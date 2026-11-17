@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 
 .donate {
   padding-bottom: var(--space-27);
@@ -132,12 +133,9 @@
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
   padding: var(--space-3) var(--space-7);
-  transition: transform var(--duration-base);
 
-  @media (hover: hover) {
-    &:hover {
-      transform: translateY(-1px);
-    }
+  @include motion.hover(background-color) {
+    background-color: color-mix(in srgb, var(--color-accent) 14%, transparent);
   }
 }
 

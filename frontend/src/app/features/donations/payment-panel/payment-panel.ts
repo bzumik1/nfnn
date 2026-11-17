@@ -15,6 +15,7 @@ import {
   Injector,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -22,10 +23,15 @@ import { Connectivity } from '../../../core/connectivity/connectivity';
 import { formatDataDay } from '../../../core/connectivity/data-time';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ShortViewport } from '../../../core/layout/short-viewport';
+import { BusyButton } from '../../../shared/ui/busy-button/busy-button';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
+import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../shared/ui/qr-code/qr-matrix';
+import { RadioGroup } from '../../../shared/ui/radio-group/radio-group';
+import { LOADING_TIMINGS, loadingView } from '../../../shared/ui/skeleton/loading-view';
 import { ZoomQr } from '../../../shared/ui/zoom-viewer/zoom-content';
 import { Zoomable } from '../../../shared/ui/zoom-viewer/zoomable';
 import { splitBeforeBankCode } from '../czech-account';
@@ -57,10 +63,10 @@ const DEFAULT_AMOUNT = 500;
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
 const MINOR_PER_CROWN = 100;
-const REDRAW_DELAY_MS = 400;
 const ANNOUNCE_DELAY_MS = 1200;
 const PAYMENT_QR_LEVEL = 'H';
 const SAVED_QR_SIDE_PX = 720;
+const CHOOSING_KEYS = new Set(['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End']);
 
 interface AmountPreset {
   readonly amount: number;
@@ -72,6 +78,8 @@ interface Payment {
   readonly spayd: string;
   readonly matrix: QrMatrix;
 }
+
+type SkeletonRow = 'account' | 'amount' | 'symbol' | 'iban';
 
 type HandoffStep = 'sharing' | 'opening' | 'saving';
 
@@ -97,7 +105,17 @@ export type PaymentAccountState =
 
 @Component({
   selector: 'app-payment-panel',
-  imports: [CopyButton, NgTemplateOutlet, QrCode, RouterLink, Zoomable],
+  imports: [
+    BusyButton,
+    BusyLabel,
+    CopyButton,
+    NeedsConnection,
+    NgTemplateOutlet,
+    QrCode,
+    RadioGroup,
+    RouterLink,
+    Zoomable,
+  ],
   providers: [GiftArrivalWatch, RepositoryGiftFeed],
   templateUrl: './payment-panel.html',
   styleUrl: './payment-panel.scss',
@@ -120,6 +138,10 @@ export class PaymentPanel {
   private readonly bankApp = viewChild<ElementRef<HTMLElement>>('bankApp');
   private readonly bankAppOpen = viewChild<ElementRef<HTMLButtonElement>>('bankAppOpen');
   private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
+  private readonly detailsRetry = viewChild<ElementRef<HTMLButtonElement>>('detailsRetry');
+  private readonly pendingCard = viewChild<ElementRef<HTMLElement>>('pendingCard');
+  private readonly amountRow = viewChild<ElementRef<HTMLElement>>('amountRow');
+  private readonly loadingTimings = inject(LOADING_TIMINGS);
   private readonly customAmountField = viewChild<ElementRef<HTMLInputElement>>('customAmountField');
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly arrivalClose = viewChild<ElementRef<HTMLButtonElement>>('arrivalClose');
@@ -146,8 +168,13 @@ export class PaymentPanel {
   );
   protected readonly customText = signal(this.initial.custom ? String(this.initial.amount) : '');
   private readonly customAmountLeft = signal(false);
-  private readonly drawnAmount = signal<number | null>(this.initial.amount);
+  protected readonly drawnAmount = signal<number | null>(this.initial.amount);
   protected readonly redrawing = signal(false);
+  protected readonly swapFades = signal(false);
+  protected readonly amountTinted = signal(false);
+  protected readonly retrying = signal(false);
+  protected readonly failedAttempts = signal(0);
+  private choosingByKey = false;
   private readonly announced = signal<number | null>(null);
   private lastAnnounced: number | null = null;
   private retried = false;
@@ -164,13 +191,33 @@ export class PaymentPanel {
     () => this.customChosen() && this.customAmountLeft() && this.amount() === null,
   );
 
+  protected readonly loadView = loadingView(
+    this.store.state,
+    (state) => state.kind === 'loading',
+    (state) => state.kind !== 'ready',
+  );
+
+  protected readonly detailsFailed = computed(() => {
+    const kind = this.loadView.state().kind;
+    return kind === 'failed' || (this.retrying() && kind === 'loading');
+  });
+  protected readonly detailsLoading = computed(
+    () => this.loadView.state().kind === 'loading' && !this.retrying(),
+  );
+  protected readonly skeletonRows = computed<readonly SkeletonRow[]>(() => [
+    'account',
+    ...(this.drawnAmount() === null ? [] : (['amount'] as const)),
+    ...(this.variableSymbol() === null ? [] : (['symbol'] as const)),
+    'iban',
+  ]);
+
   private readonly details = computed<PaymentDetails | null>(() => {
-    const state = this.store.state();
+    const state = this.loadView.state();
     return state.kind === 'ready' ? state.details : null;
   });
 
   protected readonly state = computed<QrState>(() => {
-    const stored = this.store.state();
+    const stored = this.loadView.state();
     if (stored.kind === 'loading') {
       return stored;
     }
@@ -203,10 +250,7 @@ export class PaymentPanel {
   });
 
   protected readonly busy = computed(() => this.state().kind === 'loading' || this.redrawing());
-  protected readonly failure = computed(() => {
-    const kind = this.state().kind;
-    return kind === 'unavailable' || kind === 'refused' ? kind : null;
-  });
+  protected readonly failure = computed(() => this.state().kind === 'refused');
 
   protected readonly saving = signal(false);
   protected readonly savedQrFile = signal<string | null>(null);
@@ -257,7 +301,7 @@ export class PaymentPanel {
     if (account) {
       return { kind: 'ready', account };
     }
-    return this.store.state().kind === 'loading' ? { kind: 'loading' } : { kind: 'failed' };
+    return this.loadView.state().kind === 'loading' ? { kind: 'loading' } : { kind: 'failed' };
   });
 
   protected readonly detailsAge = computed(() => {
@@ -295,7 +339,13 @@ export class PaymentPanel {
         this.giftArrival.observe(this.host.nativeElement, qrBox.nativeElement);
       }
     });
+    const noteChoosingKey = (event: KeyboardEvent) => {
+      this.choosingByKey = CHOOSING_KEYS.has(event.key);
+      queueMicrotask(() => (this.choosingByKey = false));
+    };
+    this.host.nativeElement.addEventListener('keydown', noteChoosingKey, { capture: true });
     inject(DestroyRef).onDestroy(() => {
+      this.host.nativeElement.removeEventListener('keydown', noteChoosingKey, { capture: true });
       clearTimeout(this.redrawTimer);
       clearTimeout(this.announceTimer);
     });
@@ -306,7 +356,7 @@ export class PaymentPanel {
     this.customChosen.set(false);
     this.presetAmount.set(amount);
     this.chosenAmount.remember({ amount, custom: false });
-    this.redrawNow();
+    this.redrawLater();
     this.announceAfterQuiet();
   }
 
@@ -314,7 +364,9 @@ export class PaymentPanel {
     if (!this.customChosen()) {
       this.openCustomAmount();
     }
-    this.focusCustomAmount();
+    if (!this.choosingByKey) {
+      this.focusCustomAmount();
+    }
   }
 
   finishCustomAmount(): void {
@@ -361,7 +413,14 @@ export class PaymentPanel {
   retry(): void {
     this.retried = true;
     this.failureAlerts.set(true);
-    (this.compact() ? this.bankApp() : this.qrBox())?.nativeElement.focus();
+    this.swapFades.set(false);
+    this.announced.set(null);
+    if (this.detailsFailed()) {
+      this.retrying.set(true);
+      this.detailsRetry()?.nativeElement.focus();
+    } else {
+      (this.compact() ? this.bankApp() : this.qrBox())?.nativeElement.focus();
+    }
     this.store.reload();
   }
 
@@ -526,9 +585,14 @@ export class PaymentPanel {
   }
 
   private redrawLater(): void {
+    const delay = this.loadingTimings()?.delayMs ?? 0;
+    if (delay <= 0) {
+      this.redrawNow();
+      return;
+    }
     this.redrawing.set(true);
     clearTimeout(this.redrawTimer);
-    this.redrawTimer = setTimeout(() => this.redrawNow(), REDRAW_DELAY_MS);
+    this.redrawTimer = setTimeout(() => this.redrawNow(), delay);
   }
 
   private redrawNow(): void {
@@ -538,8 +602,29 @@ export class PaymentPanel {
     if (amount === null) {
       this.lastAnnounced = null;
     }
+    const changed = amount !== null && amount !== this.drawnAmount();
+    this.swapFades.set(this.qrMatrix() !== null);
     this.drawnAmount.set(amount);
-    this.store.load();
+    if (changed && this.bankAccount() !== null) {
+      this.tintAmount();
+    }
+    if (this.store.state().kind !== 'failed') {
+      this.store.load();
+    }
+  }
+
+  private tintAmount(): void {
+    this.amountTinted.set(true);
+    afterNextRender(
+      () => {
+        const row = this.amountRow()?.nativeElement;
+        if (row) {
+          getComputedStyle(row).getPropertyValue('background-color');
+        }
+        this.amountTinted.set(false);
+      },
+      { injector: this.injector },
+    );
   }
 
   private announceAfterQuiet(): void {
@@ -558,16 +643,61 @@ export class PaymentPanel {
     if (kind === 'ready') {
       this.failureAlerts.set(false);
     }
-    if (!this.retried || kind === 'loading' || (kind === 'ready' && this.compact() && !openReady)) {
+    if (kind !== 'loading') {
+      untracked(() => this.endRetry(kind));
+    }
+    if (this.retried && kind === 'loading') {
+      this.afterRenderIfFocusLost(() => this.pendingCard()?.nativeElement);
+      return;
+    }
+    if (!this.retried || (kind === 'ready' && this.compact() && !openReady)) {
       return;
     }
     this.retried = false;
-    if (kind === 'ready' && this.compact()) {
-      afterNextRender(() => this.bankAppOpen()?.nativeElement.focus(), { injector: this.injector });
+    if (kind === 'ready') {
+      this.afterRenderIfFocusLost(() =>
+        this.compact() ? this.bankAppOpen()?.nativeElement : this.bankLabel()?.nativeElement,
+      );
     }
-    if (kind === 'unavailable' || kind === 'refused') {
+    if (kind === 'unavailable') {
+      this.afterRenderIfFocusLost(() => this.detailsRetry()?.nativeElement);
+    }
+    if (kind === 'refused') {
       afterNextRender(() => this.retryButton()?.nativeElement.focus(), { injector: this.injector });
     }
+  }
+
+  private endRetry(kind: QrState['kind']): void {
+    if (!this.retrying()) {
+      return;
+    }
+    this.retrying.set(false);
+    if (kind === 'unavailable') {
+      this.failedAttempts.update((attempts) => attempts + 1);
+      return;
+    }
+    const amount = this.drawnAmount();
+    if (amount !== null && this.qrMatrix() !== null) {
+      this.lastAnnounced = amount;
+      this.announced.set(amount);
+    }
+  }
+
+  private afterRenderIfFocusLost(target: () => HTMLElement | undefined): void {
+    afterNextRender(
+      () => {
+        const focused = document.activeElement;
+        if (
+          focused === null ||
+          focused === document.body ||
+          !focused.isConnected ||
+          focused === this.pendingCard()?.nativeElement
+        ) {
+          target()?.focus();
+        }
+      },
+      { injector: this.injector },
+    );
   }
 }
 
