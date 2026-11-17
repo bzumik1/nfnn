@@ -341,6 +341,39 @@ test.describe('Given a page checked as on a phone', () => {
     ).toEqual([]);
   });
 
+  test('when the tab bar floats above the bottom edge with a shadow that fits its gap, then the tab bar check passes', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<nav id="navigace" style="position: fixed; bottom: 16px; left: 20px; right: 20px; height: 62px; box-shadow: 0 4px 12px rgb(0 0 0 / 0.4)"></nav>',
+      ),
+    ).toEqual([]);
+  });
+
+  test("when the tab bar's shadow reaches past the bottom edge, then the tab bar check fails", async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<nav id="navigace" style="position: fixed; bottom: 16px; left: 20px; right: 20px; height: 62px; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.1), 0 6px 24px rgb(0 0 0 / 0.4)"></nav>',
+      ),
+    ).toEqual(['the tab bar above the home indicator, its shadow inside the gap']);
+  });
+
+  test('when the tab bar stands lower than the home indicator needs, then the tab bar check fails', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<nav id="navigace" style="--tab-bar-home-indicator-overlap: -24px; position: fixed; bottom: 16px; left: 20px; right: 20px; height: 62px"></nav>',
+      ),
+    ).toEqual(['the tab bar above the home indicator, its shadow inside the gap']);
+  });
+
   test('when a modal dialog is open, then only its controls are checked', async ({ page }) => {
     await page.setViewportSize(VIEWPORT);
     await page.setContent(
