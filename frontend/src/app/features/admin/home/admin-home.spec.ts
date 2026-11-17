@@ -1289,12 +1289,39 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
 
       expect(sections()).toBeNull();
+      expect(fixture.nativeElement.querySelector('h1')?.nextElementSibling).toBe(
+        fixture.nativeElement.querySelector('.attention'),
+      );
+      expect(fixture.nativeElement.querySelector('.attention')?.nextElementSibling).toBe(
+        fixture.nativeElement.querySelector('.since'),
+      );
+      expect(fixture.nativeElement.querySelector('.since').hidden).toBe(true);
+    });
+
+    it('and the window widens after something new came since the last visit, then the summary takes its place above what needs attention, which stays the same card', async () => {
+      const attention = fixture.nativeElement.querySelector('.attention');
+      visitState.set({
+        kind: 'ready',
+        seenAt: '2026-10-17T08:00:00Z',
+        copiedAt: null,
+        changes: {
+          payments: { count: 1, totalMinor: 50000 },
+          paired: { count: 0, totalMinor: 0, bookedFrom: null },
+          unpaired: { count: 1, totalMinor: 50000, bookedFrom: '2026-10-17' },
+          newDonors: 0,
+          receipts: 0,
+          otherAdministrators: [],
+          anything: true,
+        },
+      });
+      compact.set(false);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
       expect(fixture.nativeElement.querySelector('h1')?.nextElementSibling?.tagName).toBe(
         'APP-SINCE-LAST-VISIT',
       );
-      expect(fixture.nativeElement.querySelector('.since')?.nextElementSibling).toBe(
-        fixture.nativeElement.querySelector('.attention'),
-      );
+      expect(fixture.nativeElement.querySelector('.since')?.nextElementSibling).toBe(attention);
     });
   });
 });
