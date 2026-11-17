@@ -54,7 +54,7 @@
 
 .summary-tile--total {
   flex-direction: row;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-3);
 
   .summary-number {
@@ -262,6 +262,18 @@
 
 .grid-item--large {
   grid-row: span 2;
+  grid-column: span 2;
+}
+
+.grid:where(.grid--compact) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+:where(.grid--compact) > .grid-item--large {
+  grid-row: auto;
+}
+
+:where(.grid--compact) > .grid-item:last-child:nth-child(even) {
   grid-column: span 2;
 }
 

@@ -174,6 +174,7 @@
                 class="grid"
                 [class.grid--pair]="group.arrangement === 'pair'"
                 [class.grid--trio]="group.arrangement === 'trio'"
+                [class.grid--compact]="compact()"
               >
                 @for (tile of group.tiles; track tile.item.id) {
                   <li

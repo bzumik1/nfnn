@@ -156,7 +156,8 @@
 .tile--large {
   display: grid;
   grid-template-areas: 'tile';
-  min-height: max(100%, 22rem);
+  height: 100%;
+  min-height: 22rem;
   border: none;
   background: none;
 
@@ -297,9 +298,18 @@
   }
 }
 
+@mixin square-large-tile {
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 1;
+}
+
+:host-context(.grid--compact) .tile--large {
+  @include square-large-tile;
+}
+
 @include bp.container-down(stories, tablet) {
   .tile--large {
-    min-height: 0;
-    aspect-ratio: 1;
+    @include square-large-tile;
   }
 }
