@@ -30,5 +30,13 @@
     "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the retry finds nothing published, then the focus goes to the card that says so",
     "reason": "Desktop polish P22 (#1174): nothing published is a ui-notice card in place of the leading news, so after a retry the focus goes to that card, which says it, and the status line stays empty",
     "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the first page of news and the projects arrive > then the heading of the older news and each card move in one after another, at most six steps apart",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the first page of news and the projects arrive > then on a computer the heading of the older news and each row of three cards move in one after another",
+    "reason": "Desktop polish P31 (#1174): on a computer the older news move in by rows of three; the phone keeps one step per card at most six steps apart, now tested by 'when the older news stand on a phone, then the heading and each card move in one after another, at most six steps apart'",
+    "contract": "docs/frontend-overview.md, content"
   }
 ]

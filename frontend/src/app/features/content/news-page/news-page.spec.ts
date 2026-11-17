@@ -9,7 +9,7 @@ import {
   provideHttpClientTesting,
   TestRequest,
 } from '@angular/common/http/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   ActivatedRoute,
@@ -30,6 +30,7 @@ import { connectivityInterceptor } from '../../../core/connectivity/connectivity
 import { keptAnswerRefreshInterceptor } from '../../../core/connectivity/kept-answer-refresh';
 import { serviceWorkerBypassInterceptor } from '../../../core/updates/service-worker-bypass';
 import { KeptTabPages } from '../../../core/navigation/kept-tab-pages';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 @Component({ template: '' })
 class OtherTab {}
@@ -40,6 +41,7 @@ const PROJECTS = (page: number) => `/api/content/projects?page=${page}&size=50`;
 async function setUp(
   query: Record<string, string> | Observable<ParamMap> = {},
   interceptors: HttpInterceptorFn[] = [],
+  compact = false,
 ): Promise<{ fixture: ComponentFixture<NewsPage>; http: HttpTestingController }> {
   await TestBed.configureTestingModule({
     imports: [NewsPage],
@@ -47,6 +49,7 @@ async function setUp(
       provideHttpClient(withInterceptors(interceptors)),
       provideHttpClientTesting(),
       provideRouter([]),
+      { provide: CompactLayout, useValue: { isCompact: signal(compact) } },
       {
         provide: ActivatedRoute,
         useValue: {
@@ -224,11 +227,11 @@ describe('Given a visitor opening Aktuality', () => {
       expect(texts(older, 'h3')).toEqual(['Ohlédnutí za rokem 2024', 'Ohlédnutí za rokem 2023']);
     });
 
-    it('then the heading of the older news and each card move in one after another, at most six steps apart', () => {
+    it('then on a computer the heading of the older news and each row of three cards move in one after another', () => {
       expect(revealOrder(root.querySelector('.older h2'))).toBe('0');
       expect(
         Array.from(root.querySelectorAll('.older .grid-item')).map((card) => revealOrder(card)),
-      ).toEqual(['1', '2']);
+      ).toEqual(['1', '1']);
     });
 
     it('then the leading news and the stories do not move in with the older news', () => {
@@ -250,6 +253,22 @@ describe('Given a visitor opening Aktuality', () => {
     it('then a single page offers no paging', () => {
       expect(root.querySelector('nav.pages')).toBeNull();
     });
+  });
+
+  it('when the older news stand on a phone, then the heading and each card move in one after another, at most six steps apart', async () => {
+    ({ fixture, http } = await setUp({}, [], true));
+    root = fixture.nativeElement;
+    const older = [2, 3, 4, 5, 6, 7, 8, 9].map((index) =>
+      newsArticle({ id: `n${index}`, slug: `zprava-${index}`, title: `Zpráva ${index}` }),
+    );
+    http.expectOne(NEWS(0)).flush(page([lookBack2025, ...older], 0, 9));
+    http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
+    await settle(fixture);
+
+    expect(revealOrder(root.querySelector('.older h2'))).toBe('0');
+    expect(
+      Array.from(root.querySelectorAll('.older .grid-item')).map((card) => revealOrder(card)),
+    ).toEqual(['1', '2', '3', '4', '5', '6', '6', '6']);
   });
 
   it('when the projects come on more pages, then the stories count every project of the newest year', async () => {

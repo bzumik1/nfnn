@@ -92,14 +92,7 @@ const REVEALING_STORIES = ['.year-head', '.grid-item', '.year-all', 'app-donate-
 
 const REVEALING_ABOUT = ['.board-title', '.signer', 'app-donate-band'];
 
-const REVEALING_NEWS = [
-  '.stories .section-head',
-  '.story',
-  '.older .section-title',
-  '.older .grid-item',
-  '.pages',
-  'app-donate-band',
-];
+const REVEALING_NEWS = ['.older .section-title', '.older .grid-item', '.pages', 'app-donate-band'];
 
 function article(index: number): Record<string, unknown> {
   return {
@@ -250,7 +243,7 @@ test.describe('Given a visitor on a computer opening Aktuality', () => {
     await publishedNews(page);
   });
 
-  test('when Aktuality opens, then nothing in the first window waits, the stories, the older news and the Přispět band below wait, and each moves in when scrolled to', async ({
+  test('when Aktuality opens, then nothing in the first window waits, the older news and the Přispět band below wait, and each moves in when scrolled to', async ({
     page,
   }) => {
     await page.goto('/aktuality');
