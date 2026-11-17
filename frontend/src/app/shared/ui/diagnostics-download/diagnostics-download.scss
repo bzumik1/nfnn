@@ -11,6 +11,10 @@ p {
   max-inline-size: var(--measure-prose);
 }
 
+:host .diagnostics-download-about {
+  margin-block-end: 0;
+}
+
 .diagnostics-download-shared,
 .diagnostics-download-button {
   margin-block-start: var(--space-2);
