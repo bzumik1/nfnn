@@ -194,7 +194,7 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await expect(row).toContainText('Nováková Jana');
     await expect(row).toContainText('1111111111');
     await expect(row.getByRole('button')).toHaveAccessibleName(
-      /^Přiřadit dárci\s*, 10\. 10\. 2026, 500 Kč$/,
+      /^Přiřadit\sdárci\s*,\s10\.\s10\.\s2026,\s500\sKč$/,
     );
 
     await page.getByRole('button', { name: 'Přiřadit dárci' }).click();
@@ -321,13 +321,13 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await expect(page.locator('tbody tr')).toContainText('Jana Nováková');
     await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
     await expect(page.locator('tbody tr').getByRole('button')).toHaveAccessibleName(
-      /^Zrušit přiřazení\s*, 10\. 10\. 2026, 500 Kč$/,
+      /^Zrušit\spřiřazení\s*,\s10\.\s10\.\s2026,\s500\sKč$/,
     );
 
     await page.getByRole('button', { name: 'Zrušit přiřazení' }).click();
     const question = page.getByRole('group', { name: /Zrušit přiřazení platby/ });
     await expect(question.getByRole('button', { name: /^Zrušit/ })).toHaveAccessibleName(
-      /^Zrušit přiřazení\s*, 10\. 10\. 2026, 500 Kč$/,
+      /^Zrušit\spřiřazení\s*,\s10\.\s10\.\s2026,\s500\sKč$/,
     );
     await expect(question).toContainText('zmizí z přehledu dárce Jana Nováková');
     await expect(question.getByRole('button', { name: 'Ponechat' })).toBeFocused();
