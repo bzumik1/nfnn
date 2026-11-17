@@ -49,7 +49,7 @@ describe('Given a list whose row is about to leave', () => {
     const neighbour = neighbourAfterRowLeaves(byId('first'), actions());
     byId('first').remove();
     (byId('second-action') as HTMLButtonElement).disabled = true;
-    byId('third').inert = true;
+    byId('third').setAttribute('inert', '');
 
     expect(neighbour()).toBeNull();
   });
