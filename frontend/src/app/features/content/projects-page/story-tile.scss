@@ -105,6 +105,7 @@
 
 .tile-title {
   font-size: var(--text-md);
+  font-variant-numeric: var(--numeric-titles);
   font-weight: var(--weight-semibold);
   line-height: var(--leading-snug);
   color: var(--color-text);
@@ -143,6 +144,10 @@
   margin-top: var(--space-2);
   color: var(--color-text-soft);
   font-size: var(--text-xs);
+
+  &:empty {
+    display: none;
+  }
 
   &::before {
     content: '';

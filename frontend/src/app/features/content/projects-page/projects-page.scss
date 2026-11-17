@@ -168,6 +168,7 @@
 
 .year-title {
   font-family: var(--font-display);
+  font-variant-numeric: var(--numeric-titles);
   font-size: var(--text-section-title-compact);
   font-weight: var(--weight-extrabold);
   line-height: var(--leading-none);
