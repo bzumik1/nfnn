@@ -1,6 +1,12 @@
 import { Locator, Page } from '@playwright/test';
 import { stepBack } from './app-history';
-import { administrator, mockDonorApi, openAccountItem, session } from './donor-session';
+import {
+  administrator,
+  mockDonorApi,
+  openAccountItem,
+  session,
+  whenAdministrationCopied,
+} from './donor-session';
 import { expect, test } from './fixtures';
 
 const article = {
@@ -15,6 +21,8 @@ const article = {
   createdAt: '2026-10-19T09:00:00Z',
   updatedAt: '2026-10-20T07:30:00Z',
 };
+
+const LIST_TITLE = 'Co je u nás nového';
 
 interface SeenTransition {
   readonly kind: 'push' | 'pop' | 'none';
@@ -540,3 +548,161 @@ for (const [screen, viewport] of [
     });
   });
 }
+
+type LegacyTouchDocument = Document & {
+  createTouch?(
+    view: Window,
+    target: EventTarget,
+    identifier: number,
+    pageX: number,
+    pageY: number,
+    screenX: number,
+    screenY: number,
+  ): Touch;
+  createTouchList?(...touches: Touch[]): TouchList;
+};
+
+async function fingerFromEdge(page: Page, xs: readonly number[], lifts: boolean): Promise<void> {
+  await page.evaluate(
+    ({ xs, lifts }) => {
+      const y = 420;
+      const document = window.document as LegacyTouchDocument;
+      const target = document.elementFromPoint(xs[0], y) ?? document.body;
+      const at = (x: number): Touch[] =>
+        typeof document.createTouch === 'function' && typeof document.createTouchList === 'function'
+          ? Array.from(
+              document.createTouchList(
+                document.createTouch(window, target, 1, x + scrollX, y + scrollY, x, y),
+              ),
+            )
+          : [new Touch({ identifier: 1, target, clientX: x, clientY: y })];
+      const finger = (type: string, x: number, touching: boolean): void => {
+        const touches = at(x);
+        target.dispatchEvent(
+          new TouchEvent(type, {
+            touches: touching ? touches : [],
+            targetTouches: touching ? touches : [],
+            changedTouches: touches,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      };
+      finger('touchstart', xs[0], true);
+      xs.slice(1).forEach((x) => finger('touchmove', x, true));
+      if (lifts) {
+        finger('touchend', xs.at(-1)!, false);
+      }
+    },
+    { xs, lifts },
+  );
+}
+
+const DRAGGED_ACROSS = [30, 60, 90, 120, 150, 180, 210, 250];
+
+function underTheFinger(page: Page) {
+  return page.locator('.page-transition--swipe .page-transition__page--under');
+}
+
+function accountSheet(page: Page) {
+  return page.getByRole('dialog', { name: 'Účet' });
+}
+
+test.describe('Given an administrator in the app on the home screen of a phone with the account sheet open over the news', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+      Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
+      localStorage.setItem('nfnn.donor-session-app', '1');
+    });
+    await mockDonorApi(page);
+    await publishedArticle(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeVisible();
+  });
+
+  async function openAdministration(page: Page): Promise<void> {
+    const copied = whenAdministrationCopied(page);
+    await openAccountItem(page, 'Správa');
+    await expect(page).toHaveURL(/\/sprava$/);
+    await copied();
+    await expect(overlays(page)).toHaveCount(0);
+  }
+
+  test('when they open Správa and press Zpět, then the account sheet is open over the news again', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(accountSheet(page).getByRole('link', { name: /^Správa/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeAttached();
+  });
+
+  test('when they open Správa and press Zavřít, then the news returns without the account sheet', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zavřít' }).click();
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeFocused();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('when a finger drags Správa back from the edge, then the news with the account sheet open lies under it, and on letting go the account sheet is open over the news', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+
+    await fingerFromEdge(page, DRAGGED_ACROSS, false);
+
+    await expect(underTheFinger(page).locator('h1')).toHaveText(LIST_TITLE);
+    await expect(underTheFinger(page).locator('[data-presentation="sheet"]')).toHaveCount(1);
+    await expect(underTheFinger(page).locator('a[href="/sprava"]')).toHaveCount(1);
+    await expect(underTheFinger(page).locator('dialog')).toHaveCount(0);
+
+    await fingerFromEdge(page, [250, 300], true);
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(accountSheet(page).getByRole('link', { name: /^Správa/ })).toBeVisible();
+    await expect(overlays(page)).toHaveCount(0);
+  });
+
+  test('when they open Moje dary and press Zpět, then the account sheet shows its list again over the news', async ({
+    page,
+  }) => {
+    await openAccountItem(page, 'Moje dary');
+
+    await page
+      .getByRole('dialog', { name: 'Moje dary' })
+      .getByRole('button', { name: 'Zpět' })
+      .click();
+
+    await expect(accountSheet(page).getByRole('link', { name: /^Moje dary/ })).toBeVisible();
+    await expect(page).toHaveURL('/aktuality');
+  });
+
+  test('when they open Moje dary and a finger drags from the edge, then the account sheet shows its list again over the news', async ({
+    page,
+  }) => {
+    await openAccountItem(page, 'Moje dary');
+
+    await fingerFromEdge(page, [...DRAGGED_ACROSS, 300], true);
+
+    await expect(accountSheet(page).getByRole('link', { name: /^Moje dary/ })).toBeVisible();
+    await expect(page).toHaveURL('/aktuality');
+  });
+});
