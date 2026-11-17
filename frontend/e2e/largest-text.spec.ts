@@ -992,7 +992,7 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
       const summary = await openSummary(page);
 
       const words = summary.locator(
-        ':is(dt, dd:not(.summary-symbol):not(:has(.email)), dd .tag, .summary-symbol .ui-figures, .summary-symbol .ui-pill-button > span:not(.visually-hidden, [aria-hidden="true"]))',
+        ':is(dt, dd:not(.summary-symbol):not(:has(.email)), dd .tag, .summary-symbol .ui-figures, .summary-symbol .copy-button__action > span:not(.visually-hidden))',
       );
       for (const text of await words.all()) {
         expect(await wordsBrokenInside(text)).toEqual([]);
