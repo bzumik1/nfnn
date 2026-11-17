@@ -81,27 +81,30 @@ test.describe('Given a year of stories without photos on the Pomáháme tab', ()
     });
   }
 
-  test('when the text is twice as large, then the large tile grows to hold its text instead of cutting it', async ({
-    page,
-  }) => {
-    await page.addInitScript(() => {
-      document.addEventListener('DOMContentLoaded', () => {
-        const style = document.createElement('style');
-        style.textContent = 'html { font-size: 200%; }';
-        document.head.append(style);
+  for (const width of [900, 834]) {
+    test(`when the text is twice as large in a ${width} px window, then the large tile grows to hold its text instead of cutting it`, async ({
+      page,
+    }) => {
+      await page.addInitScript(() => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = 'html { font-size: 200%; }';
+          document.head.append(style);
+        });
       });
-    });
-    await openStories(page, 2, 900);
+      await openStories(page, 2, width);
 
-    const large = page.locator('.tile--large').first();
-    const fits = await large.evaluate((tile) => {
-      const body = tile.querySelector('.tile-body')!.getBoundingClientRect();
-      return body.bottom <= tile.getBoundingClientRect().bottom + 1;
+      const large = page.locator('.tile--large').first();
+      const fits = await large.evaluate((tile) => {
+        const body = tile.querySelector('.tile-body')!.getBoundingClientRect();
+        const box = tile.getBoundingClientRect();
+        return body.top >= box.top - 1 && body.bottom <= box.bottom + 1;
+      });
+      expect(fits).toBe(true);
+      const { items, tiles } = await gridBoxes(page);
+      expect(tiles[0].bottom).toBeLessThanOrEqual(items[0].bottom + EDGE_TOLERANCE_PX);
     });
-    expect(fits).toBe(true);
-    const { items, tiles } = await gridBoxes(page);
-    expect(tiles[0].bottom).toBeLessThanOrEqual(items[0].bottom + EDGE_TOLERANCE_PX);
-  });
+  }
 
   for (const width of [832, 834, 899, 900]) {
     for (const count of [1, 2, 3]) {
