@@ -147,6 +147,7 @@ describe("Given an administrator's connected applications card", () => {
     await settle();
 
     expect(element('[role="alert"]').textContent).toContain('Server neodpovídá');
+    expect(element('.connections-retry').textContent?.trim()).toBe('Zkusit znovu');
 
     element<HTMLButtonElement>('.connections-retry').click();
     await settle();

@@ -508,6 +508,36 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
     expect(text()).toContain('Upozornění má tento web v prohlížeči zakázaná.');
   });
 
+  it('when the card shows a state instead of the switches, then the state sentence takes the intro style of every card as a state line', async () => {
+    withPushApi('denied');
+    await signIn('REMEMBERED');
+    await open();
+
+    const sentence = Array.from(
+      fixture.nativeElement.querySelectorAll('p') as NodeListOf<HTMLParagraphElement>,
+    ).find((paragraph) => paragraph.textContent?.includes('Upozornění má tento web'));
+    expect(sentence?.classList).toContain('ui-card__intro');
+    expect(sentence?.classList).toContain('notifications-state');
+  });
+
+  it('when the part of the site that delivers them is not running yet, then the card asks to try again without telling to reload the page, and trying again offers them once it runs', async () => {
+    withPushApi();
+    push = { ...push, isEnabled: false };
+    await signIn('REMEMBERED');
+    await open();
+
+    expect(text()).toContain('Prohlížeč zatím nespustil část webu, která upozornění doručuje.');
+    expect(text()).not.toContain('Načtěte stránku znovu.');
+    expect(button('Zapnout na tomto zařízení')).toBeUndefined();
+
+    Object.assign(push, { isEnabled: true });
+    button('Zkusit znovu')!.click();
+    http.expectOne({ method: 'GET', url: PUSH_URL }).flush(pushView());
+    await settle();
+
+    expect(button('Zapnout na tomto zařízení')).toBeTruthy();
+  });
+
   it('when the card cannot load, then it says so and loads again on request', async () => {
     withPushApi();
     await signIn('REMEMBERED');
@@ -519,7 +549,7 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
     await settle();
 
     expect(alerts()).toContain('Upozornění se nepodařilo načíst.');
-    button('Načíst znovu')!.click();
+    button('Zkusit znovu')!.click();
     http.expectOne({ method: 'GET', url: PUSH_URL }).flush(pushView());
     await settle();
     expect(button('Zapnout na tomto zařízení')).toBeTruthy();

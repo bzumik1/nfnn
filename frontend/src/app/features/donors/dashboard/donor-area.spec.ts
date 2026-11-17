@@ -1173,7 +1173,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(texts('.overview-stats dd')[2]).toBe('0 Kč');
     });
 
-    it('then the last gift comes first with its date, amount and state, then the card Poslat dar, the stats and the recent gifts', async () => {
+    it('then the receipt comes first, then the stats, the last gift with its date, amount and state, the card Poslat dar and the recent gifts', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
 
@@ -1183,9 +1183,9 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.last-gift-status')).toBe('Přijato');
       expect(blockOrder()).toEqual([
         'receipt-ready',
+        'overview-stats',
         'last-gift',
         'send-gift',
-        'overview-stats',
         'recent-card',
       ]);
     });
@@ -1478,7 +1478,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(blockOrder()).toEqual(['first-gift', 'send-gift']);
       expect(text('.first-gift h2')).toBe('Jak poslat první dar');
       expect(texts('.first-gift-steps li')).toEqual([
-        'Zvolte částku v kartě „Poslat dar“ níže a pošlete dar na účet nadačního fondu, převodem nebo QR kódem.',
+        'Zvolte částku v kartě „Poslat dar“ a pošlete dar na účet nadačního fondu, převodem nebo QR kódem.',
         'Do platby uveďte svůj variabilní symbol 9876543210. Údaje i QR kód v kartě „Poslat dar“ ho už obsahují.',
         'Jakmile platba dorazí, dar se tu objeví sám.',
       ]);
@@ -1489,7 +1489,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.first-gift .recent-hint')).toContain('Okamžitá platba');
     });
 
-    it('then a donor with no donations yet who sent a gift without the symbol finds the way to add the account it came from', async () => {
+    it('then a donor with no donations yet who sent a gift without the symbol finds the way to add the account it came from under the three steps', async () => {
       await open('/darce/prehled');
       await respond(emptySummary(), emptyDonations());
 
@@ -1499,7 +1499,7 @@ describe('Given a signed-in donor in the donor area', () => {
       const order = [...card.querySelectorAll('h2, .missing-gift, .first-gift-steps')].map(
         (node) => (node.tagName === 'H2' ? 'H2' : node.className),
       );
-      expect(order).toEqual(['H2', 'missing-gift', 'first-gift-steps']);
+      expect(order).toEqual(['H2', 'first-gift-steps', 'missing-gift']);
     });
 
     it('then Jak poslat první dar is one card with its heading inside that ends with Zkontrolovat nové platby and the note on bank delays', async () => {
@@ -1528,9 +1528,28 @@ describe('Given a signed-in donor in the donor area', () => {
       );
       expect(element('.missing-gift')).toBeNull();
     });
+
+    it('then the card Poslat dar is the target of the link to it from Moje dary', async () => {
+      await open('/darce/prehled');
+      await respond(emptySummary(), emptyDonations());
+
+      expect(element('#poslat-dar')?.classList).toContain('send-gift');
+    });
   });
 
   describe('when the donations page opens', () => {
+    it('then the donations cannot be loaded, an alert names the gifts and offers to try again', async () => {
+      await open('/darce/dary');
+      http.expectOne('/api/donations/me').flush(twoYearDonations());
+      http
+        .expectOne('/api/donations/me/summary')
+        .flush({ title: 'Chyba' }, { status: 500, statusText: 'Internal Server Error' });
+      await settle();
+
+      expect(text('.dashboard-error-text')).toBe('Dary se nepodařilo načíst. Zkuste to znovu.');
+      expect(text('.dashboard-error button')).toBe('Zkusit znovu');
+    });
+
     it('then the payments table lists every donation newest first with date, amount, purpose and status', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
@@ -1980,12 +1999,15 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.bank-hint')).toContain('když otevřete tuto stránku');
     });
 
-    it('then a donor with no donations yet reads that there is no payment, finds the way to add the account of a missing gift and the standing order guide', async () => {
+    it('then a donor with no donations yet reads that there is no payment, finds the way to the card Poslat dar, to add the account of a missing gift and the standing order guide', async () => {
       await open('/darce/dary');
       await respond(emptySummary(), emptyDonations());
 
       expect(element('.payments-card table')).toBeNull();
       expect(text('.payments-empty')).toBe('Zatím tu není žádná platba.');
+      const send = element('.payments-empty-state a.payments-send') as HTMLAnchorElement;
+      expect(normalized(send.textContent ?? '')).toBe('Poslat dar');
+      expect(send.getAttribute('href')).toBe('/darce/prehled#poslat-dar');
       expectMissingGiftIn('.payments-card');
       expect(text('.payments-card app-standing-order .standing-toggle')).toBe(
         'Jak nastavit trvalý příkaz',
@@ -2528,6 +2550,20 @@ describe('Given a signed-in donor in the donor area', () => {
   });
 
   describe('when the receipts page opens', () => {
+    it('then the donations cannot be loaded, an alert names the receipts and offers to try again', async () => {
+      await open('/darce/potvrzeni');
+      http.expectOne('/api/donations/me').flush(twoYearDonations());
+      http
+        .expectOne('/api/donations/me/summary')
+        .flush({ title: 'Chyba' }, { status: 500, statusText: 'Internal Server Error' });
+      await settle();
+
+      expect(text('.dashboard-error-text')).toBe(
+        'Potvrzení o daru se nepodařilo načíst. Zkuste to znovu.',
+      );
+      expect(text('.dashboard-error button')).toBe('Zkusit znovu');
+    });
+
     it('then a card offers to verify a receipt, the donor’s own or anyone else’s, on the verification page', async () => {
       await open('/darce/potvrzeni');
       await respond(twoYearSummary(), twoYearDonations());

@@ -107,6 +107,14 @@ describe('Given the card "Data v tomto zařízení"', () => {
     );
   });
 
+  it('when the copy is stored, then its state takes the intro style of every card as a state line and the explanation below it does not', async () => {
+    vault.opened.set(openedWith({ chunks: [], summary: {}, storedAt: '2026-11-05T09:30:00Z' }));
+    await settle();
+
+    expect(root().querySelector('.device-data-state')?.classList).toContain('ui-card__intro');
+    expect(root().querySelector('.device-data-about')?.classList).not.toContain('ui-card__intro');
+  });
+
   it('when the stored time is shown, then the date and the time each stay whole but may wrap apart', async () => {
     vault.opened.set(openedWith({ chunks: [], summary: {}, storedAt: '2026-11-05T09:30:00Z' }));
     await settle();
