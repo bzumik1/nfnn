@@ -216,7 +216,9 @@ _Avoid_: „účet“ where a bank account is meant
 
 **Registration**\
 UI „registrace“, „Založit účet“ · Code: `DonorRegistered`, `RegistrationReminders`, `RegistrationReturn`, `UnconfirmedRegistration` (its lifetime before deletion).\
-Creating a donor account as a person or a company; the account works only after the e-mail confirmation, and a donor who does not confirm by the next day gets one reminder.
+Creating a donor account as a person or a company; the account works only after the e-mail confirmation, and a donor who does not confirm by the next day gets one reminder.\
+„Před registrací“ is the donor's time before their account existed (a gift sent then carries no symbol of theirs).\
+_Avoid_: „před založením účtu“ (with a bank account beside it, „účet“ reads two ways)
 
 **E-mail confirmation**\
 UI „potvrzení e-mailu“ (`/potvrzeni-emailu`), also „potvrzení registrace“ (settings texts) · Code: `EmailVerificationToken`, `email_verified_at`.\

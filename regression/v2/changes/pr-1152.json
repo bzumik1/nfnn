@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/app-header.spec.ts > Given the header of the app > when a donor is signed in, then the initials of their name stand for a button named Účet that opens their account sheet",
+    "replacement": "src/app/layout/app-header/app-header.spec.ts > Given the header of the app > when a donor is signed in, then the initials of their name stand for a button named Účet with those initials that opens their account sheet",
+    "reason": "Desktop polish Q25 (#1151): the initials are part of the account button's name („Účet JN“) for voice control, WCAG 2.5.3; the same test now checks the whole name",
+    "contract": "docs/frontend-overview.md, app header"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a year the API counts as completed offers its yearly receipt and the current year says it comes after the year ends",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a year the API counts as completed offers its yearly receipt and the current year says from when it can be downloaded, as on Potvrzení",
+    "reason": "Desktop polish Q30 (#1151): from nav Moje dary says „Ke stažení od 1. ledna {rok}“ as Potvrzení does; the phone keeps the sentence, checked by its own new test",
+    "contract": "docs/frontend-overview.md, donor area"
+  }
+]

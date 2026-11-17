@@ -117,6 +117,11 @@ async function askAboutAnOlderSymbol(page: Page): Promise<void> {
   );
 }
 
+function runningAnimations(root: Element): number {
+  return root.getAnimations({ subtree: true }).filter((motion) => motion.playState === 'running')
+    .length;
+}
+
 async function violations(page: Page): Promise<string[]> {
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
@@ -234,6 +239,57 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await expect(sheet).toHaveCount(0);
     await expect(account).toBeFocused();
+  });
+
+  test('when a signed-in donor without a portrait opens the account on a computer, then the button is named Účet with the initials it shows and the sheet, still named Účet, leaves the logo to the header above it', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const account = page.getByRole('banner').getByRole('button', { name: 'Účet JN' });
+
+    await expect(account).toHaveAccessibleName('Účet JN');
+    await account.click();
+
+    const sheet = page.getByRole('dialog', { name: 'Účet' });
+    await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeAttached();
+    await expect(sheet.getByRole('navigation', { name: 'Účet' })).toBeVisible();
+    await expect(sheet.locator('img.account-logo')).toHaveCount(0);
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor opens the account on a computer, then the card of the donor stands right under the row of the controls, no farther than the gap between the groups of the sheet', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.getByRole('banner').getByRole('button', { name: 'Účet JN' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Účet' });
+    const profile = sheet.locator('a.account-profile');
+    await expect(profile).toBeVisible();
+    await expect.poll(() => sheet.evaluate(runningAnimations)).toBe(0);
+    let previousBox = '';
+    await expect
+      .poll(async () => {
+        const box = JSON.stringify(await profile.boundingBox());
+        const still = box === previousBox;
+        previousBox = box;
+        return still;
+      })
+      .toBe(true);
+
+    const controls = await Promise.all(
+      [sheet.locator('button.account-appearance'), sheet.locator('button.dialog-close')].map(
+        async (control) => (await control.boundingBox())!,
+      ),
+    );
+    const controlsBottom = Math.max(...controls.map((box) => box.y + box.height));
+    const card = (await profile.boundingBox())!;
+    const list = (await sheet.locator('nav ul').first().boundingBox())!;
+    const groupGap = list.y - (card.y + card.height);
+
+    expect(card.y).toBeGreaterThan(controlsBottom);
+    expect(card.y - controlsBottom).toBeLessThanOrEqual(groupGap + 1);
   });
 
   test('when a signed-in donor opens each section inside the account sheet on a phone, then the sheet breaks no rule and Esc closes it with the focus back on the account button', async ({

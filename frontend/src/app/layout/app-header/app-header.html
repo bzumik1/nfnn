@@ -51,19 +51,10 @@
         (click)="openAccount()"
       >
         <span class="visually-hidden" i18n="@@layout.header.account">Účet</span>
-        @if (accountBadge(); as badge) {
-          &ngsp;<span class="visually-hidden">{{ badge.description }}</span>
-          <span
-            class="account-badge"
-            [class.account-badge--fault]="faultCount() > 0"
-            aria-hidden="true"
-            >{{ badge.count }}</span
-          >
-        }
         @if (portrait(); as source) {
           <img class="account-portrait" [src]="source" alt="" width="44" height="44" />
         } @else if (initials(); as letters) {
-          <span class="account-initials" aria-hidden="true">{{ letters }}</span>
+          &ngsp;<span class="account-initials">{{ letters }}</span>
         } @else {
           <svg
             aria-hidden="true"
@@ -79,6 +70,15 @@
             <circle cx="12" cy="8" r="4" />
             <path d="M4 21a8 8 0 0 1 16 0" />
           </svg>
+        }
+        @if (accountBadge(); as badge) {
+          &ngsp;<span class="visually-hidden">{{ badge.description }}</span>
+          <span
+            class="account-badge"
+            [class.account-badge--fault]="faultCount() > 0"
+            aria-hidden="true"
+            >{{ badge.count }}</span
+          >
         }
       </button>
     } @else {

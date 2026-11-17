@@ -113,6 +113,16 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(sheet.querySelector('.account-sign-out')?.textContent?.trim()).toBe('Odhlásit se');
   });
 
+  it('when it opens on a computer, then it is still named Účet but shows no logo, because the header of the page above it already does', () => {
+    compact.set(false);
+    const sheet = open();
+
+    expect(sheet.querySelector('#account-sheet-title')?.textContent?.trim()).toBe('Účet');
+    expect(sheet.querySelector('.account-logo')).toBeNull();
+    expect(sheet.querySelector('nav')?.getAttribute('aria-labelledby')).toBe('account-sheet-title');
+    expect(rows(sheet)).toEqual(['Můj přehled', 'Moje dary', 'Potvrzení o daru', 'Bankovní účty']);
+  });
+
   describe('when an administrator has open faults', () => {
     function faultRow(sheet: HTMLElement): HTMLAnchorElement | null {
       return sheet.querySelector('.account-faults a');

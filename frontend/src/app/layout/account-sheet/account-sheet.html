@@ -20,15 +20,21 @@
       <app-account-section [path]="item.path" />
     </div>
   } @else {
-    <div class="account-head" [class.account-head--centered]="presentation() === 'centered'">
-      <h2 id="account-sheet-title" class="account-title">
-        <img
-          class="account-logo"
-          [src]="appearance.dark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
-          alt=""
-          width="115"
-          height="40"
-        />
+    <div
+      class="account-head"
+      [class.account-head--centered]="presentation() === 'centered'"
+      [class.account-head--without-logo]="!showsLogo()"
+    >
+      <h2 id="account-sheet-title" class="account-title" [class.visually-hidden]="!showsLogo()">
+        @if (showsLogo()) {
+          <img
+            class="account-logo"
+            [src]="appearance.dark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
+            alt=""
+            width="115"
+            height="40"
+          />
+        }
         <span class="visually-hidden" i18n="@@layout.account.title">Účet</span>
       </h2>
       <button

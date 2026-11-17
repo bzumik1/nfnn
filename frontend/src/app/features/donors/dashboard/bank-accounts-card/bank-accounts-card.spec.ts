@@ -455,8 +455,8 @@ describe('Given the bank accounts card in the overview', () => {
     expect(element('li.account')).toBeNull();
     expect(texts('ul:has(.accounts-add) > li')).toEqual(['Přidat účet']);
     expect(text('.accounts-empty')).toBe(
-      'Účet se tu objeví sám, jakmile z něj pošlete dar s vaším variabilním symbolem. ' +
-        'Poslali jste dar bez symbolu, s jiným symbolem nebo ještě před založením účtu? ' +
+      'Bankovní účet se tu objeví sám, jakmile z něj pošlete dar s vaším variabilním symbolem. ' +
+        'Poslali jste dar bez symbolu, s jiným symbolem nebo ještě před registrací? ' +
         'Přidejte účet, ze kterého jste platili, tlačítkem „Přidat účet“ a dřívější dary z něj vám obvykle přiřadíme také.',
     );
   });

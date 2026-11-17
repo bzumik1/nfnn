@@ -311,8 +311,8 @@ describe('Given a signed-in donor in the donor area', () => {
     const block = `${container} .missing-gift`;
     expect(text(`${block} h3`)).toBe('Poslali jste dar a nevidíte ho?');
     expect(text(`${block} .missing-gift-text`)).toBe(
-      'Platbu bez vašeho variabilního symbolu, s jiným symbolem nebo z doby před založením účtu vám zatím přiřadit neumíme. ' +
-        'Ověřte účet, ze kterého jste platili, platbou 1 Kč a dřívější dary z něj vám obvykle přiřadíme také.',
+      'Platbu bez vašeho variabilního symbolu, s jiným symbolem nebo z doby před registrací vám zatím přiřadit neumíme. ' +
+        'Ověřte bankovní účet, ze kterého jste platili, platbou 1 Kč a dřívější dary z něj vám obvykle přiřadíme také.',
     );
     const link = element(`${block} a`) as HTMLAnchorElement;
     expect(normalized(link.textContent ?? '')).toBe('Přidat účet, ze kterého jste platili');
@@ -360,7 +360,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       const account = element('header button.account-button');
       expect(normalized(account?.querySelector('.account-badge')?.textContent ?? '')).toBe('1');
-      expect(normalized(account?.textContent ?? '')).toContain('Účet 1 otázka čeká na odpověď');
+      expect(normalized(account?.textContent ?? '')).toContain('Účet JN 1 otázka čeká na odpověď');
 
       harness.fixture.destroy();
 
@@ -654,9 +654,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       const account = element('header button.account-button') as HTMLButtonElement;
       expect(normalized(account.querySelector('.visually-hidden')?.textContent ?? '')).toBe('Účet');
-      expect(normalized(account.querySelector('[aria-hidden="true"]')?.textContent ?? '')).toBe(
-        'JN',
-      );
+      expect(normalized(account.textContent ?? '')).toBe('Účet JN');
       expect(element('header a.brand')?.getAttribute('href')).toBe('/');
     });
 
@@ -664,7 +662,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
 
-      expect(text('.contact-line')).toBe('Máte dotaz k platbě? Napište nám na info@nfnn.cz');
+      expect(text('.contact-line')).toBe('Máte dotaz k platbě? Napište nám na info@nfnn.cz.');
     });
 
     it('then the donations cannot be loaded, an alert offers to try again and a retry asks for both again and shows them', async () => {
@@ -1480,8 +1478,8 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(blockOrder()).toEqual(['first-gift', 'send-gift']);
       expect(text('.first-gift h2')).toBe('Jak poslat první dar');
       expect(texts('.first-gift-steps li')).toEqual([
-        'Zvolte částku v kartě Poslat dar níže a pošlete dar na účet nadačního fondu, převodem nebo QR kódem.',
-        'Do platby uveďte svůj variabilní symbol 9876543210. Údaje i QR kód v kartě Poslat dar ho už obsahují.',
+        'Zvolte částku v kartě „Poslat dar“ níže a pošlete dar na účet nadačního fondu, převodem nebo QR kódem.',
+        'Do platby uveďte svůj variabilní symbol 9876543210. Údaje i QR kód v kartě „Poslat dar“ ho už obsahují.',
         'Jakmile platba dorazí, dar se tu objeví sám.',
       ]);
       expect(element('.first-gift-steps a')).toBeNull();
@@ -1569,7 +1567,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(text('.payments-card .gifts-tax-note')).toBe(
-        'Potvrzení k jednotlivým darům stáhnete hned, roční potvrzení za celý rok od 1. ledna dalšího roku a do daňového přiznání přiložíte buď jednotlivá, nebo roční, ne obojí, protože roční obsahuje všechny dary roku.',
+        'Potvrzení k jednotlivým darům stáhnete hned, roční za celý rok od 1. ledna dalšího roku. Do daňového přiznání přiložte buď jednotlivá, nebo roční, ne obojí: roční obsahuje všechny dary roku.',
       );
     });
 
@@ -1639,12 +1637,20 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element(yearSection(2025))?.getAttribute('aria-labelledby')).toBe('gifts-year-2025');
     });
 
-    it('then a year the API counts as completed offers its yearly receipt and the current year says it comes after the year ends', async () => {
+    it('then a year the API counts as completed offers its yearly receipt and the current year says from when it can be downloaded, as on Potvrzení', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(text(`${yearSection(2025)} .yearly-pdf`)).toBe('Stáhnout potvrzení za rok 2025 (PDF)');
       expect(element(`${yearSection(2026)} .yearly-pdf`)).toBeNull();
+      expect(text(`${yearSection(2026)} .gift-year-note`)).toBe('Ke stažení od 1. ledna 2027');
+    });
+
+    it('then on a phone the current year says in a whole sentence that its yearly receipt comes after the year ends', async () => {
+      compact.set(true);
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
       expect(text(`${yearSection(2026)} .gift-year-note`)).toBe(
         'Roční potvrzení za rok 2026 stáhnete po skončení roku, od 1. ledna 2027.',
       );
@@ -1877,7 +1883,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       const note = element(`${yearSection(2026)} .gift-year-head .gift-year-note`)!;
-      expect(normalized(note.textContent ?? '')).toContain('Roční potvrzení za rok 2026 stáhnete');
+      expect(normalized(note.textContent ?? '')).toBe('Ke stažení od 1. ledna 2027');
       const table = element(`${yearSection(2026)} table`)!;
       expect(note.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
@@ -1971,6 +1977,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(text('.bank-hint')).toContain('Okamžitá platba se tu obvykle objeví do minuty');
       expect(text('.bank-hint')).toContain('každou hodinu');
+      expect(text('.bank-hint')).toContain('když otevřete tuto stránku');
     });
 
     it('then a donor with no donations yet reads that there is no payment, finds the way to add the account of a missing gift and the standing order guide', async () => {
@@ -3431,7 +3438,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(text('.receipts-intro')).toBe(
-        'Potvrzení k jednotlivým darům stáhnete hned, roční potvrzení za celý rok od 1. ledna dalšího roku a do daňového přiznání přiložíte buď jednotlivá, nebo roční, ne obojí, protože roční obsahuje všechny dary roku. ' +
+        'Potvrzení k jednotlivým darům stáhnete hned, roční za celý rok od 1. ledna dalšího roku. Do daňového přiznání přiložte buď jednotlivá, nebo roční, ne obojí: roční obsahuje všechny dary roku. ' +
           'Když změníte jméno nebo adresu, nově stažené potvrzení dostane nové číslo a nahradí to dřívější.',
       );
     });
