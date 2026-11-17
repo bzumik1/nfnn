@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/donor-detail/admin-donor-detail.spec.ts > Given an administrator on a donor card > when both parts arrive, then a summary on top shows the symbol to copy, the e-mail, the gifts and the badges",
+    "replacement": "src/app/features/admin/donor-detail/admin-donor-detail.spec.ts > Given an administrator on a donor card > when both parts arrive, then a summary on top shows the symbol to copy, the verified e-mail, the gifts, the second factor in words and the administrator badge",
+    "reason": "Desktop polish #1188: the summary names the second factor as \"Dvoufaktorové ověření: zapnuté\" among its data instead of the \"2FA\" badge, so only the administrator badge stays; the renamed test checks the new row and that \"2FA\" is gone",
+    "contract": "docs/frontend-overview.md, donor-detail"
+  }
+]

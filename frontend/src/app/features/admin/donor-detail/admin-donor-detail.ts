@@ -29,6 +29,7 @@ import { pluralCategory } from '../../../core/i18n/plural-category';
 import { TrackedForm } from '../../../core/updates/tracked-form';
 import { BankAccount } from '../../donations/bank-account/bank-account';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
+import { BankNames } from '../../donations/bank-names';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { DonationItem } from '../../donations/donations-api';
@@ -140,6 +141,7 @@ export class AdminDonorDetail {
   private readonly reads = inject(AdministrationReads);
   private readonly connectivity = inject(Connectivity);
   private readonly receiptKeys = inject(ReceiptKeysApi);
+  private readonly bankNames = inject(BankNames);
   private readonly document = inject(DOCUMENT);
   private readonly hostname = this.document.location.hostname;
   private readonly pendingTasks = inject(PendingTasks);
@@ -502,8 +504,13 @@ export class AdminDonorDetail {
 
   protected receiptLocale(receipt: AdminReceiptResponse): string {
     return receipt.locale === 'en'
-      ? $localize`:@@admin.donorDetail.receipts.locale.en:anglicky`
-      : $localize`:@@admin.donorDetail.receipts.locale.cs:česky`;
+      ? $localize`:@@admin.donorDetail.locale.en:angličtina`
+      : $localize`:@@admin.donorDetail.locale.cs:čeština`;
+  }
+
+  protected accountName(item: BankAccountItem): string {
+    const bank = this.bankNames.nameOf(item.accountNumber);
+    return bank === null ? item.accountNumber : `${item.accountNumber}, ${bank}`;
   }
 
   protected time(isoInstant: string): string {

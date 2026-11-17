@@ -129,15 +129,23 @@ describe('Given an administrator on a donor card', () => {
       .join(' | ');
   }
 
+  function visibleText(element: Element): string {
+    const copy = element.cloneNode(true) as Element;
+    copy.querySelectorAll('.visually-hidden').forEach((hidden) => hidden.remove());
+    return (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
+  }
+
+  function accessibleText(element: Element): string {
+    return (element.textContent ?? '').replace(/\s+/g, ' ').trim();
+  }
+
   function buttonNames(root: HTMLElement): string[] {
-    return Array.from(root.querySelectorAll('button')).map(
-      (candidate) => candidate.textContent?.trim() ?? '',
-    );
+    return Array.from(root.querySelectorAll('button')).map(visibleText);
   }
 
   function button(root: HTMLElement, name: string): HTMLButtonElement {
     const found = Array.from(root.querySelectorAll('button')).find(
-      (candidate) => candidate.textContent?.trim() === name,
+      (candidate) => visibleText(candidate) === name,
     );
     if (found === undefined) {
       throw new Error(`No button "${name}" in "${root.textContent?.replace(/\s+/g, ' ').trim()}"`);
@@ -172,7 +180,7 @@ describe('Given an administrator on a donor card', () => {
     expect(text('h1')).toBe('Jana Nováková');
     const account = facts('Údaje');
     expect(account).toContain('Typ Osoba');
-    expect(account).toContain('E-mail jana@example.cz ověřen');
+    expect(account).toContain('E-mail jana@example.cz | Adresa');
     expect(account).toContain('Adresa Dlouhá 12, 400 01 Ústí nad Labem');
     expect(account).toContain('Variabilní symbol 4821937560');
     expect(account).toContain('Jazyk čeština');
@@ -187,7 +195,7 @@ describe('Given an administrator on a donor card', () => {
     ]);
   });
 
-  it('when both parts arrive, then a summary on top shows the symbol to copy, the e-mail, the gifts and the badges', async () => {
+  it('when both parts arrive, then a summary on top shows the symbol to copy, the verified e-mail, the gifts, the second factor in words and the administrator badge', async () => {
     await loaded(donorAccount({ administrator: true, secondFactorEnabled: true }));
 
     const summary = fixture.nativeElement.querySelector('.donor-summary') as HTMLElement;
@@ -201,9 +209,51 @@ describe('Given an administrator on a donor card', () => {
       'VS 4821937560 Kopírovat variabilní symbol',
       'E-mail jana@example.cz ověřen',
       'Dary 2 dary za 800 Kč',
+      'Dvoufaktorové ověření zapnuté',
     ]);
-    expect(texts('.donor-summary .badges .tag')).toEqual(['Správce', '2FA']);
+    expect(texts('.donor-summary .badges .tag')).toEqual(['Správce']);
+    expect(summary.textContent).not.toContain('2FA');
     expect(text('.donor-summary app-copy-button button')).toBe('Kopírovat variabilní symbol');
+  });
+
+  it('when both parts arrive, then every label and value of the card stands in the shared data list style', async () => {
+    await loaded(donorAccount({ secondFactorEnabled: true }));
+
+    const lists = Array.from(
+      fixture.nativeElement.querySelectorAll('dl') as NodeListOf<HTMLElement>,
+    );
+    expect(lists.length).toBe(3);
+    expect(lists.every((list) => list.classList.contains('ui-data-list'))).toBe(true);
+  });
+
+  it('when the actions that weaken the sign-in are offered, then each takes the danger style of the account removal', async () => {
+    await loaded(donorAccount({ secondFactorEnabled: true, passkeys: 1 }));
+
+    const danger = [
+      button(section('Přihlášení'), 'Vypnout dvoufaktorové ověření'),
+      button(section('Přihlášení'), 'Odebrat přístupové klíče'),
+      button(section('Bankovní účty'), 'Odebrat účet'),
+      button(section('Výmaz osobních údajů (GDPR)'), 'Vymazat osobní údaje'),
+    ];
+    expect(danger.map((each) => each.classList.contains('ui-button--danger-outline'))).toEqual([
+      true,
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  it('when the bank accounts are listed, then their pairing and removal buttons start with the visible text and name the account and its bank', async () => {
+    await loaded();
+
+    const row = section('Bankovní účty').querySelector('tbody tr') as HTMLElement;
+    const disconnect = button(row, 'Vypnout párování');
+    const remove = button(row, 'Odebrat účet');
+    expect(accessibleText(disconnect)).toBe('Vypnout párování účtu 2900233333/2010, Fio banka');
+    expect(accessibleText(remove)).toBe('Odebrat účet 2900233333/2010, Fio banka');
+    expect(accessibleText(disconnect.querySelector('.visually-hidden')!)).toBe(
+      'účtu 2900233333/2010, Fio banka',
+    );
   });
 
   it('when the card opens, then a list of links leads to each part and moves the focus there', async () => {
@@ -383,7 +433,9 @@ describe('Given an administrator on a donor card', () => {
 
     const account = facts('Údaje');
     expect(account).toContain('Typ Firma · IČO 45274649');
-    expect(account).toContain('neověřen');
+    expect(account).not.toContain('ověřen');
+    expect(text('.donor-summary')).toContain('neověřen');
+    expect(text('.donor-summary')).not.toContain('Dvoufaktorové ověření');
     expect(account).toContain('Role dárce');
     expect(facts('Přihlášení')).toContain('Dvoufaktorové ověření vypnuté');
     expect(buttonNames(section('Přihlášení'))).toEqual([]);
@@ -417,7 +469,7 @@ describe('Given an administrator on a donor card', () => {
     const receipts = sectionText('Vydaná potvrzení');
     expect(receipts).toContain('2026-000001');
     expect(receipts).toContain('Dar z 10. 10. 2026');
-    expect(receipts).toContain('17. 10. 2026 11:00 česky');
+    expect(receipts).toContain('17. 10. 2026 11:00 čeština');
     expect(receipts).toContain('platné');
   });
 
@@ -491,7 +543,7 @@ describe('Given an administrator on a donor card', () => {
 
     const receipts = sectionText('Vydaná potvrzení');
     expect(receipts).toContain('Rok 2025');
-    expect(receipts).toContain('anglicky');
+    expect(receipts).toContain('angličtina');
     expect(receipts).toContain('nahrazeno novějším');
   });
 
@@ -875,6 +927,9 @@ describe('Given an administrator on a donor card', () => {
     expect(sectionText('Bankovní účty')).toContain('Párování vypnuté');
     expect(sectionText('Bankovní účty')).toContain('vypnuto 22. 10. 2026');
 
+    expect(accessibleText(button(section('Bankovní účty'), 'Zapnout párování'))).toBe(
+      'Zapnout párování účtu 2900233333/2010, Fio banka',
+    );
     button(section('Bankovní účty'), 'Zapnout párování').click();
     fixture.detectChanges();
     button(section('Bankovní účty'), 'Ano, zapnout').click();
@@ -1612,6 +1667,18 @@ describe('Given an administrator on a donor card opened part by part', () => {
     expect(fixture.nativeElement.querySelector('.donor-summary')).not.toBeNull();
     expect(cardTitles()).toEqual([]);
     expect(crumb()).toBeNull();
+  });
+
+  it('when the details part opens on a phone without the summary above it, then its e-mail says once whether it is verified', async () => {
+    await open('udaje');
+
+    expect(fixture.nativeElement.querySelector('.donor-summary')).toBeNull();
+    const email = Array.from(
+      fixture.nativeElement.querySelectorAll('dl > div') as NodeListOf<HTMLElement>,
+    )
+      .map(textOf)
+      .filter((row) => row.startsWith('E-mail'));
+    expect(email).toEqual(['E-mail jana@example.cz ověřen']);
   });
 
   it('when the card opens, then its parts are plain rows of one card under the summary', async () => {
