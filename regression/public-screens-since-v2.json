@@ -117,13 +117,13 @@
     },
     {
       "state": "receipt-verification",
-      "since": "#1171",
-      "reason": "#1171 (Q5 of the desktop polish, both teams 12/12): from nav up html reserves the scrollbar's strip (scrollbar-gutter: stable), so on a runner with classic scrollbars the page is laid out 15 px narrower and its column sits 7.5 px further left, the QR and bank details too; the verification cards also take the card hairline --color-divider and the 65ch measure of ui-card__intro (Q2, Q22)"
+      "since": "#1171, #1347",
+      "reason": "#1171 (Q5 of the desktop polish, both teams 12/12): from nav up html reserves the scrollbar's strip (scrollbar-gutter: stable), so on a runner with classic scrollbars the page is laid out 15 px narrower and its column sits 7.5 px further left, the QR and bank details too; the verification cards also take the card hairline --color-divider and the 65ch measure of ui-card__intro (Q2, Q22); and from nav below wide the page keeps its column's width and starts on the header's left axis, the logo's, as the 404 page and the privacy policy do (team Web + desktop 6/6, R7, #1212, #1347)"
     },
     {
       "state": "receipt-verification-yearly",
-      "since": "#1171",
-      "reason": "#1171 (Q5 of the desktop polish, both teams 12/12): from nav up html reserves the scrollbar's strip (scrollbar-gutter: stable), so on a runner with classic scrollbars the page is laid out 15 px narrower and its column sits 7.5 px further left, the QR and bank details too; the verification cards also take the card hairline --color-divider and the 65ch measure of ui-card__intro (Q2, Q22)"
+      "since": "#1171, #1347",
+      "reason": "#1171 (Q5 of the desktop polish, both teams 12/12): from nav up html reserves the scrollbar's strip (scrollbar-gutter: stable), so on a runner with classic scrollbars the page is laid out 15 px narrower and its column sits 7.5 px further left, the QR and bank details too; the verification cards also take the card hairline --color-divider and the 65ch measure of ui-card__intro (Q2, Q22); and from nav below wide the page keeps its column's width and starts on the header's left axis, the logo's, as the 404 page and the privacy policy do (team Web + desktop 6/6, R7, #1212, #1347)"
     }
   ]
 }
