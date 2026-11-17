@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivationEnd, NavigationEnd, provideRouter, ResolveStart, Router } from '@angular/router';
 import { EMPTY, filter, firstValueFrom, Subject } from 'rxjs';
+import { AdministrationAccess } from '../auth/administration-access';
 import { CompactLayout } from '../layout/compact-layout';
 import { PAGE_FADE_CLASS, PAGE_FADE_HIDDEN_CLASS, PageFade } from './page-fade';
 import { PAGE_LAYER_CLASS, PAGE_TRANSITION_LONGEST_MS } from './page-transitions';
@@ -20,11 +21,18 @@ interface SeenAtArrival {
 
 let slowPage: Subject<string>;
 
-function computerWith(compact: boolean): void {
+function computerWith(compact: boolean, administrationUnlocked = true): void {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
         { path: 'darce', children: [{ path: 'prehled', component: Blank }] },
+        {
+          path: 'sprava',
+          children: [
+            { path: 'platby', component: Blank },
+            { path: 'zalohy', component: Blank },
+          ],
+        },
         {
           path: '',
           children: [
@@ -37,6 +45,10 @@ function computerWith(compact: boolean): void {
         },
       ]),
       { provide: CompactLayout, useValue: { isCompact: signal(compact).asReadonly() } },
+      {
+        provide: AdministrationAccess,
+        useValue: { unlocked: signal(administrationUnlocked).asReadonly() },
+      },
     ],
   });
 }
@@ -51,8 +63,8 @@ describe('Given a computer that animates, with O nás open', () => {
   let main: HTMLElement;
   let seenAtArrival: SeenAtArrival[];
 
-  function start(compact: boolean): Promise<boolean> {
-    computerWith(compact);
+  function start(compact: boolean, administrationUnlocked = true): Promise<boolean> {
+    computerWith(compact, administrationUnlocked);
     router = TestBed.inject(Router);
     TestBed.inject(PageFade);
     seenAtArrival = [];
@@ -279,6 +291,27 @@ describe('Given a computer that animates, with O nás open', () => {
       expect(document.documentElement.classList).not.toContain(PAGE_FADE_HIDDEN_CLASS);
     });
   }
+
+  it('when the locked administration opens another of its pages, then no copy is taken and nothing fades, as the lock panel stays as it is', async () => {
+    await start(false, false);
+    await router.navigateByUrl('/sprava/platby');
+    const copies = vi.spyOn(Node.prototype, 'cloneNode');
+
+    await router.navigateByUrl('/sprava/zalohy');
+
+    expect(seenAtArrival.at(-1)?.covered).toBe(false);
+    expect(copies).not.toHaveBeenCalled();
+    expect(document.documentElement.classList).not.toContain(PAGE_FADE_HIDDEN_CLASS);
+  });
+
+  it('when the open administration opens another of its pages, then the content fades through', async () => {
+    await start(false, true);
+    await router.navigateByUrl('/sprava/platby');
+
+    await router.navigateByUrl('/sprava/zalohy');
+
+    expect(seenAtArrival.at(-1)?.covered).toBe(true);
+  });
 
   it('when only the query changes, then nothing covers the page', async () => {
     await start(false);

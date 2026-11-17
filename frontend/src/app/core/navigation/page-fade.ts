@@ -17,9 +17,11 @@ import {
   ResolveEnd,
   Router,
 } from '@angular/router';
+import { AdministrationAccess } from '../auth/administration-access';
 import { CompactLayout } from '../layout/compact-layout';
 import { BACK_NAVIGATION } from './back-target';
 import { NavigationPreview } from './navigation-preview';
+import { pathOf } from './app-tabs';
 import { pageFadeFor } from './page-transition-kind';
 import {
   PAGE_COVER_LONGEST_MS,
@@ -36,6 +38,7 @@ export const PAGE_FADE_ARRIVING_CLASS = 'page-fade-arriving';
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 const OPEN_DIALOG = 'dialog[open]:not(.dialog--leaving)';
 const CONTENT = 'main#obsah';
+const ADMINISTRATION = '/sprava';
 const INTERRUPTIONS = ['pointerdown', 'keydown', 'wheel'] as const;
 const PRESS_ENDS = ['pointerup', 'pointercancel'] as const;
 const RENDERED_AFTER_FRAMES = 2;
@@ -61,6 +64,7 @@ export class PageFade {
   private readonly compact = inject(CompactLayout).isCompact;
   private readonly preview = inject(NavigationPreview);
   private readonly scrollHold = inject(ScrollHold);
+  private readonly administration = inject(AdministrationAccess);
   private readonly interrupt = (event: Event): void => this.finish(event.type === 'pointerdown');
   private prepared: Prepared | null = null;
   private fading: Fading | null = null;
@@ -108,6 +112,10 @@ export class PageFade {
       trigger: navigation.trigger,
       back: navigation.extras.info === BACK_NAVIGATION,
       skipLocationChange: navigation.extras.skipLocationChange === true,
+      insideLockedAdministration:
+        !this.administration.unlocked() &&
+        inAdministration(this.router.url) &&
+        inAdministration(event.urlAfterRedirects),
       from: this.router.url,
       to: event.urlAfterRedirects,
     });
@@ -280,6 +288,11 @@ function contentOf(main: HTMLElement, document: Document): HTMLElement {
   content.classList.add(`${PAGE_FADE_CLASS}__main`);
   content.append(...Array.from(main.childNodes));
   return content;
+}
+
+function inAdministration(url: string): boolean {
+  const path = pathOf(url);
+  return path === ADMINISTRATION || path.startsWith(`${ADMINISTRATION}/`);
 }
 
 function isClear(colour: string): boolean {

@@ -24,6 +24,7 @@ export type PageFadeFacts = Pick<
   NavigationFacts,
   'first' | 'reducedMotion' | 'compact' | 'dialogOpen' | 'trigger' | 'back' | 'skipLocationChange'
 > & {
+  readonly insideLockedAdministration: boolean;
   readonly from: string;
   readonly to: string;
 };
@@ -37,6 +38,7 @@ export function pageFadeFor(facts: PageFadeFacts): boolean {
     facts.trigger === 'imperative' &&
     !facts.back &&
     !facts.skipLocationChange &&
+    !facts.insideLockedAdministration &&
     pathOf(facts.from) !== pathOf(facts.to)
   );
 }
