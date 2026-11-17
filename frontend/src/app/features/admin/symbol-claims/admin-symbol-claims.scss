@@ -74,8 +74,21 @@ a.admin-name {
 }
 
 @include bp.up(nav) {
-  app-bank-account {
-    white-space: nowrap;
+  .ui-table {
+    th,
+    td {
+      padding-inline: var(--space-3);
+    }
+
+    th:first-child,
+    td:first-child {
+      padding-inline-start: var(--space-6);
+    }
+
+    th:last-child,
+    td:last-child {
+      padding-inline-end: var(--space-6);
+    }
   }
 }
 
