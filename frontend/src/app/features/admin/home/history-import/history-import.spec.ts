@@ -4,6 +4,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Connectivity } from '../../../../core/connectivity/connectivity';
+import { CompactLayout } from '../../../../core/layout/compact-layout';
 import { HistoryImportResponse, ImportStateResponse } from '../../admin-api';
 import { historyImport, importState } from '../../testing/admin-fixtures';
 import { HistoryImport } from './history-import';
@@ -18,6 +19,7 @@ describe('Given the part for older bank payments on the import card', () => {
   let http: HttpTestingController;
   let finished: ImportStateResponse[];
   const offline = signal(false);
+  const compact = signal(false);
 
   beforeEach(() => {
     vi.useFakeTimers({
@@ -25,6 +27,7 @@ describe('Given the part for older bank payments on the import card', () => {
     });
     vi.setSystemTime(new Date('2026-11-05T10:00:05Z'));
     offline.set(false);
+    compact.set(false);
     TestBed.configureTestingModule({
       imports: [HistoryImport],
       providers: [
@@ -32,6 +35,7 @@ describe('Given the part for older bank payments on the import card', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: Connectivity, useValue: { offline } },
+        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -168,13 +172,25 @@ describe('Given the part for older bank payments on the import card', () => {
       expect(alert()).toBe('');
     });
 
-    it('and they choose another day, then the hint under the field names it in Czech, whatever the language of the browser', async () => {
+    it('and they choose another day on a computer, then the hint under the field names it in Czech, whatever the language of the browser', async () => {
       await changeDate('2025-06-01');
 
       const hint = fixture.nativeElement.querySelector(
         `#${dateField().getAttribute('aria-describedby')?.split(' ')[0]}`,
       );
       expect(hint?.textContent).toContain('Vybraný den: 1.\u00a06. 2025.');
+    });
+
+    it('and they choose another day on a phone, then the hint only explains repeats, as the phone shows the date in its own words', async () => {
+      compact.set(true);
+      await changeDate('2025-06-01');
+
+      const hint = fixture.nativeElement.querySelector(
+        `#${dateField().getAttribute('aria-describedby')?.split(' ')[0]}`,
+      );
+      expect((hint?.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+        'Platby za posledních 89 dní web stáhne i bez odemčení. Načíst je můžete i opakovaně: platby, které web už má, se nezdvojí.',
+      );
     });
 
     it('and they press the button, then the chosen day is posted and the button stays focusable while it waits for the bank', async () => {

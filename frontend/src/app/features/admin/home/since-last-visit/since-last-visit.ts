@@ -6,6 +6,7 @@ import {
   effect,
   ElementRef,
   inject,
+  input,
   signal,
   untracked,
   viewChild,
@@ -38,7 +39,7 @@ interface VisitFigure {
   styleUrl: './since-last-visit.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '[hidden]': "dismissed() || state().kind === 'closed'",
+    '[hidden]': "waiting() || dismissed() || state().kind === 'closed'",
     '(document:visibilitychange)': 'visibilityChanged()',
   },
 })
@@ -48,6 +49,8 @@ export class SinceLastVisit {
   private readonly document = inject(DOCUMENT);
   private readonly title = viewChild.required<ElementRef<HTMLElement>>('title');
   private readonly visible = signal(this.document.visibilityState !== 'hidden');
+
+  readonly waiting = input(false);
 
   protected readonly state = this.visit.state;
   protected readonly dismissed = this.visit.dismissed;

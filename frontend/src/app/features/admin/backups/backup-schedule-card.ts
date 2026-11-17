@@ -15,16 +15,8 @@ import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-inv
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FieldMessages, FormField } from '../../../shared/ui/form-field/form-field';
 import { AdminApi, BackupScheduleResponse } from '../admin-api';
-import { BACKUP_DAYS, describePlan, formatPlanTime, samePlan } from './backup-plan';
+import { BACKUP_DAYS, describePlan, samePlan } from './backup-plan';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
-
-const BACKUP_TIME_HINT = $localize`:@@admin.backups.schedule.backupTime.hint:Čas, kdy se databáze každý den zálohuje.`;
-
-function chosenTime(time: string): string {
-  return time
-    ? $localize`:@@admin.backups.schedule.time.chosen:Vybraný čas: ${formatPlanTime(time)}:time:.`
-    : '';
-}
 
 const TIME_MESSAGES: FieldMessages = {
   required: $localize`:@@admin.backups.schedule.time.required:Zadejte prosím čas, například 3:00.`,
@@ -49,10 +41,6 @@ export class BackupScheduleCard {
   protected readonly backupTime = linkedSignal(() => this.schedule().backupTime);
   protected readonly testRestoreDay = linkedSignal(() => this.schedule().testRestoreDay);
   protected readonly testRestoreTime = linkedSignal(() => this.schedule().testRestoreTime);
-  protected readonly backupTimeHint = computed(() =>
-    [chosenTime(this.backupTime()), BACKUP_TIME_HINT].filter(Boolean).join(' '),
-  );
-  protected readonly testRestoreTimeHint = computed(() => chosenTime(this.testRestoreTime()));
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly status = signal<string | null>(null);

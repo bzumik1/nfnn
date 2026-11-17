@@ -310,6 +310,54 @@ describe('Given an administrator on the administration home', () => {
 
       expect(order()).toEqual(['since', 'attention']);
     });
+
+    it('then while the visit is checked the summary waits out of sight, and once it settles the cards keep their order whatever the check says next', async () => {
+      await visit({ kind: 'closed' });
+      const attention = fixture.nativeElement.querySelector('.attention');
+
+      await visit({ kind: 'checking' });
+
+      expect(order()).toEqual(['attention', 'since']);
+      expect(fixture.nativeElement.querySelector('app-since-last-visit').hidden).toBe(true);
+
+      await visit(readyVisit(false));
+
+      expect(order()).toEqual(['attention', 'since']);
+      expect(fixture.nativeElement.querySelector('app-since-last-visit').hidden).toBe(false);
+
+      await visit({ kind: 'checking' });
+      await visit(readyVisit(true));
+
+      expect(order()).toEqual(['attention', 'since']);
+      expect(fixture.nativeElement.querySelector('.attention')).toBe(attention);
+    });
+
+    it('then a summary with something new that settles on top stays there when nothing is new any more', async () => {
+      await visit(readyVisit(true));
+      await visit({ kind: 'checking' });
+      await visit(readyVisit(false));
+
+      expect(order()).toEqual(['since', 'attention']);
+    });
+
+    it('then a link they focused in what needs attention keeps the focus while the summary settles above it', async () => {
+      await respond(
+        importState({
+          coveredFrom: null,
+          coveredTo: null,
+          lastAttemptedAt: null,
+          lastSucceededAt: null,
+        }),
+      );
+      const link = fixture.nativeElement.querySelector('.attention-import a') as HTMLElement;
+      link.focus();
+
+      await visit(readyVisit(true));
+
+      expect(order()).toEqual(['since', 'attention']);
+      expect(fixture.nativeElement.querySelector('.attention-import a')).toBe(link);
+      expect(document.activeElement).toBe(link);
+    });
   });
 
   async function finishRun(added: number): Promise<void> {

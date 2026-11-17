@@ -1,13 +1,14 @@
 <div class="ui-page container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
-  @if (compact() || !summaryFirst()) {
-    <ng-container *ngTemplateOutlet="attentionBlock" />
+  @if (summaryAbove()) {
+    <app-since-last-visit class="since" />
   }
-  <app-since-last-visit class="since" />
+  <ng-container *ngTemplateOutlet="attentionBlock" />
+  @if (!summaryAbove()) {
+    <app-since-last-visit class="since" [waiting]="summaryWaits()" />
+  }
   @if (compact()) {
     <app-admin-section-rows class="sections" [label]="sectionsLabel" [groups]="sections()" />
-  } @else if (summaryFirst()) {
-    <ng-container *ngTemplateOutlet="attentionBlock" />
   }
 
   <div class="admin-status">

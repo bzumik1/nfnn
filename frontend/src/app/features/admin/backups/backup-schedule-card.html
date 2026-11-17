@@ -29,7 +29,8 @@
         <app-form-field
           label="Denní záloha"
           i18n-label="@@admin.backups.schedule.backupTime"
-          [hint]="backupTimeHint()"
+          hint="Čas, kdy se databáze každý den zálohuje."
+          i18n-hint="@@admin.backups.schedule.backupTime.hint"
           [messages]="timeMessages"
         >
           <input
@@ -63,7 +64,6 @@
         <app-form-field
           label="Čas zkušební obnovy"
           i18n-label="@@admin.backups.schedule.testRestoreTime"
-          [hint]="testRestoreTimeHint()"
           [messages]="timeMessages"
         >
           <input

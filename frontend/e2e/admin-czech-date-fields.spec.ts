@@ -52,7 +52,7 @@ async function rememberedSession(page: Page): Promise<void> {
   await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
 }
 
-test.describe('Given an administrator whose browser draws native date and time fields in its own order', () => {
+test.describe('Given an administrator whose browser draws native date fields in its own order', () => {
   test.use({ locale: 'cs-CZ', timezoneId: 'Europe/Prague' });
 
   test.beforeEach(async ({ page }) => {
@@ -68,28 +68,42 @@ test.describe('Given an administrator whose browser draws native date and time f
     await rememberedSession(page);
   });
 
-  test('when they open the older payments, the payments and the backups, then every date and time field names the chosen value in Czech under it', async ({
+  test('when they open the older payments, the payments and the backups on a computer, then every date field names the chosen day in Czech under it and the time fields keep their own hints', async ({
     page,
   }) => {
     await page.goto('/sprava');
     await expect(page.getByLabel('Stáhnout platby od')).toHaveAccessibleDescription(
-      /^Vybraný den: 1\.\s1\. 2026\./,
+      /^Vybraný den: 1\.\s1\. 2026\. Platby za posledních 89 dní/,
     );
 
     await page.goto('/sprava/platby?od=2026-10-01&do=2026-10-05');
     await expect(page.locator('#payments-from')).toHaveAccessibleDescription(
-      /^Vybraný den: 1\.\s10\. 2026$/,
+      /^Vybraný den: 1\.\s10\. 2026\.$/,
     );
     await expect(page.locator('#payments-to')).toHaveAccessibleDescription(
-      /^Vybraný den: 5\.\s10\. 2026$/,
+      /^Vybraný den: 5\.\s10\. 2026\.$/,
     );
 
     await page.goto('/sprava/zalohy');
     await expect(page.getByLabel('Denní záloha')).toHaveAccessibleDescription(
-      'Vybraný čas: 3:00. Čas, kdy se databáze každý den zálohuje.',
+      'Čas, kdy se databáze každý den zálohuje.',
     );
-    await expect(page.getByLabel('Čas zkušební obnovy')).toHaveAccessibleDescription(
-      'Vybraný čas: 4:00.',
+    await expect(page.getByLabel('Čas zkušební obnovy')).toHaveAccessibleDescription('');
+  });
+
+  test('when they open the older payments and the payments on a phone, then no Czech line repeats the chosen day, as the phone shows it in its own words', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto('/sprava');
+    await expect(page.getByLabel('Stáhnout platby od')).toHaveAccessibleDescription(
+      /^Platby za posledních 89 dní/,
     );
+
+    await page.goto('/sprava/platby?od=2026-10-01&do=2026-10-05');
+    await expect(page.locator('#payments-from')).toHaveValue('2026-10-01');
+    await expect(page.locator('#payments-from')).toHaveAccessibleDescription('');
+    await expect(page.locator('#payments-to')).toHaveAccessibleDescription('');
   });
 });

@@ -187,7 +187,10 @@ export class AdminPayments {
 
   protected readonly unpairing = signal<string | null>(null);
   protected readonly opened = signal<AdminPaymentResponse | null>(null);
-  protected readonly rows = inject(CompactLayout).listsAsRows;
+  private readonly layout = inject(CompactLayout);
+  protected readonly rows = this.layout.listsAsRows;
+  protected readonly chosenFrom = computed(() => this.chosenOn(this.filters().from));
+  protected readonly chosenTo = computed(() => this.chosenOn(this.filters().to));
   protected readonly months = computed(() => byMonth(this.items()));
   protected readonly changedMeanwhile = signal(false);
   private afterReload: (() => void) | null = null;
@@ -296,8 +299,8 @@ export class AdminPayments {
     this.typed.next(value);
   }
 
-  protected chosenDay(isoDate: string): string {
-    return $localize`:@@admin.payments.period.chosen:Vybraný den: ${formatDonationDate(isoDate)}:date:`;
+  private chosenOn(isoDate: string): string | null {
+    return this.layout.isCompact() || !isoDate ? null : chosenDay(isoDate);
   }
 
   protected choosePeriod(bound: 'from' | 'to', value: string): void {
@@ -844,4 +847,8 @@ function emailsById(list: DonorAccountListResponse): ReadonlyMap<string, string>
 function senderSurname(payment: AdminPaymentResponse): string {
   const first = (payment.counterpartyName ?? '').trim().split(/\s+/)[0] ?? '';
   return first.length >= 2 ? first : '';
+}
+
+function chosenDay(isoDate: string): string {
+  return $localize`:@@admin.payments.period.chosen:Vybraný den: ${formatDonationDate(isoDate)}:date:.`;
 }

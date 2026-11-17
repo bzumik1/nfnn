@@ -24,6 +24,7 @@ import { FormControlDirective } from '../../../../shared/ui/form-field/form-cont
 import { FieldMessages, FormField } from '../../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { CompactLayout } from '../../../../core/layout/compact-layout';
 import {
   formatBankTime,
   formatDonationDate,
@@ -76,6 +77,7 @@ export class HistoryImport {
   private readonly api = inject(AdminApi);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly compact = inject(CompactLayout).isCompact;
   private readonly fromInput = viewChild<ElementRef<HTMLInputElement>>('fromInput');
   private readonly submitButton = viewChild<ElementRef<HTMLButtonElement>>('submitButton');
   private polling: Subscription | null = null;
@@ -93,7 +95,7 @@ export class HistoryImport {
   });
   protected readonly fromHint = computed(() => {
     const day = this.from();
-    return day
+    return day && !this.compact()
       ? `${$localize`:@@admin.home.history.from.chosen:Vybraný den: ${formatDonationDate(day)}:date:.`} ${FROM_HINT}`
       : FROM_HINT;
   });
