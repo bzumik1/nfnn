@@ -6,6 +6,14 @@ import { Disclosure } from './disclosure';
   imports: [Disclosure],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <button
+      id="toggle"
+      type="button"
+      [attr.aria-expanded]="!closed()"
+      (click)="closed.set(!closed())"
+    >
+      Změnit
+    </button>
     <div id="panel" appDisclosure [closed]="closed()"><button type="button">Uložit</button></div>
     @if (asking()) {
       <div id="question" appDisclosure><button type="button">Ponechat</button></div>
@@ -45,6 +53,17 @@ describe('Given a disclosure', () => {
 
     expect(byId('panel').hidden).toBe(false);
     expect(byId('panel').hasAttribute('inert')).toBe(false);
+  });
+
+  it('when its toggle closes it, then it turns inert in the same update in which aria-expanded turns false', async () => {
+    fixture.componentInstance.closed.set(false);
+    await settle();
+
+    byId('toggle').click();
+    fixture.detectChanges();
+
+    expect(byId('toggle').getAttribute('aria-expanded')).toBe('false');
+    expect(byId('panel').hasAttribute('inert')).toBe(true);
   });
 
   it('when it closes again, then it is inert at once, while its height may still be closing', async () => {

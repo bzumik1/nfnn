@@ -130,6 +130,16 @@ describe('Given a disclosure that opens and closes through motion.expand', () =>
     }
   });
 
+  it('when it closes, then no pointer reaches it while its height still closes', () => {
+    for (const closing of [
+      blocksOf(css, '.panel[hidden]')[0] ?? '',
+      plainOf(css, '.panel--leaving'),
+    ]) {
+      assert.equal(valueOf(closing, 'pointer-events'), 'none');
+    }
+    assert.equal(valueOf(plainOf(css, '.panel'), 'pointer-events'), '');
+  });
+
   it('when it carries hidden and has closed, then it leaves the layout, so a closed panel adds no gap', () => {
     assert.equal(valueOf(blocksOf(css, '.panel[hidden]')[0] ?? '', 'display'), 'none');
   });
