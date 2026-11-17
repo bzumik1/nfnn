@@ -151,10 +151,14 @@ async function rightOfCardContent(field: Locator): Promise<{ field: number; card
     if (card === null) {
       throw new Error('the field is outside a card');
     }
-    const cardBox = card.getBoundingClientRect();
+    const cell = element.closest('.ui-card__body') ?? card;
+    const style = getComputedStyle(cell);
     return {
       field: element.getBoundingClientRect().right,
-      card: cardBox.right - parseFloat(getComputedStyle(card).paddingRight),
+      card:
+        cell.getBoundingClientRect().right -
+        parseFloat(style.paddingRight) -
+        parseFloat(style.borderRightWidth),
     };
   });
 }
