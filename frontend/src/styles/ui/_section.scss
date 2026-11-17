@@ -91,7 +91,7 @@
   box-shadow: var(--shadow-cta-hero);
 
   @include motion.hover(background-color) {
-    &:not(:disabled, [aria-disabled='true']) {
+    &:not(.ui-cta--ghost, :disabled, [aria-disabled='true']) {
       background-color: var(--color-accent-fill-hover);
     }
   }

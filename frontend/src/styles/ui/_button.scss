@@ -46,7 +46,7 @@
   font-weight: var(--weight-bold);
   box-shadow: var(--shadow-button-sm);
 
-  @include motion.hover(background-color) {
+  @include motion.hover(background-color, opacity) {
     &:not(:disabled, [aria-disabled='true']) {
       background-color: var(--color-accent-fill-hover);
     }
