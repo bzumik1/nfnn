@@ -118,7 +118,9 @@ test.describe('Given a freshly installed site', () => {
     );
     await page.getByRole('button', { name: 'Zaregistrovat se' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
-    await expect(page.getByRole('dialog').getByLabel('E-mail')).toHaveValue('spravce@example.cz');
+    await expect(page.getByRole('dialog').getByLabel('E\u2011mail')).toHaveValue(
+      'spravce@example.cz',
+    );
   });
 
   test('when the operator saves without a test e-mail, then the page warns first and saves only on request', async ({

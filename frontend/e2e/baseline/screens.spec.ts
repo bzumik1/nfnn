@@ -190,7 +190,7 @@ const SCREENS: Screen[] = [
         route.fulfill(session(200)),
       );
       await page.goto('/potvrzeni-emailu#token=abc');
-      await expect(page.getByRole('heading', { name: 'E-mail je potvrzený' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'E\u2011mail je potvrzený' })).toBeVisible();
     },
   },
   {

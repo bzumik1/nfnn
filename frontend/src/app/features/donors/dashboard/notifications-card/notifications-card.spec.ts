@@ -5,6 +5,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { authInterceptor } from '../../../../core/auth/auth-interceptor';
+import { PageReload } from '../../../../core/reload/page-reload';
+import { ReloadPlace } from '../../../../core/reload/reload-place';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
 import {
@@ -77,6 +79,8 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
   let fixture: ComponentFixture<NotificationsCard>;
   let http: HttpTestingController;
   let push: FakePush;
+  let reloadFocusing: Mock<(target: string) => boolean>;
+  let focusAfterReload: string | null;
 
   async function signIn(session: string | undefined, roles: string[] = ['DONOR']): Promise<void> {
     TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
@@ -138,6 +142,8 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
   beforeEach(async () => {
     localStorage.clear();
     push = fakePush();
+    reloadFocusing = vi.fn(() => true);
+    focusAfterReload = null;
     await TestBed.configureTestingModule({
       imports: [NotificationsCard],
       providers: [
@@ -146,6 +152,11 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
         provideRouter([]),
         { provide: SERVICE_WORKER_PUSH, useFactory: () => push },
         { provide: DonorPushApi, useClass: DonorPushApi },
+        { provide: PageReload, useFactory: () => ({ reloadFocusing }) },
+        {
+          provide: ReloadPlace,
+          useFactory: () => ({ takeFocus: (target: string) => target === focusAfterReload }),
+        },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -524,22 +535,47 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
     expect(sentence?.classList).toContain('notifications-state');
   });
 
-  it('when the part of the site that delivers them is not running yet, then the card asks to try again without telling to reload the page, and trying again offers them once it runs', async () => {
+  describe('when the part of the site that delivers them is not running yet', () => {
+    beforeEach(async () => {
+      withPushApi();
+      push = { ...push, isEnabled: false };
+      await signIn('REMEMBERED');
+      await open();
+    });
+
+    it('then the card says so without telling to reload the page and offers no switch', () => {
+      expect(text()).toContain('Prohlížeč zatím nespustil část webu, která upozornění doručuje.');
+      expect(text()).not.toContain('Načtěte stránku znovu.');
+      expect(button('Zapnout na tomto zařízení')).toBeUndefined();
+    });
+
+    it('then trying again loads the page again and asks for the focus on the card heading after it', () => {
+      button('Zkusit znovu')!.click();
+
+      expect(reloadFocusing).toHaveBeenCalledWith('notifications-title');
+      http.expectNone({ method: 'GET', url: PUSH_URL });
+    });
+
+    it('then trying again within a minute of the last reload checks again in the page and offers them once it runs', async () => {
+      reloadFocusing.mockReturnValue(false);
+      Object.assign(push, { isEnabled: true });
+
+      button('Zkusit znovu')!.click();
+      http.expectOne({ method: 'GET', url: PUSH_URL }).flush(pushView());
+      await settle();
+
+      expect(button('Zapnout na tomto zařízení')).toBeTruthy();
+    });
+  });
+
+  it('when the page starts after the card asked to load it again, then the focus goes to the card heading', async () => {
+    focusAfterReload = 'notifications-title';
     withPushApi();
     push = { ...push, isEnabled: false };
     await signIn('REMEMBERED');
     await open();
 
-    expect(text()).toContain('Prohlížeč zatím nespustil část webu, která upozornění doručuje.');
-    expect(text()).not.toContain('Načtěte stránku znovu.');
-    expect(button('Zapnout na tomto zařízení')).toBeUndefined();
-
-    Object.assign(push, { isEnabled: true });
-    button('Zkusit znovu')!.click();
-    http.expectOne({ method: 'GET', url: PUSH_URL }).flush(pushView());
-    await settle();
-
-    expect(button('Zapnout na tomto zařízení')).toBeTruthy();
+    expect(document.activeElement?.id).toBe('notifications-title');
   });
 
   it('when the card cannot load, then it says so and loads again on request', async () => {

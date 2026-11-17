@@ -275,13 +275,15 @@ test.describe('Given a visitor who wants an account without a password', () => {
     await dialog.getByLabel('Ulice a číslo').fill('Dlouhá 12');
     await dialog.getByLabel('Město').fill('Ústí nad Labem');
     await dialog.getByLabel('PSČ').fill('400 01');
-    await dialog.getByLabel('E-mail').fill('jana@example.cz');
+    await dialog.getByLabel('E\u2011mail').fill('jana@example.cz');
     await dialog.getByRole('radio', { name: 'Přístupovým klíčem' }).click();
 
     await expect(dialog.getByLabel('Heslo', { exact: true })).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
 
-    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeVisible();
+    await expect(
+      dialog.getByRole('heading', { name: 'Zkontrolujte si e\u2011mail' }),
+    ).toBeVisible();
     expect(registration['password']).toBeNull();
   });
 

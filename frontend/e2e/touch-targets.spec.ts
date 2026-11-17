@@ -167,4 +167,16 @@ test.describe('Given a visitor tapping small controls on a phone', () => {
 
     await expectFingerSized(main.getByRole('button', { name: 'Jak přiřazujeme platby?' }));
   });
+
+  test('when a signed-in donor taps near the edge of Zkusit znovu in Upozornění on Údaje a zabezpečení, then a finger-sized area around it still reaches it, or the control beside it, never empty space', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, twoGifts);
+    await rememberedDonorSession(page);
+    await page.goto('/darce/udaje');
+
+    await expectFingerSized(
+      page.locator('.notifications').getByRole('button', { name: 'Zkusit znovu' }),
+    );
+  });
 });

@@ -26,7 +26,7 @@ test.describe('Given a donor who forgot the password', () => {
     await page.getByRole('button', { name: 'Odeslat odkaz' }).click();
 
     await expect(
-      page.getByRole('dialog').getByRole('heading', { name: 'Zkontrolujte si e-mail' }),
+      page.getByRole('dialog').getByRole('heading', { name: 'Zkontrolujte si e\u2011mail' }),
     ).toBeFocused();
     await expect(page.getByRole('dialog')).toContainText(
       'Pokud k adrese jana@example.cz existuje účet',

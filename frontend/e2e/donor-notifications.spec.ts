@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { mockDonorApi, openDonorSection, signIn } from './donor-session';
+import { mockDonorApi, openDonorSection, rememberedDonorSession, signIn } from './donor-session';
 import {
   DEVICE_AUTH,
   DEVICE_ENDPOINT,
@@ -99,5 +99,51 @@ test.describe('Given a donor on Údaje a zabezpečení of a browser that can rec
       { method: 'DELETE', path: `${PUSH}/device`, body: null },
     ]);
     expect((await deviceRecord(page)).unsubscribed).toBe(1);
+  });
+});
+
+test.describe('Given a donor on Údaje a zabezpečení of a browser whose part of the site that delivers notifications is not running', () => {
+  test('when they press Zkusit znovu, then the page loads again and the focus goes to the heading of the card', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedDonorSession(page);
+    await page.goto('/darce/udaje');
+    const card = page.locator('.notifications');
+    await expect(card).toContainText(
+      'Prohlížeč zatím nespustil část webu, která upozornění doručuje.',
+    );
+    await page.evaluate(() => Object.assign(window, { e2eBeforeReload: true }));
+
+    const reloaded = page.waitForEvent('load');
+    await card.getByRole('button', { name: 'Zkusit znovu' }).click();
+    await reloaded;
+
+    await expect.poll(() => page.evaluate(() => 'e2eBeforeReload' in window)).toBe(false);
+    await expect(page).toHaveURL(/\/darce\/udaje$/);
+    await expect(card.getByRole('heading', { name: 'Upozornění' })).toBeFocused();
+  });
+
+  test('when they press Zkusit znovu again within a minute, then the page stays and checks again in place', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedDonorSession(page);
+    await page.goto('/darce/udaje');
+    const card = page.locator('.notifications');
+    const reloaded = page.waitForEvent('load');
+    await card.getByRole('button', { name: 'Zkusit znovu' }).click();
+    await reloaded;
+    await expect(card.getByRole('heading', { name: 'Upozornění' })).toBeFocused();
+    await page.evaluate(() => Object.assign(window, { e2eBeforeRetry: true }));
+
+    const checked = page.waitForRequest((request) => new URL(request.url()).pathname === PUSH);
+    await card.getByRole('button', { name: 'Zkusit znovu' }).click();
+    await checked;
+
+    await expect(card).toContainText(
+      'Prohlížeč zatím nespustil část webu, která upozornění doručuje.',
+    );
+    expect(await page.evaluate(() => 'e2eBeforeRetry' in window)).toBe(true);
   });
 });

@@ -707,7 +707,7 @@ describe('Given the sign-in dialog', () => {
 
       expect(element('.ui-field-error').textContent).toContain('E-mail ještě není potvrzený');
       expect(element('.form-note .link-btn').textContent).toContain(
-        'Poslat ověřovací e-mail znovu',
+        'Poslat ověřovací e\u2011mail znovu',
       );
 
       await click('.form-note .link-btn');
@@ -717,7 +717,9 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(element('.form-status').closest('[role="status"]')).not.toBeNull();
-      expect(element('.form-status').textContent).toContain('Ověřovací e-mail jsme poslali znovu.');
+      expect(element('.form-status').textContent).toContain(
+        'Ověřovací e\u2011mail jsme poslali znovu.',
+      );
       expect(element('.form-note')).toBeNull();
       expect(element('.ui-field-error')).toBeNull();
       expect(navigate).not.toHaveBeenCalled();
@@ -1080,7 +1082,7 @@ describe('Given the sign-in dialog', () => {
       expect(dialog.isOpen()).toBe(true);
       expect(navigate).not.toHaveBeenCalled();
       expect(TestBed.inject(AuthStore).signedIn()).toBe(false);
-      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
+      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e\u2011mail');
       expect(element('.reset-success [role="status"]').textContent).toContain('jana@example.cz');
       expect(element('.register-form')).toBeNull();
       expect(element('.tab-switch')).toBeNull();
@@ -1271,7 +1273,7 @@ describe('Given the sign-in dialog', () => {
       await fillInPerson();
       await click('.type-switch[aria-labelledby="register-method-label"] button:nth-child(2)');
       expect(element('#register-password')).toBeNull();
-      expect(element('.passkey-later').textContent).toContain('hned po potvrzení e-mailu');
+      expect(element('.passkey-later').textContent).toContain('hned po potvrzení e\u2011mailu');
 
       await submit('.register-form');
       const request = http.expectOne('/api/donors/auth/register');
@@ -1279,7 +1281,7 @@ describe('Given the sign-in dialog', () => {
       request.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
+      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e\u2011mail');
     });
 
     it('in a browser without passkeys, then only the password is offered', async () => {
@@ -1625,7 +1627,7 @@ describe('Given the sign-in dialog', () => {
       request.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
+      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e\u2011mail');
       expect(element('.reset-success').textContent).toContain(
         'Pokud k\u00a0adrese jana@example.cz existuje účet',
       );
@@ -1657,7 +1659,7 @@ describe('Given the sign-in dialog', () => {
 
       http.expectNone('/api/donors/auth/password-reset/request');
       expect(element('#reset-email-error').textContent).toContain(
-        'Zadejte e-mail ve tvaru jana@example.cz.',
+        'Zadejte e\u2011mail ve tvaru jana@example.cz.',
       );
     });
 
@@ -1736,7 +1738,7 @@ describe('Given the sign-in dialog', () => {
       await render('reset');
 
       expect(words('.step-lead')).toBe(
-        `Zadejte svůj e-mail a${NBSP}pošleme vám odkaz pro obnovení hesla.`,
+        `Zadejte svůj e\u2011mail a${NBSP}pošleme vám odkaz pro obnovení hesla.`,
       );
     });
 
@@ -1751,7 +1753,7 @@ describe('Given the sign-in dialog', () => {
 
       expect(words('.reset-success p:not(.reset-hint)')).toContain(`Pokud k${NBSP}adrese`);
       expect(words('.reset-hint')).toBe(
-        'E-mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.',
+        'E\u2011mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.',
       );
     });
   });

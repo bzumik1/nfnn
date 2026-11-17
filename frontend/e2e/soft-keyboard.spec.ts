@@ -82,7 +82,7 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
 
       await expectAboveKeyboard(page.locator('#login-password'));
       await expectAboveKeyboard(dialog.getByRole('button', { name: 'Přihlásit se', exact: true }));
-      await expect(dialog.getByText('Vyplňte prosím e-mail.')).toHaveCount(0);
+      await expect(dialog.getByText('Vyplňte prosím e\u2011mail.')).toHaveCount(0);
     });
 
     test('and presses the Next key under the e-mail, then the password takes the focus and the form is not sent yet', async ({

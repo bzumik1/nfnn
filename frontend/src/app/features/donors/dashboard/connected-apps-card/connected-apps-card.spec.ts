@@ -88,6 +88,13 @@ describe("Given an administrator's connected applications card", () => {
     expect(element('.connection-scopes').textContent).toContain('Změny:');
   });
 
+  it('when Claude is connected, then the dot between the dates is bound to the date before it, so a wrapped line never starts with it', async () => {
+    http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
+    await settle();
+
+    expect(element('.connection-dates').textContent).toMatch(/2026\u00a0· naposledy použito/);
+  });
+
   it('when the administrator disconnects Claude, then the API is told, the row disappears and the status says so', async () => {
     http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
     await settle();

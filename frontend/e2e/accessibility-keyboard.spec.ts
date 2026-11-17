@@ -206,7 +206,7 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
     await page.keyboard.press('Enter');
 
     await expect(changeEmail).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.getByLabel('Nový e-mail')).toBeFocused();
+    await expect(page.getByLabel('Nový e\u2011mail')).toBeFocused();
 
     await page.getByRole('button', { name: 'Zrušit', exact: true }).focus();
     await page.keyboard.press('Enter');

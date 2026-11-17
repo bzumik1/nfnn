@@ -428,8 +428,8 @@ test.describe('Given a signed-in donor', () => {
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
     await page.getByRole('button', { name: 'Změnit e-mail' }).click();
-    await expect(page.getByLabel('Nový e-mail')).toBeFocused();
-    await page.getByLabel('Nový e-mail').fill('jana.nova@example.cz');
+    await expect(page.getByLabel('Nový e\u2011mail')).toBeFocused();
+    await page.getByLabel('Nový e\u2011mail').fill('jana.nova@example.cz');
     await page.getByLabel('Současné heslo').fill('correct horse battery');
     await page.getByRole('button', { name: 'Poslat potvrzovací odkaz' }).click();
 
@@ -479,7 +479,7 @@ test.describe('Given a signed-in donor', () => {
 
     await row.getByRole('button', { name: 'Zrušit změnu e-mailu' }).click();
     await expect(
-      page.getByRole('status').filter({ hasText: 'Změnu e-mailu jsme zrušili.' }),
+      page.getByRole('status').filter({ hasText: 'Změnu e\u2011mailu jsme zrušili.' }),
     ).toBeVisible();
     await expect(page.locator('.account-pending')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Změnit e-mail' })).toBeFocused();
@@ -504,13 +504,13 @@ test.describe('Given a signed-in donor', () => {
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
     await page.getByRole('button', { name: 'Změnit e-mail' }).click();
-    await page.getByLabel('Nový e-mail').fill('jana.nova@example.cz');
+    await page.getByLabel('Nový e\u2011mail').fill('jana.nova@example.cz');
     await page.getByLabel('Současné heslo').fill('wrong horse battery');
     await page.getByRole('button', { name: 'Poslat potvrzovací odkaz' }).click();
 
     await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
       'Nesprávné současné heslo. Zadejte prosím heslo, kterým se teď přihlašujete.',
     );
-    await expect(page.getByLabel('Nový e-mail')).toHaveValue('jana.nova@example.cz');
+    await expect(page.getByLabel('Nový e\u2011mail')).toHaveValue('jana.nova@example.cz');
   });
 });

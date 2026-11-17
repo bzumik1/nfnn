@@ -21,6 +21,8 @@ import {
 } from '../../../core/push/service-worker-push';
 import { AdminPushResponse } from '../admin-api';
 import { adminPush, PUSH_PUBLIC_KEY, pushSubscription } from '../testing/admin-fixtures';
+import { PageReload } from '../../../core/reload/page-reload';
+import { ReloadPlace } from '../../../core/reload/reload-place';
 import { AdminAlerts } from './admin-alerts';
 import { DeviceAlertMarks } from './device-alert-marks';
 
@@ -77,6 +79,8 @@ describe('Given an administrator on the alerts page', () => {
   let http: HttpTestingController;
   let push: FakePush;
   let badge: { show: Mock<(count: number) => void> };
+  let reloadFocusing: Mock<(target: string) => boolean>;
+  let focusAfterReload: string | null;
 
   async function open(answer: object = adminPush()): Promise<void> {
     fixture = TestBed.createComponent(AdminAlerts);
@@ -173,6 +177,8 @@ describe('Given an administrator on the alerts page', () => {
     localStorage.clear();
     push = fakePush();
     badge = { show: vi.fn() };
+    reloadFocusing = vi.fn(() => true);
+    focusAfterReload = null;
     await TestBed.configureTestingModule({
       imports: [AdminAlerts],
       providers: [
@@ -181,6 +187,11 @@ describe('Given an administrator on the alerts page', () => {
         provideRouter([]),
         { provide: SERVICE_WORKER_PUSH, useFactory: () => push },
         { provide: AppBadge, useFactory: () => badge },
+        { provide: PageReload, useFactory: () => ({ reloadFocusing }) },
+        {
+          provide: ReloadPlace,
+          useFactory: () => ({ takeFocus: (target: string) => target === focusAfterReload }),
+        },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -770,6 +781,54 @@ describe('Given an administrator on the alerts page', () => {
     await settle();
 
     expect(button('Zapnout upozornění na tomto zařízení')).toBeTruthy();
+  });
+
+  describe('when no worker controls the page and none takes over', () => {
+    beforeEach(async () => {
+      withPushApi();
+      push = { ...fakePush(), isEnabled: false } as FakePush;
+      await open();
+    });
+
+    it('then the page says what to do when trying again does not help, without telling to reload the page', () => {
+      expect(sectionText('Toto zařízení')).toContain(
+        'Prohlížeč zatím nespustil část webu, která upozornění doručuje. Pokud zpráva nezmizí, prohlížeč ji nejspíš nepovoluje, například v anonymním okně.',
+      );
+      expect(sectionText('Toto zařízení')).not.toContain('Načtěte stránku znovu');
+    });
+
+    it('then trying again loads the page again and asks for the focus on the device heading after it', () => {
+      button('Zkusit znovu').click();
+
+      expect(reloadFocusing).toHaveBeenCalledWith('alerts-device-title');
+      http.expectNone({ method: 'GET', url: PUSH_URL });
+    });
+
+    it('then trying again within a minute of the last reload checks again in the page and offers them once a worker runs', async () => {
+      reloadFocusing.mockReturnValue(false);
+      (push as { isEnabled: boolean }).isEnabled = true;
+
+      button('Zkusit znovu').click();
+      http.expectOne({ method: 'GET', url: PUSH_URL }).flush(adminPush());
+      await settle();
+
+      expect(button('Zapnout upozornění na tomto zařízení')).toBeTruthy();
+    });
+  });
+
+  it('when the page starts after it asked to load itself again, then the focus goes to the device heading', async () => {
+    focusAfterReload = 'alerts-device-title';
+    withPushApi();
+    push = { ...fakePush(), isEnabled: false } as FakePush;
+    fixture = TestBed.createComponent(AdminAlerts);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    http.expectOne({ method: 'GET', url: PUSH_URL }).flush(adminPush());
+    await settle();
+    await settle();
+
+    expect(document.activeElement?.id).toBe('alerts-device-title');
+    fixture.nativeElement.remove();
   });
 
   it('when the server cannot push, then the page says so', async () => {

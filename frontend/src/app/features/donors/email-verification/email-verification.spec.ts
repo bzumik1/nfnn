@@ -95,7 +95,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
       const request = http.expectOne('/api/donors/auth/email-verification/confirm');
       expect(request.request.method).toBe('POST');
       expect(request.request.body).toEqual({ token: 'abc', session: 'BROWSER' });
-      expect(heading().textContent).toContain('Potvrzujeme váš e-mail');
+      expect(heading().textContent).toContain('Potvrzujeme váš e\u2011mail');
       expect(element('[role="status"]').textContent).toContain('Chvilku strpení');
       request.flush(authResponse('token-1'));
     });
@@ -105,7 +105,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
 
       expect(store.signedIn()).toBe(true);
       expect(store.donor()?.email).toBe('jana@example.cz');
-      expect(heading().textContent).toContain('E-mail je potvrzený');
+      expect(heading().textContent).toContain('E\u2011mail je potvrzený');
       expect(element('[role="status"]').textContent).toContain('jste přihlášeni');
       expect(document.activeElement).toBe(heading());
 
@@ -139,11 +139,11 @@ describe('Given the page that confirms the e-mail from the registration link', (
       request.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(heading().textContent).toContain('E-mail odeslán');
+      expect(heading().textContent).toContain('E\u2011mail odeslán');
       expect(element('[role="status"]').textContent).toContain('poslali jsme na ni nový odkaz');
       expect(element('form')).toBeNull();
       expect(element('.ui-status').textContent).toContain(
-        'E-mail nedorazil? Podívejte se do nevyžádané pošty.',
+        'E\u2011mail nedorazil? Podívejte se do nevyžádané pošty.',
       );
       expect(element<HTMLAnchorElement>('a.ui-button--primary').getAttribute('href')).toBe('/');
     });
@@ -156,7 +156,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
       );
 
       expect(element('.already-confirmed').textContent).toContain(
-        'Už jste e-mail potvrdili? Pak se stačí přihlásit.',
+        'Už jste e\u2011mail potvrdili? Pak se stačí přihlásit.',
       );
       await click('.already-confirmed + .ui-button');
 
@@ -173,7 +173,9 @@ describe('Given the page that confirms the e-mail from the registration link', (
       await submitRequest();
 
       http.expectNone('/api/donors/auth/email-verification/request');
-      expect(element('#verification-email-error').textContent).toContain('Vyplňte prosím e-mail.');
+      expect(element('#verification-email-error').textContent).toContain(
+        'Vyplňte prosím e\u2011mail.',
+      );
     });
 
     it('and too many links were asked for from this address, then the form says to wait an hour', async () => {
@@ -197,14 +199,14 @@ describe('Given the page that confirms the e-mail from the registration link', (
     it('and the server fails, then the failed panel shows a generic error and retries on request', async () => {
       await answerConfirm(null, 502, 'Bad Gateway');
 
-      expect(heading().textContent).toContain('E-mail se nepodařilo potvrdit');
+      expect(heading().textContent).toContain('E\u2011mail se nepodařilo potvrdit');
       expect(element('[role="alert"]').textContent).toContain('Spojení se serverem se nepodařilo.');
 
       await click('.ui-button--primary');
 
-      expect(heading().textContent).toContain('Potvrzujeme váš e-mail');
+      expect(heading().textContent).toContain('Potvrzujeme váš e\u2011mail');
       await answerConfirm(authResponse('token-1') as unknown as Record<string, unknown>, 200, 'OK');
-      expect(heading().textContent).toContain('E-mail je potvrzený');
+      expect(heading().textContent).toContain('E\u2011mail je potvrzený');
     });
 
     it('and the donor leaves the page before the answer arrives, then the late answer is dropped silently', async () => {
@@ -298,7 +300,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
       await settle();
 
       expect(store.signedIn()).toBe(false);
-      expect(heading().textContent).toContain('E-mail je změněný');
+      expect(heading().textContent).toContain('E\u2011mail je změněný');
       expect(document.activeElement).toBe(heading());
       const status = element('[role="status"]').textContent?.replace(/\s+/g, ' ');
       expect(status).toContain('Nová adresa je potvrzená.');
@@ -343,7 +345,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
       await settle();
 
       expect(store.signedIn()).toBe(false);
-      expect(heading().textContent).toContain('E-mail je změněný');
+      expect(heading().textContent).toContain('E\u2011mail je změněný');
     });
   });
 
@@ -373,7 +375,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
         .flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(heading().textContent).toContain('E-mail odeslán');
+      expect(heading().textContent).toContain('E\u2011mail odeslán');
     });
   });
 });

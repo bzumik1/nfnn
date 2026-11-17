@@ -32,8 +32,12 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.getByRole('button', { name: 'Vytvořit účet' }).click();
 
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeVisible();
-    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeFocused();
+    await expect(
+      dialog.getByRole('heading', { name: 'Zkontrolujte si e\u2011mail' }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole('heading', { name: 'Zkontrolujte si e\u2011mail' }),
+    ).toBeFocused();
     await expect(dialog.getByRole('status').filter({ hasText: /\S/ })).toContainText(
       'jana@example.cz',
     );
@@ -85,11 +89,13 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(dialog.getByLabel('Sídlo – ulice a číslo')).toHaveValue('Dlouhá 12');
     await expect(dialog.getByLabel('PSČ')).toHaveValue('400 01');
     await expect(dialog.getByLabel('Město')).toHaveValue('Ústí nad Labem');
-    await dialog.getByLabel('E-mail').fill('ucetni@stavby.example.cz');
+    await dialog.getByLabel('E\u2011mail').fill('ucetni@stavby.example.cz');
     await dialog.locator('#register-password').fill('correct horse battery');
     await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
 
-    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeVisible();
+    await expect(
+      dialog.getByRole('heading', { name: 'Zkontrolujte si e\u2011mail' }),
+    ).toBeVisible();
     expect(lookups).toEqual(['45274649']);
     expect(posted).toEqual([
       {
@@ -134,11 +140,13 @@ test.describe('Given a visitor who wants a donor account', () => {
     await dialog.getByLabel('Sídlo – ulice a číslo').fill('Průmyslová 5');
     await dialog.getByLabel('PSČ').fill('415 01');
     await dialog.getByLabel('Město').fill('Teplice');
-    await dialog.getByLabel('E-mail').fill('ucetni@stavby.example.cz');
+    await dialog.getByLabel('E\u2011mail').fill('ucetni@stavby.example.cz');
     await dialog.locator('#register-password').fill('correct horse battery');
     await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
 
-    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeVisible();
+    await expect(
+      dialog.getByRole('heading', { name: 'Zkontrolujte si e\u2011mail' }),
+    ).toBeVisible();
     expect(posted).toHaveLength(1);
   });
 
@@ -168,11 +176,11 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.getByRole('dialog').locator('.ui-button--block').click();
 
     await expect(page.getByRole('alert')).toContainText('E-mail ještě není potvrzený');
-    await page.getByRole('button', { name: 'Poslat ověřovací e-mail znovu' }).click();
+    await page.getByRole('button', { name: 'Poslat ověřovací e\u2011mail znovu' }).click();
 
     await expect(
       page.getByRole('dialog').getByRole('status').filter({ hasText: /\S/ }),
-    ).toContainText('Ověřovací e-mail jsme poslali znovu.');
+    ).toContainText('Ověřovací e\u2011mail jsme poslali znovu.');
     expect(requested).toEqual([{ email: 'jana@example.cz' }]);
   });
 

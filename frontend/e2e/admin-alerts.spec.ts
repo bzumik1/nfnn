@@ -338,6 +338,25 @@ test.describe('Given an administrator on the alerts page without a service worke
     ).toHaveCount(0);
   });
 
+  test('when they press Zkusit znovu, then the page loads again and the focus goes to the heading of this device', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedSession(page);
+    await servePush(page, pushView());
+    await page.goto('/sprava/upozorneni');
+    const device = page.getByRole('region', { name: 'Toto zařízení' });
+    await expect(device).toContainText('Pokud zpráva nezmizí, prohlížeč ji nejspíš nepovoluje');
+    await page.evaluate(() => Object.assign(window, { e2eBeforeReload: true }));
+
+    const reloaded = page.waitForEvent('load');
+    await device.getByRole('button', { name: 'Zkusit znovu' }).click();
+    await reloaded;
+
+    await expect.poll(() => page.evaluate(() => 'e2eBeforeReload' in window)).toBe(false);
+    await expect(page.getByRole('heading', { name: 'Toto zařízení' })).toBeFocused();
+  });
+
   test('when the side panel is opened, then the page sits among the occasional sections after the backups', async ({
     page,
   }) => {

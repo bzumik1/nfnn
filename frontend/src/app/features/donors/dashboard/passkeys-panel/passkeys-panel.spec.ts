@@ -111,6 +111,22 @@ describe('Given the passkeys panel of the sign-in card', () => {
     expect(texts('.passkey-dates')[1]).toContain('zatím nepoužito');
   });
 
+  it('when it opens, then the intro says in a sentence of its own that a passkey does not work on a fraudulent page', async () => {
+    await render();
+
+    expect(texts('.passkeys-intro')[0]).toContain(
+      'Klíč uloží Hesla od Applu, Správce hesel Google nebo Windows Hello. Na podvodné stránce klíč nefunguje.',
+    );
+  });
+
+  it('when it lists the passkeys, then the dot between their dates is bound to the date before it, so a wrapped line never starts with it', async () => {
+    await render();
+
+    const dates = [...root().querySelectorAll('.passkey-dates')].map((node) => node.textContent);
+    expect(dates[0]).toMatch(/2026\u00a0· naposledy použito/);
+    expect(dates[1]).toMatch(/2026\u00a0· zatím nepoužito/);
+  });
+
   it('when the card is opened again, then the passkeys show at once without the loading line and are refreshed behind them', async () => {
     await render([IPHONE, WINDOWS]);
     fixture.destroy();

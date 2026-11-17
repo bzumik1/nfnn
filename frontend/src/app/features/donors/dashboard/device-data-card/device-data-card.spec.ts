@@ -107,6 +107,15 @@ describe('Given the card "Data v tomto zařízení"', () => {
     );
   });
 
+  it('when the copy is stored, then the dot of its state line is bound to the words before it, so a wrapped line never starts with it', async () => {
+    vault.opened.set(openedWith({ chunks: [], summary: {}, storedAt: '2026-11-05T09:30:00Z' }));
+    await settle();
+
+    expect(root().querySelector('.device-data-state')?.textContent).toMatch(
+      /zařízení\u00a0· aktualizováno/,
+    );
+  });
+
   it('when the copy is stored, then its state line and the explanation below it both take the one intro style of every card', async () => {
     vault.opened.set(openedWith({ chunks: [], summary: {}, storedAt: '2026-11-05T09:30:00Z' }));
     await settle();

@@ -1573,6 +1573,13 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
     });
 
+    it('then the dot between the count and the sum of a year is bound to the count, so a wrapped line never starts with it', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('.gift-year-sum')?.textContent).toMatch(/dary\u00a0· 1/);
+    });
+
     it('then the donations are grouped by year, newest first, each under a heading with the count and the sum from the summary', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
@@ -1963,6 +1970,29 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.payments-card tbody tr:nth-child(2) .pairing-tag [aria-hidden="true"]')).toBe(
         'bez symbolu · účet …5399/0800',
       );
+    });
+
+    it('then the dot of a pairing tag is bound to the words before it, so a wrapped line never starts with it', async () => {
+      const list = twoYearDonations();
+      list.items[0] = donationItem({
+        id: 'd-2',
+        pairedBy: 'SENDER_ACCOUNT',
+        senderAccount: '2900233333/2010',
+      });
+      list.items[1] = donationItem({
+        id: 'd-4',
+        pairedBy: 'CONFIRMED_SYMBOL',
+        senderAccount: '19-2000145399/0800',
+        confirmedSymbol: '6123456789',
+      });
+      await open('/darce/dary');
+      await respond(twoYearSummary(), list);
+
+      const visibleTag = (row: number) =>
+        element(`.payments-card tbody tr:nth-child(${row}) .pairing-tag [aria-hidden="true"]`)
+          ?.textContent;
+      expect(visibleTag(1)).toMatch(/symbolu\u00a0· účet/);
+      expect(visibleTag(2)).toMatch(/6123456789\u00a0· účet/);
     });
 
     it('then a donation paired by a symbol the donor confirmed carries a tag naming that symbol and the end of the account', async () => {
@@ -3623,7 +3653,7 @@ describe('Given a signed-in donor in the donor area', () => {
         'Smazání účtu',
       ]);
       expect(texts('app-account-card .account-row dt')).toEqual([
-        'E-mail',
+        'E\u2011mail',
         'Heslo',
         'Dvoufaktorové ověření',
         'Přístupové klíče',
