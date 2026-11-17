@@ -13,7 +13,7 @@ interface FadeFrame {
   readonly header: string;
   readonly copyHeaderShown: boolean;
   readonly copyHidden: boolean;
-  readonly ground: string;
+  readonly ground: readonly string[];
   readonly headingFocused: boolean;
   readonly top: number;
 }
@@ -35,11 +35,23 @@ async function watchFrames(page: Page): Promise<void> {
     window.nfnnFadeFrames = [];
     const opacityOf = (element: Element | null): number | null =>
       element === null ? null : Number(getComputedStyle(element).opacity);
-    const groundBehind = (overlay: Element | null): string => {
+    const painted = (colour: string): boolean =>
+      colour !== '' && colour !== 'transparent' && !/^rgba\(.*,\s*0\)$/.test(colour);
+    const groundBehind = (overlay: Element | null): string[] => {
       const own = overlay === null ? '' : getComputedStyle(overlay).backgroundColor;
-      return own !== '' && own !== 'rgba(0, 0, 0, 0)'
-        ? own
-        : getComputedStyle(document.body).backgroundColor;
+      const hiddenContent = document.querySelector('main#obsah');
+      return [window.innerHeight / 2, window.innerHeight - 2].map((y) =>
+        painted(own)
+          ? own
+          : (document
+              .elementsFromPoint(4, y)
+              .filter(
+                (element) =>
+                  overlay?.contains(element) !== true && hiddenContent?.contains(element) !== true,
+              )
+              .map((element) => getComputedStyle(element).backgroundColor)
+              .find(painted) ?? getComputedStyle(document.documentElement).backgroundColor),
+      );
     };
     const sample = (): void => {
       const overlay = document.querySelector('.page-fade');
@@ -200,7 +212,9 @@ test.describe('Given a visitor on a computer that animates', () => {
         (frame) => frame.copy !== null && frame.copy > 0,
       );
       expect(covering.length).toBeGreaterThan(0);
-      expect(covering.filter((frame) => frame.ground !== light)).toEqual([]);
+      expect(covering.filter((frame) => frame.ground.some((colour) => colour !== light))).toEqual(
+        [],
+      );
     });
   }
 
@@ -346,7 +360,9 @@ test.describe('Given a visitor on a computer that animates, reading the news', (
       (frame) => frame.copy !== null && frame.copy > 0,
     );
     expect(covering.length).toBeGreaterThan(0);
-    expect(covering.filter((frame) => frame.ground !== ground)).toEqual([]);
+    expect(covering.filter((frame) => frame.ground.some((colour) => colour !== ground))).toEqual(
+      [],
+    );
   });
 });
 
