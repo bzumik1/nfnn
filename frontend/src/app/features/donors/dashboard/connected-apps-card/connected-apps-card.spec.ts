@@ -172,19 +172,19 @@ describe("Given an administrator's connected applications card", () => {
       await settle();
     }
 
-    it('and the first one is disconnected, then the application below takes the focus', async () => {
+    it('and the first one is disconnected, then the heading takes the focus, never the next Odpojit, which disconnects at once', async () => {
       await disconnectThe(CLAUDE_CONNECTION, 0);
 
       expect(root().querySelectorAll('.connection')).toHaveLength(1);
-      expect(document.activeElement).toBe(disconnectButtons()[0]);
-      expect(document.activeElement?.closest('.connection')?.textContent).toContain('localhost');
+      expect(document.activeElement).toBe(element('#connections-title'));
+      expect(document.activeElement).not.toBe(disconnectButtons()[0]);
     });
 
-    it('and the last one is disconnected, then the application above takes the focus', async () => {
+    it('and the last one is disconnected, then the heading takes the focus, never the Odpojit above', async () => {
       await disconnectThe(LOCAL_CONNECTION, 1);
 
-      expect(document.activeElement).toBe(disconnectButtons()[0]);
-      expect(document.activeElement?.closest('.connection')?.textContent).toContain('claude.ai');
+      expect(root().querySelectorAll('.connection')).toHaveLength(1);
+      expect(document.activeElement).toBe(element('#connections-title'));
     });
 
     it('and both are disconnected, then the heading takes the focus', async () => {

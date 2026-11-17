@@ -1,4 +1,4 @@
-import { neighbourAfterRowLeaves } from './leaving-row';
+import { markRowsLeaving, neighbourAfterRowLeaves } from './leaving-row';
 
 describe('Given a list whose row is about to leave', () => {
   let list: HTMLUListElement;
@@ -74,5 +74,21 @@ describe('Given a list whose row is about to leave', () => {
     const neighbour = neighbourAfterRowLeaves(null, actions());
 
     expect(neighbour()).toBe(byId('first-action'));
+  });
+
+  it('when rows are marked as leaving, then each is inert at once, so neither Tab nor a screen reader reaches its controls', () => {
+    markRowsLeaving([byId('first'), null, byId('third')]);
+
+    expect(byId('first').hasAttribute('inert')).toBe(true);
+    expect(byId('first-action').closest('[inert]')).toBe(byId('first'));
+    expect(byId('second').hasAttribute('inert')).toBe(false);
+    expect(byId('third').hasAttribute('inert')).toBe(true);
+  });
+
+  it('when a row is marked as leaving before its neighbour is chosen, then its own controls are still passed over', () => {
+    markRowsLeaving([byId('second')]);
+    const neighbour = neighbourAfterRowLeaves(byId('second'), actions());
+
+    expect(neighbour()).toBe(byId('third-action'));
   });
 });

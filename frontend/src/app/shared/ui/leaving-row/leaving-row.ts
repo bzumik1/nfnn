@@ -1,3 +1,7 @@
+export function markRowsLeaving(rows: Iterable<Element | null>): void {
+  void rows;
+}
+
 export function neighbourAfterRowLeaves(
   row: Element | null,
   controls: Iterable<HTMLElement>,

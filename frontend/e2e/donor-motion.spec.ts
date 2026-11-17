@@ -15,6 +15,7 @@ interface Move {
 }
 
 const MOVING = new Set(['transform', 'translate', 'scale', 'rotate']);
+const SIZING = new Set(['grid-template-rows']);
 const INSTANT_MS = 1;
 
 async function recordMoves(page: Page): Promise<void> {
@@ -72,6 +73,24 @@ async function recordMoves(page: Page): Promise<void> {
   });
 }
 
+async function recordRowsMadeInert(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const rows: string[] = [];
+    (window as unknown as { inertRows: string[] }).inertRows = rows;
+    new MutationObserver((records) => {
+      for (const { target } of records) {
+        if (target instanceof Element && target.hasAttribute('inert') && target.isConnected) {
+          rows.push(target.id);
+        }
+      }
+    }).observe(document.body, { attributes: true, attributeFilter: ['inert'], subtree: true });
+  });
+}
+
+function rowsMadeInert(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as { inertRows: string[] }).inertRows);
+}
+
 function recordedMoves(page: Page): Promise<Move[]> {
   return page.evaluate(() => (window as unknown as { recordedMoves: Move[] }).recordedMoves);
 }
@@ -90,7 +109,7 @@ async function expectOnlyInstantChangesOrShortFades(page: Page): Promise<Move[]>
   const reduced = await reducedDuration(page);
   for (const move of moves.filter((candidate) => candidate.duration > INSTANT_MS)) {
     expect(
-      move.properties.filter((property) => MOVING.has(property)),
+      move.properties.filter((property) => MOVING.has(property) || SIZING.has(property)),
       move.on,
     ).toEqual([]);
     expect(move.duration, move.on).toBeLessThanOrEqual(reduced);
@@ -108,7 +127,7 @@ function fadesOn(moves: readonly Move[], className: RegExp): boolean {
 test.describe('Given a donor on a computer who asks for less motion', () => {
   test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
 
-  test('when they sign out their only other device, then its row only fades away and the heading takes the focus', async ({
+  test('when they sign out their only other device, then its row is out of reach at once, only fades away without closing its height, and the heading takes the focus', async ({
     page,
   }) => {
     await mockDonorApi(page);
@@ -130,6 +149,7 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     const devices = page.locator('.devices');
     await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
     await recordMoves(page);
+    await recordRowsMadeInert(page);
     await devices
       .getByRole('group', { name: 'Odhlásit iPhone · Safari?' })
       .getByRole('button', { name: 'Odhlásit', exact: true })
@@ -139,10 +159,12 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     await expect(devices.getByText('Jinde přihlášení nejste.')).toBeVisible();
     await expect(devices.getByRole('heading', { name: 'Přihlášená zařízení' })).toBeFocused();
     const moves = await expectOnlyInstantChangesOrShortFades(page);
-    expect(fadesOn(moves, /(^| )device( |$)/)).toBe(true);
+    expect(fadesOn(moves, /(^| )device-slot( |$)/)).toBe(true);
+    const otherDevice = signedInDevices.find((device) => !device.current);
+    expect(await rowsMadeInert(page)).toEqual([`device-row-${otherDevice?.id}`]);
   });
 
-  test('when they open the older sign-ins, then the row says so at once, its chevron turns at once and the rows only fade in', async ({
+  test('when they open the older sign-ins, then the row says so at once, its chevron turns at once and the rows only fade in without opening their height', async ({
     page,
   }) => {
     await mockDonorApi(page);
@@ -163,10 +185,10 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
       'Windows · Edge',
     ]);
     const moves = await expectOnlyInstantChangesOrShortFades(page);
-    expect(fadesOn(moves, /device-list--older/)).toBe(true);
+    expect(fadesOn(moves, /(^| )devices-older( |$)/)).toBe(true);
   });
 
-  test('when they open Jak přiřazujeme platby?, then the toggle says so at once and the help only fades in', async ({
+  test('when they open Jak přiřazujeme platby?, then the toggle says so at once and the help only fades in without opening its height', async ({
     page,
   }) => {
     await mockDonorApi(page);
