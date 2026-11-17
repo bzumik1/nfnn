@@ -2,7 +2,7 @@ import { Location } from '@angular/common';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
-import { APP_DEPTH_KEY, BackTarget } from './back-target';
+import { APP_ACCOUNT_KEY, APP_DEPTH_KEY, BackTarget } from './back-target';
 
 @Component({ template: '' })
 class Blank {}
@@ -211,6 +211,88 @@ describe('Given the back target of the app', () => {
     });
 
     expect(back.canGoBack).toBe(true);
+  });
+
+  describe('when the account sheet hands its entry over to Správa', () => {
+    async function openFromTheSheet(url: string, section: string): Promise<void> {
+      const location = TestBed.inject(Location);
+      location.go(location.path(), '', { ...(location.getState() as object), nfnnDialogDepth: 1 });
+      await router.navigateByUrl(url, {
+        replaceUrl: true,
+        state: { [APP_DEPTH_KEY]: back.nextDepth(), [APP_ACCOUNT_KEY]: section },
+      });
+    }
+
+    function stepBack(steps: () => void): Promise<void> {
+      const returned = navigated(router);
+      steps();
+      return returned;
+    }
+
+    it('then nothing asks for the account sheet while Správa stands', async () => {
+      await openFromTheSheet('/sprava', '');
+
+      expect(back.accountToReopen()).toBeNull();
+    });
+
+    it('and Zpět steps back, then the account sheet is asked to open again over the page it was opened on', async () => {
+      await openFromTheSheet('/sprava', '');
+
+      await stepBack(() => back.back('/'));
+
+      expect(router.url).toBe('/aktuality/clanek');
+      expect(back.accountToReopen()).toBe('');
+    });
+
+    it('and the page was opened from a section of the sheet, then the sheet is asked to open on that section', async () => {
+      await openFromTheSheet('/overit', '/darce/potvrzeni');
+
+      await stepBack(() => back.back('/'));
+
+      expect(back.accountToReopen()).toBe('/darce/potvrzeni');
+    });
+
+    it('and a deeper page of Správa steps back to it, then only a step back from Správa itself asks for the sheet', async () => {
+      await openFromTheSheet('/sprava', '');
+      await router.navigateByUrl('/sprava/darci');
+
+      await stepBack(() => back.back('/sprava'));
+
+      expect(router.url).toBe('/sprava');
+      expect(back.accountToReopen()).toBeNull();
+
+      await stepBack(() => back.back('/'));
+
+      expect(back.accountToReopen()).toBe('');
+    });
+
+    it('and Správa is closed, stepping over all its pages at once, then the account sheet stays closed', async () => {
+      await openFromTheSheet('/sprava', '');
+      await router.navigateByUrl('/sprava/darci');
+
+      await stepBack(() => back.backBy(2));
+
+      expect(router.url).toBe('/aktuality/clanek');
+      expect(back.accountToReopen()).toBeNull();
+    });
+
+    it('and the request is taken, then it is asked only once', async () => {
+      await openFromTheSheet('/sprava', '');
+      await stepBack(() => back.back('/'));
+
+      expect(back.takeAccountToReopen()).toBe('');
+      expect(back.accountToReopen()).toBeNull();
+      expect(back.takeAccountToReopen()).toBeNull();
+    });
+
+    it('and another page opens before the request is taken, then the request is dropped', async () => {
+      await openFromTheSheet('/sprava', '');
+      await stepBack(() => back.back('/'));
+
+      await router.navigateByUrl('/aktuality/druhy');
+
+      expect(back.accountToReopen()).toBeNull();
+    });
   });
 
   it('when the app starts again on an entry it made, then back still returns within the app', async () => {

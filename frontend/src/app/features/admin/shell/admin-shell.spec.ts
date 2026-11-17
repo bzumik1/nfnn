@@ -514,4 +514,26 @@ describe('Given an administrator who opened the administration on a phone over a
 
     expect(back).toHaveBeenCalledWith('/');
   });
+
+  it('when Esc is pressed, then the site steps back the same way as with Zpět', () => {
+    const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+
+    document.body.dispatchEvent(escape);
+
+    expect(back).toHaveBeenCalledWith('/');
+    expect(escape.defaultPrevented).toBe(true);
+  });
+
+  it('when Esc is pressed while a dialog of the page is open, then the dialog keeps it and the site stays', () => {
+    const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
+    const dialog = document.createElement('dialog');
+    dialog.setAttribute('open', '');
+    document.body.append(dialog);
+
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    dialog.remove();
+
+    expect(back).not.toHaveBeenCalled();
+  });
 });

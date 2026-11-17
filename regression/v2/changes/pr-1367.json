@@ -3,8 +3,8 @@
     "kind": "retired",
     "suite": "frontend-playwright",
     "test": "e2e/back-swipe.spec.ts > Given the app on the home screen of a phone and an administrator who opened the administration from the account sheet over the news > when a finger drags the administration sheet back, then the news lies under it without the account sheet, and on letting go the news returns",
-    "replacement": "e2e/page-transitions.spec.ts > Given an administrator in the app on the home screen of a phone with the account sheet open over the news > when a finger drags Správa back from the edge, then the news with the account sheet open lies under it, and on letting go the account sheet is open over the news",
-    "reason": "PR #1367 (#1358, #638 Jakub 2026-11-15: on a phone the administration belongs inside the account sheet): a step back from Správa opened from the account sheet returns to the open sheet, so the page under the swipe shows it, and the journey runs in the iphone project too",
+    "replacement": "e2e/page-transitions.spec.ts > Given an administrator in the app on the home screen of a phone with the account sheet open over the news > when a finger drags Správa back from the edge and lets go, then the account sheet is open over the news with Správa focused",
+    "reason": "PR #1367 (#1358, #638 Jakub 2026-11-15: on a phone the administration belongs inside the account sheet): a step back from Správa opened from the account sheet returns to the open sheet, and the journey runs in the iphone project too; what lies under the finger is checked by the swipe's own PR (group B)",
     "contract": "docs/frontend-overview.md, own history and the edge swipe"
   }
 ]

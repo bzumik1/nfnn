@@ -600,10 +600,6 @@ async function fingerFromEdge(page: Page, xs: readonly number[], lifts: boolean)
 
 const DRAGGED_ACROSS = [30, 60, 90, 120, 150, 180, 210, 250];
 
-function underTheFinger(page: Page) {
-  return page.locator('.page-transition--swipe .page-transition__page--under');
-}
-
 function accountSheet(page: Page) {
   return page.getByRole('dialog', { name: 'Účet' });
 }
@@ -638,16 +634,59 @@ test.describe('Given an administrator in the app on the home screen of a phone w
     await expect(overlays(page)).toHaveCount(0);
   }
 
-  test('when they open Správa and press Zpět, then the account sheet is open over the news again', async ({
+  async function backInTheAccountSheet(page: Page): Promise<void> {
+    await expect(page).toHaveURL('/aktuality');
+    await expect(accountSheet(page).getByRole('link', { name: /^Správa/ })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeAttached();
+    await expect(overlays(page)).toHaveCount(0);
+  }
+
+  test('when they open Správa and press Zpět, then the account sheet is open over the news again with Správa focused', async ({
     page,
   }) => {
     await openAdministration(page);
 
     await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
 
-    await expect(page).toHaveURL('/aktuality');
-    await expect(accountSheet(page).getByRole('link', { name: /^Správa/ })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeAttached();
+    await backInTheAccountSheet(page);
+  });
+
+  test('when they open Správa and press Esc, then the account sheet is open over the news again with Správa focused', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+
+    await page.keyboard.press('Escape');
+
+    await backInTheAccountSheet(page);
+  });
+
+  test('when they open Správa and the app steps back by itself, then the account sheet is open over the news again with Správa focused', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+
+    await stepBack(page);
+
+    await backInTheAccountSheet(page);
+  });
+
+  test('when they open Správa, go a section deeper and step back twice, then the account sheet is open over the news again', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+    await page
+      .getByRole('navigation', { name: 'Sekce správy' })
+      .getByRole('link', { name: /Lidé fondu, správci, zálohy/ })
+      .click();
+    await expect(page).toHaveURL(/\/sprava\/vice$/);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+    await expect(page).toHaveURL(/\/sprava$/);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+
+    await backInTheAccountSheet(page);
   });
 
   test('when they open Správa and press Zavřít, then the news returns without the account sheet', async ({
@@ -662,26 +701,17 @@ test.describe('Given an administrator in the app on the home screen of a phone w
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('when a finger drags Správa back from the edge, then the news with the account sheet open lies under it, and on letting go the account sheet is open over the news', async ({
+  test('when a finger drags Správa back from the edge and lets go, then the account sheet is open over the news with Správa focused', async ({
     page,
   }) => {
     await openAdministration(page);
 
-    await fingerFromEdge(page, DRAGGED_ACROSS, false);
+    await fingerFromEdge(page, [...DRAGGED_ACROSS, 300], true);
 
-    await expect(underTheFinger(page).locator('h1')).toHaveText(LIST_TITLE);
-    await expect(underTheFinger(page).locator('[data-presentation="sheet"]')).toHaveCount(1);
-    await expect(underTheFinger(page).locator('a[href="/sprava"]')).toHaveCount(1);
-    await expect(underTheFinger(page).locator('dialog')).toHaveCount(0);
-
-    await fingerFromEdge(page, [250, 300], true);
-
-    await expect(page).toHaveURL('/aktuality');
-    await expect(accountSheet(page).getByRole('link', { name: /^Správa/ })).toBeVisible();
-    await expect(overlays(page)).toHaveCount(0);
+    await backInTheAccountSheet(page);
   });
 
-  test('when they open Moje dary and press Zpět, then the account sheet shows its list again over the news', async ({
+  test('when they open Moje dary and press Zpět, then the account sheet shows its list again over the news with Moje dary focused', async ({
     page,
   }) => {
     await openAccountItem(page, 'Moje dary');
@@ -691,18 +721,18 @@ test.describe('Given an administrator in the app on the home screen of a phone w
       .getByRole('button', { name: 'Zpět' })
       .click();
 
-    await expect(accountSheet(page).getByRole('link', { name: /^Moje dary/ })).toBeVisible();
+    await expect(accountSheet(page).getByRole('link', { name: /^Moje dary/ })).toBeFocused();
     await expect(page).toHaveURL('/aktuality');
   });
 
-  test('when they open Moje dary and a finger drags from the edge, then the account sheet shows its list again over the news', async ({
+  test('when they open Moje dary and a finger drags from the edge, then the account sheet shows its list again over the news with Moje dary focused', async ({
     page,
   }) => {
     await openAccountItem(page, 'Moje dary');
 
     await fingerFromEdge(page, [...DRAGGED_ACROSS, 300], true);
 
-    await expect(accountSheet(page).getByRole('link', { name: /^Moje dary/ })).toBeVisible();
+    await expect(accountSheet(page).getByRole('link', { name: /^Moje dary/ })).toBeFocused();
     await expect(page).toHaveURL('/aktuality');
   });
 });
