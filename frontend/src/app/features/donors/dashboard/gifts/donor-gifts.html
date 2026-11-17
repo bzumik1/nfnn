@@ -106,8 +106,15 @@
     } @else {
       <div class="payments-empty-state">
         <p class="payments-empty" i18n="@@donor.dashboard.payments.empty">
-          Zatím tu není žádná platba.
+          Zatím tu není žádný dar.
         </p>
+        <a
+          class="ui-button ui-button--primary payments-send"
+          routerLink="/darce/prehled"
+          fragment="poslat-dar"
+          i18n="@@donor.gifts.empty.send"
+          >Poslat dar</a
+        >
         <app-missing-gift />
       </div>
     }
@@ -122,5 +129,5 @@
     </div>
   </div>
 } @else {
-  <app-donations-pending />
+  <app-donations-pending page="gifts" />
 }

@@ -49,6 +49,7 @@
 
 .bank-note {
   margin-top: var(--space-3-5);
+  max-inline-size: var(--measure-prose);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
@@ -155,6 +156,7 @@
 
 .amount-hint {
   margin-top: var(--space-2);
+  max-inline-size: var(--measure-prose);
   font-size: var(--text-sm);
   color: var(--color-danger);
 }
@@ -193,6 +195,7 @@
 
 .gift-arrival-text {
   flex: 1 1 14rem;
+  max-inline-size: var(--measure-prose);
   font-weight: var(--weight-semibold);
 }
 
@@ -271,6 +274,7 @@
 }
 
 .qr-desc {
+  max-inline-size: var(--measure-prose);
   font-size: var(--text-sm);
   color: var(--color-text-soft);
   line-height: var(--leading-relaxed);
@@ -440,6 +444,7 @@
 }
 
 .bank-app-progress {
+  max-inline-size: var(--measure-prose);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
@@ -519,6 +524,8 @@
 }
 
 .qr-caption {
+  max-inline-size: var(--measure-prose);
+  margin-inline: auto;
   font-size: var(--text-sm);
   color: var(--color-text-soft);
   line-height: var(--leading-relaxed);

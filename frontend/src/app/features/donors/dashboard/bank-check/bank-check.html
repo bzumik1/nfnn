@@ -1,7 +1,7 @@
 <div class="bank-check">
   <p class="bank-check-status" role="status">
     @if (donations.checkingBank()) {
-      <span i18n="@@donor.dashboard.bank.checking">Kontrolujeme nové platby v bance…</span>
+      <span i18n="@@donor.dashboard.bank.checking">Kontrolujeme nové platby v&nbsp;bance…</span>
     } @else {
       @if (outcome(); as outcome) {
         <span class="bank-check-outcome">{{ outcome }}</span
@@ -9,8 +9,9 @@
       }
       @if (donations.bankDataAsOf(); as asOf) {
         <span
-          ><span i18n="@@donor.dashboard.bank.asOf">Údaje z banky k</span>
-          {{ formatBankTime(asOf) }}</span
+          ><span i18n="@@donor.dashboard.bank.asOf">Údaje z&nbsp;banky k</span>&nbsp;{{
+            formatBankTime(asOf)
+          }}</span
         >
       }
     }
@@ -29,7 +30,7 @@
     appNeedsConnection
     type="button"
     class="ui-button ui-button--small bank-check-btn"
-    [disabled]="donations.checkingBank()"
+    [appBusy]="donations.checkingBank()"
     (click)="donations.refreshFromBank()"
     i18n="@@donor.dashboard.bank.refresh"
   >

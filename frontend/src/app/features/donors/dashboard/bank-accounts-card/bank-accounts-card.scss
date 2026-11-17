@@ -459,6 +459,7 @@
 }
 
 .watch-title {
+  max-inline-size: var(--measure-prose);
   font-size: var(--text-md);
   font-weight: var(--weight-bold);
   color: var(--color-text);
@@ -469,6 +470,7 @@
 }
 
 .watch-detail {
+  max-inline-size: var(--measure-prose);
   margin-top: var(--space-0-5);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
@@ -565,4 +567,8 @@
   .add-account-bank {
     order: -1;
   }
+}
+
+.accounts-status {
+  max-inline-size: var(--measure-prose);
 }

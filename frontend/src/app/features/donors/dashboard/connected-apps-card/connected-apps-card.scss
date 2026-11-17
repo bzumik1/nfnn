@@ -7,6 +7,7 @@
 }
 
 .connections-empty {
+  max-inline-size: var(--measure-prose);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   line-height: var(--leading-normal);
@@ -76,4 +77,8 @@
 
 .connection-disconnect {
   align-self: center;
+}
+
+.connections-status {
+  max-inline-size: var(--measure-prose);
 }

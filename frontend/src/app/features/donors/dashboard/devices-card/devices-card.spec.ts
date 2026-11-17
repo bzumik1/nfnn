@@ -426,6 +426,7 @@ describe("Given a donor's signed-in devices card", () => {
     await settle();
 
     expect(text(element('[role="alert"]'))).toContain('Server neodpovídá');
+    expect(text(element('.devices-retry'))).toBe('Zkusit znovu');
 
     element<HTMLButtonElement>('.devices-retry').click();
     await settle();

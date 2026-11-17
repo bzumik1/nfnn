@@ -183,7 +183,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
     await settle();
 
     expect(element('[role="alert"]').textContent).toContain('Chyba serveru');
-    await clickButton('Načíst znovu');
+    await clickButton('Zkusit znovu');
     http.expectOne(PASSKEYS_URL).flush({ items: [IPHONE] });
     await settle();
     expect(texts('.passkey-name')).toEqual(['iPhone']);

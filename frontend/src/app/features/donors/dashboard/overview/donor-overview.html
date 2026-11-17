@@ -16,8 +16,9 @@
         class="ui-callout ui-callout--warning admin-refusal"
         i18n="@@donor.overview.adminRefusal.secondFactor"
       >
-        Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo kódem z aplikace. Kód z
-        aplikace si zapnete v části <a routerLink="/darce/udaje">Údaje a zabezpečení</a>.
+        Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo kódem z&nbsp;aplikace. Kód
+        z&nbsp;aplikace si zapnete v&nbsp;části
+        <a routerLink="/darce/udaje">Údaje a&nbsp;zabezpečení</a>.
       </p>
     }
     @case ('needs-connection') {
@@ -31,11 +32,15 @@
   }
 </div>
 
-@if (donations.state() === 'ready') {
+@if (loadView.state() === 'ready') {
   @if (receiptYear(); as year) {
-    <section class="ui-card ui-card--padded receipt-ready" aria-labelledby="receipt-ready-title">
+    <section
+      class="ui-card ui-card--padded receipt-ready"
+      [class.ui-skeleton-reveal]="loadView.appears()"
+      aria-labelledby="receipt-ready-title"
+    >
       <h2 id="receipt-ready-title" class="ui-card__title" i18n="@@donor.overview.receipt.title">
-        Potvrzení o darech za rok {{ year }} je připravené
+        Potvrzení o&nbsp;darech za rok {{ year }} je připravené
       </h2>
       <div class="receipt-ready-action">
         <button
@@ -80,7 +85,7 @@
   <p class="ui-callout ui-callout--warning overview-question">
     @let number = accountParts(account.accountNumber);
     <span [id]="'overview-question-' + account.id" i18n="@@donor.overview.question"
-      >Máme na vás otázku k platbám z účtu
+      >Máme na vás otázku k&nbsp;platbám z&nbsp;účtu
       <span class="overview-account ui-figures">{{ number.head }}<wbr />{{ number.bankCode }}</span
       >.</span
     >&ngsp;<a
@@ -95,37 +100,77 @@
 <ng-template #bankStatus>
   <app-bank-check />
   <p class="ui-card__intro recent-hint" i18n="@@donor.dashboard.bank.hint">
-    Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled. Okamžitá platba se
-    tu obvykle objeví do minuty, běžný převod z jiné banky do dalšího pracovního dne.
+    Nové platby hledáme v&nbsp;bance každou hodinu a&nbsp;také když otevřete tento přehled. Okamžitá
+    platba se tu obvykle objeví do minuty, běžný převod z&nbsp;jiné banky do dalšího pracovního dne.
   </p>
 </ng-template>
 
-@if (donations.state() === 'ready' && !hasGift()) {
-  <section class="ui-card ui-card--padded first-gift" aria-labelledby="first-gift-title">
+@if (loadView.state() === 'ready' && hasGift()) {
+  <dl class="ui-card overview-stats" [class.ui-skeleton-reveal]="loadView.appears()">
+    <div class="overview-stat">
+      <dt i18n="@@donor.dashboard.stat.total">Celkem darováno</dt>
+      <dd class="stat-value ui-figures">
+        {{ crowns(donations.summary()?.totalAmountMinor ?? 0) }}&nbsp;Kč
+      </dd>
+    </div>
+    <div class="overview-stat">
+      <dt i18n="@@donor.dashboard.stat.count">Počet darů</dt>
+      <dd class="stat-value">
+        {{ giftCount() }}
+        @if (verifications() > 0) {
+          <span class="stat-note" i18n="@@donor.overview.stat.andVerifications">
+            {verifications(), plural,
+              one {a&nbsp;ověření účtu}
+              few {a&nbsp;{{ verifications() }} ověření účtu}
+              other {a&nbsp;{{ verifications() }} ověření účtu}
+            }
+          </span>
+        }
+      </dd>
+    </div>
+    @if (currentYear(); as year) {
+      <div class="overview-stat">
+        <dt i18n="@@donor.overview.stat.currentYear">Darováno v&nbsp;roce {{ year.year }}</dt>
+        <dd class="stat-value ui-figures">{{ crowns(year.totalAmountMinor) }}&nbsp;Kč</dd>
+      </div>
+    }
+  </dl>
+}
+
+@if (loadView.state() === 'ready' && !hasGift()) {
+  <section
+    class="ui-card ui-card--padded first-gift"
+    [class.ui-skeleton-reveal]="loadView.appears()"
+    aria-labelledby="first-gift-title"
+  >
     <h2 id="first-gift-title" class="ui-card__title" i18n="@@donor.overview.firstGift.title">
       Jak poslat první dar
     </h2>
-    <app-missing-gift />
     <ol class="first-gift-steps">
       <li i18n="@@donor.overview.firstGift.chooseInCard">
-        Zvolte částku v kartě „Poslat dar“ níže a pošlete dar na účet nadačního fondu, převodem nebo
-        QR kódem.
+        Zvolte částku v&nbsp;kartě „Poslat dar“ a&nbsp;pošlete dar na účet nadačního fondu, převodem
+        nebo QR kódem.
       </li>
       @if (donor()?.variableSymbol; as symbol) {
         <li i18n="@@donor.overview.firstGift.symbolInCard">
           Do platby uveďte svůj variabilní symbol <strong>{{ symbol }}</strong
-          >. Údaje i QR kód v kartě „Poslat dar“ ho už obsahují.
+          >. Údaje i&nbsp;QR kód v&nbsp;kartě „Poslat dar“ ho už obsahují.
         </li>
       }
       <li i18n="@@donor.overview.firstGift.appears">
         Jakmile platba dorazí, dar se tu objeví sám.
       </li>
     </ol>
+    <app-missing-gift />
     <ng-container [ngTemplateOutlet]="bankStatus" />
   </section>
-} @else if (donations.state() === 'ready') {
+} @else if (loadView.state() === 'ready') {
   @if (lastGift(); as gift) {
-    <section class="ui-card ui-card--padded last-gift" aria-labelledby="last-gift-title">
+    <section
+      class="ui-card ui-card--padded last-gift"
+      [class.ui-skeleton-reveal]="loadView.appears()"
+      aria-labelledby="last-gift-title"
+    >
       <h2 id="last-gift-title" class="ui-card__title" i18n="@@donor.overview.last.title">
         Poslední dar
       </h2>
@@ -142,44 +187,30 @@
       <ng-container [ngTemplateOutlet]="bankStatus" />
     </section>
   }
+} @else if (loadView.state() === 'loading') {
+  <p class="visually-hidden overview-loading" role="status" i18n="@@donor.dashboard.loading">
+    Načítáme vaše dary…
+  </p>
+  <div
+    class="overview-skeletons"
+    [class.overview-skeletons--shown]="loadView.skeleton()"
+    aria-hidden="true"
+  >
+    <app-skeleton [rows]="1" />
+    <app-skeleton [rows]="2" />
+  </div>
 } @else {
   <app-donations-pending />
 }
 
 <app-send-gift [variableSymbol]="donor()?.variableSymbol ?? null" />
 
-@if (donations.state() === 'ready' && hasGift()) {
-  <dl class="ui-card overview-stats">
-    <div class="overview-stat">
-      <dt i18n="@@donor.dashboard.stat.total">Celkem darováno</dt>
-      <dd class="stat-value ui-figures">
-        {{ crowns(donations.summary()?.totalAmountMinor ?? 0) }}&nbsp;Kč
-      </dd>
-    </div>
-    <div class="overview-stat">
-      <dt i18n="@@donor.dashboard.stat.count">Počet darů</dt>
-      <dd class="stat-value">
-        {{ giftCount() }}
-        @if (verifications() > 0) {
-          <span class="stat-note" i18n="@@donor.overview.stat.andVerifications">
-            {verifications(), plural,
-              one {a ověření účtu}
-              few {a {{ verifications() }} ověření účtu}
-              other {a {{ verifications() }} ověření účtu}
-            }
-          </span>
-        }
-      </dd>
-    </div>
-    @if (currentYear(); as year) {
-      <div class="overview-stat">
-        <dt i18n="@@donor.overview.stat.currentYear">Darováno v roce {{ year.year }}</dt>
-        <dd class="stat-value ui-figures">{{ crowns(year.totalAmountMinor) }}&nbsp;Kč</dd>
-      </div>
-    }
-  </dl>
-
-  <section class="ui-card recent-card" aria-labelledby="recent-title">
+@if (loadView.state() === 'ready' && hasGift()) {
+  <section
+    class="ui-card recent-card"
+    [class.ui-skeleton-reveal]="loadView.appears()"
+    aria-labelledby="recent-title"
+  >
     <div class="ui-card__bar recent-head">
       <h2 id="recent-title" class="ui-card__title" i18n="@@donor.overview.recent.title">
         Poslední dary

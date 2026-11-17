@@ -33,12 +33,15 @@
           (click)="load()"
           i18n="@@donor.notifications.retry"
         >
-          Načíst znovu
+          Zkusit znovu
         </button>
       </div>
     }
     @case ('unavailable') {
-      <p class="notifications-inset" i18n="@@donor.notifications.unavailable">
+      <p
+        class="ui-card__intro notifications-inset notifications-state"
+        i18n="@@donor.notifications.unavailable"
+      >
         Upozornění teď na webu zapnout nejde. Zkuste to prosím později.
       </p>
     }
@@ -167,45 +170,77 @@
             </p>
           }
           @case ('public') {
-            <p class="notifications-inset" i18n="@@donor.notifications.public">
+            <p
+              class="ui-card__intro notifications-inset notifications-state"
+              i18n="@@donor.notifications.public"
+            >
               Na cizím počítači upozornění zapnout nejdou.
             </p>
           }
           @case ('browser') {
-            <p class="notifications-inset" i18n="@@donor.notifications.browser">
+            <p
+              class="ui-card__intro notifications-inset notifications-state"
+              i18n="@@donor.notifications.browser"
+            >
               Upozornění jdou zapnout jen v aplikaci na ploše nebo po přihlášení se zaškrtnutým
               Zapamatovat si mě.
             </p>
           }
           @case ('device-session') {
-            <p class="notifications-inset" i18n="@@donor.notifications.deviceSession">
+            <p
+              class="ui-card__intro notifications-inset notifications-state"
+              i18n="@@donor.notifications.deviceSession"
+            >
               Toto přihlášení je starší, než web začal rozlišovat zařízení. Odhlaste se a znovu se
               přihlaste, potom tady upozornění zapnete.
             </p>
           }
           @case ('home-screen') {
-            <p class="notifications-inset" i18n="@@donor.notifications.homeScreen">
+            <p
+              class="ui-card__intro notifications-inset notifications-state"
+              i18n="@@donor.notifications.homeScreen"
+            >
               Na iPhonu a iPadu chodí upozornění jen webu přidanému na plochu. V Safari klepněte na
               Sdílet, zvolte Přidat na plochu, otevřete web z ikony na ploše a upozornění zapněte
               tady.
             </p>
           }
           @case ('denied') {
-            <p class="notifications-inset" i18n="@@donor.notifications.denied">
+            <p
+              class="ui-card__intro notifications-inset notifications-state"
+              i18n="@@donor.notifications.denied"
+            >
               Upozornění má tento web v prohlížeči zakázaná. Povolte je v nastavení prohlížeče u
               tohoto webu (obvykle ikona vedle adresy, Oprávnění, Oznámení) a stránku načtěte znovu.
             </p>
           }
           @case ('no-push') {
-            <p class="notifications-inset" i18n="@@donor.notifications.noPush">
+            <p
+              class="ui-card__intro notifications-inset notifications-state"
+              i18n="@@donor.notifications.noPush"
+            >
               Tento prohlížeč upozornění z webu neumí. Zkuste aktuální Chrome, Edge, Firefox nebo
               Safari.
             </p>
           }
           @default {
-            <p class="notifications-inset" i18n="@@donor.notifications.noServiceWorker">
-              Prohlížeč zatím nespustil část webu, která upozornění doručuje. Načtěte stránku znovu.
-            </p>
+            <div class="notifications-inset">
+              <p
+                class="ui-card__intro notifications-state"
+                i18n="@@donor.notifications.noServiceWorker"
+              >
+                Prohlížeč zatím nespustil část webu, která upozornění doručuje.
+              </p>
+              <button
+                appNeedsConnection
+                type="button"
+                class="ui-button notifications-retry"
+                (click)="load()"
+                i18n="@@donor.notifications.noServiceWorker.retry"
+              >
+                Zkusit znovu
+              </button>
+            </div>
           }
         }
       }

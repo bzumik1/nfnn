@@ -11,6 +11,7 @@ const LOGO = 'Nová naděje – nadační fond';
 interface Area {
   readonly name: string;
   readonly navId: string;
+  readonly widthsWhereContentReachesTheEnd: readonly number[];
   open(page: Page): Promise<void>;
 }
 
@@ -18,6 +19,7 @@ const AREAS: readonly Area[] = [
   {
     name: 'the donor overview',
     navId: 'donor-nav',
+    widthsWhereContentReachesTheEnd: WIDTHS,
     open: async (page) => {
       await mockDonorApi(page, donorWithDonations);
       await rememberedDonorSession(page);
@@ -28,6 +30,7 @@ const AREAS: readonly Area[] = [
   {
     name: 'the administration overview',
     navId: 'admin-nav',
+    widthsWhereContentReachesTheEnd: [WIDTH_WHERE_CONTENT_REACHES_THE_END],
     open: async (page) => {
       await mockDonorApi(page, donorWithDonations);
       await mockAdministration(page);
@@ -93,18 +96,20 @@ for (const area of AREAS) {
       });
     }
 
-    test(`when it is ${WIDTH_WHERE_CONTENT_REACHES_THE_END} px wide, then the content ends on the avatar's right edge, as the logo starts on the left one`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width: WIDTH_WHERE_CONTENT_REACHES_THE_END, height: HEIGHT });
-      await area.open(page);
-      const contentRight = await right(page.locator('main .ui-card').first());
-      expect(contentRight).toBeCloseTo(await right(avatar(page)), 0);
-      expect((await widthBesideTheScrollbar(page)) - contentRight).toBeCloseTo(
-        await left(logo(page)),
-        0,
-      );
-    });
+    for (const width of area.widthsWhereContentReachesTheEnd) {
+      test(`when it is ${width} px wide, then the content ends on the avatar's right edge, as the logo starts on the left one`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: HEIGHT });
+        await area.open(page);
+        const contentRight = await right(page.locator('main .ui-card').first());
+        expect(contentRight).toBeCloseTo(await right(avatar(page)), 0);
+        expect((await widthBesideTheScrollbar(page)) - contentRight).toBeCloseTo(
+          await left(logo(page)),
+          0,
+        );
+      });
+    }
 
     test('when forced colours are on, then the current item marked by its border keeps its text on the same edge as the others', async ({
       page,

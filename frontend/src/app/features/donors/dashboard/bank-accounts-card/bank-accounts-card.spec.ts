@@ -564,7 +564,10 @@ describe('Given the bank accounts card in the overview', () => {
     await settle();
 
     expect(element('.accounts-load-error')?.getAttribute('role')).toBe('alert');
-    expect(text('.accounts-load-error')).toContain('Bankovní účty se nepodařilo načíst.');
+    expect(text('.accounts-load-error p')).toBe(
+      'Bankovní účty se nepodařilo načíst. Zkuste to znovu.',
+    );
+    expect(text('.accounts-retry')).toBe('Zkusit znovu');
 
     await click('.accounts-retry');
     expect(text('.accounts-loading')).toBe('Načítáme vaše účty…');

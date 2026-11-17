@@ -6,8 +6,24 @@
   }
   @case ('error') {
     <div class="dashboard-error" role="alert">
-      <p class="dashboard-error-text" i18n="@@donor.dashboard.error.text">
-        Přehled darů se nepodařilo načíst.
+      <p class="dashboard-error-text">
+        @switch (page()) {
+          @case ('gifts') {
+            <ng-container i18n="@@donor.gifts.error.text"
+              >Dary se nepodařilo načíst. Zkuste to znovu.</ng-container
+            >
+          }
+          @case ('receipts') {
+            <ng-container i18n="@@donor.receipts.error.text"
+              >Potvrzení o daru se nepodařilo načíst. Zkuste to znovu.</ng-container
+            >
+          }
+          @default {
+            <ng-container i18n="@@donor.dashboard.error.text"
+              >Přehled darů se nepodařilo načíst. Zkuste to znovu.</ng-container
+            >
+          }
+        }
       </p>
       <button
         type="button"

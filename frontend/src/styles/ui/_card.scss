@@ -72,7 +72,8 @@
 }
 
 :where(.ui-card--padded) > :last-child,
-:where(.ui-card--padded) > .ui-notice:last-child {
+:where(.ui-card--padded) > .ui-notice:last-child,
+.ui-card--padded > .ui-card__intro:last-child {
   margin-block-end: 0;
 }
 

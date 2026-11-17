@@ -73,6 +73,12 @@ describe('Given the offer of a diagnostic file', () => {
     expect(button().type).toBe('button');
   });
 
+  it('when it is shown in its own card, then its explanation takes the one intro style of every card', () => {
+    expect(fixture.nativeElement.querySelector('.diagnostics-download-about')?.classList).toContain(
+      'ui-card__intro',
+    );
+  });
+
   it('when it is shown, then its e-mail link carries only the subject', () => {
     const link = fixture.nativeElement.querySelector('a') as HTMLAnchorElement;
 

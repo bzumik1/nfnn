@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then the last gift comes first with its date, amount and state, then the card Poslat dar, the stats and the recent gifts",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then the receipt comes first, then the stats, the last gift with its date, amount and state, the card Poslat dar and the recent gifts",
+    "reason": "Q14 (#1222): the overview now reads receipts, summary, Poslední dar, Poslat dar, Poslední dary, in the DOM as on the screen; the renamed test checks the new order",
+    "contract": "docs/frontend-overview.md, donor area"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then a donor with no donations yet who sent a gift without the symbol finds the way to add the account it came from",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then a donor with no donations yet who sent a gift without the symbol finds the way to add the account it came from under the three steps",
+    "reason": "Q15 (#1222): the box Poslali jste dar a nevidíte ho? moved under the three steps of Jak poslat první dar; the renamed test checks that place",
+    "contract": "docs/frontend-overview.md, donor area"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a donor with no donations yet reads that there is no payment, finds the way to add the account of a missing gift and the standing order guide",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a donor with no donations yet reads that there is no gift yet, finds the way to the card Poslat dar, to add the account of a missing gift and the standing order guide",
+    "reason": "Q20 (#1222, decided 12/12): an empty Moje dary says „Zatím tu není žádný dar.“ and links to the card Poslat dar on the overview; the renamed test checks both",
+    "contract": "docs/frontend-overview.md, donor area"
+  }
+]
