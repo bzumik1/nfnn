@@ -568,7 +568,7 @@ describe('Given an administrator on the bank payments page', () => {
 
     function press(row = 0): void {
       Array.from(document.querySelectorAll('button'))
-        .filter((candidate) => candidate.textContent?.trim() === 'Přiřadit dárci')
+        .filter((candidate) => rowText(candidate) === 'Přiřadit dárci')
         [row].click();
       fixture.detectChanges();
     }
@@ -873,7 +873,8 @@ describe('Given an administrator on the bank payments page', () => {
       await settle();
 
       expect(document.querySelector('dialog')).toBeNull();
-      expect(document.activeElement?.textContent?.trim()).toBe('Přiřadit dárci');
+      expect(document.activeElement).toBe(button('Přiřadit dárci'));
+      expect(accessibleName(document.activeElement!)).toBe('Přiřadit dárci, 10. 10. 2026, 500 Kč');
     });
   });
 
@@ -1492,9 +1493,15 @@ describe('Given an administrator on the bank payments page with the administrati
       .trim();
   }
 
+  function visibleWords(element: Element): string {
+    const copy = element.cloneNode(true) as Element;
+    copy.querySelectorAll('.visually-hidden').forEach((hidden) => hidden.remove());
+    return (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
+  }
+
   function button(name: string): HTMLButtonElement {
     const found = Array.from(document.querySelectorAll('button')).find(
-      (candidate) => candidate.textContent?.trim() === name,
+      (candidate) => visibleWords(candidate) === name,
     );
     if (!found) {
       throw new Error(`No button "${name}"`);
