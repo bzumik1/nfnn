@@ -1,3 +1,5 @@
+@use 'motion';
+
 :host {
   display: block;
 }
@@ -157,15 +159,21 @@
   border-radius: var(--radius-round);
   border: 3px solid var(--color-accent-soft);
   border-top-color: var(--color-accent);
-  animation: spin 0.9s linear infinite;
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
+  @include motion.spin;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.restart-calm {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--color-accent);
+  @include motion.appear($rises: false);
+}
+
+.save-row.ui-action-bar {
+  @include motion.appear;
+}
+
+.save-row.ui-action-bar.save-row--leaving {
+  @include motion.leave;
 }

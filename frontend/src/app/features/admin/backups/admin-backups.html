@@ -184,7 +184,7 @@
                 (click)="start('TEST_RESTORE')"
               >
                 <app-busy-label [busy]="job()?.kind === 'TEST_RESTORE'">
-                  <span when-idle i18n="@@admin.backups.testRestore.start">Ověřit obnovu teď</span>
+                  <span when-idle i18n="@@admin.backups.testRestore.start">Spustit zkušební obnovu</span>
                   <span when-busy i18n="@@admin.backups.testRestore.busy">Ověřujeme obnovu…</span>
                 </app-busy-label>
               </button>
@@ -200,7 +200,7 @@
             @if (backups().length > 0) {
               <p class="ui-callout ui-callout--warning off-server" i18n="@@admin.backups.offServer">
                 Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte
-                tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu. Jsou
+                tlačítkem „Stáhnout“ a uložte jinam, třeba na flash disk nebo do cloudu. Jsou
                 zašifrované, takže je bez klíče k zálohám nikdo nepřečte.
               </p>
             }

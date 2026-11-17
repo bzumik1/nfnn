@@ -3,9 +3,9 @@
 import { BackupProblem } from '../admin-api';
 
 const ASK_TECHNICIAN = $localize`:@@admin.backups.problem.action.askTechnician:Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.`;
-const RETRY_BACKUP = $localize`:@@admin.backups.problem.action.retryBackup:Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.`;
-const RETRY_TEST_RESTORE = $localize`:@@admin.backups.problem.action.retryTestRestore:Zkuste Ověřit obnovu teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.`;
-const RUN_TEST_RESTORE = $localize`:@@admin.backups.problem.action.runTestRestore:Spusťte Ověřit obnovu teď.`;
+const RETRY_BACKUP = $localize`:@@admin.backups.problem.action.retryBackup:Zkuste „Zálohovat teď“; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.`;
+const RETRY_TEST_RESTORE = $localize`:@@admin.backups.problem.action.retryTestRestore:Zkuste „Spustit zkušební obnovu“; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.`;
+const RUN_TEST_RESTORE = $localize`:@@admin.backups.problem.action.runTestRestore:Zkuste „Spustit zkušební obnovu“.`;
 
 export const BACKUP_PROBLEM_SUMMARIES: Record<BackupProblem, string> = {
   BACKUPS_UNAVAILABLE: $localize`:@@admin.backups.problem.unavailable.summary:Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku.`,

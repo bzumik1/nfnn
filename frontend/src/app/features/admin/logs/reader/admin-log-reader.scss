@@ -1,3 +1,4 @@
+@use 'motion';
 @use 'pressed';
 
 :host {
@@ -43,7 +44,11 @@
   }
 }
 
-.load-more {
+.load-more-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-2) var(--space-3);
   margin-bottom: var(--space-3);
 }
 
@@ -58,10 +63,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-
-  .load-more {
-    margin-bottom: 0;
-  }
 }
 
 .entry {
@@ -95,6 +96,10 @@
   &.is-focused {
     background-color: var(--color-accent-bg);
   }
+
+  @include motion.hover(background-color) {
+    background-color: var(--color-surface-alt);
+  }
 }
 
 .entry.level-error::before,
@@ -107,17 +112,11 @@
 }
 
 .entry.level-error {
-  background: var(--color-danger-bg);
+  background-color: var(--color-danger-bg);
 }
 
 .entry.level-error::before {
   border-inline-start-color: var(--color-danger);
-}
-
-@media (hover: hover) {
-  .entry:hover {
-    background: var(--color-surface-alt);
-  }
 }
 
 .entry-icon {

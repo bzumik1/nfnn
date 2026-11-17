@@ -29,7 +29,23 @@
     }
     @case ('restarting') {
       <p class="ui-load-state" role="status">
-        <span class="spinner" aria-hidden="true"></span>
+        @if (restartCalm()) {
+          <svg
+            class="restart-calm"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+        } @else {
+          <span class="spinner" aria-hidden="true"></span>
+        }
         <span i18n="@@admin.settings.restarting"
           >Nastavení je uložené a web se restartuje. Obvykle to trvá do minuty.</span
         >
@@ -299,7 +315,14 @@
           </div>
         }
 
-        <div class="save-row">
+        <div
+          class="save-row"
+          appActionBar
+          [class.ui-action-bar]="saveBar() !== 'none'"
+          [class.save-row--leaving]="saveBar() === 'leaving'"
+          (animationend)="saveBarSettled($event)"
+          (animationcancel)="saveBarSettled($event)"
+        >
           @if (confirmation(); as confirmation) {
             <div
               class="confirm"

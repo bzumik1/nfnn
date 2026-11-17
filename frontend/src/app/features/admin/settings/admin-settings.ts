@@ -9,12 +9,14 @@ import {
   ElementRef,
   inject,
   Injector,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { TrackedForm } from '../../../core/updates/tracked-form';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription, timer } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { describeProblem, problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -47,8 +49,12 @@ import {
 } from '../../../core/version/row-version';
 import { formatBankTime } from '../../donations/donation-date';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
+import { CompactLayout } from '../../../core/layout/compact-layout';
+import { ActionBar } from '../../../shared/ui/action-bar/action-bar';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
+
+type SaveBar = 'none' | 'shown' | 'leaving';
 
 type Input = 'text' | 'date' | 'flag' | 'secret';
 
@@ -96,6 +102,7 @@ interface Section {
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
+const RESTART_CALM_AFTER_MS = 5000;
 const NOTHING_CHANGED = $localize`:@@admin.settings.nothingChanged:Nic jste nezměnili.`;
 const MAIL_DELIVERY: readonly SettingName[] = [
   'MAIL_HOST',
@@ -217,6 +224,7 @@ const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše 
     NeedsConnection,
     DraftOffer,
     ChangedMeanwhileDialog,
+    ActionBar,
   ],
   templateUrl: './admin-settings.html',
   styleUrl: './admin-settings.scss',
@@ -232,6 +240,7 @@ export class AdminSettings {
   private readonly loginDialog = inject(LoginDialogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly layout = inject(CompactLayout);
   private readonly title = viewChild<ElementRef<HTMLHeadingElement>>('title');
   private readonly saveButton = viewChild<ElementRef<HTMLButtonElement>>('saveButton');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
@@ -257,6 +266,20 @@ export class AdminSettings {
   protected readonly mailNotice = signal<Notice | null>(null);
   private verifiedMail: string | null = null;
   protected readonly changedMeanwhile = signal<SettingsChanged | null>(null);
+  protected readonly restartCalm = signal(false);
+  private restartCalmTimer: Subscription | null = null;
+  private readonly barWanted = computed(
+    () => !this.layout.isCompact() && this.changes().length > 0,
+  );
+  protected readonly saveBar = linkedSignal<boolean, SaveBar>({
+    source: this.barWanted,
+    computation: (wanted, previous) => {
+      if (wanted) {
+        return 'shown';
+      }
+      return previous?.value === 'shown' ? 'leaving' : (previous?.value ?? 'none');
+    },
+  });
   private version = '';
   protected readonly draft = formDraft<Readonly<Record<string, string>>>({
     copy: 'administration',
@@ -506,7 +529,14 @@ export class AdminSettings {
       });
   }
 
+  protected saveBarSettled(event: Event): void {
+    if (event.target === event.currentTarget && this.saveBar() === 'leaving') {
+      this.saveBar.set('none');
+    }
+  }
+
   private watchRestart(): void {
+    this.calmRestartLater();
     this.setupApi
       .watchRestart()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -521,6 +551,14 @@ export class AdminSettings {
         });
         this.load();
       });
+  }
+
+  private calmRestartLater(): void {
+    this.restartCalmTimer?.unsubscribe();
+    this.restartCalm.set(false);
+    this.restartCalmTimer = timer(RESTART_CALM_AFTER_MS)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.restartCalm.set(true));
   }
 
   private testEmailRequest(): AdminTestEmailRequest {
