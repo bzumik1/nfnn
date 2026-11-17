@@ -13,6 +13,7 @@ import {
 const PAYMENTS = '/api/admin/donations/payments';
 const SHEET_FLICK_REST_MS = 100;
 const SLIDE_START_TOLERANCE_MS = 50;
+const FLICK_SETTLE_BOUND_MS = 5_000;
 const PAYMENT_ID = '019a1c00-0000-7000-8000-000000001001';
 
 const unpaired = {
@@ -202,32 +203,43 @@ async function fingerFlicksAway(target: Locator, x: number, y: number): Promise<
         (typeof document.createTouchList === 'function'
           ? document.createTouchList()
           : []) as Touch[];
-      const finger = (type: string, clientY: number, touching = true): void => {
+      const finger = (type: string, clientY: number, when: number, touching = true): void => {
         const touches = at(clientY) as Touch[];
-        element.dispatchEvent(
-          new TouchEvent(type, {
-            touches: touching ? touches : none(),
-            targetTouches: touching ? touches : none(),
-            changedTouches: touches,
-            bubbles: true,
-            cancelable: true,
-          }),
-        );
+        const event = new TouchEvent(type, {
+          touches: touching ? touches : none(),
+          targetTouches: touching ? touches : none(),
+          changedTouches: touches,
+          bubbles: true,
+          cancelable: true,
+        });
+        Object.defineProperty(event, 'timeStamp', { value: when });
+        element.dispatchEvent(event);
       };
-      const nextFrame = (): Promise<number> =>
-        new Promise((done) => view.requestAnimationFrame(done));
-      finger('touchstart', start.y);
-      await nextFrame();
-      finger('touchmove', start.y + 20);
-      await nextFrame();
-      finger('touchmove', start.y + 140);
-      finger('touchend', start.y + 140, false);
-      await nextFrame();
-      await nextFrame();
+      const settled = new Promise<void>((done) => {
+        const gone = new MutationObserver(() => {
+          if (curves.length > 0 || !panel.isConnected) {
+            gone.disconnect();
+            done();
+          }
+        });
+        gone.observe(document.body, {
+          attributes: true,
+          attributeFilter: ['style'],
+          childList: true,
+          subtree: true,
+        });
+        view.setTimeout(done, start.boundMs);
+      });
+      const pressedAt = performance.now();
+      finger('touchstart', start.y, pressedAt);
+      finger('touchmove', start.y + 20, pressedAt + 16);
+      finger('touchmove', start.y + 140, pressedAt + 32);
+      finger('touchend', start.y + 140, pressedAt + 32, false);
+      await settled;
       watch.disconnect();
       return curves;
     },
-    { x, y },
+    { x, y, boundMs: FLICK_SETTLE_BOUND_MS },
   );
 }
 
@@ -405,51 +417,73 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
   test.describe('when it floats on a computer that shows motion', () => {
     const opener = (page: Page): Locator =>
       page.getByRole('button', { name: /^(Přiřadit dárci|Nováková Jana .*)$/ }).first();
-
-    test.skip(
-      ({ browserName }) => browserName !== 'chromium',
-      'WebKit, as Safari, gives a button no focus when it is clicked, so no opener holds the focus to return; the keyboard path of the device checklist covers Safari',
-    );
+    const leaving = (page: Page): Locator => page.locator('dialog.dialog--leaving');
 
     test.beforeEach(async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 800 });
       await page.emulateMedia({ reducedMotion: 'no-preference' });
-      await page.evaluate(() => {
-        const record = window as unknown as { leftSlowly: boolean };
-        record.leftSlowly = false;
-        new MutationObserver(() => {
-          if (document.querySelector('dialog.dialog--leaving') !== null) {
-            record.leftSlowly = true;
-          }
-        }).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+    });
+
+    test.describe('and it was opened with a click', () => {
+      test.skip(
+        ({ browserName }) => browserName !== 'chromium',
+        'WebKit, as Safari, gives a button no focus when it is clicked, so no opener holds the focus to return; the journeys below open it with the keyboard and run in WebKit too',
+      );
+
+      test('and Esc is pressed while it leaves after its button, then the focus returns to the button that opened it', async ({
+        page,
+      }) => {
+        await page.getByRole('dialog').getByLabel('Zavřít').click();
+        await expect(leaving(page)).toBeAttached();
+        await page.keyboard.press('Escape');
+
+        await expect(page.getByRole('dialog')).toHaveCount(0);
+        await expect(opener(page)).toBeFocused();
+      });
+
+      test('and they go back while it leaves after its button, then it closes once and the focus returns to the button that opened it', async ({
+        page,
+      }) => {
+        await page.getByRole('dialog').getByLabel('Zavřít').click();
+        await expect(leaving(page)).toBeAttached();
+        await stepBack(page);
+
+        await expect(page.getByRole('dialog')).toHaveCount(0);
+        await expect(opener(page)).toBeFocused();
+        await expect(page).toHaveURL(/\/sprava\/platby$/);
       });
     });
 
-    test('and Esc is pressed while it leaves after its button, then the focus returns to the button that opened it', async ({
-      page,
-    }) => {
-      await page.getByRole('dialog').getByLabel('Zavřít').click();
-      await page.keyboard.press('Escape');
+    test.describe('and it was opened with the keyboard', () => {
+      test.beforeEach(async ({ page }) => {
+        await stepBack(page);
+        await expect(page.getByRole('dialog')).toHaveCount(0);
+        await opener(page).focus();
+        await page.keyboard.press('Enter');
+        await expect(page.getByRole('dialog')).toBeVisible();
+      });
 
-      await expect(page.getByRole('dialog')).toHaveCount(0);
-      await expect(opener(page)).toBeFocused();
-      expect(
-        await page.evaluate(() => (window as unknown as { leftSlowly: boolean }).leftSlowly),
-      ).toBe(true);
-    });
+      test('and Esc closes it from its close button, then the focus returns to the button that opened it', async ({
+        page,
+      }) => {
+        await page.getByRole('dialog').getByLabel('Zavřít').focus();
+        await page.keyboard.press('Escape');
 
-    test('and they go back while it leaves after its button, then it closes once and the focus returns to the button that opened it', async ({
-      page,
-    }) => {
-      await page.getByRole('dialog').getByLabel('Zavřít').click();
-      await stepBack(page);
+        await expect(page.getByRole('dialog')).toHaveCount(0);
+        await expect(opener(page)).toBeFocused();
+      });
 
-      await expect(page.getByRole('dialog')).toHaveCount(0);
-      await expect(opener(page)).toBeFocused();
-      await expect(page).toHaveURL(/\/sprava\/platby$/);
-      expect(
-        await page.evaluate(() => (window as unknown as { leftSlowly: boolean }).leftSlowly),
-      ).toBe(true);
+      test('and they go back while it leaves after its button, then it closes once and the focus returns to the button that opened it', async ({
+        page,
+      }) => {
+        await page.getByRole('dialog').getByLabel('Zavřít').click();
+        await expect(leaving(page)).toBeAttached();
+        await stepBack(page);
+
+        await expect(page.getByRole('dialog')).toHaveCount(0);
+        await expect(opener(page)).toBeFocused();
+        await expect(page).toHaveURL(/\/sprava\/platby$/);
+      });
     });
   });
 
