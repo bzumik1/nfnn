@@ -65,7 +65,7 @@ test.describe('Given a donor who edits the data on the receipt on a device that 
     expect((await rawDevice(page)).drafts).toBeGreaterThan(0);
 
     await page.getByRole('button', { name: 'Smazat data z tohoto zařízení' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Smazat data a odhlásit' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Smazat data a odhlásit' }).click();
 
     await expect(page).toHaveURL(/\/$/);
     await expect.poll(async () => (await rawDevice(page)).databases).not.toContain(DEVICE_DATABASE);
