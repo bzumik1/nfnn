@@ -195,7 +195,7 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
 
-    const toggle = page.getByRole('button', { name: 'Změnit heslo' });
+    const toggle = page.locator('dd.account-actions').getByRole('button', { name: 'Změnit heslo' });
     await recordMoves(page);
     await toggle.click();
 
