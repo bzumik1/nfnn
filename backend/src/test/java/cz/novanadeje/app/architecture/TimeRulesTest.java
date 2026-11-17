@@ -32,6 +32,7 @@ import java.time.OffsetDateTime;
 import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.chrono.HijrahDate;
 import java.time.chrono.IsoChronology;
@@ -40,6 +41,8 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Set;
+import java.util.SimpleTimeZone;
+import java.util.TimeZone;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -57,21 +60,24 @@ class TimeRulesTest {
     private static final String CLOCK_BEAN = "cz.novanadeje.app.shared.infrastructure.time.ClockConfiguration";
     private static final Set<String> SYSTEM_CLOCK_FACTORIES = Set.of("system", "systemUTC", "systemDefaultZone", "tickSeconds", "tickMinutes", "tickMillis");
     private static final Set<String> TODAY_IN_JAVA_TIME = Set.of("now", "dateNow");
+    private static final Set<String> DEFAULT_TIME_ZONE = Set.of("getDefault", "setDefault");
     private static final String FOUNDATION_ZONE_ID = "Europe/Prague";
     private static final Path FOUNDATION_ZONE = Path.of("cz", "novanadeje", "app", "shared", "domain", "FoundationZone.java");
     private static final Pattern REPORTED_TARGET = Pattern.compile("(?:calls|references) (?:method|constructor) <(.+)> in \\(");
 
-    private static final DescribedPredicate<JavaAccess<?>> READING_THE_SYSTEM_CLOCK = DescribedPredicate.describe(
-            "a read of the system clock", TimeRulesTest::readsTheSystemClock);
+    private static final DescribedPredicate<JavaAccess<?>> READING_THE_SYSTEM_CLOCK_OR_ZONE = DescribedPredicate.describe(
+            "a read of the system clock, of the default zone or of a calendar day from a clock", TimeRulesTest::readsTheSystemClockOrZone);
 
     @ArchTest
     static final ArchRule time_comes_from_the_injected_clock = noClasses()
-            .should().accessTargetWhere(READING_THE_SYSTEM_CLOCK)
-            .because("business time comes from the injected Clock, so tests move it with MutableClock");
+            .should().accessTargetWhere(READING_THE_SYSTEM_CLOCK_OR_ZONE)
+            .because("business time comes from the injected Clock, so tests move it with MutableClock; the clock and the tests run in UTC and "
+                    + "the server in Prague, so a calendar day comes from FoundationCalendar, BankCalendar, ReceiptCalendar or "
+                    + "ofInstant(clock.instant(), FoundationZone.ZONE), never from the clock's or the JVM's zone");
 
     @Test
-    @DisplayName("Given a class that reads the system clock in every way Java offers, when the time rule checks it, then each read is reported and no read of a given clock is")
-    void should_report_every_system_clock_read_when_rule_checks_given_a_planted_class() {
+    @DisplayName("Given a class that reads the system clock, the default zone or a calendar day from a clock in every way Java offers, when the time rule checks it, then each read is reported and a read through a given clock's instant or an explicit zone is not")
+    void should_report_every_system_clock_zone_and_calendar_read_when_rule_checks_given_a_planted_class() {
         var details = time_comes_from_the_injected_clock.evaluate(new ClassFileImporter().importClasses(PlantedClockReads.class))
                 .getFailureReport().getDetails();
 
@@ -95,7 +101,18 @@ class TimeRulesTest {
                 "java.lang.System.currentTimeMillis()",
                 "java.util.Date.<init>()",
                 "java.util.Calendar.getInstance()",
-                "java.util.GregorianCalendar.<init>()");
+                "java.util.GregorianCalendar.<init>()",
+                "java.time.LocalDate.now(java.time.Clock)",
+                "java.time.Year.now(java.time.Clock)",
+                "java.time.ZonedDateTime.now(java.time.Clock)",
+                "java.time.chrono.IsoChronology.dateNow(java.time.Clock)",
+                "java.time.ZoneId.systemDefault()",
+                "java.time.ZoneOffset.systemDefault()",
+                "java.util.TimeZone.getDefault()",
+                "java.util.SimpleTimeZone.getDefault()",
+                "java.util.TimeZone.setDefault(java.util.TimeZone)",
+                "java.time.Clock.getZone()",
+                PlantedClockReads.PlantedClock.class.getName() + ".getZone()");
     }
 
     @Test
@@ -115,8 +132,9 @@ class TimeRulesTest {
         assertThat(filesNamingTheZone(sources)).containsExactly(sources.resolve("PlantedScheduler.java"));
     }
 
-    private static boolean readsTheSystemClock(JavaAccess<?> access) {
+    private static boolean readsTheSystemClockOrZone(JavaAccess<?> access) {
         return asksJavaTimeForToday(access)
+                || readsOrChangesTheDefaultZone(access)
                 || buildsASystemClock(access)
                 || readsCurrentTimeMillis(access)
                 || buildsTodaysDateOrCalendar(access)
@@ -126,7 +144,15 @@ class TimeRulesTest {
     private static boolean asksJavaTimeForToday(JavaAccess<?> access) {
         return access.getTargetOwner().getPackageName().startsWith("java.time")
                 && TODAY_IN_JAVA_TIME.contains(access.getTarget().getName())
-                && !takesAClock(access.getTarget());
+                && !(access.getTargetOwner().isEquivalentTo(Instant.class) && takesAClock(access.getTarget()));
+    }
+
+    private static boolean readsOrChangesTheDefaultZone(JavaAccess<?> access) {
+        JavaClass owner = access.getTargetOwner();
+        String name = access.getTarget().getName();
+        return owner.isAssignableTo(ZoneId.class) && name.equals("systemDefault")
+                || owner.isAssignableTo(TimeZone.class) && DEFAULT_TIME_ZONE.contains(name)
+                || owner.isAssignableTo(Clock.class) && name.equals("getZone");
     }
 
     private static boolean buildsASystemClock(JavaAccess<?> access) {
@@ -180,7 +206,7 @@ class TimeRulesTest {
 
     static final class PlantedClockReads {
 
-        List<Object> reads(ZoneId zone) {
+        List<Object> reads(Clock clock, PlantedClock plantedClock, ZoneId zone) {
             Supplier<Instant> reference = Instant::now;
             return List.of(
                     reference,
@@ -202,18 +228,33 @@ class TimeRulesTest {
                     System.currentTimeMillis(),
                     new Date(),
                     Calendar.getInstance(),
-                    new GregorianCalendar());
+                    new GregorianCalendar(),
+                    LocalDate.now(clock),
+                    Year.now(clock),
+                    ZonedDateTime.now(clock),
+                    IsoChronology.INSTANCE.dateNow(clock),
+                    ZoneId.systemDefault(),
+                    ZoneOffset.systemDefault(),
+                    TimeZone.getDefault(),
+                    SimpleTimeZone.getDefault(),
+                    clock.getZone(),
+                    plantedClock.getZone());
+        }
+
+        void changesTheDefaultZone() {
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         }
 
         List<Object> readsTheGivenClock(Clock clock, ZoneId zone) {
             return List.of(
                     Instant.now(clock),
-                    LocalDate.now(clock),
-                    Year.now(clock),
+                    LocalDate.ofInstant(clock.instant(), zone),
                     Clock.tick(clock, Duration.ofSeconds(1)),
                     Clock.fixed(Instant.EPOCH, zone),
-                    new Date(0L),
-                    new GregorianCalendar(2026, Calendar.NOVEMBER, 13));
+                    new Date(0L));
+        }
+
+        abstract static class PlantedClock extends Clock {
         }
     }
 }
