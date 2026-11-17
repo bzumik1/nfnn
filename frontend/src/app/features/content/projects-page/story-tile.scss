@@ -314,7 +314,12 @@
 }
 
 @include bp.container-down(stories, tablet) {
-  .tile--large,
+  .tile--large {
+    @include large-tile-of-ratio(1);
+  }
+}
+
+@include bp.container-down(stories, cards) {
   :host-context(.grid--compact) .tile--large {
     @include large-tile-of-ratio(1);
   }
