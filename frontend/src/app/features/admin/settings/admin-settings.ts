@@ -229,6 +229,7 @@ const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše 
   templateUrl: './admin-settings.html',
   styleUrl: './admin-settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(input)': 'edited()', '(change)': 'edited()' },
 })
 export class AdminSettings {
   private readonly api = inject(AdminApi);
@@ -268,9 +269,11 @@ export class AdminSettings {
   protected readonly changedMeanwhile = signal<SettingsChanged | null>(null);
   protected readonly restartCalm = signal(false);
   private restartCalmTimer: Subscription | null = null;
-  private readonly barWanted = computed(
-    () => !this.layout.isCompact() && this.changes().length > 0,
-  );
+  private readonly edits = signal(0);
+  private readonly barWanted = computed(() => {
+    this.edits();
+    return !this.layout.isCompact() && this.changes().length > 0;
+  });
   protected readonly saveBar = linkedSignal<boolean, SaveBar>({
     source: this.barWanted,
     computation: (wanted, previous) => {
@@ -527,6 +530,10 @@ export class AdminSettings {
           });
         },
       });
+  }
+
+  protected edited(): void {
+    this.edits.update((count) => count + 1);
   }
 
   protected saveBarSettled(event: Event): void {
