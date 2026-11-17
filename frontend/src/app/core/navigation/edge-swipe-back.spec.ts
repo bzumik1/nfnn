@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { appConfig } from '../../app.config';
 import { DirtyForms } from '../updates/dirty-forms';
 import { BackTarget } from './back-target';
-import { EdgeSwipeBack, edgeSwipeBackAtStart } from './edge-swipe-back';
+import { EdgeSwipeBack, edgeSwipeBackAtStart, StepsInside } from './edge-swipe-back';
 import { PageTransitions, SwipePreview } from './page-transitions';
 import { Chrome, RouteChrome } from './route-chrome';
 
@@ -29,7 +29,11 @@ let backTarget: {
   back: ReturnType<typeof vi.fn>;
   destination: ReturnType<typeof vi.fn>;
 };
-let transitions: { startSwipe: ReturnType<typeof vi.fn> };
+let transitions: {
+  startSwipe: ReturnType<typeof vi.fn>;
+  stepsBySwipe: ReturnType<typeof vi.fn>;
+  followsFinger: ReturnType<typeof vi.fn>;
+};
 let dirty: boolean;
 let chrome: ReturnType<typeof signal<Chrome>>;
 let pendingNavigation: ReturnType<typeof signal<object | null>>;
@@ -89,6 +93,20 @@ function drag(target: EventTarget, points: readonly Point[]): { start: Event; en
   return { start, end };
 }
 
+function sheetSteps(preview: SwipePreview | null = null) {
+  return {
+    startSwipe: vi.fn<StepsInside['startSwipe']>(() => preview),
+    back: vi.fn<StepsInside['back']>(),
+  };
+}
+
+function leavingDialog(): HTMLDialogElement {
+  const dialog = document.createElement('dialog');
+  dialog.classList.add('dialog--leaving');
+  document.body.append(dialog);
+  return dialog;
+}
+
 function openDialog(): HTMLDialogElement {
   const dialog = document.createElement('dialog');
   dialog.setAttribute('open', '');
@@ -115,7 +133,11 @@ beforeEach(() => {
     back: vi.fn(),
     destination: vi.fn(() => ({ kind: 'step', depth: 0, path: '/aktuality' })),
   };
-  transitions = { startSwipe: vi.fn(() => null) };
+  transitions = {
+    startSwipe: vi.fn(() => null),
+    stepsBySwipe: vi.fn(() => true),
+    followsFinger: vi.fn(() => false),
+  };
   dirty = false;
   chrome = signal(chromeWith('/aktuality'));
   pendingNavigation = signal<object | null>(null);
@@ -372,16 +394,17 @@ describe('Given the app opened from the home screen of an iPhone', () => {
     expect(location.back).not.toHaveBeenCalled();
   });
 
-  it('when a dialog is open, then a swipe steps back in its history, which closes it or its last step', () => {
+  it('when a modal dialog is open, then a swipe from the edge does nothing and the dialog stays open', () => {
     const dialog = openDialog();
 
     drag(dialog, ACROSS);
 
-    expect(location.back).toHaveBeenCalledTimes(1);
+    expect(dialog.open).toBe(true);
+    expect(location.back).not.toHaveBeenCalled();
     expect(backTarget.back).not.toHaveBeenCalled();
   });
 
-  it('when a dialog asks before a navigation leaves the page, then a swipe dismisses it as Esc does', () => {
+  it('when a dialog asks before a navigation leaves the page, then a swipe from the edge does nothing and the question stays', () => {
     pendingNavigation.set({});
     const dialog = openDialog();
     const cancelled = vi.fn();
@@ -389,19 +412,61 @@ describe('Given the app opened from the home screen of an iPhone', () => {
 
     drag(dialog, ACROSS);
 
-    expect(cancelled).toHaveBeenCalledTimes(1);
-    expect(dialog.open).toBe(false);
+    expect(cancelled).not.toHaveBeenCalled();
+    expect(dialog.open).toBe(true);
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when a sheet is still sliding away, then a swipe from the edge does nothing', () => {
+    leavingDialog();
+
+    drag(page, ACROSS);
+
+    expect(backTarget.back).not.toHaveBeenCalled();
     expect(location.back).not.toHaveBeenCalled();
   });
 
-  it('when that dialog refuses to be dismissed, then it stays open', () => {
-    pendingNavigation.set({});
+  it('when a sheet offers the steps of its sections, then a swipe steps back inside it as its ‹ does and the page stays', () => {
     const dialog = openDialog();
-    dialog.addEventListener('cancel', (event) => event.preventDefault());
+    const steps = sheetSteps();
+    TestBed.inject(EdgeSwipeBack).stepsInside(dialog, steps);
 
     drag(dialog, ACROSS);
 
-    expect(dialog.open).toBe(true);
+    expect(steps.back).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
+    expect(location.back).not.toHaveBeenCalled();
+  });
+
+  it('when a sheet took back its offer of steps, then a swipe over it does nothing', () => {
+    const dialog = openDialog();
+    const steps = sheetSteps();
+    const withdraw = TestBed.inject(EdgeSwipeBack).stepsInside(dialog, steps);
+    withdraw();
+
+    drag(dialog, ACROSS);
+
+    expect(steps.back).not.toHaveBeenCalled();
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when a second dialog opens over the sheet that offers its steps, then a swipe does nothing', () => {
+    const sheet = openDialog();
+    const steps = sheetSteps();
+    TestBed.inject(EdgeSwipeBack).stepsInside(sheet, steps);
+    const question = openDialog();
+
+    drag(question, ACROSS);
+
+    expect(steps.back).not.toHaveBeenCalled();
+  });
+
+  it('when the page is no step on a wide screen, as a section of the side navigation, then a swipe does nothing', () => {
+    transitions.stepsBySwipe.mockReturnValue(false);
+
+    drag(page, ACROSS);
+
+    expect(backTarget.back).not.toHaveBeenCalled();
   });
 });
 
@@ -419,6 +484,7 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
       slideBack: vi.fn(() => Promise.resolve()),
     };
     transitions.startSwipe.mockImplementation(() => preview as SwipePreview);
+    transitions.followsFinger.mockReturnValue(true);
     runOn(IPHONE_HOME_SCREEN);
   });
 
@@ -514,13 +580,62 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
     expect(backTarget.back).not.toHaveBeenCalled();
   });
 
-  it('when a dialog is open, then no page shows under the finger and the swipe closes the dialog as before', () => {
+  it('when a modal dialog is open, then nothing moves under the finger and the swipe does nothing', () => {
     openDialog();
 
     drag(page, ACROSS);
 
     expect(transitions.startSwipe).not.toHaveBeenCalled();
-    expect(location.back).toHaveBeenCalledTimes(1);
+    expect(location.back).not.toHaveBeenCalled();
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when the page cannot be taken where it is, as while another transition runs, then the swipe is ignored and the app never jumps back', async () => {
+    transitions.startSwipe.mockReturnValue(null);
+
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 330, y: 304, at: 300 },
+    ]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(transitions.startSwipe).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when a sheet offers the steps of its sections, then its content follows the finger, the page stays, and past half it steps back inside the sheet', async () => {
+    const dialog = openDialog();
+    const steps = sheetSteps(preview as SwipePreview);
+    TestBed.inject(EdgeSwipeBack).stepsInside(dialog, steps);
+
+    drag(dialog, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(transitions.startSwipe).not.toHaveBeenCalled();
+    expect(steps.startSwipe).toHaveBeenCalledTimes(1);
+    expect(preview.follow).toHaveBeenCalledWith(210);
+    expect(preview.settle).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ completes: true }),
+    );
+    expect(steps.back).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when the page is no step on a wide screen, then nothing moves under the finger', () => {
+    transitions.stepsBySwipe.mockReturnValue(false);
+
+    drag(page, ACROSS);
+
+    expect(transitions.startSwipe).not.toHaveBeenCalled();
+    expect(backTarget.back).not.toHaveBeenCalled();
   });
 
   it('when the page is a tab root, then no page shows under the finger', () => {

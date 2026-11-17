@@ -31,6 +31,30 @@
   visibility: hidden;
 }
 
+.page-transition--content {
+  inset: var(--page-transition-top) 0 0 var(--page-transition-start);
+
+  .page-transition__scroller {
+    inset: calc(-1 * var(--page-transition-top)) 0 0 calc(-1 * var(--page-transition-start));
+  }
+
+  .page-transition__page--over {
+    border-radius: 0;
+  }
+
+  .page-transition__scroller :is(app-header, .side-nav-panel) {
+    visibility: hidden;
+  }
+}
+
+.page-transition--heads-held .page-transition__scroller app-sheet-head {
+  visibility: hidden;
+}
+
+.page-transition-sheet-under dialog[open]:not(.page-transition *) {
+  opacity: 0 !important;
+}
+
 .page-transition--under-tab-bar .page-transition__scroller app-tab-bar {
   display: none;
 }

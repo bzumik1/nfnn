@@ -9,6 +9,7 @@ import {
 } from '@angular/router';
 import { CompactLayout } from '../layout/compact-layout';
 import { APP_DEPTH_KEY, BackTarget } from './back-target';
+import { ACCOUNT_RETURNS_KEY } from './page-transitions';
 import { NavigationPreview } from './navigation-preview';
 import {
   PAGE_LAYER_CLASS,
@@ -162,6 +163,7 @@ interface Painted {
   readonly tabBar?: boolean;
   readonly sheet?: boolean;
   readonly account?: string;
+  readonly head?: string;
 }
 
 function paint(layer: HTMLElement, page: Painted): void {
@@ -183,6 +185,11 @@ function paint(layer: HTMLElement, page: Painted): void {
   }
   header.append(bar);
   const main = document.createElement('main');
+  if (page.head !== undefined) {
+    const head = document.createElement('app-sheet-head');
+    head.textContent = page.head;
+    main.append(head);
+  }
   const heading = document.createElement('h1');
   heading.textContent = page.title;
   main.append(heading);
@@ -225,12 +232,16 @@ describe('Given the app on the home screen of a phone, where the news led to the
     return transitions.startSwipe(TestBed.inject(BackTarget).destination('/'))!;
   }
 
-  async function openOverviewFromTheNews(news: Painted, overview: Painted): Promise<void> {
+  async function openOverviewFromTheNews(
+    news: Painted,
+    overview: Painted,
+    sheetReturns = false,
+  ): Promise<void> {
     paint(layer, news);
     const depth = TestBed.inject(BackTarget).nextDepth();
     await router.navigateByUrl('/darce/prehled', {
       replaceUrl: true,
-      state: { [APP_DEPTH_KEY]: depth },
+      state: { [APP_DEPTH_KEY]: depth, ...(sheetReturns ? { [ACCOUNT_RETURNS_KEY]: '' } : {}) },
     });
     paint(layer, overview);
   }
@@ -286,6 +297,60 @@ describe('Given the app on the home screen of a phone, where the news led to the
     expect(under().querySelector('h1')?.textContent).toBe('Aktuality');
     expect(under().querySelector('dialog')).toBeNull();
     expect(over().querySelector('h1')?.textContent).toBe('Přehled');
+  });
+
+  it('when the overview was opened from the account sheet, which comes back on the way back, then the news lies under the finger with the account sheet standing over it', async () => {
+    await openOverviewFromTheNews({ title: 'Aktuality', sheet: true }, { title: 'Přehled' }, true);
+
+    swipeBack();
+
+    expect(under().querySelector('h1')?.textContent).toBe('Aktuality');
+    expect(under().querySelector('dialog')?.textContent).toBe('Účet');
+    expect(over().querySelector('dialog')).toBeNull();
+  });
+
+  it('when the account sheet comes back on the way back, then the real sheet stays unseen while the page moves and shows once it stands', async () => {
+    await openOverviewFromTheNews({ title: 'Aktuality', sheet: true }, { title: 'Přehled' }, true);
+
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => ({ finished: Promise.resolve() }),
+    });
+    try {
+      const swipe = swipeBack();
+      expect(document.documentElement.classList).toContain(`${PAGE_TRANSITION_CLASS}-sheet-under`);
+      await swipe.slideBack();
+
+      expect(document.documentElement.classList).not.toContain(
+        `${PAGE_TRANSITION_CLASS}-sheet-under`,
+      );
+    } finally {
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
+  it('when both pages are sheets of the administration, then the head of the sheet stands while the pages move and its title changes in place', async () => {
+    await openOverviewFromTheNews(
+      { title: 'Dárci', head: 'Dárci' },
+      { title: 'Jana Nováková', head: 'Jana Nováková' },
+    );
+
+    swipeBack().follow(195);
+
+    const heads = barItems('app-sheet-head');
+    expect(heads.map((head) => head.textContent)).toEqual(['Dárci', 'Jana Nováková']);
+    expect(heads[1].style.opacity).toBe('0.5');
+    expect(heads[0].style.opacity).toBe('');
+    expect(overlay().classList).toContain(`${PAGE_TRANSITION_CLASS}--heads-held`);
+  });
+
+  it('when only the page being left is a sheet, then its head rides with it', async () => {
+    await openOverviewFromTheNews({ title: 'Aktuality' }, { title: 'Přehled', head: 'Přehled' });
+
+    swipeBack();
+
+    expect(barItems('app-sheet-head')).toHaveLength(0);
+    expect(overlay().classList).not.toContain(`${PAGE_TRANSITION_CLASS}--heads-held`);
   });
 
   it('when the screen changed its width since the news was left, then the copy of another width is not laid under the finger', async () => {
@@ -503,5 +568,138 @@ describe('Given the app on the home screen of a phone opened straight on the don
     await Promise.resolve();
 
     expect(under()).toBe('Úvod');
+  });
+});
+
+describe('Given the app on a wide screen, where the header and the side navigation stand beside the content', () => {
+  let router: Router;
+  let layer: HTMLElement;
+  let transitions: PageTransitions;
+  let lessMotion: boolean;
+
+  function paintWide(title: string): void {
+    layer.replaceChildren();
+    const header = document.createElement('app-header');
+    const nav = document.createElement('nav');
+    for (const [path, name] of [
+      ['/', 'Úvod'],
+      ['/aktuality', 'Aktuality'],
+      ['/projekty', 'Pomáháme'],
+    ]) {
+      const link = document.createElement('a');
+      link.setAttribute('href', path);
+      link.textContent = name;
+      nav.append(link);
+    }
+    header.append(nav);
+    const main = document.createElement('main');
+    const heading = document.createElement('h1');
+    heading.textContent = title;
+    const inMain = document.createElement('a');
+    inMain.setAttribute('href', '/aktuality/clanek');
+    main.append(heading, inMain);
+    layer.append(header, main);
+  }
+
+  function overlay(): HTMLElement | null {
+    return document.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}`);
+  }
+
+  beforeEach(async () => {
+    lessMotion = false;
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) =>
+        ({
+          matches: query.includes('prefers-reduced-motion') && lessMotion,
+          media: query,
+        }) as MediaQueryList,
+    });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1180 });
+    layer = document.createElement('div');
+    layer.className = PAGE_LAYER_CLASS;
+    document.body.append(layer);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: '', component: Blank },
+          { path: 'aktuality', component: Blank },
+          { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
+          { path: 'overit', component: Blank, data: { parent: '/' } },
+        ]),
+        { provide: CompactLayout, useValue: { isCompact: signal(false).asReadonly() } },
+        {
+          provide: NavigationPreview,
+          useValue: {
+            active: () => false,
+            drives: () => false,
+            discard: () => undefined,
+            visit: () => Promise.resolve(null),
+          },
+        },
+      ],
+    });
+    router = TestBed.inject(Router);
+    transitions = TestBed.inject(PageTransitions);
+    await router.navigateByUrl('/aktuality');
+    paintWide('Aktuality');
+  });
+
+  afterEach(() => {
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+    layer.remove();
+    delete (window as { matchMedia?: unknown }).matchMedia;
+    Object.defineProperty(window, 'innerWidth', jsdomWidth!);
+  });
+
+  async function openArticle(): Promise<void> {
+    await router.navigateByUrl('/aktuality/clanek');
+    paintWide('Zahrada pro děti');
+  }
+
+  it('when an article opened from the news is open, then a swipe is a step, and only the content follows the finger over a copy of the news while the header carries no copy of its own', async () => {
+    await openArticle();
+
+    expect(transitions.stepsBySwipe()).toBe(true);
+    const swipe = transitions.startSwipe(TestBed.inject(BackTarget).destination('/aktuality'));
+
+    expect(swipe).not.toBeNull();
+    expect(overlay()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--content`);
+    expect(overlay()?.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under h1`)?.textContent).toBe(
+      'Aktuality',
+    );
+    expect(overlay()?.querySelector(`.${PAGE_TRANSITION_CLASS}__bar`)).toBeNull();
+  });
+
+  it('when a step without a finger opens the article, then nothing slides, as on a computer today', async () => {
+    const covered: boolean[] = [];
+    router.events.subscribe((event) => {
+      if (event instanceof GuardsCheckEnd) {
+        covered.push(overlay() !== null);
+      }
+    });
+
+    await openArticle();
+
+    expect(covered).toEqual([false]);
+  });
+
+  it('when a section of the header is open, then a swipe is no step, as the header switches sections', () => {
+    expect(transitions.stepsBySwipe()).toBe(false);
+  });
+
+  it('when a page of no section is open, then a swipe is no step', async () => {
+    await router.navigateByUrl('/overit');
+    paintWide('Ověření');
+
+    expect(transitions.stepsBySwipe()).toBe(false);
+  });
+
+  it('when the visitor asks for less motion, then the page does not follow the finger', async () => {
+    await openArticle();
+    lessMotion = true;
+
+    expect(transitions.stepsBySwipe()).toBe(true);
+    expect(transitions.followsFinger()).toBe(false);
   });
 });

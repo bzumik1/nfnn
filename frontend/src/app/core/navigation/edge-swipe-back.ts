@@ -1,6 +1,5 @@
-import { DOCUMENT, Location } from '@angular/common';
+import { DOCUMENT } from '@angular/common';
 import { EnvironmentProviders, inject, Injectable, provideAppInitializer } from '@angular/core';
-import { Router } from '@angular/router';
 import { DirtyForms } from '../updates/dirty-forms';
 import { BackSwipe, SwipePoint } from './back-swipe';
 import { BackTarget } from './back-target';
@@ -9,15 +8,24 @@ import { RouteChrome } from './route-chrome';
 
 const FIELDS = 'input, select, textarea, [contenteditable]:not([contenteditable="false"])';
 const SCROLLS_SIDEWAYS = new Set(['auto', 'scroll']);
+const OPEN_DIALOG = 'dialog[open]';
+const LEAVING_DIALOG = 'dialog.dialog--leaving';
 
 const PASSIVE: AddEventListenerOptions = { passive: true, capture: true };
 
 type HomeScreenNavigator = Navigator & { readonly standalone?: boolean };
 
+export interface StepsInside {
+  startSwipe(): SwipePreview | null;
+  back(): void;
+}
+
 interface Swipe {
   readonly id: number;
   readonly pops: number;
   readonly motion: BackSwipe;
+  readonly steps: StepsInside;
+  readonly ofPage: boolean;
   preview: SwipePreview | null;
   previewAsked: boolean;
 }
@@ -25,12 +33,11 @@ interface Swipe {
 @Injectable({ providedIn: 'root' })
 export class EdgeSwipeBack {
   private readonly document = inject(DOCUMENT);
-  private readonly location = inject(Location);
-  private readonly router = inject(Router);
   private readonly backTarget = inject(BackTarget);
   private readonly chrome = inject(RouteChrome).current;
   private readonly transitions = inject(PageTransitions);
   private readonly dirtyForms = inject(DirtyForms);
+  private readonly inside = new Map<HTMLDialogElement, StepsInside>();
   private swipe: Swipe | null = null;
   private pops = 0;
 
@@ -58,6 +65,15 @@ export class EdgeSwipeBack {
     view.addEventListener('pagehide', this.onLeave, PASSIVE);
   }
 
+  stepsInside(dialog: HTMLDialogElement, steps: StepsInside): () => void {
+    this.inside.set(dialog, steps);
+    return () => {
+      if (this.inside.get(dialog) === steps) {
+        this.inside.delete(dialog);
+      }
+    };
+  }
+
   stop(): void {
     const view = this.document.defaultView;
     this.document.removeEventListener('touchstart', this.onStart, PASSIVE);
@@ -75,13 +91,41 @@ export class EdgeSwipeBack {
     if (event.touches.length > 1 || touch === undefined || keepsItsOwnSwipe(event.target)) {
       return;
     }
+    const target = this.stepsHere();
+    if (target === null) {
+      return;
+    }
     const width = this.document.defaultView?.innerWidth ?? 0;
     this.swipe = {
       id: touch.identifier,
       pops: this.pops,
       motion: new BackSwipe(pointOf(touch, event), width),
+      steps: target.steps,
+      ofPage: target.ofPage,
       preview: null,
       previewAsked: false,
+    };
+  }
+
+  private stepsHere(): { steps: StepsInside; ofPage: boolean } | null {
+    if (this.document.querySelector(LEAVING_DIALOG) !== null) {
+      return null;
+    }
+    const dialogs = this.document.querySelectorAll<HTMLDialogElement>(OPEN_DIALOG);
+    if (dialogs.length > 0) {
+      const steps = this.inside.get(dialogs.item(dialogs.length - 1));
+      return steps === undefined ? null : { steps, ofPage: false };
+    }
+    const parent = this.chrome().parent;
+    if (parent === null || !this.transitions.stepsBySwipe()) {
+      return null;
+    }
+    return {
+      ofPage: true,
+      steps: {
+        startSwipe: () => this.transitions.startSwipe(this.backTarget.destination(parent)),
+        back: () => this.backTarget.back(parent),
+      },
     };
   }
 
@@ -98,7 +142,13 @@ export class EdgeSwipeBack {
     }
     if (swipe.motion.dragging && !swipe.previewAsked) {
       swipe.previewAsked = true;
-      swipe.preview = this.preview();
+      if (this.transitions.followsFinger()) {
+        swipe.preview = swipe.steps.startSwipe();
+        if (swipe.preview === null) {
+          this.swipe = null;
+          return;
+        }
+      }
     }
     swipe.preview?.follow(swipe.motion.offset);
   }
@@ -112,42 +162,20 @@ export class EdgeSwipeBack {
     this.swipe = null;
     const settle = swipe.motion.release(pointOf(touch, event));
     const goesBack = settle?.completes === true && swipe.pops === this.pops;
+    const back = (): void => swipe.steps.back();
     const preview = swipe.preview;
     if (preview === null) {
       if (goesBack) {
-        this.back();
+        back();
       }
-    } else if (goesBack && this.dirtyForms.any()) {
-      void preview.slideBack().then(() => this.back());
+    } else if (goesBack && swipe.ofPage && this.dirtyForms.any()) {
+      void preview.slideBack().then(back);
     } else if (goesBack && settle !== null) {
-      void preview.settle(settle).then(() => this.back());
+      void preview.settle(settle).then(back);
     } else if (settle !== null && !settle.completes) {
       void preview.settle(settle);
     } else {
       void preview.slideBack();
-    }
-  }
-
-  private preview(): SwipePreview | null {
-    const parent = this.chrome().parent;
-    if (parent === null || this.document.querySelector('dialog[open]') !== null) {
-      return null;
-    }
-    return this.transitions.startSwipe(this.backTarget.destination(parent));
-  }
-
-  private back(): void {
-    const dialogs = this.document.querySelectorAll<HTMLDialogElement>('dialog[open]');
-    const top = dialogs.item(dialogs.length - 1);
-    if (top !== null && this.router.currentNavigation() !== null) {
-      dismiss(top);
-    } else if (top !== null) {
-      this.location.back();
-    } else {
-      const parent = this.chrome().parent;
-      if (parent !== null) {
-        this.backTarget.back(parent);
-      }
     }
   }
 }
@@ -182,12 +210,6 @@ function keepsItsOwnSwipe(target: EventTarget | null): boolean {
     }
   }
   return false;
-}
-
-function dismiss(dialog: HTMLDialogElement): void {
-  if (dialog.dispatchEvent(new Event('cancel', { cancelable: true }))) {
-    dialog.close();
-  }
 }
 
 export const edgeSwipeBackAtStart: EnvironmentProviders = provideAppInitializer(() =>
