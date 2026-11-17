@@ -522,7 +522,7 @@ describe('Given an administrator on the settings page', () => {
 
 class FormEndObserver {
   static all: FormEndObserver[] = [];
-  readonly observed: Element[] = [];
+  observed: Element[] = [];
   disconnected = false;
 
   constructor(private readonly report: IntersectionObserverCallback) {
@@ -533,7 +533,9 @@ class FormEndObserver {
     this.observed.push(target);
   }
 
-  unobserve(): void {}
+  unobserve(target: Element): void {
+    this.observed = this.observed.filter((observed) => observed !== target);
+  }
 
   disconnect(): void {
     this.disconnected = true;
