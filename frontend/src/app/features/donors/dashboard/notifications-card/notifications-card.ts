@@ -19,6 +19,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { PushAvailability, pushAvailability } from '../../../../core/push/push-availability';
+import { PageReload } from '../../../../core/reload/page-reload';
+import { ReloadPlace } from '../../../../core/reload/reload-place';
 import {
   BrowserPushSubscriptionState,
   SERVICE_WORKER_PUSH,
@@ -40,6 +42,7 @@ type LoadState = 'loading' | 'ready' | 'error' | 'unavailable';
 type Kind = keyof DonorNotificationSwitches;
 type Offer = 'device-session' | 'public' | 'browser' | PushAvailability;
 
+const HEADING_ID = 'notifications-title';
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const PUSH_UNAVAILABLE = 'operations/push-unavailable';
 const SUBSCRIPTION_LIMIT = 'operations/push-subscription-limit';
@@ -68,6 +71,7 @@ export class NotificationsCard {
   private readonly push = inject(SERVICE_WORKER_PUSH);
   private readonly holders = inject(BrowserPushHolders);
   private readonly notified = inject(DonorNotifiedDevices);
+  private readonly pageReload = inject(PageReload);
   private readonly window = inject(DOCUMENT).defaultView;
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -114,6 +118,15 @@ export class NotificationsCard {
 
   constructor() {
     this.load();
+    if (inject(ReloadPlace).takeFocus(HEADING_ID)) {
+      this.focusHeading();
+    }
+  }
+
+  protected retryWithReload(): void {
+    if (!this.pageReload.reloadFocusing(HEADING_ID)) {
+      this.load();
+    }
   }
 
   protected load(): void {

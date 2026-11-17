@@ -7,7 +7,7 @@
     <div class="ui-callout ui-callout--warning account-no-method">
       <p i18n="@@donor.account.noSignInMethod">
         Účet zatím nemá heslo ani přístupový klíč. Nejdřív si vytvořte přístupový klíč, pak tu
-        můžete nastavit heslo, změnit e-mail nebo zapnout kód z aplikace.
+        můžete nastavit heslo, změnit e&#8209;mail nebo zapnout kód z aplikace.
       </p>
       @if (passkeysSupported) {
         <button
@@ -24,7 +24,7 @@
 
   <dl class="account-data">
     <div class="account-row">
-      <dt id="account-email-label" i18n="@@donor.login.email">E-mail</dt>
+      <dt id="account-email-label" i18n="@@donor.login.email">E&#8209;mail</dt>
       <dd class="account-value">
         <span class="account-email">{{ donor()?.email }}</span>
         @if (pendingEmailChange(); as pending) {
@@ -101,14 +101,16 @@
             (ngSubmit)="requestEmailChange(emailForm)"
             novalidate
           >
-            <h3 class="ui-card__subtitle" i18n="@@donor.account.email.title">Změna e-mailu</h3>
+            <h3 class="ui-card__subtitle" i18n="@@donor.account.email.title">
+              Změna e&#8209;mailu
+            </h3>
             <p class="ui-card__intro account-form-intro" i18n="@@donor.account.email.intro">
               Na novou adresu pošleme odkaz. Účet se na ni přepne, až ho otevřete; do té doby platí
               současná adresa.
             </p>
             <app-account-username [email]="accountEmail()" />
             <app-form-field
-              label="Nový e-mail"
+              label="Nový e&#8209;mail"
               i18n-label="@@donor.account.newEmail"
               [messages]="newEmailMessages"
             >
@@ -369,13 +371,13 @@
               i18n="@@donor.account.removePassword.intro"
             >
               Přihlásíte se pak jen přístupovým klíčem. Mějte klíč aspoň ve dvou zařízeních; když o
-              všechny přijdete, přístup obnovíte odkazem z e-mailu přes „Zapomenuté heslo“. Ostatní
-              přihlášení ukončíme, tohle zůstane.
+              všechny přijdete, přístup obnovíte odkazem z e&#8209;mailu přes „Zapomenuté heslo“.
+              Ostatní přihlášení ukončíme, tohle zůstane.
             </p>
             @if (isAdmin()) {
               <p class="account-hint" i18n="@@donor.account.removePassword.admin">
-                Jako správce si přístup odkazem z e-mailu neobnovíte. Když o klíče přijdete, pomůže
-                vám jiný správce.
+                Jako správce si přístup odkazem z e&#8209;mailu neobnovíte. Když o klíče přijdete,
+                pomůže vám jiný správce.
               </p>
             }
             <app-account-username [email]="accountEmail()" />
@@ -513,8 +515,8 @@
               >
                 Kód z ověřovací aplikace v telefonu nebo tabletu (například Google Authenticator,
                 Microsoft Authenticator nebo Aegis) pak budete potřebovat, když budete obnovovat
-                přístup odkazem z e-mailu; samotný e-mail tak k účtu nestačí. Přihlášení klíčem
-                zůstává stejné.
+                přístup odkazem z e&#8209;mailu; samotný e&#8209;mail tak k účtu nestačí. Přihlášení
+                klíčem zůstává stejné.
               </p>
             }
             <p
@@ -710,8 +712,8 @@
                 class="ui-card__intro account-form-intro"
                 i18n="@@donor.account.secondFactor.off.introPasswordless"
               >
-                Při obnově přístupu odkazem z e-mailu pak kód z aplikace chtít nebudeme. Ostatní
-                přihlášení ukončíme, tohle zůstane.
+                Při obnově přístupu odkazem z e&#8209;mailu pak kód z aplikace chtít nebudeme.
+                Ostatní přihlášení ukončíme, tohle zůstane.
               </p>
             }
             @if (hasPassword()) {
@@ -873,7 +875,8 @@
       </span>
     } @else if (emailChange() === 'cancelled') {
       <span i18n="@@donor.account.email.cancelled">
-        Změnu e-mailu jsme zrušili. Účet dál používá současnou adresu a odeslaný odkaz už neplatí.
+        Změnu e&#8209;mailu jsme zrušili. Účet dál používá současnou adresu a odeslaný odkaz už
+        neplatí.
       </span>
     }
   </p>

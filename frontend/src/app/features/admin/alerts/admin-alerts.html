@@ -227,10 +227,20 @@
             }
             @default {
               <p class="ui-card__footer" i18n="@@admin.alerts.device.noServiceWorker">
-                Prohlížeč zatím nespustil část webu, která upozornění doručuje. Načtěte stránku
-                znovu; pokud zpráva nezmizí, prohlížeč ji nejspíš nepovoluje, například v anonymním
-                okně.
+                Prohlížeč zatím nespustil část webu, která upozornění doručuje. Pokud zpráva
+                nezmizí, prohlížeč ji nejspíš nepovoluje, například v anonymním okně.
               </p>
+              <div class="ui-card__body device-retry">
+                <button
+                  appNeedsConnection
+                  type="button"
+                  class="ui-button"
+                  (click)="retryWithReload()"
+                  i18n="@@donor.notifications.noServiceWorker.retry"
+                >
+                  Zkusit znovu
+                </button>
+              </div>
             }
           }
         }

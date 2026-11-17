@@ -218,8 +218,8 @@ export class LoginDialog {
   protected resetEmail = this.mode() === 'reset' ? this.dialog.initialEmail() : '';
 
   protected readonly emailMessages = {
-    required: $localize`:@@donor.form.email.required:Vyplňte prosím e-mail.`,
-    email: $localize`:@@donor.form.email.invalid:Zadejte e-mail ve tvaru jana@example.cz.`,
+    required: $localize`:@@donor.form.email.required:Vyplňte prosím e\u2011mail.`,
+    email: $localize`:@@donor.form.email.invalid:Zadejte e\u2011mail ve tvaru jana@example.cz.`,
   };
   protected readonly signInPasswordMessages = {
     required: $localize`:@@donor.form.password.required:Vyplňte prosím heslo.`,
