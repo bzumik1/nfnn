@@ -111,6 +111,12 @@ $_at-once: 0s;
   }
 
   @include _tint-at-once($properties, var(--duration-base));
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not([aria-disabled='true']) {
+      @include _tint-at-once($properties, var(--duration-fast));
+    }
+  }
 }
 
 @mixin move($properties, $duration: base, $ease: spring) {

@@ -13,11 +13,10 @@
 
 .pdf-button__layer {
   grid-area: 1 / 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1-5);
+  display: block;
   min-inline-size: 0;
+  text-align: center;
+  text-wrap: balance;
   opacity: 0;
   visibility: hidden;
   @include motion.state(opacity, visibility);
@@ -30,7 +29,8 @@
 
 .pdf-button__icon {
   display: inline-grid;
-  flex: none;
+  margin-inline-end: var(--space-1-5);
+  vertical-align: -0.2em;
   inline-size: 1.15em;
   block-size: 1.15em;
 
@@ -48,8 +48,13 @@
   color: inherit;
 }
 
-.pdf-button__layer--current .pdf-button__ring {
+.pdf-button__ring {
   @include motion.spin;
+  animation-play-state: paused;
+}
+
+.pdf-button__layer--current .pdf-button__ring {
+  animation-play-state: running;
 }
 
 .pdf-button__layer--current .pdf-button__share {
