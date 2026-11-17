@@ -47,6 +47,7 @@ import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-conne
 import { loadingView } from '../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
+import { fileNameParts } from './file-name-parts';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -56,6 +57,7 @@ interface RunningJob {
 
 interface RunLine {
   text: string;
+  fileName?: string | null;
   error: string | null;
   errorOnServerOnly?: boolean;
 }
@@ -148,6 +150,7 @@ export class AdminBackups {
   protected readonly lastTestRestore = computed(() =>
     this.describeTestRestore(this.view()?.lastTestRestore),
   );
+  protected readonly fileNameParts = fileNameParts;
   protected readonly lastRestore = computed(() => this.describeRestore(this.view()?.lastRestore));
   protected readonly restorePending = computed(() => this.view()?.restorePending ?? false);
   protected readonly schedule = computed(() => this.view()?.schedule ?? null);
@@ -438,6 +441,7 @@ export class AdminBackups {
     }
     return {
       text: $localize`:@@admin.backups.lastRestore.ok:${at}:time: ze zálohy ${run.fileName ?? ''}:file:`,
+      fileName: run.fileName,
       error: null,
     };
   }
@@ -485,6 +489,7 @@ export class AdminBackups {
     }
     return {
       text: $localize`:@@admin.backups.lastTestRestore.ok:${at}:time:, ${run.tables ?? 0}:tables: tabulek ze zálohy ${run.fileName ?? ''}:file:`,
+      fileName: run.fileName,
       error: null,
     };
   }

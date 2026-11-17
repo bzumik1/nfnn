@@ -17,6 +17,7 @@
 
 .ui-page--form {
   @include bp.up(nav) {
+    box-sizing: content-box;
     max-width: var(--page-form-max);
   }
 }

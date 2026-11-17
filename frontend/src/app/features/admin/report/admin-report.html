@@ -118,7 +118,13 @@
               hint="Přehled za minulý měsíc odejde v tento den v měsíci."
               i18n-hint="@@admin.report.sendDay.hint"
             >
-              <select appFormControl id="report-send-day" name="sendDay" [(ngModel)]="sendDay">
+              <select
+                appFormControl
+                class="short-control"
+                id="report-send-day"
+                name="sendDay"
+                [(ngModel)]="sendDay"
+              >
                 @for (day of sendDays; track day) {
                   <option [ngValue]="day">{{ day }}.</option>
                 }
@@ -131,7 +137,13 @@
               hint="Pražský čas; výchozí je 7:00."
               i18n-hint="@@admin.report.sendHour.hint"
             >
-              <select appFormControl id="report-send-hour" name="sendHour" [(ngModel)]="sendHour">
+              <select
+                appFormControl
+                class="short-control"
+                id="report-send-hour"
+                name="sendHour"
+                [(ngModel)]="sendHour"
+              >
                 @for (hour of sendHours; track hour) {
                   <option [ngValue]="hour">{{ hour }}:00</option>
                 }
