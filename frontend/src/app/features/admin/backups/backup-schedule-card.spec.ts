@@ -77,6 +77,22 @@ describe('Given the backup plan card', () => {
       expect(fixture.nativeElement.querySelector('.applied')).toBeNull();
     });
 
+    it('then the hint under each time field names the chosen time in Czech, whatever the language of the browser', () => {
+      const hintOf = (id: string) =>
+        (
+          fixture.nativeElement.querySelector(
+            `#${field<HTMLInputElement>(id).getAttribute('aria-describedby')?.split(' ')[0]}`,
+          )?.textContent ?? ''
+        )
+          .replace(/\s+/g, ' ')
+          .trim();
+
+      expect(hintOf('backup-time')).toBe(
+        'Vybraný čas: 3:00. Čas, kdy se databáze každý den zálohuje.',
+      );
+      expect(hintOf('test-restore-time')).toBe('Vybraný čas: 4:00.');
+    });
+
     it('and the administrator saves another plan, then it is sent and handed to the page', async () => {
       await type('backup-time', '02:30');
       await choose('test-restore-day', 'sobota');

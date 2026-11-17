@@ -296,6 +296,10 @@ export class AdminPayments {
     this.typed.next(value);
   }
 
+  protected chosenDay(isoDate: string): string {
+    return $localize`:@@admin.payments.period.chosen:Vybraný den: ${formatDonationDate(isoDate)}:date:`;
+  }
+
   protected choosePeriod(bound: 'from' | 'to', value: string): void {
     this.navigate(bound === 'from' ? { from: value } : { to: value });
   }

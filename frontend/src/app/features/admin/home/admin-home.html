@@ -83,8 +83,10 @@
               <dt i18n="@@admin.home.import.covered">Stažené období</dt>
               <dd>
                 @if (coveredPeriod(); as period) {
-                  <span class="ui-date">{{ period.from }}&nbsp;–</span>
-                  <span class="ui-date">{{ period.to }}</span>
+                  <span class="ui-date">{{ period.from }}&nbsp;–</span>&ngsp;<span
+                    class="ui-date"
+                    >{{ period.to }}</span
+                  >
                 } @else {
                   <ng-container i18n="@@admin.home.import.covered.none">zatím nic</ng-container>
                 }

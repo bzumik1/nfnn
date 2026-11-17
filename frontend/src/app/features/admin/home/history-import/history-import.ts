@@ -49,6 +49,8 @@ const EARLIEST_DAY = '2000-01-01';
 const TOO_EARLY = 'donations/history-start-too-early';
 const IN_FUTURE = 'donations/history-start-in-future';
 
+const FROM_HINT = $localize`:@@admin.home.history.from.hint:Platby za posledních 89 dní web stáhne i bez odemčení. Načíst je můžete i opakovaně: platby, které web už má, se nezdvojí.`;
+
 const FROM_MESSAGES: FieldMessages = {
   required: $localize`:@@admin.home.history.from.required:Zadejte prosím den, od kterého se mají platby stáhnout.`,
   max: $localize`:@@admin.home.history.from.max:Zvolte prosím den nejpozději dnes.`,
@@ -88,6 +90,12 @@ export class HistoryImport {
   protected readonly from = linkedSignal({
     source: () => this.state().defaultHistoryFrom,
     computation: (day) => day,
+  });
+  protected readonly fromHint = computed(() => {
+    const day = this.from();
+    return day
+      ? `${$localize`:@@admin.home.history.from.chosen:Vybraný den: ${formatDonationDate(day)}:date:.`} ${FROM_HINT}`
+      : FROM_HINT;
   });
   protected readonly run = linkedSignal(() => this.state().historyImport);
   protected readonly requesting = signal(false);

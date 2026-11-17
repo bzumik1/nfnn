@@ -158,7 +158,7 @@ describe('Given the part for older bank payments on the import card', () => {
         `#${dateField().getAttribute('aria-describedby')?.split(' ')[0]}`,
       );
       expect((hint?.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
-        'Platby za posledních 89 dní web stáhne i bez odemčení. Načíst je můžete i opakovaně: platby, které web už má, se nezdvojí.',
+        'Vybraný den: 1. 1. 2026. Platby za posledních 89 dní web stáhne i bez odemčení. Načíst je můžete i opakovaně: platby, které web už má, se nezdvojí.',
       );
       expect(button().textContent?.trim()).toBe('Načíst starší platby');
       expect(button().disabled).toBe(false);
@@ -166,6 +166,15 @@ describe('Given the part for older bank payments on the import card', () => {
       expect(checkAgain()).toBeNull();
       expect(status()).toBe('');
       expect(alert()).toBe('');
+    });
+
+    it('and they choose another day, then the hint under the field names it in Czech, whatever the language of the browser', async () => {
+      await changeDate('2025-06-01');
+
+      const hint = fixture.nativeElement.querySelector(
+        `#${dateField().getAttribute('aria-describedby')?.split(' ')[0]}`,
+      );
+      expect(hint?.textContent).toContain('Vybraný den: 1.\u00a06. 2025.');
     });
 
     it('and they press the button, then the chosen day is posted and the button stays focusable while it waits for the bank', async () => {
