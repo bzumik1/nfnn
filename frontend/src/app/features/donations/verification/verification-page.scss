@@ -13,9 +13,12 @@ $intro-measure: calc($container-width - 2 * var(--space-6));
 }
 
 .container {
-  max-width: $container-width;
   margin: 0 auto;
   padding: var(--space-8) var(--space-6) var(--space-12);
+}
+
+:host(:not(.verify-embedded)) .container {
+  max-width: $container-width;
 }
 
 .container--compact {
