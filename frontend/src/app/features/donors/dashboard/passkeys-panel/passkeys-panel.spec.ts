@@ -393,6 +393,59 @@ describe('Given the passkeys panel of the sign-in card', () => {
     });
   });
 
+  describe('when the donor removes a passkey from the page', () => {
+    afterEach(() => root().remove());
+
+    async function renderOnPage(items = [IPHONE, WINDOWS]): Promise<void> {
+      await render(items);
+      document.body.append(root());
+    }
+
+    async function removeThe(passkey: typeof IPHONE): Promise<void> {
+      const row = Array.from(root().querySelectorAll<HTMLElement>('.passkey')).find((candidate) =>
+        candidate.querySelector('.passkey-name')?.textContent?.includes(passkey.name),
+      );
+      Array.from(row?.querySelectorAll('button') ?? [])
+        .find((button) => button.textContent?.includes('Odebrat'))
+        ?.click();
+      await settle();
+      await clickButton('Ano, odebrat');
+      http.expectOne(`${PASSKEYS_URL}/${passkey.id}`).flush(null);
+      await settle();
+    }
+
+    it('then the key below takes the focus when the first one leaves', async () => {
+      await renderOnPage();
+
+      await removeThe(IPHONE);
+
+      expect(texts('.passkey-name')).toEqual(['Windows']);
+      expect(document.activeElement).toBe(
+        document.getElementById(`passkey-rename-button-${WINDOWS.id}`),
+      );
+    });
+
+    it('then the key above takes the focus when the last one leaves', async () => {
+      await renderOnPage();
+
+      await removeThe(WINDOWS);
+
+      expect(texts('.passkey-name')).toEqual(['iPhone']);
+      expect(document.activeElement).toBe(
+        document.getElementById(`passkey-rename-button-${IPHONE.id}`),
+      );
+    });
+
+    it('then the panel named by its row takes the focus when the only key leaves', async () => {
+      await renderOnPage([IPHONE]);
+
+      await removeThe(IPHONE);
+
+      expect(root().querySelector('.passkey')).toBeNull();
+      expect(document.activeElement).toBe(element('.passkeys'));
+    });
+  });
+
   describe('when the donor renames a passkey', () => {
     beforeEach(() => render());
 

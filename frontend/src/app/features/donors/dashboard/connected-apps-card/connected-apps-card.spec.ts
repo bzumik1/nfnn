@@ -30,6 +30,11 @@ const CLAUDE_CONNECTION = {
   lastUsedAt: '2026-10-23T09:30:00Z',
   expiresAt: '2026-11-06T09:30:00Z',
 };
+const LOCAL_CONNECTION = {
+  ...CLAUDE_CONNECTION,
+  id: '0192f0f1-0000-7000-8000-000000000012',
+  client: 'localhost',
+};
 
 describe("Given an administrator's connected applications card", () => {
   let fixture: ComponentFixture<ConnectedAppsCard>;
@@ -143,6 +148,53 @@ describe("Given an administrator's connected applications card", () => {
     expect(element('.connection')).toBeNull();
     expect(element('.connections-empty').textContent).toContain('Žádná aplikace není připojená');
     expect(element('.connections-status').textContent).toContain('Aplikace claude.ai je odpojená');
+  });
+
+  describe('when two applications are connected and the card is on the page', () => {
+    beforeEach(async () => {
+      document.body.append(root());
+      http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION, LOCAL_CONNECTION] });
+      await settle();
+    });
+
+    afterEach(() => root().remove());
+
+    function disconnectButtons(): HTMLButtonElement[] {
+      return Array.from(root().querySelectorAll<HTMLButtonElement>('.connection-disconnect'));
+    }
+
+    async function disconnectThe(app: typeof CLAUDE_CONNECTION, index: number): Promise<void> {
+      disconnectButtons()[index].click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: `${CONNECTIONS_URL}/${app.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+    }
+
+    it('and the first one is disconnected, then the application below takes the focus', async () => {
+      await disconnectThe(CLAUDE_CONNECTION, 0);
+
+      expect(root().querySelectorAll('.connection')).toHaveLength(1);
+      expect(document.activeElement).toBe(disconnectButtons()[0]);
+      expect(document.activeElement?.closest('.connection')?.textContent).toContain('localhost');
+    });
+
+    it('and the last one is disconnected, then the application above takes the focus', async () => {
+      await disconnectThe(LOCAL_CONNECTION, 1);
+
+      expect(document.activeElement).toBe(disconnectButtons()[0]);
+      expect(document.activeElement?.closest('.connection')?.textContent).toContain('claude.ai');
+    });
+
+    it('and both are disconnected, then the heading takes the focus', async () => {
+      await disconnectThe(CLAUDE_CONNECTION, 0);
+      await disconnectThe(LOCAL_CONNECTION, 0);
+
+      expect(root().querySelector('.connection')).toBeNull();
+      expect(element('.connections-empty').textContent).toContain('Žádná aplikace není připojená');
+      expect(document.activeElement).toBe(element('#connections-title'));
+    });
   });
 
   it('when the card is opened again, then the connections show at once without the loading line', async () => {
