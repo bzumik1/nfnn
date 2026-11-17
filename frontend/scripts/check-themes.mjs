@@ -392,6 +392,18 @@ const READABLE_PAIRS = [
     minimum: 3,
     softInTheDefaultLook: true,
   },
+  {
+    texts: ['--color-text-muted'],
+    grounds: [
+      {
+        shadeOf: '--color-text',
+        amountOf: '--scroll-shade-amount',
+        over: '--color-surface-elevated',
+      },
+      { shadeOf: '--color-text', amountOf: '--scroll-shade-amount', over: '--color-sheet-grouped' },
+    ],
+    minimum: 4.5,
+  },
 ];
 
 function mediaMatches(query, media) {
@@ -437,27 +449,42 @@ function pressedTintPercent(values, token) {
   return tint === null ? null : Number(tint[1]);
 }
 
-function groundOf(ground, measurable, text, tokens) {
+function groundUnder(ground, measurable, text, tokens, percentOf, page) {
   if (typeof ground === 'string') {
-    return measurable(ground);
+    const colour = measurable(ground);
+    return colour === null ? null : over(colour, page);
+  }
+  if (ground.shadeOf !== undefined) {
+    const shade = measurable(ground.shadeOf);
+    const panel = measurable(ground.over);
+    const percent = percentOf(ground.amountOf);
+    if (shade === null || panel === null || percent === null) {
+      return null;
+    }
+    return over({ rgb: shade.rgb, alpha: (shade.alpha * percent) / 100 }, over(panel, page));
   }
   if (ground.pressedTintOf !== undefined) {
     const percent = pressedTintPercent(tokens, ground.pressedTintOf);
     const tinted = measurable(text);
     return percent === null || tinted === null
       ? null
-      : { rgb: tinted.rgb, alpha: (tinted.alpha * percent) / 100 };
+      : over({ rgb: tinted.rgb, alpha: (tinted.alpha * percent) / 100 }, page);
   }
   const tinted = measurable(ground.tintOf);
-  return tinted === null ? null : { rgb: tinted.rgb, alpha: (tinted.alpha * ground.percent) / 100 };
+  return tinted === null
+    ? null
+    : over({ rgb: tinted.rgb, alpha: (tinted.alpha * ground.percent) / 100 }, page);
 }
 
-function groundName(ground, tokens) {
+function groundName(ground, tokens, percentOf) {
   if (typeof ground === 'string') {
     return ground;
   }
   if (ground.pressedTintOf !== undefined) {
     return `its own pressed tint (${pressedTintPercent(tokens, ground.pressedTintOf)} % of ${ground.pressedTintOf})`;
+  }
+  if (ground.shadeOf !== undefined) {
+    return `the ${ground.amountOf} (${percentOf(ground.amountOf)} %) shade of ${ground.shadeOf} over ${ground.over}`;
   }
   return `the ${ground.percent} % tint of ${ground.tintOf}`;
 }
@@ -523,6 +550,15 @@ export function appearanceProblems(theme, source) {
       }
       return colour;
     };
+    const percentOf = (name) => {
+      const written = tokens.get(name);
+      const amount = /^(\d+(?:\.\d+)?)%$/.exec(written ?? '');
+      if (amount === null) {
+        problems.push(`${label}: ${name} is ${written}, not a percentage of the text colour`);
+        return null;
+      }
+      return Number(amount[1]);
+    };
     const page = measurable('--color-surface');
     if (page === null) {
       continue;
@@ -542,16 +578,15 @@ export function appearanceProblems(theme, source) {
           continue;
         }
         for (const text of pair.texts) {
-          const groundColour = groundOf(ground, measurable, text, tokens);
+          const under = groundUnder(ground, measurable, text, tokens, percentOf, page.rgb);
           const textColour = measurable(text);
-          if (groundColour === null || textColour === null) {
+          if (under === null || textColour === null) {
             continue;
           }
-          const under = over(groundColour, page.rgb);
           const ratio = contrast(over(textColour, under), under);
           if (ratio < pair.minimum) {
             problems.push(
-              `${label}: ${text} on ${groundName(ground, tokens)} is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
+              `${label}: ${text} on ${groundName(ground, tokens, percentOf)} is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
             );
           }
         }

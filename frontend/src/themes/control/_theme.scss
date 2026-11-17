@@ -357,6 +357,7 @@
   --safe-area-top: env(safe-area-inset-top);
   --full-screen-height: 100svh;
   --scroll-edge-fade: 25px;
+  --scroll-shade-amount: 14%;
   --touch-target-size: 45px;
   --list-row-min-height: 55px;
   --list-inset-row-min-height: 2.8rem;
@@ -495,4 +496,10 @@
 
 :root[data-appearance='light'] {
   color-scheme: light;
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --scroll-shade-amount: 21%;
+  }
 }

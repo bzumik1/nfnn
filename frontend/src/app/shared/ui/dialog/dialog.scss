@@ -25,7 +25,11 @@
   --dialog-pull: 0;
   --dialog-enter-opacity: 0;
   --dialog-enter-scale: var(--motion-scale-enter);
-  --dialog-scroll-shade: color-mix(in srgb, var(--color-text) 14%, transparent);
+  --dialog-scroll-shade: color-mix(
+    in srgb,
+    var(--color-text) var(--scroll-shade-amount),
+    transparent
+  );
   position: fixed;
   inset: 0;
   width: 100%;
@@ -248,6 +252,10 @@
     display: none;
   }
 
+  .dialog--sheet .dialog-panel--tall .dialog-grabber {
+    cursor: auto;
+  }
+
   .dialog--sheet .dialog-close {
     top: var(--sheet-close-inset);
     right: sheet.$inline-end;
@@ -317,7 +325,7 @@
     }
 
     .dialog--sheet .dialog-panel {
-      max-width: var(--dialog-max-width-wide);
+      max-width: min(var(--dialog-max-width-wide), 100% - 2 * var(--space-5));
       border-radius: var(--radius-sheet);
       padding-bottom: var(--space-8);
     }
@@ -330,6 +338,11 @@
 
     .dialog--sheet .dialog-grabber::before {
       display: none;
+    }
+
+    .dialog--sheet .dialog-grabber,
+    .dialog--sheet .dialog-panel--dragging .dialog-grabber {
+      cursor: auto;
     }
   }
 }

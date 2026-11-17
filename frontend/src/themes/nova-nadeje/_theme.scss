@@ -452,6 +452,7 @@
   --safe-area-top: env(safe-area-inset-top);
   --full-screen-height: 100svh;
   --scroll-edge-fade: 24px;
+  --scroll-shade-amount: 14%;
   --touch-target-size: 44px;
   --list-row-min-height: 56px;
   --list-inset-row-min-height: 2.765rem;
@@ -489,6 +490,7 @@
 
 @media (prefers-contrast: more) {
   :root {
+    --scroll-shade-amount: 30%;
     --color-text-secondary: #1a1a2e;
     --color-text-muted: #1f2937;
     --color-text-soft: #374151;
