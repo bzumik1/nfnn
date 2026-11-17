@@ -8,6 +8,7 @@ describe('Given the bank check of a signed-in donor', () => {
   let fixture: ComponentFixture<BankCheck>;
   let offline: WritableSignal<boolean>;
   let refreshFromBank: ReturnType<typeof vi.fn>;
+  let checkingBank: WritableSignal<boolean>;
 
   function checkButton(): HTMLButtonElement {
     return (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
@@ -18,6 +19,7 @@ describe('Given the bank check of a signed-in donor', () => {
   beforeEach(async () => {
     offline = signal(false);
     refreshFromBank = vi.fn();
+    checkingBank = signal(false);
     TestBed.configureTestingModule({
       imports: [BankCheck],
       providers: [
@@ -25,7 +27,7 @@ describe('Given the bank check of a signed-in donor', () => {
         {
           provide: DonorDonations,
           useValue: {
-            checkingBank: signal(false),
+            checkingBank,
             bankCheckOutcome: signal(null),
             incomingCount: signal(0),
             bankDataAsOf: signal(null),
@@ -38,6 +40,23 @@ describe('Given the bank check of a signed-in donor', () => {
     });
     fixture = TestBed.createComponent(BankCheck);
     await fixture.whenStable();
+  });
+
+  it('when a check is running, then Zkontrolovat nové platby stays focusable with its name, says it is unavailable and asks the bank no second time', async () => {
+    checkingBank.set(true);
+    await fixture.whenStable();
+
+    expect(checkButton().disabled).toBe(false);
+    expect(checkButton().getAttribute('aria-disabled')).toBe('true');
+    expect(checkButton().textContent?.trim()).toBe('Zkontrolovat nové platby');
+
+    checkButton().click();
+    await fixture.whenStable();
+    expect(refreshFromBank).not.toHaveBeenCalled();
+
+    checkingBank.set(false);
+    await fixture.whenStable();
+    expect(checkButton().hasAttribute('aria-disabled')).toBe(false);
   });
 
   it('when the device is offline and the donor presses Zkontrolovat nové platby, then the button says it needs a connection and the bank is not asked', async () => {

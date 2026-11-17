@@ -2038,7 +2038,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(element('.bank-check-status')?.getAttribute('role')).toBe('status');
       expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
-      expect(button('.bank-check-btn').disabled).toBe(false);
+      expect(button('.bank-check-btn').hasAttribute('aria-disabled')).toBe(false);
     });
 
     it('then while the bank is being checked the page says so and loads the donations again once new bank data arrived', async () => {
@@ -2053,7 +2053,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await settle();
 
       expect(text('.bank-check-status')).toBe('Kontrolujeme nové platby v bance…');
-      expect(button('.bank-check-btn').disabled).toBe(true);
+      expect(button('.bank-check-btn').getAttribute('aria-disabled')).toBe('true');
 
       await vi.advanceTimersByTimeAsync(2000);
       http
@@ -2066,7 +2066,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:07');
-      expect(button('.bank-check-btn').disabled).toBe(false);
+      expect(button('.bank-check-btn').hasAttribute('aria-disabled')).toBe(false);
       expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
     });
 
@@ -2105,7 +2105,7 @@ describe('Given a signed-in donor in the donor area', () => {
       it('then the bank is asked again, the page says so until the donations are loaded again, and then that no gift is new', async () => {
         await pressAfterAreaCheck();
         expect(text('.bank-check-status')).toBe('Kontrolujeme nové platby v bance…');
-        expect(button('.bank-check-btn').disabled).toBe(true);
+        expect(button('.bank-check-btn').getAttribute('aria-disabled')).toBe('true');
 
         http
           .expectOne({ method: 'POST', url: BANK_CHECK_URL })
@@ -2117,7 +2117,7 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(text('.bank-check-status')).toBe(
           'Žádný nový dar zatím nepřišel. Banky se ptáme nejvýš jednou za 30 sekund, zkuste to proto za chvíli znovu. Údaje z banky k 18. 10. 2026 10:05',
         );
-        expect(button('.bank-check-btn').disabled).toBe(false);
+        expect(button('.bank-check-btn').hasAttribute('aria-disabled')).toBe(false);
       });
 
       it('and one gift arrives, then the outcome says one new gift was added', async () => {
@@ -2182,7 +2182,7 @@ describe('Given a signed-in donor in the donor area', () => {
           'Nové platby se nepodařilo zkontrolovat. Zkuste to prosím za chvíli znovu.',
         );
         expect(element('.bank-check-error')?.getAttribute('role')).toBe('alert');
-        expect(button('.bank-check-btn').disabled).toBe(false);
+        expect(button('.bank-check-btn').hasAttribute('aria-disabled')).toBe(false);
       });
 
       it('and the bank is still busy after the last poll, then the donations load again and the outcome says to try again later', async () => {
@@ -2229,7 +2229,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(text('.bank-check-status')).toBe('');
       expect(element('.bank-check-error')).toBeNull();
-      expect(button('.bank-check-btn').disabled).toBe(false);
+      expect(button('.bank-check-btn').hasAttribute('aria-disabled')).toBe(false);
     });
 
     it('then the receipt of one payment is saved under the name the server gives', async () => {
