@@ -248,6 +248,11 @@ describe('Given the card "Data v tomto zařízení"', () => {
 
       expect(dialog.getAttribute('role')).toBe('alertdialog');
       expect(
+        normalized(document.getElementById(dialog.getAttribute('aria-describedby')!)?.textContent),
+      ).toBe(
+        'Kopie vašich darů, potvrzení a bankovních účtů se z tohoto zařízení smaže a odhlásíme vás. Na serveru zůstane vše, jak je; po dalším přihlášení se kopie stáhne znovu.',
+      );
+      expect(
         [...dialog.querySelectorAll('.ui-dialog__actions button')].map((action) =>
           normalized(action.textContent),
         ),
