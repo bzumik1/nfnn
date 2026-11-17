@@ -224,3 +224,28 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     expect(fadesOn(moves, /accounts-help-panel/)).toBe(true);
   });
 });
+
+test.describe('Given a donor on a computer', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' });
+
+  test('when they cancel the password form, then the toggle takes the focus at once and the closing panel is inert, so Tab never enters it', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+
+    const toggle = page.locator('dd.account-actions').getByRole('button', { name: 'Změnit heslo' });
+    const panel = page.locator('#account-password-panel');
+    await toggle.click();
+    await expect(panel.getByLabel('Současné heslo')).toBeFocused();
+
+    await panel.getByRole('button', { name: 'Zrušit' }).click();
+
+    await expect(toggle).toBeFocused();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(panel).toHaveAttribute('inert', '');
+    await page.keyboard.press('Tab');
+    expect(await panel.evaluate((element) => element.contains(document.activeElement))).toBe(false);
+  });
+});
