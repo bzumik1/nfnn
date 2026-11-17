@@ -137,6 +137,14 @@ async function separatorPlace(account: Locator): Promise<SeparatorPlace> {
   });
 }
 
+async function placement(row: Locator, button: Locator): Promise<number[]> {
+  const rowBox = (await row.boundingBox())!;
+  const buttonBox = (await button.boundingBox())!;
+  return [rowBox.height, buttonBox.x, buttonBox.y, buttonBox.width].map((value) =>
+    Math.round(value),
+  );
+}
+
 async function rememberedSession(page: Page): Promise<void> {
   await page.route('**/api/donors/auth/refresh', (route) =>
     route.fulfill(session(200, administrator)),
@@ -530,6 +538,92 @@ test.describe('Given an administrator on the donors page', () => {
       }
     });
   }
+
+  test('when the PDF of a receipt takes long to prepare on a computer, then its row keeps its height, the button stays put, Zrušit comes before it and the state sits on the row axis', async ({
+    page,
+  }) => {
+    const receipt = petrDetail.receipts[0];
+    await page.route(
+      (url) => url.pathname === PETR_ACCOUNT,
+      (route) => route.fulfill({ json: petrAccount }),
+    );
+    await page.route(
+      (url) => url.pathname === PETR_DONATIONS,
+      (route) => route.fulfill({ json: petrDetail }),
+    );
+    await page.clock.install();
+    await page.route(
+      (url) => url.pathname === `/api/admin/donations/receipts/${receipt.id}`,
+      () => new Promise<void>(() => undefined),
+    );
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`/sprava/darci/${PETR_ID}`);
+    const row = page
+      .getByRole('region', { name: 'Vydaná potvrzení' })
+      .getByRole('row')
+      .filter({ hasText: receipt.number });
+    await expect(
+      row.getByRole('button', { name: `Stáhnout PDF potvrzení ${receipt.number}` }),
+    ).toBeVisible();
+    const button = row.locator('.receipt-pdf');
+    const resting = await placement(row, button);
+    const pill = (await row.getByText('platné', { exact: true }).boundingBox())!;
+    const buttonBox = (await button.boundingBox())!;
+    expect(
+      Math.abs(pill.y + pill.height / 2 - (buttonBox.y + buttonBox.height / 2)),
+    ).toBeLessThanOrEqual(1);
+
+    await button.click();
+    await expect(row.getByRole('status')).toHaveText(/\S/);
+    expect(await placement(row, button)).toEqual(resting);
+
+    await page.clock.fastForward(8000);
+    const cancel = row.getByRole('button', { name: 'Zrušit' });
+    await expect(cancel).toBeVisible();
+    expect(await placement(row, button)).toEqual(resting);
+    const cancelBox = (await cancel.boundingBox())!;
+    expect(cancelBox.x + cancelBox.width).toBeLessThanOrEqual(buttonBox.x);
+
+    await cancel.focus();
+    await page.keyboard.press('Tab');
+    await expect(button).toBeFocused();
+  });
+
+  test('when the card shows its actions on a computer, then every hint stands under its button and the two account actions stand side by side at one height', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === PETR_ACCOUNT,
+      (route) => route.fulfill({ json: { ...petrAccount, passkeys: 1 } }),
+    );
+    await page.route(
+      (url) => url.pathname === PETR_DONATIONS,
+      (route) => route.fulfill({ json: petrDetail }),
+    );
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`/sprava/darci/${PETR_ID}`);
+
+    for (const [card, name, hint] of [
+      ['Přihlášení', 'Vypnout dvoufaktorové ověření', 'Pro dárce, který přišel o telefon'],
+      ['Přihlášení', 'Odebrat přístupové klíče', 'Pro dárce, který přišel o zařízení s klíčem.'],
+      ['Výmaz osobních údajů (GDPR)', 'Vymazat osobní údaje', 'Pro dárce, který požádal o výmaz'],
+    ]) {
+      const region = page.getByRole('region', { name: card });
+      const buttonBox = (await region.getByRole('button', { name }).boundingBox())!;
+      const hintBox = (await region.getByText(hint).boundingBox())!;
+      expect(hintBox.y, name).toBeGreaterThanOrEqual(buttonBox.y + buttonBox.height);
+      expect(Math.round(hintBox.x), name).toBe(Math.round(buttonBox.x));
+    }
+
+    const accounts = page.getByRole('region', { name: 'Bankovní účty' });
+    const disconnect = (await accounts
+      .getByRole('button', { name: /^Vypnout párování/ })
+      .boundingBox())!;
+    const remove = (await accounts.getByRole('button', { name: /^Odebrat účet/ }).boundingBox())!;
+    expect(Math.round(remove.y)).toBe(Math.round(disconnect.y));
+    expect(Math.round(remove.height)).toBe(Math.round(disconnect.height));
+    expect(remove.x).toBeGreaterThanOrEqual(disconnect.x + disconnect.width);
+  });
 
   test('when the text grows up to 200 % on a computer, then the separator before the bank never covers the account number and never starts a line, up to the largest system text', async ({
     page,
