@@ -189,6 +189,20 @@ async function heroControlsInTabBarBand(page: Page): Promise<string[]> {
   });
 }
 
+const EDGE_ROUNDING_PX = 1;
+
+async function heroControlsPartlyBehindTabBar(page: Page): Promise<string[]> {
+  return page.evaluate((rounding) => {
+    const tabBarTop = document.querySelector('app-tab-bar nav')!.getBoundingClientRect().top;
+    return [...document.querySelectorAll<HTMLElement>('#uvod a')]
+      .filter((control) => {
+        const box = control.getBoundingClientRect();
+        return box.bottom > tabBarTop && box.top < window.innerHeight - rounding;
+      })
+      .map((control) => control.textContent?.trim() ?? '');
+  }, EDGE_ROUNDING_PX);
+}
+
 async function lowestContrastOverPhoto(page: Page, selector: string): Promise<number> {
   const { color, lines } = await page.locator(selector).evaluate((element) => {
     const range = document.createRange();
@@ -440,6 +454,8 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
     { name: 'a computer', width: 1280, height: 748, root: '150%' },
     { name: 'a computer', width: 1280, height: 748, root: '200%' },
     { name: 'an iPad on its side', width: 1180, height: 820, root: '34px' },
+    { name: 'an iPad mini on its side', width: 1133, height: 744, root: '34px' },
+    { name: 'an iPad mini on its side', width: 1133, height: 744, root: '53px' },
     { name: 'an iPhone SE', width: 375, height: 647, root: '53px' },
   ]) {
     test.describe(`when it opens on ${screen.name} of ${screen.width} × ${screen.height} with a root of ${screen.root}, where the hero no longer fits one screen and its buttons may rest partly behind the tab bar`, () => {
@@ -545,6 +561,143 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
         }
       });
     });
+  }
+
+  for (const screen of [
+    { name: 'an iPad mini on its side', width: 1133, height: 744, root: '34px' },
+    { name: 'an iPad mini on its side', width: 1133, height: 744, root: '53px' },
+    { name: 'an iPad on its side', width: 1180, height: 820, root: '34px' },
+    { name: 'a computer', width: 1280, height: 748, root: '200%' },
+    { name: 'an iPhone SE', width: 375, height: 647, root: '53px' },
+  ]) {
+    test.describe(`when it opens on ${screen.name} of ${screen.width} × ${screen.height} with a root of ${screen.root} and rests at the top`, () => {
+      test.use({ viewport: { width: screen.width, height: screen.height } });
+
+      test.beforeEach(async ({ page }) => {
+        await page.goto('/');
+        await page.addStyleTag({ content: `html { font-size: ${screen.root}; }` });
+        await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+        await heroLayout(page, FACE_IN_HERO_PHOTO);
+      });
+
+      test("then each hero button stands wholly above the tab bar or wholly below the window's edge, never partly behind the bar", async ({
+        page,
+      }) => {
+        await expect.poll(() => heroControlsPartlyBehindTabBar(page)).toEqual([]);
+        await expect(page.locator('#uvod .hero-lead')).toHaveText(
+          /Pomáháme zdravotně postiženým dětem/,
+        );
+      });
+
+      test("then buttons moved below the window's edge start right at it, so the space under the lead is no larger than the buttons took", async ({
+        page,
+      }) => {
+        const buttons = await page.locator('#uvod .hero-btns').evaluate((row) => ({
+          top: row.getBoundingClientRect().top,
+          edge: window.innerHeight,
+        }));
+
+        if (buttons.top >= buttons.edge - EDGE_ROUNDING_PX) {
+          expect(Math.abs(buttons.top - buttons.edge)).toBeLessThanOrEqual(EDGE_ROUNDING_PX);
+        }
+      });
+    });
+  }
+
+  test.describe('when it opens on an iPad mini on its side (1133 × 744) at the default text size', () => {
+    test.use({ viewport: { width: 1133, height: 744 } });
+
+    test('then its buttons stay on the first screen above the tab bar instead of moving below its edge', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+      await heroLayout(page, FACE_IN_HERO_PHOTO);
+
+      const layout = await page.evaluate(() => ({
+        buttons: document
+          .querySelector('#uvod .hero-btns')!
+          .getBoundingClientRect()
+          .toJSON() as DOMRect,
+        tabBarTop: document.querySelector('app-tab-bar nav')!.getBoundingClientRect().top,
+      }));
+      expect(layout.buttons.top).toBeGreaterThan(0);
+      expect(layout.buttons.bottom).toBeLessThanOrEqual(layout.tabBarTop);
+    });
+  });
+
+  test.describe('when it opens on a touch screen of an iPad mini on its side (1133 × 744) with a root of 53 px and the visitor scrolls', () => {
+    test.use({ viewport: { width: 1133, height: 744 }, hasTouch: true, isMobile: true });
+
+    test('then the hero keeps its buttons where they first stood while the page scrolls', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await page.addStyleTag({ content: 'html { font-size: 53px; }' });
+      await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+      await heroLayout(page, FACE_IN_HERO_PHOTO);
+      await expect.poll(() => heroControlsPartlyBehindTabBar(page)).toEqual([]);
+      const before = await page.locator('#uvod .hero-btns').evaluate((row) => row.offsetTop);
+      await page.evaluate(() => {
+        const changes = { count: 0 };
+        Object.assign(window, { heroChanges: changes });
+        new MutationObserver((records) => (changes.count += records.length)).observe(
+          document.querySelector('#uvod')!,
+          {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            attributeFilter: ['class', 'style'],
+          },
+        );
+      });
+
+      for (const top of [120, 360, 40, 600, 0]) {
+        await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), top);
+        await page.evaluate(
+          () =>
+            new Promise<void>((settled) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => settled())),
+            ),
+        );
+      }
+      await waitWhileNothingMayHappen(page, 400);
+
+      const changes = await page.evaluate(
+        () => (window as unknown as { heroChanges: { count: number } }).heroChanges.count,
+      );
+      expect(changes, 'the hero changed while the page scrolled').toBe(0);
+      expect(await page.locator('#uvod .hero-btns').evaluate((row) => row.offsetTop)).toBe(before);
+    });
+  });
+
+  for (const screen of [
+    { name: 'an iPad mini on its side', width: 1133, height: 744 },
+    { name: 'an iPad on its side', width: 1180, height: 820 },
+    { name: 'a computer', width: 1280, height: 748 },
+  ]) {
+    for (const colorScheme of ['light', 'dark'] as const) {
+      test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height}) with text at 200 % in the ${colorScheme} appearance`, () => {
+        test.use({ viewport: { width: screen.width, height: screen.height }, colorScheme });
+
+        test("then the lead keeps clear of the child's face and reads against the brightest part of the photo behind it", async ({
+          page,
+        }) => {
+          await page.goto('/');
+          await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+          await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+          const layout = await heroLayout(page, FACE_IN_HERO_PHOTO);
+
+          for (const { text, box } of layout.shown) {
+            expect(overlaps(box, layout.face), `"${text}" lies over the child's face`).toBe(false);
+          }
+          expect(
+            await lowestContrastOverPhoto(page, '#uvod .hero-lead'),
+            'the lead falls below WCAG AA contrast over the photo',
+          ).toBeGreaterThanOrEqual(NORMAL_TEXT_CONTRAST);
+        });
+      });
+    }
   }
 
   test.describe('when it opens on an iPhone SE with the largest system text (a root of 53 px), turns on its side and back, and Safari shows and hides its toolbar', () => {
