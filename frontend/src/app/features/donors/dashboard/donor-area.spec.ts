@@ -3657,6 +3657,23 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(new URL(mail.href).searchParams.get('subject')).toBe('Smazání účtu');
       expect(normalized(mail.textContent ?? '')).toBe('info@nfnn.cz');
     });
+
+    it('then the paragraphs of Smazání účtu and the explanation of Když web nefunguje take the one intro style of every card', async () => {
+      await open('/darce/udaje');
+      http.expectOne(PASSKEYS_URL).flush({ items: [] });
+      http.expectOne(DEVICES_URL).flush({ items: [] });
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const paragraphs = [
+        ...root().querySelectorAll<HTMLElement>(
+          '.account-deletion p, .diagnostics-card .diagnostics-download-about',
+        ),
+      ];
+      expect(paragraphs.length).toBe(4);
+      expect(paragraphs.every((paragraph) => paragraph.classList.contains('ui-card__intro'))).toBe(
+        true,
+      );
+    });
   });
   describe('when the donor’s copy is open on this device', () => {
     let copy: FakeDonorCopy;
