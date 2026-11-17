@@ -55,7 +55,7 @@ for (const width of COMPUTER_WIDTHS) {
       const axis = await leftEdge(backButton(page));
       const title = await leftEdge(page.getByRole('heading', { level: 1 }));
       const box = (await card.boundingBox())!;
-      const layoutWidth = await page.evaluate(() => document.documentElement.clientWidth);
+      const layoutWidth = await page.evaluate(() => document.body.clientWidth);
 
       expect(Math.abs(title - axis)).toBeLessThanOrEqual(PIXEL_TOLERANCE);
       expect(Math.abs(box.x - axis)).toBeLessThanOrEqual(PIXEL_TOLERANCE);
