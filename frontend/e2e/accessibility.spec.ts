@@ -441,7 +441,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     const featured = page.locator('.featured');
     await featured.getByRole('button', { name: /^Kopírovat odkaz/ }).click();
-    await expect(featured.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+    await expect(featured.locator('app-copy-button').getByRole('status')).toHaveText(/zkopírován/i);
 
     expect(await violations(page)).toEqual([]);
 
