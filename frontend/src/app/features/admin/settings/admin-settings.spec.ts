@@ -337,19 +337,16 @@ describe('Given an administrator on the settings page', () => {
       );
     });
 
-    it('then a change on a computer keeps the save button in a bar at the bottom, which lets go once the change is undone', async () => {
+    it('then a change on a computer with the save row in view gives it the bar without an entrance, and undoing the change lets it go at once', async () => {
       expect(element('.save-row').classList).not.toContain('ui-action-bar');
 
       await type('#setting-RECEIPT_FIRST_YEAR', '2025');
 
       expect(element('.save-row').classList).toContain('ui-action-bar');
+      expect(element('.save-row').classList).not.toContain('save-row--entering');
       expect(element('.save-row').contains(button('Uložit nastavení'))).toBe(true);
 
       await type('#setting-RECEIPT_FIRST_YEAR', '2026');
-
-      expect(element('.save-row').classList).toContain('save-row--leaving');
-      element('.save-row').dispatchEvent(new Event('animationend'));
-      await settle();
 
       expect(element('.save-row').classList).not.toContain('ui-action-bar');
       expect(element('.save-row').classList).not.toContain('save-row--leaving');
@@ -520,6 +517,102 @@ describe('Given an administrator on the settings page', () => {
 
     expect(text('.ui-notice--alert')).toContain('Tajné údaje (hesla a tokeny) teď nejde uložit');
     expect(element<HTMLInputElement>('#setting-FIO_TOKEN').disabled).toBe(true);
+  });
+});
+
+class FormEndObserver {
+  static all: FormEndObserver[] = [];
+  readonly observed: Element[] = [];
+  disconnected = false;
+
+  constructor(private readonly report: IntersectionObserverCallback) {
+    FormEndObserver.all.push(this);
+  }
+
+  observe(target: Element): void {
+    this.observed.push(target);
+  }
+
+  unobserve(): void {}
+
+  disconnect(): void {
+    this.disconnected = true;
+  }
+
+  sees(top: number, windowBottom: number): void {
+    const entry = {
+      isIntersecting: top < windowBottom,
+      boundingClientRect: { top },
+      rootBounds: { bottom: windowBottom },
+      target: this.observed[0],
+    } as unknown as IntersectionObserverEntry;
+    this.report([entry], this as unknown as IntersectionObserver);
+  }
+}
+
+describe("Given an administrator on a computer scrolled up the settings page, the form's end below the window", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('when they change a field, then the bar enters at the bottom, and undoing the change lets it leave before the row rests in its place', async () => {
+    FormEndObserver.all = [];
+    vi.stubGlobal('IntersectionObserver', FormEndObserver);
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminSettings],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+      ],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(AdminSettings);
+    fixture.detectChanges();
+    http.expectOne(SETTINGS_URL).flush(settingsView());
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const settle = async () => {
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+    const row = () => fixture.nativeElement.querySelector('.save-row') as HTMLElement;
+    const type = async (value: string) => {
+      const input = fixture.nativeElement.querySelector(
+        '#setting-RECEIPT_FIRST_YEAR',
+      ) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+      await settle();
+    };
+
+    expect(FormEndObserver.all).toHaveLength(1);
+    expect(FormEndObserver.all[0]!.observed).toEqual([
+      fixture.nativeElement.querySelector('.save-row-end'),
+    ]);
+    FormEndObserver.all[0]!.sees(2000, 800);
+
+    await type('2025');
+
+    expect(row().classList).toContain('ui-action-bar');
+    expect(row().classList).toContain('save-row--entering');
+
+    await type('2026');
+
+    expect(row().classList).toContain('ui-action-bar');
+    expect(row().classList).toContain('save-row--leaving');
+    row().dispatchEvent(new Event('animationend'));
+    await settle();
+
+    expect(row().classList).not.toContain('ui-action-bar');
+    expect(row().classList).not.toContain('save-row--leaving');
+
+    fixture.destroy();
+    expect(FormEndObserver.all.every((observer) => observer.disconnected)).toBe(true);
+    http.match(SIGNATORY_URL);
+    http.match(SIGNING_KEYS_URL);
+    http.verify();
   });
 });
 

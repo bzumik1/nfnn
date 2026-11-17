@@ -1,5 +1,8 @@
 import { logWindow } from '../../testing/admin-fixtures';
 import { LOGS_URL, LogPageHarness, problem } from '../testing/log-page-harness';
+import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { CompactLayout } from '../../../../core/layout/compact-layout';
 import { AdminLogReader } from './admin-log-reader';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 
@@ -200,6 +203,28 @@ describe('Given an administrator reading a log file', () => {
     expect(
       top.compareDocumentPosition(page.element('.entry')) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it('when the file holds older lines on a phone or a tablet, then Načíst starší řádky stays only under the entries', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: CompactLayout,
+          useValue: {
+            isCompact: signal(true).asReadonly(),
+            listsAsRows: signal(true).asReadonly(),
+          },
+        },
+      ],
+    });
+    await openTail();
+
+    const loadButtons = Array.from(page.element('.ui-page').querySelectorAll('button'))
+      .map((button) => (button.textContent ?? '').replace(/\s+/g, ' ').trim())
+      .filter((name) => name.startsWith('Načíst'));
+    expect(loadButtons).toEqual(['Načíst novější řádky', 'Načíst starší řádky']);
+    expect(page.element('.list-end').textContent).toContain('Načíst starší řádky');
+    expect(page.element('.load-more').textContent).toContain('Načíst novější řádky');
   });
 
   it('when they load older lines, then the older entries join below and the first of them takes the focus', async () => {

@@ -217,7 +217,7 @@ describe('Given an administrator on the backups page', () => {
     expect(button('Zálohovat teď').disabled).toBe(true);
     expect(button('Spustit zkušební obnovu').disabled).toBe(true);
     expect(text('.actions-blocked')).toBe(
-      'Zálohovat teď ani ověřit obnovu nejde, dokud se nevyřeší problém výše.',
+      'Zálohu ani zkušební obnovu teď nejde spustit, dokud se nevyřeší problém výše.',
     );
     expect(text('[aria-labelledby="backups-list-title"]')).toContain('Zatím žádná záloha.');
   });

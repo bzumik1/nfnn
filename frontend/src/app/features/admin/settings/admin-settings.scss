@@ -170,7 +170,7 @@
   @include motion.appear($rises: false);
 }
 
-.save-row.ui-action-bar {
+.save-row.ui-action-bar.save-row--entering {
   @include motion.appear;
 }
 

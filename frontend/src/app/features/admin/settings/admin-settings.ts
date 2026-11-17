@@ -6,11 +6,14 @@ import {
   Component,
   computed,
   DestroyRef,
+  DOCUMENT,
+  effect,
   ElementRef,
   inject,
   Injector,
   linkedSignal,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
@@ -54,7 +57,7 @@ import { ActionBar } from '../../../shared/ui/action-bar/action-bar';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
 
-type SaveBar = 'none' | 'shown' | 'leaving';
+type SaveBar = 'none' | 'resting' | 'entering' | 'leaving';
 
 type Input = 'text' | 'date' | 'flag' | 'secret';
 
@@ -273,13 +276,21 @@ export class AdminSettings {
     this.edits();
     return !this.layout.isCompact() && this.changes().length > 0;
   });
+  private readonly saveRowEnd = viewChild<ElementRef<HTMLElement>>('saveRowEnd');
+  private readonly saveRowStuck = signal(false);
   protected readonly saveBar = linkedSignal<boolean, SaveBar>({
     source: this.barWanted,
     computation: (wanted, previous) => {
+      const now = previous?.value ?? 'none';
+      const stuck = untracked(this.saveRowStuck);
+      const shown = now === 'resting' || now === 'entering';
       if (wanted) {
-        return 'shown';
+        return shown ? now : stuck ? 'entering' : 'resting';
       }
-      return previous?.value === 'shown' ? 'leaving' : (previous?.value ?? 'none');
+      if (shown) {
+        return stuck ? 'leaving' : 'none';
+      }
+      return now;
     },
   });
   private version = '';
@@ -311,6 +322,7 @@ export class AdminSettings {
 
   constructor() {
     this.load();
+    this.watchSaveRowEnd();
     afterNextRender(() => this.title()?.nativeElement.focus(), { injector: this.injector });
   }
 
@@ -537,9 +549,36 @@ export class AdminSettings {
   }
 
   protected saveBarSettled(event: Event): void {
-    if (event.target === event.currentTarget && this.saveBar() === 'leaving') {
-      this.saveBar.set('none');
+    if (event.target !== event.currentTarget) {
+      return;
     }
+    if (this.saveBar() === 'leaving') {
+      this.saveBar.set('none');
+    } else if (this.saveBar() === 'entering') {
+      this.saveBar.set('resting');
+    }
+  }
+
+  private watchSaveRowEnd(): void {
+    const view = inject(DOCUMENT).defaultView;
+    effect((onCleanup) => {
+      const marker = this.saveRowEnd()?.nativeElement;
+      if (marker === undefined || typeof IntersectionObserver !== 'function') {
+        return;
+      }
+      const observer = new IntersectionObserver((entries) => {
+        const entry = entries.at(-1);
+        if (entry === undefined) {
+          return;
+        }
+        const windowBottom = entry.rootBounds?.bottom ?? view?.innerHeight ?? 0;
+        this.saveRowStuck.set(
+          !entry.isIntersecting && entry.boundingClientRect.top >= windowBottom,
+        );
+      });
+      observer.observe(marker);
+      onCleanup(() => observer.disconnect());
+    });
   }
 
   private watchRestart(): void {

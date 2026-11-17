@@ -126,11 +126,11 @@
     }
     @case ('ready') {
       @if (!searchMode()) {
-        <div class="load-more-row">
+        @if (layout.isCompact()) {
           <button
             appNeedsConnection
             type="button"
-            class="ui-button ui-button--quiet"
+            class="ui-button ui-button--quiet load-more"
             [disabled]="loadingMore() !== null"
             (click)="loadNewer()"
           >
@@ -139,21 +139,36 @@
               <span when-busy i18n="@@admin.logs.reader.loadingMore">Načítáme…</span>
             </app-busy-label>
           </button>
-          @if (hasOlder()) {
+        } @else {
+          <div class="load-more-row">
             <button
               appNeedsConnection
               type="button"
               class="ui-button ui-button--quiet"
-              [disabled]="loadingMore() !== null || searching()"
-              (click)="loadOlder()"
+              [disabled]="loadingMore() !== null"
+              (click)="loadNewer()"
             >
-              <app-busy-label [busy]="loadingMore() === 'older'">
-                <span when-idle i18n="@@admin.logs.reader.older">Načíst starší řádky</span>
+              <app-busy-label [busy]="loadingMore() === 'newer'">
+                <span when-idle i18n="@@admin.logs.reader.newer">Načíst novější řádky</span>
                 <span when-busy i18n="@@admin.logs.reader.loadingMore">Načítáme…</span>
               </app-busy-label>
             </button>
-          }
-        </div>
+            @if (hasOlder()) {
+              <button
+                appNeedsConnection
+                type="button"
+                class="ui-button ui-button--quiet"
+                [disabled]="loadingMore() !== null || searching()"
+                (click)="loadOlder()"
+              >
+                <app-busy-label [busy]="loadingMore() === 'older'">
+                  <span when-idle i18n="@@admin.logs.reader.older">Načíst starší řádky</span>
+                  <span when-busy i18n="@@admin.logs.reader.loadingMore">Načítáme…</span>
+                </app-busy-label>
+              </button>
+            }
+          </div>
+        }
       }
       @if (searchingWithoutResults()) {
         <p id="log-search-busy" class="ui-load-state searching" i18n="@@admin.logs.search.busy">

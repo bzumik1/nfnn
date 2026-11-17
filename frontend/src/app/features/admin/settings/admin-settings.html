@@ -322,6 +322,7 @@
           class="save-row"
           appActionBar
           [class.ui-action-bar]="saveBar() !== 'none'"
+          [class.save-row--entering]="saveBar() === 'entering'"
           [class.save-row--leaving]="saveBar() === 'leaving'"
           (animationend)="saveBarSettled($event)"
           (animationcancel)="saveBarSettled($event)"
@@ -394,6 +395,7 @@
             }
           </p>
         </div>
+        <div #saveRowEnd class="save-row-end" aria-hidden="true"></div>
       </form>
     }
   }
