@@ -2711,7 +2711,9 @@ describe('Given a signed-in donor in the donor area', () => {
       it('then the line at the button names each phase that lasts, and the ring in the button turns until the PDF is saved', async () => {
         await downloadYear(2025);
         expect(line(2025)).toBe('');
-        expect(pdfButton(2025).querySelector('.pdf-button__ring')).not.toBeNull();
+        expect(
+          pdfButton(2025).querySelector('.pdf-button__layer--current .pdf-button__ring'),
+        ).not.toBeNull();
         await afterPhaseLasts();
         expect(line(2025)).toBe('Připravujeme údaje potvrzení…');
         expect(yearRow(2025).querySelector('progress')).toBeNull();
@@ -2739,7 +2741,9 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(
           yearRow(2025).querySelector<HTMLElement>('.pdf-progress__brief')?.dataset['brief'],
         ).toBe('PDF je stažené');
-        expect(pdfButton(2025).querySelector('.pdf-button__download')).not.toBeNull();
+        expect(
+          pdfButton(2025).querySelector('.pdf-button__layer--current .pdf-button__download'),
+        ).not.toBeNull();
         expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
       });
 
@@ -2830,7 +2834,9 @@ describe('Given a signed-in donor in the donor area', () => {
         );
         expect(button('.yearly-pdf').disabled).toBe(false);
         expect(text('.yearly-pdf')).toBe('Zkusit znovu');
-        expect(pdfButton(2025).querySelector('.pdf-button__warning')).not.toBeNull();
+        expect(
+          pdfButton(2025).querySelector('.pdf-button__layer--current .pdf-button__warning'),
+        ).not.toBeNull();
       });
 
       it('then a drawing that fails offers the diagnostic file under its line', async () => {

@@ -18,13 +18,13 @@
     right: calc(var(--dialog-close-inset) + var(--dialog-close-size) + var(--space-3));
     width: var(--dialog-close-size);
     height: var(--dialog-close-size);
-    background: transparent;
+    background-color: transparent;
     box-shadow: none;
     color: var(--color-text-subtle);
 
     @media (hover: hover) {
       &:hover {
-        background: var(--color-accent-bg);
+        background-color: var(--color-accent-bg);
         color: var(--color-accent);
       }
     }

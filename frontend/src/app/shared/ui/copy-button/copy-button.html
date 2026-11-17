@@ -4,17 +4,25 @@
   [class.ui-pill-button--done]="state() === 'copied'"
   (click)="copy()"
 >
-  @if (state() === 'copied') {
-    <span i18n="@@ui.copy.done">Zkopírováno</span>
-  } @else if (label(); as text) {
-    <span>{{ text }}</span>
-    @if (labelDetail(); as detail) {
-      <span class="visually-hidden"> {{ detail }}</span>
-    }
-  } @else {
-    <span i18n="@@ui.copy.action">Kopírovat</span>
-    <span class="visually-hidden"> {{ what() }}</span>
-  }
+  <span class="copy-button__faces">
+    <span class="copy-button__action">
+      @if (label(); as text) {
+        <span>{{ text }}</span>
+        @if (labelDetail(); as detail) {
+          <span class="visually-hidden"> {{ detail }}</span>
+        }
+      } @else {
+        <span i18n="@@ui.copy.action">Kopírovat</span>
+        <span class="visually-hidden"> {{ what() }}</span>
+      }
+    </span>
+    <span
+      class="copy-button__done"
+      aria-hidden="true"
+      data-label="Zkopírováno"
+      i18n-data-label="@@ui.copy.done"
+    ></span>
+  </span>
 </button>
 <span class="copy-status" [class.visually-hidden]="state() !== 'failed'" role="status">{{
   status()

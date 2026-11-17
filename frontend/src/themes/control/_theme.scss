@@ -1,6 +1,7 @@
 :root {
   --color-accent: #0e7068;
   --color-accent-fill: #0f766e;
+  --color-accent-fill-hover: #115e59;
   --color-accent-soft: #e6f4f1;
   --color-accent-bg: #ecfdf8;
   --color-side-nav-active: var(--color-surface);
@@ -223,7 +224,7 @@
   --color-page-dim: color-mix(in srgb, var(--color-surface-inverse) 20%, transparent);
   --shadow-page-edge: -3px 0 0 var(--color-border-field);
   --radius-page-card: 0;
-  --color-pressed: color-mix(in srgb, currentColor 14%, transparent);
+  --pressed-tint-amount: 14%;
   --pressed-brightness: 0.8;
   --pressed-scale: 0.94;
   --pressed-scale-surface: 1;

@@ -1,11 +1,42 @@
-@use 'touch-target';
+@use 'motion';
 
 :host {
   display: inline-flex;
 }
 
 .ui-pill-button {
-  @include touch-target.reaches-finger-size;
+  max-inline-size: 100%;
+}
+
+.copy-button__faces {
+  display: inline-grid;
+}
+
+.copy-button__action,
+.copy-button__done {
+  grid-area: 1 / 1;
+  text-align: center;
+  @include motion.state(opacity);
+}
+
+.copy-button__done {
+  opacity: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+
+  &::after {
+    content: attr(data-label) / '';
+  }
+}
+
+.ui-pill-button--done {
+  .copy-button__action {
+    opacity: 0;
+  }
+
+  .copy-button__done {
+    opacity: 1;
+  }
 }
 
 :host(.has-failed) {

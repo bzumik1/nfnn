@@ -408,7 +408,7 @@ test.describe('Given a visitor on the Přispět page', () => {
         await expect(bank).toContainText('2 500 Kč');
         await page.getByRole('button', { name: 'Kopírovat částku' }).click();
 
-        await expect(page.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+        await expect(page.getByRole('status').filter({ hasText: 'Zkopírováno.' })).toHaveCount(1);
         expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('2500');
         const bankTop = (await bank.boundingBox())!.y;
         const qrTop = (await page.locator('#prispet .qr').boundingBox())!.y;

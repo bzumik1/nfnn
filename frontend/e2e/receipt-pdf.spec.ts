@@ -1,6 +1,7 @@
 import type { Download, Page, Route } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { readPdf } from '../src/app/features/donations/receipt-pdf/testing/pdf-reader';
+import { donorWithDonations } from './baseline/screen-mocks';
 import { mockDonorApi } from './donor-session';
 import { expect, test } from './fixtures';
 import {
@@ -36,6 +37,32 @@ function documentsLoaded(page: Page): string[] {
 }
 
 test.describe('Given a signed-in donor who downloads a receipt', () => {
+  test('when they read the receipts on a computer, then the label of every PDF button sits in the middle of its button, one line or wrapped', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await openReceiptsAfterSignIn(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const faces = page.locator('app-pdf-button-face');
+    await expect(faces.nth(2)).toBeVisible();
+
+    const offsets = await faces.evaluateAll((all) =>
+      all.map((face) => {
+        const button = face.closest('button, a')!.getBoundingClientRect();
+        const text = document.createRange();
+        text.selectNodeContents(face.querySelector('.pdf-button__layer--current')!);
+        const lines = Array.from(text.getClientRects()).filter((line) => line.height > 0);
+        const top = Math.min(...lines.map((line) => line.top));
+        const bottom = Math.max(...lines.map((line) => line.bottom));
+        return (top + bottom) / 2 - (button.top + button.bottom) / 2;
+      }),
+    );
+
+    for (const offset of offsets) {
+      expect(Math.abs(offset), JSON.stringify(offsets)).toBeLessThanOrEqual(2);
+    }
+  });
+
   test('when the data takes a while, then a progress line names each step, the focused button keeps the focus, and the PDF drawn in the browser is saved and holds the receipt', async ({
     page,
   }) => {
@@ -67,7 +94,9 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
     await page.keyboard.press('Enter');
 
     await expect(yearlyLine(page)).toHaveText('Připravujeme údaje potvrzení…');
-    await expect(yearlyButton(page).locator('.pdf-button__ring')).toBeVisible();
+    await expect(
+      yearlyButton(page).locator('.pdf-button__layer--current .pdf-button__ring'),
+    ).toBeVisible();
     await expect(page.locator('.year-row progress')).toHaveCount(0);
     await expect(yearlyButton(page)).toHaveAttribute('aria-disabled', 'true');
     await expect(yearlyButton(page)).toHaveCSS('opacity', '1');
@@ -83,7 +112,9 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
     await expect(yearlyLine(page)).toHaveText(
       'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
     );
-    await expect(yearlyButton(page).locator('.pdf-button__download')).toBeVisible();
+    await expect(
+      yearlyButton(page).locator('.pdf-button__layer--current .pdf-button__download'),
+    ).toBeVisible();
     await expect(yearlyButton(page)).toBeFocused();
     expect(await buttonBox()).toEqual(idleButton);
     expect(await lineRoom()).toEqual(idleLine);
@@ -163,7 +194,9 @@ test.describe('Given a signed-in donor on an iPhone, whose browser shares files'
       'Potvrzení potvrzeni-o-darech-2025.pdf je připravené. Otevřete ho tlačítkem Otevřít potvrzení.',
     );
     await expect(yearlyButton(page)).toHaveText('Otevřít potvrzení za rok 2025 (PDF)');
-    await expect(yearlyButton(page).locator('.pdf-button__share')).toBeVisible();
+    await expect(
+      yearlyButton(page).locator('.pdf-button__layer--current .pdf-button__share'),
+    ).toBeVisible();
     await expect(yearlyLine(page).locator('.pdf-progress__brief')).toHaveAttribute(
       'data-brief',
       'PDF je připravené',

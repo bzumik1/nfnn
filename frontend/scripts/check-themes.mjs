@@ -319,7 +319,16 @@ const READABLE_PAIRS = [
     grounds: [{ tintOf: '--color-accent', percent: 14 }],
     minimum: 4.5,
   },
-  { texts: ['--color-on-accent'], grounds: ['--color-accent-fill'], minimum: 4.5 },
+  {
+    texts: ['--color-text', '--color-text-secondary', '--color-text-muted', '--color-accent'],
+    grounds: [{ pressedTintOf: '--pressed-tint-amount' }],
+    minimum: 4.5,
+  },
+  {
+    texts: ['--color-on-accent'],
+    grounds: ['--color-accent-fill', '--color-accent-fill-hover'],
+    minimum: 4.5,
+  },
   { texts: ['--color-on-badge-warning'], grounds: ['--color-badge-warning'], minimum: 4.5 },
   {
     texts: ['--color-on-tile'],
@@ -420,16 +429,37 @@ function resolvedColour(tokens, name, seen = new Set()) {
   return { written: value, colour: value === undefined ? null : colourOf(value) };
 }
 
-function groundOf(ground, measurable) {
+const TINT_AMOUNT = /^(\d+(?:\.\d+)?)%$/;
+
+function pressedTintPercent(values, token) {
+  const written = values.get(token);
+  const tint = TINT_AMOUNT.exec(written ?? '');
+  return tint === null ? null : Number(tint[1]);
+}
+
+function groundOf(ground, measurable, text, tokens) {
   if (typeof ground === 'string') {
     return measurable(ground);
+  }
+  if (ground.pressedTintOf !== undefined) {
+    const percent = pressedTintPercent(tokens, ground.pressedTintOf);
+    const tinted = measurable(text);
+    return percent === null || tinted === null
+      ? null
+      : { rgb: tinted.rgb, alpha: (tinted.alpha * percent) / 100 };
   }
   const tinted = measurable(ground.tintOf);
   return tinted === null ? null : { rgb: tinted.rgb, alpha: (tinted.alpha * ground.percent) / 100 };
 }
 
-function groundName(ground) {
-  return typeof ground === 'string' ? ground : `the ${ground.percent} % tint of ${ground.tintOf}`;
+function groundName(ground, tokens) {
+  if (typeof ground === 'string') {
+    return ground;
+  }
+  if (ground.pressedTintOf !== undefined) {
+    return `its own pressed tint (${pressedTintPercent(tokens, ground.pressedTintOf)} % of ${ground.pressedTintOf})`;
+  }
+  return `the ${ground.percent} % tint of ${ground.tintOf}`;
 }
 
 export function appearanceProblems(theme, source) {
@@ -502,8 +532,17 @@ export function appearanceProblems(theme, source) {
         continue;
       }
       for (const ground of pair.grounds) {
-        const groundColour = groundOf(ground, measurable);
+        if (
+          ground.pressedTintOf !== undefined &&
+          pressedTintPercent(tokens, ground.pressedTintOf) === null
+        ) {
+          problems.push(
+            `${label}: ${ground.pressedTintOf} is ${tokens.get(ground.pressedTintOf)}, not a percentage of the text colour, so the label under it cannot be measured`,
+          );
+          continue;
+        }
         for (const text of pair.texts) {
+          const groundColour = groundOf(ground, measurable, text, tokens);
           const textColour = measurable(text);
           if (groundColour === null || textColour === null) {
             continue;
@@ -512,7 +551,7 @@ export function appearanceProblems(theme, source) {
           const ratio = contrast(over(textColour, under), under);
           if (ratio < pair.minimum) {
             problems.push(
-              `${label}: ${text} on ${groundName(ground)} is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
+              `${label}: ${text} on ${groundName(ground, tokens)} is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
             );
           }
         }

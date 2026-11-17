@@ -27,7 +27,11 @@
       </div>
     </main>
   } @else {
-    <div #bar class="ui-notice ui-notice--alert ui-notice--floating chunk-load-bar">
+    <div
+      #bar
+      class="ui-notice ui-notice--alert ui-notice--floating chunk-load-bar"
+      animate.leave="ui-notice--leaving"
+    >
       <p
         #message
         id="chunk-load-message"

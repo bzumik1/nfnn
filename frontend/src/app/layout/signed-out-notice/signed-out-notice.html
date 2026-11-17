@@ -1,6 +1,10 @@
 <div role="status">
   @if (notice.shown()) {
-    <div #bar class="ui-notice ui-notice--status ui-notice--floating">
+    <div
+      #bar
+      class="ui-notice ui-notice--status ui-notice--floating"
+      animate.leave="ui-notice--leaving"
+    >
       <div class="ui-notice__text">
         @if (notice.reason() === 'device-data-deleted') {
           <p class="ui-notice__text" i18n="@@layout.signedOut.deviceDataDeleted">

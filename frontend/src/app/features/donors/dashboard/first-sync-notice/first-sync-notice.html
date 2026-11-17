@@ -1,21 +1,33 @@
 <div aria-live="polite" aria-atomic="true">
   @switch (shown()) {
     @case ('saving') {
-      <div #bar class="ui-notice ui-notice--floating first-sync first-sync--saving">
+      <div
+        #bar
+        class="ui-notice ui-notice--floating first-sync first-sync--saving"
+        animate.leave="ui-notice--leaving"
+      >
         <p class="ui-notice__text" i18n="@@donor.dashboard.firstSync.saving">
           Ukládáme přehled vašich darů do tohoto zařízení…
         </p>
       </div>
     }
     @case ('stored') {
-      <div #bar class="ui-notice ui-notice--status ui-notice--floating first-sync">
+      <div
+        #bar
+        class="ui-notice ui-notice--status ui-notice--floating first-sync"
+        animate.leave="ui-notice--leaving"
+      >
         <p class="ui-notice__text" i18n="@@donor.dashboard.firstSync.stored">
           Přehled vašich darů je uložený v tomto zařízení.
         </p>
       </div>
     }
     @case ('failed') {
-      <div #bar class="ui-notice ui-notice--warning ui-notice--floating first-sync">
+      <div
+        #bar
+        class="ui-notice ui-notice--warning ui-notice--floating first-sync"
+        animate.leave="ui-notice--leaving"
+      >
         <p class="ui-notice__text" i18n="@@donor.dashboard.firstSync.failed">
           Přehled vašich darů se do tohoto zařízení teď nepodařilo uložit. Online vše funguje dál.
         </p>

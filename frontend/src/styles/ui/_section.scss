@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 @use 'pressed';
 
 .ui-container {
@@ -80,7 +81,7 @@
   padding: var(--space-4) var(--space-9);
   border: none;
   border-radius: var(--radius-pill);
-  background: var(--color-accent-fill);
+  background-color: var(--color-accent-fill);
   color: var(--color-on-accent);
   font-family: var(--font-sans);
   font-size: var(--text-xl);
@@ -88,11 +89,10 @@
   text-decoration: none;
   cursor: pointer;
   box-shadow: var(--shadow-cta-hero);
-  transition: transform var(--duration-base);
 
-  @media (hover: hover) {
-    &:hover {
-      transform: translateY(-2px);
+  @include motion.hover(background-color) {
+    &:not(.ui-cta--ghost, :disabled, [aria-disabled='true']) {
+      background-color: var(--color-accent-fill-hover);
     }
   }
 
@@ -102,17 +102,15 @@
 }
 
 .ui-cta--ghost {
-  background: transparent;
+  background-color: transparent;
   color: var(--color-text);
   font-weight: var(--weight-semibold);
   border: 1.5px solid var(--color-border);
   box-shadow: none;
-  transition: background var(--duration-base);
 
   @media (hover: hover) {
     &:hover {
-      background: var(--color-surface-alt);
-      transform: none;
+      background-color: var(--color-surface-alt);
     }
   }
 
@@ -128,20 +126,20 @@
 
   @media (hover: hover) {
     &:hover {
-      background: color-mix(in srgb, var(--color-on-inverse) 12%, transparent);
+      background-color: color-mix(in srgb, var(--color-on-inverse) 12%, transparent);
     }
   }
 }
 
 .ui-cta--ghost.ui-cta--on-image {
-  background: color-mix(in srgb, var(--color-on-image) 12%, transparent);
+  background-color: color-mix(in srgb, var(--color-on-image) 12%, transparent);
   backdrop-filter: blur(10px);
   color: var(--color-on-image);
   border-color: color-mix(in srgb, var(--color-on-image) 35%, transparent);
 
   @media (hover: hover) {
     &:hover {
-      background: color-mix(in srgb, var(--color-on-image) 22%, transparent);
+      background-color: color-mix(in srgb, var(--color-on-image) 22%, transparent);
     }
   }
 }

@@ -1,3 +1,4 @@
+@use 'motion';
 @use 'pressed';
 
 .ui-group-title {
@@ -46,9 +47,9 @@ label.ui-list__row {
   margin-inline-end: 0;
   border: 0;
   border-radius: var(--radius-pill);
-  background: var(--color-switch-off);
+  background-color: var(--color-switch-off);
   cursor: pointer;
-  transition: background var(--duration-base);
+  @include motion.state(background-color);
 
   &::before {
     content: '';
@@ -59,11 +60,11 @@ label.ui-list__row {
     border-radius: var(--radius-round);
     background: var(--color-switch-thumb);
     box-shadow: var(--shadow-switch-thumb);
-    transition: translate var(--duration-base);
+    @include motion.move(translate, base, spring);
   }
 
   &:checked {
-    background: var(--color-switch-on);
+    background-color: var(--color-switch-on);
 
     &::before {
       translate: calc(var(--switch-width) - var(--switch-height)) 0;
@@ -76,14 +77,6 @@ label.ui-list__row {
 
   @include pressed.when-pressed {
     @include pressed.darkens;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
-
-    &::before {
-      transition: none;
-    }
   }
 
   @media (forced-colors: active) {

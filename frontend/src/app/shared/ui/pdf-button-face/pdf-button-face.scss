@@ -1,7 +1,7 @@
+@use 'motion';
+
 :host {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1-5);
+  display: inline-grid;
   max-inline-size: 100%;
   vertical-align: middle;
 }
@@ -11,9 +11,27 @@
   font-weight: var(--weight-semibold);
 }
 
+.pdf-button__layer {
+  grid-area: 1 / 1;
+  align-self: center;
+  display: block;
+  min-inline-size: 0;
+  text-align: center;
+  text-wrap: balance;
+  opacity: 0;
+  visibility: hidden;
+  @include motion.state(opacity, visibility);
+}
+
+.pdf-button__layer--current {
+  opacity: 1;
+  visibility: visible;
+}
+
 .pdf-button__icon {
   display: inline-grid;
-  flex: none;
+  margin-inline-end: var(--space-1-5);
+  vertical-align: -0.2em;
   inline-size: 1.15em;
   block-size: 1.15em;
 
@@ -23,7 +41,7 @@
   }
 }
 
-:host(.pdf-button--failed) .pdf-button__icon {
+.pdf-button__layer--failed .pdf-button__icon {
   color: var(--color-danger);
 }
 
@@ -32,7 +50,16 @@
 }
 
 .pdf-button__ring {
-  animation: pdf-button-spin 0.9s linear infinite;
+  @include motion.spin;
+  animation-play-state: paused;
+}
+
+.pdf-button__layer--current .pdf-button__ring {
+  animation-play-state: running;
+}
+
+.pdf-button__layer--current .pdf-button__share {
+  @include motion.done;
 }
 
 .pdf-button__ring-track {
@@ -44,42 +71,19 @@
   stroke-dasharray: 14 50.3;
 }
 
-.pdf-button__labels {
-  display: inline-grid;
+.pdf-button__label {
   min-inline-size: 0;
-  text-align: start;
+  text-align: center;
   white-space: normal;
   overflow-wrap: anywhere;
 }
 
-.pdf-button__label,
-.pdf-button__reserve {
-  grid-area: 1 / 1;
-  align-self: center;
-}
-
-.pdf-button__reserve {
-  visibility: hidden;
-
-  &::after {
-    content: attr(data-label);
-  }
-}
-
-@keyframes pdf-button-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pdf-button__ring {
-    animation: none;
-  }
+.pdf-button__reserve::after {
+  content: attr(data-label) / '';
 }
 
 @media (forced-colors: active) {
-  :host(.pdf-button--failed) .pdf-button__icon {
+  .pdf-button__layer--failed .pdf-button__icon {
     color: currentColor;
   }
 }

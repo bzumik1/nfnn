@@ -70,6 +70,7 @@
 :root {
   --color-accent: #1d5fc9;
   --color-accent-fill: #2563eb;
+  --color-accent-fill-hover: #1d4ed8;
   --color-accent-soft: #edf2fb;
   --color-accent-bg: #f1f5fc;
   --color-side-nav-active: var(--color-surface);
@@ -318,7 +319,7 @@
   --color-page-dim: color-mix(in srgb, #000000 10%, transparent);
   --shadow-page-edge: -8px 0 24px color-mix(in srgb, #000000 12%, transparent);
   --radius-page-card: 55px;
-  --color-pressed: color-mix(in srgb, currentColor 8%, transparent);
+  --pressed-tint-amount: 8%;
   --pressed-brightness: 0.92;
   --pressed-scale: 0.97;
   --pressed-scale-surface: 0.99;
@@ -500,6 +501,7 @@
     --color-log-code: #1e3560;
     --color-log-warn: #92400e;
     --color-skeleton: color-mix(in srgb, #767680 24%, transparent);
+    --pressed-tint-amount: 14%;
   }
 }
 

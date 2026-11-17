@@ -25,10 +25,10 @@ export class PdfButtonFace {
     failed: RETRY_LABEL,
   }));
 
-  protected readonly label = computed(() => this.labels()[this.state()]);
-  protected readonly reserves = computed(() =>
-    Object.entries(this.labels())
-      .filter(([state]) => state !== this.state())
-      .map(([, label]) => label),
+  protected readonly layers = computed(() =>
+    (Object.entries(this.labels()) as [PdfButtonState, string][]).map(([state, label]) => ({
+      state,
+      label,
+    })),
   );
 }

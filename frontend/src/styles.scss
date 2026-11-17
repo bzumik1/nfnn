@@ -29,6 +29,12 @@
 @use 'styles/ui/glass';
 @use 'styles/ui/skeleton';
 
+@property --pressed-tint {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
 *,
 *::before,
 *::after {

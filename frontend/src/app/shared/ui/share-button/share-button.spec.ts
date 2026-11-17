@@ -207,7 +207,7 @@ describe('Given a share button for a news article', () => {
       await press(buttons()[0]);
 
       expect(writeText).toHaveBeenCalledWith(URL);
-      expect(buttonTexts()).toEqual(['Zkopírováno']);
+      expect(buttonTexts()).toEqual(['Kopírovat odkaz']);
       expect(statuses()).toEqual(['Odkaz je zkopírovaný, můžete ho vložit do zprávy.']);
     });
 
@@ -270,11 +270,13 @@ describe('Given a share button in a list of articles', () => {
       button.textContent?.replace(/\s+/g, ' ').trim(),
     );
   const shownTexts = () =>
-    ([...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[]).map((button) =>
-      [...button.querySelectorAll('span:not(.visually-hidden)')]
-        .map((span) => span.textContent?.trim())
-        .join(' '),
-    );
+    ([...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[]).map((button) => {
+      const shown = button.cloneNode(true) as HTMLButtonElement;
+      shown
+        .querySelectorAll('.visually-hidden, [aria-hidden="true"]')
+        .forEach((hidden) => hidden.remove());
+      return shown.textContent?.replace(/\s+/g, ' ').trim();
+    });
 
   afterEach(() => forgetNavigatorStubs());
 
