@@ -178,7 +178,6 @@ test.describe('Given an administrator on a form page on a computer', () => {
 
   for (const [path, wide] of [
     ['/sprava/prehledy', '#report-recipients'],
-    ['/sprava/zalohy', '#test-restore-time'],
     ['/sprava/aktuality/nova', '#news-title'],
     ['/sprava/projekty/nova', '#projects-title'],
   ] as const) {
@@ -195,6 +194,33 @@ test.describe('Given an administrator on a form page on a computer', () => {
       expect(edges.field).toBeCloseTo(edges.card, 0);
     });
   }
+
+  test('when Zálohy opens, then its times and day stay short, as the day and hour of Měsíční e-mail, with the day and time of the test restore side by side', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: WHERE_THE_FULL_WIDTH_REACHES_THE_AVATAR, height: HEIGHT });
+    await openUnlocked(page, '/sprava/zalohy');
+    const time = page.locator('#test-restore-time');
+    await expect(time).toBeVisible();
+    const card = await time.evaluate((element) => {
+      const box = element.closest('.ui-card')!;
+      const style = getComputedStyle(box);
+      return (
+        box.getBoundingClientRect().width -
+        parseFloat(style.paddingLeft) -
+        parseFloat(style.paddingRight)
+      );
+    });
+
+    for (const short of ['#backup-time', '#test-restore-day', '#test-restore-time']) {
+      const box = await page.locator(short).boundingBox();
+      expect(box!.width).toBeLessThan(card / 2);
+    }
+    const day = await page.locator('#test-restore-day').boundingBox();
+    const restoreTime = await time.boundingBox();
+    expect(restoreTime!.y).toBeCloseTo(day!.y, 0);
+    expect(restoreTime!.x).toBeGreaterThan(day!.x + day!.width);
+  });
 
   test('when Měsíční e-mail opens, then its day and hour stay short beside the recipients filling the card', async ({
     page,
