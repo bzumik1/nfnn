@@ -10,9 +10,16 @@ const GIFTS_PATHS = new Set([
   '/api/donations/me/sync',
 ]);
 
+type LoadingPhase = 'held' | 'shown' | 'content';
+
+interface SendGiftPlace {
+  readonly top: number;
+  readonly phase: LoadingPhase;
+}
+
 declare global {
   interface Window {
-    sendGiftTops?: number[];
+    sendGiftPlaces?: SendGiftPlace[];
   }
 }
 
@@ -26,16 +33,34 @@ async function answerGiftsSlowly(page: Page): Promise<void> {
   );
 }
 
-async function recordWhereSendGiftStands(page: Page): Promise<void> {
+async function recordWhereSendGiftStandsWhileLoading(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    window.sendGiftTops = [];
+    const places: SendGiftPlace[] = [];
+    window.sendGiftPlaces = places;
+    let placeSeen = false;
     const record = () => {
+      if (document.fonts.status === 'loading') {
+        places.length = 0;
+        requestAnimationFrame(record);
+        return;
+      }
       const card = document.querySelector('.send-gift');
-      if (card !== null) {
+      const place = document.querySelector('.overview-skeletons');
+      if (card !== null && (place !== null || placeSeen)) {
+        placeSeen = true;
+        const phase: LoadingPhase =
+          place === null
+            ? 'content'
+            : place.classList.contains('overview-skeletons--shown')
+              ? 'shown'
+              : 'held';
         const top = Math.round(card.getBoundingClientRect().top + window.scrollY);
-        const tops = window.sendGiftTops!;
-        if (tops.at(-1) !== top) {
-          tops.push(top);
+        const last = places.at(-1);
+        if (last?.top !== top || last.phase !== phase) {
+          places.push({ top, phase });
+        }
+        if (phase === 'content') {
+          return;
         }
       }
       requestAnimationFrame(record);
@@ -67,20 +92,26 @@ async function spaceAboveTitleAndBelowLastChild(
 }
 
 test.describe('Given a signed-in donor on Můj přehled', () => {
-  test('when the gifts answer slowly, then the card Poslat dar moves at most once while the skeleton stands in for the cards above it', async ({
+  test('when the gifts answer slowly, then the card Poslat dar keeps its place while the skeleton stands in and fades in, and moves only once, when the cards take its place', async ({
     page,
   }) => {
     await mockDonorApi(page, donorWithDonations);
     await answerGiftsSlowly(page);
-    await recordWhereSendGiftStands(page);
+    await recordWhereSendGiftStandsWhileLoading(page);
     await openOverview(page);
 
     await expect(page.locator('.last-gift')).toBeVisible({ timeout: SLOW_ANSWER_MS * 4 });
-    await expect(page.locator('.ui-skeleton-reveal')).toHaveCount(0);
+    await expect
+      .poll(() => page.evaluate(() => window.sendGiftPlaces?.at(-1)?.phase))
+      .toBe('content');
 
-    const tops = await page.evaluate(() => window.sendGiftTops ?? []);
-    expect(tops.length).toBeGreaterThan(0);
-    expect(tops.length - 1).toBeLessThanOrEqual(1);
+    const places = await page.evaluate(() => window.sendGiftPlaces ?? []);
+    const recorded = JSON.stringify(places);
+    const phases = new Set(places.map((place) => place.phase));
+    expect(phases.has('shown'), recorded).toBe(true);
+    const whileLoading = places.filter((place) => place.phase !== 'content');
+    expect(new Set(whileLoading.map((place) => place.top)).size, recorded).toBe(1);
+    expect(new Set(places.map((place) => place.top)).size, recorded).toBeLessThanOrEqual(2);
   });
 
   test('when they have a gift, then the card Poslední dar ends as close below its last line as it starts above its title', async ({
