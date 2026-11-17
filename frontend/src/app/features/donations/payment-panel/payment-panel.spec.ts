@@ -23,6 +23,8 @@ const RESERVATION_ID = '6f1c1e9a-3c1b-4f53-9d55-0d0a9b1f2c11';
 const QR_OF_500 = paymentQrCase('500 Kč without a variable symbol');
 const QR_OF_1000 = paymentQrCase('1 000 Kč without a variable symbol');
 const QR_OF_500_FOR_JANA = paymentQrCase('500 Kč with a ten-digit variable symbol');
+const DETAILS_FAILED =
+  'Platební údaje se nepodařilo načíst. Zkuste to prosím znovu. Když to nepomůže, napište na info@nfnn.cz.';
 
 function pngOf(matrix: QrMatrix): Blob {
   return new Blob([`png of ${matrix.modules}`], { type: 'image/png' });
@@ -681,7 +683,8 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(element<HTMLButtonElement>('.bank-app-second').disabled).toBe(true);
   });
 
-  it('when the payment details fail to load, then the failure and its retry show without unfolding the QR', async () => {
+  it('when the payment details fail to load, then the card says so with its retry above the bank buttons without unfolding the QR, and the retry keeps the focus until the bank buttons are ready', async () => {
+    document.body.appendChild(panel().nativeElement);
     await settle();
     http
       .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
@@ -689,24 +692,92 @@ describe('Given the payment panel on a phone or a tablet', () => {
     await settle();
 
     expect(qrRegion().hidden).toBe(true);
-    expect(squashed('.qr-error')).toContain('QR platbu se nepodařilo připravit.');
-    expect(qrRegion().querySelector('.qr-error')).toBeNull();
+    expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
+    expect(element('.qr-error')).toBeNull();
     const order = Array.from(
-      panel().nativeElement.querySelectorAll('.qr-error, .bank-app-open') as NodeListOf<Element>,
-    ).map((part) => part.classList.contains('qr-error'));
+      panel().nativeElement.querySelectorAll(
+        '.bank-failure, .bank-app-open',
+      ) as NodeListOf<Element>,
+    ).map((part) => part.classList.contains('bank-failure'));
     expect(order).toEqual([true, false]);
     expect(element<HTMLButtonElement>('.bank-app-open').disabled).toBe(true);
 
+    const retry = element<HTMLButtonElement>('.bank-failure-retry');
+    retry.focus();
     await tap('Zkusit znovu');
-    expect(document.activeElement).toBe(element('.bank-app'));
-    expect(element('.bank-app').getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(retry.getAttribute('aria-disabled')).toBe('true');
     http
       .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
       .flush(foundationPaymentDetails());
     await settle();
-    expect(element('.qr-error')).toBeNull();
+    expect(element('.bank [role="alert"]')).toBeNull();
     expect(element<HTMLButtonElement>('.bank-app-open').disabled).toBe(false);
     expect(document.activeElement).toBe(element('.bank-app-open'));
+    panel().nativeElement.remove();
+  });
+
+  describe('when the amounts are chosen with the arrow keys', () => {
+    beforeEach(async () => {
+      document.body.appendChild(panel().nativeElement);
+      await openWithQr();
+    });
+
+    afterEach(() => panel().nativeElement.remove());
+
+    function radio(label: string): HTMLButtonElement {
+      return button(label);
+    }
+
+    function press(key: string): void {
+      (document.activeElement as HTMLElement).dispatchEvent(
+        new KeyboardEvent('keydown', { key, bubbles: true }),
+      );
+    }
+
+    it('then the amounts are one radio group named Zvolte částku, with only the chosen one in the Tab order', () => {
+      const group = element('[role="radiogroup"]');
+      expect(squashed(`#${group.getAttribute('aria-labelledby')}`)).toBe('Zvolte částku');
+      const radios = Array.from(group.querySelectorAll('[role="radio"]')) as HTMLElement[];
+      expect(radios.map((option) => option.textContent?.trim())).toEqual([
+        '1 000 Kč',
+        '500 Kč',
+        '100 Kč',
+        'Jiná částka',
+      ]);
+      expect(radios.map((option) => option.getAttribute('aria-checked'))).toEqual([
+        'false',
+        'true',
+        'false',
+        'false',
+      ]);
+      expect(radios.map((option) => option.tabIndex)).toEqual([-1, 0, -1, -1]);
+    });
+
+    it('then an arrow moves the choice and the focus to the next amount', async () => {
+      radio('500 Kč').focus();
+
+      press('ArrowRight');
+      await settle(REDRAW_MS);
+
+      expect(document.activeElement).toBe(radio('100 Kč'));
+      expect(radio('100 Kč').getAttribute('aria-checked')).toBe('true');
+      expect(squashed('.bank-row-amount .bank-value')).toBe('100 Kč');
+    });
+
+    it('then an arrow onto Jiná částka chooses it but leaves the focus on it, and Tab goes on to the field', async () => {
+      radio('100 Kč').focus();
+
+      press('ArrowRight');
+      await settle();
+
+      expect(radio('Jiná částka').getAttribute('aria-checked')).toBe('true');
+      expect(document.activeElement).toBe(radio('Jiná částka'));
+      const tabbable = Array.from(
+        panel().nativeElement.querySelectorAll('button, input') as NodeListOf<HTMLElement>,
+      ).filter((candidate) => candidate.tabIndex >= 0);
+      expect(tabbable[tabbable.indexOf(radio('Jiná částka')) + 1]?.id).toBe('donate-custom-amount');
+    });
   });
 });
 

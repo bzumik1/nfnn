@@ -176,22 +176,22 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
     await expect(page.getByRole('main')).toContainText('Můj přehled');
   });
 
-  test('when a signed-in donor chooses an amount in Poslat dar with the keyboard, then it is pressed, the bank details follow it and Tab reaches the copy buttons before the QR', async ({
+  test('when a signed-in donor chooses an amount in Poslat dar with the keyboard, then it is checked, the bank details follow it and Tab reaches the copy buttons before the QR', async ({
     page,
   }) => {
     await signIn(page);
     const card = page.getByRole('region', { name: 'Poslat dar' });
-    const thousand = card.getByRole('button', { name: '1 000 Kč' });
+    const thousand = card.getByRole('radio', { name: '1 000 Kč' });
     await thousand.focus();
     await page.keyboard.press('Enter');
 
-    await expect(thousand).toHaveAttribute('aria-pressed', 'true');
+    await expect(thousand).toHaveAttribute('aria-checked', 'true');
     await expect(card.locator('.bank-value').nth(1)).toHaveText('1 000 Kč');
     await expect(card.getByRole('status').filter({ hasText: 'QR platba na 1 000 Kč' })).toHaveCount(
       1,
     );
 
-    await card.getByRole('button', { name: 'Jiná částka' }).focus();
+    await card.getByRole('radio', { name: 'Jiná částka' }).focus();
     const order: string[] = [];
     for (let step = 0; step < 7; step++) {
       await page.keyboard.press('Tab');

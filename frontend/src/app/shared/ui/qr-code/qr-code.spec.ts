@@ -76,6 +76,68 @@ describe('Given a branded QR code', () => {
   });
 });
 
+describe('Given a branded QR code whose theme names the times of its wave', () => {
+  const times: Record<string, string> = {
+    '--duration-qr-wave-start': '11ms',
+    '--duration-qr-wave-step': '2ms',
+    '--duration-qr-wave-jitter': '0ms',
+    '--duration-qr-stay': '333ms',
+    '--duration-qr-leave': '0.444s',
+    '--duration-qr-leave-lead': '1ms',
+    '--duration-qr-enter': '222ms',
+    '--duration-qr-enter-lag': '3ms',
+    '--duration-qr-settle': '111ms',
+    '--duration-qr-settle-lag': '4ms',
+    '--duration-qr-star': '777ms',
+    '--duration-qr-badge': '555ms',
+  };
+  let durations: number[];
+
+  beforeEach(() => {
+    durations = [];
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    Object.defineProperty(Element.prototype, 'animate', {
+      configurable: true,
+      value: (_keyframes: Keyframe[], options: KeyframeAnimationOptions) => {
+        durations.push(Number(options.duration));
+        return { cancel: () => undefined };
+      },
+    });
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, 'animate');
+    vi.unstubAllGlobals();
+  });
+
+  it('when the matrix changes, then the wave takes its times from the theme', async () => {
+    const fixture = render(checkerboard(SIZE), 'branded');
+    const svg = fixture.nativeElement.querySelector('svg') as SVGSVGElement;
+    for (const [token, value] of Object.entries(times)) {
+      svg.style.setProperty(token, value);
+    }
+
+    fixture.componentRef.setInput('matrix', inverseCheckerboard(SIZE));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    for (const duration of [333, 444, 222, 111, 777, 555]) {
+      expect(durations).toContain(duration);
+    }
+    expect(durations).not.toContain(1860);
+  });
+
+  it('when the theme names no times, then the matrix changes without a wave', async () => {
+    const fixture = render(checkerboard(SIZE), 'branded');
+
+    fixture.componentRef.setInput('matrix', inverseCheckerboard(SIZE));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(durations).toEqual([]);
+  });
+});
+
 describe('Given a plain QR code', () => {
   it('when it renders, then it draws one square per dark module and no badge', () => {
     const matrix = checkerboard(SIZE);

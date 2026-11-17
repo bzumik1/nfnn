@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test';
 import jsQR from 'jsqr';
 import { expect, test } from './fixtures';
+import { waitWhileNothingMayHappen } from './fixed-waits';
 import { openSection } from './donor-session';
 import {
   FOUNDATION_PAYMENT_DETAILS,
@@ -16,6 +17,8 @@ const PAYMENT_QR_1000_SPAYD = paymentSpayd('1 000 Kč without a variable symbol'
 const PAYMENT_DETAILS_PATH = '/api/donations/payment-details';
 const QR_NAME = 'QR platba na účet Nadačního fondu Nová naděje';
 const PHONE_LAYOUT_MAX_WIDTH = 899;
+const DETAILS_FAILED =
+  'Platební údaje se nepodařilo načíst. Zkuste to prosím znovu. Když to nepomůže, napište na info@nfnn.cz.';
 
 function phoneLayout(page: Page): boolean {
   return (page.viewportSize()?.width ?? 0) <= PHONE_LAYOUT_MAX_WIDTH;
@@ -51,6 +54,17 @@ async function decodedQrText(page: Page, png: Buffer): Promise<string | undefine
     ?.data;
 }
 
+async function tokenMilliseconds(page: Page, token: string): Promise<number> {
+  return page.evaluate((name) => {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value.endsWith('ms') ? Number.parseFloat(value) : Number.parseFloat(value) * 1000;
+  }, token);
+}
+
+async function cardHeight(page: Page): Promise<number> {
+  return (await page.locator('#prispet .bank').boundingBox())!.height;
+}
+
 async function enlargedText(page: Page, percent: number): Promise<void> {
   await page.addInitScript((scale) => {
     const style = document.createElement('style');
@@ -72,9 +86,9 @@ test.describe('Given a visitor on the Přispět page', () => {
     await expect(qrCode).toBeVisible();
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
 
-    await page.getByRole('button', { name: '1 000 Kč' }).click();
+    await page.getByRole('radio', { name: '1 000 Kč' }).click();
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_1000)).toBe(true);
-    await page.getByRole('button', { name: '500 Kč' }).click();
+    await page.getByRole('radio', { name: '500 Kč' }).click();
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
 
     expect(PAYMENT_QR_1000.modules).not.toBe(PAYMENT_QR_500.modules);
@@ -92,7 +106,7 @@ test.describe('Given a visitor on the Přispět page', () => {
     const qrCode = page.getByRole('img', { name: QR_NAME });
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
 
-    await page.getByRole('button', { name: 'Jiná částka' }).click();
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
     await page.locator('#donate-custom-amount').pressSequentially('1000');
 
     await expect(page.locator('#prispet .qr-image')).not.toHaveClass(/qr-image-stale/);
@@ -101,6 +115,111 @@ test.describe('Given a visitor on the Přispět page', () => {
       'QR platba na 1 000\u00a0Kč je připravená.',
     );
     expect(asked).toEqual([PAYMENT_DETAILS_PATH]);
+  });
+
+  test('when they choose another amount, then the QR reads as the new payment within --duration-page of Částka showing it', async ({
+    page,
+  }) => {
+    await servePaymentDetails(page, []);
+    await page.goto('/prispet');
+    await showQr(page);
+    const qrCode = page.getByRole('img', { name: QR_NAME });
+    await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
+    const budget = await tokenMilliseconds(page, '--duration-page');
+
+    await page.getByRole('radio', { name: '1 000 Kč' }).click();
+    await expect(page.locator('#prispet .bank-row-amount .bank-value')).toHaveText('1 000\u00a0Kč');
+    const shownAt = await page.evaluate(() => performance.now());
+    const read: { at: number | null } = { at: null };
+    await expect
+      .poll(async () => {
+        const shotAt = await page.evaluate(() => performance.now());
+        const text = await decodedQrText(
+          page,
+          await page.locator('#prispet .qr-code').screenshot({ animations: 'allow' }),
+        );
+        if (text === PAYMENT_QR_1000_SPAYD) {
+          read.at ??= shotAt;
+        }
+        return read.at !== null;
+      })
+      .toBe(true);
+
+    expect((read.at ?? Infinity) - shownAt).toBeLessThanOrEqual(budget);
+  });
+
+  test('when the payment details fail, then the card says so with the address to write to, and an amount chosen meanwhile loads nothing until Zkusit znovu, which says the QR is ready', async ({
+    page,
+  }) => {
+    test.skip(
+      phoneLayout(page),
+      'The phone keeps the QR folded; its failure is covered on a phone below',
+    );
+    const asked: string[] = [];
+    await page.route(
+      (url) => url.pathname === PAYMENT_DETAILS_PATH,
+      async (route) => {
+        asked.push(route.request().url());
+        await (asked.length === 1
+          ? route.fulfill({ status: 503, json: { title: 'Nedostupné' } })
+          : route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS }));
+      },
+    );
+    await page.goto('/prispet');
+    const alert = page.locator('#prispet .bank').getByRole('alert');
+    await expect(alert).toHaveText(DETAILS_FAILED);
+    await expect(alert.getByRole('link', { name: 'info@nfnn.cz' })).toHaveAttribute(
+      'href',
+      'mailto:info@nfnn.cz',
+    );
+    await expect(page.locator('#prispet .qr-code')).toHaveCount(0);
+    await expect(page.locator('#prispet')).not.toContainText('Naskenujte a přispějte');
+    const failedHeight = await cardHeight(page);
+
+    await page.getByRole('radio', { name: '1 000 Kč' }).click();
+    await expect(page.getByRole('radio', { name: '1 000 Kč' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await waitWhileNothingMayHappen(page, 1000);
+    expect(asked).toHaveLength(1);
+
+    await page.locator('#prispet').getByRole('button', { name: 'Zkusit znovu' }).click();
+
+    await expect(page.locator('#prispet .qr-announcement')).toHaveText(
+      'QR platba na 1 000\u00a0Kč je připravená.',
+    );
+    await expect(page.locator('#prispet .bank-row-amount .bank-value')).toHaveText('1 000\u00a0Kč');
+    expect(Math.abs((await cardHeight(page)) - failedHeight)).toBeLessThanOrEqual(1);
+  });
+
+  test('when the payment details come slowly, then the card stands as its skeleton at the size of the finished card', async ({
+    page,
+  }) => {
+    test.skip(
+      phoneLayout(page),
+      'On a phone the IBAN wraps by its own length, which the skeleton cannot know before the details come',
+    );
+    let release: () => void = () => undefined;
+    const answer = new Promise<void>((resolve) => (release = resolve));
+    await page.route(
+      (url) => url.pathname === PAYMENT_DETAILS_PATH,
+      async (route) => {
+        await answer;
+        await route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS });
+      },
+    );
+    await page.goto('/prispet');
+    await expect(page.locator('#prispet .bank-skeleton.is-shown')).toBeVisible();
+    await expect(page.locator('#prispet .bank').getByRole('status')).toHaveText(
+      'Připravujeme QR kód…',
+    );
+    const loadingHeight = await cardHeight(page);
+
+    release();
+
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    expect(Math.abs((await cardHeight(page)) - loadingHeight)).toBeLessThanOrEqual(1);
   });
 
   test('when they save the QR code, then a PNG image of it downloads', async ({ page }) => {
@@ -133,7 +252,7 @@ test.describe('Given a visitor on the Přispět page', () => {
     await servePaymentDetails(page, []);
     await page.goto('/prispet');
     await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
-    await page.getByRole('button', { name: 'Jiná částka' }).focus();
+    await page.getByRole('radio', { name: 'Jiná částka' }).focus();
 
     const expected = phoneLayout(page)
       ? [
@@ -178,7 +297,7 @@ test.describe('Given a visitor on the Přispět page', () => {
   }) => {
     await servePaymentDetails(page, []);
     await page.goto('/prispet');
-    await page.getByRole('button', { name: 'Jiná částka' }).click();
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
     await page.getByLabel('Vlastní částka v korunách').fill('300');
     await expect(page.locator('#prispet .bank')).toContainText('300 Kč');
 
@@ -189,8 +308,8 @@ test.describe('Given a visitor on the Přispět page', () => {
     await expect(page).toHaveURL(/zasady-ochrany-osobnich-udaju/);
     await openSection(page, 'Přispět');
 
-    await expect(page.getByRole('button', { name: 'Jiná částka' })).toHaveAttribute(
-      'aria-pressed',
+    await expect(page.getByRole('radio', { name: 'Jiná částka' })).toHaveAttribute(
+      'aria-checked',
       'true',
     );
     await expect(page.getByLabel('Vlastní částka v korunách')).toHaveValue('300');
@@ -223,7 +342,7 @@ test.describe('Given a visitor on the Přispět page', () => {
       expect(bankTop).toBeLessThan(qrTop);
     });
 
-    test('when the payment details failed and the visitor retries, then the focus waits on the bank buttons and then rests on Otevřít v aplikaci banky', async ({
+    test('when the payment details failed and the visitor retries, then the focus stays on Zkusit znovu and then rests on Otevřít v aplikaci banky', async ({
       page,
     }) => {
       let answers = 0;
@@ -252,7 +371,7 @@ test.describe('Given a visitor on the Přispět page', () => {
       });
       await servePaymentDetails(page, []);
       await page.goto('/prispet');
-      await page.getByRole('button', { name: '1 000 Kč' }).click();
+      await page.getByRole('radio', { name: '1 000 Kč' }).click();
 
       const download = page.waitForEvent('download');
       await page.getByRole('button', { name: 'Otevřít v aplikaci banky' }).click();
@@ -400,7 +519,7 @@ test.describe('Given a visitor on the Přispět page', () => {
         const bank = page.locator('#prispet .bank');
         await expect(bank).toContainText('5544332217/2010');
 
-        await page.getByRole('button', { name: 'Jiná částka' }).click();
+        await page.getByRole('radio', { name: 'Jiná částka' }).click();
         await expect(page.locator('#donate-custom-amount')).toHaveValue('');
         await showQr(page);
         await expect(page.locator('#prispet .qr-placeholder')).toHaveText('Nejprve zadejte částku');

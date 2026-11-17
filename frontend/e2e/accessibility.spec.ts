@@ -971,7 +971,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     expect(await violations(page)).toEqual([]);
 
-    await page.locator('.send-gift').getByRole('button', { name: 'Jiná částka' }).click();
+    await page.locator('.send-gift').getByRole('radio', { name: 'Jiná částka' }).click();
     await page.locator('#send-gift-custom-amount').fill('2 500');
     await expect(page.locator('.send-gift .bank-value').nth(1)).toHaveText('2 500 Kč');
 
