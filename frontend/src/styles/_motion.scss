@@ -232,6 +232,7 @@ $_pressed: (--pressed-tint, filter);
 
 @mixin _closed {
   @include _shut;
+  pointer-events: none;
   transition:
     grid-template-rows var(--duration-base) var(--ease-standard),
     opacity var(--duration-fast) var(--ease-out),
