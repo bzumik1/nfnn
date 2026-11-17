@@ -63,7 +63,6 @@ export class NewsPage {
   private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('heading');
   private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
   private readonly listState = viewChild.required<ElementRef<HTMLElement>>('listState');
-  private readonly emptyNotice = viewChild<ElementRef<HTMLElement>>('emptyNotice');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
   private loadingDelay: ReturnType<typeof setTimeout> | undefined;
@@ -167,7 +166,7 @@ export class NewsPage {
     const firstCard = this.host.nativeElement.querySelector<HTMLElement>(
       '.content :is(app-featured-news, app-news-card) a[href]',
     );
-    (firstCard ?? this.emptyNotice()?.nativeElement ?? this.listState().nativeElement).focus();
+    (firstCard ?? this.listState().nativeElement).focus();
   }
 
   protected olderRow(index: number): number {
@@ -186,7 +185,7 @@ export class NewsPage {
       next: (page) => {
         this.list.set({ items: page.items, total: page.total });
         this.newsState.set('ready');
-        this.reloaded.set(retried && page.items.length > 0);
+        this.reloaded.set(retried);
       },
       error: (failure: unknown) => {
         if (quietly && this.newsState() === 'ready') {

@@ -19,12 +19,20 @@
           >
         }
       } @else if (state() === 'ready' && reloaded()) {
-        <span i18n="@@content.news.reloaded">Aktuality jsou načtené.</span>
+        @if (!empty()) {
+          <span i18n="@@content.news.reloaded">Aktuality jsou načtené.</span>
+        } @else if (pastLastPage()) {
+          <span class="visually-hidden" i18n="@@content.list.pastEnd">Tato strana neexistuje.</span>
+        } @else {
+          <span class="visually-hidden" i18n="@@content.list.news.empty"
+            >Zatím tu žádná aktualita není.</span
+          >
+        }
       }
     </p>
 
     @if (state() === 'ready' && empty()) {
-      <div #emptyNotice class="news-notice news-notice--empty ui-notice" tabindex="-1">
+      <div class="news-notice news-notice--empty ui-notice">
         @if (pastLastPage()) {
           <p class="ui-notice__text" i18n="@@content.list.pastEnd">Tato strana neexistuje.</p>
           <a class="ui-cta ui-cta--ghost" routerLink="/aktuality" i18n="@@content.list.firstPage"

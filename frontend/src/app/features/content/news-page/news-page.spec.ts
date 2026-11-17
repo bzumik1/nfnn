@@ -38,10 +38,11 @@ class OtherTab {}
 const NEWS = (page: number) => `/api/content/news?page=${page}&size=10`;
 const PROJECTS = (page: number) => `/api/content/projects?page=${page}&size=50`;
 
+const compactLayout = signal(false);
+
 async function setUp(
   query: Record<string, string> | Observable<ParamMap> = {},
   interceptors: HttpInterceptorFn[] = [],
-  compact = false,
 ): Promise<{ fixture: ComponentFixture<NewsPage>; http: HttpTestingController }> {
   await TestBed.configureTestingModule({
     imports: [NewsPage],
@@ -49,7 +50,7 @@ async function setUp(
       provideHttpClient(withInterceptors(interceptors)),
       provideHttpClientTesting(),
       provideRouter([]),
-      { provide: CompactLayout, useValue: { isCompact: signal(compact) } },
+      { provide: CompactLayout, useValue: { isCompact: compactLayout } },
       {
         provide: ActivatedRoute,
         useValue: {
@@ -148,6 +149,7 @@ describe('Given a visitor opening Aktuality', () => {
   let root: HTMLElement;
 
   beforeEach(() => {
+    compactLayout.set(false);
     Object.defineProperty(navigator, 'share', {
       value: () => Promise.resolve(),
       configurable: true,
@@ -155,6 +157,7 @@ describe('Given a visitor opening Aktuality', () => {
   });
 
   afterEach(() => {
+    compactLayout.set(false);
     answerHome(http);
     http.verify();
     Reflect.deleteProperty(navigator, 'share');
@@ -227,6 +230,16 @@ describe('Given a visitor opening Aktuality', () => {
       expect(texts(older, 'h3')).toEqual(['Ohlédnutí za rokem 2024', 'Ohlédnutí za rokem 2023']);
     });
 
+    it('then the heading of the older news and each card move in one after another, at most six steps apart', () => {
+      compactLayout.set(true);
+      fixture.detectChanges();
+
+      expect(revealOrder(root.querySelector('.older h2'))).toBe('0');
+      expect(
+        Array.from(root.querySelectorAll('.older .grid-item')).map((card) => revealOrder(card)),
+      ).toEqual(['1', '2']);
+    });
+
     it('then on a computer the heading of the older news and each row of three cards move in one after another', () => {
       expect(revealOrder(root.querySelector('.older h2'))).toBe('0');
       expect(
@@ -256,7 +269,8 @@ describe('Given a visitor opening Aktuality', () => {
   });
 
   it('when the older news stand on a phone, then the heading and each card move in one after another, at most six steps apart', async () => {
-    ({ fixture, http } = await setUp({}, [], true));
+    compactLayout.set(true);
+    ({ fixture, http } = await setUp());
     root = fixture.nativeElement;
     const older = [2, 3, 4, 5, 6, 7, 8, 9].map((index) =>
       newsArticle({ id: `n${index}`, slug: `zprava-${index}`, title: `Zpráva ${index}` }),
@@ -756,7 +770,7 @@ describe('Given a visitor opening Aktuality', () => {
     root.remove();
   });
 
-  it('when the retry finds nothing published, then the focus goes to the card that says so', async () => {
+  it('when the retry finds nothing published, then the focus stays on the status line that says so', async () => {
     ({ fixture, http } = await setUp());
     root = fixture.nativeElement;
     document.body.appendChild(root);
@@ -769,10 +783,10 @@ describe('Given a visitor opening Aktuality', () => {
     http.expectOne(NEWS(0)).flush(page([], 0, 0));
     await settle(fixture);
 
-    const notice = root.querySelector('.news-notice') as HTMLElement;
-    expect(document.activeElement).toBe(notice);
-    expect(text(notice, '.ui-notice__text')).toBe('Zatím tu žádná aktualita není.');
-    expect(text(root, '.list-state')).toBe('');
+    expect(document.activeElement).toBe(root.querySelector('.list-state'));
+    expect(text(root, '.list-state')).toBe('Zatím tu žádná aktualita není.');
+    expect(root.querySelector('.list-state span')?.classList).toContain('visually-hidden');
+    expect(text(root, '.news-notice .ui-notice__text')).toBe('Zatím tu žádná aktualita není.');
     root.remove();
   });
 
