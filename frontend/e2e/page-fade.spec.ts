@@ -8,6 +8,7 @@ interface FadeFrame {
   readonly path: string;
   readonly copy: number | null;
   readonly copyAt: number | null;
+  readonly copyScroll: number | null;
   readonly content: number;
   readonly header: string;
   readonly copyHeaderShown: boolean;
@@ -51,6 +52,7 @@ async function watchFrames(page: Page): Promise<void> {
         path: location.pathname,
         copy: opacityOf(copy),
         copyAt: copy?.querySelector('.page-fade__main')?.getBoundingClientRect().top ?? null,
+        copyScroll: copy === null ? null : copy.scrollTop,
         content: opacityOf(content) ?? 0,
         header:
           header === null
@@ -169,6 +171,68 @@ test.describe('Given a visitor on a computer that animates', () => {
     expect(
       frames.filter((frame) => frame.path === '/prispet' && frame.content > 0 && frame.top !== 0),
     ).toEqual([]);
+  });
+
+  for (const [way, open] of [
+    [
+      'scrolled into view',
+      async (page: Page) => {
+        await page.goto('/o-nas');
+        await page.locator('#kontakt').scrollIntoViewIfNeeded();
+      },
+    ],
+    ['opened at its anchor', (page: Page) => page.goto('/o-nas#kontakt').then(() => undefined)],
+  ] as const) {
+    test(`when they open Aktuality from O nás with Kontakt ${way}, then the old page fades out on its own light ground`, async ({
+      page,
+    }) => {
+      await open(page);
+      await expect(page.locator('html')).toHaveClass(/contact-in-view/);
+      const light = await page.evaluate(
+        () => getComputedStyle(document.querySelector('app-root') ?? document.body).backgroundColor,
+      );
+      await slowAnimations(page);
+      await watchFrames(page);
+
+      await tab(page, 'Aktuality').click();
+
+      const covering = (await settledOn(page, '/aktuality')).filter(
+        (frame) => frame.copy !== null && frame.copy > 0,
+      );
+      expect(covering.length).toBeGreaterThan(0);
+      expect(covering.filter((frame) => frame.ground !== light)).toEqual([]);
+    });
+  }
+
+  test('when they leave O nás from its very end, then the copy stays where the page stood until it is gone', async ({
+    page,
+  }) => {
+    await page.goto('/o-nas');
+    await expect(tab(page, 'O nás')).toHaveAttribute('aria-current', 'page');
+    await page.evaluate(() =>
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }),
+    );
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight,
+        ),
+      )
+      .toBe(true);
+    const stood = await page.evaluate(
+      () => -(document.querySelector('.page-layer')?.getBoundingClientRect().top ?? 0),
+    );
+    await slowAnimations(page);
+    await watchFrames(page);
+
+    await tab(page, 'Aktuality').click();
+
+    const covering = (await settledOn(page, '/aktuality')).filter(
+      (frame) => frame.copyScroll !== null,
+    );
+    expect(covering.length).toBeGreaterThan(0);
+    expect(covering.filter((frame) => Math.abs((frame.copyScroll ?? 0) - stood) > 1)).toEqual([]);
   });
 
   test('when they click another tab while the content fades, then that tab opens', async ({

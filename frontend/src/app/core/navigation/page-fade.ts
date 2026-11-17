@@ -212,11 +212,13 @@ export class PageFade {
   }
 
   private groundOf(layer: HTMLElement, view: Window): string {
-    return (
-      [layer, this.document.body, this.document.documentElement]
-        .map((element) => view.getComputedStyle(element).backgroundColor)
-        .find((colour) => colour !== '' && colour !== 'transparent' && !isClear(colour)) ?? ''
-    );
+    for (let element: Element | null = layer; element !== null; element = element.parentElement) {
+      const colour = view.getComputedStyle(element).backgroundColor;
+      if (colour !== '' && colour !== 'transparent' && !isClear(colour)) {
+        return colour;
+      }
+    }
+    return '';
   }
 
   private releaseScrollAfterPress(view: Window): void {
@@ -272,9 +274,9 @@ function fadeCopyOf(layer: HTMLElement, document: Document): HTMLElement {
 
 function contentOf(main: HTMLElement, document: Document): HTMLElement {
   const content = document.createElement('div');
-  Array.from(main.attributes).forEach((attribute) =>
-    content.setAttribute(attribute.name, attribute.value),
-  );
+  Array.from(main.attributes)
+    .filter((attribute) => attribute.name !== 'id')
+    .forEach((attribute) => content.setAttribute(attribute.name, attribute.value));
   content.classList.add(`${PAGE_FADE_CLASS}__main`);
   content.append(...Array.from(main.childNodes));
   return content;

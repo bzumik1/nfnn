@@ -93,6 +93,7 @@ describe('Given a computer that animates, with O nás open', () => {
     document.documentElement.classList.remove(PAGE_FADE_HIDDEN_CLASS);
     document.body.style.backgroundColor = '';
     layer.remove();
+    document.querySelectorAll('app-root').forEach((node) => node.remove());
     vi.restoreAllMocks();
     delete (window as { matchMedia?: unknown }).matchMedia;
   });
@@ -178,6 +179,47 @@ describe('Given a computer that animates, with O nás open', () => {
     await router.navigateByUrl('/darce/prehled');
 
     expect(seenAtArrival.at(-1)).toMatchObject({ covered: true, opaque: true });
+  });
+
+  it('when Kontakt in view darkened body under a light root and Aktuality lightens it again, then the cover takes no ground of its own, as the old page stood on the light root', async () => {
+    const root = document.createElement('app-root');
+    root.style.backgroundColor = 'rgb(255, 255, 255)';
+    document.body.append(root);
+    root.append(layer);
+    document.body.style.backgroundColor = 'rgb(18, 24, 38)';
+    await start(false);
+    router.events.subscribe((event) => {
+      if (event instanceof ActivationEnd) {
+        document.body.style.backgroundColor = 'rgb(255, 255, 255)';
+        root.style.backgroundColor = '';
+      }
+    });
+
+    await router.navigateByUrl('/aktuality');
+
+    expect(seenAtArrival.at(-1)?.covered).toBe(true);
+    expect(cover()?.style.backgroundColor).toBe('');
+  });
+
+  it('when the copy covers the screen, then it carries no id outside its pictures, so neither the skip link nor an id lookup can reach it', async () => {
+    main.setAttribute('tabindex', '-1');
+    const section = document.createElement('section');
+    section.id = 'kontakt';
+    const picture = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+    gradient.id = 'odstin';
+    picture.append(gradient);
+    main.append(section, picture);
+    await start(false);
+
+    await router.navigateByUrl('/aktuality');
+
+    const ids = Array.from(cover()?.querySelectorAll('[id]') ?? []).filter(
+      (element) => element.closest('svg') === null,
+    );
+    expect(ids).toEqual([]);
+    expect(document.getElementById('obsah')).toBe(main);
+    expect(document.getElementById('kontakt')).toBe(section);
   });
 
   it('when the home page darkens the ground as it arrives, then the old content keeps its own ground until it is gone', async () => {
