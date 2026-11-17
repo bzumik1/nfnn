@@ -234,6 +234,9 @@ describe('Given the part for older bank payments on the import card', () => {
       http.expectNone(HISTORY_URL);
       expect(dateField().getAttribute('aria-invalid')).toBe('true');
       expect(fieldError()).toBe('Zvolte prosím den nejdříve 1. 1. 2000.');
+      expect(fixture.nativeElement.querySelector('.field-error')?.textContent).toContain(
+        'nejdříve 1.\u00a01. 2000.',
+      );
       expect(document.activeElement).toBe(dateField());
     });
 

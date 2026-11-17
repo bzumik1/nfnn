@@ -50,6 +50,7 @@ const RELEASE_URL = '/api/admin/operations/release';
 
 describe('Given an administrator on the administration home', () => {
   const compact = signal(false);
+  const visitState = signal<VisitState>({ kind: 'checking' });
   const openAlerts = signal<readonly OpenAlert[] | null>(null);
   const refresh = vi.fn();
   let fixture: ComponentFixture<AdminHome>;
@@ -59,6 +60,7 @@ describe('Given an administrator on the administration home', () => {
   beforeEach(async () => {
     localStorage.clear();
     compact.set(false);
+    visitState.set({ kind: 'checking' });
     openAlerts.set(null);
     refresh.mockClear();
     await TestBed.configureTestingModule({
@@ -72,7 +74,7 @@ describe('Given an administrator on the administration home', () => {
         {
           provide: AdministrationVisit,
           useValue: {
-            state: signal<VisitState>({ kind: 'checking' }).asReadonly(),
+            state: visitState.asReadonly(),
             opened: signal(null).asReadonly(),
             dismissed: signal(false).asReadonly(),
             check: () => Promise.resolve(),
@@ -214,6 +216,7 @@ describe('Given an administrator on the administration home', () => {
   });
 
   it('when the import card is ready, then it holds the part for older payments with the default day', async () => {
+    compact.set(true);
     await respond(importState({ defaultHistoryFrom: '2025-01-01' }));
 
     const card = fixture.nativeElement.querySelector(
@@ -223,6 +226,90 @@ describe('Given an administrator on the administration home', () => {
       'Starší platby z banky',
     );
     expect((card.querySelector('input#history-from') as HTMLInputElement).value).toBe('2025-01-01');
+  });
+
+  it('when the import state is ready on a computer, then the older payments get a card of their own under the import and the backups, headed like the other cards', async () => {
+    await respond(importState({ defaultHistoryFrom: '2025-01-01' }));
+
+    const importCard = fixture.nativeElement.querySelector(
+      '.ui-card[aria-labelledby="admin-import-title"]',
+    ) as HTMLElement;
+    expect(importCard.querySelector('app-history-import')).toBeNull();
+    const historyCard = fixture.nativeElement.querySelector('.admin-status')
+      ?.nextElementSibling as HTMLElement;
+    expect(historyCard.querySelector('h2')?.textContent?.trim()).toBe('Starší platby z banky');
+    expect(historyCard.querySelector('h3')).toBeNull();
+    expect((historyCard.querySelector('input#history-from') as HTMLInputElement).value).toBe(
+      '2025-01-01',
+    );
+    expect(historyCard.nextElementSibling).toBe(
+      fixture.nativeElement.querySelector('.admin-overview'),
+    );
+  });
+
+  it('when the import state cannot be loaded on a computer, then no card for older payments stands empty', async () => {
+    await respond({}, 500);
+
+    expect(fixture.nativeElement.querySelector('app-history-import')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.admin-status')?.nextElementSibling).toBe(
+      fixture.nativeElement.querySelector('.admin-overview'),
+    );
+  });
+
+  describe('when they look at the overview on a computer', () => {
+    function order(): string[] {
+      return Array.from(
+        fixture.nativeElement.querySelectorAll('.attention, app-since-last-visit'),
+      ).map((element) => ((element as HTMLElement).matches('.attention') ? 'attention' : 'since'));
+    }
+
+    async function visit(state: VisitState): Promise<void> {
+      visitState.set(state);
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    function readyVisit(anything: boolean): VisitState {
+      const none = { count: 0, totalMinor: 0, bookedFrom: null };
+      return {
+        kind: 'ready',
+        seenAt: '2026-10-17T08:00:00Z',
+        copiedAt: null,
+        changes: {
+          payments: { count: anything ? 1 : 0, totalMinor: anything ? 50000 : 0 },
+          paired: none,
+          unpaired: anything ? { count: 1, totalMinor: 50000, bookedFrom: '2026-10-17' } : none,
+          newDonors: 0,
+          receipts: 0,
+          otherAdministrators: [],
+          anything,
+        },
+      };
+    }
+
+    it('then on a first visit of this device what needs attention comes first and the summary with nothing to compare follows it', async () => {
+      await visit({ kind: 'first' });
+
+      expect(order()).toEqual(['attention', 'since']);
+    });
+
+    it('then in a browser that keeps no administration what needs attention comes first too', async () => {
+      await visit({ kind: 'not-kept' });
+
+      expect(order()).toEqual(['attention', 'since']);
+    });
+
+    it('then with nothing new since the last visit what needs attention comes first too', async () => {
+      await visit(readyVisit(false));
+
+      expect(order()).toEqual(['attention', 'since']);
+    });
+
+    it('then with something new since the last visit the summary comes first and what needs attention follows it', async () => {
+      await visit(readyVisit(true));
+
+      expect(order()).toEqual(['since', 'attention']);
+    });
   });
 
   async function finishRun(added: number): Promise<void> {

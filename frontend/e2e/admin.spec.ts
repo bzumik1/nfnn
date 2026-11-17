@@ -422,8 +422,7 @@ test.describe('Given an administrator', () => {
 
     await page.goto('/sprava');
 
-    const card = page.getByRole('region', { name: 'Stav stahování plateb z banky' });
-    const part = card.getByRole('region', { name: 'Starší platby z banky' });
+    const part = page.getByRole('region', { name: 'Starší platby z banky' });
     await expect(part.getByRole('listitem')).toHaveText([
       'Níže zvolte den, od kterého platby chcete.',
       'V internetovém bankovnictví Fio otevřete Nastavení → API.',
