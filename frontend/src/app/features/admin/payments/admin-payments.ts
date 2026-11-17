@@ -631,6 +631,17 @@ export class AdminPayments {
     this.refreshIfMissed();
   }
 
+  protected escapeSearch(event: Event, dialog: Dialog): void {
+    const field = event.target as HTMLInputElement;
+    if (field.value === '') {
+      dialog.dismiss();
+      return;
+    }
+    event.preventDefault();
+    field.value = '';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
   protected search(value: string): void {
     this.query.set(value);
     this.selectedDonor.set(null);

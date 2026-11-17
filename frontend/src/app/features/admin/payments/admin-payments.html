@@ -479,7 +479,7 @@
 </div>
 
 @if (pairing(); as payment) {
-  <app-dialog labelledBy="pair-title" (dismissed)="closePairing()">
+  <app-dialog #pairingDialog labelledBy="pair-title" (dismissed)="closePairing()">
     <h2 id="pair-title" class="pair-title" i18n="@@admin.payments.pair.title">
       Přiřadit platbu dárci
     </h2>
@@ -550,6 +550,7 @@
       autocomplete="off"
       [value]="query()"
       (input)="search($any($event.target).value)"
+      (keydown.escape)="escapeSearch($event, pairingDialog)"
       placeholder="např. Nováková nebo 4821"
       i18n-placeholder="@@admin.payments.pair.search.placeholder"
       aria-describedby="pair-search-hint"
