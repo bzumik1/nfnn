@@ -999,7 +999,7 @@ describe('Given an administrator on a donor card', () => {
     fixture.detectChanges();
 
     expect(text('.ui-notice--status')).toBe(
-      'Účet 2900233333/2010 jsme dárci odebrali: 2 dary přiřazené přes něj jsme smazali a platby jsou zase nespárované.',
+      'Bankovní účet 2900233333/2010 jsme dárci odebrali: 2 dary přiřazené přes něj jsme smazali a platby jsou zase nespárované.',
     );
     http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [] }));
     await settle();
@@ -1123,6 +1123,21 @@ describe('Given an administrator on a donor card', () => {
     );
 
     expect(sectionText('Bankovní účty')).toContain('Potvrzené starší symboly: 6123456789');
+  });
+
+  it('when the removal fails without an answer, then the alert names the bank account and what to do next', async () => {
+    await loaded();
+
+    button(section('Bankovní účty'), 'Odebrat účet').click();
+    fixture.detectChanges();
+    button(section('Bankovní účty'), 'Ano, odebrat').click();
+    fixture.detectChanges();
+    http.expectOne(LINK_URL).error(new ProgressEvent('error'));
+    await settle();
+
+    expect(
+      (section('Bankovní účty').querySelector('.ui-notice--alert')?.textContent ?? '').trim(),
+    ).toBe('Bankovní účet se nepodařilo odebrat. Zkuste to prosím znovu.');
   });
 
   it('when the removal is refused because of a receipt, then the alert shows the backend title and detail and the account stays', async () => {

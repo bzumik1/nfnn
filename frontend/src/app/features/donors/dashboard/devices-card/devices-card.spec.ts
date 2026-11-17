@@ -246,6 +246,19 @@ describe("Given a donor's signed-in devices card", () => {
       expect(document.activeElement).toBe(element('.devices-status'));
     });
 
+    it('and the donor signs out the unknown device, then the status names it in lower case inside its sentence', async () => {
+      await ask(signOutButton(rows()[2]));
+      await confirmSignOut();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${UNKNOWN.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(text(element('.devices-status'))).toBe(
+        'Zařízení jsme odhlásili: neznámé zařízení. Pokud jste se na něm nepřihlásili vy, změňte si heslo.',
+      );
+    });
+
     it('and the donor presses Odhlásit všechna ostatní zařízení, then the card asks the same way and cancelling returns focus to that button', async () => {
       await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
 

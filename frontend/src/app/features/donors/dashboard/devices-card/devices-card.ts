@@ -216,7 +216,7 @@ export class DevicesCard {
     this.confirming.set(null);
     this.devices.update((list) => (list ?? []).filter((other) => other.id !== device.id));
     this.signedOut.set(
-      $localize`:@@donor.account.devices.signedOut:Zařízení jsme odhlásili: ${this.name(device)}:device:. Pokud jste se na něm nepřihlásili vy, změňte si heslo.`,
+      $localize`:@@donor.account.devices.signedOut:Zařízení jsme odhlásili: ${this.nameInSentence(device)}:device:. Pokud jste se na něm nepřihlásili vy, změňte si heslo.`,
     );
     this.focusAfterRender(() => this.status().nativeElement);
     this.changes.changed();

@@ -329,7 +329,7 @@ test.describe('Given an administrator on the donors page', () => {
     await accountsCard.getByRole('button', { name: 'Ano, odebrat' }).click();
     const accountsResult = accountsCard.getByRole('status').filter({ hasNotText: 'Načítáme' });
     await expect(accountsResult).toHaveText(
-      'Účet 2900233333/2010 jsme dárci odebrali: 2 dary přiřazené přes něj jsme smazali a platby jsou zase nespárované.',
+      'Bankovní účet 2900233333/2010 jsme dárci odebrali: 2 dary přiřazené přes něj jsme smazali a platby jsou zase nespárované.',
     );
     await expect(accountsCard.locator('app-live-notice')).toBeFocused();
     await expect(accountsCard).toContainText('Z žádného účtu zatím nepřišla platba');

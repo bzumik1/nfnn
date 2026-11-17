@@ -778,8 +778,8 @@ export class AdminDonorDetail {
   protected remove(item: AdminBankAccountItem): void {
     this.run(
       this.api.removeDonorAccount(this.donorId, item.id, item.version),
-      $localize`:@@admin.donorDetail.remove.done:Účet ${item.accountNumber}:account: jsme dárci odebrali: ${this.donationsCount(item.donationCount)}:donations: přiřazené přes něj jsme smazali a platby jsou zase nespárované.`,
-      $localize`:@@admin.donorDetail.remove.failed:Účet se nepodařilo odebrat. Zkuste to prosím znovu.`,
+      $localize`:@@admin.donorDetail.remove.done:Bankovní účet ${item.accountNumber}:account: jsme dárci odebrali: ${this.donationsCount(item.donationCount)}:donations: přiřazené přes něj jsme smazali a platby jsou zase nespárované.`,
+      $localize`:@@admin.donorDetail.remove.failed:Bankovní účet se nepodařilo odebrat. Zkuste to prosím znovu.`,
       (onLoaded) => this.loadDonations(onLoaded),
       'accounts',
     );
