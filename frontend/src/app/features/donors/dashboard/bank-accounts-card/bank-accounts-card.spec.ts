@@ -461,7 +461,7 @@ describe('Given the bank accounts card in the overview', () => {
     expect(line?.textContent).toBe('ověřeno 12.\u00a03. 2026');
   });
 
-  it('when two accounts can be disconnected, then each Nepřiřazovat platby z tohoto účtu is described by its own account number', async () => {
+  it('when two accounts can be disconnected, then each Nepřiřazovat platby z tohoto účtu is named by its label and its own account number, as the VoiceOver rotor lists names', async () => {
     await respond([
       bankAccount(),
       bankAccount({
@@ -470,15 +470,18 @@ describe('Given the bank accounts card in the overview', () => {
       }),
     ]);
 
-    const descriptions = [
+    const names = [
       ...((fixture.nativeElement as HTMLElement).querySelectorAll(
         '.account-action',
       ) as NodeListOf<HTMLButtonElement>),
     ].map((button) => {
-      const ids = (button.getAttribute('aria-describedby') ?? '').split(' ').filter(Boolean);
+      const ids = (button.getAttribute('aria-labelledby') ?? '').split(' ').filter(Boolean);
       return ids.map((id) => normalized(document.getElementById(id)?.textContent ?? '')).join(' ');
     });
-    expect(descriptions).toEqual(['2900233333/2010', '19-2000145399/0800']);
+    expect(names).toEqual([
+      'Nepřiřazovat platby z tohoto účtu 2900233333/2010',
+      'Nepřiřazovat platby z tohoto účtu 19-2000145399/0800',
+    ]);
   });
 
   it('when an account can be disconnected, then Nepřiřazovat platby z tohoto účtu is a quiet button, as a rare action', async () => {

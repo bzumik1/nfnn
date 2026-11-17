@@ -136,7 +136,9 @@
                     class="ui-button ui-button--quiet account-action"
                     [class.account-action--apart]="account.symbolOffer !== null"
                     [id]="actionButtonId(account)"
-                    [attr.aria-describedby]="actionButtonId(account) + '-number'"
+                    [attr.aria-labelledby]="
+                      actionButtonId(account) + ' ' + actionButtonId(account) + '-number'
+                    "
                     (click)="askToDisconnect(account)"
                     i18n="@@donor.bankAccounts.disconnect"
                   >
