@@ -25,7 +25,7 @@ import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
 import { DonorNotifiedDevices } from '../../../operations/donor-notified-devices';
 import { groupDevices } from './device-groups';
-import { deviceName, sessionKindName } from './device-labels';
+import { deviceName, deviceNameInSentence, sessionKindName } from './device-labels';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const DEVICE_NOT_FOUND = 'donors/device-not-found';
@@ -157,7 +157,7 @@ export class DevicesCard {
         this.devices.update((list) => (list ?? []).filter((device) => device.current));
         this.signedOut.set(
           this.auth.isAdmin()
-            ? $localize`:@@donor.account.devices.othersSignedOutAdmin:Ostatní zařízení jsou odhlášená. Připojené aplikace zůstávají připojené; odpojíte je na kartě Připojené aplikace.`
+            ? $localize`:@@donor.account.devices.othersSignedOutAdmin:Ostatní zařízení jsou odhlášená. Připojené aplikace zůstávají připojené; odpojíte je v kartě „Připojené aplikace“.`
             : $localize`:@@donor.account.devices.othersSignedOut:Ostatní zařízení jsou odhlášená.`,
         );
         this.focusAfterRender(() => this.status().nativeElement);
@@ -179,6 +179,10 @@ export class DevicesCard {
     return deviceName(device);
   }
 
+  protected nameInSentence(device: SignedInDevice): string {
+    return deviceNameInSentence(device);
+  }
+
   protected kind(device: SignedInDevice): string | null {
     return sessionKindName(device);
   }
@@ -188,7 +192,7 @@ export class DevicesCard {
   }
 
   protected signOutLabel(device: SignedInDevice): string {
-    return $localize`:@@donor.account.devices.signOutLabel:Odhlásit ${this.name(device)}:device:`;
+    return $localize`:@@donor.account.devices.signOutLabel:Odhlásit ${this.nameInSentence(device)}:device:`;
   }
 
   protected signOutButtonId(device: SignedInDevice): string {

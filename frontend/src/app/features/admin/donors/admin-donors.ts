@@ -159,7 +159,7 @@ export class AdminDonors {
   protected typeLabel(item: DonorAccountResponse): string {
     return item.type === 'COMPANY'
       ? $localize`:@@admin.donors.type.company:Firma`
-      : $localize`:@@admin.donors.type.person:Osoba`;
+      : $localize`:@@admin.donors.type.person:Člověk`;
   }
 
   private loadPortraits(): void {

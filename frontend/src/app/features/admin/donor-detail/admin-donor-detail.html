@@ -24,8 +24,8 @@
   @if (erasedAt(); as erasedAt) {
     <p class="admin-erased" role="note" i18n="@@admin.donorDetail.erased">
       Osobní údaje tohoto dárce jsme vymazali {{ time(erasedAt) }}. Účet už nejde použít. Dary a
-      vydaná potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají na serveru beze změny, i se
-      jménem a adresou dárce.
+      vystavená potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají na serveru beze změny, i
+      se jménem a adresou dárce.
     </p>
   }
 
@@ -530,7 +530,7 @@
                     Odebrat přístupové klíče
                   </button>
                   <span class="admin-hint" i18n="@@admin.donorDetail.passkeys.hint"
-                    >Pro dárce, který přišel o zařízení s klíčem.</span
+                    >Pro dárce, který přišel o zařízení s přístupovým klíčem.</span
                   >
                 }
               </div>
@@ -681,7 +681,7 @@
               <table class="ui-table" [class.ui-table--stacked]="drill()">
                 <thead>
                   <tr>
-                    <th i18n="@@admin.donorDetail.accounts.col.account">Účet</th>
+                    <th i18n="@@admin.donorDetail.accounts.col.account">Bankovní účet</th>
                     <th i18n="@@admin.donorDetail.accounts.col.status">Stav</th>
                     <th i18n="@@admin.donorDetail.accounts.col.donations">
                       Dary přiřazené podle účtu
@@ -697,7 +697,7 @@
                   @for (item of bankAccounts(); track item.id) {
                     <tr>
                       <td
-                        data-label="Účet"
+                        data-label="Bankovní účet"
                         i18n-data-label="@@admin.donorDetail.accounts.col.account"
                       >
                         <app-bank-account class="account-number" [account]="item.accountNumber" />
@@ -1141,7 +1141,7 @@
           aria-labelledby="receipts-title"
         >
           <h2 id="receipts-title" class="ui-card__title" i18n="@@admin.donorDetail.receipts.title">
-            Vydaná potvrzení
+            Vystavená potvrzení
           </h2>
           @if (erasedAt() === null) {
             <div class="ui-card__body receipt-issue">
@@ -1396,8 +1396,8 @@
         <h3 i18n="@@admin.donorDetail.erase.dialog.kept">Zůstane</h3>
         <ul>
           <li i18n="@@admin.donorDetail.erase.dialog.kept.donations">
-            dary a vydaná potvrzení kvůli účetnictví; potvrzení na serveru beze změny, i se jménem a
-            adresou dárce
+            dary a vystavená potvrzení kvůli účetnictví; potvrzení na serveru beze změny, i se
+            jménem a adresou dárce
           </li>
           <li i18n="@@admin.donorDetail.erase.dialog.kept.payments">
             platby z banky, jak je uvádí výpis (číslo účtu a jméno plátce), a záznamy v Historii

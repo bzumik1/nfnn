@@ -682,7 +682,11 @@ test.describe('Given an administrator on the donors page', () => {
 
     for (const [card, name, hint] of [
       ['Přihlášení', 'Vypnout dvoufaktorové ověření', 'Pro dárce, který přišel o telefon'],
-      ['Přihlášení', 'Odebrat přístupové klíče', 'Pro dárce, který přišel o zařízení s přístupovým klíčem.'],
+      [
+        'Přihlášení',
+        'Odebrat přístupové klíče',
+        'Pro dárce, který přišel o zařízení s přístupovým klíčem.',
+      ],
       ['Výmaz osobních údajů (GDPR)', 'Vymazat osobní údaje', 'Pro dárce, který požádal o výmaz'],
     ]) {
       const region = page.getByRole('region', { name: card });

@@ -597,8 +597,8 @@ describe('Given an administrator on a donor card', () => {
 
   function receiptsNotice(kind: 'status' | 'alert'): string {
     return (
-      section('Vystavená potvrzení').querySelector(`app-live-notice [role="${kind}"]`)?.textContent ??
-      ''
+      section('Vystavená potvrzení').querySelector(`app-live-notice [role="${kind}"]`)
+        ?.textContent ?? ''
     )
       .replace(/\s+/g, ' ')
       .trim();
@@ -1202,7 +1202,9 @@ describe('Given an administrator on a donor card', () => {
 
     function rowNote(number: string): string | null {
       const row = Array.from(
-        section('Vystavená potvrzení').querySelectorAll('tbody tr') as NodeListOf<HTMLTableRowElement>,
+        section('Vystavená potvrzení').querySelectorAll(
+          'tbody tr',
+        ) as NodeListOf<HTMLTableRowElement>,
       ).find((candidate) => candidate.textContent?.includes(number));
       const note = row?.querySelector('.receipt-key-note');
       return note === null || note === undefined
@@ -1285,7 +1287,9 @@ describe('Given an administrator on a donor card', () => {
 
     function receiptRow(number: string): HTMLTableRowElement {
       const row = Array.from(
-        section('Vystavená potvrzení').querySelectorAll('tbody tr') as NodeListOf<HTMLTableRowElement>,
+        section('Vystavená potvrzení').querySelectorAll(
+          'tbody tr',
+        ) as NodeListOf<HTMLTableRowElement>,
       ).find((candidate) => candidate.textContent?.includes(number));
       if (row === undefined) {
         throw new Error(`No receipt row ${number}`);

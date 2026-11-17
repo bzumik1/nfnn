@@ -264,7 +264,7 @@ export class NotificationsCard {
           this.notice.set({
             kind: 'alert',
             text: problemTypeEndsWith(failure, SUBSCRIPTION_LIMIT)
-              ? $localize`:@@donor.notifications.limit:Upozornění můžete mít zapnutá nejvýš na 10 zařízeních. Na zařízení, které už nepoužíváte, je vypněte nebo ho v kartě Přihlášená zařízení odhlaste.`
+              ? $localize`:@@donor.notifications.limit:Upozornění můžete mít zapnutá nejvýš na 10 zařízeních. Na zařízení, které už nepoužíváte, je vypněte nebo ho v kartě „Přihlášená zařízení“ odhlaste.`
               : describeProblem(
                   failure,
                   $localize`:@@donor.notifications.turnOnFailed:Upozornění se nepodařilo zapnout. Zkuste to prosím znovu.`,

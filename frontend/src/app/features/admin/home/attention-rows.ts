@@ -425,7 +425,7 @@ function signatoryRows({ signatory }: AttentionSources): AttentionRow[] {
           key: 'signature',
           tone: 'task',
           icon: 'signature',
-          title: $localize`:@@admin.home.attention.signature.title:Podepisující nemá nahraný podpis`,
+          title: $localize`:@@admin.home.attention.signature.title:Osoba, která podepisuje potvrzení, nemá nahraný podpis`,
           meta: $localize`:@@admin.home.attention.signature.meta:Potvrzení o daru mají zatím jen čáru se jménem.`,
           link: PEOPLE,
         }),

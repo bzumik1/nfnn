@@ -889,7 +889,7 @@ function readyText(scope: ReceiptScope, fileName: string): string {
   if (scope === 'single') {
     return readySingleReceiptText(fileName);
   }
-  return $localize`:@@donor.dashboard.receipt.ready:Potvrzení ${fileName}:fileName: je připravené. Otevřete ho tlačítkem Otevřít potvrzení.`;
+  return $localize`:@@donor.dashboard.receipt.ready:Potvrzení ${fileName}:fileName: je připravené. Otevřete ho tlačítkem „Otevřít potvrzení“.`;
 }
 
 function downloadName(key: string): string {

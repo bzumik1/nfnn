@@ -286,7 +286,9 @@ test.describe('Given an administrator', () => {
       attention.getByRole('link', { name: '1 platba čeká na přiřazení 150 Kč' }),
     ).toHaveAttribute('href', '/sprava/platby');
     await expect(
-      attention.getByRole('link', { name: 'Osoba, která podepisuje potvrzení, nemá nahraný podpis' }),
+      attention.getByRole('link', {
+        name: 'Osoba, která podepisuje potvrzení, nemá nahraný podpis',
+      }),
     ).toHaveAttribute('href', '/sprava/lide-fondu');
     const backupsCard = page.getByRole('region', { name: 'Zálohy databáze' });
     await expect(backupsCard).toContainText('23. 10. 2026 3:00 (2 kB)');
