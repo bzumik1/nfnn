@@ -1,6 +1,7 @@
 .install-card__lead,
 .install-card__how {
   margin: var(--space-2) 0 0;
+  max-inline-size: var(--measure-prose);
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
   color: var(--color-text-soft);

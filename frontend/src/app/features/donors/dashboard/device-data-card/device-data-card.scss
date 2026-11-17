@@ -17,8 +17,10 @@
 
 .device-data-about {
   margin: 0 0 var(--space-4);
-  color: var(--color-text-secondary);
-  line-height: var(--leading-normal);
+  max-inline-size: var(--measure-prose);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-soft);
 }
 
 .device-data-actions {

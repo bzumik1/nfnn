@@ -23,6 +23,7 @@
 }
 
 .dashboard-error-text {
+  max-inline-size: var(--measure-prose);
   color: var(--color-danger);
   font-size: var(--text-md);
   font-weight: var(--weight-medium);

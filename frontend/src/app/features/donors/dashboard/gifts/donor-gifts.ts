@@ -7,6 +7,7 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { CompactLayout } from '../../../../core/layout/compact-layout';
 import { formatMinorUnits } from '../../../donations/donation-amount';
@@ -45,6 +46,7 @@ interface GiftYear {
     DonationsTable,
     GiftCount,
     MissingGift,
+    RouterLink,
     StandingOrder,
   ],
   templateUrl: './donor-gifts.html',

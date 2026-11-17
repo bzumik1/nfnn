@@ -35,3 +35,11 @@
   margin-bottom: 0;
   border-bottom: 0;
 }
+
+.notifications-state {
+  font-weight: var(--weight-semibold);
+}
+
+.notifications-retry {
+  margin-top: var(--space-3);
+}

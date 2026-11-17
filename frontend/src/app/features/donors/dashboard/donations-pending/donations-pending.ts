@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { DonorDonations } from '../donor-donations';
 
 @Component({
@@ -8,5 +8,7 @@ import { DonorDonations } from '../donor-donations';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DonationsPending {
+  readonly page = input<'overview' | 'gifts' | 'receipts'>('overview');
+
   protected readonly donations = inject(DonorDonations);
 }

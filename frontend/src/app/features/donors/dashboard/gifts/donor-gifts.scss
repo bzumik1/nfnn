@@ -16,6 +16,7 @@
 }
 
 .gifts-tax-note {
+  max-inline-size: var(--measure-prose);
   margin-top: var(--space-2);
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
@@ -56,15 +57,30 @@
 }
 
 .gift-year-note {
+  max-inline-size: var(--measure-prose);
   font-size: var(--text-sm);
   color: var(--color-text-soft);
 }
 
 .payments-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: var(--space-6);
+
+  app-missing-gift {
+    align-self: stretch;
+  }
+}
+
+.payments-send {
+  margin-top: var(--space-4);
+  max-width: 100%;
+  white-space: normal;
 }
 
 .payments-empty {
+  max-inline-size: var(--measure-prose);
   text-align: center;
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);

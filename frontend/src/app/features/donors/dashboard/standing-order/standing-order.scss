@@ -80,6 +80,14 @@
   margin-top: var(--space-2);
 }
 
+.standing-lead,
+.standing-loading,
+.standing-after,
+.standing-bank-only,
+.standing-older {
+  max-inline-size: var(--measure-prose);
+}
+
 @include bp.down(phone) {
   .standing-line {
     grid-template-columns: minmax(0, 1fr);

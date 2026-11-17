@@ -19,6 +19,7 @@
 }
 
 .bank-check-status {
+  max-inline-size: var(--measure-prose);
   display: flex;
   flex-wrap: wrap;
   align-items: center;

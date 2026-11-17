@@ -16,6 +16,7 @@
 }
 
 .missing-gift-text {
+  max-inline-size: var(--measure-prose);
   margin: var(--space-1) 0 var(--space-3);
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);

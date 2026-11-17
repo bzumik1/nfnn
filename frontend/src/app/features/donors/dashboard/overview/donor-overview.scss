@@ -81,10 +81,6 @@
   letter-spacing: normal;
 }
 
-.recent-card {
-  margin-bottom: 0;
-}
-
 .recent-all {
   @include touch-target.reaches-finger-size;
 }

@@ -14,6 +14,7 @@
 }
 
 .claim-question {
+  max-inline-size: var(--measure-prose);
   color: var(--color-text);
   font-weight: var(--weight-medium);
 }
@@ -25,6 +26,7 @@
 }
 
 .claim-note {
+  max-inline-size: var(--measure-prose);
   margin-top: var(--space-1-5);
   font-size: var(--text-sm);
 

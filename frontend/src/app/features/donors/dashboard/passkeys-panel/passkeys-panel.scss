@@ -12,6 +12,7 @@
 .passkeys-unsupported,
 .passkeys-hint,
 .passkeys-form-intro {
+  max-inline-size: var(--measure-prose);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   color: var(--color-text-muted);
@@ -112,4 +113,8 @@
 
 .passkeys-form {
   max-width: 560px;
+}
+
+.ui-form-status {
+  max-inline-size: var(--measure-prose);
 }
