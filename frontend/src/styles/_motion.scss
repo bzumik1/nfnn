@@ -212,14 +212,38 @@ $_pressed: (--pressed-tint, filter);
   animation: motion-pulse var(--duration-pulse) var(--ease-standard) 3;
 }
 
-@mixin _collapsed {
+@mixin _shut {
   grid-template-rows: 0fr;
   opacity: 0;
   visibility: hidden;
+}
 
+@mixin _clipped {
   > * {
     overflow: hidden;
     transition: none;
+  }
+}
+
+@mixin _collapsed {
+  @include _shut;
+  @include _clipped;
+}
+
+@mixin _closed {
+  @include _shut;
+  transition:
+    grid-template-rows var(--duration-base) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-out),
+    visibility var(--duration-base) step-end,
+    display var(--duration-base) allow-discrete;
+  @include _clipped;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition:
+      opacity var(--duration-reduced) var(--ease-standard),
+      visibility var(--duration-reduced) step-end,
+      display var(--duration-reduced) allow-discrete !important;
   }
 }
 
@@ -229,7 +253,6 @@ $_pressed: (--pressed-tint, filter);
   transition:
     grid-template-rows var(--duration-base) var(--ease-standard),
     opacity var(--duration-fast) var(--ease-out),
-    visibility var(--duration-base),
     display var(--duration-base) allow-discrete;
 
   > * {
@@ -240,7 +263,7 @@ $_pressed: (--pressed-tint, filter);
 
   &[hidden] {
     display: none;
-    @include _collapsed;
+    @include _closed;
   }
 
   @starting-style {
@@ -250,7 +273,6 @@ $_pressed: (--pressed-tint, filter);
   @media (prefers-reduced-motion: reduce) {
     transition:
       opacity var(--duration-reduced) var(--ease-standard),
-      visibility var(--duration-reduced),
       display var(--duration-reduced) allow-discrete !important;
 
     > * {
@@ -260,7 +282,7 @@ $_pressed: (--pressed-tint, filter);
 }
 
 @mixin collapse {
-  @include _collapsed;
+  @include _closed;
 }
 
 @mixin expand-content-leave {
