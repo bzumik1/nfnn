@@ -13,6 +13,7 @@ import { AppTab, AppTabId, pathOf, tabOf } from './app-tabs';
 import { ReloadPlace } from '../reload/reload-place';
 import { KeptTabPages } from './kept-tab-pages';
 import { NavigationPreview } from './navigation-preview';
+import { ScrollHold } from './scroll-hold';
 
 @Injectable({ providedIn: 'root' })
 export class TabMemory {
@@ -22,6 +23,7 @@ export class TabMemory {
   private readonly preview = inject(NavigationPreview);
   private readonly window = inject(DOCUMENT).defaultView;
   private readonly reloadPlace = inject(ReloadPlace);
+  private readonly scrollHold = inject(ScrollHold);
   private readonly lastUrls = new Map<AppTabId, string>(this.reloadPlace.keptTabs());
   private readonly current = signal<AppTab | null>(tabOf(this.router.url));
   readonly currentTab = this.current.asReadonly();
@@ -121,7 +123,7 @@ export class TabMemory {
   }
 
   private scrollTo(top: number): void {
-    this.window?.scrollTo({ top, behavior: 'instant' });
+    this.scrollHold.run(() => this.window?.scrollTo({ top, behavior: 'instant' }));
   }
 
   private visited(url: string): void {

@@ -26,7 +26,7 @@ interface SeenTransition {
 declare global {
   interface Window {
     nfnnSeenTransitions: SeenTransition[];
-    nfnnSeenTops: [string, number][];
+    nfnnSeenTops: [string, number, boolean][];
   }
 }
 
@@ -255,7 +255,11 @@ for (const [screen, viewport] of [
       await page.evaluate(() => {
         window.nfnnSeenTops = [];
         const sample = () => {
-          window.nfnnSeenTops.push([location.pathname, window.scrollY]);
+          window.nfnnSeenTops.push([
+            location.pathname,
+            window.scrollY,
+            document.querySelector('.page-fade') !== null,
+          ]);
           requestAnimationFrame(sample);
         };
         requestAnimationFrame(sample);
@@ -274,7 +278,9 @@ for (const [screen, viewport] of [
         .toBeGreaterThan(20);
 
       const tops = await page.evaluate(() =>
-        window.nfnnSeenTops.filter(([path]) => path === '/prispet').map(([, top]) => top),
+        window.nfnnSeenTops
+          .filter(([path, , covered]) => path === '/prispet' && !covered)
+          .map(([, top]) => top),
       );
       expect(tops.filter((top) => top !== 0)).toEqual([]);
     });

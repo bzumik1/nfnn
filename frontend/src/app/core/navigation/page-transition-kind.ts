@@ -20,6 +20,29 @@ export interface NavigationFacts {
   readonly to: PagePlace;
 }
 
+export type PageFadeFacts = Pick<
+  NavigationFacts,
+  'first' | 'reducedMotion' | 'compact' | 'dialogOpen' | 'trigger' | 'back' | 'skipLocationChange'
+> & {
+  readonly insideLockedAdministration: boolean;
+  readonly from: string;
+  readonly to: string;
+};
+
+export function pageFadeFor(facts: PageFadeFacts): boolean {
+  return (
+    !facts.first &&
+    !facts.reducedMotion &&
+    !facts.compact &&
+    !facts.dialogOpen &&
+    facts.trigger === 'imperative' &&
+    !facts.back &&
+    !facts.skipLocationChange &&
+    !facts.insideLockedAdministration &&
+    pathOf(facts.from) !== pathOf(facts.to)
+  );
+}
+
 export function pageTransitionFor(facts: NavigationFacts): PageTransitionKind | null {
   if (
     facts.first ||

@@ -1,0 +1,53 @@
+:root.page-fade-hidden main#obsah {
+  opacity: 0;
+}
+
+:root.page-fade-arriving main#obsah {
+  animation: page-fade-in calc(var(--duration-base) / 2) var(--ease-standard) backwards;
+}
+
+.page-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.page-fade__copy {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  overflow: hidden;
+  scroll-behavior: auto;
+
+  :not(.page-fade__main, .page-fade__main *) {
+    visibility: hidden !important;
+  }
+
+  .page-fade__main {
+    visibility: visible;
+  }
+
+  * {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition: none !important;
+  }
+}
+
+.page-fade--leaving .page-fade__copy {
+  animation: page-fade-out calc(var(--duration-base) / 2) var(--ease-standard) forwards;
+}
+
+@keyframes page-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+}

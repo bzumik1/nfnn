@@ -29,6 +29,7 @@ import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { BackTarget } from './core/navigation/back-target';
 import { edgeSwipeBackAtStart } from './core/navigation/edge-swipe-back';
+import { pageFadeAtStart } from './core/navigation/page-fade';
 import { pageTransitionsAtStart } from './core/navigation/page-transitions';
 import { provideSmoothAnchorScrolling } from './core/navigation/smooth-anchor-scroller';
 import { keptPublicAnswersInterceptor } from './core/navigation/kept-public-answers';
@@ -182,6 +183,7 @@ export const appConfig: ApplicationConfig = {
     contentAheadAtStart,
     edgeSwipeBackAtStart,
     pageTransitionsAtStart,
+    pageFadeAtStart,
     keptPageStyles,
   ],
 };
