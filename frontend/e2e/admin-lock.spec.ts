@@ -350,6 +350,45 @@ test.describe('Given an administrator whose administration locks on this device'
     });
   });
 
+  test('when the administration is locked, then the panel is part of the page, not a modal dialog, so the way out of the administration stays open', async ({
+    page,
+  }) => {
+    await rememberedSession(page);
+
+    await page.goto('/sprava/prehledy');
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
+    ).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.locator('[aria-modal]')).toHaveCount(0);
+    await expect(page.locator('.lock-panel')).not.toHaveAttribute('role');
+  });
+
+  test('when the administration is locked and two items of its side navigation are pressed, then each shows only the lock panel and none of the page', async ({
+    page,
+  }) => {
+    await rememberedSession(page);
+    await page.goto('/sprava/prehledy');
+    const locked = page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED });
+    await expect(locked).toBeVisible();
+    const sideNav = page.getByRole('navigation', { name: 'Správa', exact: true });
+
+    for (const [item, address] of [
+      ['Platby z banky', /\/sprava\/platby$/],
+      ['Dárci', /\/sprava\/darci$/],
+    ] as const) {
+      await sideNav.getByRole('link', { name: new RegExp(`^${item}`) }).click();
+
+      await expect(page).toHaveURL(address);
+      await expect(locked).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+      await expect(page.getByRole('heading', { level: 1, name: item, exact: true })).toHaveCount(0);
+      await expect(page.locator('.admin-page:not([hidden])')).toHaveCount(0);
+      await expect(page.locator('.admin-page :is(table, .ui-card):visible')).toHaveCount(0);
+    }
+  });
+
   test('when the device is offline, then the panel says that the password waits for a connection', async ({
     page,
     context,
