@@ -93,13 +93,19 @@ describe("Given the donor's overview while the gifts load", () => {
       .map((line) => (line.textContent ?? '').replace(/\s+/g, ' ').trim())
       .filter((line) => line !== '');
 
-  it('when the answer takes longer than the delay, then skeletons hidden from screen readers stand where the cards come, one status line names the loading and Poslat dar stays', async () => {
+  it('when the answer takes longer than the delay, then the place of the skeletons is held from the start, they show only after the delay, hidden from screen readers, one status line names the loading and Poslat dar stays', async () => {
     await open();
-    expect(all('app-skeleton')).toEqual([]);
+    const place = root().querySelector('.overview-skeletons');
+    expect(place).not.toBeNull();
+    expect(place!.getAttribute('aria-hidden')).toBe('true');
+    expect(place!.classList).not.toContain('overview-skeletons--shown');
+    expect(all('.overview-skeletons app-skeleton').length).toBeGreaterThan(0);
     expect(statusLines()).toEqual(['Načítáme vaše dary…']);
 
     await wait(300);
 
+    expect(root().querySelector('.overview-skeletons')).toBe(place);
+    expect(place!.classList).toContain('overview-skeletons--shown');
     const skeletons = all('app-skeleton');
     expect(skeletons.length).toBeGreaterThan(0);
     expect(skeletons.every((skeleton) => skeleton.getAttribute('aria-hidden') === 'true')).toBe(
@@ -130,11 +136,13 @@ describe("Given the donor's overview while the gifts load", () => {
     expect(statusLines()).toEqual([]);
   });
 
-  it('when the gifts arrive before the delay, then no skeleton shows and the cards come without appearing', async () => {
+  it('when the gifts arrive before the delay, then the held place never shows a skeleton and the cards take it without appearing', async () => {
     await open();
     await wait(100);
+    expect(root().querySelector('.overview-skeletons--shown')).toBeNull();
 
     await answer();
+    expect(root().querySelector('.overview-skeletons')).toBeNull();
     await wait(300);
 
     expect(all('app-skeleton')).toEqual([]);

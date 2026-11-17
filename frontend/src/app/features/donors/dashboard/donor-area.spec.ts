@@ -673,7 +673,9 @@ describe('Given a signed-in donor in the donor area', () => {
         .flush({ title: 'Chyba' }, { status: 500, statusText: 'Internal Server Error' });
       await settle();
 
-      expect(text('[role="alert"]')).toContain('Přehled darů se nepodařilo načíst.');
+      expect(text('.dashboard-error-text')).toBe(
+        'Přehled darů se nepodařilo načíst. Zkuste to znovu.',
+      );
       expect(element('.overview-stats')).toBeNull();
       expect(text('.send-gift h2')).toBe('Poslat dar');
 
