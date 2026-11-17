@@ -346,6 +346,33 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
   });
 });
 
+test.describe('Given a signed-in donor on an iPad upright with the account sheet open', () => {
+  test('when they open Údaje a zabezpečení inside the sheet and step back, then the form sheet keeps its height all the way', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedDonorSession(page);
+    await page.setViewportSize({ width: 834, height: 1194 });
+    await page.goto('/o-nas');
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const sheet = page.getByRole('dialog');
+    const panel = sheet.locator('.dialog-panel');
+    await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeVisible();
+    const listHeight = (await panel.boundingBox())!.height;
+
+    await sheet.getByRole('link', { name: 'Údaje a zabezpečení' }).click();
+    await expect(
+      sheet.getByRole('heading', { level: 2, name: 'Údaje a zabezpečení', exact: true }),
+    ).toBeVisible();
+    const sectionHeight = (await panel.boundingBox())!.height;
+    await stepBack(page);
+    await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeVisible();
+
+    expect(sectionHeight).toBeCloseTo(listHeight, 0);
+    expect((await panel.boundingBox())!.height).toBeCloseTo(listHeight, 0);
+  });
+});
+
 test.describe('Given a donor in the installed app on a phone with a section open in the account sheet', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {

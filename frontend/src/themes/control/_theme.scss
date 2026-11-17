@@ -291,8 +291,8 @@
   --side-nav-width: 230px;
   --floating-notice-height: 0rem;
   --offline-pill-height: 0rem;
-  --dialog-max-width: 420px;
-  --dialog-max-width-wide: 520px;
+  --dialog-max-width: 26.25rem;
+  --dialog-max-width-wide: 32.5rem;
   --dialog-close-inset: 14px;
   --dialog-close-size: 32px;
   --text-dialog-close: min(var(--text-4xl), var(--dialog-close-size));
@@ -303,6 +303,7 @@
   --blend-ink: normal;
   --blend-ink-on-paper: multiply;
   --sheet-max-width: 640px;
+  --sheet-form-height: 620px;
   --sheet-grabber-width: 40px;
   --sheet-grabber-height: 4px;
   --sheet-close-size: var(--back-button-size);

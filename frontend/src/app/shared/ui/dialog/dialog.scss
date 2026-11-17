@@ -25,6 +25,7 @@
   --dialog-pull: 0;
   --dialog-enter-opacity: 0;
   --dialog-enter-scale: var(--motion-scale-enter);
+  --dialog-scroll-shade: color-mix(in srgb, var(--color-text) 14%, transparent);
   position: fixed;
   inset: 0;
   width: 100%;
@@ -66,6 +67,7 @@
   width: 100%;
   max-width: var(--dialog-max-width);
   box-shadow: var(--shadow-dialog);
+  outline: 1px solid transparent;
 
   &--wide {
     max-width: var(--dialog-max-width-wide);
@@ -112,9 +114,20 @@
 
 @include bp.up(phone) {
   .dialog-panel {
+    --dialog-panel-ground: var(--color-surface-elevated);
     max-block-size: calc(100dvh - 2 * var(--space-5));
     overflow-y: auto;
     overscroll-behavior: contain;
+    background:
+      linear-gradient(var(--dialog-panel-ground), var(--dialog-panel-ground)) center bottom / 100%
+        var(--scroll-edge-fade) no-repeat local,
+      linear-gradient(to top, var(--dialog-scroll-shade), transparent) center bottom / 100%
+        var(--scroll-edge-fade) no-repeat scroll,
+      var(--dialog-panel-ground);
+  }
+
+  .dialog-panel--grouped {
+    --dialog-panel-ground: var(--color-sheet-grouped);
   }
 }
 
@@ -304,12 +317,19 @@
     }
 
     .dialog--sheet .dialog-panel {
+      max-width: var(--dialog-max-width-wide);
       border-radius: var(--radius-sheet);
+      padding-bottom: var(--space-8);
     }
 
     .dialog--sheet .dialog-panel--tall {
-      height: auto;
+      height: min(var(--sheet-form-height), calc(100dvh - var(--space-12)));
       max-height: calc(100dvh - var(--space-12));
+      padding-bottom: var(--space-8);
+    }
+
+    .dialog--sheet .dialog-grabber::before {
+      display: none;
     }
   }
 }
