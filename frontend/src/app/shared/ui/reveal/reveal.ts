@@ -10,6 +10,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { ScrollHold } from '../../../core/navigation/scroll-hold';
 
 const LONGEST_ROW = 6;
 const LINE = '0px 0px -10% 0px';
@@ -40,52 +41,58 @@ export class Reveal {
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
+  private readonly scrollHold = inject(ScrollHold);
   protected readonly showing = signal<Showing>('still');
 
   constructor() {
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
-      const view = this.document.defaultView;
-      if (view === null || !mayMove(view) || this.startsInSight(view)) {
-        this.revealed.emit();
-        return;
-      }
-      this.showing.set('waiting');
-      let lateReveal: ReturnType<typeof setTimeout> | undefined;
-      const stopWatching = () => {
-        clearTimeout(lateReveal);
-        line.disconnect();
-        screen.disconnect();
-        view.removeEventListener('beforeprint', showForPrint);
-      };
-      const line = new IntersectionObserver(
-        (entries) => {
-          const sighted = entries.find((entry) => entry.isIntersecting);
-          if (sighted !== undefined) {
-            stopWatching();
-            this.reveal(scrolledIn(sighted, view) ? 'moving' : 'still');
-          }
-        },
-        { rootMargin: LINE, threshold: 0 },
-      );
-      const screen = new IntersectionObserver(
-        (entries) => {
-          clearTimeout(lateReveal);
-          if (entries.some((entry) => entry.isIntersecting)) {
-            lateReveal = setTimeout(() => {
-              stopWatching();
-              this.reveal('moving');
-            }, this.revealMs(view));
-          }
-        },
-        { rootMargin: SCREEN, threshold: 0 },
-      );
-      const showForPrint = () => this.showAtOnce();
-      line.observe(this.host.nativeElement);
-      screen.observe(this.host.nativeElement);
-      view.addEventListener('beforeprint', showForPrint);
-      destroyRef.onDestroy(stopWatching);
+      const giveUp = this.scrollHold.whenReleased(() => this.watch(destroyRef));
+      destroyRef.onDestroy(giveUp);
     });
+  }
+
+  private watch(destroyRef: DestroyRef): void {
+    const view = this.document.defaultView;
+    if (view === null || !mayMove(view) || this.startsInSight(view)) {
+      this.revealed.emit();
+      return;
+    }
+    this.showing.set('waiting');
+    let lateReveal: ReturnType<typeof setTimeout> | undefined;
+    const stopWatching = () => {
+      clearTimeout(lateReveal);
+      line.disconnect();
+      screen.disconnect();
+      view.removeEventListener('beforeprint', showForPrint);
+    };
+    const line = new IntersectionObserver(
+      (entries) => {
+        const sighted = entries.find((entry) => entry.isIntersecting);
+        if (sighted !== undefined) {
+          stopWatching();
+          this.reveal(scrolledIn(sighted, view) ? 'moving' : 'still');
+        }
+      },
+      { rootMargin: LINE, threshold: 0 },
+    );
+    const screen = new IntersectionObserver(
+      (entries) => {
+        clearTimeout(lateReveal);
+        if (entries.some((entry) => entry.isIntersecting)) {
+          lateReveal = setTimeout(() => {
+            stopWatching();
+            this.reveal('moving');
+          }, this.revealMs(view));
+        }
+      },
+      { rootMargin: SCREEN, threshold: 0 },
+    );
+    const showForPrint = () => this.showAtOnce();
+    line.observe(this.host.nativeElement);
+    screen.observe(this.host.nativeElement);
+    view.addEventListener('beforeprint', showForPrint);
+    destroyRef.onDestroy(stopWatching);
   }
 
   protected showAtOnce(): void {
