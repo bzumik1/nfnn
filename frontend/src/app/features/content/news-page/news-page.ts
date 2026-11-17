@@ -10,6 +10,7 @@ import {
   ElementRef,
   inject,
   Injector,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -76,7 +77,6 @@ export class NewsPage {
   protected readonly offline = signal(false);
   protected readonly loadingShown = signal(false);
   protected readonly reloaded = signal(false);
-  protected readonly settledOnce = signal(false);
   protected readonly pageNumber = signal(1);
   protected readonly list = signal<NewsList>({ items: [], total: 0 });
   protected readonly bandPhoto = signal<DonateBandPhotoResponse | null>(null);
@@ -87,6 +87,10 @@ export class NewsPage {
       return news;
     }
     return this.pageNumber() === 1 && this.storiesState().kind === 'loading' ? 'loading' : 'ready';
+  });
+  protected readonly settledOnce = linkedSignal<LoadState, boolean>({
+    source: this.state,
+    computation: (state, before) => (before?.value ?? false) || state !== 'loading',
   });
   protected readonly stories = computed(() => {
     const stories = this.storiesState();
@@ -182,7 +186,6 @@ export class NewsPage {
       next: (page) => {
         this.list.set({ items: page.items, total: page.total });
         this.newsState.set('ready');
-        this.settledOnce.set(true);
         this.reloaded.set(retried && page.items.length > 0);
       },
       error: (failure: unknown) => {
@@ -191,7 +194,6 @@ export class NewsPage {
         }
         this.offline.set(failure instanceof HttpErrorResponse && failure.status === 0);
         this.newsState.set('error');
-        this.settledOnce.set(true);
       },
     });
     if (this.pageNumber() === 1) {
