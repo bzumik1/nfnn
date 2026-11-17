@@ -377,9 +377,14 @@
                           type="button"
                           class="ui-button ui-button--small"
                           (click)="openPairing(item)"
-                          i18n="@@admin.payments.pair.open"
                         >
-                          Přiřadit dárci
+                          <ng-container i18n="@@admin.payments.pair.open"
+                            >Přiřadit dárci</ng-container
+                          >
+                          <span class="visually-hidden" i18n="@@admin.payments.pair.openOf"
+                            >, {{ date(item.bookedOn) }},
+                            {{ crowns(item.amountMinor) }}&nbsp;Kč</span
+                          >
                         </button>
                       } @else if (item.donation?.receiptIssued) {
                         <span class="muted" i18n="@@admin.payments.unpair.blocked"
@@ -403,6 +408,10 @@
                               <ng-container i18n="@@admin.payments.unpair.yes"
                                 >Zrušit přiřazení</ng-container
                               >
+                              <span class="visually-hidden" i18n="@@admin.payments.unpair.yesOf"
+                                >, {{ date(item.bookedOn) }},
+                                {{ crowns(item.amountMinor) }}&nbsp;Kč</span
+                              >
                             }
                           </button>
                           <button
@@ -422,9 +431,14 @@
                           type="button"
                           class="ui-button ui-button--small ui-button--quiet"
                           (click)="askUnpair(item)"
-                          i18n="@@admin.payments.unpair.open"
                         >
-                          Zrušit přiřazení
+                          <ng-container i18n="@@admin.payments.unpair.open"
+                            >Zrušit přiřazení</ng-container
+                          >
+                          <span class="visually-hidden" i18n="@@admin.payments.unpair.openOf"
+                            >, {{ date(item.bookedOn) }},
+                            {{ crowns(item.amountMinor) }}&nbsp;Kč</span
+                          >
                         </button>
                       }
                     </td>
