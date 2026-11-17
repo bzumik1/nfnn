@@ -49,7 +49,7 @@ describe('Given a button whose label says when it saves', () => {
     expect(faces()[0].parentElement).toBe(faces()[1].parentElement);
   });
 
-  describe('when it starts saving', () => {
+  describe("when it starts saving without the theme's loading delay", () => {
     beforeEach(() => setSaving(true));
 
     it('then its name changes at once to the saving label alone', () => {
@@ -85,5 +85,78 @@ describe('Given a button whose label says when it saves', () => {
 
     expect(accessibleText(button())).toBe('Uložit nastavení');
     expect(faces()[1].getAttribute('aria-hidden')).toBe('true');
+  });
+
+  describe("with the theme's loading delay", () => {
+    beforeEach(async () => {
+      vi.useFakeTimers();
+      document.documentElement.style.setProperty('--delay-loading', '0.3s');
+      fixture.destroy();
+      fixture = TestBed.createComponent(Host);
+      fixture.detectChanges();
+    });
+
+    afterEach(() => {
+      document.documentElement.style.removeProperty('--delay-loading');
+      vi.useRealTimers();
+    });
+
+    async function saving(value: boolean): Promise<void> {
+      fixture.componentInstance.saving.set(value);
+      await wait(0);
+    }
+
+    async function wait(ms: number): Promise<void> {
+      await vi.advanceTimersByTimeAsync(ms);
+      fixture.detectChanges();
+    }
+
+    it('when it starts saving, then its name stays the resting label until the delay is over', async () => {
+      await saving(true);
+      await wait(299);
+
+      expect(accessibleText(button())).toBe('Uložit nastavení');
+      expect(faces()[1].getAttribute('aria-hidden')).toBe('true');
+
+      await wait(1);
+
+      expect(accessibleText(button())).toBe('Ukládáme…');
+      expect(faces()[0].getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('when the save ends before the delay is over, then the saving label never shows', async () => {
+      await saving(true);
+      await wait(200);
+      await saving(false);
+
+      await wait(500);
+
+      expect(accessibleText(button())).toBe('Uložit nastavení');
+      expect(faces()[1].getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('when the save ends after the saving label showed, then the resting label is back at once', async () => {
+      await saving(true);
+      await wait(300);
+
+      await saving(false);
+
+      expect(accessibleText(button())).toBe('Uložit nastavení');
+    });
+
+    it('when a second save starts soon after a fast one, then it waits the whole delay again', async () => {
+      await saving(true);
+      await wait(200);
+      await saving(false);
+      await saving(true);
+
+      await wait(200);
+
+      expect(accessibleText(button())).toBe('Uložit nastavení');
+
+      await wait(100);
+
+      expect(accessibleText(button())).toBe('Ukládáme…');
+    });
   });
 });

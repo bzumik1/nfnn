@@ -155,9 +155,10 @@ test.describe('Given an administrator on the monthly report page', () => {
     ]);
   });
 
-  test('when they save and the server takes a while, then the button says so at once under its new name without changing its width', async ({
+  test('when they save and the server takes a while, then the button is locked at once and says so under its new name after the loading delay without changing its width', async ({
     page,
   }) => {
+    await page.clock.install();
     await page.route(
       (url) => url.pathname === REPORT,
       (route) => route.fulfill({ json: reportView() }),
@@ -179,7 +180,14 @@ test.describe('Given an administrator on the monthly report page', () => {
     await expect(save).toHaveAccessibleName('Uložit nastavení');
     const restingWidth = (await save.boundingBox())?.width;
 
+    await page.evaluate(() => document.documentElement.style.setProperty('--delay-loading', '10s'));
     await save.click();
+
+    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    await expect(save).toHaveAccessibleName('Uložit nastavení');
+    expect((await save.boundingBox())?.width).toBe(restingWidth);
+
+    await page.clock.fastForward(10_000);
 
     await expect(save).toHaveAccessibleName('Ukládáme…');
     await expect(save).toHaveAttribute('aria-disabled', 'true');

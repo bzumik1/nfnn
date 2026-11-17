@@ -4,7 +4,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { ConnectedAppsCard } from './connected-apps-card';
+
+function labels(button: Element | null): string[] {
+  return Array.from(button?.querySelectorAll('.busy-label__face') ?? []).map((face) =>
+    (face.textContent ?? '').replace(/\s+/g, ' ').trim(),
+  );
+}
 
 const CONNECTIONS_URL = '/api/donors/me/connections';
 const CLAUDE_CONNECTION = {
@@ -94,7 +101,9 @@ describe("Given an administrator's connected applications card", () => {
 
     element<HTMLButtonElement>('.connection-disconnect').click();
     await settle();
-    expect(element('.connection-disconnect').textContent).toContain('Odpojujeme…');
+    expect(accessibleText(element('.connection-disconnect'))).toBe('Odpojujeme…');
+    expect(element<HTMLButtonElement>('.connection-disconnect').disabled).toBe(true);
+    expect(labels(element('.connection-disconnect'))).toEqual(['Odpojit', 'Odpojujeme…']);
     http
       .expectOne({ method: 'DELETE', url: `${CONNECTIONS_URL}/${CLAUDE_CONNECTION.id}` })
       .flush(null, { status: 204, statusText: 'No Content' });

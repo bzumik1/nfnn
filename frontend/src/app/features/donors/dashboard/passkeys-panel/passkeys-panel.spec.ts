@@ -17,7 +17,14 @@ import {
   sampleDonor,
   samplePasskey,
 } from '../../../../core/auth/testing/donor-fixtures';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { PasskeysPanel } from './passkeys-panel';
+
+function labels(button: Element | null): string[] {
+  return Array.from(button?.querySelectorAll('.busy-label__face') ?? []).map((face) =>
+    (face.textContent ?? '').replace(/\s+/g, ' ').trim(),
+  );
+}
 
 const PASSKEYS_URL = '/api/donors/me/passkeys';
 const OPTIONS_URL = '/api/donors/me/passkeys/options';
@@ -69,9 +76,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
   }
 
   function texts(selector: string): string[] {
-    return Array.from(root().querySelectorAll(selector)).map(
-      (node) => node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
-    );
+    return Array.from(root().querySelectorAll(selector)).map((node) => accessibleText(node));
   }
 
   async function settle(): Promise<void> {
@@ -82,7 +87,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
   async function clickButton(text: string): Promise<void> {
     const button = Array.from(root().querySelectorAll('button')).find((candidate) =>
-      candidate.textContent?.includes(text),
+      accessibleText(candidate).includes(text),
     );
     expect(button, `button "${text}"`).toBeDefined();
     button?.click();
@@ -336,6 +341,10 @@ describe('Given the passkeys panel of the sign-in card', () => {
       expect(element('.passkey-confirm').textContent).toContain('Odebrat klíč iPhone?');
 
       await clickButton('Ano, odebrat');
+      const yes = element<HTMLButtonElement>('.passkey-confirm .ui-button--danger-soft');
+      expect(yes.disabled).toBe(true);
+      expect(accessibleText(yes)).toBe('Odebíráme…');
+      expect(labels(yes)).toEqual(['Ano, odebrat', 'Odebíráme…']);
       const removal = http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`);
       expect(removal.request.method).toBe('DELETE');
       removal.flush(null);
@@ -511,9 +520,7 @@ describe('Given the passkeys panel of a donor without a password', () => {
   }
 
   function texts(selector: string): string[] {
-    return Array.from(root().querySelectorAll(selector)).map(
-      (node) => node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
-    );
+    return Array.from(root().querySelectorAll(selector)).map((node) => accessibleText(node));
   }
 
   async function settle(): Promise<void> {
@@ -524,7 +531,7 @@ describe('Given the passkeys panel of a donor without a password', () => {
 
   async function clickButton(text: string): Promise<void> {
     const button = Array.from(root().querySelectorAll('button')).find((candidate) =>
-      candidate.textContent?.includes(text),
+      accessibleText(candidate).includes(text),
     );
     expect(button, `button "${text}"`).toBeDefined();
     button?.click();

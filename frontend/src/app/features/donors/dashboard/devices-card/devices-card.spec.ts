@@ -6,6 +6,7 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { Donor, SignedInDevice } from '../../../../core/auth/donor';
 import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
 import { DonorNotifiedDevices } from '../../../operations/donor-notified-devices';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { deviceNameInSentence } from './device-labels';
 import { DevicesCard } from './devices-card';
 
@@ -193,7 +194,7 @@ describe("Given a donor's signed-in devices card", () => {
       expect(confirmation?.getAttribute('role')).toBe('group');
       const question = document.getElementById(confirmation?.getAttribute('aria-labelledby') ?? '');
       expect(text(question)).toBe('Odhlásit iPhone · Safari?');
-      expect(text(element('.devices-confirm-yes'))).toBe('Odhlásit');
+      expect(accessibleText(element('.devices-confirm-yes'))).toBe('Odhlásit');
       expect(element('.devices-confirm-yes').classList).toContain('ui-button--danger');
       expect(text(element('.devices-confirm-no'))).toBe('Zrušit');
       expect(signOutButton(rows()[1])).toBeNull();
@@ -228,7 +229,7 @@ describe("Given a donor's signed-in devices card", () => {
     it('and the donor signs out the iPhone, then the API is told, the row disappears, the status says so and takes focus', async () => {
       await ask(signOutButton(rows()[1]));
       await confirmSignOut();
-      expect(text(element('.devices-confirm-yes'))).toBe('Odhlašujeme…');
+      expect(accessibleText(element('.devices-confirm-yes'))).toBe('Odhlašujeme…');
       expect(element<HTMLButtonElement>('.devices-sign-out-others').disabled).toBe(true);
       http
         .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
@@ -279,13 +280,43 @@ describe("Given a donor's signed-in devices card", () => {
       expectShared(element<HTMLElement>('.devices-footer .devices-confirm'));
     });
 
+    it('and the donor signs out the iPhone, then its button is locked at once and keeps both labels, so its width does not change', async () => {
+      await ask(signOutButton(rows()[1]));
+      await confirmSignOut();
+
+      const yes = element<HTMLButtonElement>('.devices-confirm-yes');
+      expect(yes.disabled).toBe(true);
+      expect(
+        Array.from(yes.querySelectorAll('.busy-label__face')).map((face) => text(face)),
+      ).toEqual(['Odhlásit', 'Odhlašujeme…']);
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+    });
+
+    it('and the donor signs out every other device, then the button is locked at once and keeps both labels', async () => {
+      await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
+      await confirmSignOut();
+
+      const yes = element<HTMLButtonElement>('.devices-confirm-yes');
+      expect(yes.disabled).toBe(true);
+      expect(
+        Array.from(yes.querySelectorAll('.busy-label__face')).map((face) => text(face)),
+      ).toEqual(['Odhlásit', 'Odhlašujeme…']);
+      http
+        .expectOne({ method: 'DELETE', url: DEVICES_URL })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+    });
+
     it('and the donor presses Odhlásit všechna ostatní zařízení, then the card asks the same way and cancelling returns focus to that button', async () => {
       await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
 
       const confirmation = element<HTMLElement>('.devices-footer .devices-confirm');
       const question = document.getElementById(confirmation?.getAttribute('aria-labelledby') ?? '');
       expect(text(question)).toBe('Odhlásit všechna ostatní zařízení?');
-      expect(text(element('.devices-confirm-yes'))).toBe('Odhlásit');
+      expect(accessibleText(element('.devices-confirm-yes'))).toBe('Odhlásit');
       expect(document.activeElement).toBe(element('.devices-confirm-no'));
       http.expectNone({ method: 'DELETE' });
 
@@ -299,7 +330,7 @@ describe("Given a donor's signed-in devices card", () => {
     it('and the donor signs out every other device, then only this one stays, the status says so and takes focus', async () => {
       await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
       await confirmSignOut();
-      expect(text(element('.devices-confirm-yes'))).toBe('Odhlašujeme…');
+      expect(accessibleText(element('.devices-confirm-yes'))).toBe('Odhlašujeme…');
       http
         .expectOne({ method: 'DELETE', url: DEVICES_URL })
         .flush(null, { status: 204, statusText: 'No Content' });
