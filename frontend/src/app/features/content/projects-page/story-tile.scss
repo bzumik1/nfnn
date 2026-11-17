@@ -303,18 +303,19 @@
   }
 }
 
-@mixin square-large-tile {
+@mixin large-tile-of-ratio($ratio) {
   height: auto;
   min-height: auto;
-  aspect-ratio: 1;
+  aspect-ratio: $ratio;
 }
 
 :host-context(.grid--compact) .tile--large {
-  @include square-large-tile;
+  @include large-tile-of-ratio(3 / 2);
 }
 
 @include bp.container-down(stories, tablet) {
-  .tile--large {
-    @include square-large-tile;
+  .tile--large,
+  :host-context(.grid--compact) .tile--large {
+    @include large-tile-of-ratio(1);
   }
 }
