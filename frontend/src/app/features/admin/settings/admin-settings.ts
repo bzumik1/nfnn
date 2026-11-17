@@ -229,7 +229,6 @@ const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše 
   templateUrl: './admin-settings.html',
   styleUrl: './admin-settings.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '(input)': 'edited()', '(change)': 'edited()' },
 })
 export class AdminSettings {
   private readonly api = inject(AdminApi);
@@ -375,6 +374,7 @@ export class AdminSettings {
 
   protected setFlag(field: Field, on: boolean): void {
     field.value = String(on);
+    this.edited();
     this.draft.changed();
   }
 

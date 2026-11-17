@@ -151,6 +151,7 @@
                       [name]="field.name"
                       [disabled]="!secretsCanBeStored() || field.remove"
                       [(ngModel)]="field.value"
+                      (ngModelChange)="edited()"
                     />
                   </app-password-reveal>
                 </app-form-field>
@@ -161,6 +162,7 @@
                       [id]="'setting-' + field.name + '-remove'"
                       [name]="field.name + '-remove'"
                       [(ngModel)]="field.remove"
+                      (ngModelChange)="edited()"
                     />
                     <span i18n="@@admin.settings.secret.remove">Odebrat uloženou hodnotu</span>
                   </label>
@@ -182,6 +184,7 @@
                   [id]="'setting-' + field.name"
                   [name]="field.name"
                   [(ngModel)]="field.value"
+                  (ngModelChange)="edited()"
                 />
               </app-form-field>
             }
