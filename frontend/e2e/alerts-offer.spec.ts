@@ -15,7 +15,7 @@ const PUSH = '/api/admin/operations/push';
 const PUBLIC_KEY = `B${'E'.repeat(86)}`;
 const OWNER_KEY = 'nfnn.alerts.device-owner';
 const NOTHING_SHOWS_MS = 1500;
-const PAGE_TITLE = 'Občas a pro technika';
+const PAGE_TITLE = 'Správa';
 
 test.use({ unlocksAdministration: false });
 
@@ -27,7 +27,9 @@ interface Sent {
 async function enterAdministration(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED })).toBeVisible();
   await unlockAdministration(page);
-  await expect(page.getByRole('heading', { level: 1, name: PAGE_TITLE })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: PAGE_TITLE, exact: true }),
+  ).toBeVisible();
 }
 
 function ownerMarkOf(donorId: string): string {
@@ -90,7 +92,7 @@ async function openAdministration(
     },
     { installed: options.installed, ownerMark: options.ownerMark, ownerKey: OWNER_KEY },
   );
-  await page.goto('/sprava/vice');
+  await page.goto('/sprava');
   await enterAdministration(page);
   return sent;
 }

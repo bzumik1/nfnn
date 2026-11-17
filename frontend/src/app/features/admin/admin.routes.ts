@@ -4,6 +4,7 @@ import { inject, signal } from '@angular/core';
 import { Routes } from '@angular/router';
 import { AdministrationLockPanel } from './lock/administration-lock-panel';
 import { AdministrationLockService } from './lock/administration-lock-service';
+import { computerLeavesOutMore } from './more/computer-leaves-out-more';
 import { ADMINISTRATION_LOCK, type AdministrationLock } from './shell/administration-lock';
 import {
   ADMIN_BACKUPS_PATH,
@@ -27,6 +28,7 @@ export const adminRoutes: Routes = [
       {
         path: 'vice',
         data: { parent: ADMIN_HOME_PATH },
+        canActivate: [computerLeavesOutMore],
         title: $localize`:@@admin.more.pageTitle:Občas a pro technika | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./more/admin-more').then((m) => m.AdminMore),
       },

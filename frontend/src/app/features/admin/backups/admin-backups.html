@@ -1,4 +1,4 @@
-<div class="ui-page container">
+<div class="ui-page ui-page--form container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.backups.heading">Zálohy</h1>
   <p class="ui-page-intro" i18n="@@admin.backups.introRestore">
     Web se každý den sám zálohuje a jednou týdně si vyzkouší, že jde zálohu obnovit. Tady vidíte,
@@ -139,7 +139,15 @@
                 </p>
                 <ul class="restore-files">
                   @for (file of restoreFiles(); track file.fileName) {
-                    <li>{{ describeRestoreFile(file) }}</li>
+                    <li>
+                      <ng-container
+                        [ngTemplateOutlet]="namingFile"
+                        [ngTemplateOutletContext]="{
+                          $implicit: describeRestoreFile(file),
+                          fileName: file.fileName,
+                        }"
+                      />
+                    </li>
                   }
                 </ul>
               </div>
@@ -316,7 +324,11 @@
 }
 
 <ng-template #runLine let-line>
-  <span class="run-text">{{ line.text }}</span>
+  <span class="run-text"
+    ><ng-container
+      [ngTemplateOutlet]="namingFile"
+      [ngTemplateOutletContext]="{ $implicit: line.text, fileName: line.fileName }"
+  /></span>
   @if (line.error) {
     <details class="tech-details">
       <summary i18n="@@admin.backups.techDetails">Technické podrobnosti</summary>
@@ -331,6 +343,16 @@
       <p class="run-error-later" i18n="@@admin.backups.errorNeedsConnection">
         Podrobnosti chyby ukážeme, až budete online.
       </p>
+    }
+  }
+</ng-template>
+
+<ng-template #namingFile let-text let-fileName="fileName">
+  @for (part of fileNameParts(text, fileName); track $index) {
+    @if (part.fileName) {
+      <span class="file-name">{{ part.text }}</span>
+    } @else {
+      <ng-container>{{ part.text }}</ng-container>
     }
   }
 </ng-template>

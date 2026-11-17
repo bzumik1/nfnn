@@ -4,10 +4,6 @@
   display: block;
 }
 
-.container {
-  max-width: 900px;
-}
-
 .problems {
   margin: 0 0 var(--space-4);
   padding: var(--space-3) var(--space-4);
@@ -130,6 +126,10 @@
   margin-top: var(--space-1-5);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+}
+
+.file-name {
+  white-space: nowrap;
 }
 
 .run-error {

@@ -4,10 +4,6 @@
   display: block;
 }
 
-.container {
-  max-width: 1000px;
-}
-
 .issue-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

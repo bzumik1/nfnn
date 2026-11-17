@@ -34,6 +34,37 @@ async function rememberedSession(page: Page): Promise<void> {
   await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
 }
 
+interface LockArrival {
+  readonly pageHidden: boolean;
+  readonly pageInert: boolean;
+  readonly animation: string;
+  readonly seconds: number;
+}
+
+function recordTheLockArrival(): void {
+  const record = window as unknown as { lockArrival?: unknown };
+  const observer = new MutationObserver(() => {
+    const panel = document.querySelector('.lock-panel');
+    if (panel === null) {
+      return;
+    }
+    observer.disconnect();
+    const underneath = document.querySelector<HTMLElement>('.admin-page');
+    const style = getComputedStyle(panel);
+    record.lockArrival = {
+      pageHidden: underneath === null || underneath.hidden,
+      pageInert: underneath === null || underneath.inert,
+      animation: style.animationName,
+      seconds: parseFloat(style.animationDuration),
+    };
+  });
+  observer.observe(document, { childList: true, subtree: true });
+}
+
+function lockArrival(page: Page): Promise<LockArrival> {
+  return page.evaluate(() => (window as unknown as { lockArrival: LockArrival }).lockArrival);
+}
+
 test.describe('Given an administrator whose administration locks on this device', () => {
   test.use({ unlocksAdministration: false });
 
@@ -189,6 +220,25 @@ test.describe('Given an administrator whose administration locks on this device'
       await expect(page.getByLabel('Příjemci')).toHaveCount(0);
     });
 
+    test('and it locks while a field holds the focus, then the page hides and turns inert as the panel arrives, the panel moves in and the focus stays in it', async ({
+      page,
+    }) => {
+      await page.getByLabel('Příjemci').focus();
+      await page.evaluate(recordTheLockArrival);
+
+      await leaveTheApp(page);
+      await page.clock.runFor(FIVE_MINUTES_MS);
+      await comeBack(page);
+
+      const heading = page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED });
+      await expect(heading).toBeFocused();
+      expect(await lockArrival(page)).toEqual(
+        expect.objectContaining({ pageHidden: true, pageInert: true, animation: 'motion-appear' }),
+      );
+      await page.keyboard.press('Tab');
+      await expect(page.locator('.lock-panel :focus')).toHaveCount(1);
+    });
+
     test('and it locks while the recipients are half-typed, then after unlocking the typed text is still there', async ({
       page,
     }) => {
@@ -300,6 +350,45 @@ test.describe('Given an administrator whose administration locks on this device'
     });
   });
 
+  test('when the administration is locked, then the panel is part of the page, not a modal dialog, so the way out of the administration stays open', async ({
+    page,
+  }) => {
+    await rememberedSession(page);
+
+    await page.goto('/sprava/prehledy');
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
+    ).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.locator('[aria-modal]')).toHaveCount(0);
+    await expect(page.locator('.lock-panel')).not.toHaveAttribute('role');
+  });
+
+  test('when the administration is locked and two items of its side navigation are pressed, then each shows only the lock panel and none of the page', async ({
+    page,
+  }) => {
+    await rememberedSession(page);
+    await page.goto('/sprava/prehledy');
+    const locked = page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED });
+    await expect(locked).toBeVisible();
+    const sideNav = page.getByRole('navigation', { name: 'Správa', exact: true });
+
+    for (const [item, address] of [
+      ['Platby z banky', /\/sprava\/platby$/],
+      ['Dárci', /\/sprava\/darci$/],
+    ] as const) {
+      await sideNav.getByRole('link', { name: new RegExp(`^${item}`) }).click();
+
+      await expect(page).toHaveURL(address);
+      await expect(locked).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+      await expect(page.getByRole('heading', { level: 1, name: item, exact: true })).toHaveCount(0);
+      await expect(page.locator('.admin-page:not([hidden])')).toHaveCount(0);
+      await expect(page.locator('.admin-page :is(table, .ui-card):visible')).toHaveCount(0);
+    }
+  });
+
   test('when the device is offline, then the panel says that the password waits for a connection', async ({
     page,
     context,
@@ -317,5 +406,26 @@ test.describe('Given an administrator whose administration locks on this device'
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Použít heslo' })).toBeDisabled();
     await context.setOffline(false);
+  });
+});
+
+test.describe('Given an administrator who asks for less motion when the administration locks', () => {
+  test.use({ unlocksAdministration: false, reducedMotion: 'reduce' });
+
+  test('when the panel arrives, then it changes at once or with a short fade', async ({ page }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === REPORT,
+      (route) => route.fulfill({ json: reportView }),
+    );
+    await rememberedSession(page);
+    await page.addInitScript(recordTheLockArrival);
+
+    await page.goto('/sprava/prehledy');
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
+    ).toBeFocused();
+    expect((await lockArrival(page)).seconds).toBeLessThanOrEqual(0.2);
   });
 });

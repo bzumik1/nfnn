@@ -1,4 +1,8 @@
-<div class="container" [class.container--compact]="compact()">
+<div
+  class="container"
+  [class.container--compact]="compact()"
+  [class.ui-page--form]="administration"
+>
   @if (administration) {
     <app-page-title i18n="@@admin.verify.empty.title">Ověřit potvrzení</app-page-title>
   } @else {

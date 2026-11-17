@@ -9,6 +9,19 @@
   }
 }
 
+.ui-page--full {
+  @include bp.up(nav) {
+    max-width: none;
+  }
+}
+
+.ui-page--form {
+  @include bp.up(nav) {
+    box-sizing: content-box;
+    max-width: var(--page-form-max);
+  }
+}
+
 .ui-page-head {
   display: flex;
   flex-wrap: wrap;
