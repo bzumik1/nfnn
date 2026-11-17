@@ -3383,7 +3383,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.getByRole('button', { name: 'Smazat data z tohoto zařízení' }).click();
     await expect(
-      page.getByRole('alertdialog').getByRole('heading', { name: 'Smazat data z tohoto zařízení?' }),
+      page
+        .getByRole('alertdialog')
+        .getByRole('heading', { name: 'Smazat data z tohoto zařízení?' }),
     ).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
