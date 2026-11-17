@@ -8,7 +8,7 @@ import {
   YEARLY_RECEIPT,
 } from './receipt-verification';
 
-const WIDE_WIDTHS = [1600, 1920, 2560];
+const COMPUTER_WIDTHS = [900, 1024, 1280, 1440, 1599, 1600, 1920, 2560];
 const FORMER_COLUMN_WIDTH = 912;
 const PIXEL_TOLERANCE = 1;
 
@@ -22,7 +22,7 @@ function backButton(page: Page): Locator {
   return page.getByRole('banner').getByRole('button', { name: 'Zpět' });
 }
 
-for (const width of WIDE_WIDTHS) {
+for (const width of COMPUTER_WIDTHS) {
   test.describe(`Given a visitor on /overit in a window ${width} px wide`, () => {
     test.beforeEach(async ({ page }) => {
       await page.setViewportSize({ width, height: 1000 });
@@ -55,10 +55,13 @@ for (const width of WIDE_WIDTHS) {
       const axis = await leftEdge(backButton(page));
       const title = await leftEdge(page.getByRole('heading', { level: 1 }));
       const box = (await card.boundingBox())!;
+      const layoutWidth = await page.evaluate(() => document.documentElement.clientWidth);
 
       expect(Math.abs(title - axis)).toBeLessThanOrEqual(PIXEL_TOLERANCE);
       expect(Math.abs(box.x - axis)).toBeLessThanOrEqual(PIXEL_TOLERANCE);
-      expect(Math.abs(box.width - FORMER_COLUMN_WIDTH)).toBeLessThanOrEqual(PIXEL_TOLERANCE);
+      expect(
+        Math.abs(box.width - Math.min(FORMER_COLUMN_WIDTH, layoutWidth - 2 * axis)),
+      ).toBeLessThanOrEqual(PIXEL_TOLERANCE);
     });
   });
 }
