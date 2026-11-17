@@ -260,6 +260,16 @@ describe('Given the card "Data v tomto zařízení"', () => {
       expect(button('Zrušit').hasAttribute('autofocus')).toBe(true);
     });
 
+    it('then no one-letter word of its title and lead ends a line, as Czech typography asks', () => {
+      const dialog = document.querySelector('dialog')!;
+      const lead = dialog.querySelector('.ui-dialog__lead')?.textContent ?? '';
+
+      expect(dialog.querySelector('h2')?.textContent).toContain('z\u00a0tohoto');
+      expect(lead).toContain('a\u00a0bankovních');
+      expect(lead).toContain('z\u00a0tohoto');
+      expect(lead).toContain('a\u00a0odhlásíme');
+    });
+
     it('and cancels, then nothing is deleted and the dialog closes', async () => {
       button('Zrušit').click();
       await settle();
@@ -310,6 +320,9 @@ describe('Given the card "Data v tomto zařízení"', () => {
         ).toBe(
           'Data z tohoto zařízení se nepodařilo smazat. Zkuste to prosím znovu. Když to nepůjde, smažte data webu nfnn.cz v nastavení prohlížeče.',
         ),
+      );
+      expect(document.querySelector('dialog [role="alert"]')?.textContent).toContain(
+        'Data z\u00a0tohoto zařízení',
       );
       expect(logout).not.toHaveBeenCalled();
       expect(TestBed.inject(SignedOutNotice).shown()).toBe(false);
