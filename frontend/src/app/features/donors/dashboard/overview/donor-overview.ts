@@ -18,6 +18,8 @@ import { InstallCard } from '../install-card/install-card';
 import { receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { SendGift } from '../send-gift/send-gift';
+import { loadingView } from '../../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { DiagnosticsDownload } from '../../../../shared/ui/diagnostics-download/diagnostics-download';
 
 const RECENT_DONATIONS_SHOWN = 5;
@@ -37,6 +39,7 @@ const RECENT_DONATIONS_SHOWN = 5;
     DonationsPending,
     DonationsTable,
     InstallCard,
+    Skeleton,
   ],
   templateUrl: './donor-overview.html',
   styleUrl: './donor-overview.scss',
@@ -44,6 +47,11 @@ const RECENT_DONATIONS_SHOWN = 5;
 })
 export class DonorOverview {
   protected readonly donations = inject(DonorDonations);
+  protected readonly loadView = loadingView(
+    this.donations.state,
+    (state) => state === 'loading',
+    (state) => state !== 'ready',
+  );
   protected readonly donor = inject(AuthStore).donor;
   private readonly refusal = inject(AdminAccessRefusal);
   protected readonly adminRefusal = this.refusal.reason;

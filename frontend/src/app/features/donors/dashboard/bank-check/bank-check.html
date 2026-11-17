@@ -30,7 +30,7 @@
     appNeedsConnection
     type="button"
     class="ui-button ui-button--small bank-check-btn"
-    [disabled]="donations.checkingBank()"
+    [appBusy]="donations.checkingBank()"
     (click)="donations.refreshFromBank()"
     i18n="@@donor.dashboard.bank.refresh"
   >

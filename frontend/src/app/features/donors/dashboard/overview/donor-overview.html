@@ -32,9 +32,13 @@
   }
 </div>
 
-@if (donations.state() === 'ready') {
+@if (loadView.state() === 'ready') {
   @if (receiptYear(); as year) {
-    <section class="ui-card ui-card--padded receipt-ready" aria-labelledby="receipt-ready-title">
+    <section
+      class="ui-card ui-card--padded receipt-ready"
+      [class.ui-skeleton-reveal]="loadView.appears()"
+      aria-labelledby="receipt-ready-title"
+    >
       <h2 id="receipt-ready-title" class="ui-card__title" i18n="@@donor.overview.receipt.title">
         Potvrzení o&nbsp;darech za rok {{ year }} je připravené
       </h2>
@@ -101,8 +105,8 @@
   </p>
 </ng-template>
 
-@if (donations.state() === 'ready' && hasGift()) {
-  <dl class="ui-card overview-stats">
+@if (loadView.state() === 'ready' && hasGift()) {
+  <dl class="ui-card overview-stats" [class.ui-skeleton-reveal]="loadView.appears()">
     <div class="overview-stat">
       <dt i18n="@@donor.dashboard.stat.total">Celkem darováno</dt>
       <dd class="stat-value ui-figures">
@@ -133,8 +137,12 @@
   </dl>
 }
 
-@if (donations.state() === 'ready' && !hasGift()) {
-  <section class="ui-card ui-card--padded first-gift" aria-labelledby="first-gift-title">
+@if (loadView.state() === 'ready' && !hasGift()) {
+  <section
+    class="ui-card ui-card--padded first-gift"
+    [class.ui-skeleton-reveal]="loadView.appears()"
+    aria-labelledby="first-gift-title"
+  >
     <h2 id="first-gift-title" class="ui-card__title" i18n="@@donor.overview.firstGift.title">
       Jak poslat první dar
     </h2>
@@ -156,9 +164,13 @@
     <app-missing-gift />
     <ng-container [ngTemplateOutlet]="bankStatus" />
   </section>
-} @else if (donations.state() === 'ready') {
+} @else if (loadView.state() === 'ready') {
   @if (lastGift(); as gift) {
-    <section class="ui-card ui-card--padded last-gift" aria-labelledby="last-gift-title">
+    <section
+      class="ui-card ui-card--padded last-gift"
+      [class.ui-skeleton-reveal]="loadView.appears()"
+      aria-labelledby="last-gift-title"
+    >
       <h2 id="last-gift-title" class="ui-card__title" i18n="@@donor.overview.last.title">
         Poslední dar
       </h2>
@@ -175,14 +187,26 @@
       <ng-container [ngTemplateOutlet]="bankStatus" />
     </section>
   }
+} @else if (loadView.state() === 'loading') {
+  <p class="visually-hidden overview-loading" role="status" i18n="@@donor.dashboard.loading">
+    Načítáme vaše dary…
+  </p>
+  @if (loadView.skeleton()) {
+    <app-skeleton [rows]="1" />
+    <app-skeleton [rows]="2" />
+  }
 } @else {
   <app-donations-pending />
 }
 
 <app-send-gift [variableSymbol]="donor()?.variableSymbol ?? null" />
 
-@if (donations.state() === 'ready' && hasGift()) {
-  <section class="ui-card recent-card" aria-labelledby="recent-title">
+@if (loadView.state() === 'ready' && hasGift()) {
+  <section
+    class="ui-card recent-card"
+    [class.ui-skeleton-reveal]="loadView.appears()"
+    aria-labelledby="recent-title"
+  >
     <div class="ui-card__bar recent-head">
       <h2 id="recent-title" class="ui-card__title" i18n="@@donor.overview.recent.title">
         Poslední dary

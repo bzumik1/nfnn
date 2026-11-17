@@ -12,13 +12,14 @@ import {
   viewChild,
 } from '@angular/core';
 import { pluralCategory } from '../../../../core/i18n/plural-category';
+import { BusyButton } from '../../../../shared/ui/busy-button/busy-button';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { formatBankTime } from '../../../donations/donation-date';
 import { BankCheckOutcome, DonorDonations } from '../donor-donations';
 
 @Component({
   selector: 'app-bank-check',
-  imports: [NeedsConnection],
+  imports: [BusyButton, NeedsConnection],
   templateUrl: './bank-check.html',
   styleUrl: './bank-check.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
