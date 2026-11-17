@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 @use 'pressed';
 @use 'touch-target';
 
@@ -12,6 +13,22 @@
 
   @include bp.down(phone) {
     grid-template-columns: 1fr;
+  }
+
+  &:last-child > app-form-field:first-child {
+    border-end-start-radius: var(--radius-sheet-group);
+
+    @include bp.down(phone) {
+      border-end-start-radius: 0;
+    }
+  }
+
+  &:last-child > app-form-field:last-child {
+    border-end-end-radius: var(--radius-sheet-group);
+
+    @include bp.down(phone) {
+      border-end-start-radius: var(--radius-sheet-group);
+    }
   }
 
   > app-form-field + app-form-field::before {
@@ -83,6 +100,17 @@
     width: auto;
     height: var(--sheet-logo-height);
   }
+
+  @include bp.height-down(short) {
+    display: none;
+  }
+}
+
+@include bp.height-down(short) {
+  .tab-switch,
+  .offline-entry .step-title {
+    margin-inline-end: calc(var(--sheet-close-size) + var(--space-3));
+  }
 }
 
 .visually-hidden {
@@ -98,6 +126,8 @@
 }
 
 .segmented {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-wrap: wrap;
   row-gap: var(--space-0-5);
@@ -118,27 +148,62 @@
     font-size: var(--text-sheet-subtitle);
     font-weight: var(--weight-semibold);
     cursor: pointer;
-    transition:
-      background var(--duration-base),
-      box-shadow var(--duration-base);
     @include touch-target.reaches-finger-size;
 
     @include pressed.when-pressed {
       @include pressed.fades;
     }
+  }
 
-    &.is-active {
-      background: var(--color-segment-thumb);
-      box-shadow: var(--shadow-segment-thumb);
-    }
+  &:not(.segmented--thumb) button.is-active {
+    background: var(--color-segment-thumb);
+    box-shadow: var(--shadow-segment-thumb);
 
     @media (forced-colors: active) {
-      &.is-active {
-        background: Highlight;
-        color: HighlightText;
-      }
+      background: Highlight;
+      color: HighlightText;
     }
   }
+}
+
+.segment-thumb {
+  position: absolute;
+  top: var(--space-0-5);
+  bottom: var(--space-0-5);
+  left: var(--space-0-5);
+  z-index: -1;
+  display: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-segment-thumb);
+  box-shadow: var(--shadow-segment-thumb);
+  pointer-events: none;
+
+  .segmented--thumb > & {
+    display: block;
+  }
+
+  .segmented--thumb-glides > & {
+    @include motion.move(translate, slow, spring);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
+
+.step--moves {
+  @include motion.appear;
+}
+
+.ui-field-error[role='alert'],
+[role='status'] > .form-status {
+  --motion-rise: 0px;
+  @include motion.appear;
 }
 
 .tab-switch {
@@ -175,6 +240,7 @@
 }
 
 .session-check {
+  @include touch-target.reaches-finger-size;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -185,8 +251,8 @@
 
   input {
     flex-shrink: 0;
-    width: var(--space-4-5);
-    height: var(--space-4-5);
+    width: 1.375em;
+    height: 1.375em;
     margin: 0;
     accent-color: var(--color-accent);
   }
@@ -229,6 +295,11 @@
   .link-btn {
     padding: var(--space-1) 0;
   }
+}
+
+.passkey-btn svg {
+  width: 1.125em;
+  height: 1.125em;
 }
 
 .link-btn {

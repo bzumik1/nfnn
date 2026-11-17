@@ -69,6 +69,7 @@ import {
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { SegmentThumb } from './segment-thumb';
 
 interface RegistrationFields {
   name: string;
@@ -127,6 +128,7 @@ const REGISTRATION_FIELDS: Readonly<Record<string, string>> = {
     CompanyIdentifierValidator,
     PrintableOnReceiptValidator,
     NeedsConnection,
+    SegmentThumb,
   ],
   templateUrl: './login-dialog.html',
   styleUrl: './login-dialog.scss',
@@ -196,6 +198,7 @@ export class LoginDialog {
         return this.challenge() === null ? 'login' : 'code';
     }
   });
+  protected readonly stepMoves = signal(false);
   protected readonly atCrossroads = computed(
     () => this.step() === 'login' || this.step() === 'register',
   );
@@ -221,7 +224,7 @@ export class LoginDialog {
   protected readonly signInPasswordMessages = {
     required: $localize`:@@donor.form.password.required:Vyplňte prosím heslo.`,
   };
-  protected readonly codeHint = $localize`:@@donor.login.secondFactor.codeHint:Šest číslic z ověřovací aplikace; kód se mění každých 30 sekund.`;
+  protected readonly codeHint = $localize`:@@donor.login.secondFactor.codeHint:Šest číslic z\u00a0ověřovací aplikace; kód se mění každých 30 sekund.`;
   protected readonly codeMessages = {
     required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
     pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
@@ -233,7 +236,7 @@ export class LoginDialog {
   };
   protected readonly personNameMessages = PERSON_NAME_MESSAGES;
   protected readonly companyNameMessages = COMPANY_NAME_MESSAGES;
-  protected readonly companyIdentifierHint = $localize`:@@donor.register.companyIdentifierHint:Osm číslic, uvedeme ho na potvrzení o daru.`;
+  protected readonly companyIdentifierHint = $localize`:@@donor.register.companyIdentifierHint:Osm číslic, uvedeme ho na potvrzení o\u00a0daru.`;
   protected readonly companyIdentifierMessages = {
     required: $localize`:@@donor.register.companyIdentifier.required:Vyplňte prosím IČO.`,
     pattern: $localize`:@@donor.register.companyIdentifier.invalid:IČO má osm číslic.`,
@@ -255,10 +258,20 @@ export class LoginDialog {
     inject(SESSION_DEVICE).prepare?.();
     this.dialog.onStepBack(() => this.stepBack());
     effect(() => this.dialog.showStep(STEP_DEPTH[this.step()]));
+    this.moveStepsAfterTheFirst();
     inject(DestroyRef).onDestroy(() => {
       this.dropCompanyLookup();
       this.dialog.onStepBack(null);
       this.keepDraft();
+    });
+  }
+
+  private moveStepsAfterTheFirst(): void {
+    const first = this.step();
+    effect(() => {
+      if (this.step() !== first) {
+        this.stepMoves.set(true);
+      }
     });
   }
 

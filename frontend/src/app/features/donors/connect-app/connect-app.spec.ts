@@ -227,7 +227,7 @@ describe('Given an application sent the browser to the connection page', () => {
         secondFactorCode: '123456',
       });
       expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(true);
-      expect(element('.ui-button--primary').textContent).toContain('Povoluji…');
+      expect(element('.ui-button--primary').textContent).toContain('Povolujeme…');
       request.flush({
         redirectTo: `${REDIRECT}?code=abc&state=xyz&iss=http%3A%2F%2Flocalhost%3A4200`,
       });

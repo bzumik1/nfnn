@@ -105,7 +105,7 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       expect(request.request.body).toEqual({ token: 'abc', password: 'correct horse battery' });
       await settle();
       expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(true);
-      expect(element('.ui-button--primary').textContent).toContain('Ukládám…');
+      expect(element('.ui-button--primary').textContent).toContain('Ukládáme…');
       request.flush(null, { status: 204, statusText: 'No Content' });
     });
 

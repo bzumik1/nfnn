@@ -351,7 +351,7 @@ describe('Given the sign-in dialog', () => {
       it('then the dialog asks for the code from the app, focuses its field and shows no error', () => {
         expect(element('.login-form')).toBeNull();
         expect(element('.step-lead').textContent).toContain(
-          'Přihlášení dokončíte kódem z ověřovací aplikace',
+          'Přihlášení dokončíte kódem z\u00a0ověřovací aplikace',
         );
         expect(element('#login-code').getAttribute('autocomplete')).toBe('one-time-code');
         expect(element('#login-code').getAttribute('inputmode')).toBe('numeric');
@@ -802,7 +802,7 @@ describe('Given the sign-in dialog', () => {
       expect(box.checked).toBe(true);
       expect(element('.session-check').textContent).toContain('Cizí počítač, nic neukládat');
       expect(element('#session-public-hint').textContent).toContain(
-        'Po hodině bez používání vás odhlásíme a po zavření prohlížeče tu nic nezůstane.',
+        'Po hodině bez používání vás odhlásíme a\u00a0po zavření prohlížeče tu nic nezůstane.',
       );
       expect(box.getAttribute('aria-describedby')).toBe('session-public-hint');
       expect((await signIn())['session']).toBe('PUBLIC');
@@ -1130,8 +1130,8 @@ describe('Given the sign-in dialog', () => {
     });
 
     it('then the form explains why it asks for the address, names its sections and asks for the postal code before the city', () => {
-      expect(element('.register-lead').textContent).toContain(
-        'Jméno a adresu uvedeme na potvrzení o daru.',
+      expect(element('.register-lead').textContent?.replace(/[ \n]+/g, ' ')).toContain(
+        'Jméno a\u00a0adresu uvedeme na potvrzení o\u00a0daru.',
       );
       expect(element('#register-type-label').textContent).toContain('Registruji se jako');
       expect(element('.type-switch').getAttribute('aria-labelledby')).toBe('register-type-label');
@@ -1352,7 +1352,7 @@ describe('Given the sign-in dialog', () => {
         expect(value('#register-city')).toBe('Ústí nad Labem');
         expect(element('.company-lookup-status').closest('[role="status"]')).not.toBeNull();
         expect(status()).toBe(
-          'Údaje jsme doplnili z obchodního rejstříku (ARES). Zkontrolujte je.',
+          'Údaje jsme doplnili z\u00a0obchodního rejstříku (ARES). Zkontrolujte je.',
         );
       });
 
@@ -1627,7 +1627,7 @@ describe('Given the sign-in dialog', () => {
 
       expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
       expect(element('.reset-success').textContent).toContain(
-        'Pokud k adrese jana@example.cz existuje účet',
+        'Pokud k\u00a0adrese jana@example.cz existuje účet',
       );
       expect(element('.reset-success').textContent).toContain('Platí hodinu.');
       expect(element('.reset-form')).toBeNull();
@@ -1709,6 +1709,134 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(element('.ui-field-error').textContent).toContain('Spojení se serverem se nepodařilo');
+    });
+  });
+  describe('when the visitor reads the dialog', () => {
+    const NBSP = ' ';
+
+    function words(selector: string): string {
+      return (element(selector).textContent ?? '').replace(/[ \n\t]+/g, ' ').trim();
+    }
+
+    it('then the register lead keeps each one-letter word on the line of the word after it', async () => {
+      await render('register');
+
+      expect(words('.register-lead')).toBe(
+        `Vytvořte si účet pro potvrzení o${NBSP}darech. Jméno a${NBSP}adresu uvedeme na potvrzení o${NBSP}daru.`,
+      );
+
+      await click('.type-switch button:nth-child(2)');
+
+      expect(words('.register-lead')).toBe(
+        `Vytvořte si účet pro potvrzení o${NBSP}darech. Název firmy, IČO a${NBSP}sídlo uvedeme na potvrzení o${NBSP}daru.`,
+      );
+    });
+
+    it('then the reset form promises to send the link in the words of the rest of the site', async () => {
+      await render('reset');
+
+      expect(words('.step-lead')).toBe(
+        `Zadejte svůj e-mail a${NBSP}pošleme vám odkaz pro obnovení hesla.`,
+      );
+    });
+
+    it('then the sent reset link names the address with a fixed space and advises without a comma before nebo', async () => {
+      await render('reset');
+      await fillIn('#reset-email', 'jana@example.cz');
+      await submit('.reset-form');
+      http
+        .expectOne('/api/donors/auth/password-reset/request')
+        .flush(null, { status: 202, statusText: 'Accepted' });
+      await settle();
+
+      expect(words('.reset-success p:not(.reset-hint)')).toContain(`Pokud k${NBSP}adrese`);
+      expect(words('.reset-hint')).toBe(
+        'E-mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.',
+      );
+    });
+  });
+
+  describe('when the visitor sends a form and the answer is on its way', () => {
+    function busyLabel(selector: string): string {
+      return element(selector).textContent?.trim() ?? '';
+    }
+
+    it('then signing in says Přihlašujeme…', async () => {
+      await render();
+      await fillIn('#login-email', 'jana@example.cz');
+      await fillIn('#login-password', 'correct horse battery');
+      await submit('.login-form');
+
+      expect(busyLabel('.login-form .ui-button--primary')).toBe('Přihlašujeme…');
+      http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+    });
+
+    it('then the code from the app says Ověřujeme kód…', async () => {
+      await render();
+      await fillIn('#login-email', 'jana@example.cz');
+      await fillIn('#login-password', 'correct horse battery');
+      await submit('.login-form');
+      http
+        .expectOne('/api/donors/auth/login')
+        .flush(secondFactorRequired(), { status: 401, statusText: 'Unauthorized' });
+      await settle();
+      await fillIn('#login-code', '287082');
+      await submit('.code-form');
+
+      expect(busyLabel('.code-form .ui-button--primary')).toBe('Ověřujeme kód…');
+      http.expectOne('/api/donors/auth/login/second-factor').flush(authResponse('token-1'));
+    });
+
+    it('then the registration says Vytváříme účet… and sending the link again says Odesíláme…, with the link valid 24 hours on one line', async () => {
+      await render('register');
+      await fillIn('#register-name', 'Jana Nováková');
+      await fillIn('#register-street', 'Dlouhá 12');
+      await fillIn('#register-city', 'Ústí nad Labem');
+      await fillIn('#register-postal-code', '400 01');
+      await fillIn('#register-email', 'jana@example.cz');
+      await fillIn('#register-password', 'correct horse battery');
+      await submit('.register-form');
+
+      expect(busyLabel('.register-form .ui-button--primary')).toBe('Vytváříme účet…');
+      http
+        .expectOne('/api/donors/auth/register')
+        .flush(null, { status: 202, statusText: 'Accepted' });
+      await settle();
+      expect(element('.reset-success [role="status"]').textContent).toContain('24 hodin');
+
+      await click('.registration-resend');
+
+      expect(busyLabel('.registration-resend')).toBe('Odesíláme…');
+      http
+        .expectOne('/api/donors/auth/email-verification/request')
+        .flush(null, { status: 202, statusText: 'Accepted' });
+    });
+
+    it('then asking for a reset link says Odesíláme…', async () => {
+      await render('reset');
+      await fillIn('#reset-email', 'jana@example.cz');
+      await submit('.reset-form');
+
+      expect(busyLabel('.reset-form .ui-button--primary')).toBe('Odesíláme…');
+      http
+        .expectOne('/api/donors/auth/password-reset/request')
+        .flush(null, { status: 202, statusText: 'Accepted' });
+    });
+  });
+
+  describe('when a choice of segments is shown', () => {
+    it('then each segmented choice has one thumb under its buttons that assistive technology skips, and the buttons keep their states', async () => {
+      await render('register');
+
+      const choices = [...fixture.nativeElement.querySelectorAll('.segmented')] as HTMLElement[];
+      expect(choices.length).toBeGreaterThan(1);
+      for (const choice of choices) {
+        const thumbs = choice.querySelectorAll(':scope > .segment-thumb');
+        expect(thumbs.length).toBe(1);
+        expect(thumbs[0].getAttribute('aria-hidden')).toBe('true');
+      }
+      expect(element('.tab-switch button.is-active').getAttribute('aria-pressed')).toBe('true');
+      expect(element('.type-switch button.is-active').getAttribute('aria-checked')).toBe('true');
     });
   });
 });
