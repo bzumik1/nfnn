@@ -106,10 +106,10 @@ describe("Given the donor's overview while the gifts load", () => {
       true,
     );
     expect(statusLines()).toEqual(['Načítáme vaše dary…']);
-    expect(root().querySelector('app-send-gift')).not.toBeNull();
+    const sendGift = root().querySelector('app-send-gift');
+    expect(sendGift).not.toBeNull();
     expect(
-      root().querySelector('app-send-gift')?.compareDocumentPosition(skeletons.at(-1)!) &
-        Node.DOCUMENT_POSITION_PRECEDING,
+      sendGift!.compareDocumentPosition(skeletons.at(-1)!) & Node.DOCUMENT_POSITION_PRECEDING,
     ).toBeTruthy();
   });
 
