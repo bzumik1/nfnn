@@ -47,7 +47,7 @@ const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
 const STANDING_DIALOG = 'dialog[open]:not(.dialog--leaving)';
 const SHEET_HEAD = 'app-sheet-head';
 const SECTION_LINKS = 'nav a[href]';
-const HEADER = 'app-header';
+const HEADER = 'app-header .app-header';
 const SIDE_NAVIGATION = '.side-nav-panel';
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
 
@@ -178,6 +178,13 @@ export class PageTransitions {
     const content = this.compact() ? null : this.contentArea(overlay);
     const arriving = this.place(overlay, behind ?? this.placeholder(), 'under');
     const leaving = this.place(overlay, this.keep(layer), 'over');
+    if (content !== null) {
+      overlay
+        .querySelectorAll<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__scroller`)
+        .forEach(
+          (scroller) => (scroller.style.inset = `${-content.top}px 0 0 ${-content.start}px`),
+        );
+    }
     const dress = (into: PlacedPage): BarItem[] =>
       content === null ? this.dressChrome(overlay, leaving, into) : [];
     const bar = { items: dress(arriving) };
@@ -547,16 +554,15 @@ export class PageTransitions {
     return copy;
   }
 
-  private contentArea(overlay: HTMLElement): { width: number } {
+  private contentArea(overlay: HTMLElement): { top: number; start: number; width: number } {
     const view = this.document.defaultView;
     const header = this.document.querySelector(`.${PAGE_LAYER_CLASS} ${HEADER}`);
     const sideNavigation = this.document.querySelector(`.${PAGE_LAYER_CLASS} ${SIDE_NAVIGATION}`);
     const top = Math.max(0, header?.getBoundingClientRect().bottom ?? 0);
     const start = Math.max(0, sideNavigation?.getBoundingClientRect().right ?? 0);
     overlay.classList.add(`${PAGE_TRANSITION_CLASS}--content`);
-    overlay.style.setProperty('--page-transition-top', `${top}px`);
-    overlay.style.setProperty('--page-transition-start', `${start}px`);
-    return { width: (view?.innerWidth ?? 0) - start };
+    overlay.style.inset = `${top}px 0 0 ${start}px`;
+    return { top, start, width: (view?.innerWidth ?? 0) - start };
   }
 
   private standingSheetCopy(): HTMLElement | null {

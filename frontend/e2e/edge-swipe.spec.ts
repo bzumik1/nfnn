@@ -1,0 +1,312 @@
+import { Page } from '@playwright/test';
+import {
+  administrator,
+  mockDonorApi,
+  openAccountItem,
+  openUnlockedAdministrationPage,
+  session,
+  whenAdministrationCopied,
+} from './donor-session';
+import { expect, test } from './fixtures';
+import { waitWhileNothingMayHappen } from './fixed-waits';
+
+const FINGER_Y = 420;
+const LIST_TITLE = 'Co je u nás nového';
+const SETTLED_MS = 600;
+
+const article = {
+  id: '0199f3e0-0000-7000-8000-00000000c021',
+  slug: 'zahrada-pro-deti',
+  title: 'Zahrada pro děti',
+  tag: 'Projekt',
+  perex: 'Stavíme zahradu, kde si děti budou hrát.',
+  body: 'První odstavec.',
+  coverImage: null,
+  publishedOn: '2026-10-20',
+  createdAt: '2026-10-19T09:00:00Z',
+  updatedAt: '2026-10-20T07:30:00Z',
+};
+
+type LegacyTouchDocument = Document & {
+  createTouch?(
+    view: Window,
+    target: EventTarget,
+    identifier: number,
+    pageX: number,
+    pageY: number,
+    screenX: number,
+    screenY: number,
+  ): Touch;
+  createTouchList?(...touches: Touch[]): TouchList;
+};
+
+interface FingerProbe {
+  fingerTarget: Element;
+  underWhenTaken: string | null;
+}
+
+async function touchAt(page: Page, type: string, x: number): Promise<void> {
+  await page.evaluate(
+    ({ type, x, y }) => {
+      const probe = window as unknown as FingerProbe;
+      const document = window.document as LegacyTouchDocument;
+      if (type === 'touchstart') {
+        probe.fingerTarget = document.elementFromPoint(x, y) ?? document.body;
+      }
+      const target = probe.fingerTarget;
+      const touches = (
+        typeof document.createTouch === 'function' && typeof document.createTouchList === 'function'
+          ? document.createTouchList(
+              document.createTouch(window, target, 1, x + scrollX, y + scrollY, x, y),
+            )
+          : [new Touch({ identifier: 1, target, clientX: x, clientY: y })]
+      ) as Touch[];
+      const none = (
+        typeof document.createTouchList === 'function' ? document.createTouchList() : []
+      ) as Touch[];
+      const touching = type !== 'touchend';
+      target.dispatchEvent(
+        new TouchEvent(type, {
+          touches: touching ? touches : none,
+          targetTouches: touching ? touches : none,
+          changedTouches: touches,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    },
+    { type, x, y: FINGER_Y },
+  );
+}
+
+async function takeWithFinger(page: Page, from: number): Promise<void> {
+  await page.evaluate(() => {
+    const probe = window as unknown as FingerProbe;
+    probe.underWhenTaken = null;
+    const watch = new MutationObserver(() => {
+      const under = document.querySelector('.page-transition--swipe .page-transition__page--under');
+      if (under !== null) {
+        watch.disconnect();
+        probe.underWhenTaken = under.querySelector('h1')?.textContent?.trim() ?? '';
+      }
+    });
+    watch.observe(document.body, { childList: true });
+  });
+  await touchAt(page, 'touchstart', from);
+  for (const step of [10, 25, 45, 70, 100]) {
+    await touchAt(page, 'touchmove', from + step);
+  }
+}
+
+async function dragOn(page: Page, to: number): Promise<void> {
+  await touchAt(page, 'touchmove', to);
+}
+
+async function letGo(page: Page, at: number): Promise<void> {
+  await touchAt(page, 'touchend', at);
+}
+
+function underWhenTaken(page: Page): Promise<string | null> {
+  return page.evaluate(() => (window as unknown as FingerProbe).underWhenTaken);
+}
+
+function swipeOverlay(page: Page) {
+  return page.locator('.page-transition--swipe');
+}
+
+function overPageOffset(page: Page): Promise<number> {
+  return page
+    .locator('.page-transition--swipe .page-transition__page--over')
+    .evaluate((over) => new DOMMatrixReadOnly(getComputedStyle(over).transform).m41);
+}
+
+async function inTheHomeScreenApp(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+    Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
+  });
+}
+
+async function publishedArticle(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === `/api/content/news/${article.slug}`,
+    (route) => route.fulfill({ json: article }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/content/news',
+    (route) =>
+      route.fulfill({ json: { items: [article], page: 0, size: 10, total: 1, hasMore: false } }),
+  );
+}
+
+async function asAdministrator(page: Page): Promise<void> {
+  await page.addInitScript(() => localStorage.setItem('nfnn.donor-session-app', '1'));
+  await page.route('**/api/donors/auth/refresh', (route) =>
+    route.fulfill(session(200, administrator)),
+  );
+}
+
+test.describe('Given an administrator in the app on the home screen of a phone who opened Správa from the account sheet over the news', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await inTheHomeScreenApp(page);
+    await asAdministrator(page);
+    await mockDonorApi(page);
+    await publishedArticle(page);
+    await page.goto('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeVisible();
+    const copied = whenAdministrationCopied(page);
+    await openAccountItem(page, 'Správa');
+    await expect(page).toHaveURL(/\/sprava$/);
+    await copied();
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+
+  test('when a finger takes Správa from the edge, then the news already lies under it as the page starts to move, never an empty screen, and past half the news returns', async ({
+    page,
+  }) => {
+    await takeWithFinger(page, 20);
+
+    await expect(swipeOverlay(page)).toHaveCount(1);
+    expect(await underWhenTaken(page)).toBe(LIST_TITLE);
+    await dragOn(page, 300);
+    await expect.poll(() => overPageOffset(page)).toBeCloseTo(280, 0);
+    await letGo(page, 300);
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+
+  test('when a finger takes a deeper section of Správa from the edge, then the head of the sheet stands while the section moves', async ({
+    page,
+  }) => {
+    await page
+      .getByRole('navigation', { name: 'Sekce správy' })
+      .getByRole('link', { name: /Lidé fondu, správci, zálohy/ })
+      .click();
+    await expect(page).toHaveURL(/\/sprava\/vice$/);
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+
+    await takeWithFinger(page, 20);
+    await dragOn(page, 220);
+
+    await expect.poll(() => overPageOffset(page)).toBeCloseTo(200, 0);
+    const heads = swipeOverlay(page).locator('.page-transition__bar app-sheet-head');
+    await expect(heads).toHaveCount(2);
+    for (const head of await heads.all()) {
+      expect((await head.boundingBox())?.x).toBe(0);
+    }
+    await letGo(page, 220);
+  });
+});
+
+test.describe('Given a visitor in the app on the home screen of a phone with the account sheet open over an article', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await inTheHomeScreenApp(page);
+    await mockDonorApi(page);
+    await publishedArticle(page);
+    await page.goto('/aktuality');
+    await page.getByRole('link', { name: article.title }).click();
+    await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    await page
+      .getByRole('banner')
+      .getByRole('button', { name: /^(Účet|Přihlásit)/ })
+      .click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+  });
+
+  test('when a finger swipes from the edge over the sheet, then nothing moves, the sheet stays open and the article stays', async ({
+    page,
+  }) => {
+    await takeWithFinger(page, 20);
+    await dragOn(page, 300);
+
+    await expect(swipeOverlay(page)).toHaveCount(0);
+    await letGo(page, 300);
+    await waitWhileNothingMayHappen(page, SETTLED_MS);
+
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+  });
+});
+
+test.describe('Given the app on the home screen of an iPad held across with an article opened from the news', () => {
+  test.use({
+    viewport: { width: 1180, height: 820 },
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await inTheHomeScreenApp(page);
+    await mockDonorApi(page);
+    await publishedArticle(page);
+    await page.goto('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeVisible();
+    await page.getByRole('main').getByRole('link', { name: article.title }).click();
+    await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+    await expect(page.getByRole('heading', { level: 1, name: article.title })).toBeVisible();
+    await expect(page.locator('.page-transition, .page-fade')).toHaveCount(0);
+  });
+
+  test('when a finger takes the article from the edge, then only the content area follows it over the news while the header stands, and past half the news returns', async ({
+    page,
+  }) => {
+    await takeWithFinger(page, 20);
+    await dragOn(page, 700);
+
+    expect(await underWhenTaken(page)).toBe(LIST_TITLE);
+    const header = await page.locator('.page-layer app-header header').first().boundingBox();
+    const area = await swipeOverlay(page).boundingBox();
+    expect(area?.y).toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.height ?? 0) - 1);
+    await expect.poll(() => overPageOffset(page)).toBeCloseTo(680, 0);
+    await letGo(page, 700);
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+});
+
+test.describe('Given an administrator in the app on the home screen of an iPad held across on Platby z banky, a section of the side navigation', () => {
+  test.use({
+    viewport: { width: 1180, height: 820 },
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await inTheHomeScreenApp(page);
+    await asAdministrator(page);
+    await mockDonorApi(page);
+    await openUnlockedAdministrationPage(page, '/sprava/platby', 'Platby z banky');
+    await expect(page.locator('.page-transition, .page-fade')).toHaveCount(0);
+  });
+
+  test('when a finger swipes across its content, then nothing moves and the payments stay, as choosing another section is no step', async ({
+    page,
+  }) => {
+    const content = await page.locator('.admin-content').boundingBox();
+    const from = (content?.x ?? 0) + 20;
+    await takeWithFinger(page, from);
+    await dragOn(page, from + 600);
+
+    await expect(swipeOverlay(page)).toHaveCount(0);
+    await letGo(page, from + 600);
+    await waitWhileNothingMayHappen(page, SETTLED_MS);
+
+    await expect(page).toHaveURL('/sprava/platby');
+    await expect(page.getByRole('heading', { level: 1, name: 'Platby z banky' })).toBeVisible();
+  });
+});

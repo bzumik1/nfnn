@@ -32,12 +32,6 @@
 }
 
 .page-transition--content {
-  inset: var(--page-transition-top) 0 0 var(--page-transition-start);
-
-  .page-transition__scroller {
-    inset: calc(-1 * var(--page-transition-top)) 0 0 calc(-1 * var(--page-transition-start));
-  }
-
   .page-transition__page--over {
     border-radius: 0;
   }
