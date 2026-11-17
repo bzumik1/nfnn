@@ -272,3 +272,99 @@ test.describe('Given a visitor on a computer who asks for less motion', () => {
     });
   }
 });
+
+function tab(page: Page, name: string): Locator {
+  return page.getByRole('navigation', { name: 'Hlavní sekce' }).getByRole('link', {
+    name,
+    exact: true,
+  });
+}
+
+async function fadedInFromTop(page: Page, path: string): Promise<void> {
+  await expect(page).toHaveURL(path);
+  await expect(page.locator('.page-fade')).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveClass(/page-fade-/);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+}
+
+async function watchCountUpWhileHidden(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const seen = window as unknown as { countedWhileHidden: boolean };
+    seen.countedWhileHidden = false;
+    const sample = (): void => {
+      const figures = document.querySelector('main#obsah app-stats-bar');
+      if (
+        figures !== null &&
+        figures.getAnimations().length > 0 &&
+        document.documentElement.classList.contains('page-fade-hidden')
+      ) {
+        seen.countedWhileHidden = true;
+      }
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+}
+
+function countedWhileHidden(page: Page): Promise<boolean> {
+  return page.evaluate(
+    () => (window as unknown as { countedWhileHidden: boolean }).countedWhileHidden,
+  );
+}
+
+test.describe('Given a visitor on a computer that animates, far down a page', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await publishedStories(page);
+  });
+
+  test('when they open Pomáháme from the tab bar, then its blocks below the first window wait and move in when scrolled to', async ({
+    page,
+  }) => {
+    await page.goto('/o-nas');
+    await expect(tab(page, 'O nás')).toHaveAttribute('aria-current', 'page');
+    await scrollToEnd(page);
+    await settled(page);
+
+    await tab(page, 'Pomáháme').click();
+
+    await fadedInFromTop(page, '/projekty');
+    await expect(page.locator('.grid-item').first()).toBeVisible();
+    expect(await revealingInFirstWindow(page)).toEqual([]);
+    const shownBelow = await page.evaluate(
+      (selectors) =>
+        [...document.querySelectorAll(selectors.join(','))]
+          .filter((element) => element.getBoundingClientRect().top >= window.innerHeight)
+          .map((element) => element.classList.contains('motion-reveal')),
+      REVEALING_STORIES,
+    );
+    expect(shownBelow.length).toBeGreaterThan(0);
+    expect(shownBelow.filter((waits) => !waits)).toEqual([]);
+
+    await scrollToEnd(page);
+
+    await settled(page);
+  });
+
+  test('when they open O nás from the tab bar, then its figures count up only once the page shows', async ({
+    page,
+  }) => {
+    await page.goto('/projekty');
+    await expect(page.locator('.grid-item').first()).toBeVisible();
+    await scrollToEnd(page);
+    await settled(page);
+    await watchCountUpWhileHidden(page);
+
+    await tab(page, 'O nás').click();
+
+    await fadedInFromTop(page, '/o-nas');
+    await page.locator('main#obsah app-stats-bar').scrollIntoViewIfNeeded();
+    const figure = page.locator('main#obsah app-stats-bar .stat-value').first();
+    await expect(figure.locator('[aria-hidden="true"]')).toHaveText(
+      (await figure.locator('.visually-hidden').textContent()) ?? '',
+    );
+    expect(await countedWhileHidden(page)).toBe(false);
+  });
+});
