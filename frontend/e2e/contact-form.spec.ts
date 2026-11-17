@@ -234,7 +234,7 @@ test.describe('Given an accountant on a phone 390 px wide', () => {
 test.describe('Given an accountant on a computer 1280 px wide', () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
-  test('when they read Údaje pro účetní on O nás, then every one-line row takes the same height, with or without a copy button', async ({
+  test('when they read Údaje pro účetní on O nás, then every one-line row takes the same height, with or without a copy button, and a wrapped value keeps its own line spacing', async ({
     page,
   }) => {
     await mockDonorApi(page);
@@ -247,11 +247,15 @@ test.describe('Given an accountant on a computer 1280 px wide', () => {
         const value = item.querySelector('dd > :first-child')!;
         const text = document.createRange();
         text.selectNodeContents(value);
-        const lines = new Set(Array.from(text.getClientRects(), (box) => Math.round(box.top)));
+        const lines = [
+          ...new Set(Array.from(text.getClientRects(), (box) => Math.round(box.top))),
+        ].sort((a, b) => a - b);
         return {
           label: item.querySelector('dt')!.textContent!.trim(),
           top: value.getBoundingClientRect().top,
-          lines: lines.size,
+          lines: lines.length,
+          lineGap: lines.length > 1 ? lines[1] - lines[0] : 0,
+          fontSize: parseFloat(getComputedStyle(value).fontSize),
         };
       }),
     );
@@ -263,6 +267,11 @@ test.describe('Given an accountant on a computer 1280 px wide', () => {
 
     expect(steps.length).toBeGreaterThan(2);
     expect(Math.max(...sizes) - Math.min(...sizes), JSON.stringify(steps)).toBeLessThanOrEqual(1);
+    const wrapped = rows.filter((row) => row.lines > 1);
+    expect(wrapped.length).toBeGreaterThan(0);
+    for (const row of wrapped) {
+      expect(row.lineGap, row.label).toBeLessThanOrEqual(row.fontSize * 1.6);
+    }
   });
 });
 
