@@ -678,7 +678,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.send-gift h2')).toBe('Poslat dar');
 
       await click('.dashboard-error button');
-      expect(text('.dashboard-loading')).toBe('Načítáme vaše dary…');
+      expect(text('.overview-loading')).toBe('Načítáme vaše dary…');
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(element('[role="alert"]')).toBeNull();
@@ -1129,13 +1129,13 @@ describe('Given a signed-in donor in the donor area', () => {
     it('then while the donations load a loading line stands where the stat cards go and the card Poslat dar is ready', async () => {
       await open('/darce/prehled');
 
-      expect(text('.dashboard-loading')).toBe('Načítáme vaše dary…');
+      expect(text('.overview-loading')).toBe('Načítáme vaše dary…');
       expect(element('.overview-stats')).toBeNull();
       expect(text('.send-gift h2')).toBe('Poslat dar');
 
       await respond(twoYearSummary(), twoYearDonations());
 
-      expect(element('.dashboard-loading')).toBeNull();
+      expect(element('.overview-loading')).toBeNull();
       http.expectNone(PAYMENT_DETAILS_URL_MATCH);
     });
 
@@ -3560,7 +3560,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       await go('/darce/prehled');
-      expect(element('.dashboard-loading')).toBeNull();
+      expect(element('.overview-loading')).toBeNull();
       expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '1 500 Kč']);
     });
   });
