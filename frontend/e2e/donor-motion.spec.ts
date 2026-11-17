@@ -188,6 +188,25 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     expect(fadesOn(moves, /(^| )devices-older( |$)/)).toBe(true);
   });
 
+  test('when they open Změnit heslo, then the toggle says so, the current password takes the focus at once and the panel only fades in', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+
+    const toggle = page.getByRole('button', { name: 'Změnit heslo' });
+    await recordMoves(page);
+    await toggle.click();
+
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(
+      page.locator('#account-password-panel').getByLabel('Současné heslo'),
+    ).toBeFocused();
+    const moves = await expectOnlyInstantChangesOrShortFades(page);
+    expect(fadesOn(moves, /(^| )account-panel( |$)/)).toBe(true);
+  });
+
   test('when they open Jak přiřazujeme platby?, then the toggle says so at once and the help only fades in without opening its height', async ({
     page,
   }) => {

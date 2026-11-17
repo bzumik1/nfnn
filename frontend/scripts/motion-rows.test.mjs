@@ -89,18 +89,33 @@ describe('Given a disclosure that opens and closes through motion.expand', () =>
     assert.doesNotMatch(valueOf(child, 'transition'), /\d(m?s)\b/);
   });
 
-  it('when it opens or closes, then its height, opacity and visibility change by tokens and nothing moves', () => {
+  it('when it opens, then its height and opacity change by tokens while its visibility changes at once, so its content takes the focus from the first frame', () => {
     const plain = plainOf(css, '.panel');
 
     assert.deepEqual(transitionedProperties(plain).sort(), [
       'display',
       'grid-template-rows',
       'opacity',
-      'visibility',
     ]);
     assert.match(valueOf(plain, 'transition'), /display var\(--duration-base\) allow-discrete/);
     assert.doesNotMatch(valueOf(plain, 'transition'), /\d(m?s)\b/);
     assert.doesNotMatch(css, MOVING);
+  });
+
+  it('when it closes, then its height and opacity change by tokens and it stays visible until the height has closed', () => {
+    for (const closing of [
+      blocksOf(css, '.panel[hidden]')[0] ?? '',
+      plainOf(css, '.panel--leaving'),
+    ]) {
+      assert.deepEqual(transitionedProperties(closing).sort(), [
+        'display',
+        'grid-template-rows',
+        'opacity',
+        'visibility',
+      ]);
+      assert.match(valueOf(closing, 'transition'), /visibility var\(--duration-base\) step-end/);
+      assert.doesNotMatch(valueOf(closing, 'transition'), /\d(m?s)\b/);
+    }
   });
 
   it('when it carries hidden or is inserted, then it starts from no height, transparent and out of reach', () => {
@@ -130,13 +145,28 @@ describe('Given a disclosure that opens and closes through motion.expand', () =>
     );
   });
 
-  it('when the visitor asks for less motion, then its height changes at once and only its opacity fades in the reduced duration', () => {
+  it('when the visitor asks for less motion, then its height and visibility change at once on opening and only its opacity fades in the reduced duration', () => {
     const reduced = reducedOf(css, '.panel');
 
-    assert.deepEqual(transitionedProperties(reduced).sort(), ['display', 'opacity', 'visibility']);
+    assert.deepEqual(transitionedProperties(reduced).sort(), ['display', 'opacity']);
     assert.doesNotMatch(valueOf(reduced, 'transition'), HEIGHT);
     assert.match(valueOf(reduced, 'transition'), /var\(--duration-reduced\)/);
     assert.match(valueOf(reduced, 'transition'), /!important/);
+  });
+
+  it('when the visitor asks for less motion and it closes, then its height changes at once and it fades and hides in the reduced duration', () => {
+    for (const selector of ['.panel[hidden]', '.panel--leaving']) {
+      const reduced = reducedOf(css, selector);
+
+      assert.deepEqual(transitionedProperties(reduced).sort(), [
+        'display',
+        'opacity',
+        'visibility',
+      ]);
+      assert.doesNotMatch(valueOf(reduced, 'transition'), HEIGHT);
+      assert.match(valueOf(reduced, 'transition'), /visibility var\(--duration-reduced\) step-end/);
+      assert.match(valueOf(reduced, 'transition'), /!important/);
+    }
   });
 });
 
