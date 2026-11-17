@@ -326,3 +326,18 @@
     font-size: var(--text-md);
   }
 }
+
+@include bp.up(wide) {
+  .intro,
+  .founders {
+    max-width: var(--content-max-wide);
+  }
+
+  .paragraph {
+    max-width: 40rem;
+  }
+
+  .intro-photo {
+    aspect-ratio: auto;
+  }
+}
