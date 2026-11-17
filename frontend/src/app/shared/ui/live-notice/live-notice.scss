@@ -1,3 +1,9 @@
+@use 'motion';
+
 :host {
   display: block;
+}
+
+p {
+  @include motion.appear($rises: false);
 }

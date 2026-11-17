@@ -1,0 +1,53 @@
+@use 'motion';
+
+.skeleton {
+  display: block;
+}
+
+.ui-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6) var(--space-6);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  @include motion.state(opacity);
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.ui-skeleton--inset {
+  padding: 0 var(--space-6) var(--space-5);
+}
+
+.ui-skeleton__line {
+  display: block;
+  block-size: 1em;
+  inline-size: 100%;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-skeleton);
+  @include motion.pulse;
+
+  &:nth-child(even) {
+    inline-size: 70%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+
+  @media (forced-colors: active) {
+    border: 1px solid GrayText;
+  }
+}
+
+.ui-skeleton__line--title {
+  inline-size: 40%;
+  margin-block-end: var(--space-2);
+}
+
+.ui-skeleton-reveal {
+  @include motion.appear($rises: false);
+}

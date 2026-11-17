@@ -5,15 +5,26 @@
     podrobnosti s identifikátory se hodí, když je potřeba změnu dohledat.
   </p>
 
-  <section class="ui-card" aria-labelledby="actions-title">
+  <section
+    class="ui-card"
+    aria-labelledby="actions-title"
+    [attr.aria-busy]="loadView.busy() ? 'true' : null"
+  >
     <h2 id="actions-title" class="ui-card__title" i18n="@@admin.actions.list.title">
       Co správci udělali
     </h2>
-    @switch (state()) {
+    @switch (loadView.state()) {
       @case ('loading') {
-        <p class="ui-load-state ui-load-state--inset" role="status" i18n="@@admin.actions.loading">
+        <p
+          class="ui-load-state visually-hidden ui-load-state--inset"
+          role="status"
+          i18n="@@admin.actions.loading"
+        >
           Načítáme historii…
         </p>
+        @if (loadView.skeleton()) {
+          <app-skeleton [rows]="5" [inset]="true" />
+        }
       }
       @case ('error') {
         <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
@@ -31,12 +42,16 @@
       }
       @case ('ready') {
         @if (items().length === 0) {
-          <p class="ui-card__empty" i18n="@@admin.actions.empty">
+          <p
+            class="ui-card__empty"
+            [class.ui-skeleton-reveal]="loadView.appears()"
+            i18n="@@admin.actions.empty"
+          >
             Zatím žádný správce nic nezměnil.
           </p>
         } @else {
           @if (rows()) {
-            <ul class="ui-list action-rows">
+            <ul class="ui-list action-rows" [class.ui-skeleton-reveal]="loadView.appears()">
               @for (item of items(); track item.id) {
                 <li>
                   <div class="ui-list__row">
@@ -103,7 +118,7 @@
               }
             </ul>
           } @else {
-            <table class="ui-table">
+            <table class="ui-table" [class.ui-skeleton-reveal]="loadView.appears()">
               <thead>
                 <tr>
                   <th i18n="@@admin.actions.col.when">Kdy</th>
@@ -184,7 +199,7 @@
             </table>
           }
           @if (hasMore()) {
-            <div class="admin-more">
+            <div class="admin-more" [class.ui-skeleton-reveal]="loadView.appears()">
               <button
                 type="button"
                 class="ui-button ui-button--small"

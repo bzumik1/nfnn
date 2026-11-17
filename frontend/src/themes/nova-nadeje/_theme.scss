@@ -118,6 +118,7 @@
   --color-divider: #f0f4ff;
   --color-separator: color-mix(in srgb, #0f172a 10%, transparent);
   --color-fill: color-mix(in srgb, #767680 12%, transparent);
+  --color-skeleton: var(--color-fill);
   --color-media-rim: transparent;
   --color-focus-ring: #2563eb;
 
@@ -272,6 +273,7 @@
   --duration-spin: 0.9s;
   --duration-pulse: 1.4s;
   --delay-loading: 0.3s;
+  --duration-loading-min: 0.4s;
   --duration-done: 0.4s;
   --duration-done-hold: 2s;
   --duration-count: 0.8s;
@@ -495,6 +497,7 @@
     --color-separator: #6b7280;
     --color-log-code: #1e3560;
     --color-log-warn: #92400e;
+    --color-skeleton: color-mix(in srgb, #767680 24%, transparent);
   }
 }
 
@@ -626,6 +629,7 @@
   --color-separator: #8a93a3;
   --color-log-code: #cbdaf5;
   --color-log-warn: #fcd34d;
+  --color-skeleton: color-mix(in srgb, #767680 40%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {

@@ -108,6 +108,34 @@ test.describe('Given an administrator managing the news', () => {
     ).toHaveAttribute('href', '/aktuality/zahrada-pro-deti');
   });
 
+  test('when the list answers slowly, then a skeleton holds its place after a moment while a reader hears the loading sentence, and the list then takes its place', async ({
+    page,
+  }) => {
+    let answer: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => (answer = resolve));
+    await page.route(
+      (url) => url.pathname === NEWS,
+      async (route) => {
+        await answered;
+        await route.fulfill({ json: { items: [draft()] } });
+      },
+    );
+
+    await page.goto('/sprava/aktuality');
+
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Načítáme aktuality…' }),
+    ).toBeAttached();
+    await expect(page.locator('app-skeleton')).toBeVisible();
+    await expect(page.locator('app-skeleton')).toHaveAttribute('aria-hidden', 'true');
+
+    answer();
+
+    await expect(page.locator('tbody tr')).toHaveCount(1);
+    await expect(page.locator('app-skeleton')).toHaveCount(0);
+    await expect(page.getByRole('status').filter({ hasText: 'Načítáme' })).toHaveCount(0);
+  });
+
   test('when they write a new article with a photo and publish it, then each step is confirmed and the requests carry what they typed', async ({
     page,
   }) => {

@@ -13,6 +13,7 @@ import type {
 } from '../../../../core/device/store/account-store';
 import { DeviceVault, type OpenedCopy } from '../../../../core/device/store/device-vault';
 import { AdministrationCopyDownload } from '../administration-copy-download';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 
 export const COPY_STORED_AT = '2026-11-12T08:00:00.000Z';
 
@@ -143,7 +144,7 @@ export function textOf(element: Element | null): string {
 
 export function waitsForConnection(page: HTMLElement, label: string): void {
   const control = [...page.querySelectorAll<HTMLElement>('button, input[type="file"], label')].find(
-    (candidate) => textOf(candidate) === label,
+    (candidate) => textOf(candidate) === label || accessibleText(candidate) === label,
   );
   const offered = [...page.querySelectorAll('button')].map((button) => textOf(button));
   expect(control, `the control ${label} among ${offered.join(' | ')}`).toBeDefined();

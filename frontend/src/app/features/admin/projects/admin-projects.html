@@ -16,9 +16,14 @@
 
   <app-live-notice [notice]="notice()" />
 
-  @switch (state()) {
+  @switch (loadView.state()) {
     @case ('loading') {
-      <p class="ui-load-state" role="status" i18n="@@admin.projects.loading">Načítáme příběhy…</p>
+      <p class="ui-load-state visually-hidden" role="status" i18n="@@admin.projects.loading">
+        Načítáme příběhy…
+      </p>
+      @if (loadView.skeleton()) {
+        <app-skeleton [rows]="5" />
+      }
     }
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
@@ -35,7 +40,11 @@
       </div>
     }
     @case ('ready') {
-      <section class="ui-card" aria-labelledby="projects-list-title">
+      <section
+        class="ui-card"
+        [class.ui-skeleton-reveal]="loadView.appears()"
+        aria-labelledby="projects-list-title"
+      >
         <h2 id="projects-list-title" class="ui-card__title" i18n="@@admin.projects.list.title">
           Všechny příběhy
         </h2>

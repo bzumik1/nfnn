@@ -83,7 +83,7 @@ $_never: (
   @include _fades-when-reduced(transition);
 
   @media (hover: hover) and (pointer: fine) {
-    &:hover {
+    &:hover:not([aria-disabled='true']) {
       transition-duration: var(--duration-fast);
       transition-timing-function: var(--ease-out);
       @content;
@@ -114,8 +114,12 @@ $_never: (
   }
 }
 
-@mixin appear {
-  animation: motion-appear var(--duration-slow) var(--ease-out) backwards;
+@mixin appear($rises: true) {
+  $keyframes: motion-appear;
+  @if not $rises {
+    $keyframes: motion-fade-in;
+  }
+  animation: $keyframes var(--duration-slow) var(--ease-out) backwards;
   @include _fades-when-reduced(animation);
 }
 

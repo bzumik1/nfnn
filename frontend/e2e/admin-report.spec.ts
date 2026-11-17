@@ -155,6 +155,47 @@ test.describe('Given an administrator on the monthly report page', () => {
     ]);
   });
 
+  test('when they save and the server takes a while, then the button says so at once under its new name without changing its width', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === REPORT,
+      (route) => route.fulfill({ json: reportView() }),
+    );
+    let answer: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => (answer = resolve));
+    await page.route(
+      (url) => url.pathname === SETTINGS,
+      async (route) => {
+        const body = route.request().postDataJSON();
+        await answered;
+        await route.fulfill({ json: { ...body, changedAt: '2026-10-23T08:00:00Z' } });
+      },
+    );
+
+    await page.goto('/sprava/prehledy');
+    await page.getByLabel('Den odeslání').selectOption({ label: '5.' });
+    const save = page.locator('form.settings-form button[type="submit"]');
+    await expect(save).toHaveAccessibleName('Uložit nastavení');
+    const restingWidth = (await save.boundingBox())?.width;
+
+    await save.click();
+
+    await expect(save).toHaveAccessibleName('Ukládáme…');
+    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    await expect(save).toBeFocused();
+    await expect(save).not.toHaveAttribute('aria-live');
+    expect((await save.boundingBox())?.width).toBe(restingWidth);
+
+    answer();
+
+    await expect(page.locator('.ui-form-status')).toHaveText(
+      'Nastavení jsme uložili. Příští přehled odejde podle něj.',
+    );
+    await expect(save).toHaveAccessibleName('Uložit nastavení');
+    expect((await save.boundingBox())?.width).toBe(restingWidth);
+  });
+
   test('when an address is not an e-mail, then the field says so and nothing is saved', async ({
     page,
   }) => {

@@ -9,9 +9,14 @@
 
   <app-live-notice [notice]="notice()" />
 
-  @switch (state()) {
+  @switch (loadView.state()) {
     @case ('loading') {
-      <p class="ui-load-state" role="status" i18n="@@admin.logs.level.loading">Načítáme úrovně…</p>
+      <p class="ui-load-state visually-hidden" role="status" i18n="@@admin.logs.level.loading">
+        Načítáme úrovně…
+      </p>
+      @if (loadView.skeleton()) {
+        <app-skeleton [rows]="5" />
+      }
     }
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
@@ -28,7 +33,7 @@
       </div>
     }
     @case ('ready') {
-      <div class="cards">
+      <div class="cards" [class.ui-skeleton-reveal]="loadView.appears()">
         @if (overrides().length > 0) {
           <section class="ui-card overrides" aria-labelledby="levels-overrides-title">
             <h2

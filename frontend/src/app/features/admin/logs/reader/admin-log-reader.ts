@@ -17,6 +17,7 @@ import { describeProblem } from '../../../../core/auth/api-problem';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { Dialog } from '../../../../shared/ui/dialog/dialog';
 import { LiveNotice, Notice } from '../../../../shared/ui/live-notice/live-notice';
+import { BusyButton } from '../../../../shared/ui/busy-button/busy-button';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { RadioGroup } from '../../../../shared/ui/radio-group/radio-group';
 import { formatDonationDate, pragueDay, pragueTime } from '../../../donations/donation-date';
@@ -68,7 +69,16 @@ const FILTER_PARAMS: Readonly<Record<string, LevelFilter>> = {
 
 @Component({
   selector: 'app-admin-log-reader',
-  imports: [FormsModule, CopyButton, Dialog, LiveNotice, NeedsConnection, LevelIcon, RadioGroup],
+  imports: [
+    BusyButton,
+    FormsModule,
+    CopyButton,
+    Dialog,
+    LiveNotice,
+    NeedsConnection,
+    LevelIcon,
+    RadioGroup,
+  ],
   templateUrl: './admin-log-reader.html',
   styleUrl: './admin-log-reader.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -107,6 +117,9 @@ export class AdminLogReader {
 
   protected readonly searchMode = computed(
     () => this.filter() !== 'all' || this.appliedQuery() !== '',
+  );
+  protected readonly searchingWithoutResults = computed(
+    () => this.searchMode() && this.searching() && this.results() === null,
   );
   protected readonly entries = computed<readonly LogEntry[]>(() => {
     if (this.searchMode()) {
@@ -184,6 +197,9 @@ export class AdminLogReader {
   }
 
   protected find(): void {
+    if (this.searching()) {
+      return;
+    }
     this.appliedQuery.set(this.query.trim());
     this.refreshResults();
   }

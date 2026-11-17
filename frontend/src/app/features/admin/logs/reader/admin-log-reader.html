@@ -28,7 +28,8 @@
           appNeedsConnection
           type="submit"
           class="ui-button ui-button--small"
-          [disabled]="searching()"
+          [appBusy]="searching()"
+          [attr.aria-describedby]="searchingWithoutResults() ? 'log-search-busy' : null"
           i18n="@@admin.logs.search.submit"
         >
           Hledat
@@ -137,8 +138,10 @@
           }
         </button>
       }
-      @if (searchMode() && searching() && results() === null) {
-        <p class="ui-load-state searching" i18n="@@admin.logs.search.busy">Hledáme…</p>
+      @if (searchingWithoutResults()) {
+        <p id="log-search-busy" class="ui-load-state searching" i18n="@@admin.logs.search.busy">
+          Hledáme…
+        </p>
       } @else if (entries().length === 0 && searchError() === '') {
         <p class="empty">
           @if (searchMode()) {

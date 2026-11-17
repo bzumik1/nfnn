@@ -21,6 +21,8 @@ import { formatBankTime, formatDonationDate } from '../../donations/donation-dat
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { ProjectOrderCard } from './project-order-card';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { loadingView } from '../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -29,7 +31,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-projects',
-  imports: [NeedsConnection, RouterLink, LiveNotice, ProjectOrderCard],
+  imports: [Skeleton, NeedsConnection, RouterLink, LiveNotice, ProjectOrderCard],
   templateUrl: './admin-projects.html',
   styleUrl: './admin-projects.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,6 +47,11 @@ export class AdminProjects {
 
   protected readonly categoryLabel = projectCategoryLabel;
   protected readonly state = signal<LoadState>('loading');
+  protected readonly loadView = loadingView(
+    this.state,
+    (state) => state === 'loading',
+    (state) => state !== 'ready',
+  );
   protected readonly items = signal<ProjectResponse[]>([]);
   protected readonly notice = signal<Notice | null>(null);
 

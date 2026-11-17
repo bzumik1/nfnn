@@ -13,6 +13,8 @@ import { PROJECT_ORDERS, ProjectOrder, ProjectsApi } from '../../content/project
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { projectOrderDescription, projectOrderLabel } from './project-order';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { loadingView } from '../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { reloadWhenOnlineAgain } from '../device-copy/online-again';
 
@@ -20,7 +22,7 @@ type LoadState = 'loading' | 'ready' | 'error' | 'offline';
 
 @Component({
   selector: 'app-project-order-card',
-  imports: [LiveNotice, NeedsConnection],
+  imports: [Skeleton, LiveNotice, NeedsConnection],
   templateUrl: './project-order-card.html',
   styleUrl: './project-order-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,6 +38,11 @@ export class ProjectOrderCard {
   protected readonly label = projectOrderLabel;
   protected readonly description = projectOrderDescription;
   protected readonly state = signal<LoadState>('loading');
+  protected readonly loadView = loadingView(
+    this.state,
+    (state) => state === 'loading',
+    (state) => state !== 'ready',
+  );
   protected readonly chosen = signal<ProjectOrder | null>(null);
   private readonly saved = signal<ProjectOrder | null>(null);
   protected readonly saving = signal(false);

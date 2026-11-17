@@ -1,11 +1,19 @@
 <div class="ui-page container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.logs.state.heading">Stav serveru</h1>
 
-  @switch (state()) {
+  @switch (loadView.state()) {
     @case ('loading') {
-      <p class="ui-load-state" role="status" i18n="@@admin.logs.health.loading">
+      <p class="ui-load-state visually-hidden" role="status" i18n="@@admin.logs.health.loading">
         Zjišťujeme stav serveru…
       </p>
+      @if (loadView.skeleton()) {
+        <div class="cards">
+          <app-skeleton [rows]="2" />
+          <app-skeleton [rows]="4" />
+          <app-skeleton [rows]="4" />
+          <app-skeleton [rows]="2" />
+        </div>
+      }
     }
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
@@ -23,7 +31,7 @@
     }
     @case ('ready') {
       @if (diagnostics(); as diagnostics) {
-        <div class="cards">
+        <div class="cards" [class.ui-skeleton-reveal]="loadView.appears()">
           @if (health(); as health) {
             <section class="ui-card verdict" aria-labelledby="state-verdict-title">
               <ul class="ui-list">

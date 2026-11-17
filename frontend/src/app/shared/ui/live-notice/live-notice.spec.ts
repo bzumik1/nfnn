@@ -40,6 +40,27 @@ describe('Given a page with a live notice', () => {
     expect(region('alert')?.textContent?.trim()).toBe('');
   });
 
+  it('when a shown line changes its text, then the same line keeps standing, so its fade does not replay', async () => {
+    fixture.componentInstance.notice.set({ kind: 'status', text: 'Uloženo.' });
+    await fixture.whenStable();
+    const line = fixture.nativeElement.querySelector('[role="status"] > p');
+
+    fixture.componentInstance.notice.set({ kind: 'status', text: 'Uloženo znovu.' });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('[role="status"] > p')).toBe(line);
+    expect(line?.textContent?.trim()).toBe('Uloženo znovu.');
+  });
+
+  it('when a line shows, then it never takes the focus', async () => {
+    fixture.componentInstance.notice.set({ kind: 'alert', text: 'Nepovedlo se.' });
+    await fixture.whenStable();
+
+    const line = fixture.nativeElement.querySelector('[role="alert"] > p') as HTMLElement;
+    expect(line.hasAttribute('tabindex')).toBe(false);
+    expect(document.activeElement).not.toBe(line);
+  });
+
   it('when an alert follows, then the status empties and the alert region carries the text', async () => {
     fixture.componentInstance.notice.set({ kind: 'status', text: 'Uloženo.' });
     await fixture.whenStable();

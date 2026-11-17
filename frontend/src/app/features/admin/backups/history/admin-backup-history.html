@@ -6,11 +6,14 @@
     Nejnovější nahoře. Klepnutím na zálohu ji stáhnete nebo z ní web obnovíte.
   </p>
 
-  @switch (state()) {
+  @switch (loadView.state()) {
     @case ('loading') {
-      <p class="ui-load-state" role="status" i18n="@@admin.backups.history.loading">
+      <p class="ui-load-state visually-hidden" role="status" i18n="@@admin.backups.history.loading">
         Načítáme zálohy…
       </p>
+      @if (loadView.skeleton()) {
+        <app-skeleton [rows]="4" />
+      }
     }
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
@@ -28,9 +31,15 @@
     }
     @case ('ready') {
       @if (days().length === 0) {
-        <p class="empty" i18n="@@admin.backups.list.none">Zatím žádná záloha.</p>
+        <p
+          class="empty"
+          [class.ui-skeleton-reveal]="loadView.appears()"
+          i18n="@@admin.backups.list.none"
+        >
+          Zatím žádná záloha.
+        </p>
       } @else {
-        <div class="groups">
+        <div class="groups" [class.ui-skeleton-reveal]="loadView.appears()">
           @for (day of days(); track day.day) {
             <section class="ui-card" [attr.aria-labelledby]="'den-' + day.day">
               <div class="ui-card__bar">

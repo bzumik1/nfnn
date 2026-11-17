@@ -43,6 +43,8 @@ import {
 } from './email-list';
 import { followingMonth, formatReportMonth, previousMonths } from './report-month';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { BusyButton } from '../../../shared/ui/busy-button/busy-button';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import {
   isChangedMeanwhile,
@@ -83,6 +85,8 @@ const SEND_HOURS = Array.from({ length: 24 }, (_, index) => index);
 @Component({
   selector: 'app-admin-report',
   imports: [
+    BusyButton,
+    BusyLabel,
     LiveNotice,
     RouterLink,
     FormsModule,

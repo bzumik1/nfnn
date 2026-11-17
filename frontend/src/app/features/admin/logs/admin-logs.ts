@@ -12,6 +12,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { loadingView } from '../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { formatBankTime, pragueDay } from '../../donations/donation-date';
 import { AdminApi, DiagnosticsResponse, LogFileResponse } from '../admin-api';
 import { formatSize } from '../backups/backup-format';
@@ -33,7 +35,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 @Component({
   selector: 'app-admin-logs',
-  imports: [RouterLink, NeedsConnection, HealthIcon, LogsToday],
+  imports: [Skeleton, RouterLink, NeedsConnection, HealthIcon, LogsToday],
   templateUrl: './admin-logs.html',
   styleUrl: './admin-logs.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,9 +50,19 @@ export class AdminLogs {
   protected readonly filePath = LOG_FILE_PATH;
   protected readonly query = (file: LogFileResponse) => logFileQuery(file.name);
   protected readonly filesState = signal<LoadState>('loading');
+  protected readonly filesView = loadingView(
+    this.filesState,
+    (state) => state === 'loading',
+    (state) => state !== 'ready',
+  );
   protected readonly available = signal(false);
   protected readonly files = signal<LogFileResponse[]>([]);
   protected readonly healthState = signal<LoadState>('loading');
+  protected readonly healthView = loadingView(
+    this.healthState,
+    (state) => state === 'loading',
+    (state) => state !== 'ready',
+  );
   protected readonly diagnostics = signal<DiagnosticsResponse | null>(null);
 
   protected readonly current = computed(() => currentLogFiles(this.files()));

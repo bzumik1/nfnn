@@ -1,0 +1,17 @@
+@use 'motion';
+
+:host {
+  display: inline-grid;
+  justify-items: center;
+  vertical-align: top;
+}
+
+.busy-label__face {
+  grid-area: 1 / 1;
+  opacity: 0;
+  @include motion.state(opacity);
+}
+
+.busy-label__face--shown {
+  opacity: 1;
+}

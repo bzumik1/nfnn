@@ -12,6 +12,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { loadingView } from '../../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { formatBankTime } from '../../../donations/donation-date';
 import { AdminApi, LogFileResponse } from '../../admin-api';
 import { formatSize } from '../../backups/backup-format';
@@ -22,7 +24,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 @Component({
   selector: 'app-admin-log-files',
-  imports: [RouterLink, NeedsConnection],
+  imports: [Skeleton, RouterLink, NeedsConnection],
   templateUrl: './admin-log-files.html',
   styleUrl: './admin-log-files.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,6 +38,11 @@ export class AdminLogFiles {
   protected readonly filePath = LOG_FILE_PATH;
   protected readonly query = (file: LogFileResponse) => logFileQuery(file.name);
   protected readonly state = signal<LoadState>('loading');
+  protected readonly loadView = loadingView(
+    this.state,
+    (state) => state === 'loading',
+    (state) => state !== 'ready',
+  );
   protected readonly available = signal(false);
   protected readonly files = signal<LogFileResponse[]>([]);
   protected readonly groups = computed(() => olderLogFileGroups(this.files()));

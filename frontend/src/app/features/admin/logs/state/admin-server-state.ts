@@ -11,6 +11,8 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { loadingView } from '../../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { formatBankTime } from '../../../donations/donation-date';
 import { AdminApi, DiagnosticsResponse, DiskSpaceResponse, ReleaseResponse } from '../../admin-api';
 import { formatSize } from '../../backups/backup-format';
@@ -25,7 +27,7 @@ const RELEASES = 'https://github.com/bzumik1/nfnn/releases/tag/';
 
 @Component({
   selector: 'app-admin-server-state',
-  imports: [NeedsConnection, HealthIcon],
+  imports: [Skeleton, NeedsConnection, HealthIcon],
   templateUrl: './admin-server-state.html',
   styleUrl: './admin-server-state.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,6 +39,11 @@ export class AdminServerState {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly loadView = loadingView(
+    this.state,
+    (state) => state === 'loading',
+    (state) => state !== 'ready',
+  );
   protected readonly refreshing = signal(false);
   protected readonly refreshFailed = signal(false);
   protected readonly diagnostics = signal<DiagnosticsResponse | null>(null);
