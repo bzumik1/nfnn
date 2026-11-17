@@ -139,11 +139,11 @@ describe('Given an administrator on the backups page', () => {
       fixture.nativeElement.querySelector('.backups-list a.ui-list__row')?.getAttribute('href'),
     ).toBe('/sprava/zalohy/historie');
     expect(text('.off-server')).toBe(
-      'Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu. Jsou zašifrované, takže je bez klíče k zálohám nikdo nepřečte.',
+      'Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte tlačítkem „Stáhnout“ a uložte jinam, třeba na flash disk nebo do cloudu. Jsou zašifrované, takže je bez klíče k zálohám nikdo nepřečte.',
     );
     expect(fixture.nativeElement.querySelector('.actions-blocked')).toBeNull();
     expect(button('Zálohovat teď').disabled).toBe(false);
-    expect(button('Ověřit obnovu teď').disabled).toBe(false);
+    expect(button('Spustit zkušební obnovu').disabled).toBe(false);
   });
 
   it('when the backups have problems, then each is named in an alert, the failed runs say why and the restore folder is described', async () => {
@@ -171,8 +171,8 @@ describe('Given an administrator on the backups page', () => {
     );
 
     expect(texts('.problems > ul li')).toEqual([
-      'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
-      'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
+      'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste „Zálohovat teď“; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
+      'Zatím se nevyzkoušelo, že jde zálohu obnovit. Zkuste „Spustit zkušební obnovu“.',
     ]);
     expect(texts('.problems details li')).toEqual([
       'Poslední záloha selhala.',
@@ -215,7 +215,7 @@ describe('Given an administrator on the backups page', () => {
     );
     expect(texts('.problems details li')[0]).toContain('Backend nevidí složku záloh.');
     expect(button('Zálohovat teď').disabled).toBe(true);
-    expect(button('Ověřit obnovu teď').disabled).toBe(true);
+    expect(button('Spustit zkušební obnovu').disabled).toBe(true);
     expect(text('.actions-blocked')).toBe(
       'Zálohovat teď ani ověřit obnovu nejde, dokud se nevyřeší problém výše.',
     );
@@ -234,7 +234,7 @@ describe('Given an administrator on the backups page', () => {
     );
 
     expect(fixture.nativeElement.querySelector('.off-server')).toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain('tlačítkem Stáhnout');
+    expect(fixture.nativeElement.textContent).not.toContain('tlačítkem „Stáhnout“');
   });
 
   it('when a problem needs the server administrator, then a button copies the message for the technician without the backup key', async () => {
@@ -281,7 +281,7 @@ describe('Given an administrator on the backups page', () => {
       expect(request.request.body).toEqual({ kind: 'BACKUP' });
       expect(button('Zálohujeme…').disabled).toBe(true);
       expect(labelFaces(button('Zálohujeme…'))).toEqual(['Zálohovat teď', 'Zálohujeme…']);
-      expect(button('Ověřit obnovu teď').disabled).toBe(true);
+      expect(button('Spustit zkušební obnovu').disabled).toBe(true);
       request.flush({ requestId: 'req-1', kind: 'BACKUP', requestedAt: '2026-10-23T08:00:00Z' });
       await settle();
 
@@ -382,13 +382,13 @@ describe('Given an administrator on the backups page', () => {
   it('when a test restore is started and finishes, then the page reports the tables it counted', async () => {
     await respond(backupsView());
     vi.useFakeTimers();
-    button('Ověřit obnovu teď').click();
+    button('Spustit zkušební obnovu').click();
     await settle();
     const request = http.expectOne(REQUESTS_URL);
     expect(request.request.body).toEqual({ kind: 'TEST_RESTORE' });
     expect(button('Ověřujeme obnovu…').disabled).toBe(true);
     expect(labelFaces(button('Ověřujeme obnovu…'))).toEqual([
-      'Ověřit obnovu teď',
+      'Spustit zkušební obnovu',
       'Ověřujeme obnovu…',
     ]);
     request.flush({
@@ -569,7 +569,7 @@ describe('Given an administrator on the backups page', () => {
 
     expect(button('Obnovit web z této zálohy…').disabled).toBe(true);
     expect(button('Zálohovat teď').disabled).toBe(true);
-    expect(button('Ověřit obnovu teď').disabled).toBe(true);
+    expect(button('Spustit zkušební obnovu').disabled).toBe(true);
   });
 
   it('when a dump is downloaded, then the file is fetched as a blob with the token and saved under its name, and no reload cuts it off meanwhile', async () => {

@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
@@ -13,6 +14,7 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminSettings } from './admin-settings';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import {
   copyOf,
   openOfflineFromCopy,
@@ -28,6 +30,7 @@ const STATUS_URL = '/api/operations/setup';
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 const REFRESH_URL = '/api/donors/auth/refresh';
 const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
+const FIVE_SECONDS = 5000;
 
 describe('Given an administrator on the settings page', () => {
   let fixture: ComponentFixture<AdminSettings>;
@@ -307,6 +310,51 @@ describe('Given an administrator on the settings page', () => {
       expect(text('.ui-notice--status')).toBe('Nastavení je uložené a web po restartu běží s ním.');
     });
 
+    it('then a restart that takes longer than five seconds trades the turning ring for a calm icon beside the same words', async () => {
+      await type('#setting-RECEIPT_FIRST_YEAR', '2025');
+      await submit();
+      button('Uložit a restartovat').click();
+      await settle();
+      vi.useFakeTimers();
+      http
+        .expectOne(SETTINGS_URL)
+        .flush({ changed: ['RECEIPT_FIRST_YEAR'], restarting: true, version: '00000000000000c2' });
+      await vi.advanceTimersByTimeAsync(1);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.ui-load-state .spinner')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.ui-load-state .restart-calm')).toBeNull();
+
+      await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
+      http.expectOne(STATUS_URL).flush('', { status: 502, statusText: 'Bad Gateway' });
+      await vi.advanceTimersByTimeAsync(FIVE_SECONDS - RESTART_POLL_MS);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.ui-load-state .spinner')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.ui-load-state .restart-calm')).not.toBeNull();
+      expect(text('[role="status"]:not(:empty)')).toBe(
+        'Nastavení je uložené a web se restartuje. Obvykle to trvá do minuty.',
+      );
+    });
+
+    it('then a change on a computer keeps the save button in a bar at the bottom, which lets go once the change is undone', async () => {
+      expect(element('.save-row').classList).not.toContain('ui-action-bar');
+
+      await type('#setting-RECEIPT_FIRST_YEAR', '2025');
+
+      expect(element('.save-row').classList).toContain('ui-action-bar');
+      expect(element('.save-row').contains(button('Uložit nastavení'))).toBe(true);
+
+      await type('#setting-RECEIPT_FIRST_YEAR', '2026');
+
+      expect(element('.save-row').classList).toContain('save-row--leaving');
+      element('.save-row').dispatchEvent(new Event('animationend'));
+      await settle();
+
+      expect(element('.save-row').classList).not.toContain('ui-action-bar');
+      expect(element('.save-row').classList).not.toContain('save-row--leaving');
+    });
+
     it('then a value the backend refuses is listed with its name and nothing restarts', async () => {
       await type('#setting-RECEIPT_FIRST_YEAR', '26');
       await submit();
@@ -472,6 +520,48 @@ describe('Given an administrator on the settings page', () => {
 
     expect(text('.ui-notice--alert')).toContain('Tajné údaje (hesla a tokeny) teď nejde uložit');
     expect(element<HTMLInputElement>('#setting-FIO_TOKEN').disabled).toBe(true);
+  });
+});
+
+describe('Given an administrator changing the settings on a phone or a tablet', () => {
+  it('when they change a field, then the save button stays at the end of the form without a bar', async () => {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminSettings],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: CompactLayout,
+          useValue: {
+            isCompact: signal(true).asReadonly(),
+            listsAsRows: signal(true).asReadonly(),
+          },
+        },
+      ],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(AdminSettings);
+    fixture.detectChanges();
+    http.expectOne(SETTINGS_URL).flush(settingsView());
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector(
+      '#setting-RECEIPT_FIRST_YEAR',
+    ) as HTMLInputElement;
+    input.value = '2025';
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const row = fixture.nativeElement.querySelector('.save-row') as HTMLElement;
+    expect(row.classList).not.toContain('ui-action-bar');
+    expect(row.textContent).toContain('Uložit nastavení');
+    http.match(SIGNATORY_URL);
+    http.match(SIGNING_KEYS_URL);
+    http.verify();
   });
 });
 

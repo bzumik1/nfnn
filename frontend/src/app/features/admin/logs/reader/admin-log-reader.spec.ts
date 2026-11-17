@@ -180,6 +180,28 @@ describe('Given an administrator reading a log file', () => {
     ]);
   });
 
+  it('when the reader opens, then its intro says how to open an entry in words that fit a mouse, a keyboard and a finger', async () => {
+    await openTail();
+
+    expect(page.text('.ui-page-intro')).toBe(
+      'Nejnovější záznamy jsou nahoře, časy jsou pražské. Vyberte záznam a zobrazí se celý.',
+    );
+  });
+
+  it('when the file holds older lines, then Načíst novější řádky and Načíst starší řádky stand side by side above the entries', async () => {
+    await openTail();
+
+    const top = page.element('.load-more-row');
+    expect(
+      Array.from(top.querySelectorAll('button')).map((button) =>
+        (button.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      ),
+    ).toEqual(['Načíst novější řádky', 'Načíst starší řádky']);
+    expect(
+      top.compareDocumentPosition(page.element('.entry')) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('when they load older lines, then the older entries join below and the first of them takes the focus', async () => {
     await openTail();
 
