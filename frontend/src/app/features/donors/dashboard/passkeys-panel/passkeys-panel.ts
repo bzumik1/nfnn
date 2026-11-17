@@ -28,7 +28,10 @@ import {
 } from '../../../../core/auth/passkey-authenticator';
 import { deviceName } from '../../../../core/auth/device-name';
 import { deviceAccountOf, SESSION_DEVICE } from '../../../../core/auth/session-device';
-import { neighbourAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
+import {
+  markRowsLeaving,
+  neighbourAfterRowLeaves,
+} from '../../../../shared/ui/leaving-row/leaving-row';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
@@ -328,10 +331,12 @@ export class PasskeysPanel {
     this.removing.set(passkey.id);
     this.authApi.removePasskey(passkey.id).subscribe({
       next: () => {
+        const row = this.document.getElementById(this.rowId(passkey));
         const neighbour = neighbourAfterRowLeaves(
-          this.document.getElementById(this.rowId(passkey)),
+          row,
           this.passkeyList()?.nativeElement.querySelectorAll<HTMLElement>(RENAME_BUTTONS) ?? [],
         );
+        markRowsLeaving([row]);
         this.removing.set(null);
         this.confirming.set(null);
         this.rowLeft.set(true);
@@ -369,7 +374,7 @@ export class PasskeysPanel {
   }
 
   protected rowEntrance(passkey: Passkey): string {
-    return this.added() === passkey.id ? 'passkey--entering' : '';
+    return this.added() === passkey.id ? 'passkey-slot--entering' : '';
   }
 
   protected renameButtonId(passkey: Passkey): string {

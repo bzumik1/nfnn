@@ -248,11 +248,18 @@
 }
 
 .account-confirm {
+  @include motion.expand;
+}
+
+.account-confirm--closing {
+  @include motion.collapse;
+}
+
+.account-confirm-box {
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  @include motion.expand;
 }
 
 .account-confirm-text {
@@ -445,6 +452,19 @@
   @media (prefers-reduced-motion: reduce) {
     animation: none;
   }
+}
+
+.watch-spinner {
+  @include motion.wait-settles;
+}
+
+.watch-hands {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  @include motion.wait-calm;
 }
 
 .watch-icon--verified {

@@ -212,23 +212,70 @@ $_pressed: (--pressed-tint, filter);
   animation: motion-pulse var(--duration-pulse) var(--ease-standard) 3;
 }
 
+@mixin _collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+
+  > * {
+    overflow: hidden;
+    transition: none;
+  }
+}
+
 @mixin expand {
+  display: grid;
+  grid-template-rows: 1fr;
   transition:
+    grid-template-rows var(--duration-base) var(--ease-standard),
     opacity var(--duration-fast) var(--ease-out),
-    translate var(--duration-base) var(--ease-out);
+    visibility var(--duration-base),
+    display var(--duration-base) allow-discrete;
+
+  > * {
+    min-height: 0;
+    overflow: visible;
+    transition: overflow 0s var(--duration-base) allow-discrete;
+  }
+
+  &[hidden] {
+    display: none;
+    @include _collapsed;
+  }
 
   @starting-style {
-    opacity: 0;
-    translate: 0 calc(-1 * var(--motion-rise));
+    @include _collapsed;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    transition: opacity var(--duration-reduced) var(--ease-standard) !important;
+    transition:
+      opacity var(--duration-reduced) var(--ease-standard),
+      visibility var(--duration-reduced),
+      display var(--duration-reduced) allow-discrete !important;
+
+    > * {
+      transition: none !important;
+    }
+  }
+}
+
+@mixin collapse {
+  @include _collapsed;
+}
+
+@mixin expand-content-leave {
+  animation: motion-leave var(--duration-base) var(--ease-in) forwards;
+  @include _fades-when-reduced(animation);
+
+  &:not(:only-child) {
+    display: none;
   }
 }
 
 @mixin row-enter {
-  animation: motion-appear var(--duration-base) var(--ease-out) backwards;
+  animation:
+    motion-fade-in var(--duration-base) var(--ease-out) backwards,
+    motion-row-tint var(--duration-slow) var(--ease-out) backwards;
 
   @media (prefers-reduced-motion: reduce) {
     animation: motion-fade-in var(--duration-reduced) var(--ease-standard) backwards !important;
@@ -236,15 +283,43 @@ $_pressed: (--pressed-tint, filter);
 }
 
 @mixin row-leave {
+  display: grid;
+  grid-template-rows: 1fr;
   pointer-events: none;
-  @include leave;
+  animation: motion-row-leave var(--duration-fast) var(--ease-in) forwards;
+
+  > * {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: motion-leave var(--duration-reduced) var(--ease-standard) forwards !important;
+  }
 }
 
 @mixin after-rows-left {
-  animation: motion-fade-in var(--duration-base) var(--ease-out) var(--duration-fast) backwards;
+  animation: motion-after-rows var(--duration-base) var(--ease-out) var(--duration-fast) backwards;
 
   @media (prefers-reduced-motion: reduce) {
     animation-duration: var(--duration-reduced) !important;
     animation-delay: var(--duration-reduced) !important;
+  }
+}
+
+@mixin wait-settles {
+  animation: motion-leave var(--duration-base) var(--ease-in) var(--duration-calm) forwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    opacity: 0;
+    animation: none !important;
+  }
+}
+
+@mixin wait-calm {
+  animation: motion-fade-in var(--duration-base) var(--ease-out) var(--duration-calm) backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none !important;
   }
 }

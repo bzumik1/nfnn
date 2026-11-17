@@ -30,10 +30,17 @@
   margin-top: 0;
   border-block: 0;
   background: var(--color-surface-alt);
+}
+
+.devices-older {
   @include motion.expand;
 }
 
-.device--leaving {
+.devices-older--closing {
+  @include motion.collapse;
+}
+
+.device-slot--leaving {
   @include motion.row-leave;
 }
 
@@ -67,14 +74,21 @@
 }
 
 .devices-confirm {
+  @include motion.expand;
+}
+
+.devices-confirm--closing {
+  @include motion.collapse;
+}
+
+.devices-confirm-box {
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  @include motion.expand;
 }
 
-.device-confirm {
+.device-confirm .devices-confirm-box {
   margin: 0 var(--space-6) var(--space-3);
 }
 

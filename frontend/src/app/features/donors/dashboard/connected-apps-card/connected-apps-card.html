@@ -21,38 +21,43 @@
     </button>
   } @else if (connections(); as apps) {
     @if (apps.length > 0) {
-      <ul #connectionList class="connection-list">
+      <ul class="connection-list">
         @for (app of apps; track app.id) {
-          <li class="connection" [id]="rowId(app)" animate.leave="connection--leaving">
-            <div class="connection-body">
-              <span class="connection-client">{{ app.client }}</span>
-              <span class="connection-dates">
-                <span i18n="@@donor.account.connections.since">připojeno</span>&ngsp;<span
-                  class="ui-date"
-                  >{{ formatDate(app.grantedAt) }}</span
+          <li class="connection-slot" [id]="rowId(app)" animate.leave="connection-slot--leaving">
+            <div>
+              <div class="connection">
+                <div class="connection-body">
+                  <span class="connection-client">{{ app.client }}</span>
+                  <span class="connection-dates">
+                    <span i18n="@@donor.account.connections.since">připojeno</span>&ngsp;<span
+                      class="ui-date"
+                      >{{ formatDate(app.grantedAt) }}</span
+                    >
+                    ·
+                    <span i18n="@@donor.account.connections.lastUsed">naposledy použito</span
+                    >&ngsp;<span class="ui-date">{{ formatDate(app.lastUsedAt) }}</span>
+                  </span>
+                  <ul class="connection-scopes">
+                    @for (scope of scopeLabels(app); track scope) {
+                      <li>{{ scope }}</li>
+                    }
+                  </ul>
+                </div>
+                <button
+                  appNeedsConnection
+                  type="button"
+                  class="ui-button ui-button--danger-soft connection-disconnect"
+                  [disabled]="disconnecting() !== null"
+                  (click)="disconnect(app)"
                 >
-                ·
-                <span i18n="@@donor.account.connections.lastUsed">naposledy použito</span
-                >&ngsp;<span class="ui-date">{{ formatDate(app.lastUsedAt) }}</span>
-              </span>
-              <ul class="connection-scopes">
-                @for (scope of scopeLabels(app); track scope) {
-                  <li>{{ scope }}</li>
-                }
-              </ul>
+                  @if (disconnecting() === app.id) {
+                    <span i18n="@@donor.account.connections.disconnecting">Odpojujeme…</span>
+                  } @else {
+                    <span i18n="@@donor.account.connections.disconnect">Odpojit</span>
+                  }
+                </button>
+              </div>
             </div>
-            <button
-              appNeedsConnection
-              type="button"
-              class="ui-button ui-button--danger-soft connection-disconnect"
-              [disabled]="disconnecting() !== null"
-              (click)="disconnect(app)"
-            >
-              <app-busy-label [busy]="disconnecting() === app.id">
-                <span when-idle i18n="@@donor.account.connections.disconnect">Odpojit</span>
-                <span when-busy i18n="@@donor.account.connections.disconnecting">Odpojujeme…</span>
-              </app-busy-label>
-            </button>
           </li>
         }
       </ul>
@@ -73,9 +78,7 @@
   }
 
   <p class="ui-form-status connections-status" role="status">
-    @if (busyAnnouncement.text(); as starting) {
-      <span class="visually-hidden">{{ starting }}</span>
-    } @else if (disconnected(); as client) {
+    @if (disconnected(); as client) {
       <span i18n="@@donor.account.connections.disconnected">
         Aplikace {{ client }} je odpojená. Přístup získá znovu jen novým připojením, které povolíte.
       </span>

@@ -15,7 +15,10 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { neighbourAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
+import {
+  markRowsLeaving,
+  neighbourAfterRowLeaves,
+} from '../../../../shared/ui/leaving-row/leaving-row';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -163,6 +166,7 @@ export class DevicesCard {
     this.begin(ALL_OTHERS);
     this.authApi.signOutOtherDevices().subscribe({
       next: () => {
+        markRowsLeaving(this.otherDevices().map((device) => this.row(device)));
         this.signingOut.set(null);
         this.confirming.set(null);
         this.rowLeft.set(true);
@@ -228,10 +232,12 @@ export class DevicesCard {
   }
 
   private removed(device: SignedInDevice): void {
+    const row = this.row(device);
     const neighbour = neighbourAfterRowLeaves(
-      this.document.getElementById(this.rowId(device)),
+      row,
       this.deviceList()?.nativeElement.querySelectorAll<HTMLElement>(ROW_CONTROLS) ?? [],
     );
+    markRowsLeaving([row]);
     this.signingOut.set(null);
     this.confirming.set(null);
     this.rowLeft.set(true);
@@ -241,6 +247,14 @@ export class DevicesCard {
     );
     this.focusAfterRender(() => neighbour() ?? this.title().nativeElement);
     this.changes.changed();
+  }
+
+  private otherDevices(): SignedInDevice[] {
+    return (this.devices() ?? []).filter((device) => !device.current);
+  }
+
+  private row(device: SignedInDevice): HTMLElement | null {
+    return this.document.getElementById(this.rowId(device));
   }
 
   private ask(target: string): void {

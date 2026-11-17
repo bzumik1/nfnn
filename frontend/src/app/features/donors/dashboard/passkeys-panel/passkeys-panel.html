@@ -25,141 +25,149 @@
       <ul #passkeyList class="passkey-list">
         @for (passkey of list; track passkey.id) {
           <li
-            class="passkey"
+            class="passkey-slot"
             [id]="rowId(passkey)"
             [animate.enter]="rowEntrance(passkey)"
-            animate.leave="passkey--leaving"
+            animate.leave="passkey-slot--leaving"
           >
-            <div class="passkey-body">
-              <span class="passkey-name">{{ passkey.name }}</span>
-              <span class="passkey-dates">
-                <span class="passkey-date"
-                  ><span i18n="@@donor.passkeys.createdAt">přidáno</span>
-                  {{ formatDate(passkey.createdAt) }}</span
-                >
-                ·
-                @if (passkey.lastUsedAt; as lastUsedAt) {
-                  <span class="passkey-date"
-                    ><span i18n="@@donor.passkeys.lastUsedAt">naposledy použito</span>
-                    {{ formatDate(lastUsedAt) }}</span
+            <div>
+              <div class="passkey">
+                <div class="passkey-body">
+                  <span class="passkey-name">{{ passkey.name }}</span>
+                  <span class="passkey-dates">
+                    <span class="passkey-date"
+                      ><span i18n="@@donor.passkeys.createdAt">přidáno</span>
+                      {{ formatDate(passkey.createdAt) }}</span
+                    >
+                    ·
+                    @if (passkey.lastUsedAt; as lastUsedAt) {
+                      <span class="passkey-date"
+                        ><span i18n="@@donor.passkeys.lastUsedAt">naposledy použito</span>
+                        {{ formatDate(lastUsedAt) }}</span
+                      >
+                    } @else {
+                      <span class="passkey-date" i18n="@@donor.passkeys.neverUsed"
+                        >zatím nepoužito</span
+                      >
+                    }
+                  </span>
+                </div>
+                @if (confirming() === passkey.id) {
+                  <div class="passkey-confirm" animate.leave="passkey-confirm--closing">
+                    <div>
+                      <p i18n="@@donor.passkeys.confirm">
+                        Odebrat klíč {{ passkey.name }}? Přihlásit se jím pak nepůjde.
+                      </p>
+                      <div class="passkeys-buttons">
+                        <button
+                          appNeedsConnection
+                          type="button"
+                          class="ui-button passkeys-action ui-button--danger-soft"
+                          [disabled]="removing() !== null"
+                          (click)="remove(passkey)"
+                        >
+                          @if (removing() === passkey.id) {
+                            <span i18n="@@donor.passkeys.removing">Odebíráme…</span>
+                          } @else {
+                            <span i18n="@@donor.passkeys.confirmRemove">Ano, odebrat</span>
+                          }
+                        </button>
+                        <button
+                          type="button"
+                          class="ui-button passkeys-action"
+                          (click)="keep()"
+                          i18n="@@donor.passkeys.keep"
+                        >
+                          Ponechat
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                } @else if (renaming() === passkey.id) {
+                  <form
+                    #renameForm="ngForm"
+                    class="passkey-rename"
+                    appFocusFirstInvalid
+                    (ngSubmit)="rename(renameForm, passkey)"
+                    novalidate
                   >
+                    <app-form-field
+                      label="Nový název klíče"
+                      i18n-label="@@donor.passkeys.rename.name"
+                      [messages]="nameMessages"
+                    >
+                      <input
+                        #renameField
+                        appFormControl
+                        id="passkey-rename"
+                        name="newName"
+                        type="text"
+                        autocomplete="off"
+                        [(ngModel)]="newName"
+                        required
+                        [maxlength]="nameMaxLength"
+                      />
+                    </app-form-field>
+                    @if (renameError()) {
+                      <p class="ui-field-error" role="alert">{{ renameError() }}</p>
+                    }
+                    <div class="passkeys-buttons">
+                      <button
+                        appNeedsConnection
+                        type="submit"
+                        class="ui-button ui-button--primary passkeys-save"
+                        [disabled]="renameSaving()"
+                      >
+                        @if (renameSaving()) {
+                          <span i18n="@@donor.passkeys.rename.saving">Ukládáme…</span>
+                        } @else {
+                          <span i18n="@@donor.passkeys.rename.submit">Uložit název</span>
+                        }
+                      </button>
+                      <button
+                        type="button"
+                        class="ui-button passkeys-action ui-button--large passkeys-cancel"
+                        (click)="cancelRename(passkey)"
+                        i18n="@@donor.account.cancel"
+                      >
+                        Zrušit
+                      </button>
+                    </div>
+                  </form>
                 } @else {
-                  <span class="passkey-date" i18n="@@donor.passkeys.neverUsed"
-                    >zatím nepoužito</span
-                  >
+                  <div class="passkey-actions">
+                    <button
+                      type="button"
+                      class="ui-button passkeys-action"
+                      [id]="renameButtonId(passkey)"
+                      [disabled]="removing() !== null"
+                      (click)="openRename(passkey)"
+                      i18n="@@donor.passkeys.rename"
+                    >
+                      Přejmenovat
+                    </button>
+                    @if (!lastSignInMethod()) {
+                      <button
+                        appNeedsConnection
+                        type="button"
+                        class="ui-button passkeys-action ui-button--danger-soft"
+                        [disabled]="removing() !== null"
+                        (click)="askToRemove(passkey)"
+                        i18n="@@donor.passkeys.remove"
+                      >
+                        Odebrat
+                      </button>
+                    }
+                  </div>
+                  @if (lastSignInMethod()) {
+                    <p class="passkeys-hint" i18n="@@donor.passkeys.lastOne">
+                      Jediný způsob přihlášení. Odebrat půjde, až přidáte další klíč nebo nastavíte
+                      heslo.
+                    </p>
+                  }
                 }
-              </span>
+              </div>
             </div>
-            @if (confirming() === passkey.id) {
-              <div class="passkey-confirm">
-                <p i18n="@@donor.passkeys.confirm">
-                  Odebrat klíč {{ passkey.name }}? Přihlásit se jím pak nepůjde.
-                </p>
-                <div class="passkeys-buttons">
-                  <button
-                    appNeedsConnection
-                    type="button"
-                    class="ui-button passkeys-action ui-button--danger-soft"
-                    [disabled]="removing() !== null"
-                    (click)="remove(passkey)"
-                  >
-                    <app-busy-label [busy]="removing() === passkey.id">
-                      <span when-idle i18n="@@donor.passkeys.confirmRemove">Ano, odebrat</span>
-                      <span when-busy i18n="@@donor.passkeys.removing">Odebíráme…</span>
-                    </app-busy-label>
-                  </button>
-                  <button
-                    type="button"
-                    class="ui-button passkeys-action"
-                    (click)="keep()"
-                    i18n="@@donor.passkeys.keep"
-                  >
-                    Ponechat
-                  </button>
-                </div>
-              </div>
-            } @else if (renaming() === passkey.id) {
-              <form
-                #renameForm="ngForm"
-                class="passkey-rename"
-                appFocusFirstInvalid
-                (ngSubmit)="rename(renameForm, passkey)"
-                novalidate
-              >
-                <app-form-field
-                  label="Nový název klíče"
-                  i18n-label="@@donor.passkeys.rename.name"
-                  [messages]="nameMessages"
-                >
-                  <input
-                    #renameField
-                    appFormControl
-                    id="passkey-rename"
-                    name="newName"
-                    type="text"
-                    autocomplete="off"
-                    [(ngModel)]="newName"
-                    required
-                    [maxlength]="nameMaxLength"
-                  />
-                </app-form-field>
-                @if (renameError()) {
-                  <p class="ui-field-error" role="alert">{{ renameError() }}</p>
-                }
-                <div class="passkeys-buttons">
-                  <button
-                    appNeedsConnection
-                    type="submit"
-                    class="ui-button ui-button--primary passkeys-save"
-                    [disabled]="renameSaving()"
-                  >
-                    <app-busy-label [busy]="renameSaving()">
-                      <span when-idle i18n="@@donor.passkeys.rename.submit">Uložit název</span>
-                      <span when-busy i18n="@@donor.passkeys.rename.saving">Ukládáme…</span>
-                    </app-busy-label>
-                  </button>
-                  <button
-                    type="button"
-                    class="ui-button passkeys-action ui-button--large passkeys-cancel"
-                    (click)="cancelRename(passkey)"
-                    i18n="@@donor.account.cancel"
-                  >
-                    Zrušit
-                  </button>
-                </div>
-              </form>
-            } @else {
-              <div class="passkey-actions">
-                <button
-                  type="button"
-                  class="ui-button passkeys-action"
-                  [id]="renameButtonId(passkey)"
-                  [disabled]="removing() !== null"
-                  (click)="openRename(passkey)"
-                  i18n="@@donor.passkeys.rename"
-                >
-                  Přejmenovat
-                </button>
-                @if (!lastSignInMethod()) {
-                  <button
-                    appNeedsConnection
-                    type="button"
-                    class="ui-button passkeys-action ui-button--danger-soft"
-                    [disabled]="removing() !== null"
-                    (click)="askToRemove(passkey)"
-                    i18n="@@donor.passkeys.remove"
-                  >
-                    Odebrat
-                  </button>
-                }
-              </div>
-              @if (lastSignInMethod()) {
-                <p class="passkeys-hint" i18n="@@donor.passkeys.lastOne">
-                  Jediný způsob přihlášení. Odebrat půjde, až přidáte další klíč nebo nastavíte
-                  heslo.
-                </p>
-              }
-            }
           </li>
         }
       </ul>
@@ -273,10 +281,11 @@
           class="ui-button ui-button--primary passkeys-save"
           [disabled]="saving()"
         >
-          <app-busy-label [busy]="saving()">
-            <span when-idle i18n="@@donor.passkeys.submit">Vytvořit klíč</span>
-            <span when-busy i18n="@@donor.passkeys.saving">Čekáme na zařízení…</span>
-          </app-busy-label>
+          @if (saving()) {
+            <span i18n="@@donor.passkeys.saving">Čekáme na zařízení…</span>
+          } @else {
+            <span i18n="@@donor.passkeys.submit">Vytvořit klíč</span>
+          }
         </button>
         <button
           type="button"
@@ -302,9 +311,7 @@
   }
 
   <p class="ui-form-status" role="status">
-    @if (busyAnnouncement.text(); as starting) {
-      <span class="visually-hidden">{{ starting }}</span>
-    } @else if (status()) {
+    @if (status()) {
       <span>{{ status() }}</span>
     }
   </p>

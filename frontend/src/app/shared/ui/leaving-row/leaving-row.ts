@@ -1,5 +1,7 @@
 export function markRowsLeaving(rows: Iterable<Element | null>): void {
-  void rows;
+  for (const row of rows) {
+    row?.setAttribute('inert', '');
+  }
 }
 
 export function neighbourAfterRowLeaves(

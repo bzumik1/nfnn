@@ -5,6 +5,10 @@
 }
 
 .accounts-help-panel {
+  @include motion.expand;
+}
+
+.accounts-help-box {
   margin-block: var(--space-4);
   padding: var(--space-3-5) var(--space-4);
   background: var(--color-surface-accent);
@@ -13,7 +17,6 @@
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
   color: var(--color-text-secondary);
-  @include motion.expand;
 }
 
 .help-title {

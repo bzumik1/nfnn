@@ -97,8 +97,11 @@
 }
 
 @include bp.container-down(payment-panel, pair) {
-  .standing-box {
+  .standing-panel {
     margin-inline: calc(-1 * var(--space-4));
+  }
+
+  .standing-box {
     padding-inline: var(--space-2);
   }
 

@@ -42,11 +42,11 @@
   padding: 0;
 }
 
-.passkey--entering {
+.passkey-slot--entering {
   @include motion.row-enter;
 }
 
-.passkey--leaving {
+.passkey-slot--leaving {
   @include motion.row-leave;
 }
 
@@ -117,6 +117,10 @@
   p {
     margin-bottom: var(--space-2);
   }
+}
+
+.passkey-confirm--closing {
+  @include motion.collapse;
 }
 
 .passkeys-buttons {

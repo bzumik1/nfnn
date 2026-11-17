@@ -25,10 +25,9 @@ import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
-import { neighbourAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
+import { markRowsLeaving } from '../../../../shared/ui/leaving-row/leaving-row';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
-const DISCONNECT_BUTTONS = '.connection-disconnect';
 
 @Component({
   selector: 'app-connected-apps-card',
@@ -47,7 +46,6 @@ export class ConnectedAppsCard {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly title = viewChild.required<ElementRef<HTMLElement>>('title');
-  private readonly connectionList = viewChild<ElementRef<HTMLElement>>('connectionList');
 
   readonly sessionEnded = output<void>();
 
@@ -100,18 +98,12 @@ export class ConnectedAppsCard {
     this.disconnected.set('');
     this.authApi.disconnect(app.id).subscribe({
       next: () => {
-        const neighbour = neighbourAfterRowLeaves(
-          this.document.getElementById(this.rowId(app)),
-          this.connectionList()?.nativeElement.querySelectorAll<HTMLElement>(DISCONNECT_BUTTONS) ??
-            [],
-        );
+        markRowsLeaving([this.document.getElementById(this.rowId(app))]);
         this.disconnecting.set(null);
         this.rowLeft.set(true);
         this.connections.update((apps) => (apps ?? []).filter((other) => other.id !== app.id));
         this.disconnected.set(app.client);
-        afterNextRender(() => (neighbour() ?? this.title().nativeElement).focus(), {
-          injector: this.injector,
-        });
+        afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
         this.changes.changed();
       },
       error: (failure: unknown) => {
