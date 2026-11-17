@@ -566,6 +566,7 @@ test.describe('Given an administrator on the donors page', () => {
       row.getByRole('button', { name: `Stáhnout PDF potvrzení ${receipt.number}` }),
     ).toBeVisible();
     const button = row.locator('.receipt-pdf');
+    await row.scrollIntoViewIfNeeded();
     const resting = await placement(row, button);
     const pill = (await row.getByText('platné', { exact: true }).boundingBox())!;
     const buttonBox = (await button.boundingBox())!;
