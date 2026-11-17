@@ -33,26 +33,15 @@
 .summary-list {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-6);
+  gap: var(--space-3) var(--space-6);
   margin: 0;
 
   div {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
     min-width: 0;
-  }
-
-  dt {
-    font-size: var(--text-md);
-    font-weight: var(--weight-regular);
-    color: var(--color-text-soft);
   }
 
   dd {
     margin: 0;
-    font-size: var(--text-md);
-    overflow-wrap: anywhere;
   }
 }
 
@@ -102,7 +91,7 @@
 
 .erase-lists {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr));
   gap: var(--space-3) var(--space-6);
   margin-bottom: var(--space-3);
   font-size: var(--text-md);
@@ -167,23 +156,13 @@
 
 .admin-data {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr));
   gap: var(--space-3-5) var(--space-6);
   padding: 0 var(--space-6) var(--space-5);
   margin: 0;
 
-  dt {
-    font-size: var(--text-md);
-    font-weight: var(--weight-regular);
-    color: var(--color-text-soft);
-    margin-bottom: var(--space-1);
-  }
-
   dd {
     margin: 0;
-    font-size: var(--text-md);
-    color: var(--color-text);
-    overflow-wrap: anywhere;
 
     a {
       color: var(--color-accent);
@@ -193,9 +172,9 @@
 
 .admin-actions {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
   padding: 0 var(--space-6) var(--space-5);
 }
 
@@ -221,6 +200,44 @@ td.action {
 
 td.receipt-pdf-cell {
   inline-size: 15rem;
+}
+
+@include bp.up(nav) {
+  td.receipt-pdf-cell {
+    inline-size: 21rem;
+  }
+
+  .receipts-table td {
+    vertical-align: middle;
+  }
+
+  .receipt-download {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+
+  .receipt-download .receipt-pdf {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .receipt-download .receipt-pdf-progress {
+    flex: none;
+    flex-wrap: nowrap;
+    inline-size: 11rem;
+    margin-top: 0;
+  }
+
+  .ui-table:not(.ui-table--stacked) .actions {
+    flex-wrap: nowrap;
+    align-items: stretch;
+
+    .ui-button {
+      white-space: nowrap;
+    }
+  }
 }
 
 .receipt-pdf[aria-disabled='true'] {

@@ -54,7 +54,7 @@
           aria-label="Shrnutí dárce"
           i18n-aria-label="@@admin.donorDetail.summary.label"
         >
-          <dl class="summary-list">
+          <dl class="ui-data-list summary-list">
             <div>
               <dt i18n="@@admin.donorDetail.summary.symbol">VS</dt>
               <dd class="summary-symbol">
@@ -97,15 +97,18 @@
                 </dd>
               </div>
             }
+            @if (account.secondFactorEnabled) {
+              <div>
+                <dt i18n="@@admin.donorDetail.account.secondFactor">Dvoufaktorové ověření</dt>
+                <dd i18n="@@admin.donorDetail.account.secondFactor.on">zapnuté</dd>
+              </div>
+            }
           </dl>
           <p class="badges">
             @if (account.administrator) {
               <span class="tag tag--accent" i18n="@@admin.donorDetail.summary.administrator"
                 >Správce</span
               >
-            }
-            @if (account.secondFactorEnabled) {
-              <span class="tag tag--on" i18n="@@admin.donorDetail.summary.secondFactor">2FA</span>
             }
           </p>
         </section>
@@ -281,7 +284,7 @@
           }
           @case ('ready') {
             @if (account(); as account) {
-              <dl class="admin-data">
+              <dl class="ui-data-list admin-data">
                 <div>
                   <dt i18n="@@admin.donorDetail.account.type">Typ</dt>
                   <dd>
@@ -302,18 +305,22 @@
                         >vymazán</span
                       >
                     } @else {
-                      <span class="email">{{ account.email }}</span
-                      >&ngsp;
-                      @if (account.emailVerified) {
-                        <span class="tag tag--on" i18n="@@admin.donorDetail.account.email.verified"
-                          >ověřen</span
-                        >
-                      } @else {
-                        <span
-                          class="tag tag--warn"
-                          i18n="@@admin.donorDetail.account.email.unverified"
-                          >neověřen</span
-                        >
+                      <span class="email">{{ account.email }}</span>
+                      @if (drill()) {
+                        &ngsp;
+                        @if (account.emailVerified) {
+                          <span
+                            class="tag tag--on"
+                            i18n="@@admin.donorDetail.account.email.verified"
+                            >ověřen</span
+                          >
+                        } @else {
+                          <span
+                            class="tag tag--warn"
+                            i18n="@@admin.donorDetail.account.email.unverified"
+                            >neověřen</span
+                          >
+                        }
                       }
                     }
                   </dd>
@@ -385,7 +392,7 @@
               tabindex="-1"
               [notice]="noticeIn('signIn')"
             />
-            <dl class="admin-data">
+            <dl class="ui-data-list admin-data">
               <div>
                 <dt i18n="@@admin.donorDetail.account.secondFactor">Dvoufaktorové ověření</dt>
                 <dd>
@@ -457,7 +464,7 @@
                   <button
                     id="donor-reset-open"
                     type="button"
-                    class="ui-button ui-button--small ui-button--quiet"
+                    class="ui-button ui-button--small ui-button--danger-outline"
                     (click)="askReset()"
                     i18n="@@admin.donorDetail.reset.open"
                   >
@@ -516,7 +523,7 @@
                   <button
                     id="donor-passkeys-open"
                     type="button"
-                    class="ui-button ui-button--small ui-button--quiet"
+                    class="ui-button ui-button--small ui-button--danger-outline"
                     (click)="askRemovePasskeys()"
                     i18n="@@admin.donorDetail.passkeys.open"
                   >
@@ -901,9 +908,14 @@
                                   type="button"
                                   class="ui-button ui-button--small ui-button--quiet"
                                   (click)="askAccount('disconnect', item)"
-                                  i18n="@@admin.donorDetail.disconnect.open"
                                 >
-                                  Vypnout párování
+                                  <ng-container i18n="@@admin.donorDetail.disconnect.open"
+                                    >Vypnout párování</ng-container
+                                  ><span
+                                    class="visually-hidden"
+                                    i18n="@@admin.donorDetail.disconnect.openOf"
+                                    >&ngsp;účtu {{ accountName(item) }}</span
+                                  >
                                 </button>
                               } @else if (!item.pairingExcluded) {
                                 <button
@@ -926,9 +938,14 @@
                                   type="button"
                                   class="ui-button ui-button--small ui-button--danger-outline"
                                   (click)="askAccount('remove', item)"
-                                  i18n="@@admin.donorDetail.remove.open"
                                 >
-                                  Odebrat účet
+                                  <ng-container i18n="@@admin.donorDetail.remove.open"
+                                    >Odebrat účet</ng-container
+                                  ><span
+                                    class="visually-hidden"
+                                    i18n="@@admin.donorDetail.remove.openOf"
+                                    >&ngsp;{{ accountName(item) }}</span
+                                  >
                                 </button>
                               }
                             </span>
@@ -1180,7 +1197,7 @@
               Dárci zatím nikdo žádné potvrzení nevystavil.
             </p>
           } @else {
-            <table class="ui-table" [class.ui-table--stacked]="drill()">
+            <table class="ui-table receipts-table" [class.ui-table--stacked]="drill()">
               <thead>
                 <tr>
                   <th i18n="@@admin.donorDetail.receipts.col.number">Číslo</th>
@@ -1233,36 +1250,48 @@
                     </td>
                     <td class="action receipt-pdf-cell">
                       @if (receipt.active) {
-                        <button
-                          type="button"
-                          class="ui-button ui-button--small receipt-pdf"
-                          [attr.aria-disabled]="pdfs.drawing(receipt.id) ? 'true' : null"
-                          [attr.aria-busy]="pdfs.drawing(receipt.id)"
-                          [id]="receiptPdfId(receipt)"
-                          [attr.aria-describedby]="
-                            signedWithWithdrawnKey(receipt) ? withdrawnKeyNoteId(receipt) : null
-                          "
-                          (click)="pdfs.press(receipt.id)"
-                        >
-                          <app-pdf-button-face
-                            [state]="pdfs.state(receipt.id)"
-                            downloadLabel="Stáhnout PDF"
-                            i18n-downloadLabel="@@admin.donorDetail.receiptPdf.download"
-                            preparingLabel="Připravujeme PDF…"
-                            i18n-preparingLabel="@@admin.donorDetail.receiptPdf.preparing"
-                            openLabel="Otevřít PDF"
-                            i18n-openLabel="@@admin.donorDetail.receiptPdf.open"
-                          />
-                          <span class="visually-hidden" i18n="@@admin.donorDetail.receiptPdf.of">
-                            potvrzení {{ receipt.number }}</span
+                        <div class="receipt-download">
+                          @if (!compact()) {
+                            <app-pdf-progress
+                              class="receipt-pdf-progress"
+                              [compact]="true"
+                              [progress]="pdfs.progress(receipt.id)"
+                              (cancelled)="cancelReceiptPdf(receipt)"
+                            />
+                          }
+                          <button
+                            type="button"
+                            class="ui-button ui-button--small receipt-pdf"
+                            [attr.aria-disabled]="pdfs.drawing(receipt.id) ? 'true' : null"
+                            [attr.aria-busy]="pdfs.drawing(receipt.id)"
+                            [id]="receiptPdfId(receipt)"
+                            [attr.aria-describedby]="
+                              signedWithWithdrawnKey(receipt) ? withdrawnKeyNoteId(receipt) : null
+                            "
+                            (click)="pdfs.press(receipt.id)"
                           >
-                        </button>
-                        <app-pdf-progress
-                          class="receipt-pdf-progress"
-                          [compact]="true"
-                          [progress]="pdfs.progress(receipt.id)"
-                          (cancelled)="cancelReceiptPdf(receipt)"
-                        />
+                            <app-pdf-button-face
+                              [state]="pdfs.state(receipt.id)"
+                              downloadLabel="Stáhnout PDF"
+                              i18n-downloadLabel="@@admin.donorDetail.receiptPdf.download"
+                              preparingLabel="Připravujeme PDF…"
+                              i18n-preparingLabel="@@admin.donorDetail.receiptPdf.preparing"
+                              openLabel="Otevřít PDF"
+                              i18n-openLabel="@@admin.donorDetail.receiptPdf.open"
+                            />
+                            <span class="visually-hidden" i18n="@@admin.donorDetail.receiptPdf.of">
+                              potvrzení {{ receipt.number }}</span
+                            >
+                          </button>
+                          @if (compact()) {
+                            <app-pdf-progress
+                              class="receipt-pdf-progress"
+                              [compact]="true"
+                              [progress]="pdfs.progress(receipt.id)"
+                              (cancelled)="cancelReceiptPdf(receipt)"
+                            />
+                          }
+                        </div>
                         @if (pdfs.failure(receipt.id); as failure) {
                           <p class="ui-field-error receipt-pdf-error" role="alert">{{ failure }}</p>
                         }
