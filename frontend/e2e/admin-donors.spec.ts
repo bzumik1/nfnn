@@ -543,7 +543,7 @@ test.describe('Given an administrator on the donors page', () => {
       (route) => route.fulfill({ json: petrDetail }),
     );
     await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.goto(`/sprava/darci/${PETR_ID}`);
+    await page.goto(`/sprava/darci/${PETR_ID}/bankovni-ucty`);
     const account = page
       .getByRole('region', { name: 'Bankovní účty' })
       .locator('app-bank-account', { hasText: '2900233333/2010' });
