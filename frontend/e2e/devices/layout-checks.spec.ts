@@ -374,6 +374,37 @@ test.describe('Given a page checked as on a phone', () => {
     ).toEqual(['the tab bar above the home indicator, its shadow inside the gap']);
   });
 
+  test('when every tab label stands on one line inside the tab bar, then the label check passes', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<nav id="navigace" style="position: fixed; bottom: 16px; left: 20px; right: 20px; display: flex"><a href="#" style="height: 44px; flex: 1"><span class="tab-label">O nás</span></a><a href="#" style="height: 44px; flex: 1"><span class="tab-label">Přispět</span></a></nav>',
+      ),
+    ).toEqual([]);
+  });
+
+  test('when a tab label breaks onto two lines, then the label check fails', async ({ page }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<nav id="navigace" style="position: fixed; bottom: 16px; left: 20px; right: 20px; display: flex"><a href="#" style="height: 44px; flex: 1"><span class="tab-label" style="display: inline-block; width: 1ch">O nás</span></a><a href="#" style="height: 44px; flex: 1"><span class="tab-label">Přispět</span></a></nav>',
+      ),
+    ).toEqual(['every tab label on one line inside the tab bar']);
+  });
+
+  test('when a tab label reaches past the side of the tab bar, then the label check fails', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<nav id="navigace" style="position: fixed; bottom: 16px; left: 20px; width: 200px; display: flex"><a href="#" style="height: 44px; flex: 1"><span class="tab-label">O nás</span></a><a href="#" style="height: 44px; flex: 1; min-width: 0"><span class="tab-label" style="margin-left: 120px; white-space: nowrap">Přispět</span></a></nav>',
+      ),
+    ).toEqual(['every tab label on one line inside the tab bar']);
+  });
+
   test('when a modal dialog is open, then only its controls are checked', async ({ page }) => {
     await page.setViewportSize(VIEWPORT);
     await page.setContent(

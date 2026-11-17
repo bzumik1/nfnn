@@ -31,6 +31,7 @@ export interface Findings {
   clippedText: string[];
   offCentreQr: string[];
   tabBarEdge: string[];
+  tabLabels: string[];
 }
 
 export function collectFindings(limits: typeof LIMITS): Findings {
@@ -411,6 +412,35 @@ export function collectFindings(limits: typeof LIMITS): Findings {
     }
   }
 
+  const tabLabels: string[] = [];
+  if (tabBar && shown(tabBar)) {
+    const inner = tabBar.getBoundingClientRect();
+    for (const label of tabBar.querySelectorAll('.tab-label')) {
+      const text = [...label.childNodes].find(
+        (node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim().length > 0,
+      );
+      if (!text) {
+        continue;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const boxes = [...range.getClientRects()].filter((box) => box.width > 0);
+      const lines = new Set(boxes.map((box) => Math.round(box.top))).size;
+      const words = (text.textContent ?? '').trim();
+      if (lines > 1) {
+        tabLabels.push(`${words} on ${lines} lines`);
+      }
+      const outside = boxes.some(
+        (box) =>
+          box.left < inner.left + tabBar.clientLeft - 0.5 ||
+          box.right > inner.left + tabBar.clientLeft + tabBar.clientWidth + 0.5,
+      );
+      if (outside) {
+        tabLabels.push(`${words} reaches past the bar's side`);
+      }
+    }
+  }
+
   return {
     pageWidth,
     viewportWidth,
@@ -424,6 +454,7 @@ export function collectFindings(limits: typeof LIMITS): Findings {
     clippedText,
     offCentreQr,
     tabBarEdge,
+    tabLabels,
   };
 }
 
@@ -494,6 +525,11 @@ export function checksFrom(found: Findings, pageErrors: string[]): Check[] {
       name: 'the tab bar above the home indicator, its shadow inside the gap',
       pass: found.tabBarEdge.length === 0,
       detail: list(found.tabBarEdge),
+    },
+    {
+      name: 'every tab label on one line inside the tab bar',
+      pass: found.tabLabels.length === 0,
+      detail: list(found.tabLabels),
     },
   ];
 }
