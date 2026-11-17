@@ -33,6 +33,9 @@ describe('Given the about section', () => {
   it('when it renders, then it opens with what the foundation does, then the work with FOD with the figures under it', () => {
     expect(text(root().querySelector('.ui-intro h1.ui-intro__title'))).toBe('Vznik a poslání');
     expect(text(root().querySelector('.ui-intro__lead'))).toMatch(/^Nejsme velká organizace/);
+    expect(root().querySelector('.ui-intro__lead')?.textContent).toContain(
+      'a\u00a0kompenzační pomůcky, přístroje, které jim umožňují další rozvoj v\u00a0běžném životě a\u00a0posun',
+    );
     expect(root().querySelector('.ui-intro .ui-eyebrow')).toBeNull();
     const rest = root().querySelector('.intro-rest')!;
     expect(text(rest.querySelector('.paragraph'))).toMatch(/^Od svého počátku úzce spolupracujeme/);

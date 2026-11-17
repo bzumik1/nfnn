@@ -46,7 +46,7 @@ describe('Given the install card in the donor overview', () => {
       'Nová naděje jako aplikace',
     );
     expect(text()).toContain(
-      'Klepněte na Sdílet (v Safari ho najdete i pod tlačítkem ⋯) a pak na Přidat na plochu. V aplikaci se přihlásíte ještě jednou.',
+      'Klepněte na „Sdílet“ (v Safari ho najdete i pod tlačítkem ⋯) a pak na „Přidat na plochu“. V aplikaci se přihlásíte ještě jednou.',
     );
     expect(button('Nainstalovat aplikaci')).toBeUndefined();
     expect(fixture.nativeElement.contains(document.activeElement)).toBe(false);
@@ -55,7 +55,7 @@ describe('Given the install card in the donor overview', () => {
   it('when it appears in Safari on a Mac, then it explains Add to Dock', async () => {
     await render('mac-dock');
 
-    expect(text()).toContain('V Safari zvolte v nabídce Soubor položku Přidat do Docku.');
+    expect(text()).toContain('V Safari zvolte v nabídce „Soubor“ položku „Přidat do Docku“.');
   });
 
   describe('when the browser offers its own install', () => {

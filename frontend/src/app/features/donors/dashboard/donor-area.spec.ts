@@ -764,6 +764,7 @@ describe('Given a signed-in donor in the donor area', () => {
         ['Bankovní účty', '/darce/ucty'],
         ['Údaje a zabezpečení', '/darce/udaje'],
       ]);
+      expect(links[4].textContent?.trim()).toBe('Údaje a\u00a0zabezpečení');
       expect(links.map((link) => link.getAttribute('aria-current'))).toEqual([
         'page',
         null,
@@ -801,6 +802,9 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(root().querySelectorAll('h1')).toHaveLength(1);
         expect(document.activeElement).toBe(element('h1'));
         headings.push(text('h1'));
+        if (url === '/darce/udaje') {
+          expect(element('h1')?.textContent?.trim()).toBe('Údaje a\u00a0zabezpečení');
+        }
       }
       await go('/darce/ucty');
       http.expectOne(BANK_ACCOUNTS_URL).flush({ items: [] });
@@ -1740,7 +1744,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(text(secondRowButton)).toBe('Otevřít PDF, dar z 10. 1. 2026, 1 000 Kč');
       expect(text(`${yearSection(2026)} tbody tr:nth-child(2) .receipt-saved`)).toBe(
-        'Potvrzení potvrzeni-o-daru-2026-000017.pdf je připravené. Otevřete ho tlačítkem Otevřít PDF.',
+        'Potvrzení potvrzeni-o-daru-2026-000017.pdf je připravené. Otevřete ho tlačítkem „Otevřít PDF“.',
       );
       expect(document.activeElement).toBe(element(secondRowButton));
       await click(secondRowButton);
@@ -2923,7 +2927,7 @@ describe('Given a signed-in donor in the donor area', () => {
         it('then nothing is saved yet, the line says it is ready and the same button now opens it, with the focus on it', () => {
           expect(savedFiles).toEqual([]);
           expect(line(2025)).toBe(
-            'Potvrzení potvrzeni-o-darech-2025.pdf je připravené. Otevřete ho tlačítkem Otevřít potvrzení.',
+            'Potvrzení potvrzeni-o-darech-2025.pdf je připravené. Otevřete ho tlačítkem „Otevřít potvrzení“.',
           );
           const open = yearRow(2025).querySelector('.yearly-pdf') as HTMLButtonElement;
           expect(normalized(open.textContent ?? '')).toBe('Otevřít potvrzení za rok 2025 (PDF)');

@@ -103,7 +103,7 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(profile.getAttribute('href')).toBe('/darce/udaje');
     expect(profile.querySelector('.account-name')?.textContent?.trim()).toBe('Jana Nováková');
     expect(profile.querySelector('.account-profile-detail')?.textContent?.trim()).toBe(
-      'Údaje a zabezpečení',
+      'Údaje a\u00a0zabezpečení',
     );
     expect(sheet.querySelector('.account-initials')?.textContent?.trim()).toBe('JN');
     expect(rows(sheet)).toEqual(['Můj přehled', 'Moje dary', 'Potvrzení o daru', 'Bankovní účty']);
@@ -401,7 +401,7 @@ describe('Given the account sheet of a signed-in donor', () => {
     fixture.detectChanges();
 
     expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe(
-      'Údaje a zabezpečení',
+      'Údaje a\u00a0zabezpečení',
     );
   });
 
@@ -513,7 +513,7 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(row.getAttribute('aria-expanded')).toBe('true');
     const how = sheet.querySelector(`#${row.getAttribute('aria-controls')}`);
     expect(how?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'Klepněte na Sdílet (v Safari ho najdete i pod tlačítkem ⋯) a pak na Přidat na plochu. V aplikaci se přihlásíte ještě jednou.',
+      'Klepněte na „Sdílet“ (v Safari ho najdete i pod tlačítkem ⋯) a pak na „Přidat na plochu“. V aplikaci se přihlásíte ještě jednou.',
     );
     expect(install).not.toHaveBeenCalled();
     expect(closed).toBe(0);
@@ -533,7 +533,7 @@ describe('Given the account sheet of a signed-in donor', () => {
         ?.textContent?.replace(/\s+/g, ' ')
         .trim(),
     ).toBe(
-      'V Safari zvolte v nabídce Soubor položku Přidat do Docku. V aplikaci se přihlásíte ještě jednou.',
+      'V Safari zvolte v nabídce „Soubor“ položku „Přidat do Docku“. V aplikaci se přihlásíte ještě jednou.',
     );
   });
 

@@ -173,7 +173,7 @@ test.describe('Given an administrator whose device keeps the administration', ()
       'href',
       '/sprava/darci',
     );
-    await expect(block(page)).toContainText('Vydaná potvrzení 1 potvrzení');
+    await expect(block(page)).toContainText('Vystavená potvrzení 1 potvrzení');
     await expect(
       block(page).getByRole('link', { name: 'Pavel Znamenáček: 1 úkon' }),
     ).toHaveAttribute('href', '/sprava/historie');

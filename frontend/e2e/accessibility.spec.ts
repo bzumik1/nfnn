@@ -2025,7 +2025,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.getByRole('link', { name: 'Petr Svoboda' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeFocused();
-    await expect(page.getByRole('region', { name: 'Vydaná potvrzení' })).toContainText(
+    await expect(page.getByRole('region', { name: 'Vystavená potvrzení' })).toContainText(
       '2026-000001',
     );
     expect(await violations(page)).toEqual([]);
@@ -2033,7 +2033,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.getByRole('button', { name: 'Stáhnout PDF potvrzení 2027-000001' }).click();
     await expect(
       page
-        .getByRole('region', { name: 'Vydaná potvrzení' })
+        .getByRole('region', { name: 'Vystavená potvrzení' })
         .getByRole('alert')
         .filter({ hasText: /\S/ }),
     ).toBeVisible();

@@ -19,7 +19,8 @@ _Avoid_: user, sponsor, payer (the payer is whoever the bank statement names, se
 
 **Donor type**\
 UI „člověk“ / „firma“ · Code: `shared/domain/DonorType` `PERSON` / `COMPANY`.\
-Whether a donor registered as an individual (name and address) or a company (name, IČO and seat); the receipt prints what the type requires. `PERSON` is not a person of the foundation (`content/domain/people/Person`).
+Whether a donor registered as an individual (name and address) or a company (name, IČO and seat); the receipt prints what the type requires. `PERSON` is not a person of the foundation (`content/domain/people/Person`).\
+_Avoid_: „fyzická osoba“, „osoba“ (it reads as the person who signs the receipts)
 
 **Administrator**\
 UI „správce“ (menu „Správci“; once „administrátoři“) · Code: role `ADMIN` (`donors/domain/Role`), `/api/admin/**`, `Admin…` and `Administrator…` class names.\
@@ -48,7 +49,7 @@ _Avoid_: employee
 **Receipt signatory**\
 UI „osoba, která podepisuje“, the receipt role „Funkce na potvrzení“ · Code: `donations/domain/receipt/ReceiptSignatory`, `donation_receipt_signatory`.\
 The one person of the foundation whose name, receipt role, portrait and signature the receipts print; chosen and changed only in a browser session (their signature, like anyone's, also by the connector).\
-_Avoid_: signer (in code `Ed25519ReceiptSigner` signs the verification QR and `NewsSigners` are the people under a news article)
+_Avoid_: signer (in code `Ed25519ReceiptSigner` signs the verification QR and `NewsSigners` are the people under a news article), „podepisující“
 
 ## Money in and pairing
 
@@ -164,8 +165,9 @@ UI „Hromadná potvrzení“ · Code: `YearlyReceiptsService`, `donations/domai
 Issuing the yearly receipts of many donors at once in the administration, drawn by the browser into one PDF for printing.
 
 **Issue a receipt**\
-UI „vystavit“, „vystavené potvrzení“ and „vydat“, „vydané potvrzení“ · Code: `issue`, `DonationReceiptIssuer`.\
-Giving a receipt its number and freezing its content; repeating the request with unchanged data returns the active receipt instead of a new one.
+UI „vystavit“, „vystavené potvrzení“ · Code: `issue`, `DonationReceiptIssuer`.\
+Giving a receipt its number and freezing its content; repeating the request with unchanged data returns the active receipt instead of a new one.\
+_Avoid_: „vydat“, „vydané potvrzení“ („vydání“ is a release of the site)
 
 **Receipt number**\
 UI „číslo potvrzení“ · Code: `ReceiptNumber`.\

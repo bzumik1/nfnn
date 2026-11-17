@@ -670,7 +670,7 @@ describe('Given an administrator and two people of the foundation, one of whom s
     await settle(fixture);
 
     expect(text(fixture, '.receipt-part [role="alert"]:not(:empty)')).toBe(
-      'Podepisujícího se nepodařilo uložit. Zkuste to prosím znovu.',
+      'Osobu, která podepisuje potvrzení, se nepodařilo uložit. Zkuste to prosím znovu.',
     );
     expect(badges(fixture)).toContain('Podepisuje potvrzení');
   });

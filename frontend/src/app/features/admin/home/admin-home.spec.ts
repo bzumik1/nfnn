@@ -950,7 +950,7 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
 
       expect(items()).toEqual([
-        'Podepisující nemá nahraný podpis Potvrzení o daru mají zatím jen čáru se jménem.',
+        'Osoba, která podepisuje potvrzení, nemá nahraný podpis Potvrzení o daru mají zatím jen čáru se jménem.',
       ]);
       expect(links()).toEqual(['/sprava/lide-fondu']);
     });

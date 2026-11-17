@@ -110,6 +110,16 @@ describe('Given an administrator on the older symbols page', () => {
     const [first, second] = rows();
     expect(rowText(first)).toContain('Jana Nováková');
     expect(rowText(first)).toContain('1234567/0800 · Česká spořitelna');
+    expect(
+      Array.from(fixture.nativeElement.querySelectorAll('thead th') as NodeListOf<HTMLElement>)
+        .map((cell) => cell.textContent?.trim())
+        .includes('Bankovní účet'),
+    ).toBe(true);
+    expect(
+      Array.from(first.querySelectorAll('td') as NodeListOf<HTMLElement>).some(
+        (cell) => cell.dataset['label'] === 'Bankovní účet',
+      ),
+    ).toBe(true);
     expect(rowText(first)).toContain('6123456789');
     expect(rowText(first)).toContain('Ano, jsou moje');
     expect(rowText(first)).toContain('20. 10. 2026 11:00');

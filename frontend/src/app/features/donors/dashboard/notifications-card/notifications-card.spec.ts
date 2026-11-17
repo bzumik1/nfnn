@@ -340,7 +340,9 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
       );
       await settle();
 
-      expect(alerts()).toContain('Upozornění můžete mít zapnutá nejvýš na 10 zařízeních.');
+      expect(alerts()).toContain(
+        'Upozornění můžete mít zapnutá nejvýš na 10 zařízeních. Na zařízení, které už nepoužíváte, je vypněte nebo ho v kartě „Přihlášená zařízení“ odhlaste.',
+      );
       expect(push.unsubscribe).toHaveBeenCalledTimes(1);
     });
 
@@ -495,7 +497,9 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
     await signIn('REMEMBERED');
     await open();
 
-    expect(text()).toContain('Na iPhonu a iPadu chodí upozornění jen webu přidanému na plochu.');
+    expect(text()).toContain(
+      'Na iPhonu a iPadu chodí upozornění jen webu přidanému na plochu. V Safari klepněte na „Sdílet“, zvolte „Přidat na plochu“,',
+    );
     expect(button('Zapnout na tomto zařízení')).toBeUndefined();
     agent.mockRestore();
   });

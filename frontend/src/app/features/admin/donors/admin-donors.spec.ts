@@ -226,7 +226,7 @@ describe('Given an administrator on the donors page', () => {
 
     const [first, second] = rows();
     expect(rowText(first)).toContain('Jana Nováková');
-    expect(rowText(first)).toContain('Osoba');
+    expect(rowText(first)).toContain('Člověk');
     expect(rowText(first)).toContain('jana@example.cz');
     expect(rowText(first)).toContain('4821937560');
     expect(rowText(first)).toContain('17. 10. 2026');

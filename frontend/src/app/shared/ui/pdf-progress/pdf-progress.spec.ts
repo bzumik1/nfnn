@@ -92,7 +92,7 @@ describe('Given the line under a PDF button', () => {
     beforeEach(() =>
       show({
         kind: 'ready',
-        text: 'Potvrzení x.pdf je připravené. Otevřete ho tlačítkem Otevřít PDF.',
+        text: 'Potvrzení x.pdf je připravené. Otevřete ho tlačítkem „Otevřít PDF“.',
         brief: 'PDF je připravené',
       }),
     );
@@ -102,7 +102,7 @@ describe('Given the line under a PDF button', () => {
       expect(brief.dataset['brief']).toBe('PDF je připravené');
       expect(brief.getAttribute('aria-hidden')).toBe('true');
       expect(brief.querySelector('svg')).not.toBeNull();
-      expect(status()).toBe('Potvrzení x.pdf je připravené. Otevřete ho tlačítkem Otevřít PDF.');
+      expect(status()).toBe('Potvrzení x.pdf je připravené. Otevřete ho tlačítkem „Otevřít PDF“.');
       expect(element('.pdf-progress__line--done')).not.toBeNull();
       expect(element('button')).toBeNull();
     });
