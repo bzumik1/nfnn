@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 import { stepBack } from './app-history';
-import { mockDonorApi } from './donor-session';
+import { administrator, mockDonorApi, openAccountItem, session } from './donor-session';
 import { expect, test } from './fixtures';
 
 const article = {
@@ -117,6 +117,74 @@ async function publishedArticle(page: Page): Promise<void> {
   );
 }
 
+const pairedPayment = {
+  id: '019a1c00-0000-7000-8000-000000001001',
+  bankTransactionId: 1001,
+  bookedOn: '2026-10-10',
+  amountMinor: 50000,
+  currency: 'CZK',
+  variableSymbol: '1111111111',
+  counterpartyAccount: '2900233333/2010',
+  counterpartyName: 'Nováková Jana',
+  messageForRecipient: 'Dar pro fond',
+  importedAt: '2026-10-17T10:00:00Z',
+  unpairedByAdminAt: null,
+  accountVerification: false,
+  donation: {
+    id: 'd1',
+    donorId: administrator.id,
+    donorName: 'Jana Nováková',
+    pairedBy: 'MANUAL',
+    status: 'RECEIVED',
+    recordedAt: '2026-10-18T09:00:00Z',
+    receiptIssued: false,
+  },
+};
+
+async function pairedPayments(page: Page): Promise<void> {
+  await page.route('**/api/donors/auth/refresh', (route) =>
+    route.fulfill(session(200, administrator)),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/admin/donations/payments',
+    (route) => {
+      const pairedOnly = new URL(route.request().url()).searchParams.get('pairing') === 'paired';
+      return route.fulfill({
+        json: {
+          year: null,
+          availableYears: pairedOnly ? [2026] : [],
+          items: pairedOnly ? [pairedPayment] : [],
+          total: pairedOnly ? 1 : 0,
+        },
+      });
+    },
+  );
+}
+
+async function followPairedPaymentsDonor(page: Page): Promise<void> {
+  await page.goto('/aktuality');
+  await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeVisible();
+  await openAccountItem(page, 'Správa');
+  await expect(page).toHaveURL(/\/sprava$/);
+  await page
+    .getByRole('main')
+    .getByRole('link', { name: /^Platby z banky/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/sprava\/platby/);
+  await page.getByRole('button', { name: 'Přiřazené', exact: true }).click();
+  await page.locator('button[data-payment-row]').click();
+  await page
+    .getByRole('dialog', { name: 'Přiřazená platba' })
+    .getByRole('link', { name: 'Jana Nováková' })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/sprava/darci/${administrator.id}$`));
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(overlays(page)).toHaveCount(0);
+}
+
 async function openArticleFromList(page: Page): Promise<void> {
   await page.goto('/aktuality');
   await page.getByRole('link', { name: article.title }).click();
@@ -214,6 +282,35 @@ test.describe('Given a visitor reading the news on a phone', () => {
       page.getByRole('main').locator(`a[href="/aktuality/${article.slug}"]`).first(),
     ).toBeFocused();
     expect(await seenTransitions(page)).toEqual([]);
+  });
+});
+
+test.describe("Given an administrator on a phone who opened the administration from the account sheet over the news and followed a paired payment's donor from the payments", () => {
+  test.use({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await pairedPayments(page);
+    await followPairedPaymentsDonor(page);
+  });
+
+  test("when they press Zpět on the donor card, then the payments return with the payment's row focused", async ({
+    page,
+  }) => {
+    await back(page).click();
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ })).toBeFocused();
+    await expect(overlays(page)).toHaveCount(0);
+  });
+
+  test('when they close the administration on the donor card, then the news it was opened over return', async ({
+    page,
+  }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Zavřít' }).click();
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeVisible();
   });
 });
 

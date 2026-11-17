@@ -24,6 +24,7 @@ import type { AccountStore, CopyContents } from '../../../core/device/store/acco
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
 import { FORCED_REFRESH_GAP_MS } from '../device-copy/administration-reads';
+import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
 
 const PAYMENTS_URL = '/api/admin/donations/payments';
 const DONORS_URL = '/api/admin/donations/donors';
@@ -1196,6 +1197,21 @@ describe('Given an administrator on the bank payments page where lists show as r
       expect(sheet().querySelector('.pair-payment a')?.getAttribute('href')).toBe(
         '/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369',
       );
+    });
+
+    it("then following the donor from the sheet hands the donor card the history's next step", async () => {
+      await openPaired();
+      const depth = TestBed.inject(BackTarget).nextDepth();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+      sheet()
+        .querySelector<HTMLAnchorElement>('.pair-payment a')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+
+      expect(navigate).toHaveBeenCalledWith('/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369', {
+        replaceUrl: true,
+        state: { [APP_DEPTH_KEY]: depth },
+      });
     });
 
     it('then a gift with an issued receipt cannot be unpaired from the sheet', async () => {

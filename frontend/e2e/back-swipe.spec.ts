@@ -339,3 +339,100 @@ test.describe('Given the app on the home screen of a phone opened by an administ
     await expect(page.locator('.page-transition')).toHaveCount(0);
   });
 });
+
+const pairedPayment = {
+  id: '019a1c00-0000-7000-8000-000000001001',
+  bankTransactionId: 1001,
+  bookedOn: '2026-10-10',
+  amountMinor: 50000,
+  currency: 'CZK',
+  variableSymbol: '1111111111',
+  counterpartyAccount: '2900233333/2010',
+  counterpartyName: 'Nováková Jana',
+  messageForRecipient: 'Dar pro fond',
+  importedAt: '2026-10-17T10:00:00Z',
+  unpairedByAdminAt: null,
+  accountVerification: false,
+  donation: {
+    id: 'd1',
+    donorId: administrator.id,
+    donorName: 'Jana Nováková',
+    pairedBy: 'MANUAL',
+    status: 'RECEIVED',
+    recordedAt: '2026-10-18T09:00:00Z',
+    receiptIssued: false,
+  },
+};
+
+test.describe("Given the app on the home screen of a phone and an administrator who followed a paired payment's donor from the payments", () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'touch events come only through CDP; the swipe in Safari is recorded on the iOS simulator',
+  );
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+      localStorage.setItem('nfnn.donor-session-app', '1');
+    });
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/payments',
+      (route) => {
+        const pairedOnly = new URL(route.request().url()).searchParams.get('pairing') === 'paired';
+        return route.fulfill({
+          json: {
+            year: null,
+            availableYears: pairedOnly ? [2026] : [],
+            items: pairedOnly ? [pairedPayment] : [],
+            total: pairedOnly ? 1 : 0,
+          },
+        });
+      },
+    );
+    const copied = whenAdministrationCopied(page);
+    await page.goto('/sprava');
+    await copied();
+    await page
+      .getByRole('main')
+      .getByRole('link', { name: /^Platby z banky/ })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/sprava\/platby/);
+    await page.getByRole('button', { name: 'Přiřazené', exact: true }).click();
+    await page.locator('button[data-payment-row]').click();
+    await page
+      .getByRole('dialog', { name: 'Přiřazená platba' })
+      .getByRole('link', { name: 'Jana Nováková' })
+      .click();
+    await expect(page).toHaveURL(new RegExp(`/sprava/darci/${administrator.id}$`));
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+
+  test("when a finger drags the donor card back, then the payments lie under it, and on letting go they return with the payment's row focused", async ({
+    page,
+  }) => {
+    const finger = await fingerOn(page);
+
+    await drag(finger, 30, 250);
+    await expect(swipeOverlay(page).locator('.page-transition__page--under h1')).toHaveText(
+      'Platby z banky',
+    );
+    await restLongerThanAFlick(page);
+    await finger.up();
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ })).toBeFocused();
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+});
