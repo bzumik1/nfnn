@@ -35,6 +35,7 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { LiveUpdates } from '../../../core/live/live-updates';
+import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
 import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
@@ -138,6 +139,7 @@ export class AdminPayments {
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly dialogHistory = inject(DialogHistory);
+  private readonly backTarget = inject(BackTarget);
   private readonly route = inject(ActivatedRoute);
   private readonly loginDialog = inject(LoginDialogService);
   private readonly destroyRef = inject(DestroyRef);
@@ -191,6 +193,7 @@ export class AdminPayments {
   protected readonly months = computed(() => byMonth(this.items()));
   protected readonly changedMeanwhile = signal(false);
   private afterReload: (() => void) | null = null;
+  private leftByStep: string | null = null;
 
   protected readonly hasMore = computed(() => this.items().length < this.total());
   protected readonly filteredDonorName = computed(
@@ -203,7 +206,14 @@ export class AdminPayments {
   );
 
   constructor() {
-    afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+    afterNextRender(
+      () => {
+        this.leftByStep = this.backTarget.returningByButton ? this.backTarget.leftPath : null;
+        this.title().nativeElement.focus();
+        this.focusRowLeftBy();
+      },
+      { injector: this.injector },
+    );
     this.pages
       .pipe(
         switchMap((filters) => this.firstPage(filters)),
@@ -435,6 +445,31 @@ export class AdminPayments {
     }
     this.state.set('ready');
     afterReload?.();
+    if (this.leftByStep !== null) {
+      afterNextRender(() => this.focusRowLeftBy(), { injector: this.injector });
+    }
+  }
+
+  private focusRowLeftBy(): void {
+    const left = this.leftByStep;
+    if (left === null || this.state() !== 'ready') {
+      return;
+    }
+    this.leftByStep = null;
+    const shown = this.rows() ? this.months().flatMap((month) => month.items) : this.items();
+    const index = shown.findIndex(
+      (item) => item.donation !== null && this.donorHref(item.donation.donorId) === left,
+    );
+    const row = this.host.nativeElement
+      .querySelectorAll<HTMLElement>('[data-payment-row]')
+      .item(index);
+    if (index < 0 || row === null) {
+      return;
+    }
+    const link = Array.from(row.querySelectorAll<HTMLElement>('a[href]')).find(
+      (candidate) => candidate.getAttribute('href') === left,
+    );
+    (link ?? row).focus({ preventScroll: true });
   }
 
   private leaveOnRefusal(failure: unknown): boolean {
@@ -530,8 +565,12 @@ export class AdminPayments {
     }
     event.preventDefault();
     const url = this.donorHref(donorId);
-    const replaced = this.dialogHistory.handOver(url);
-    void this.router.navigateByUrl(url, { replaceUrl: replaced });
+    const depth = this.backTarget.nextDepth();
+    if (this.dialogHistory.handOver(url)) {
+      void this.router.navigateByUrl(url, { replaceUrl: true, state: { [APP_DEPTH_KEY]: depth } });
+    } else {
+      void this.router.navigateByUrl(url);
+    }
   }
 
   protected closePayment(): void {
