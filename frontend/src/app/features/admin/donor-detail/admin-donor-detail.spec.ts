@@ -543,7 +543,7 @@ describe('Given an administrator on a donor card', () => {
 
     const receipts = sectionText('Vydaná potvrzení');
     expect(receipts).toContain('Rok 2025');
-    expect(receipts).toContain('anglicky');
+    expect(receipts).toContain('angličtina');
     expect(receipts).toContain('nahrazeno novějším');
   });
 
