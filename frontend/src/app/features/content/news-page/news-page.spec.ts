@@ -76,6 +76,10 @@ function link(root: ParentNode, name: string): HTMLAnchorElement | undefined {
   );
 }
 
+function revealOrder(element: Element | null): string {
+  return (element as HTMLElement | null)?.style.getPropertyValue('--reveal-order') ?? '';
+}
+
 function buttonNames(root: ParentNode): string[] {
   return Array.from(root.querySelectorAll('button')).map((button) =>
     (button.textContent ?? '').replace(/\s+/g, ' ').trim(),
@@ -166,6 +170,9 @@ describe('Given a visitor opening Aktuality', () => {
 
     it('then the page is named and the newest news leads it, large, with its signer', () => {
       expect(text(root, 'h1')).toBe('Co je u nás nového');
+      expect(root.querySelector('.ui-intro__lead')?.textContent?.trim()).toBe(
+        'Zprávy o\u00a0tom, komu jsme pomohli, co chystáme a\u00a0jak naložíme s\u00a0vašimi dary.',
+      );
       const featured = root.querySelector('.featured') as HTMLElement;
       expect(text(featured, 'h2')).toBe('Ohlédnutí za rokem 2025');
       expect(link(featured, 'Číst celé Ohlédnutí za rokem 2025')?.getAttribute('href')).toBe(
@@ -213,8 +220,23 @@ describe('Given a visitor opening Aktuality', () => {
 
     it('then the older news follow as cards in a section of their own', () => {
       const older = root.querySelector('.older') as HTMLElement;
-      expect(text(older, 'h2')).toBe('Starší zprávy');
+      expect(text(older, 'h2')).toBe('Starší aktuality');
       expect(texts(older, 'h3')).toEqual(['Ohlédnutí za rokem 2024', 'Ohlédnutí za rokem 2023']);
+    });
+
+    it('then the heading of the older news and each card move in one after another, at most six steps apart', () => {
+      expect(revealOrder(root.querySelector('.older h2'))).toBe('0');
+      expect(
+        Array.from(root.querySelectorAll('.older .grid-item')).map((card) => revealOrder(card)),
+      ).toEqual(['1', '2']);
+    });
+
+    it('then the leading news and the stories do not move in with the older news', () => {
+      const lead = root.querySelector('.lead') as HTMLElement;
+      expect(lead.querySelector('.featured')).not.toBeNull();
+      expect(lead.querySelector('.stories')).not.toBeNull();
+      expect(lead.querySelector('[style*="--reveal-order"]')).toBeNull();
+      expect(lead.closest('[style*="--reveal-order"]')).toBeNull();
     });
 
     it('then every Sdílet button names the article it shares', () => {
@@ -446,6 +468,7 @@ describe('Given a visitor opening Aktuality', () => {
     it('then older pages are offered in a named navigation', () => {
       const nav = root.querySelector('nav.pages') as HTMLElement;
       expect(nav.getAttribute('aria-label')).toBe('Stránky aktualit');
+      expect(revealOrder(nav)).toBe('0');
       expect(text(nav, '.pages-position')).toBe('Strana 1 z 3');
       expect(link(nav, 'Starší')?.getAttribute('href')).toBe('/aktuality?strana=2');
       expect(link(nav, 'Novější')).toBeUndefined();
@@ -481,6 +504,7 @@ describe('Given a visitor opening Aktuality', () => {
     });
 
     it('then it shows only that page as cards, without a leading article or stories', () => {
+      expect(text(root, '.older h2')).toBe('Aktuality na straně 2');
       expect(root.querySelector('.featured')).toBeNull();
       expect(root.querySelector('.stories')).toBeNull();
       expect(texts(root, '.older h3')).toEqual([
@@ -493,6 +517,12 @@ describe('Given a visitor opening Aktuality', () => {
       expect(text(root, '.pages-position')).toBe('Strana 2 z 3');
       expect(link(root, 'Novější')?.getAttribute('href')).toBe('/aktuality');
       expect(link(root, 'Starší')?.getAttribute('href')).toBe('/aktuality?strana=3');
+    });
+
+    it('then the cards come as one list that does not move in card by card', () => {
+      expect(
+        Array.from(root.querySelectorAll('.older app-news-card')).map((card) => revealOrder(card)),
+      ).toEqual(['', '']);
     });
 
     it('then each direction carries a chevron icon hidden from screen readers', () => {
@@ -532,9 +562,130 @@ describe('Given a visitor opening Aktuality', () => {
     expect(link(root, 'Na první stranu')?.getAttribute('href')).toBe('/aktuality');
   });
 
+  describe.each([
+    ['with motion', false],
+    ['with reduced motion', true],
+  ])('while the news are on their way %s', (_, reduced) => {
+    beforeEach(async () => {
+      vi.useFakeTimers();
+      document.documentElement.style.setProperty('--delay-loading', '0.3s');
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: reduced && query === '(prefers-reduced-motion: reduce)',
+        media: query,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }));
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      document.documentElement.style.removeProperty('--delay-loading');
+      vi.useRealTimers();
+    });
+
+    async function openNews(query: Record<string, string> = {}): Promise<void> {
+      ({ fixture, http } = await setUp(query));
+      root = fixture.nativeElement;
+    }
+
+    async function wait(ms: number): Promise<void> {
+      await vi.advanceTimersByTimeAsync(ms);
+      fixture.detectChanges();
+    }
+
+    it('then the status line is there from the start and stays empty until the loading delay is over', async () => {
+      await openNews();
+      const status = root.querySelector('[role="status"]') as HTMLElement;
+      expect(status.classList).toContain('list-state');
+      expect(text(status, '.list-state')).toBe('');
+
+      await wait(299);
+
+      expect(root.querySelector('.list-state-loading')).toBeNull();
+
+      await wait(1);
+
+      expect(text(status, '.list-state-loading')).toBe('Načítáme aktuality…');
+      http.expectOne(NEWS(0)).flush(page([lookBack2025], 0, 1));
+      http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
+    });
+
+    it('and they arrive before the loading delay is over, then no loading text shows and the news stand at once without moving in', async () => {
+      await openNews();
+      await wait(100);
+      http.expectOne(NEWS(0)).flush(page([lookBack2025], 0, 1));
+      http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
+      await wait(0);
+
+      expect(root.querySelector('.list-state-loading')).toBeNull();
+      expect(root.querySelector('.lead')?.classList).not.toContain('lead--appears');
+
+      await wait(1000);
+
+      expect(root.querySelector('.list-state-loading')).toBeNull();
+      expect(root.querySelector('.lead')?.classList).not.toContain('lead--appears');
+    });
+
+    it('and they arrive after the loading text showed, then the news move in in its place', async () => {
+      await openNews();
+      await wait(300);
+      expect(text(root, '.list-state')).toBe('Načítáme aktuality…');
+
+      http.expectOne(NEWS(0)).flush(page([lookBack2025], 0, 1));
+      http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
+      await wait(0);
+
+      expect(root.querySelector('.list-state-loading')).toBeNull();
+      expect(root.querySelector('.lead')?.classList).toContain('lead--appears');
+    });
+
+    it('and a later page arrives after the loading text showed, then its list moves in in its place', async () => {
+      await openNews({ strana: '2' });
+      await wait(300);
+      http.expectOne(NEWS(1)).flush(page([lookBack2024], 1, 25));
+      await wait(0);
+
+      expect(root.querySelector('.older')?.classList).toContain('older--appears');
+    });
+
+    it('and nothing is published, then the empty state is not held back like the loading text', async () => {
+      await openNews();
+      http.expectOne(NEWS(0)).flush(page([], 0, 0));
+      http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
+      await wait(0);
+
+      expect(root.querySelector('.list-state-loading')).toBeNull();
+      expect(text(root, '.list-state')).toBe('Zatím tu žádná aktualita není.');
+    });
+
+    it('and they fail, then the alert is not held back like the loading text', async () => {
+      await openNews();
+      http.expectOne(NEWS(0)).flush(null, { status: 500, statusText: 'Error' });
+      http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
+      await wait(0);
+
+      expect(text(root, '[role="alert"]')).toBe('Aktuality se nepodařilo načíst.');
+      await wait(1000);
+      expect(root.querySelector('.list-state-loading')).toBeNull();
+    });
+
+    it('and the visitor leaves, then the loading delay is cancelled', async () => {
+      await openNews({ strana: '2' });
+      answerHome(http);
+      const news = http.expectOne(NEWS(1));
+      const pending = vi.getTimerCount();
+
+      fixture.destroy();
+
+      expect(vi.getTimerCount()).toBe(pending - 1);
+      expect(news.cancelled).toBe(true);
+    });
+  });
+
   it('when the news fail, then an alert offers to try again and the retry loads them', async () => {
     ({ fixture, http } = await setUp());
     root = fixture.nativeElement;
+    document.body.appendChild(root);
     expect(text(root, '.list-state')).toBe('Načítáme aktuality…');
     http.expectOne(NEWS(0)).flush(null, { status: 500, statusText: 'Error' });
     http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
@@ -546,13 +697,51 @@ describe('Given a visitor opening Aktuality', () => {
     expect(document.activeElement).toBe(retry);
     retry.click();
     fixture.detectChanges();
+
+    expect(document.activeElement).toBe(root.querySelector('.list-state'));
+
     http.expectOne(NEWS(0)).flush(page([lookBack2025], 0, 1));
     await settle(fixture);
 
     http.expectNone(PROJECTS(0));
     expect(root.querySelector('[role="alert"]')).toBeNull();
     expect(text(root, '.featured h2')).toBe('Ohlédnutí za rokem 2025');
-    expect(document.activeElement).toBe(root.querySelector('h1'));
+    expect(document.activeElement).toBe(link(root, 'Číst celé Ohlédnutí za rokem 2025'));
+    root.remove();
+  });
+
+  it('when the retry on a later page loads it, then the focus goes to its first card', async () => {
+    ({ fixture, http } = await setUp({ strana: '2' }));
+    root = fixture.nativeElement;
+    document.body.appendChild(root);
+    http.expectOne(NEWS(1)).flush(null, { status: 500, statusText: 'Error' });
+    await settle(fixture);
+
+    (root.querySelector('.retry') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    http.expectOne(NEWS(1)).flush(page([lookBack2024, lookBack2023], 1, 25));
+    await settle(fixture);
+
+    expect(document.activeElement).toBe(link(root, 'Ohlédnutí za rokem 2024'));
+    root.remove();
+  });
+
+  it('when the retry finds nothing published, then the focus stays on the status line that says so', async () => {
+    ({ fixture, http } = await setUp());
+    root = fixture.nativeElement;
+    document.body.appendChild(root);
+    http.expectOne(NEWS(0)).flush(null, { status: 500, statusText: 'Error' });
+    http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
+    await settle(fixture);
+
+    (root.querySelector('.retry') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    http.expectOne(NEWS(0)).flush(page([], 0, 0));
+    await settle(fixture);
+
+    expect(document.activeElement).toBe(root.querySelector('.list-state'));
+    expect(text(root, '.list-state')).toBe('Zatím tu žádná aktualita není.');
+    root.remove();
   });
 
   it('when the retry fails again, then the focus returns to Zkusit znovu', async () => {

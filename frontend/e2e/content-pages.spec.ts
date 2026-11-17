@@ -315,6 +315,7 @@ test.describe('Given a visitor paging through the news', () => {
     await page.goto('/aktuality');
 
     await expect(page.locator('.featured')).toHaveCount(1);
+    await expect(page.getByRole('heading', { level: 2, name: 'Starší aktuality' })).toBeVisible();
     await expect(page.locator('.news-card')).toHaveCount(9);
     await expect(page.getByText('Strana 1 z 2')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Novější' })).toHaveCount(0);
@@ -324,6 +325,9 @@ test.describe('Given a visitor paging through the news', () => {
       .click();
 
     await expect(page).toHaveURL('/aktuality?strana=2');
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Aktuality na straně 2' }),
+    ).toBeAttached();
     await expect(page.locator('.news-card')).toHaveCount(2);
     await expect(page.getByRole('link', { name: 'Aktualita 12' })).toBeVisible();
     await page.getByRole('link', { name: 'Novější' }).click();
@@ -591,6 +595,8 @@ test.describe('Given a visitor whose connection drops while they page through Ak
     await expect(
       page.getByRole('heading', { level: 3, name: 'Aktualita na straně 2' }),
     ).toBeVisible();
-    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
+    await expect(
+      page.getByRole('link', { name: 'Aktualita na straně 2', exact: true }),
+    ).toBeFocused();
   });
 });

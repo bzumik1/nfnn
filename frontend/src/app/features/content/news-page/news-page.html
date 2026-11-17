@@ -5,15 +5,19 @@
         Co je u nás nového
       </h1>
       <p class="ui-intro__lead" i18n="@@content.news.lead">
-        Zprávy o tom, komu jsme pomohli, co chystáme a jak naložíme s vašimi dary.
+        Zprávy o&nbsp;tom, komu jsme pomohli, co chystáme a&nbsp;jak naložíme s&nbsp;vašimi dary.
       </p>
     </div>
   </header>
 
   <div class="content ui-container">
-    <p class="list-state" role="status">
+    <p #listState class="list-state" role="status" tabindex="-1">
       @if (state() === 'loading') {
-        <span i18n="@@content.list.news.loading">Načítáme aktuality…</span>
+        @if (loadingShown()) {
+          <span class="list-state-loading" i18n="@@content.list.news.loading"
+            >Načítáme aktuality…</span
+          >
+        }
       } @else if (state() === 'ready' && empty()) {
         @if (pastLastPage()) {
           <span i18n="@@content.list.pastEnd">Tato strana neexistuje.</span>
@@ -60,35 +64,57 @@
     }
 
     @if (state() === 'ready') {
-      @if (featured(); as lead) {
-        <app-featured-news [item]="lead" />
-      }
+      @if (featured() || stories()) {
+        <div class="lead" [class.lead--appears]="loadingShown()">
+          @if (featured(); as lead) {
+            <app-featured-news [item]="lead" />
+          }
 
-      @if (stories(); as year) {
-        <app-year-stories class="stories-block" [stories]="year" />
+          @if (stories(); as year) {
+            <app-year-stories class="stories-block" [stories]="year" />
+          }
+        </div>
       }
 
       @if (older().length > 0) {
-        <section class="older" aria-labelledby="news-older-title">
-          @if (featured()) {
-            <h2 id="news-older-title" class="section-title" i18n="@@content.news.older.title">
-              Starší zprávy
+        @if (featured()) {
+          <section class="older" aria-labelledby="news-older-title">
+            <h2
+              id="news-older-title"
+              class="section-title"
+              appReveal
+              i18n="@@content.news.older.title"
+            >
+              Starší aktuality
             </h2>
-          } @else {
+            <div class="grid">
+              @for (item of older(); track item.id) {
+                <div class="grid-item" [appReveal]="$index + 1">
+                  <app-news-card [item]="item" />
+                </div>
+              }
+            </div>
+          </section>
+        } @else {
+          <section
+            class="older"
+            [class.older--appears]="loadingShown()"
+            aria-labelledby="news-older-title"
+          >
             <h2 id="news-older-title" class="visually-hidden" i18n="@@content.news.older.page">
-              Zprávy na straně {{ pageNumber() }}
+              Aktuality na straně {{ pageNumber() }}
             </h2>
-          }
-          <div class="grid">
-            @for (item of older(); track item.id) {
-              <app-news-card [item]="item" />
-            }
-          </div>
-        </section>
+            <div class="grid">
+              @for (item of older(); track item.id) {
+                <app-news-card [item]="item" />
+              }
+            </div>
+          </section>
+        }
       }
 
       @if (pageCount() > 1 && !empty()) {
-        <nav class="pages ui-pager" [attr.aria-label]="pagesLabel">
+        <nav class="pages ui-pager" appReveal [attr.aria-label]="pagesLabel">
           @if (pageNumber() > 1) {
             <a
               class="ui-button ui-pager__step ui-pager__step--newer"

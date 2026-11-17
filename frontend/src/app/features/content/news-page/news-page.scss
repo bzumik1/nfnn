@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 
 :host {
   display: block;
@@ -9,15 +10,24 @@
   padding-bottom: var(--space-27);
 }
 
-.list-state:empty {
-  display: none;
-}
-
 .list-state,
 .list-error {
   color: var(--color-text-soft);
   font-size: var(--text-xl);
   margin-bottom: var(--space-6);
+}
+
+.list-state:empty {
+  margin-bottom: 0;
+}
+
+.list-state-loading {
+  @include motion.appear;
+}
+
+.lead--appears,
+.older--appears {
+  @include motion.appear;
 }
 
 .list-error {
@@ -48,9 +58,12 @@
   }
 }
 
-app-featured-news ~ .older,
-.stories-block ~ .older {
+.lead ~ .older {
   margin-top: var(--space-16);
+}
+
+.list-state + .older {
+  margin-top: 0;
 }
 
 .grid {
@@ -58,6 +71,10 @@ app-featured-news ~ .older,
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
   gap: var(--space-7);
   align-items: stretch;
+}
+
+.grid-item {
+  display: grid;
 }
 
 .pages {

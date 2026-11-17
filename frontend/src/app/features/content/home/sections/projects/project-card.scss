@@ -1,7 +1,38 @@
+@use 'motion';
 @use 'pressed';
+
+@mixin lifted {
+  translate: 0 calc(-1 * var(--motion-lift));
+
+  &::after {
+    opacity: 1;
+  }
+}
 
 :host {
   display: block;
+}
+
+:host(:has(.card-link)) {
+  position: relative;
+  @include motion.hover(translate) {
+    @include lifted;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card-hover);
+    opacity: 0;
+    pointer-events: none;
+    @include motion.state(opacity);
+  }
+}
+
+:host(:has(.card-link:focus-visible)) {
+  @include lifted;
 }
 
 .card {
@@ -71,16 +102,7 @@
 
 .card:has(.card-link) {
   position: relative;
-  transition:
-    box-shadow var(--duration-base),
-    transform var(--duration-base);
-
-  @media (hover: hover) {
-    &:hover {
-      box-shadow: var(--shadow-card-hover);
-      transform: translateY(-4px);
-    }
-  }
+  @include motion.move(transform);
 }
 
 .card:has(.card-link:active) {
