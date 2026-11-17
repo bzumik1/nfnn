@@ -48,6 +48,10 @@ $intro-measure: calc($container-width - 2 * var(--space-6));
   margin-bottom: 0;
   padding: 0;
   background: none;
+
+  .container {
+    margin-inline: 0;
+  }
 }
 
 @include bp.up(wide) {

@@ -92,6 +92,10 @@ app-live-notice:has(p) {
   list-style: disc;
   font-size: var(--text-md);
   color: var(--color-text-secondary);
+
+  a {
+    color: var(--color-accent);
+  }
 }
 
 .keep-open,

@@ -28,7 +28,7 @@
 .search-row {
   display: flex;
   gap: var(--space-2);
-  align-items: center;
+  align-items: stretch;
 }
 
 .search-input {
@@ -39,7 +39,7 @@
 .filters {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: stretch;
   gap: var(--space-2) var(--space-3);
 
   .ui-segmented {

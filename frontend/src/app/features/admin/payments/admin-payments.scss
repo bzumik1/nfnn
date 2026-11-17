@@ -224,6 +224,10 @@
 .donor-link {
   margin: 0 0 var(--space-4);
   font-size: var(--text-md);
+
+  a {
+    color: var(--color-accent);
+  }
 }
 
 .held-tag {
@@ -281,6 +285,10 @@
 
     .muted {
       display: block;
+    }
+
+    a {
+      color: var(--color-accent);
     }
   }
 }
