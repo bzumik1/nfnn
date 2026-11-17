@@ -22,5 +22,13 @@
     "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the news fail, then an alert card offers to try again and the retry loads them and says so",
     "reason": "Desktop polish P21 (#1174): a failed load is one ui-notice alert card with 'Aktuality se nepodařilo načíst. Zkuste to znovu.' and Zkusit znovu, and a retry that loads the news announces it in the status line",
     "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the retry finds nothing published, then the focus stays on the status line that says so",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the retry finds nothing published, then the focus goes to the card that says so",
+    "reason": "Desktop polish P22 (#1174): nothing published is a ui-notice card in place of the leading news, so after a retry the focus goes to that card, which says it, and the status line stays empty",
+    "contract": "docs/frontend-overview.md, content"
   }
 ]
