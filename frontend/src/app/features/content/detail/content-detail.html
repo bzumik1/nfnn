@@ -9,8 +9,16 @@
   @case ('error') {
     <section class="detail detail--waiting ui-intro">
       <div class="ui-intro__head ui-container">
-        <p class="waiting" role="alert" i18n="@@content.detail.error">
-          Stránku se nepodařilo načíst.
+        <p class="ui-notice ui-notice--alert" role="alert">
+          @if (kind === 'news') {
+            <ng-container i18n="@@content.detail.error.news"
+              >Aktualitu se nepodařilo načíst. Zkuste to znovu.</ng-container
+            >
+          } @else {
+            <ng-container i18n="@@content.detail.error.projects"
+              >Příběh se nepodařilo načíst. Zkuste to znovu.</ng-container
+            >
+          }
         </p>
         <button
           appNeedsConnection
@@ -29,7 +37,32 @@
   }
   @case ('ready') {
     @if (page(); as page) {
-      <app-content-article [page]="page" [kind]="kind" />
+      <app-content-article [page]="page" [kind]="kind">
+        @if (onward(); as onward) {
+          <aside class="onward" aria-labelledby="onward-heading">
+            <h2 id="onward-heading" class="onward-heading">
+              @if (onward.kind === 'news') {
+                <ng-container i18n="@@content.detail.onward.news">Další aktuality</ng-container>
+              } @else {
+                <ng-container i18n="@@content.detail.onward.projects"
+                  >Další příběhy z roku {{ onward.year }}</ng-container
+                >
+              }
+            </h2>
+            <ul class="onward-list" role="list">
+              @if (onward.kind === 'news') {
+                @for (item of onward.items; track item.id) {
+                  <li><app-news-card [item]="item" /></li>
+                }
+              } @else {
+                @for (item of onward.items; track item.id) {
+                  <li><app-story-tile [item]="item" /></li>
+                }
+              }
+            </ul>
+          </aside>
+        }
+      </app-content-article>
     }
   }
 }

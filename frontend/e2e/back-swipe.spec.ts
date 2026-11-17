@@ -6,6 +6,7 @@ import {
   session,
   whenAdministrationCopied,
 } from './donor-session';
+import { NEWS_PAGE_SIZE } from '../src/app/features/content/content-page-sizes';
 import { expect, test } from './fixtures';
 
 const FLICK_REST_MS = 100;
@@ -61,10 +62,14 @@ async function drag(finger: Finger, from: number, to: number): Promise<void> {
   }
 }
 
-function asked(page: Page, path: string): () => number {
+function asked(page: Page, path: string, params: Record<string, string> = {}): () => number {
   let count = 0;
   page.on('request', (request) => {
-    if (new URL(request.url()).pathname === path) {
+    const url = new URL(request.url());
+    const matches = Object.entries(params).every(
+      ([name, value]) => url.searchParams.get(name) === value,
+    );
+    if (url.pathname === path && matches) {
       count++;
     }
   });
@@ -176,7 +181,7 @@ test.describe('Given the app on the home screen of a phone with an article opene
   test('when the article was opened afresh and a finger drags it back, then the list, never shown before, is drawn under it and on letting go is the page that opens without being asked for again', async ({
     page,
   }) => {
-    const listAsked = asked(page, '/api/content/news');
+    const listAsked = asked(page, '/api/content/news', { size: String(NEWS_PAGE_SIZE) });
     await page.goto(`/aktuality/${article.slug}`);
     await expect(page.getByRole('heading', { level: 1, name: article.title })).toBeVisible();
     const finger = await fingerOn(page);
