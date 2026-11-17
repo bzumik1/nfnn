@@ -20,6 +20,7 @@ export interface ContentPage {
   imageAlt: string;
   imageFocalPoint: FocalPoint | null;
   slug: string;
+  year: number | null;
   backPath: string;
   signer: ContentSigner | null;
 }
@@ -35,6 +36,7 @@ export function newsPage(article: NewsArticleResponse): ContentPage {
     imageAlt: article.coverImage?.alt ?? '',
     imageFocalPoint: article.coverImage?.focalPoint ?? null,
     slug: article.slug,
+    year: null,
     backPath: '/aktuality',
     signer: article.signer
       ? {
@@ -56,6 +58,7 @@ export function projectPage(project: ProjectResponse): ContentPage {
     imageAlt: project.coverImage?.alt ?? '',
     imageFocalPoint: project.coverImage?.focalPoint ?? null,
     slug: project.slug,
+    year: project.year,
     backPath: '/projekty',
     signer: null,
   };

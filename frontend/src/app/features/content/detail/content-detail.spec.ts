@@ -1,6 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import {
@@ -21,6 +21,7 @@ import { connectivityInterceptor } from '../../../core/connectivity/connectivity
 import { keptAnswerRefreshInterceptor } from '../../../core/connectivity/kept-answer-refresh';
 import { serviceWorkerBypassInterceptor } from '../../../core/updates/service-worker-bypass';
 import { KeptTabPages } from '../../../core/navigation/kept-tab-pages';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 @Component({ template: '' })
 class OtherTab {}
@@ -39,6 +40,7 @@ function problem(status: number, type: string) {
 async function setUp(
   kind: ContentKind,
   slug: string,
+  compact = false,
 ): Promise<{ fixture: ComponentFixture<ContentDetail>; http: HttpTestingController }> {
   await TestBed.configureTestingModule({
     imports: [ContentDetail],
@@ -46,6 +48,7 @@ async function setUp(
       provideHttpClient(),
       provideHttpClientTesting(),
       provideRouter([]),
+      { provide: CompactLayout, useValue: { isCompact: signal(compact).asReadonly() } },
       {
         provide: ActivatedRoute,
         useValue: { snapshot: { paramMap: convertToParamMap({ slug }), data: { kind } } },
@@ -68,6 +71,41 @@ async function settle(fixture: ComponentFixture<unknown>): Promise<void> {
   fixture.detectChanges();
 }
 
+function isList(request: { url: string }): boolean {
+  return request.url === '/api/content/news' || request.url === '/api/content/projects';
+}
+
+function leaveListsUnanswered(http: HttpTestingController): void {
+  for (const request of http.match(isList)) {
+    if (!request.cancelled) {
+      request.flush(null, { status: 500, statusText: 'Error' });
+    }
+  }
+}
+
+function listPage<T>(items: T[]) {
+  return { items, page: 0, size: items.length, total: items.length, hasMore: false };
+}
+
+function onward(fixture: ComponentFixture<unknown>): HTMLElement | null {
+  return fixture.nativeElement.querySelector('aside');
+}
+
+function onwardTitles(fixture: ComponentFixture<unknown>): string[] {
+  return Array.from((onward(fixture)?.querySelectorAll('h3') ?? []) as NodeListOf<Element>).map(
+    (title) => title.textContent?.trim() ?? '',
+  );
+}
+
+function headingOf(region: HTMLElement): string {
+  const id = region.getAttribute('aria-labelledby') ?? '';
+  return region.ownerDocument.getElementById(id)?.textContent?.trim() ?? '';
+}
+
+function follows(earlier: Element, later: Element): boolean {
+  return Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
+}
+
 describe('Given a visitor opening a news article', () => {
   let fixture: ComponentFixture<ContentDetail>;
   let http: HttpTestingController;
@@ -76,7 +114,10 @@ describe('Given a visitor opening a news article', () => {
     ({ fixture, http } = await setUp('news', 'zahrada-pro-deti'));
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    leaveListsUnanswered(http);
+    http.verify();
+  });
 
   it('when the article arrives, then the page shows its tag and date, title, perex, photo and paragraphs and names the tab after it', async () => {
     http.expectOne('/api/content/news/zahrada-pro-deti').flush(newsArticle());
@@ -95,10 +136,56 @@ describe('Given a visitor opening a news article', () => {
     expect(image.getAttribute('srcset')).toContain(`/api/content/media/${IMAGE_ID}?w=1440 1440w`);
     expect(image.getAttribute('alt')).toBe('');
     expect(TestBed.inject(Title).getTitle()).toBe('Zahrada pro děti | Nová naděje – nadační fond');
-    expect(text(fixture, '.crumbs a')).toBe('← Všechny aktuality');
-    expect(fixture.nativeElement.querySelector('.crumbs a').getAttribute('href')).toBe(
-      '/aktuality',
-    );
+  });
+
+  it('when the article and the newest news arrive, then a side region after the article offers the newest other news under its own heading', async () => {
+    http.expectOne('/api/content/news/zahrada-pro-deti').flush(newsArticle());
+    await settle(fixture);
+    http
+      .expectOne(
+        (request) =>
+          request.url === '/api/content/news' &&
+          request.params.get('page') === '0' &&
+          request.params.get('size') === '4',
+      )
+      .flush(
+        listPage([
+          newsArticle({ id: 'n1', slug: 'letni-tabor', title: 'Letní tábor' }),
+          newsArticle(),
+          newsArticle({ id: 'n2', slug: 'novy-vozik', title: 'Nový vozík' }),
+          newsArticle({ id: 'n3', slug: 'koncert', title: 'Koncert' }),
+        ]),
+      );
+    await settle(fixture);
+
+    const region = onward(fixture)!;
+    expect(region).not.toBeNull();
+    expect(headingOf(region)).toBe('Další aktuality');
+    expect(onwardTitles(fixture)).toEqual(['Letní tábor', 'Nový vozík', 'Koncert']);
+    expect(follows(fixture.nativeElement.querySelector('article.detail'), region)).toBe(true);
+    expect(fixture.nativeElement.querySelector('article.detail').contains(region)).toBe(false);
+  });
+
+  it('when no other news is published, then no side region is shown', async () => {
+    http.expectOne('/api/content/news/zahrada-pro-deti').flush(newsArticle());
+    await settle(fixture);
+    http
+      .expectOne((request) => request.url === '/api/content/news')
+      .flush(listPage([newsArticle()]));
+    await settle(fixture);
+
+    expect(onward(fixture)).toBeNull();
+  });
+
+  it('when the newest news cannot be loaded, then the article stays and no side region is shown', async () => {
+    http.expectOne('/api/content/news/zahrada-pro-deti').flush(newsArticle());
+    await settle(fixture);
+    leaveListsUnanswered(http);
+    await settle(fixture);
+
+    expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
+    expect(onward(fixture)).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
   });
 
   it('when the article answers under its newer address, then the address bar shows the newer one', async () => {
@@ -171,8 +258,11 @@ describe('Given a visitor opening a news article', () => {
       .flush(null, { status: 500, statusText: 'Error' });
     await settle(fixture);
 
-    expect(text(fixture, '[role="alert"]')).toBe('Stránku se nepodařilo načíst.');
-    (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();
+    const notice = fixture.nativeElement.querySelector('.ui-notice[role="alert"]');
+    expect(notice?.textContent?.trim()).toBe('Aktualitu se nepodařilo načíst. Zkuste to znovu.');
+    const retry = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    expect(retry.textContent?.trim()).toBe('Zkusit znovu');
+    retry.click();
     await settle(fixture);
     http.expectOne('/api/content/news/zahrada-pro-deti').flush(newsArticle());
     await settle(fixture);
@@ -189,7 +279,10 @@ describe('Given a visitor opening a project', () => {
     ({ fixture, http } = await setUp('project', 'zahrada-pro-deti'));
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    leaveListsUnanswered(http);
+    http.verify();
+  });
 
   it('when the project arrives, then the page shows its tag and year and leads back to the projects', async () => {
     http.expectOne('/api/content/projects/zahrada-pro-deti').flush(project());
@@ -197,19 +290,57 @@ describe('Given a visitor opening a project', () => {
 
     expect(text(fixture, '.ui-intro__meta')).toBe('Projekt · 2024');
     expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
-    expect(text(fixture, '.crumbs a')).toBe('← Kde pomáháme');
-    expect(fixture.nativeElement.querySelector('.crumbs a').getAttribute('href')).toBe('/projekty');
+    expect(fixture.nativeElement.querySelector('.crumbs')).toBeNull();
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('.actions a') as NodeListOf<Element>).map(
         (link) => [link.getAttribute('href'), link.textContent?.trim()],
       ),
     ).toEqual([
       ['/prispet', 'Přispět'],
-      ['/projekty', 'Kde všude pomáháme'],
+      ['/projekty', 'Kde pomáháme'],
     ]);
     expect(text(fixture, '.actions-lead')).toBe(
       'Chcete pomoct dalším dětem? Přispějte na jejich pomůcky.',
     );
+  });
+
+  it('when the published stories arrive, then a side region after the article offers the other stories of the same year under its own heading', async () => {
+    http.expectOne('/api/content/projects/zahrada-pro-deti').flush(project());
+    await settle(fixture);
+    http
+      .expectOne((request) => request.url === '/api/content/projects')
+      .flush(
+        listPage([
+          project({ id: 'p1', slug: 'eliska', title: 'Eliška, 5 let' }),
+          project(),
+          project({ id: 'p2', slug: 'jan', title: 'Jan, 9 let', year: 2023 }),
+          project({ id: 'p3', slug: 'adam', title: 'Adam, 12 let' }),
+        ]),
+      );
+    leaveListsUnanswered(http);
+    await settle(fixture);
+
+    const region = onward(fixture)!;
+    expect(region).not.toBeNull();
+    expect(headingOf(region)).toBe('Další příběhy z roku 2024');
+    expect(onwardTitles(fixture)).toEqual(['Eliška, 5 let', 'Adam, 12 let']);
+    expect(follows(fixture.nativeElement.querySelector('article.detail'), region)).toBe(true);
+  });
+
+  it('when the server fails, then an alert names the story and offers a retry', async () => {
+    http
+      .expectOne('/api/content/projects/zahrada-pro-deti')
+      .flush(null, { status: 500, statusText: 'Error' });
+    await settle(fixture);
+
+    const notice = fixture.nativeElement.querySelector('.ui-notice[role="alert"]');
+    expect(notice?.textContent?.trim()).toBe('Příběh se nepodařilo načíst. Zkuste to znovu.');
+    (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();
+    await settle(fixture);
+    http.expectOne('/api/content/projects/zahrada-pro-deti').flush(project());
+    await settle(fixture);
+
+    expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
   });
 
   it('when the project is unknown, then the page says it was not found', async () => {
@@ -219,6 +350,34 @@ describe('Given a visitor opening a project', () => {
 
     expect(fixture.nativeElement.querySelector('app-not-found')).not.toBeNull();
     expect(text(fixture, 'app-not-found a')).toBe('Kde pomáháme');
+  });
+});
+
+describe('Given a visitor on a phone opening a news article and then a project', () => {
+  it('when each arrives, then a text link above the title and the last button lead back to its list', async () => {
+    const { fixture, http } = await setUp('news', 'zahrada-pro-deti', true);
+    http.expectOne('/api/content/news/zahrada-pro-deti').flush(newsArticle());
+    await settle(fixture);
+
+    expect(text(fixture, '.crumbs a')).toBe('← Všechny aktuality');
+    expect(fixture.nativeElement.querySelector('.crumbs a').getAttribute('href')).toBe(
+      '/aktuality',
+    );
+    expect(text(fixture, '.actions a.ui-cta--ghost')).toBe('Zpět na aktuality');
+    leaveListsUnanswered(http);
+    http.verify();
+  });
+
+  it('when a project arrives, then the text link above the title leads back to the stories', async () => {
+    const { fixture, http } = await setUp('project', 'zahrada-pro-deti', true);
+    http.expectOne('/api/content/projects/zahrada-pro-deti').flush(project());
+    await settle(fixture);
+
+    expect(text(fixture, '.crumbs a')).toBe('← Kde pomáháme');
+    expect(fixture.nativeElement.querySelector('.crumbs a').getAttribute('href')).toBe('/projekty');
+    expect(text(fixture, '.actions a.ui-cta--ghost')).toBe('Kde všude pomáháme');
+    leaveListsUnanswered(http);
+    http.verify();
   });
 });
 
@@ -258,6 +417,7 @@ describe('Given a visitor opening a news article the service worker kept from an
 
   afterEach(() => {
     http.match(PROBE_PATH).forEach((probe) => probe.flush({}));
+    leaveListsUnanswered(http);
     http.verify();
   });
 
@@ -306,7 +466,10 @@ describe('Given an article kept while the visitor is on another tab', () => {
     await harness.navigateByUrl('/aktuality/zahrada-pro-deti');
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    leaveListsUnanswered(http);
+    http.verify();
+  });
 
   async function shown(): Promise<HTMLElement> {
     await harness.fixture.whenStable();

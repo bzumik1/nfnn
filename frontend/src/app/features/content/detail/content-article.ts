@@ -3,10 +3,12 @@ import {
   Component,
   computed,
   ElementRef,
+  inject,
   input,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { canonicalAddress } from '../../../core/seo/canonical-link';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { FocalPointCrop } from '../../../shared/ui/focal-point/focal-point';
@@ -28,11 +30,14 @@ const PORTRAIT_WIDTH = 480;
   templateUrl: './content-article.html',
   styleUrl: './content-article.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.is-preview]': 'preview()' },
 })
 export class ContentArticle {
   readonly page = input.required<ContentPage>();
   readonly kind = input.required<ContentKind>();
   readonly preview = input(false);
+
+  protected readonly compact = inject(CompactLayout).isCompact;
 
   private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('heading');
 

@@ -1,5 +1,7 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { IMAGE_ID, newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
@@ -7,10 +9,14 @@ import { FakeDialogHistory } from '../../../shared/ui/dialog/testing/fake-dialog
 import { ContentArticle } from './content-article';
 import { newsPage, projectPage } from './content-page';
 
-async function setUp(): Promise<ComponentFixture<ContentArticle>> {
+async function setUp(compact = true): Promise<ComponentFixture<ContentArticle>> {
   await TestBed.configureTestingModule({
     imports: [ContentArticle],
-    providers: [provideRouter([]), { provide: DialogHistory, useClass: FakeDialogHistory }],
+    providers: [
+      provideRouter([]),
+      { provide: DialogHistory, useClass: FakeDialogHistory },
+      { provide: CompactLayout, useValue: { isCompact: signal(compact).asReadonly() } },
+    ],
   }).compileComponents();
   return TestBed.createComponent(ContentArticle);
 }
@@ -36,6 +42,7 @@ describe('Given the page of a news article', () => {
     expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
     expect(text(fixture, '.ui-intro__meta')).toBe('Projekt · 20. 10. 2026');
     expect(text(fixture, '.crumbs a')).toBe('← Všechny aktuality');
+    expect(text(fixture, '.actions a.ui-cta--ghost')).toBe('Zpět na aktuality');
     expect(
       (fixture.nativeElement.querySelector('.photo img') as HTMLImageElement).getAttribute('src'),
     ).toBe(`/api/content/media/${IMAGE_ID}?w=960`);
@@ -80,6 +87,44 @@ describe('Given the page of a news article', () => {
     expect(fixture.nativeElement.querySelector('h1')).toBeNull();
     expect(text(fixture, 'h3.ui-intro__title')).toBe('Zahrada pro děti');
     expect(text(fixture, '.ui-intro__lead')).toBe(newsArticle().perex);
+  });
+});
+
+describe('Given the page of a news article on a computer', () => {
+  let fixture: ComponentFixture<ContentArticle>;
+
+  beforeEach(async () => {
+    fixture = await setUp(false);
+    fixture.componentRef.setInput('kind', 'news');
+    fixture.componentRef.setInput('page', newsPage(newsArticle()));
+    await fixture.whenStable();
+  });
+
+  it('when it is shown, then no text link leads back above the title and the last button leads to all the news under the name of the list', () => {
+    expect(fixture.nativeElement.querySelector('.crumbs')).toBeNull();
+    expect(
+      Array.from(fixture.nativeElement.querySelectorAll('.actions a') as NodeListOf<Element>).map(
+        (link) => [link.getAttribute('href'), link.textContent?.trim()],
+      ),
+    ).toEqual([
+      ['/prispet', 'Přispět'],
+      ['/aktuality', 'Všechny aktuality'],
+    ]);
+  });
+});
+
+describe('Given the page of a project on a computer', () => {
+  it('when it is shown, then no text link leads back above the title and the last button leads to all the stories under the name of the list', async () => {
+    const fixture = await setUp(false);
+    fixture.componentRef.setInput('kind', 'project');
+    fixture.componentRef.setInput('page', projectPage(project()));
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.crumbs')).toBeNull();
+    expect(text(fixture, '.actions a.ui-cta--ghost')).toBe('Kde pomáháme');
+    expect(
+      fixture.nativeElement.querySelector('.actions a.ui-cta--ghost').getAttribute('href'),
+    ).toBe('/projekty');
   });
 });
 

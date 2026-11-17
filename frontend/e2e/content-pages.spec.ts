@@ -102,7 +102,8 @@ test.describe('Given a visitor on the Aktuality and Pomáháme tabs', () => {
     await expect(page.locator('.photo img')).toBeVisible();
     await expect(page.locator('.photo img')).toHaveAttribute('alt', 'Děti sázejí stromek');
 
-    await page.getByRole('link', { name: '← Všechny aktuality' }).click();
+    await expect(page.getByRole('link', { name: '← Všechny aktuality' })).toHaveCount(0);
+    await page.getByRole('link', { name: 'Všechny aktuality', exact: true }).click();
 
     await expect(page).toHaveURL('/aktuality');
     await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
@@ -119,7 +120,7 @@ test.describe('Given a visitor on the Aktuality and Pomáháme tabs', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Dominik, 7 let' })).toBeFocused();
     await expect(page.locator('.ui-intro__meta')).toHaveText('Kompenzační pomůcky · 2024');
     await expect(page.locator('.photo')).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Kde všude pomáháme' })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: 'Kde pomáháme', exact: true })).toHaveAttribute(
       'href',
       '/projekty',
     );
@@ -211,6 +212,74 @@ test.describe('Given a visitor reading a news article', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeVisible();
   });
 });
+
+for (const width of [1600, 1920]) {
+  test.describe(`Given a visitor ${width} px wide reading a news article with more news published`, () => {
+    test.beforeEach(async ({ page }) => {
+      await mockDonorApi(page);
+      await publishedContent(page);
+      await page.route(
+        (url) => url.pathname === '/api/content/news',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                article,
+                { ...article, id: 'n2', slug: 'letni-tabor', title: 'Letní tábor' },
+                { ...article, id: 'n3', slug: 'novy-vozik', title: 'Nový vozík' },
+              ],
+              page: 0,
+              size: 4,
+              total: 3,
+              hasMore: false,
+            },
+          }),
+      );
+      await page.setViewportSize({ width, height: 1000 });
+    });
+
+    test('when the page shows, then the side column stands at most --space-20 after the text, within the header, and the text keeps its measure', async ({
+      page,
+    }) => {
+      await page.goto(`/aktuality/${article.slug}`);
+      const side = page.getByRole('complementary', { name: 'Další aktuality' });
+      await expect(side).toBeVisible();
+
+      const geometry = await page.evaluate(() => {
+        const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+        const probe = document.createElement('div');
+        probe.style.width = 'var(--space-20)';
+        document.body.append(probe);
+        const space20 = probe.getBoundingClientRect().width;
+        probe.remove();
+        const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const header = document.querySelector('.app-header-inner')!;
+        const headerEnd =
+          header.getBoundingClientRect().right - parseFloat(getComputedStyle(header).paddingRight);
+        const textEnd = Math.max(
+          box('.prose').right,
+          box('.photo').right,
+          box('.ui-intro__lead').right,
+        );
+        return {
+          gap: box('aside').left - textEnd,
+          space20,
+          sideEnd: box('aside').right,
+          headerEnd,
+          prose: box('.prose').width,
+          lead: box('.ui-intro__lead').width,
+          measure: 40 * rem,
+        };
+      });
+
+      expect(geometry.gap).toBeGreaterThan(0);
+      expect(geometry.gap).toBeLessThanOrEqual(geometry.space20 + 1);
+      expect(geometry.sideEnd).toBeLessThanOrEqual(geometry.headerEnd + 1);
+      expect(geometry.prose).toBeLessThanOrEqual(geometry.measure + 1);
+      expect(geometry.lead).toBeLessThanOrEqual(geometry.measure + 1);
+    });
+  });
+}
 
 test.describe('Given a visitor paging through the news', () => {
   test('when there are more than ten articles, then the list pages by ten and the address names the page', async ({
