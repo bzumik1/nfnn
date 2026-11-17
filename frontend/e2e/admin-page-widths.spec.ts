@@ -49,6 +49,7 @@ const FORM_WIDTH_PAGES = [
 
 interface Edges {
   readonly left: number;
+  readonly contentLeft: number;
   readonly contentRight: number;
   readonly widestCardRight: number;
   readonly avatarRight: number;
@@ -80,12 +81,14 @@ async function edgesAt(page: Page, width: number): Promise<Edges> {
   expect(avatar).not.toBeNull();
   const edges = await pageBox(page).evaluate((element) => {
     const box = element.getBoundingClientRect();
-    const paddingRight = parseFloat(getComputedStyle(element).paddingRight);
+    const style = getComputedStyle(element);
+    const paddingRight = parseFloat(style.paddingRight);
     const cards = Array.from(element.querySelectorAll('.ui-card')).map(
       (card) => card.getBoundingClientRect().right,
     );
     return {
       left: box.left,
+      contentLeft: box.left + parseFloat(style.paddingLeft),
       contentRight: box.right - paddingRight,
       widestCardRight: Math.max(box.left, ...cards),
       pansSideways: document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -134,6 +137,79 @@ test.describe('Given an administrator on a computer', () => {
   }
 });
 
+function contentWidth(edges: Edges): number {
+  return edges.contentRight - edges.contentLeft;
+}
+
+async function textSize(page: Page, percent: number): Promise<void> {
+  await page.addStyleTag({ content: `html { font-size: ${percent}%; }` });
+}
+
+async function rightOfCardContent(field: Locator): Promise<{ field: number; card: number }> {
+  return field.evaluate((element) => {
+    const card = element.closest('.ui-card');
+    if (card === null) {
+      throw new Error('the field is outside a card');
+    }
+    const cardBox = card.getBoundingClientRect();
+    return {
+      field: element.getBoundingClientRect().right,
+      card: cardBox.right - parseFloat(getComputedStyle(card).paddingRight),
+    };
+  });
+}
+
+test.describe('Given an administrator on a form page on a computer', () => {
+  test('when the text grows, then the form width grows with it, measured on the content, until it reaches the avatar', async ({
+    page,
+  }) => {
+    await openUnlocked(page, '/sprava/nastaveni');
+    const atDefault = await edgesAt(page, WHERE_THE_FORM_WIDTH_STAYS_NARROWER);
+
+    await textSize(page, 125);
+    const larger = await edgesAt(page, WHERE_THE_FORM_WIDTH_STAYS_NARROWER);
+    expect(contentWidth(larger)).toBeCloseTo(contentWidth(atDefault) * 1.25, 0);
+
+    await textSize(page, 200);
+    const largest = await edgesAt(page, WHERE_THE_FORM_WIDTH_STAYS_NARROWER);
+    expectWithinTheAvatar(largest);
+    expect(largest.contentRight).toBeCloseTo(largest.avatarRight, 0);
+  });
+
+  for (const [path, wide] of [
+    ['/sprava/prehledy', '#report-recipients'],
+    ['/sprava/zalohy', '#test-restore-time'],
+    ['/sprava/aktuality/nova', '#news-title'],
+    ['/sprava/projekty/nova', '#projects-title'],
+  ] as const) {
+    test(`when ${path} opens, then its wide field fills the card`, async ({ page }) => {
+      await page.setViewportSize({
+        width: WHERE_THE_FULL_WIDTH_REACHES_THE_AVATAR,
+        height: HEIGHT,
+      });
+      await openUnlocked(page, path);
+      const field = page.locator(wide);
+      await expect(field).toBeVisible();
+
+      const edges = await rightOfCardContent(field);
+      expect(edges.field).toBeCloseTo(edges.card, 0);
+    });
+  }
+
+  test('when Měsíční e-mail opens, then its day and hour stay short beside the recipients filling the card', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: WHERE_THE_FULL_WIDTH_REACHES_THE_AVATAR, height: HEIGHT });
+    await openUnlocked(page, '/sprava/prehledy');
+    const recipients = await page.locator('#report-recipients').boundingBox();
+
+    for (const short of ['#report-send-day', '#report-send-hour']) {
+      const box = await page.locator(short).boundingBox();
+      expect(box!.width).toBeLessThan(recipients!.width / 2);
+    }
+  });
+});
+
 test.describe('Given an administrator who opens Občas a pro technika', () => {
   test('when a computer opens its address, then the overview opens in its place and the side navigation does not list it', async ({
     page,
@@ -166,4 +242,69 @@ test.describe('Given an administrator who opens Občas a pro technika', () => {
       page.getByRole('heading', { level: 1, name: 'Správa', exact: true }),
     ).toBeVisible();
   });
+});
+
+interface FileNameLines {
+  readonly found: number;
+  readonly brokenInside: number;
+  readonly overflowing: number;
+}
+
+function backupFileNameLines(page: Page, name: string): Promise<FileNameLines> {
+  return page.locator('.admin-page').evaluate((root, fileName) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const ranges: Range[] = [];
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      const at = node.textContent?.indexOf(fileName) ?? -1;
+      if (at >= 0) {
+        const range = document.createRange();
+        range.setStart(node, at);
+        range.setEnd(node, at + fileName.length);
+        ranges.push(range);
+      }
+    }
+    const lines = (range: Range): number =>
+      new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top))).size;
+    const overflows = (range: Range): boolean => {
+      const card = range.startContainer.parentElement?.closest('.ui-card');
+      if (!card) {
+        return false;
+      }
+      const cardBox = card.getBoundingClientRect();
+      return range.getBoundingClientRect().right > cardBox.right + 0.5;
+    };
+    return {
+      found: ranges.length,
+      brokenInside: ranges.filter((range) => lines(range) > 1).length,
+      overflowing: ranges.filter(overflows).length,
+    };
+  }, name);
+}
+
+test.describe('Given an administrator on Zálohy on a computer', () => {
+  for (const percent of [100, 200]) {
+    test(`when the page opens at 1280 px with ${percent} % text, then a backup's file name stays whole on its line and never runs out of its card`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({
+        width: WHERE_THE_FULL_WIDTH_REACHES_THE_AVATAR,
+        height: HEIGHT,
+      });
+      await openUnlocked(page, '/sprava/zalohy');
+      if (percent !== 100) {
+        await textSize(page, percent);
+      }
+      await expect(page.getByText('nfnn-2026-10-25_0300.dump').first()).toBeVisible();
+
+      const lines = await backupFileNameLines(page, 'nfnn-2026-10-25_0300.dump');
+      expect(lines.found).toBeGreaterThan(0);
+      expect(lines.brokenInside).toBe(0);
+      expect(lines.overflowing).toBe(0);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+      ).toBe(true);
+    });
+  }
 });
