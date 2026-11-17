@@ -590,6 +590,82 @@ test.describe('Given an administrator on the donors page', () => {
     await expect(button).toBeFocused();
   });
 
+  test('when the card opens on a phone, then each fact of the summary keeps its label and value side by side in one row', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === PETR_ACCOUNT,
+      (route) => route.fulfill({ json: petrAccount }),
+    );
+    await page.route(
+      (url) => url.pathname === PETR_DONATIONS,
+      (route) => route.fulfill({ json: petrDetail }),
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/sprava/darci/${PETR_ID}`);
+    const summary = page.getByRole('region', { name: 'Shrnutí dárce' });
+    await expect(summary).toContainText('Dvoufaktorové ověření');
+
+    const rows = await summary.locator('dl > div').evaluateAll((items) =>
+      items.map((item) => {
+        const label = item.querySelector('dt')!.getBoundingClientRect();
+        const value = item.querySelector('dd')!.getBoundingClientRect();
+        return {
+          label: item.querySelector('dt')!.textContent!.trim(),
+          beside: value.left >= label.right && value.top < label.bottom && value.bottom > label.top,
+        };
+      }),
+    );
+    expect(rows.map((row) => row.label)).toEqual(['VS', 'E-mail', 'Dary', 'Dvoufaktorové ověření']);
+    expect(rows.every((row) => row.beside)).toBe(true);
+  });
+
+  test('when the card opens on a computer, then the summary values share one baseline and the receipt dates stay on one line beside the PDF reserve', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === PETR_ACCOUNT,
+      (route) => route.fulfill({ json: petrAccount }),
+    );
+    await page.route(
+      (url) => url.pathname === PETR_DONATIONS,
+      (route) => route.fulfill({ json: petrDetail }),
+    );
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`/sprava/darci/${PETR_ID}`);
+    const summary = page.getByRole('region', { name: 'Shrnutí dárce' });
+    await expect(summary).toContainText('Dvoufaktorové ověření');
+
+    const baselines = await summary.locator('dl > div > dd').evaluateAll((values) =>
+      values.map((value) => {
+        const walker = document.createTreeWalker(value, NodeFilter.SHOW_TEXT, {
+          acceptNode: (node) =>
+            node.textContent!.trim() === '' || node.parentElement!.closest('button')
+              ? NodeFilter.FILTER_REJECT
+              : NodeFilter.FILTER_ACCEPT,
+        });
+        const range = document.createRange();
+        range.selectNodeContents(walker.nextNode()!);
+        return Math.round(range.getClientRects()[0].bottom);
+      }),
+    );
+    expect(baselines).toHaveLength(4);
+    expect(Math.max(...baselines) - Math.min(...baselines)).toBeLessThanOrEqual(1);
+
+    const row = page
+      .getByRole('region', { name: 'Vydaná potvrzení' })
+      .getByRole('row')
+      .filter({ hasText: petrDetail.receipts[0].number });
+    const lines = async (cell: RegExp, selector: string | null) =>
+      row.getByRole('cell', { name: cell }).evaluate((element, query) => {
+        const range = document.createRange();
+        range.selectNodeContents(query === null ? element : element.querySelector(query)!);
+        return new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top))).size;
+      }, selector);
+    expect(await lines(/^Dar z 10\.\s10\.\s2026$/, null)).toBe(1);
+    expect(await lines(/^17\.\s10\.\s2026\s11:00/, '.ui-date')).toBe(1);
+  });
+
   test('when the card shows its actions on a computer, then every hint stands under its button and the two account actions stand side by side at one height', async ({
     page,
   }) => {

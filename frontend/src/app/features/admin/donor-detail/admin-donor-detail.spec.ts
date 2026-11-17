@@ -927,6 +927,9 @@ describe('Given an administrator on a donor card', () => {
     expect(sectionText('Bankovní účty')).toContain('Párování vypnuté');
     expect(sectionText('Bankovní účty')).toContain('vypnuto 22. 10. 2026');
 
+    expect(accessibleText(button(section('Bankovní účty'), 'Zapnout párování'))).toBe(
+      'Zapnout párování účtu 2900233333/2010, Fio banka',
+    );
     button(section('Bankovní účty'), 'Zapnout párování').click();
     fixture.detectChanges();
     button(section('Bankovní účty'), 'Ano, zapnout').click();

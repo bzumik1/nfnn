@@ -923,9 +923,14 @@
                                   type="button"
                                   class="ui-button ui-button--small ui-button--quiet"
                                   (click)="askAccount('reconnect', item)"
-                                  i18n="@@admin.donorDetail.reconnect.open"
                                 >
-                                  Zapnout párování
+                                  <ng-container i18n="@@admin.donorDetail.reconnect.open"
+                                    >Zapnout párování</ng-container
+                                  ><span
+                                    class="visually-hidden"
+                                    i18n="@@admin.donorDetail.reconnect.openOf"
+                                    >&ngsp;účtu {{ accountName(item) }}</span
+                                  >
                                 </button>
                               }
                               @if (removalBlocked(item)) {
