@@ -12,16 +12,18 @@
   <div class="hero-top-shade"></div>
   <div class="hero-overlay"></div>
 
-  <div #fullScreen class="hero-full-screen" aria-hidden="true"></div>
+  <div #fullScreen class="hero-full-screen" aria-hidden="true">
+    <div #tabBarStrip class="hero-tab-bar-strip"></div>
+  </div>
 
   <div #content class="hero-content">
     <p class="hero-eyebrow" i18n="@@home.hero.eyebrow">nadační fond</p>
     <h1 class="hero-title" i18n="@@home.hero.title">Nová naděje</h1>
     <p class="hero-lead" i18n="@@home.hero.lead">
-      Pomáháme zdravotně postiženým dětem k lepšímu životu. Každý příspěvek mění příběh.
+      Pomáháme zdravotně postiženým dětem k&nbsp;lepšímu životu. Každý příspěvek mění příběh.
     </p>
     @if (showsDonate()) {
-      <div class="hero-btns">
+      <div #buttons class="hero-btns" [style.margin-top.px]="buttonsDrop() || null">
         <a class="ui-cta" routerLink="/prispet" i18n="@@home.hero.cta.primary">Přispět</a>
         @if (showsWhereWeHelp()) {
           <a

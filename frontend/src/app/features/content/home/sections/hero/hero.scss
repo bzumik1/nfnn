@@ -21,6 +21,14 @@
   pointer-events: none;
 }
 
+.hero-tab-bar-strip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: var(--tab-bar-clearance);
+}
+
 .hero-img {
   position: absolute;
   inset: 0;
@@ -86,7 +94,7 @@
 .hero-lead {
   color: var(--color-on-image);
   font-size: var(--text-2xl);
-  max-width: 500px;
+  max-width: 31.25rem;
   line-height: var(--leading-loose);
   margin-bottom: var(--space-9);
 }
