@@ -52,7 +52,7 @@ const IN_FUTURE = 'donations/history-start-in-future';
 const FROM_MESSAGES: FieldMessages = {
   required: $localize`:@@admin.home.history.from.required:Zadejte prosím den, od kterého se mají platby stáhnout.`,
   max: $localize`:@@admin.home.history.from.max:Zvolte prosím den nejpozději dnes.`,
-  min: $localize`:@@admin.home.history.from.min:Zvolte prosím den nejdříve 1. 1. 2000.`,
+  min: $localize`:@@admin.home.history.from.min:Zvolte prosím den nejdříve ${formatDonationDate(EARLIEST_DAY)}:earliest:.`,
 };
 
 @Component({
@@ -79,6 +79,7 @@ export class HistoryImport {
   private polling: Subscription | null = null;
 
   readonly state = input.required<ImportStateResponse>();
+  readonly ownCard = input(false);
   readonly finished = output<ImportStateResponse>();
 
   protected readonly fromMessages = FROM_MESSAGES;

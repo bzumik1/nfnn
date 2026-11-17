@@ -46,6 +46,7 @@ import {
   type StoredImportState,
 } from '../device-copy/administration-reads';
 import { SinceLastVisit } from './since-last-visit/since-last-visit';
+import { AdministrationVisit } from '../device-copy/administration-visit';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ADMIN_DAILY, ADMIN_MORE_PATH, ADMIN_PAYMENTS_PATH } from '../shell/admin-sections';
@@ -107,6 +108,19 @@ export class AdminHome {
   private readonly openAlerts = inject(OpenAlerts);
   protected readonly donor = this.auth.donor;
   protected readonly compact = inject(CompactLayout).isCompact;
+  private readonly visit = inject(AdministrationVisit).state;
+  protected readonly summaryFirst = computed(() => {
+    const visit = this.visit();
+    switch (visit.kind) {
+      case 'first':
+      case 'not-kept':
+        return false;
+      case 'ready':
+        return visit.changes.anything;
+      default:
+        return true;
+    }
+  });
   protected readonly sectionsLabel = $localize`:@@admin.home.sections.nav:Sekce správy`;
   protected readonly sections = computed(() => sectionRows(this.unpaired()?.count ?? 0));
   protected readonly state = signal<LoadState>('loading');

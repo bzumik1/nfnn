@@ -1,12 +1,12 @@
 <div class="ui-page container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
-  @if (compact()) {
+  @if (compact() || !summaryFirst()) {
     <ng-container *ngTemplateOutlet="attentionBlock" />
   }
   <app-since-last-visit class="since" />
   @if (compact()) {
     <app-admin-section-rows class="sections" [label]="sectionsLabel" [groups]="sections()" />
-  } @else {
+  } @else if (summaryFirst()) {
     <ng-container *ngTemplateOutlet="attentionBlock" />
   }
 
@@ -58,7 +58,7 @@
               </p>
             }
           }
-          <dl class="admin-data">
+          <dl class="ui-data-list admin-data">
             <div>
               <dt i18n="@@admin.home.import.balance">Zůstatek účtu</dt>
               <dd>
@@ -83,8 +83,7 @@
               <dt i18n="@@admin.home.import.covered">Stažené období</dt>
               <dd>
                 @if (coveredPeriod(); as period) {
-                  <span class="ui-date">{{ period.from }}</span
-                  >&nbsp;–
+                  <span class="ui-date">{{ period.from }}&nbsp;–</span>
                   <span class="ui-date">{{ period.to }}</span>
                 } @else {
                   <ng-container i18n="@@admin.home.import.covered.none">zatím nic</ng-container>
@@ -133,8 +132,10 @@
               </dd>
             </div>
           </dl>
-          @if (historyState(); as current) {
-            <app-history-import [state]="current" (finished)="historyFinished($event)" />
+          @if (compact()) {
+            @if (historyState(); as current) {
+              <app-history-import [state]="current" (finished)="historyFinished($event)" />
+            }
           }
         }
       }
@@ -183,7 +184,7 @@
               <span i18n="@@admin.backups.status.healthy">Zálohování je v pořádku.</span>
             </p>
           }
-          <dl class="admin-data">
+          <dl class="ui-data-list admin-data">
             <div>
               <dt i18n="@@admin.home.backups.lastBackup">Poslední záloha</dt>
               <dd>{{ lastBackup() }}</dd>
@@ -200,6 +201,12 @@
       >
     </section>
   </div>
+
+  @if (!compact() && state() === 'ready') {
+    @if (historyState(); as current) {
+      <app-history-import [ownCard]="true" [state]="current" (finished)="historyFinished($event)" />
+    }
+  }
 
   <section class="ui-card ui-card--padded admin-overview" aria-labelledby="admin-overview-title">
     <div class="admin-card-head">

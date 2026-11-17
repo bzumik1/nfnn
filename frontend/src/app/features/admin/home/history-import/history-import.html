@@ -1,7 +1,20 @@
-<section id="starsi-platby" class="history" tabindex="-1" aria-labelledby="admin-history-title">
-  <h3 id="admin-history-title" class="ui-card__subtitle" i18n="@@admin.home.history.title">
-    Starší platby z banky
-  </h3>
+<section
+  id="starsi-platby"
+  [class.history]="!ownCard()"
+  [class.ui-card]="ownCard()"
+  [class.ui-card--padded]="ownCard()"
+  tabindex="-1"
+  aria-labelledby="admin-history-title"
+>
+  @if (ownCard()) {
+    <h2 id="admin-history-title" class="ui-card__title" i18n="@@admin.home.history.title">
+      Starší platby z banky
+    </h2>
+  } @else {
+    <h3 id="admin-history-title" class="ui-card__subtitle" i18n="@@admin.home.history.title">
+      Starší platby z banky
+    </h3>
+  }
   <p class="ui-card__intro history-lead" i18n="@@admin.home.history.lead">
     Nové platby web stahuje z banky sám každou hodinu. Platby starší než 89 dní vydá Fio jen do 10
     minut po odemčení historie v internetovém bankovnictví.
