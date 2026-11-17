@@ -167,7 +167,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
     await settle();
 
     expect(element('[role="status"]').textContent).toContain(
-      'heslo teď můžete u řádku Heslo i odebrat',
+      'heslo teď můžete u řádku „Heslo“ i odebrat',
     );
   });
 

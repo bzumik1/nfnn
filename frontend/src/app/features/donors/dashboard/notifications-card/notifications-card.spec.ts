@@ -473,7 +473,7 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
     ['PUBLIC', 'Na cizím počítači upozornění zapnout nejdou.'],
     [
       'BROWSER',
-      'Upozornění jdou zapnout jen v aplikaci na ploše nebo po přihlášení se zaškrtnutým Zapamatovat si mě.',
+      'Upozornění jdou zapnout jen v aplikaci na ploše nebo po přihlášení se zaškrtnutým „Zapamatovat si mě“.',
     ],
   ])(
     'when a %s sign-in opens the card, then it says why and offers nothing',

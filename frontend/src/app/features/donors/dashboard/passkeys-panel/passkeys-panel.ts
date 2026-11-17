@@ -220,7 +220,7 @@ export class PasskeysPanel {
           this.passkeys.update((list) => [...(list ?? []), passkey]);
           this.status.set(
             first && this.hasPassword()
-              ? $localize`:@@donor.passkeys.addedFirst:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla; heslo teď můžete u řádku Heslo i odebrat.`
+              ? $localize`:@@donor.passkeys.addedFirst:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla; heslo teď můžete u řádku „Heslo“ i odebrat.`
               : $localize`:@@donor.passkeys.added:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla.`,
           );
           this.closeForm();
