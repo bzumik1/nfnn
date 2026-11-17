@@ -118,9 +118,8 @@ async function askAboutAnOlderSymbol(page: Page): Promise<void> {
 }
 
 function runningAnimations(root: Element): number {
-  return root
-    .getAnimations({ subtree: true })
-    .filter((motion) => motion.playState === 'running').length;
+  return root.getAnimations({ subtree: true }).filter((motion) => motion.playState === 'running')
+    .length;
 }
 
 async function violations(page: Page): Promise<string[]> {
