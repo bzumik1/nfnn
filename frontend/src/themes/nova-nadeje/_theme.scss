@@ -410,6 +410,7 @@
   --sheet-row-height: 2.765rem;
   --sheet-row-padding-inline: 20px;
   --sheet-profile-padding: 13.5px 18px;
+  --text-sheet-avatar-initials: min(var(--text-md), var(--sheet-avatar-size) * 0.34);
   --sheet-avatar-size: 50px;
   --sheet-logo-height: 36px;
   --header-logo-width-wide: 140px;
@@ -430,6 +431,7 @@
   --tab-icon-size: 1.5rem;
   --text-tab-label: min(var(--text-2xs), (100cqi - 40px) / 19);
   --back-icon-size: min(1.375rem, var(--back-button-size) * 0.68);
+  --text-account-initials: min(var(--text-sm), var(--back-button-size) * 0.34);
   --list-chevron-size: 1rem;
   --sheet-close-icon-size: min(1.25rem, var(--sheet-close-size) * 0.6);
   --launch-icon-size: 128px;
