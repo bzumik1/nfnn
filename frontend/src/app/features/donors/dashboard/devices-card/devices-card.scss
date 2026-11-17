@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 
 :host {
   display: block;
@@ -29,6 +30,15 @@
   margin-top: 0;
   border-block: 0;
   background: var(--color-surface-alt);
+  @include motion.expand;
+}
+
+.device--leaving {
+  @include motion.row-leave;
+}
+
+.devices-empty--after-rows {
+  @include motion.after-rows-left;
 }
 
 .device-icon {
@@ -56,8 +66,29 @@
   padding-top: var(--space-4);
 }
 
+.devices-confirm {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  @include motion.expand;
+}
+
 .device-confirm {
   margin: 0 var(--space-6) var(--space-3);
+}
+
+.devices-confirm-text {
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.devices-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2-5);
+  margin-top: var(--space-3);
 }
 
 .devices-sign-out-others {

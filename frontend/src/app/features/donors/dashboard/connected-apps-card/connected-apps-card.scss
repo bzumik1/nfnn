@@ -1,3 +1,5 @@
+@use 'motion';
+
 :host {
   display: block;
 }
@@ -30,6 +32,14 @@
   & + .connection {
     border-top: 1px solid var(--color-divider);
   }
+}
+
+.connection--leaving {
+  @include motion.row-leave;
+}
+
+.connections-empty--after-rows {
+  @include motion.after-rows-left;
 }
 
 .connection-body {

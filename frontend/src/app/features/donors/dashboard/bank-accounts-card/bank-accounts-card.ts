@@ -342,6 +342,10 @@ export class BankAccountsCard {
     return labelOf(account) === 'shared';
   }
 
+  protected rowEntrance(account: BankAccountItem): string {
+    return this.newlyVerifiedId() === account.id ? 'account--entering' : '';
+  }
+
   protected asksInDialog(account: BankAccountItem): boolean {
     return this.newlyVerifiedId() === account.id;
   }

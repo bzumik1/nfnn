@@ -1,5 +1,11 @@
 <section class="ui-card devices" aria-labelledby="devices-title">
-  <h2 id="devices-title" class="ui-card__title" tabindex="-1" i18n="@@donor.account.devices.title">
+  <h2
+    #title
+    id="devices-title"
+    class="ui-card__title"
+    tabindex="-1"
+    i18n="@@donor.account.devices.title"
+  >
     Přihlášená zařízení
   </h2>
   <p class="ui-card__intro devices-inset devices-intro" i18n="@@donor.account.devices.intro">
@@ -20,7 +26,7 @@
       </button>
     </div>
   } @else if (devices()) {
-    <ul class="ui-list device-list">
+    <ul #deviceList class="ui-list device-list">
       @for (device of shown(); track device.id) {
         <ng-container *ngTemplateOutlet="row; context: { $implicit: device }" />
       }
@@ -103,12 +109,14 @@
                 type="button"
                 class="ui-button ui-button--danger devices-confirm-yes"
                 [disabled]="signingOut() !== null"
+                [attr.aria-busy]="signingOutOthers()"
                 (click)="signOutOthers()"
               >
-                <app-busy-label [busy]="signingOutOthers()">
-                  <span when-idle i18n="@@donor.account.devices.signOut">Odhlásit</span>
-                  <span when-busy i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
-                </app-busy-label>
+                @if (signingOutOthers()) {
+                  <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+                } @else {
+                  <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
+                }
               </button>
               <button
                 #confirmCancel
@@ -137,7 +145,13 @@
           </button>
         }
       } @else {
-        <p class="devices-empty" i18n="@@donor.account.devices.empty">Jinde přihlášení nejste.</p>
+        <p
+          class="devices-empty"
+          [animate.enter]="emptyEntrance()"
+          i18n="@@donor.account.devices.empty"
+        >
+          Jinde přihlášení nejste.
+        </p>
       }
     </div>
   } @else {
@@ -150,10 +164,8 @@
     @if (actionError()) {
       <p class="ui-field-error" role="alert">{{ actionError() }}</p>
     }
-    <p #status class="ui-form-status devices-status" role="status" tabindex="-1">
-      @if (busyAnnouncement.text(); as starting) {
-        <span class="visually-hidden">{{ starting }}</span>
-      } @else if (signedOut(); as message) {
+    <p class="ui-form-status devices-status" role="status">
+      @if (signedOut(); as message) {
         <span>{{ message }}</span>
       }
     </p>
@@ -161,7 +173,7 @@
 </section>
 
 <ng-template #row let-device>
-  <li class="device">
+  <li class="device" [id]="rowId(device)" animate.leave="device--leaving">
     <div class="ui-list__row device-row">
       <span class="ui-list__lead device-icon" aria-hidden="true">
         <svg
@@ -259,12 +271,14 @@
             type="button"
             class="ui-button ui-button--danger devices-confirm-yes"
             [disabled]="signingOut() !== null"
+            [attr.aria-busy]="signingOut() === device.id"
             (click)="signOut(device)"
           >
-            <app-busy-label [busy]="signingOut() === device.id">
-              <span when-idle i18n="@@donor.account.devices.signOut">Odhlásit</span>
-              <span when-busy i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
-            </app-busy-label>
+            @if (signingOut() === device.id) {
+              <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+            } @else {
+              <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
+            }
           </button>
           <button
             #confirmCancel

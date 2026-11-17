@@ -211,3 +211,40 @@ $_pressed: (--pressed-tint, filter);
 @mixin pulse {
   animation: motion-pulse var(--duration-pulse) var(--ease-standard) 3;
 }
+
+@mixin expand {
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    translate var(--duration-base) var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 calc(-1 * var(--motion-rise));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity var(--duration-reduced) var(--ease-standard) !important;
+  }
+}
+
+@mixin row-enter {
+  animation: motion-appear var(--duration-base) var(--ease-out) backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: motion-fade-in var(--duration-reduced) var(--ease-standard) backwards !important;
+  }
+}
+
+@mixin row-leave {
+  pointer-events: none;
+  @include leave;
+}
+
+@mixin after-rows-left {
+  animation: motion-fade-in var(--duration-base) var(--ease-out) var(--duration-fast) backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation-duration: var(--duration-reduced) !important;
+    animation-delay: var(--duration-reduced) !important;
+  }
+}

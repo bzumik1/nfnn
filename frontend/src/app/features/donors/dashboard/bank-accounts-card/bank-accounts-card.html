@@ -33,7 +33,11 @@
   <ul class="ui-list accounts-list" [class.accounts-list--after-help]="helpOpen()">
     @if (state() === 'ready') {
       @for (account of accounts(); track account.id) {
-        <li class="account" [class.account--disconnected]="account.status === 'DISCONNECTED'">
+        <li
+          class="account"
+          [class.account--disconnected]="account.status === 'DISCONNECTED'"
+          [animate.enter]="rowEntrance(account)"
+        >
           <div class="ui-list__row account-row">
             <span class="ui-list__lead account-lead">
               @if (isCzech(account)) {

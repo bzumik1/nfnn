@@ -28,6 +28,7 @@ import {
 } from '../../../../core/auth/passkey-authenticator';
 import { deviceName } from '../../../../core/auth/device-name';
 import { deviceAccountOf, SESSION_DEVICE } from '../../../../core/auth/session-device';
+import { neighbourAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
@@ -42,6 +43,7 @@ import { KeptDonorAnswers } from '../kept-donor-answers';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const PASSKEY_NAME_MAX_LENGTH = 64;
+const RENAME_BUTTONS = '[id^="passkey-rename-button-"]';
 
 @Component({
   selector: 'app-passkeys-panel',
@@ -80,6 +82,7 @@ export class PasskeysPanel {
   private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
   private readonly renameField = viewChild<ElementRef<HTMLInputElement>>('renameField');
+  private readonly passkeyList = viewChild<ElementRef<HTMLElement>>('passkeyList');
 
   protected readonly supported = this.authenticator.supported();
   protected readonly passkeys = signal<Passkey[] | null>(null);
@@ -107,6 +110,11 @@ export class PasskeysPanel {
   protected readonly renameSaving = signal(false);
   protected readonly renameError = signal('');
   protected readonly status = signal('');
+  private readonly added = signal<string | null>(null);
+  private readonly rowLeft = signal(false);
+  protected readonly emptyEntrance = computed(() =>
+    this.rowLeft() ? 'passkeys-empty--after-rows' : '',
+  );
   protected readonly nameMaxLength = PASSKEY_NAME_MAX_LENGTH;
 
   protected readonly nameHint = $localize`:@@donor.passkeys.name.hint:Podle názvu klíč později poznáte, třeba „iPhone“ nebo „Pracovní notebook“.`;
@@ -222,6 +230,7 @@ export class PasskeysPanel {
         next: (passkey) => {
           this.saving.set(false);
           const first = (this.passkeys()?.length ?? 0) === 0;
+          this.added.set(passkey.id);
           this.passkeys.update((list) => [...(list ?? []), passkey]);
           this.status.set(
             first && this.hasPassword()
@@ -319,12 +328,20 @@ export class PasskeysPanel {
     this.removing.set(passkey.id);
     this.authApi.removePasskey(passkey.id).subscribe({
       next: () => {
+        const neighbour = neighbourAfterRowLeaves(
+          this.document.getElementById(this.rowId(passkey)),
+          this.passkeyList()?.nativeElement.querySelectorAll<HTMLElement>(RENAME_BUTTONS) ?? [],
+        );
         this.removing.set(null);
         this.confirming.set(null);
+        this.rowLeft.set(true);
         this.passkeys.update((list) => (list ?? []).filter((other) => other.id !== passkey.id));
         this.status.set(
           $localize`:@@donor.passkeys.removed:Přístupový klíč ${passkey.name}:name: je odebraný. Tímto klíčem se už nepřihlásíte; v\u00a0zařízení ho můžete smazat.`,
         );
+        afterNextRender(() => (neighbour() ?? this.region().nativeElement).focus(), {
+          injector: this.injector,
+        });
         this.changes.changed();
       },
       error: (failure: unknown) => {
@@ -345,6 +362,14 @@ export class PasskeysPanel {
 
   protected formatDate(isoInstant: string): string {
     return formatDonationDate(isoInstant);
+  }
+
+  protected rowId(passkey: Passkey): string {
+    return `passkey-row-${passkey.id}`;
+  }
+
+  protected rowEntrance(passkey: Passkey): string {
+    return this.added() === passkey.id ? 'passkey--entering' : '';
   }
 
   protected renameButtonId(passkey: Passkey): string {

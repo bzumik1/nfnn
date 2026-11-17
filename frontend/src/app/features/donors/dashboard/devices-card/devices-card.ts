@@ -15,6 +15,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { neighbourAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -32,6 +33,7 @@ import { deviceName, deviceNameInSentence, sessionKindName } from './device-labe
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const DEVICE_NOT_FOUND = 'donors/device-not-found';
 const ALL_OTHERS = 'others';
+const ROW_CONTROLS = '.device-sign-out, .devices-older-toggle';
 
 function signOutButtonId(deviceId: string): string {
   return `device-sign-out-${deviceId}`;
@@ -67,7 +69,8 @@ export class DevicesCard {
   private readonly changes = new ListChanges(() => this.loadDevices(false, true));
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
-  private readonly status = viewChild.required<ElementRef<HTMLElement>>('status');
+  private readonly title = viewChild.required<ElementRef<HTMLElement>>('title');
+  private readonly deviceList = viewChild<ElementRef<HTMLElement>>('deviceList');
   private readonly othersButton = viewChild<ElementRef<HTMLButtonElement>>('othersButton');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
 
@@ -87,6 +90,10 @@ export class DevicesCard {
   );
   protected readonly signingOutOthers = computed(() => this.signingOut() === ALL_OTHERS);
   protected readonly confirmingOthers = computed(() => this.confirming() === ALL_OTHERS);
+  private readonly rowLeft = signal(false);
+  protected readonly emptyEntrance = computed(() =>
+    this.rowLeft() ? 'devices-empty--after-rows' : '',
+  );
 
   constructor() {
     this.loadDevices(true);
@@ -158,13 +165,14 @@ export class DevicesCard {
       next: () => {
         this.signingOut.set(null);
         this.confirming.set(null);
+        this.rowLeft.set(true);
         this.devices.update((list) => (list ?? []).filter((device) => device.current));
         this.signedOut.set(
           this.auth.isAdmin()
             ? $localize`:@@donor.account.devices.othersSignedOutAdmin:Ostatní zařízení jsou odhlášená. Připojené aplikace zůstávají připojené; odpojíte je v\u00a0kartě „Připojené aplikace“.`
             : $localize`:@@donor.account.devices.othersSignedOut:Ostatní zařízení jsou odhlášená.`,
         );
-        this.focusAfterRender(() => this.status().nativeElement);
+        this.focusAfterRender(() => this.title().nativeElement);
         this.changes.changed();
       },
       error: (failure: unknown) => this.failed(failure, () => this.askingButton(ALL_OTHERS)),
@@ -203,6 +211,10 @@ export class DevicesCard {
     return signOutButtonId(device.id);
   }
 
+  protected rowId(device: SignedInDevice): string {
+    return `device-row-${device.id}`;
+  }
+
   protected confirmQuestionId(device: SignedInDevice): string {
     return `device-sign-out-confirm-${device.id}`;
   }
@@ -216,13 +228,18 @@ export class DevicesCard {
   }
 
   private removed(device: SignedInDevice): void {
+    const neighbour = neighbourAfterRowLeaves(
+      this.document.getElementById(this.rowId(device)),
+      this.deviceList()?.nativeElement.querySelectorAll<HTMLElement>(ROW_CONTROLS) ?? [],
+    );
     this.signingOut.set(null);
     this.confirming.set(null);
+    this.rowLeft.set(true);
     this.devices.update((list) => (list ?? []).filter((other) => other.id !== device.id));
     this.signedOut.set(
       $localize`:@@donor.account.devices.signedOut:Zařízení jsme odhlásili: ${this.nameInSentence(device)}:device:. Pokud jste se na něm nepřihlásili vy, změňte si heslo.`,
     );
-    this.focusAfterRender(() => this.status().nativeElement);
+    this.focusAfterRender(() => neighbour() ?? this.title().nativeElement);
     this.changes.changed();
   }
 

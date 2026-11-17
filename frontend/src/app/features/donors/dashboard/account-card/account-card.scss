@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 
 :host {
   display: block;
@@ -94,6 +95,7 @@
 .account-panel {
   grid-column: 1 / -1;
   padding-top: var(--space-3);
+  @include motion.expand;
 }
 
 .account-no-method {
