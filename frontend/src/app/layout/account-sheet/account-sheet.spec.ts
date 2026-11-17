@@ -515,6 +515,9 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(how?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
       'Klepněte na „Sdílet“ (v Safari ho najdete i pod tlačítkem ⋯) a pak na „Přidat na plochu“. V aplikaci se přihlásíte ještě jednou.',
     );
+    expect(how?.textContent?.replace(/[ \n]+/g, ' ').trim()).toBe(
+      'Klepněte na „Sdílet“ (v\u00a0Safari ho najdete i\u00a0pod tlačítkem ⋯) a\u00a0pak na „Přidat na plochu“. V\u00a0aplikaci se přihlásíte ještě jednou.',
+    );
     expect(install).not.toHaveBeenCalled();
     expect(closed).toBe(0);
   });
@@ -534,6 +537,14 @@ describe('Given the account sheet of a signed-in donor', () => {
         .trim(),
     ).toBe(
       'V Safari zvolte v nabídce „Soubor“ položku „Přidat do Docku“. V aplikaci se přihlásíte ještě jednou.',
+    );
+    expect(
+      sheet
+        .querySelector(`#${row.getAttribute('aria-controls')}`)
+        ?.textContent?.replace(/[ \n]+/g, ' ')
+        .trim(),
+    ).toBe(
+      'V\u00a0Safari zvolte v\u00a0nabídce „Soubor“ položku „Přidat do Docku“. V\u00a0aplikaci se přihlásíte ještě jednou.',
     );
   });
 
