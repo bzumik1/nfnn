@@ -34,6 +34,18 @@
 .accounting-value {
   flex: 1 1 10rem;
   text-wrap: balance;
+
+  &::before {
+    content: '\200b' / '';
+    display: inline-block;
+    vertical-align: top;
+    width: 0;
+    min-height: 2rem;
+    padding-block: var(--space-1-5);
+    border-block: calc(var(--space-unit) * 0.375) solid transparent;
+    font-size: var(--text-sm);
+    line-height: normal;
+  }
 }
 
 @include bp.up(nav) {
