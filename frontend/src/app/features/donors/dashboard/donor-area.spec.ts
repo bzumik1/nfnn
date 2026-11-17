@@ -1999,12 +1999,12 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.bank-hint')).toContain('když otevřete tuto stránku');
     });
 
-    it('then a donor with no donations yet reads that there is no payment, finds the way to the card Poslat dar, to add the account of a missing gift and the standing order guide', async () => {
+    it('then a donor with no donations yet reads that there is no gift yet, finds the way to the card Poslat dar, to add the account of a missing gift and the standing order guide', async () => {
       await open('/darce/dary');
       await respond(emptySummary(), emptyDonations());
 
       expect(element('.payments-card table')).toBeNull();
-      expect(text('.payments-empty')).toBe('Zatím tu není žádná platba.');
+      expect(text('.payments-empty')).toBe('Zatím tu není žádný dar.');
       const send = element('.payments-empty-state a.payments-send') as HTMLAnchorElement;
       expect(normalized(send.textContent ?? '')).toBe('Poslat dar');
       expect(send.getAttribute('href')).toBe('/darce/prehled#poslat-dar');
@@ -3464,7 +3464,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(element('.year-row')).toBeNull();
       expect(text('.yearly-empty')).toBe(
-        'Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.',
+        'Zatím tu není žádný dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.',
       );
       expectMissingGiftIn('.yearly-card');
     });

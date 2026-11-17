@@ -232,7 +232,7 @@ test.describe('Given a signed-in donor', () => {
     await openDonorSection(page, 'Moje dary');
 
     await expect(page.locator('.payments-card table')).toHaveCount(0);
-    await expect(page.locator('.payments-empty')).toHaveText('Zatím tu není žádná platba.');
+    await expect(page.locator('.payments-empty')).toHaveText('Zatím tu není žádný dar.');
     await expect(
       page.getByRole('heading', { level: 3, name: 'Poslali jste dar a nevidíte ho?' }),
     ).toBeVisible();

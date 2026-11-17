@@ -19,8 +19,8 @@
     "kind": "retired",
     "suite": "frontend-vitest",
     "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a donor with no donations yet reads that there is no payment, finds the way to add the account of a missing gift and the standing order guide",
-    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a donor with no donations yet reads that there is no payment, finds the way to the card Poslat dar, to add the account of a missing gift and the standing order guide",
-    "reason": "Q20 (#1222): an empty Moje dary links to the card Poslat dar on the overview; the renamed test also checks that link",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a donor with no donations yet reads that there is no gift yet, finds the way to the card Poslat dar, to add the account of a missing gift and the standing order guide",
+    "reason": "Q20 (#1222, decided 12/12): an empty Moje dary says „Zatím tu není žádný dar.“ and links to the card Poslat dar on the overview; the renamed test checks both",
     "contract": "docs/frontend-overview.md, donor area"
   }
 ]
