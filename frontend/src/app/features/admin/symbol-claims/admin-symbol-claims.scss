@@ -73,6 +73,10 @@ a.admin-name {
   color: var(--color-text-muted);
 }
 
+app-bank-account {
+  white-space: nowrap;
+}
+
 .answered-at {
   display: block;
   margin-top: var(--space-1);
