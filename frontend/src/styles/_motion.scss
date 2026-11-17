@@ -235,7 +235,7 @@ $_pressed: (--pressed-tint, filter);
   > * {
     min-height: 0;
     overflow: visible;
-    transition: overflow 0s var(--duration-base) allow-discrete;
+    transition: overflow var(--duration-base) step-end allow-discrete;
   }
 
   &[hidden] {

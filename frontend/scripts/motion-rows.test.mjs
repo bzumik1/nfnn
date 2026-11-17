@@ -78,6 +78,17 @@ describe('Given a disclosure that opens and closes through motion.expand', () =>
     assert.match(blocksOf(css, '.panel > *')[0] ?? '', /min-height:\s*0/);
   });
 
+  it('when it opens, then its child clips until the base duration has passed and lets focus rings show after it, without a raw time', () => {
+    const child = blocksOf(css, '.panel > *')[0] ?? '';
+
+    assert.equal(valueOf(child, 'overflow'), 'visible');
+    assert.equal(
+      valueOf(child, 'transition'),
+      'overflow var(--duration-base) step-end allow-discrete',
+    );
+    assert.doesNotMatch(valueOf(child, 'transition'), /\d(m?s)\b/);
+  });
+
   it('when it opens or closes, then its height, opacity and visibility change by tokens and nothing moves', () => {
     const plain = plainOf(css, '.panel');
 
