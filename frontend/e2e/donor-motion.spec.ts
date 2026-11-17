@@ -73,22 +73,22 @@ async function recordMoves(page: Page): Promise<void> {
   });
 }
 
-async function recordRowsMadeInert(page: Page): Promise<void> {
+async function recordElementsMadeInert(page: Page): Promise<void> {
   await page.evaluate(() => {
-    const rows: string[] = [];
-    (window as unknown as { inertRows: string[] }).inertRows = rows;
+    const elements: string[] = [];
+    (window as unknown as { inertElements: string[] }).inertElements = elements;
     new MutationObserver((records) => {
       for (const { target } of records) {
         if (target instanceof Element && target.hasAttribute('inert') && target.isConnected) {
-          rows.push(target.id);
+          elements.push(target.id || `inside ${target.parentElement?.closest('[id]')?.id}`);
         }
       }
     }).observe(document.body, { attributes: true, attributeFilter: ['inert'], subtree: true });
   });
 }
 
-function rowsMadeInert(page: Page): Promise<string[]> {
-  return page.evaluate(() => (window as unknown as { inertRows: string[] }).inertRows);
+function elementsMadeInert(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as { inertElements: string[] }).inertElements);
 }
 
 function recordedMoves(page: Page): Promise<Move[]> {
@@ -127,7 +127,7 @@ function fadesOn(moves: readonly Move[], className: RegExp): boolean {
 test.describe('Given a donor on a computer who asks for less motion', () => {
   test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
 
-  test('when they sign out their only other device, then its row is out of reach at once, only fades away without closing its height, and the heading takes the focus', async ({
+  test('when they sign out their only other device, then its row and the confirmation inside it are out of reach at once, the row only fades away without closing its height, and the heading takes the focus', async ({
     page,
   }) => {
     await mockDonorApi(page);
@@ -149,7 +149,7 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     const devices = page.locator('.devices');
     await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
     await recordMoves(page);
-    await recordRowsMadeInert(page);
+    await recordElementsMadeInert(page);
     await devices
       .getByRole('group', { name: 'Odhlásit iPhone · Safari?' })
       .getByRole('button', { name: 'Odhlásit', exact: true })
@@ -161,7 +161,8 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     const moves = await expectOnlyInstantChangesOrShortFades(page);
     expect(fadesOn(moves, /(^| )device-slot( |$)/)).toBe(true);
     const otherDevice = signedInDevices.find((device) => !device.current);
-    expect(await rowsMadeInert(page)).toEqual([`device-row-${otherDevice?.id}`]);
+    const row = `device-row-${otherDevice?.id}`;
+    expect(await elementsMadeInert(page)).toEqual([row, `inside ${row}`]);
   });
 
   test('when they open the older sign-ins, then the row says so at once, its chevron turns at once and the rows only fade in without opening their height', async ({
