@@ -77,6 +77,23 @@ test.describe('Given an administrator whose administration locks on this device'
     );
   });
 
+  test('when the lock shows on an iPad upright with the text twice its size, then its panel keeps a margin from both edges of the screen', async ({
+    page,
+  }) => {
+    await rememberedSession(page);
+    await page.setViewportSize({ width: 834, height: 1194 });
+
+    await page.goto('/sprava/prehledy');
+    await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+    await expect(
+      page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
+    ).toBeVisible();
+    const box = (await page.locator('.lock-panel').boundingBox())!;
+
+    expect(box.x).toBeGreaterThanOrEqual(19.5);
+    expect(box.x + box.width).toBeLessThanOrEqual(834 - 19.5);
+  });
+
   test('when the app starts with a remembered session, then the administration is locked until the server accepts the password and a fresh code', async ({
     page,
   }) => {

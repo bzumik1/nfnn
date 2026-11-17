@@ -347,6 +347,60 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
 });
 
 test.describe('Given a signed-in donor on an iPad upright with the account sheet open', () => {
+  test('when the form sheet shows no grabber, then its top edge does not offer a hand to grab it with', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedDonorSession(page);
+    await page.setViewportSize({ width: 834, height: 1194 });
+    await page.goto('/o-nas');
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const grabber = page.getByRole('dialog').locator('.dialog-grabber');
+    await expect(grabber).toBeAttached();
+
+    expect(await grabber.evaluate((element) => getComputedStyle(element).cursor)).not.toBe('grab');
+  });
+
+  test('when they open Údaje a zabezpečení inside the form sheet, then the e-mail is never split inside its domain', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedDonorSession(page);
+    await page.setViewportSize({ width: 834, height: 1194 });
+    await page.goto('/o-nas');
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const sheet = page.getByRole('dialog');
+    await sheet.getByRole('link', { name: 'Údaje a zabezpečení' }).click();
+    const email = sheet.locator('.account-email').first();
+    await expect(email).toBeVisible();
+
+    const lines = await email.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
+    });
+
+    expect(lines).toBe(1);
+  });
+
+  test('when the text is twice its size, then the form sheet still keeps a margin from both edges of the screen', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedDonorSession(page);
+    await page.setViewportSize({ width: 834, height: 1194 });
+    await page.goto('/o-nas');
+    await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const sheet = page.getByRole('dialog');
+    await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeAttached();
+
+    const box = (await sheet.locator('.dialog-panel').boundingBox())!;
+
+    expect(box.x).toBeGreaterThanOrEqual(19.5);
+    expect(box.x + box.width).toBeLessThanOrEqual(834 - 19.5);
+  });
+
   test('when they open Údaje a zabezpečení inside the sheet and step back, then the form sheet keeps its height all the way', async ({
     page,
   }) => {
