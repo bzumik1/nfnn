@@ -170,6 +170,67 @@ async function fingerPulls(target: Locator, x: number, y: number, downs: number[
   );
 }
 
+async function fingerFlicksAway(target: Locator, x: number, y: number): Promise<string[]> {
+  return target.evaluate(
+    async (element, start) => {
+      const document = element.ownerDocument as LegacyTouchDocument;
+      const view = document.defaultView!;
+      const panel = element.closest<HTMLElement>('.dialog-panel')!;
+      const curves: string[] = [];
+      const watch = new MutationObserver(() => {
+        const curve = panel.style.transitionTimingFunction;
+        if (curve !== '' && !curves.includes(curve)) {
+          curves.push(curve);
+        }
+      });
+      watch.observe(panel, { attributes: true, attributeFilter: ['style'] });
+      const at = (clientY: number): Touch[] | TouchList =>
+        typeof document.createTouch === 'function'
+          ? document.createTouchList(
+              document.createTouch(
+                view,
+                element,
+                1,
+                start.x + view.scrollX,
+                clientY + view.scrollY,
+                start.x,
+                clientY,
+              ),
+            )
+          : [new Touch({ identifier: 1, target: element, clientX: start.x, clientY })];
+      const none = (): Touch[] =>
+        (typeof document.createTouchList === 'function'
+          ? document.createTouchList()
+          : []) as Touch[];
+      const finger = (type: string, clientY: number, touching = true): void => {
+        const touches = at(clientY) as Touch[];
+        element.dispatchEvent(
+          new TouchEvent(type, {
+            touches: touching ? touches : none(),
+            targetTouches: touching ? touches : none(),
+            changedTouches: touches,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      };
+      const nextFrame = (): Promise<number> =>
+        new Promise((done) => view.requestAnimationFrame(done));
+      finger('touchstart', start.y);
+      await nextFrame();
+      finger('touchmove', start.y + 20);
+      await nextFrame();
+      finger('touchmove', start.y + 140);
+      finger('touchend', start.y + 140, false);
+      await nextFrame();
+      await nextFrame();
+      watch.disconnect();
+      return curves;
+    },
+    { x, y },
+  );
+}
+
 interface SheetLeave {
   slideFrom: number | null;
   slideTo: string | null;
@@ -341,6 +402,57 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await expect(page.locator('[data-payment-row]')).toContainText('Nováková Jana');
   });
 
+  test.describe('when it floats on a computer that shows motion', () => {
+    const opener = (page: Page): Locator =>
+      page.getByRole('button', { name: /^(Přiřadit dárci|Nováková Jana .*)$/ }).first();
+
+    test.skip(
+      ({ browserName }) => browserName !== 'chromium',
+      'WebKit, as Safari, gives a button no focus when it is clicked, so no opener holds the focus to return; the keyboard path of the device checklist covers Safari',
+    );
+
+    test.beforeEach(async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await page.evaluate(() => {
+        const record = window as unknown as { leftSlowly: boolean };
+        record.leftSlowly = false;
+        new MutationObserver(() => {
+          if (document.querySelector('dialog.dialog--leaving') !== null) {
+            record.leftSlowly = true;
+          }
+        }).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+      });
+    });
+
+    test('and Esc is pressed while it leaves after its button, then the focus returns to the button that opened it', async ({
+      page,
+    }) => {
+      await page.getByRole('dialog').getByLabel('Zavřít').click();
+      await page.keyboard.press('Escape');
+
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(opener(page)).toBeFocused();
+      expect(
+        await page.evaluate(() => (window as unknown as { leftSlowly: boolean }).leftSlowly),
+      ).toBe(true);
+    });
+
+    test('and they go back while it leaves after its button, then it closes once and the focus returns to the button that opened it', async ({
+      page,
+    }) => {
+      await page.getByRole('dialog').getByLabel('Zavřít').click();
+      await stepBack(page);
+
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(opener(page)).toBeFocused();
+      await expect(page).toHaveURL(/\/sprava\/platby$/);
+      expect(
+        await page.evaluate(() => (window as unknown as { leftSlowly: boolean }).leftSlowly),
+      ).toBe(true);
+    });
+  });
+
   test('when they close it with its button and go back, then the page before the payments opens', async ({
     page,
   }) => {
@@ -510,6 +622,23 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await entryTakenBack(page);
     await stepBack(page);
     await expect(page).toHaveURL(/\/sprava$/);
+  });
+
+  test('when a finger flicks the content of the sheet down on a phone, then the sheet leaves on a curve that starts at the speed of the finger', async ({
+    page,
+  }) => {
+    await phoneThatAnimates(page);
+    const content = page.getByRole('dialog').getByRole('heading', { level: 2 }).first();
+    await sheetSettled(page);
+    const box = (await content.boundingBox())!;
+
+    const curves = await fingerFlicksAway(content, box.x + box.width / 2, box.y + box.height / 2);
+
+    expect(curves).toEqual([
+      expect.stringMatching(/^cubic-bezier\(0\.25, (0\.\d+|1), 0\.25, 1\)$/),
+    ]);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await entryTakenBack(page);
   });
 
   test('when a finger pulls the content of the sheet only a little on a phone, then it returns and a step back still closes it', async ({

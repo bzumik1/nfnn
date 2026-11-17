@@ -29,6 +29,7 @@ import { CompactLayout } from '../../../core/layout/compact-layout';
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 const CLOSING_GRACE_MS = 300;
+const SHEET_DURATION = '--duration-sheet';
 
 type Exit = 'open' | 'leaving' | 'gone';
 
@@ -373,14 +374,12 @@ export class Dialog implements AfterViewInit, OnDestroy {
 
   private letGo(time: number): void {
     const height = this.panelHeight();
-    const offset = this.dragOffset();
+    const wayDown = this.wayBelowTheWindow();
+    const wayBack = this.dragOffset();
     const release = this.drag.end(height, time);
     this.stopDrag();
-    const way = release === 'dismiss' ? height - offset : offset;
-    const panel = this.panel().nativeElement;
-    this.settleEasing.set(
-      this.drag.settleEasing(way, longestTransitionMs(getComputedStyle(panel).transitionDuration)),
-    );
+    const way = release === 'dismiss' ? wayDown : wayBack;
+    this.settleEasing.set(this.drag.settleEasing(way, this.sheetDurationMs()));
     if (release !== 'dismiss' || !this.dismissible()) {
       return;
     }
@@ -446,6 +445,16 @@ export class Dialog implements AfterViewInit, OnDestroy {
       this.entryTakenBackWhileLeaving = false;
       this.history.open(this.historyEntry);
     }
+  }
+
+  private wayBelowTheWindow(): number {
+    const windowHeight = this.document.defaultView?.innerHeight ?? 0;
+    return windowHeight - this.panel().nativeElement.getBoundingClientRect().top;
+  }
+
+  private sheetDurationMs(): number {
+    const root = this.document.documentElement;
+    return longestTransitionMs(getComputedStyle(root).getPropertyValue(SHEET_DURATION));
   }
 
   private panelHeight(): number {

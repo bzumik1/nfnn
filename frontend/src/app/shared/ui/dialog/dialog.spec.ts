@@ -619,14 +619,18 @@ describe('Given a sheet whose content the visitor pulls with a finger', () => {
     expect(fixture.componentInstance.dismissals).toBe(1);
   });
 
-  it('when the finger flicks the sheet down, then it slides away from the speed of the finger', async () => {
-    panel().style.transitionDuration = '0.3s';
-    panel().getBoundingClientRect = () => ({ height: 800 }) as DOMRect;
-    await pull(400);
-    touch('touchend', text(), [], 45);
-    fixture.detectChanges();
+  describe('when the theme gives the sheet its duration', () => {
+    beforeEach(() => document.documentElement.style.setProperty('--duration-sheet', '0.3s'));
+    afterEach(() => document.documentElement.style.removeProperty('--duration-sheet'));
 
-    expect(panel().style.transitionTimingFunction).toBe('cubic-bezier(0.25, 1, 0.25, 1)');
+    it('and the finger flicks the sheet down, then it slides the rest of the way to the bottom edge from the speed of the finger', async () => {
+      panel().getBoundingClientRect = () => ({ top: 100, height: 400 }) as DOMRect;
+      await pull(150);
+      touch('touchend', text(), [], 45);
+      fixture.detectChanges();
+
+      expect(panel().style.transitionTimingFunction).toBe('cubic-bezier(0.25, 0.168, 0.25, 1)');
+    });
   });
 
   it('when the finger lets go after a short way, then the sheet returns and stays open', async () => {
