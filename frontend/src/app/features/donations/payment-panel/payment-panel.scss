@@ -31,6 +31,14 @@
   }
 }
 
+@include bp.up(nav) {
+  @include bp.down(laptop) {
+    :host(.split) {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    }
+  }
+}
+
 @include bp.height-down(short) {
   :host(.split) {
     display: block;
@@ -67,6 +75,7 @@
 }
 
 .amount {
+  container: amount-options / inline-size;
   margin-bottom: var(--space-7);
 }
 
@@ -114,6 +123,12 @@
       background: Highlight;
       color: HighlightText;
     }
+  }
+}
+
+@include bp.container-down(amount-options, amounts) {
+  .amount-option {
+    flex: 1 1 calc(50% - var(--space-2-5));
   }
 }
 
@@ -327,6 +342,18 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--space-2) var(--space-3);
+
+  &:has(> .ui-figures--groups) {
+    flex-wrap: nowrap;
+  }
+}
+
+.bank-value.ui-figures--groups {
+  min-width: 0;
+
+  > * {
+    white-space: normal;
+  }
 }
 
 @mixin stacked-bank-rows {
@@ -354,6 +381,7 @@
 
   app-copy-button {
     flex-shrink: 0;
+    margin-block: calc(-1 * var(--space-1-5));
   }
 }
 
@@ -376,6 +404,10 @@
     align-items: flex-start;
   }
 
+  app-copy-button {
+    margin-block: 0;
+  }
+
   .bank-value {
     flex: none;
     max-width: 100%;
@@ -384,10 +416,6 @@
 
     &.ui-figures--groups {
       overflow-wrap: normal;
-    }
-
-    &.ui-figures--groups > * {
-      white-space: normal;
     }
   }
 }

@@ -64,6 +64,19 @@
 
 .bank-receipt-note {
   margin: 0 0 var(--space-6);
+  padding-inline: var(--space-7);
+}
+
+@include bp.down(tablet) {
+  .bank-receipt-note {
+    padding-inline: var(--space-5);
+  }
+}
+
+@include bp.container-down(payment-panel, phone) {
+  .bank-receipt-note {
+    padding-inline: var(--space-5);
+  }
 }
 
 .bank-receipt-register {
@@ -160,6 +173,25 @@
   }
 }
 
+@include bp.up(nav) {
+  @supports (text-box: trim-start cap alphabetic) {
+    .donate-columns {
+      padding-top: calc(var(--page-top) + var(--space-10) + var(--space-3));
+    }
+
+    .ui-intro__title,
+    .pay-title {
+      text-box: trim-start cap alphabetic;
+    }
+  }
+}
+
+@include bp.up(wide) {
+  .donate-columns {
+    max-width: var(--content-max-wide);
+  }
+}
+
 @include bp.down(tablet) {
   @include one-column;
 }
@@ -173,5 +205,10 @@
 
   .ui-intro {
     padding-top: var(--page-top);
+  }
+
+  .ui-intro__title,
+  .pay-title {
+    text-box: normal;
   }
 }
