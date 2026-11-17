@@ -73,8 +73,10 @@ a.admin-name {
   color: var(--color-text-muted);
 }
 
-app-bank-account {
-  white-space: nowrap;
+@include bp.up(nav) {
+  app-bank-account {
+    white-space: nowrap;
+  }
 }
 
 .answered-at {
