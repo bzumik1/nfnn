@@ -47,7 +47,10 @@ import { FirstDownloadNotice } from './first-download-notice/first-download-noti
   templateUrl: './admin-shell.html',
   styleUrl: './admin-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class.admin-shell--sheet]': 'sheet()' },
+  host: {
+    '[class.admin-shell--sheet]': 'sheet()',
+    '(document:keydown.escape)': 'escapePressed($event)',
+  },
 })
 export class AdminShell {
   protected readonly groups = ADMIN_SECTIONS;
@@ -98,6 +101,19 @@ export class AdminShell {
 
   protected back(): void {
     this.backTarget.back(this.chrome().parent ?? '/');
+  }
+
+  protected escapePressed(event: Event): void {
+    if (
+      !this.sheet() ||
+      event.defaultPrevented ||
+      this.lock.locked() ||
+      this.document.querySelector('dialog[open]') !== null
+    ) {
+      return;
+    }
+    event.preventDefault();
+    this.back();
   }
 
   protected close(): void {

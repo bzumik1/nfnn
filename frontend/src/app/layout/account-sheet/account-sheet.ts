@@ -14,6 +14,7 @@ import {
   inject,
   Injector,
   input,
+  linkedSignal,
   output,
   signal,
   viewChild,
@@ -26,7 +27,7 @@ import { initialsOf } from '../../core/auth/initials';
 import { SignedOutNotice } from '../../core/auth/signed-out-notice';
 import { CompactLayout } from '../../core/layout/compact-layout';
 import { pathOf } from '../../core/navigation/app-tabs';
-import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
+import { APP_ACCOUNT_KEY, APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
 import { Dialog } from '../../shared/ui/dialog/dialog';
 import { Appearance, AppearanceChoice } from '../../core/appearance/appearance';
 import { AccountSection } from './account-section';
@@ -89,6 +90,7 @@ export class AccountSheet {
   private readonly signedOut = inject(SignedOutNotice);
 
   readonly portrait = input<string | null>(null);
+  readonly reopenedOn = input<string | null>(null);
   readonly closed = output<void>();
 
   private readonly compact = inject(CompactLayout).isCompact;
@@ -132,12 +134,15 @@ export class AccountSheet {
   private readonly location = inject(Location);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
-  protected readonly section = signal<AccountItem | null>(null);
-  protected readonly depth = computed(() => (this.section() === null ? 0 : 1));
+  private readonly trail = linkedSignal<AccountItem[]>(() => {
+    const item = sectionAt(this.reopenedOn() ?? '');
+    return item === null ? [] : [item];
+  });
+  protected readonly section = computed(() => this.trail().at(-1) ?? null);
+  protected readonly depth = computed(() => this.trail().length);
   private readonly dialog = viewChild.required(Dialog);
   protected readonly discardAsked = signal<'back' | 'close' | null>(null);
   private discarding = false;
-  private openedFrom: string | null = null;
   protected readonly appearance = inject(Appearance);
   protected readonly appearanceLabel = computed(() => APPEARANCE_LABELS[this.appearance.choice()]);
   private readonly announcer = inject(DialogAnnouncer);
@@ -155,6 +160,11 @@ export class AccountSheet {
     inject(DestroyRef).onDestroy(() =>
       this.host.removeEventListener('click', followInSection, true),
     );
+    afterNextRender(() => {
+      if (this.reopenedOn() !== null) {
+        this.standAtOnce();
+      }
+    });
   }
 
   protected follow(event: MouseEvent, url: string): void {
@@ -164,8 +174,8 @@ export class AccountSheet {
     event.preventDefault();
     const item = sectionAt(url);
     if (item !== null && this.compact() && this.router.url !== url) {
-      this.openedFrom = url;
-      this.show(item);
+      this.trail.set([item]);
+      this.focusSectionTitle();
       return;
     }
     this.leaveFor(url);
@@ -212,16 +222,40 @@ export class AccountSheet {
   }
 
   private leaveSection(): void {
-    const from = this.openedFrom;
-    this.section.set(null);
-    this.openedFrom = null;
+    const left = this.section();
+    this.trail.update((trail) => trail.slice(0, -1));
     afterNextRender(
       () => {
-        if (from !== null) {
-          this.host.querySelector<HTMLElement>(`a[href="${from}"]`)?.focus();
+        if (left !== null) {
+          this.linkTo(left.path)?.focus();
         }
       },
       { injector: this.injector },
+    );
+  }
+
+  private standAtOnce(): void {
+    const dialog = this.host.querySelector('dialog');
+    if (dialog !== null && typeof dialog.getAnimations === 'function') {
+      dialog
+        .getAnimations({ subtree: true })
+        .filter((motion) => motion.effect?.getComputedTiming().endTime !== Infinity)
+        .forEach((motion) => motion.finish());
+    }
+    const left = this.backTarget.leftPath;
+    const link = left === null ? null : this.linkTo(left);
+    if (link !== null) {
+      link.focus();
+    } else if (this.section() !== null) {
+      this.host.querySelector<HTMLElement>('#account-section-title')?.focus();
+    }
+  }
+
+  private linkTo(path: string): HTMLAnchorElement | null {
+    return (
+      Array.from(this.host.querySelectorAll<HTMLAnchorElement>('a[href]')).find(
+        (link) => pathOf(link.getAttribute('href') ?? '') === path,
+      ) ?? null
     );
   }
 
@@ -242,15 +276,18 @@ export class AccountSheet {
     event.preventDefault();
     event.stopPropagation();
     const item = sectionAt(url);
+    if (item === this.section()) {
+      return;
+    }
     if (item !== null) {
-      this.show(item);
+      this.trail.update((trail) => [...trail, item]);
+      this.focusSectionTitle();
     } else {
       this.leaveFor(url);
     }
   }
 
-  private show(item: AccountItem): void {
-    this.section.set(item);
+  private focusSectionTitle(): void {
     afterNextRender(() => this.host.querySelector<HTMLElement>('#account-section-title')?.focus(), {
       injector: this.injector,
     });
@@ -277,7 +314,7 @@ export class AccountSheet {
     }
     this.signingOut.set(true);
     this.auth.logout().subscribe(() => {
-      this.leaveFor('/');
+      this.leaveFor('/', false);
       this.signedOut.show();
     });
   }
@@ -286,16 +323,23 @@ export class AccountSheet {
     this.closed.emit();
   }
 
-  private leaveFor(url: string): void {
+  private leaveFor(url: string, returnsHere = true): void {
     if (this.router.url === url) {
       this.closed.emit();
       return;
     }
     const depth = this.backTarget.nextDepth();
+    const account =
+      returnsHere && this.compact() ? { [APP_ACCOUNT_KEY]: this.section()?.path ?? '' } : null;
     const handedOver = this.history.handOver(url);
     this.closed.emit();
     if (handedOver) {
-      void this.router.navigateByUrl(url, { replaceUrl: true, state: { [APP_DEPTH_KEY]: depth } });
+      void this.router.navigateByUrl(url, {
+        replaceUrl: true,
+        state: { [APP_DEPTH_KEY]: depth, ...account },
+      });
+    } else if (account !== null) {
+      void this.router.navigateByUrl(url, { state: account });
     } else {
       void this.router.navigateByUrl(url);
     }

@@ -12,6 +12,11 @@ interface OpenDialog {
   steps: number;
 }
 
+interface StepsLeftBehind {
+  readonly path: string;
+  readonly deepest: number;
+}
+
 const DEPTH_KEY = 'nfnnDialogDepth';
 const popStateListeners = new Set<(event: PopStateEvent) => void>();
 
@@ -32,6 +37,7 @@ export class DialogHistory {
   private ownPops = 0;
   private entryPath = '';
   private dialogs: OpenDialog[] = [];
+  private stepsLeftBehind: StepsLeftBehind | null = null;
 
   constructor() {
     const onPopState = (event: PopStateEvent): void => this.popped(event);
@@ -54,6 +60,7 @@ export class DialogHistory {
   }
 
   open(listener: DialogHistoryListener): void {
+    this.stepsLeftBehind = null;
     if (!this.dialogs.some((dialog) => dialog.listener === listener)) {
       this.dialogs.push({ listener, steps: 1 });
     }
@@ -83,6 +90,9 @@ export class DialogHistory {
 
   handOver(url: string): boolean {
     const owned = this.owned;
+    if (owned > 1) {
+      this.stepsLeftBehind = { path: this.entryPath, deepest: owned - 1 };
+    }
     this.release();
     if (owned > 0) {
       this.location.replaceState(url);
@@ -107,6 +117,12 @@ export class DialogHistory {
       return;
     }
     const depth = depthOf(event.state);
+    if (this.landsOnStepLeftBehind(depth)) {
+      event.stopImmediatePropagation();
+      this.stepsLeftBehind = null;
+      this.window?.history.go(-depth);
+      return;
+    }
     if (depth >= this.owned) {
       return;
     }
@@ -137,6 +153,17 @@ export class DialogHistory {
       }
     }
     told.forEach((tell) => tell());
+  }
+
+  private landsOnStepLeftBehind(depth: number): boolean {
+    const left = this.stepsLeftBehind;
+    return (
+      left !== null &&
+      this.dialogs.length === 0 &&
+      depth > 0 &&
+      depth <= left.deepest &&
+      this.location.path(true) === left.path
+    );
   }
 
   private settle(): void {

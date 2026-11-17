@@ -99,5 +99,9 @@
   }
 </header>
 @if (accountOpen()) {
-  <app-account-sheet [portrait]="portrait()" (closed)="closeAccount()" />
+  <app-account-sheet
+    [portrait]="portrait()"
+    [reopenedOn]="accountReopenedOn()"
+    (closed)="closeAccount()"
+  />
 }
