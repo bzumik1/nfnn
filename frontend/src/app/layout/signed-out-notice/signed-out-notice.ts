@@ -14,9 +14,11 @@ import { filter } from 'rxjs';
 import { AuthStore } from '../../core/auth/auth-store';
 import { SignedOutNotice as SignedOutNoticeState } from '../../core/auth/signed-out-notice';
 import { keepRoomForFloatingNotice } from '../../shared/ui/floating-notice/floating-notice-room';
+import { LeavingNotice } from '../../shared/ui/leaving-notice/leaving-notice';
 
 @Component({
   selector: 'app-signed-out-notice',
+  imports: [LeavingNotice],
   templateUrl: './signed-out-notice.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

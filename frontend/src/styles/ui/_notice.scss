@@ -127,7 +127,6 @@
 }
 
 .ui-notice--floating.ui-notice--leaving {
-  pointer-events: none;
   @include motion.leave;
 }
 

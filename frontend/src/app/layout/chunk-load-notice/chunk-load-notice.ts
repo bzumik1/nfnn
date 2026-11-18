@@ -13,9 +13,11 @@ import { Title } from '@angular/platform-browser';
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { keepRoomForFloatingNotice } from '../../shared/ui/floating-notice/floating-notice-room';
+import { LeavingNotice } from '../../shared/ui/leaving-notice/leaving-notice';
 
 @Component({
   selector: 'app-chunk-load-notice',
+  imports: [LeavingNotice],
   templateUrl: './chunk-load-notice.html',
   styleUrl: './chunk-load-notice.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
