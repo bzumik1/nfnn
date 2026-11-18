@@ -1,6 +1,7 @@
 import { Locator, Page } from '@playwright/test';
 import { stepBack } from './app-history';
 import { fingerAlong } from './finger';
+import { waitWhileNothingMayHappen } from './fixed-waits';
 import {
   administrator,
   mockDonorApi,
@@ -648,6 +649,31 @@ test.describe('Given an administrator in the app on the home screen of a phone w
     await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
 
     await backInTheAccountSheet(page);
+  });
+
+  test.describe('on an iPad held upright with a keyboard', () => {
+    test.use({ viewport: { width: 820, height: 1180 } });
+
+    test('when they press Esc while typing a search for donors in Správa, then the field keeps it and the administration stays', async ({
+      page,
+    }) => {
+      await openAdministration(page);
+      await page
+        .getByRole('navigation', { name: 'Sekce správy' })
+        .getByRole('link', { name: /^Dárci/ })
+        .click();
+      await expect(page).toHaveURL(/\/sprava\/darci/);
+      const search = page.getByLabel('Jméno, e-mail nebo variabilní symbol');
+      await search.focus();
+      await page.keyboard.type('nov');
+
+      await page.keyboard.press('Escape');
+
+      await waitWhileNothingMayHappen(page, 500);
+      await expect(page).toHaveURL(/\/sprava\/darci/);
+      await expect(search).toBeFocused();
+      await expect(accountSheet(page)).toHaveCount(0);
+    });
   });
 
   test('when they open Správa and press Zavřít, then the news returns without the account sheet', async ({

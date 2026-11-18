@@ -105,7 +105,7 @@ export class AppHeader {
     });
     effect(() => {
       if (this.backTarget.accountToReopen() !== null && this.auth.signedIn()) {
-        untracked(() => this.reopenAccount());
+        untracked(() => this.answerAccountRequest());
       }
     });
     effect(() => {
@@ -141,6 +141,14 @@ export class AppHeader {
   protected closeAccount(): void {
     this.accountOpen.set(false);
     this.accountReopenedOn.set(null);
+  }
+
+  private answerAccountRequest(): void {
+    if (this.compact()) {
+      this.reopenAccount();
+    } else {
+      this.backTarget.takeAccountToReopen();
+    }
   }
 
   private reopenAccount(): void {

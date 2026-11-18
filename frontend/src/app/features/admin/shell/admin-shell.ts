@@ -107,6 +107,7 @@ export class AdminShell {
     if (
       !this.sheet() ||
       event.defaultPrevented ||
+      typesText(event.target) ||
       this.lock.locked() ||
       this.document.querySelector('dialog[open]') !== null
     ) {
@@ -208,4 +209,8 @@ function framedFullScreen(root: ActivatedRouteSnapshot): boolean {
     route = route.firstChild;
   }
   return route?.data['adminFrame'] === 'full';
+}
+
+function typesText(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('input, textarea, [contenteditable]') !== null;
 }
