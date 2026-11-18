@@ -218,6 +218,13 @@ describe('Given the donate section', () => {
     );
   });
 
+  it('when the grey note wraps, then it never leaves the one-letter a at the end of a line before zprávu', async () => {
+    await openWithQr();
+
+    const note = fixture.nativeElement.querySelector('.next .donate-privacy') as HTMLElement;
+    expect(note.textContent).toContain('číslo účtu a zprávu');
+  });
+
   it('when nobody is signed in, then before the payment a line offers the receipt for the tax return with the account actions', async () => {
     await openWithQr();
 

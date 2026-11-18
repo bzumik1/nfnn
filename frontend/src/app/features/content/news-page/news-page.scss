@@ -93,3 +93,9 @@
     margin-top: var(--space-10);
   }
 }
+
+@include bp.down(nav) {
+  .content {
+    padding-bottom: 0;
+  }
+}

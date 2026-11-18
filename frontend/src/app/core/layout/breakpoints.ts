@@ -5,9 +5,11 @@ export const BREAKPOINTS = {
   tiny: 360,
   narrow: 420,
   phone: 480,
+  amounts: 520,
   cards: 640,
   tablet: 768,
   nav: 899,
+  laptop: 1100,
   wide: 1599,
 } as const;
 

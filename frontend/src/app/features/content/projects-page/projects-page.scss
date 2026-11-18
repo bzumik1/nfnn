@@ -374,3 +374,13 @@
     max-width: var(--content-max-wide);
   }
 }
+
+@include bp.down(nav) {
+  .stories-body {
+    padding-bottom: 0;
+  }
+
+  .year:last-child {
+    padding-bottom: 0;
+  }
+}
