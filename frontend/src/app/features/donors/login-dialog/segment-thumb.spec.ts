@@ -6,15 +6,23 @@ interface SegmentBox {
   width: number;
 }
 
+function laidOut(segment: HTMLElement, box: () => SegmentBox): void {
+  Object.defineProperties(segment, {
+    offsetLeft: { get: () => Math.round(box().left) },
+    offsetTop: { get: () => Math.round(box().top) },
+    offsetWidth: { get: () => Math.round(box().width) },
+  });
+  segment.getBoundingClientRect = () => {
+    const { left, top, width } = box();
+    return new DOMRect(left, top, width, 36);
+  };
+}
+
 function group(boxes: SegmentBox[]): { group: HTMLElement; thumb: HTMLElement } {
   const element = document.createElement('div');
   for (const box of boxes) {
     const segment = document.createElement('button');
-    Object.defineProperties(segment, {
-      offsetLeft: { value: box.left },
-      offsetTop: { value: box.top },
-      offsetWidth: { value: box.width },
-    });
+    laidOut(segment, () => box);
     element.append(segment);
   }
   const thumb = document.createElement('span');
@@ -41,6 +49,45 @@ describe('Given a choice of two segments side by side', () => {
 
     expect(restThumbOn(choice, thumb, 0)).toBe(true);
     expect(thumb.style.translate).toBe('0% 0');
+  });
+});
+
+describe('Given a choice whose segments are laid out on fractions of a pixel', () => {
+  const fractional = [
+    { left: 2.4, top: 2.2, width: 160.6 },
+    { left: 163, top: 2.2, width: 160.6 },
+  ];
+
+  it('when the second is selected, then the thumb takes the exact width and moves by exactly one segment', () => {
+    const { group: choice, thumb } = group(fractional);
+
+    expect(restThumbOn(choice, thumb, 1)).toBe(true);
+    expect(thumb.style.width).toBe('160.6px');
+    expect(thumb.style.translate).toBe('100% 0');
+  });
+});
+
+describe('Given a gliding thumb whose choice widens to fractions of a pixel', () => {
+  it('when the segments keep their share of the choice, then the thumb keeps gliding', () => {
+    const {
+      group: choice,
+      thumb,
+      layOut,
+    } = resizableGroup([
+      { left: 2, top: 2, width: 160 },
+      { left: 162, top: 2, width: 160 },
+    ]);
+    placeThumb(choice, 0, true);
+    placeThumb(choice, 1, true);
+    layOut([
+      { left: 2, top: 2, width: 180.4 },
+      { left: 182.4, top: 2, width: 180.4 },
+    ]);
+
+    const states = classStatesDuring(choice, () => placeThumb(choice, 1, false));
+
+    expect(states.every((state) => state.includes('ui-segmented--thumb-glides'))).toBe(true);
+    expect(thumb.style.translate).toBe('100% 0');
   });
 });
 
@@ -85,15 +132,11 @@ function resizableGroup(initial: SegmentBox[]): {
   const element = document.createElement('div');
   initial.forEach((_, index) => {
     const segment = document.createElement('button');
-    Object.defineProperties(segment, {
-      offsetLeft: { get: () => boxes[index].left },
-      offsetTop: { get: () => boxes[index].top },
-      offsetWidth: { get: () => boxes[index].width },
-    });
+    laidOut(segment, () => boxes[index]);
     element.append(segment);
   });
   const thumb = document.createElement('span');
-  thumb.className = 'segment-thumb';
+  thumb.className = 'ui-segmented__thumb';
   element.append(thumb);
   return {
     group: element,
@@ -121,7 +164,7 @@ describe('Given a thumb gliding to the newly selected segment', () => {
 
     const states = classStatesDuring(choice, () => placeThumb(choice, 1, false));
 
-    expect(states.every((state) => state.includes('segmented--thumb-glides'))).toBe(true);
+    expect(states.every((state) => state.includes('ui-segmented--thumb-glides'))).toBe(true);
     expect(thumb.style.translate).toBe('100% 0');
     expect(thumb.style.width).toBe('220px');
   });
@@ -137,7 +180,7 @@ describe('Given a thumb gliding to the newly selected segment', () => {
 
     placeThumb(choice, 1, false);
 
-    expect(choice.classList.contains('segmented--thumb-glides')).toBe(false);
-    expect(choice.classList.contains('segmented--thumb')).toBe(false);
+    expect(choice.classList.contains('ui-segmented--thumb-glides')).toBe(false);
+    expect(choice.classList.contains('ui-segmented--thumb')).toBe(false);
   });
 });

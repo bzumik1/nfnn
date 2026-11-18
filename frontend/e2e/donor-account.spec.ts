@@ -248,6 +248,38 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page.getByText('Odhlásili jste se.')).toHaveCount(0);
   });
 
+  test('when they close the signed-out notice, then it cannot be reached from the first moment it starts leaving', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedDonorSession(page);
+    await page.goto('/darce/prehled');
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Odhlásit se' }).click();
+    await expect(page.getByRole('status').getByText('Odhlásili jste se.')).toBeVisible();
+    await page.evaluate(() => {
+      const watch = window as unknown as { inertWhenLeaving: boolean[] };
+      watch.inertWhenLeaving = [];
+      new MutationObserver((records) => {
+        for (const record of records) {
+          const notice = record.target as HTMLElement;
+          if (notice.classList.contains('ui-notice--leaving')) {
+            watch.inertWhenLeaving.push(notice.inert);
+          }
+        }
+      }).observe(document.body, { subtree: true, attributeFilter: ['class'] });
+    });
+
+    await page.getByRole('button', { name: 'Zavřít' }).click();
+
+    await expect(page.getByText('Odhlásili jste se.')).toHaveCount(0);
+    const inertWhenLeaving = await page.evaluate(
+      () => (window as unknown as { inertWhenLeaving: boolean[] }).inertWhenLeaving,
+    );
+    expect(inertWhenLeaving).toContain(true);
+    expect(inertWhenLeaving).not.toContain(false);
+  });
+
   test('when they sign out while the server cannot hear it, then the notice says the sign-out finishes once there is a connection', async ({
     page,
   }) => {
