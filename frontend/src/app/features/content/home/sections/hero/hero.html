@@ -1,4 +1,11 @@
-<section #hero id="uvod" class="hero">
+<section
+  #hero
+  id="uvod"
+  class="hero"
+  [class.hero--shaded]="shade() !== null"
+  [style.--hero-lead-end.px]="shade()?.leadEnd"
+  [style.--hero-shade-end.px]="shade()?.shadeEnd"
+>
   <img
     #photo
     fetchpriority="high"
@@ -15,6 +22,7 @@
 
   <div #fullScreen class="hero-full-screen" aria-hidden="true">
     <div #tabBarStrip class="hero-tab-bar-strip"></div>
+    <div #shadeFade class="hero-shade-fade"></div>
   </div>
 
   <div #content class="hero-content">
