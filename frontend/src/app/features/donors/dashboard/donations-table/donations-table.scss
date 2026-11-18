@@ -74,20 +74,6 @@ tr.is-verification td.amount {
   font-variant-numeric: var(--numeric-figures);
 }
 
-.status-pill {
-  background: var(--color-success-bg);
-  color: var(--color-success);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  padding: var(--space-0-75) var(--space-2-5);
-  border-radius: var(--radius-pill);
-}
-
-.status-pill--refunded {
-  background: var(--color-border);
-  color: var(--color-text-muted);
-}
-
 .receipt-saved {
   max-width: 12rem;
 }
