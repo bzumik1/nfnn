@@ -177,6 +177,10 @@ describe('Given the sign-in dialog', () => {
       expect(element('.login-form button[type="submit"]').textContent?.trim()).toBe('Přihlásit se');
     });
 
+    it('then the e-mail field is labelled E-mail with an ordinary hyphen, so a screen reader says the word as written', () => {
+      expect(element('label[for="login-email"]').textContent?.trim()).toBe('E-mail');
+    });
+
     it('then the forgotten password link stands right under the password field', () => {
       const field = element('#login-password').closest('app-form-field') as HTMLElement;
       const card = field.parentElement as HTMLElement;
@@ -707,7 +711,7 @@ describe('Given the sign-in dialog', () => {
 
       expect(element('.ui-field-error').textContent).toContain('E-mail ještě není potvrzený');
       expect(element('.form-note .link-btn').textContent).toContain(
-        'Poslat ověřovací e\u2011mail znovu',
+        'Poslat ověřovací e-mail znovu',
       );
 
       await click('.form-note .link-btn');
@@ -1082,7 +1086,7 @@ describe('Given the sign-in dialog', () => {
       expect(dialog.isOpen()).toBe(true);
       expect(navigate).not.toHaveBeenCalled();
       expect(TestBed.inject(AuthStore).signedIn()).toBe(false);
-      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e\u2011mail');
+      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
       expect(element('.reset-success [role="status"]').textContent).toContain('jana@example.cz');
       expect(element('.register-form')).toBeNull();
       expect(element('.tab-switch')).toBeNull();
@@ -1281,7 +1285,7 @@ describe('Given the sign-in dialog', () => {
       request.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e\u2011mail');
+      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
     });
 
     it('in a browser without passkeys, then only the password is offered', async () => {
@@ -1627,7 +1631,7 @@ describe('Given the sign-in dialog', () => {
       request.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e\u2011mail');
+      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
       expect(element('.reset-success').textContent).toContain(
         'Pokud k\u00a0adrese jana@example.cz existuje účet',
       );
@@ -1659,7 +1663,7 @@ describe('Given the sign-in dialog', () => {
 
       http.expectNone('/api/donors/auth/password-reset/request');
       expect(element('#reset-email-error').textContent).toContain(
-        'Zadejte e\u2011mail ve tvaru jana@example.cz.',
+        'Zadejte e-mail ve tvaru jana@example.cz.',
       );
     });
 

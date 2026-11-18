@@ -3630,7 +3630,7 @@ describe('Given a signed-in donor in the donor area', () => {
         'Smazání účtu',
       ]);
       expect(texts('app-account-card .account-row dt')).toEqual([
-        'E\u2011mail',
+        'E-mail',
         'Heslo',
         'Dvoufaktorové ověření',
         'Přístupové klíče',

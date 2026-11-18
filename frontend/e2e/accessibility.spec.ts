@@ -911,9 +911,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await dialog.locator('#login-email').fill('jana@example.cz');
     await dialog.getByRole('button', { name: 'Zapomněli jste heslo?' }).click();
     await dialog.getByRole('button', { name: 'Odeslat odkaz' }).click();
-    await expect(
-      dialog.getByRole('heading', { name: 'Zkontrolujte si e\u2011mail' }),
-    ).toBeFocused();
+    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeFocused();
     expect(await violations(page)).toEqual([]);
 
     await dialog.getByRole('button', { name: 'Zpět na přihlášení' }).click();
@@ -924,9 +922,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await dialog.locator('#register-city').fill('Ústí nad Labem');
     await dialog.locator('#register-password').fill('correct horse battery');
     await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
-    await expect(
-      dialog.getByRole('heading', { name: 'Zkontrolujte si e\u2011mail' }),
-    ).toBeFocused();
+    await expect(dialog.getByRole('heading', { name: 'Zkontrolujte si e-mail' })).toBeFocused();
     expect(await violations(page)).toEqual([]);
   });
 
@@ -3399,9 +3395,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
     await page.getByRole('button', { name: 'Změnit e-mail' }).click();
-    await page.getByLabel('Nový e\u2011mail').fill('not-an-email');
+    await page.getByLabel('Nový e-mail').fill('not-an-email');
     await page.getByRole('button', { name: 'Poslat potvrzovací odkaz' }).click();
-    await expect(page.getByLabel('Nový e\u2011mail')).toBeFocused();
+    await expect(page.getByLabel('Nový e-mail')).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
 

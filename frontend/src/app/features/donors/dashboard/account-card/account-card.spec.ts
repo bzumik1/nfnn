@@ -161,7 +161,7 @@ describe('Given the sign-in and security card of the details page', () => {
     it('then one row per sign-in item shows its state and its action', () => {
       expect(card.element('h2').textContent).toContain('Přihlášení a zabezpečení');
       expect(card.texts('.account-row dt')).toEqual([
-        'E\u2011mail',
+        'E-mail',
         'Heslo',
         'Dvoufaktorové ověření',
         'Přístupové klíče',
@@ -204,7 +204,7 @@ describe('Given the sign-in and security card of the details page', () => {
       const action = card.button('Změnit e-mail')!;
       expect(action.getAttribute('aria-expanded')).toBe('true');
       expect(card.element('#account-email-panel').hidden).toBe(false);
-      expect(card.row('E\u2011mail').querySelector('#account-new-email')).not.toBeNull();
+      expect(card.row('E-mail').querySelector('#account-new-email')).not.toBeNull();
 
       await card.clickButton('Změnit e-mail');
 
@@ -616,7 +616,7 @@ describe('Given the sign-in and security card of the details page', () => {
 
       http.expectNone(EMAIL_CHANGE_URL);
       expect(card.element('#account-new-email-error').textContent).toContain(
-        'Zadejte prosím platnou e\u2011mailovou adresu.',
+        'Zadejte prosím platnou e-mailovou adresu.',
       );
       expect(document.activeElement).toBe(card.element('#account-new-email'));
     });
@@ -676,7 +676,7 @@ describe('Given the sign-in and security card of the details page', () => {
     });
 
     it('then the e-mail row shows the current address, the pending one with the expiry of its link and both actions', () => {
-      const row = card.row('E\u2011mail');
+      const row = card.row('E-mail');
       expect(normalized(row.querySelector('.account-email')?.textContent)).toBe('jana@example.cz');
       expect(normalized(row.querySelector('.account-pending-address')?.textContent)).toBe(
         'Čeká na potvrzení: jana.nova@example.cz',
@@ -721,7 +721,7 @@ describe('Given the sign-in and security card of the details page', () => {
         });
       await card.settle();
 
-      expect(card.row('E\u2011mail').querySelector('[role="alert"]')?.textContent).toContain(
+      expect(card.row('E-mail').querySelector('[role="alert"]')?.textContent).toContain(
         'Příliš mnoho požadavků',
       );
       expect(card.element('.account-pending-address')).not.toBeNull();

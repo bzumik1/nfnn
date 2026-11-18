@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { mockDonorApi, openDonorSection, openSignInDialog, signIn } from './donor-session';
 import {
@@ -206,7 +206,7 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
     await page.keyboard.press('Enter');
 
     await expect(changeEmail).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.getByLabel('Nový e\u2011mail')).toBeFocused();
+    await expect(page.getByLabel('Nový e-mail')).toBeFocused();
 
     await page.getByRole('button', { name: 'Zrušit', exact: true }).focus();
     await page.keyboard.press('Enter');
@@ -281,6 +281,27 @@ async function splitWords(page: Page, selector: string): Promise<string[]> {
   );
 }
 
+async function emailWordsBrokenAtTheHyphen(scope: Locator): Promise<string[]> {
+  return scope.evaluate((root) => {
+    const broken: string[] = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      for (const word of (node.textContent ?? '').matchAll(/e[-\u2011]mail\p{L}*/giu)) {
+        const range = document.createRange();
+        range.setStart(node, word.index);
+        range.setEnd(node, word.index + word[0].length);
+        const tops = new Set(
+          Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+        );
+        if (tops.size > 1) {
+          broken.push(word[0]);
+        }
+      }
+    }
+    return broken;
+  });
+}
+
 for (const width of [320, 390]) {
   test.describe(`Given a visitor on a phone ${width} px wide whose browser shows text twice as large`, () => {
     test.use({ viewport: { width, height: 844 } });
@@ -326,6 +347,18 @@ for (const width of [320, 390]) {
       }
       expect(boxes[0].x + boxes[0].width).toBeLessThanOrEqual(boxes[1].x);
       expect(await widerThanScreen(page)).toBe(0);
+    });
+
+    test('when they open the sign-in dialog, then the e-mail field is named E-mail with an ordinary hyphen and no e-mail word breaks at its hyphen', async ({
+      page,
+    }) => {
+      await page.goto('/aktuality/zahrada-pro-deti');
+      await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+      await openSignInDialog(page);
+      const dialog = page.getByRole('dialog');
+
+      await expect(dialog.getByRole('textbox', { name: 'E-mail', exact: true })).toBeVisible();
+      expect(await emailWordsBrokenAtTheHyphen(dialog)).toEqual([]);
     });
 
     test('when they open Aktuality, then the leading article keeps its signer, Sdílet and Číst celé inside its card', async ({

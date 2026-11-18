@@ -23,7 +23,7 @@ test.describe('Given a visitor on the donate section without an account', () => 
     await page.getByRole('button', { name: 'Vytvořit účet' }).click();
 
     await expect(
-      page.getByRole('dialog').getByRole('heading', { name: 'Zkontrolujte si e\u2011mail' }),
+      page.getByRole('dialog').getByRole('heading', { name: 'Zkontrolujte si e-mail' }),
     ).toBeVisible();
     expect(posted.map((body) => body.returnTo)).toEqual(['/#prispet']);
   });
@@ -42,7 +42,7 @@ test.describe('Given a visitor who registered and received the confirmation e-ma
 
     await page.goto('/potvrzeni-emailu#token=abc');
 
-    await expect(page.getByRole('heading', { name: 'E\u2011mail je potvrzený' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'E-mail je potvrzený' })).toBeVisible();
     await expect(page).toHaveURL(/\/potvrzeni-emailu$/);
     expect(page.url()).not.toContain('token');
     await expect(page).toHaveTitle('Potvrzení e-mailu | Nová naděje – nadační fond');
@@ -67,7 +67,7 @@ test.describe('Given a visitor who registered and received the confirmation e-ma
 
     await page.goto('/potvrzeni-emailu#token=abc&returnTo=%2F%23prispet');
 
-    await expect(page.getByRole('heading', { name: 'E\u2011mail je potvrzený' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'E-mail je potvrzený' })).toBeVisible();
     expect(page.url()).not.toContain('prispet');
     await page.getByRole('button', { name: 'Pokračovat k příspěvku' }).click();
 
@@ -100,14 +100,14 @@ test.describe('Given a visitor who registered and received the confirmation e-ma
 
     await page.goto('/potvrzeni-emailu#token=abc&change=email');
 
-    await expect(page.getByRole('heading', { name: 'E\u2011mail je změněný' })).toBeFocused();
+    await expect(page.getByRole('heading', { name: 'E-mail je změněný' })).toBeFocused();
     await expect(page.getByRole('status').filter({ hasText: /\S/ })).toContainText(
       'Nová adresa je potvrzená.',
     );
     expect(posted).toEqual([{ token: 'abc' }]);
     expect(page.url()).not.toContain('change');
     await page
-      .getByRole('region', { name: 'E\u2011mail je změněný' })
+      .getByRole('region', { name: 'E-mail je změněný' })
       .getByRole('button', { name: 'Přihlásit se' })
       .click();
 
@@ -142,7 +142,7 @@ test.describe('Given a visitor who registered and received the confirmation e-ma
     await page.locator('#verification-email').fill(' jana@example.cz ');
     await page.getByRole('button', { name: 'Poslat nový odkaz' }).click();
 
-    await expect(page.getByRole('heading', { name: 'E\u2011mail odeslán' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'E-mail odeslán' })).toBeVisible();
     expect(requested).toEqual([{ email: 'jana@example.cz' }]);
   });
 
