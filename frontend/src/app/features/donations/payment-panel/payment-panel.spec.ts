@@ -685,7 +685,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(element<HTMLButtonElement>('.bank-app-second').disabled).toBe(true);
   });
 
-  it('when the payment details fail to load, then the card says so with its retry above the bank buttons without unfolding the QR, and the retry keeps the focus until the bank buttons are ready', async () => {
+  it('when the payment details fail to load, then the card says only that with its retry, without the bank buttons, the other device or a QR, and the retry keeps the focus until the bank buttons are back', async () => {
     document.body.appendChild(panel().nativeElement);
     await settle();
     http
@@ -693,16 +693,14 @@ describe('Given the payment panel on a phone or a tablet', () => {
       .flush(null, { status: 503, statusText: 'Service Unavailable' });
     await settle();
 
-    expect(qrRegion().hidden).toBe(true);
     expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
     expect(element('.qr-error')).toBeNull();
-    const order = Array.from(
-      panel().nativeElement.querySelectorAll(
-        '.bank-failure, .bank-app-open',
-      ) as NodeListOf<Element>,
-    ).map((part) => part.classList.contains('bank-failure'));
-    expect(order).toEqual([true, false]);
-    expect(element<HTMLButtonElement>('.bank-app-open').disabled).toBe(true);
+    expect(element('.bank-app')).toBeNull();
+    expect(element('.bank-app-open')).toBeNull();
+    expect(element('.other-device')).toBeNull();
+    expect(element('.qr')).toBeNull();
+    expect(element('.qr-code')).toBeNull();
+    expect(panel().nativeElement.textContent).not.toContain('Platíte z jiného zařízení?');
 
     const retry = element<HTMLButtonElement>('.bank-failure-retry');
     retry.focus();

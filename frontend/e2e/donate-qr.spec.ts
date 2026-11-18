@@ -100,6 +100,19 @@ async function tokenMilliseconds(page: Page, token: string): Promise<number> {
   }, token);
 }
 
+async function heldPaymentDetails(page: Page): Promise<{ fail: () => void }> {
+  let fail: () => void = () => undefined;
+  const failed = new Promise<void>((resolve) => (fail = resolve));
+  await page.route(
+    (url) => url.pathname === PAYMENT_DETAILS_PATH,
+    async (route) => {
+      await failed;
+      await route.fulfill({ status: 503, json: { title: 'Nedostupné' } });
+    },
+  );
+  return { fail };
+}
+
 async function cardHeight(page: Page): Promise<number> {
   return (await page.locator('#prispet .bank').boundingBox())!.height;
 }
@@ -373,6 +386,25 @@ test.describe('Given a visitor on the Přispět page', () => {
       const bankTop = (await bank.boundingBox())!.y;
       const qrTop = (await page.locator('#prispet .qr').boundingBox())!.y;
       expect(bankTop).toBeLessThan(qrTop);
+    });
+
+    test('when the payment details fail, then the card says only that at the height it had while loading, with no bank buttons, other device or QR left under it', async ({
+      page,
+    }) => {
+      const answer = await heldPaymentDetails(page);
+      await page.goto('/prispet');
+      const card = page.locator('#prispet .bank');
+      await expect(card.locator('.bank-skeleton')).toBeAttached();
+      const loadingHeight = await cardHeight(page);
+
+      answer.fail();
+
+      await expect(card.getByRole('alert')).toHaveText(DETAILS_FAILED);
+      expect(Math.abs((await cardHeight(page)) - loadingHeight)).toBeLessThanOrEqual(1);
+      await expect(page.locator('#prispet .bank-app')).toHaveCount(0);
+      await expect(page.locator('#prispet .other-device')).toHaveCount(0);
+      await expect(page.locator('#prispet .qr')).toHaveCount(0);
+      await expect(page.locator('#prispet .qr-code')).toHaveCount(0);
     });
 
     test('when the payment details failed and the visitor retries, then the focus stays on Zkusit znovu and then rests on Otevřít v aplikaci banky', async ({

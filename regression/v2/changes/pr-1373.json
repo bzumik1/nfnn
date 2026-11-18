@@ -44,7 +44,7 @@
     "suite": "frontend-vitest",
     "test": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when the payment details fail to load, then the failure and its retry show without unfolding the QR",
     "reason": "Both teams 12/12 on #1303 and #1314 (#1373): when the payment details fail, one alert with a mailto link and Zkusit znovu replaces the whole card over its hidden skeleton, and Zkusit znovu keeps the focus while it loads, instead of a polite status in the QR column and the focus on the QR",
-    "replacement": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when the payment details fail to load, then the card says so with its retry above the bank buttons without unfolding the QR, and the retry keeps the focus until the bank buttons are ready",
+    "replacement": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when the payment details fail to load, then the card says only that with its retry, without the bank buttons, the other device or a QR, and the retry keeps the focus until the bank buttons are back",
     "contract": "docs/frontend-overview.md, Payment panel"
   },
   {

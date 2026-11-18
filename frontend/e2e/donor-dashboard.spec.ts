@@ -350,6 +350,38 @@ test.describe('Given a signed-in donor', () => {
     await expect(toggle).toBeInViewport();
   });
 
+  test('when the payment details fail on a phone, then the card Poslat dar says only that at the height it had while loading, with no bank buttons, other device or QR left under it', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, noDonations);
+    let fail: () => void = () => undefined;
+    const failed = new Promise<void>((resolve) => (fail = resolve));
+    await page.route(
+      (url) => url.pathname === '/api/donations/payment-details',
+      async (route) => {
+        await failed;
+        await route.fulfill({ status: 503, json: { title: 'Nedostupné' } });
+      },
+    );
+    await signIn(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const card = page.locator('.send-gift');
+    const bank = card.locator('.bank');
+    await expect(bank.locator('.bank-skeleton')).toBeAttached();
+    const loadingHeight = (await bank.boundingBox())!.height;
+
+    fail();
+
+    await expect(bank.getByRole('alert')).toHaveText(
+      'Platební údaje se nepodařilo načíst. Zkuste to prosím znovu. Když to nepomůže, napište na info@nfnn.cz.',
+    );
+    expect(Math.abs((await bank.boundingBox())!.height - loadingHeight)).toBeLessThanOrEqual(1);
+    await expect(card.locator('.bank-app')).toHaveCount(0);
+    await expect(card.locator('.other-device')).toHaveCount(0);
+    await expect(card.locator('.qr')).toHaveCount(0);
+    await expect(card.locator('.qr-code')).toHaveCount(0);
+  });
+
   test('when no donation has arrived yet and they sent a gift without the symbol, then the overview opens Přidat účet for the account it came from', async ({
     page,
   }) => {
