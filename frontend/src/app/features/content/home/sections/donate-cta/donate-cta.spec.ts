@@ -83,7 +83,7 @@ describe('Given the donate section', () => {
     const buttons = Array.from(
       fixture.nativeElement.querySelectorAll('button'),
     ) as HTMLButtonElement[];
-    const match = buttons.find((candidate) => candidate.textContent?.trim() === label);
+    const match = buttons.find((candidate) => spokenText(candidate) === label);
     if (!match) {
       throw new Error(`No button labelled "${label}"`);
     }
@@ -122,6 +122,18 @@ describe('Given the donate section', () => {
         return dark !== dot.classList.contains('is-off');
       })
     );
+  }
+
+  function spokenText(node: Element): string {
+    const copy = node.cloneNode(true) as Element;
+    copy.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => hidden.remove());
+    return copy.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+  }
+
+  function outsideSkeleton(selector: string): Element[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll(selector) as NodeListOf<Element>,
+    ).filter((found) => found.closest('.bank-skeleton') === null);
   }
 
   function squashed(selector: string): string {
@@ -789,8 +801,9 @@ describe('Given the donate section', () => {
 
     expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
     expect(element('.bank [role="alert"] a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
-    expect(element('.qr-code')).toBeNull();
-    expect(element('.qr-title')).toBeNull();
+    expect(element('.bank-skeleton').classList.contains('is-held')).toBe(true);
+    expect(outsideSkeleton('.qr-code')).toEqual([]);
+    expect(outsideSkeleton('.qr-title')).toEqual([]);
     expect(element('.qr-error')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('Naskenujte a přispějte');
     expect(button('Zkusit znovu')).not.toBeNull();
@@ -851,7 +864,7 @@ describe('Given the donate section', () => {
     fixture.nativeElement.remove();
   });
 
-  it('when the focus was on the QR and reloading the details fails, then the focus moves to Zkusit znovu, never to the page', async () => {
+  it('when the focus was on the QR and reloading the details fails with a server error, then the focus moves to Zkusit znovu, never to the page', async () => {
     document.body.appendChild(fixture.nativeElement);
     await settle();
     const details = foundationPaymentDetails();
@@ -864,7 +877,7 @@ describe('Given the donate section', () => {
     expect(document.activeElement).not.toBe(document.body);
     http
       .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
-      .flush(null, { status: 503, statusText: 'Service Unavailable' });
+      .flush(null, { status: 500, statusText: 'Server Error' });
     await settle();
 
     expect(document.activeElement).toBe(element('.bank-failure-retry'));

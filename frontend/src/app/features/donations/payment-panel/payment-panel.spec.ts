@@ -151,9 +151,11 @@ describe('Given the payment panel on a phone or a tablet', () => {
   }
 
   function button(label: string): HTMLButtonElement {
-    const match = buttons().find(
-      (candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === label,
-    );
+    const match = buttons().find((candidate) => {
+      const copy = candidate.cloneNode(true) as Element;
+      copy.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => hidden.remove());
+      return copy.textContent?.replace(/\s+/g, ' ').trim() === label;
+    });
     if (!match) {
       throw new Error(`No button labelled "${label}"`);
     }

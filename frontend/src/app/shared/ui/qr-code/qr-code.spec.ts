@@ -4,7 +4,7 @@ import { QrCode } from './qr-code';
 import { byteSegment, encodeSegments, encodeText, numericSegment } from './qr-encoder';
 import { isDark, QrMatrix } from './qr-matrix';
 import { decodePlainQr } from './testing/plain-qr-decoder';
-import { checkerboard, inverseCheckerboard } from './testing/qr-matrices';
+import { checkerboard, inverseCheckerboard, qrMatrix } from './testing/qr-matrices';
 
 const SIZE = 25;
 
@@ -110,21 +110,28 @@ describe('Given a branded QR code whose theme names the times of its wave', () =
     vi.unstubAllGlobals();
   });
 
-  it('when the matrix changes, then the wave takes its times from the theme', async () => {
+  it('when half of the matrix changes, then every part of the wave takes its time from the theme', async () => {
     const fixture = render(checkerboard(SIZE), 'branded');
     const svg = fixture.nativeElement.querySelector('svg') as SVGSVGElement;
     for (const [token, value] of Object.entries(times)) {
       svg.style.setProperty(token, value);
     }
+    const half = qrMatrix(SIZE, (column, row) =>
+      row < SIZE / 2 ? (column + row) % 2 === 0 : (column + row) % 2 === 1,
+    );
 
-    fixture.componentRef.setInput('matrix', inverseCheckerboard(SIZE));
+    fixture.componentRef.setInput('matrix', half);
     fixture.detectChanges();
     await fixture.whenStable();
 
-    for (const duration of [333, 444, 222, 111, 777, 555]) {
+    const themed = [333, 444, 222, 111, 777, 555];
+    for (const duration of themed) {
       expect(durations).toContain(duration);
     }
-    expect(durations).not.toContain(1860);
+    const ring = [...new Set(durations)].filter((duration) => !themed.includes(duration));
+    expect(ring).toHaveLength(1);
+    expect(ring[0]).toBeGreaterThan(11);
+    expect(ring[0]).toBeLessThan(11 + 2 * SIZE);
   });
 
   it('when the theme names no times, then the matrix changes without a wave', async () => {

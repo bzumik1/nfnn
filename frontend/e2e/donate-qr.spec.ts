@@ -132,17 +132,20 @@ test.describe('Given a visitor on the Přispět page', () => {
     const shownAt = await page.evaluate(() => performance.now());
     const read: { at: number | null } = { at: null };
     await expect
-      .poll(async () => {
-        const shotAt = await page.evaluate(() => performance.now());
-        const text = await decodedQrText(
-          page,
-          await page.locator('#prispet .qr-code').screenshot({ animations: 'allow' }),
-        );
-        if (text === PAYMENT_QR_1000_SPAYD) {
-          read.at ??= shotAt;
-        }
-        return read.at !== null;
-      })
+      .poll(
+        async () => {
+          const shotAt = await page.evaluate(() => performance.now());
+          const text = await decodedQrText(
+            page,
+            await page.locator('#prispet app-qr-code').screenshot({ animations: 'allow' }),
+          );
+          if (text === PAYMENT_QR_1000_SPAYD) {
+            read.at ??= shotAt;
+          }
+          return read.at !== null;
+        },
+        { intervals: [16] },
+      )
       .toBe(true);
 
     expect((read.at ?? Infinity) - shownAt).toBeLessThanOrEqual(budget);
@@ -172,7 +175,8 @@ test.describe('Given a visitor on the Přispět page', () => {
       'href',
       'mailto:info@nfnn.cz',
     );
-    await expect(page.locator('#prispet .qr-code')).toHaveCount(0);
+    await expect(page.locator('#prispet app-qr-code')).toHaveCount(0);
+    await expect(page.locator('#prispet .qr-code')).toBeHidden();
     await expect(page.locator('#prispet')).not.toContainText('Naskenujte a přispějte');
     const failedHeight = await cardHeight(page);
 
