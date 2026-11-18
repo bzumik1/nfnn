@@ -43,7 +43,7 @@ describe('Given the privacy policy page', () => {
     expect(texts('h2')).toEqual([
       'Správce osobních údajů',
       'Jaké údaje zpracováváme a proč',
-      'Jaké e‑maily posíláme',
+      'Jaké e-maily posíláme',
       'Jak dlouho údaje uchováváme',
       'Komu údaje předáváme',
       'Cookies',
@@ -437,7 +437,7 @@ describe('Given the privacy policy page', () => {
 
     expect(recipients).toContain('Sendinblue SAS');
     expect(recipients).toContain(
-      'přes kterou web odesílá e‑maily dárcům popsané v části Jaké e‑maily posíláme, zprávy z kontaktního formuláře přeposílané do schránky nadačního fondu a přehledy a upozornění pro správce webu',
+      'přes kterou web odesílá e‑maily dárcům popsané v části Jaké e-maily posíláme, zprávy z kontaktního formuláře přeposílané do schránky nadačního fondu a přehledy a upozornění pro správce webu',
     );
     expect(recipients).toContain('Brevo');
     expect(recipients).toContain('Cloudflare');
@@ -581,7 +581,7 @@ describe('Given the privacy policy page read in a browser that reports which sec
     await sight(enters('emaily'));
     await sight(leavesUpwards('emaily'));
 
-    expect(currentEntries()).toEqual(['Jaké e‑maily posíláme']);
+    expect(currentEntries()).toEqual(['Jaké e-maily posíláme']);
   });
 
   it('when the reader scrolls back up above the current section, then the section before it is the current location', async () => {
