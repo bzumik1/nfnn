@@ -30,8 +30,10 @@
     type="button"
     class="ui-button ui-button--small ui-button--quiet pdf-progress__cancel"
     (click)="cancelled.emit()"
-    i18n="@@ui.downloadProgress.cancel"
   >
-    Zrušit
+    <ng-container i18n="@@ui.downloadProgress.cancel">Zrušit</ng-container>
+    @if (cancelOf()) {
+      <span class="visually-hidden"> {{ cancelOf() }}</span>
+    }
   </button>
 }

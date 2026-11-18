@@ -137,6 +137,9 @@ describe('Given an administrator on the log levels page', () => {
 
     radio('WARN').click();
     await page.settle();
+    expect(
+      page.element('dialog .ui-segmented > .ui-segmented__thumb').getAttribute('aria-hidden'),
+    ).toBe('true');
     await page.click('1 h');
     await page.click('Nastavit na 1 h');
     const put = page.http.expectOne(`${LOGGERS_URL}/ROOT`);

@@ -1,4 +1,5 @@
 @use 'motion';
+@use 'pressed';
 @use 'touch-target';
 
 .ui-field-error {
@@ -9,28 +10,90 @@
 }
 
 .ui-segmented {
+  position: relative;
+  isolation: isolate;
   display: flex;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  row-gap: var(--space-0-5);
+  padding: var(--space-0-5);
+  border-radius: var(--radius-pill);
+  background: var(--color-fill);
 
   button {
     flex: 1;
-    padding: var(--space-2-5);
-    border-radius: var(--radius-lg);
-    border: 1.5px solid var(--color-border);
-    background-color: var(--color-surface);
-    color: var(--color-text-soft);
+    max-width: 100%;
+    overflow-wrap: break-word;
+    padding: var(--space-1-5) var(--space-3);
+    border: none;
+    border-radius: var(--radius-pill);
+    background-color: transparent;
+    color: var(--color-sheet-text);
+    font-family: var(--font-sheet);
+    font-size: var(--text-sheet-subtitle);
+    font-weight: var(--weight-regular);
     cursor: pointer;
-    font-family: var(--font-sans);
-    font-weight: var(--weight-semibold);
-    font-size: var(--text-md);
-    @include motion.state(border-color, background-color, color);
+    @include motion.state(background-color, opacity);
     @include touch-target.reaches-finger-size;
 
     &.is-active {
-      border-color: var(--color-accent);
-      background-color: var(--color-accent-bg);
-      color: var(--color-accent);
+      font-weight: var(--weight-semibold);
     }
+
+    &::after {
+      content: attr(data-label) / '';
+      display: block;
+      height: 0;
+      overflow: hidden;
+      font-weight: var(--weight-semibold);
+      visibility: hidden;
+    }
+
+    @include pressed.when-pressed {
+      @include pressed.fades;
+    }
+  }
+
+  &:not(.ui-segmented--thumb) button.is-active {
+    background-color: var(--color-segment-thumb);
+    box-shadow: var(--shadow-segment-thumb);
+  }
+}
+
+@media (forced-colors: active) {
+  .ui-segmented button:is([aria-checked='true'], [aria-pressed='true'], .is-active) {
+    background-color: Highlight;
+    color: HighlightText;
+  }
+}
+
+.ui-segmented__thumb {
+  position: absolute;
+  top: var(--space-0-5);
+  bottom: var(--space-0-5);
+  left: var(--space-0-5);
+  z-index: -1;
+  display: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-segment-thumb);
+  box-shadow: var(--shadow-segment-thumb);
+  pointer-events: none;
+  transform-origin: left;
+
+  .ui-segmented--thumb > & {
+    display: block;
+  }
+
+  .ui-segmented--thumb-glides > & {
+    @include motion.move((translate, scale), slow, spring);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
   }
 }
 

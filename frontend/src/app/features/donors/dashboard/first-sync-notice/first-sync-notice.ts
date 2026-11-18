@@ -14,6 +14,7 @@ import {
 import { keepRoomForFloatingNotice } from '../../../../shared/ui/floating-notice/floating-notice-room';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { DonorCopyLink } from '../../../donations/device-copy/donor-copy';
+import { LeavingNotice } from '../../../../shared/ui/leaving-notice/leaving-notice';
 
 export const FIRST_SYNC_NOTICE_DELAY_MS = 1000;
 export const STORED_NOTICE_MS = 4000;
@@ -22,7 +23,7 @@ type Shown = 'saving' | 'stored' | 'failed' | null;
 
 @Component({
   selector: 'app-first-sync-notice',
-  imports: [NeedsConnection],
+  imports: [NeedsConnection, LeavingNotice],
   templateUrl: './first-sync-notice.html',
   styleUrl: './first-sync-notice.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -84,6 +84,9 @@ describe('Given an administrator reading a log file', () => {
     ]);
     expect(page.texts('.ui-segmented button')).toEqual(['Vše', 'Varování', 'Chyby']);
     expect(page.element('.ui-segmented button').getAttribute('aria-checked')).toBe('true');
+    expect(page.element('.ui-segmented > .ui-segmented__thumb').getAttribute('aria-hidden')).toBe(
+      'true',
+    );
   });
 
   it('when the reader opens, then each day is a card with its date inside, above its entries', async () => {

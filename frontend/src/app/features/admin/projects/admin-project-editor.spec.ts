@@ -416,6 +416,9 @@ describe('Given an administrator writing a new project', () => {
     it('then the unsaved texts and the uploaded photo show as the public card and page, and the fields are hidden', () => {
       expect(button(fixture, 'Náhled').getAttribute('aria-pressed')).toBe('true');
       expect(button(fixture, 'Upravit').getAttribute('aria-pressed')).toBe('false');
+      expect(
+        element(fixture, '.editor-mode > .ui-segmented__thumb').getAttribute('aria-hidden'),
+      ).toBe('true');
       expect(element(fixture, '.ui-card[aria-labelledby="projects-content-title"]').hidden).toBe(
         true,
       );

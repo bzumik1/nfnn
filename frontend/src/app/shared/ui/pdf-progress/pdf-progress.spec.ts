@@ -88,6 +88,35 @@ describe('Given the line under a PDF button', () => {
     });
   });
 
+  describe('when a phase of a named receipt starts', () => {
+    beforeEach(async () => {
+      fixture.componentRef.setInput('cancelOf', 'přípravu potvrzení za rok 2025');
+      await show({ kind: 'running', text: 'Načítáme nástroje pro PDF…' });
+    });
+
+    it('and it takes longer than eight seconds, then the cancel shows Zrušit and its name goes on to the receipt, the same through every phase', async () => {
+      await wait(8000);
+
+      const cancel = element('.pdf-progress__cancel') as HTMLButtonElement;
+      const visible = [...cancel.childNodes]
+        .filter((node) => node.nodeType !== Node.COMMENT_NODE)
+        .filter((node) => !(node instanceof HTMLElement && node.matches('.visually-hidden')))
+        .map((node) => node.textContent)
+        .join('');
+      expect(visible.trim()).toBe('Zrušit');
+      expect(cancel.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Zrušit přípravu potvrzení za rok 2025',
+      );
+
+      await show({ kind: 'running', text: 'Vytváříme PDF… · strana 1' });
+      await wait(400);
+      expect(cancel.isConnected).toBe(true);
+      expect(cancel.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Zrušit přípravu potvrzení za rok 2025',
+      );
+    });
+  });
+
   describe('when the PDF waits for a second tap', () => {
     beforeEach(() =>
       show({

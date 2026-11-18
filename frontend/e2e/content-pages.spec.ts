@@ -64,6 +64,23 @@ async function publishedContent(page: Page): Promise<void> {
   );
 }
 
+async function wordsOfTheLastLine(paragraph: Locator): Promise<string[]> {
+  return paragraph.evaluate((element) => {
+    const range = document.createRange();
+    const words: { word: string; top: number }[] = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let text = walker.nextNode(); text !== null; text = walker.nextNode()) {
+      for (const match of (text.textContent ?? '').matchAll(/\S+/g)) {
+        range.setStart(text, match.index);
+        range.setEnd(text, match.index + match[0].length);
+        words.push({ word: match[0], top: Math.round(range.getClientRects()[0].top) });
+      }
+    }
+    const lastTop = words.at(-1)?.top;
+    return words.filter((each) => each.top === lastTop).map((each) => each.word);
+  });
+}
+
 test.describe('Given a visitor on the Aktuality and Pomáháme tabs', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
@@ -144,6 +161,23 @@ test.describe('Given a visitor on the Aktuality and Pomáháme tabs', () => {
       'href',
       '/',
     );
+  });
+
+  test('when they open Aktuality on an iPad upright, then the lead never ends with a lone word', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/content/news' || url.pathname === '/api/content/projects',
+      (route) =>
+        route.fulfill({ json: { items: [], page: 0, size: 10, total: 0, hasMore: false } }),
+    );
+    await page.setViewportSize({ width: 834, height: 1194 });
+
+    await page.goto('/aktuality');
+
+    const lead = page.locator('.ui-intro__lead');
+    await expect(lead).toContainText('vašimi dary.');
+    expect((await wordsOfTheLastLine(lead)).length).toBeGreaterThan(1);
   });
 
   test('when the address is one the article had before, then the article shows under its current address', async ({
