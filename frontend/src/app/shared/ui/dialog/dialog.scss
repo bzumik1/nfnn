@@ -135,6 +135,18 @@
   }
 }
 
+@include bp.up(nav) {
+  .dialog[open]:has(> .dialog-panel--tall) {
+    align-items: flex-start;
+  }
+
+  .dialog-panel--tall {
+    --dialog-tall-top: max(0px, (100dvh - var(--sheet-form-height)) / 2 - var(--space-5));
+    margin-top: var(--dialog-tall-top);
+    max-block-size: calc(100dvh - 2 * var(--space-5) - var(--dialog-tall-top));
+  }
+}
+
 @include bp.down(phone) {
   .dialog {
     --dialog-enter-scale: 1;
@@ -231,7 +243,9 @@
     }
   }
 
-  .dialog--sheet .dialog-panel--dragging {
+  .dialog--sheet .dialog-panel--dragging,
+  .dialog--sheet[open]:has(> .dialog-panel--dragging),
+  .dialog--sheet[open]:has(> .dialog-panel--dragging)::backdrop {
     transition: none;
   }
 

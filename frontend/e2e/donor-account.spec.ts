@@ -29,6 +29,49 @@ test.describe('Given a visitor who wants a donor account', () => {
     );
   });
 
+  for (const iPad of [
+    { pose: 'upright', width: 834, height: 1194 },
+    { pose: 'on its side', width: 1194, height: 834 },
+  ]) {
+    test(`when they switch from Přihlášení to Registrace and back on an iPad ${iPad.pose}, then the switch stays under the finger and the button is in sight or cued below`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.setViewportSize({ width: iPad.width, height: iPad.height });
+      await openSignInDialog(page);
+      const dialog = page.getByRole('dialog');
+      const switchTop = async (): Promise<number> => {
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () =>
+                document
+                  .getAnimations()
+                  .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+                  .filter((animation) => animation.playState === 'running').length,
+            ),
+          )
+          .toBe(0);
+        return (await dialog.locator('.tab-switch').boundingBox())!.y;
+      };
+      await expect(dialog.getByRole('button', { name: 'Přihlásit se', exact: true })).toBeVisible();
+      const signInTop = await switchTop();
+
+      await dialog.getByRole('button', { name: 'Registrace' }).click();
+      await expect(dialog.getByRole('button', { name: 'Vytvořit účet' })).toBeAttached();
+      const registrationTop = await switchTop();
+      await expectActionInSightOrCuedBelow(
+        dialog.locator('.dialog-panel'),
+        dialog.getByRole('button', { name: 'Vytvořit účet' }),
+      );
+      await dialog.getByRole('button', { name: 'Přihlášení', exact: true }).click();
+      await expect(dialog.getByRole('button', { name: 'Přihlásit se', exact: true })).toBeVisible();
+
+      expect(registrationTop).toBeCloseTo(signInTop, 0);
+      expect(await switchTop()).toBeCloseTo(signInTop, 0);
+    });
+  }
+
   test('when they register as a person, then the dialog asks them to confirm the e-mail and nobody is signed in', async ({
     page,
   }) => {
@@ -239,7 +282,7 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await expect(page).toHaveURL(/\/$/);
     await expect(
-      page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }),
+      page.getByRole('banner').getByRole('button', { name: 'Přihlásit se', exact: true }),
     ).toBeVisible();
     await expect(page.getByRole('status').getByText('Odhlásili jste se.')).toBeVisible();
 
@@ -269,7 +312,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Odhlásit se' }).click();
 
     await expect(
-      page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }),
+      page.getByRole('banner').getByRole('button', { name: 'Přihlásit se', exact: true }),
     ).toBeVisible();
     await expect(page.getByText('Server se o odhlášení zatím nedozvěděl')).toBeVisible();
     await expect

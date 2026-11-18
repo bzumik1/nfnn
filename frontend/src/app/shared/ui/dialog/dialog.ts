@@ -393,7 +393,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private closesWithMotion(): boolean {
     const view = this.document.defaultView;
     return (
-      (this.look() === 'sheet' || !this.layout.isCompact()) &&
+      (this.look() !== 'viewer' || !this.layout.isCompact()) &&
       !this.steppedAside &&
       this.element().nativeElement.open &&
       view?.matchMedia?.(LESS_MOTION).matches === false
