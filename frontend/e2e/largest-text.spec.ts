@@ -1546,5 +1546,99 @@ for (const { pose, width, rootSize } of [
         });
       }
     });
+
+    test('when the four busy buttons it can reach start working and the loading delay passes, then each keeps its height while its busy label shows', async ({
+      page,
+    }) => {
+      await page.clock.install();
+      await mockDonorApi(page);
+      const pending = { newEmail: 'jana.nova@example.cz', expiresAt: '2026-10-21T10:00:00Z' };
+      await page.route(
+        (url) => url.pathname === '/api/donors/me',
+        (route) => route.fulfill({ json: { ...administrator, pendingEmailChange: pending } }),
+      );
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/connections',
+        (route) => route.fulfill({ json: { items: [claudeConnection] } }),
+      );
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/passkeys',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                {
+                  id: '019a1b2c-3d4e-7f00-8000-000000000001',
+                  name: 'iPhone',
+                  createdAt: '2026-10-17T10:00:00Z',
+                  lastUsedAt: '2026-10-22T09:00:00Z',
+                },
+              ],
+            },
+          }),
+      );
+      const neverAnswered = new Promise<void>(() => undefined);
+      for (const path of [
+        '/api/donors/me/devices/',
+        '/api/donors/me/connections/',
+        '/api/donors/me/passkeys/',
+        '/api/donors/me/email-change/resend',
+      ]) {
+        await page.route(
+          (url) => url.pathname.startsWith(path),
+          async () => neverAnswered,
+        );
+      }
+      await signIn(page, { ...administrator, pendingEmailChange: pending });
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
+      await openDonorSection(page, 'Údaje a zabezpečení');
+
+      const devices = page.locator('.devices');
+      await devices.getByRole('button', { name: /^Odhlásit iPhone/ }).click();
+      const signOut = devices.locator('.devices-confirm-yes');
+      const disconnect = page.locator('.connection-disconnect');
+      const resend = page.locator('.account-resend');
+      await page.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
+      const passkeys = page.getByRole('region', { name: 'Přístupové klíče' });
+      await passkeys.getByRole('button', { name: 'Odebrat', exact: true }).click();
+      const remove = passkeys.locator('.passkey-confirm .ui-button--danger-soft');
+      const buttons = [signOut, disconnect, remove, resend];
+      for (const button of buttons) {
+        await expect(button).toBeVisible();
+      }
+      await page.evaluate(() => document.fonts.ready);
+      const heights = async () =>
+        Promise.all(
+          buttons.map((button) =>
+            button.evaluate((control) => Math.round(control.getBoundingClientRect().height)),
+          ),
+        );
+      const resting = await heights();
+      await page.evaluate(() =>
+        document.documentElement.style.setProperty('--delay-loading', '10s'),
+      );
+
+      for (const button of buttons) {
+        await button.click();
+      }
+      await page.clock.fastForward(10_000);
+
+      for (const [button, busyLabel] of [
+        [signOut, 'Odhlašujeme…'],
+        [disconnect, 'Odpojujeme…'],
+        [remove, 'Odebíráme…'],
+        [resend, 'Posíláme…'],
+      ] as const) {
+        await expect(button.locator('.busy-label__face--shown')).toHaveText(busyLabel);
+      }
+      const working = await heights();
+      for (const [index, height] of working.entries()) {
+        expect(
+          Math.abs(height - resting[index]),
+          `${await buttons[index].evaluate((control) => control.textContent?.trim())}: ${resting[index]} → ${height}`,
+        ).toBeLessThanOrEqual(1);
+      }
+    });
   });
 }
