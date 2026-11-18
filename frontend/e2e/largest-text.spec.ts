@@ -487,6 +487,9 @@ for (const { width, height } of [
           await expect.poll(() => numbersSplitAcrossLines(row), textSize).toEqual([]);
           await expect.poll(() => contentPastTheSides(row), textSize).toEqual([]);
         }
+        const refunded = rows.nth(2).locator('.ui-list__state .ui-badge');
+        await expect(refunded).toHaveText('Vráceno');
+        await expect.poll(() => linesOf(refunded), textSize).toBe(1);
       }
     });
 
