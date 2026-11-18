@@ -38,6 +38,7 @@ import { AdministrationCopyDownload } from '../device-copy/administration-copy-d
 import { everyOfferedYear } from '../device-copy/administration-overview';
 import { OpenAlert } from '../../../core/push/open-alerts-api';
 import { OpenAlerts } from '../../../core/push/open-alerts';
+import { LOADING_TIMINGS } from '../../../shared/ui/skeleton/loading-view';
 
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
 const OVERVIEW_URL = '/api/admin/donations/overview';
@@ -47,6 +48,8 @@ const ADMINISTRATORS_URL = '/api/admin/donors/administrators';
 const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 const RELEASE_URL = '/api/admin/operations/release';
+
+const LOADING_DELAY_MS = 10_000;
 
 describe('Given an administrator on the administration home', () => {
   const compact = signal(false);
@@ -70,6 +73,10 @@ describe('Given an administrator on the administration home', () => {
         provideHttpClientTesting(),
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
         { provide: OpenAlerts, useValue: { alerts: openAlerts.asReadonly(), refresh } },
+        {
+          provide: LOADING_TIMINGS,
+          useValue: () => ({ delayMs: LOADING_DELAY_MS, minimumMs: 0, appearMs: 0 }),
+        },
         provideRouter([]),
         {
           provide: AdministrationVisit,
@@ -330,6 +337,38 @@ describe('Given an administrator on the administration home', () => {
 
       expect(order()).toEqual(['attention', 'since']);
       expect(fixture.nativeElement.querySelector('.attention')).toBe(attention);
+    });
+
+    async function afterTheLoadingDelay(step: () => Promise<void>): Promise<void> {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(Date.now() + 2 * LOADING_DELAY_MS);
+      try {
+        await step();
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+
+    it('then something new found only after the loading delay leaves the summary under what needs attention, which does not move', async () => {
+      const attention = fixture.nativeElement.querySelector('.attention');
+
+      await afterTheLoadingDelay(() => visit(readyVisit(true)));
+
+      expect(order()).toEqual(['attention', 'since']);
+      expect(fixture.nativeElement.querySelector('app-since-last-visit').hidden).toBe(false);
+      expect(fixture.nativeElement.querySelector('.attention')).toBe(attention);
+    });
+
+    it('then a check that fails only after the loading delay leaves the summary under what needs attention too', async () => {
+      await afterTheLoadingDelay(() => visit({ kind: 'failed' }));
+
+      expect(order()).toEqual(['attention', 'since']);
+    });
+
+    it('then a check that fails within the loading delay puts the summary with its alert above what needs attention', async () => {
+      await visit({ kind: 'failed' });
+
+      expect(order()).toEqual(['since', 'attention']);
     });
 
     it('then a summary with something new that settles on top stays there when nothing is new any more', async () => {

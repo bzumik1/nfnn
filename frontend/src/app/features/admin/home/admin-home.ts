@@ -34,6 +34,7 @@ import {
   TallyResponse,
 } from '../admin-api';
 import { OpenAlerts } from '../../../core/push/open-alerts';
+import { LOADING_TIMINGS } from '../../../shared/ui/skeleton/loading-view';
 import { formatSize } from '../backups/backup-format';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { formatReportMonth } from '../report/report-month';
@@ -109,9 +110,18 @@ export class AdminHome {
   private readonly openAlerts = inject(OpenAlerts);
   protected readonly donor = this.auth.donor;
   protected readonly compact = inject(CompactLayout).isCompact;
-  private readonly summaryPlace = linkedSignal<VisitState, SummaryPlace | null>({
-    source: inject(AdministrationVisit).state,
-    computation: (state, previous) => previous?.value ?? summaryPlaceOf(state),
+  private readonly openedAt = Date.now();
+  private readonly loadingDelayMs = inject(LOADING_TIMINGS)()?.delayMs ?? 0;
+  private readonly loadingDelayPassed = signal(this.loadingDelayMs === 0);
+  private readonly visitState = inject(AdministrationVisit).state;
+  private readonly summaryPlace = linkedSignal<
+    { readonly state: VisitState; readonly late: boolean },
+    SummaryPlace | null
+  >({
+    source: () => ({ state: this.visitState(), late: this.loadingDelayPassed() }),
+    computation: ({ state, late }, previous) =>
+      previous?.value ??
+      (late || Date.now() - this.openedAt > this.loadingDelayMs ? 'below' : summaryPlaceOf(state)),
   });
   protected readonly summaryAbove = computed(
     () => !this.compact() && this.summaryPlace() === 'above',
@@ -232,6 +242,10 @@ export class AdminHome {
   };
 
   constructor() {
+    if (!this.loadingDelayPassed()) {
+      const delay = setTimeout(() => this.loadingDelayPassed.set(true), this.loadingDelayMs);
+      this.destroyRef.onDestroy(() => clearTimeout(delay));
+    }
     this.openAlerts.refresh();
     this.load();
     this.loadOverview();
