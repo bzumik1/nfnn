@@ -51,7 +51,8 @@ const SECTION_LINKS = 'nav a[href]';
 const HEADER = 'app-header .app-header';
 const SIDE_NAVIGATION = '.side-nav-panel';
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
-const CATCHING_UP_CLASS = `${PAGE_TRANSITION_CLASS}--catching-up`;
+const CATCH_UP_SPANS = 3;
+const FRAME_MS = 16;
 
 interface Running {
   readonly kind: PageTransitionKind;
@@ -205,9 +206,11 @@ export class PageTransitions {
     let progress = 0;
     let offset = 0;
     let ready = behind !== null;
+    let shown = 0;
+    let catchingUp = false;
     const follow = (): void => {
-      progress = offset / width;
-      over.style.transform = `translateX(${offset}px)`;
+      progress = shown / width;
+      over.style.transform = `translateX(${shown}px)`;
       under.style.transform = parallaxAt(progress);
       if (dim !== null) {
         dim.style.opacity = String(1 - progress);
@@ -223,15 +226,32 @@ export class PageTransitions {
               return;
             }
             ready = true;
-            overlay.classList.add(CATCHING_UP_CLASS);
-            follow();
-            view.setTimeout(
-              () => overlay.classList.remove(CATCHING_UP_CLASS),
-              this.durationOf('--duration-fast'),
-            );
+            catchingUp = true;
+            const closing = Math.max(1, this.durationOf('--duration-fast') / CATCH_UP_SPANS);
+            let last: number | null = null;
+            let gap = offset - shown;
+            const closeIn = (now: number): void => {
+              if (!catchingUp || this.running !== running) {
+                return;
+              }
+              const elapsed = last === null ? FRAME_MS : Math.max(0, now - last);
+              last = now;
+              gap *= Math.exp(-elapsed / closing);
+              if (Math.abs(gap) < 1) {
+                gap = 0;
+              }
+              shown = offset - gap;
+              follow();
+              catchingUp = gap !== 0;
+              if (catchingUp) {
+                view.requestAnimationFrame(closeIn);
+              }
+            };
+            view.requestAnimationFrame(closeIn);
           })
         : Promise.resolve();
     const settle = async (end: SwipeSettle): Promise<boolean> => {
+      catchingUp = false;
       if (this.running !== running) {
         return false;
       }
@@ -277,7 +297,8 @@ export class PageTransitions {
     return {
       follow: (to) => {
         offset = Math.min(width, Math.max(0, to));
-        if (ready) {
+        if (ready && !catchingUp) {
+          shown = offset;
           follow();
         }
       },
@@ -300,10 +321,12 @@ export class PageTransitions {
     arriving: PlacedPage,
     redressed: (into: PlacedPage) => void,
   ): Promise<boolean> {
-    const drawn = await this.preview.visit(path, () => {
-      const layer = this.layer();
-      return layer === null ? null : this.keep(layer);
-    });
+    const drawn = await this.withoutFocus(() =>
+      this.preview.visit(path, () => {
+        const layer = this.layer();
+        return layer === null ? null : this.keep(layer);
+      }),
+    );
     const scroller = arriving.box.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__scroller`);
     if (drawn === null || drawn.copy === null || scroller === null || this.running !== running) {
       return false;
@@ -313,6 +336,25 @@ export class PageTransitions {
     scroller.style.backgroundColor = drawn.ground;
     redressed({ box: arriving.box, copy: drawn.copy, scrollY: drawn.scrollY });
     return true;
+  }
+
+  private async withoutFocus<T>(draw: () => Promise<T>): Promise<T> {
+    const layer = this.layer();
+    const focused = this.document.activeElement;
+    layer?.setAttribute('inert', '');
+    try {
+      return await draw();
+    } finally {
+      layer?.removeAttribute('inert');
+      if (
+        focused instanceof HTMLElement &&
+        focused.isConnected &&
+        focused !== this.document.body &&
+        this.document.activeElement !== focused
+      ) {
+        focused.focus({ preventScroll: true });
+      }
+    }
   }
 
   private cover(event: GuardsCheckEnd): void {

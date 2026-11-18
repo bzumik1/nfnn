@@ -687,23 +687,73 @@ describe('Given the app on the home screen of a phone opened straight on the don
     Object.defineProperty(window, 'innerWidth', jsdomWidth!);
   });
 
+  function drawnUnder(): Promise<void> {
+    return new Promise((done) => setTimeout(done, 0));
+  }
+
   function over(): HTMLElement {
     return document.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`)!;
   }
 
-  it('when a finger takes the page before the page Zpět leads to is drawn, then the page stays over it, never over an empty ground, and once drawn it catches up with the finger', async () => {
+  function framesByHand(): { run(at: number): void; restore(): void } {
+    let waiting: FrameRequestCallback[] = [];
+    const asked = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        waiting.push(callback);
+        return waiting.length;
+      });
+    return {
+      run: (at) => {
+        const now = waiting;
+        waiting = [];
+        now.forEach((callback) => callback(at));
+      },
+      restore: () => asked.mockRestore(),
+    };
+  }
+
+  function offsetOf(page: HTMLElement): number {
+    return Number.parseFloat(/translateX\(([-\d.]+)px\)/.exec(page.style.transform)?.[1] ?? '0');
+  }
+
+  it('when a finger takes the page before the page Zpět leads to is drawn, then the page stays over it, never over an empty ground', async () => {
     const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
 
     swipe.follow(120);
-    expect(over().style.transform).toBe('');
-    finishVisit();
-    await Promise.resolve();
-    await Promise.resolve();
 
-    expect(over().style.transform).toBe('translateX(120px)');
-    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)?.classList).toContain(
-      `${PAGE_TRANSITION_CLASS}--catching-up`,
-    );
+    expect(over().style.transform).toBe('');
+  });
+
+  it('when the page Zpět leads to is drawn while the finger keeps moving, then the page closes in on the finger frame by frame until it is with it and then follows it 1:1, never jumping at an end set in advance', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    const frames = framesByHand();
+    try {
+      const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+      swipe.follow(120);
+      finishVisit();
+      await drawnUnder();
+
+      const gaps: number[] = [];
+      for (let frame = 1; frame <= 40; frame++) {
+        const finger = 120 + frame * 3;
+        swipe.follow(finger);
+        frames.run(frame * 16);
+        gaps.push(finger - offsetOf(over()));
+      }
+
+      expect(gaps[0]).toBeGreaterThan(30);
+      gaps.slice(1).forEach((gap, frame) => expect(gap).toBeLessThanOrEqual(gaps[frame]));
+      expect(gaps.at(-1)).toBe(0);
+      swipe.follow(300);
+      expect(offsetOf(over())).toBe(300);
+      expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)?.classList).not.toContain(
+        `${PAGE_TRANSITION_CLASS}--catching-up`,
+      );
+    } finally {
+      frames.restore();
+      document.documentElement.style.removeProperty('--duration-fast');
+    }
   });
 
   it('when the page Zpět leads to cannot be drawn, then letting go past half leaves the page where it is and says it did not leave', async () => {
@@ -738,7 +788,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
     expect(visits).toEqual(['/']);
     expect(under()).toBeNull();
     finishVisit();
-    await Promise.resolve();
+    await drawnUnder();
 
     expect(under()).toBe('Úvod');
   });

@@ -45,7 +45,8 @@
   visibility: hidden;
 }
 
-.page-transition-sheet-under dialog[open]:not(.page-transition *) {
+.page-transition-sheet-under dialog[open]:not(.page-transition *),
+.page-transition-sheet-under dialog[open]:not(.page-transition *)::backdrop {
   opacity: 0 !important;
 }
 
@@ -84,12 +85,6 @@
   animation-duration: 0s !important;
   animation-delay: 0s !important;
   transition: none !important;
-}
-
-.page-transition--catching-up :is(.page-transition__page, .page-transition__dim) {
-  transition:
-    transform var(--duration-fast) var(--ease-page),
-    opacity var(--duration-fast) var(--ease-page);
 }
 
 .page-transition__dim {

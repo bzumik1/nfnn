@@ -121,6 +121,41 @@ function overPageOffset(page: Page): Promise<number> {
     .evaluate((over) => new DOMMatrixReadOnly(getComputedStyle(over).transform).m41);
 }
 
+const FLICK_REST_MS = 100;
+
+async function restLongerThanAFlick(page: Page): Promise<void> {
+  const restStartedAt = await page.evaluate(() => performance.now());
+  await expect
+    .poll(() => page.evaluate(() => performance.now()))
+    .toBeGreaterThan(restStartedAt + FLICK_REST_MS);
+}
+
+async function countFocusMoves(page: Page): Promise<() => Promise<number>> {
+  const focused = await watchFocus(page);
+  return async () => (await focused()).length;
+}
+
+async function watchFocus(page: Page): Promise<() => Promise<string[]>> {
+  await page.evaluate(() => {
+    const probe = window as unknown as { focused: string[] };
+    probe.focused = [];
+    document.addEventListener(
+      'focusin',
+      (event) => probe.focused.push((event.target as Element).textContent?.trim() ?? ''),
+      { capture: true },
+    );
+  });
+  return () => page.evaluate(() => (window as unknown as { focused: string[] }).focused);
+}
+
+function linkToArticle(page: Page) {
+  return page.getByRole('main').locator(`a[href="/aktuality/${article.slug}"]`).first();
+}
+
+function articleHeading(page: Page) {
+  return page.getByRole('heading', { level: 1, name: article.title });
+}
+
 async function inTheHomeScreenApp(page: Page): Promise<void> {
   await page.addInitScript(() => {
     Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
@@ -287,6 +322,133 @@ test.describe('Given an administrator who opened the app on the home screen of a
     await letGo(page, 300);
     await expect(page).toHaveURL('/');
     await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+});
+
+test.describe('Given the app on the home screen of a phone with an article opened from the news', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await inTheHomeScreenApp(page);
+    await mockDonorApi(page);
+    await publishedArticle(page);
+    await page.goto('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeVisible();
+    await linkToArticle(page).click();
+    await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+    await expect(articleHeading(page)).toBeFocused();
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+
+  test('when a finger takes the article back past half and lets go, then the news returns with focus on the link the visitor left by', async ({
+    page,
+  }) => {
+    await takeWithFinger(page, 20);
+    await dragOn(page, 300);
+    await letGo(page, 300);
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(linkToArticle(page)).toBeFocused();
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+
+  test('when a finger takes the article a little way and rests before letting go, then the article stays and keeps its focus, which never moved meanwhile', async ({
+    page,
+  }) => {
+    const focusMoves = await countFocusMoves(page);
+
+    await takeWithFinger(page, 20);
+    await restLongerThanAFlick(page);
+    await letGo(page, 120);
+
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+    await expect(articleHeading(page)).toBeFocused();
+    expect(await focusMoves()).toBe(0);
+  });
+});
+
+test.describe('Given the app on the home screen of a phone opened straight on an article, so the news is drawn under the finger', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await inTheHomeScreenApp(page);
+    await mockDonorApi(page);
+    await publishedArticle(page);
+    await page.goto(`/aktuality/${article.slug}`);
+    await expect(articleHeading(page)).toBeVisible();
+    await articleHeading(page).focus();
+  });
+
+  test('when a finger takes the article while the news is drawn under it and the swipe is called off, then the drawing took no focus and the article keeps it', async ({
+    page,
+  }) => {
+    const focused = await watchFocus(page);
+
+    await takeWithFinger(page, 20);
+    await expect(
+      swipeOverlay(page).locator('.page-transition__page--under h1', { hasText: LIST_TITLE }),
+    ).toHaveCount(1);
+    await restLongerThanAFlick(page);
+    await letGo(page, 120);
+
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+    await expect(articleHeading(page)).toBeFocused();
+    expect(new Set(await focused())).toEqual(new Set([article.title]));
+  });
+
+  test('when a finger takes the article back past half and lets go, then the news, never shown before, opens with focus on its heading', async ({
+    page,
+  }) => {
+    await takeWithFinger(page, 20);
+    await expect(
+      swipeOverlay(page).locator('.page-transition__page--under h1', { hasText: LIST_TITLE }),
+    ).toHaveCount(1);
+    await dragOn(page, 300);
+    await letGo(page, 300);
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeFocused();
+  });
+});
+
+test.describe('Given the app on the home screen of a phone with an article opened from the news, for a visitor who asks for less motion', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    reducedMotion: 'reduce',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await inTheHomeScreenApp(page);
+    await mockDonorApi(page);
+    await publishedArticle(page);
+    await page.goto('/aktuality');
+    await linkToArticle(page).click();
+    await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+    await expect(articleHeading(page)).toBeFocused();
+  });
+
+  test('when a finger swipes the article back past half, then nothing follows the finger, and on letting go the news returns with focus on the link the visitor left by', async ({
+    page,
+  }) => {
+    await takeWithFinger(page, 20);
+    await dragOn(page, 300);
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+    await letGo(page, 300);
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(linkToArticle(page)).toBeFocused();
   });
 });
 
