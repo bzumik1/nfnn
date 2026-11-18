@@ -23,6 +23,7 @@ import { DialogHistory, DialogHistoryListener } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { DIALOG_SUSPENSION } from './dialog-suspension';
 import { canPullSheetFrom, PullIntent, pullIntent, SheetDrag, TouchOrigin } from './sheet-drag';
+import { Appearance } from '../../../core/appearance/appearance';
 import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 
@@ -30,6 +31,7 @@ const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 const CLOSING_GRACE_MS = 300;
 const SHEET_DURATION = '--duration-sheet';
+const REPAINTING = 'dialog--repainting';
 
 type Exit = 'open' | 'leaving' | 'gone';
 
@@ -96,6 +98,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private readonly suspension = inject(DIALOG_SUSPENSION);
   private readonly layout = inject(CompactLayout);
   private readonly modality = inject(InputModality);
+  private readonly appearance = inject(Appearance);
   private dragPointer: number | null = null;
   private touchOrigin: TouchOrigin | null = null;
   private touchIntent: PullIntent = 'content';
@@ -115,6 +118,32 @@ export class Dialog implements AfterViewInit, OnDestroy {
       const depth = this.depth();
       untracked(() => this.showDepth(depth));
     });
+    let shownAppearance: boolean | null = null;
+    effect(() => {
+      const dark = this.appearance.dark();
+      if (shownAppearance !== null && shownAppearance !== dark) {
+        untracked(() => this.repaintStatusBar());
+      }
+      shownAppearance = dark;
+    });
+  }
+
+  private repaintStatusBar(): void {
+    const dialog = this.element().nativeElement;
+    const view = this.document.defaultView;
+    if (!this.viewReady || !dialog.open || view === null || dialog.classList.contains(REPAINTING)) {
+      return;
+    }
+    const focused = this.document.activeElement;
+    dialog.classList.add(REPAINTING);
+    view.requestAnimationFrame(() =>
+      view.requestAnimationFrame(() => {
+        dialog.classList.remove(REPAINTING);
+        if (focused instanceof HTMLElement && dialog.contains(focused)) {
+          focused.focus({ preventScroll: true });
+        }
+      }),
+    );
   }
 
   ngAfterViewInit(): void {

@@ -172,6 +172,33 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
   });
 });
 
+test.describe('Given a signed-in donor who asks for less motion', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('when they read the receipts, then no animation of a PDF button waits paused, so every animation that ends does end', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await openReceiptsAfterSignIn(page);
+    await expect(page.locator('app-pdf-button-face').nth(2)).toBeVisible();
+
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            document
+              .getAnimations()
+              .filter(
+                (animation) =>
+                  animation.playState === 'paused' &&
+                  animation.effect?.getComputedTiming().iterations !== Infinity,
+              ).length,
+        ),
+      )
+      .toBe(0);
+  });
+});
+
 test.describe('Given a signed-in donor on an iPhone, whose browser shares files', () => {
   test('when the receipt is drawn, then the same button, now Otevřít potvrzení and focused, hands the PDF to the share sheet without issuing it again', async ({
     page,
