@@ -28,7 +28,7 @@ export class PreviewingReuse extends BaseRouteReuseStrategy {
   }
 
   override shouldDetach(route: ActivatedRouteSnapshot): boolean {
-    return this.preview.drives() || this.kept.shouldDetach(route);
+    return this.kept.shouldDetach(route) || this.preview.drives();
   }
 
   override store(route: ActivatedRouteSnapshot, handle: DetachedRouteHandle | null): void {

@@ -224,15 +224,25 @@ describe('Given the app on the home screen with the news scrolled and left for t
   let router: Router;
   let preview: NavigationPreview;
   let scrolledTo: number[];
+  let place: number;
 
   function scrolledBy(top: number): void {
-    Object.defineProperty(window, 'scrollY', { value: top, configurable: true });
+    place = top;
+  }
+
+  function onlyTheNewsIsLongEnoughToScroll(): void {
+    Object.defineProperty(window, 'scrollY', {
+      get: () => (document.querySelector('p')?.textContent === '/aktuality' ? place : 0),
+      configurable: true,
+    });
   }
 
   beforeEach(async () => {
     created.length = 0;
     destroyed.length = 0;
     scrolledTo = [];
+    place = 0;
+    onlyTheNewsIsLongEnoughToScroll();
     vi.spyOn(window, 'scrollTo').mockImplementation((options?: ScrollToOptions | number) => {
       if (typeof options === 'object') {
         scrolledTo.push(options.top ?? 0);
@@ -278,7 +288,7 @@ describe('Given the app on the home screen with the news scrolled and left for t
   afterEach(() => {
     delete (Navigator.prototype as { standalone?: boolean }).standalone;
     vi.restoreAllMocks();
-    scrolledBy(0);
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
   });
 
   function stepBackToTheNews(): Promise<boolean> {

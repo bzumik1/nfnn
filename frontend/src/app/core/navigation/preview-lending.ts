@@ -87,8 +87,7 @@ export class PreviewLending {
       this.navigation()?.extras.info !== PREVIEW_BACK ||
       handle === null ||
       lent === null ||
-      !isPageOf(lent, route) ||
-      !this.kept.shouldDetach(route)
+      !isPageOf(lent, route)
     ) {
       return false;
     }
