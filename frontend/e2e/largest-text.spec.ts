@@ -282,20 +282,26 @@ for (const { width, height } of [
           const bar = document.querySelector('header.app-header')!.getBoundingClientRect();
           return range.getClientRects()[0].bottom - bar.height;
         });
-      const scrollByPixels = (pixels: number): Promise<void> =>
-        page.evaluate((pixels) => window.scrollBy({ top: pixels, behavior: 'instant' }), pixels);
+      const bringTheFirstLineTo = async (pastTheBar: number): Promise<void> => {
+        const pixels = (await firstLinePastTheBar()) - pastTheBar;
+        await page.evaluate((top) => window.scrollBy({ top, behavior: 'instant' }), pixels);
+      };
+      const bar = page.locator('header.app-header');
 
-      await scrollByPixels((await firstLinePastTheBar()) + 2);
-
-      await expect(title).toHaveClass(/edge-title--shown/);
+      await expect(async () => {
+        await bringTheFirstLineTo(-2);
+        expect(await firstLinePastTheBar()).toBeLessThan(0);
+        const large = (await heading.boundingBox())!;
+        expect(large.y + large.height).toBeGreaterThan((await bar.boundingBox())!.height);
+        await expect(title).toHaveClass(/edge-title--shown/, { timeout: 1000 });
+      }).toPass();
       await expect(title).toHaveText('Údaje a zabezpečení');
-      const bar = (await page.locator('header.app-header').boundingBox())!;
-      const large = (await heading.boundingBox())!;
-      expect(large.y + large.height).toBeGreaterThan(bar.height);
 
-      await scrollByPixels((await firstLinePastTheBar()) - 2);
-
-      await expect(title).not.toHaveClass(/edge-title--shown/);
+      await expect(async () => {
+        await bringTheFirstLineTo(2);
+        expect(await firstLinePastTheBar()).toBeGreaterThan(0);
+        await expect(title).not.toHaveClass(/edge-title--shown/, { timeout: 1000 });
+      }).toPass();
     });
 
     test('when a signed-in donor opens Bankovní účty, then every account number stays within its card beside or under the logo of its bank', async ({
