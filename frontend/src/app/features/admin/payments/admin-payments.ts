@@ -35,6 +35,7 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { LiveUpdates } from '../../../core/live/live-updates';
+import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
 import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
@@ -138,6 +139,7 @@ export class AdminPayments {
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly dialogHistory = inject(DialogHistory);
+  private readonly backTarget = inject(BackTarget);
   private readonly route = inject(ActivatedRoute);
   private readonly loginDialog = inject(LoginDialogService);
   private readonly destroyRef = inject(DestroyRef);
@@ -187,10 +189,14 @@ export class AdminPayments {
 
   protected readonly unpairing = signal<string | null>(null);
   protected readonly opened = signal<AdminPaymentResponse | null>(null);
-  protected readonly rows = inject(CompactLayout).listsAsRows;
+  private readonly layout = inject(CompactLayout);
+  protected readonly rows = this.layout.listsAsRows;
+  protected readonly chosenFrom = computed(() => this.chosenOn(this.filters().from));
+  protected readonly chosenTo = computed(() => this.chosenOn(this.filters().to));
   protected readonly months = computed(() => byMonth(this.items()));
   protected readonly changedMeanwhile = signal(false);
   private afterReload: (() => void) | null = null;
+  private leftByStep: string | null = null;
 
   protected readonly hasMore = computed(() => this.items().length < this.total());
   protected readonly filteredDonorName = computed(
@@ -203,7 +209,17 @@ export class AdminPayments {
   );
 
   constructor() {
-    afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+    afterNextRender(
+      () => {
+        this.leftByStep =
+          this.router.lastSuccessfulNavigation()?.trigger === 'popstate'
+            ? this.backTarget.leftPath
+            : null;
+        this.title().nativeElement.focus();
+        this.focusRowLeftBy();
+      },
+      { injector: this.injector },
+    );
     this.pages
       .pipe(
         switchMap((filters) => this.firstPage(filters)),
@@ -294,6 +310,10 @@ export class AdminPayments {
   protected searchPayments(value: string): void {
     this.searchText.set(value);
     this.typed.next(value);
+  }
+
+  private chosenOn(isoDate: string): string | null {
+    return this.layout.isCompact() || !isoDate ? null : chosenDay(isoDate);
   }
 
   protected choosePeriod(bound: 'from' | 'to', value: string): void {
@@ -435,6 +455,33 @@ export class AdminPayments {
     }
     this.state.set('ready');
     afterReload?.();
+    if (this.leftByStep !== null) {
+      afterNextRender(() => this.focusRowLeftBy(), { injector: this.injector });
+    }
+  }
+
+  private focusRowLeftBy(): void {
+    const left = this.leftByStep;
+    if (left === null || this.state() !== 'ready') {
+      return;
+    }
+    this.leftByStep = null;
+    const shown = this.rows() ? this.months().flatMap((month) => month.items) : this.items();
+    const index = shown.findIndex(
+      (item) => item.donation !== null && this.donorHref(item.donation.donorId) === left,
+    );
+    const row = this.host.nativeElement
+      .querySelectorAll<HTMLElement>('[data-payment-row]')
+      .item(index);
+    if (index < 0 || row === null) {
+      return;
+    }
+    const link = Array.from(row.querySelectorAll<HTMLElement>('a[href]')).find(
+      (candidate) => candidate.getAttribute('href') === left,
+    );
+    const target = link ?? row;
+    target.focus({ preventScroll: true });
+    target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }
 
   private leaveOnRefusal(failure: unknown): boolean {
@@ -530,8 +577,12 @@ export class AdminPayments {
     }
     event.preventDefault();
     const url = this.donorHref(donorId);
-    const replaced = this.dialogHistory.handOver(url);
-    void this.router.navigateByUrl(url, { replaceUrl: replaced });
+    const depth = this.backTarget.nextDepth();
+    if (this.dialogHistory.handOver(url)) {
+      void this.router.navigateByUrl(url, { replaceUrl: true, state: { [APP_DEPTH_KEY]: depth } });
+    } else {
+      void this.router.navigateByUrl(url);
+    }
   }
 
   protected closePayment(): void {
@@ -840,4 +891,8 @@ function emailsById(list: DonorAccountListResponse): ReadonlyMap<string, string>
 function senderSurname(payment: AdminPaymentResponse): string {
   const first = (payment.counterpartyName ?? '').trim().split(/\s+/)[0] ?? '';
   return first.length >= 2 ? first : '';
+}
+
+function chosenDay(isoDate: string): string {
+  return $localize`:@@admin.payments.period.chosen:Vybraný den: ${formatDonationDate(isoDate)}:date:.`;
 }

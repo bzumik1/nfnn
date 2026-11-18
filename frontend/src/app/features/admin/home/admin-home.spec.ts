@@ -38,6 +38,7 @@ import { AdministrationCopyDownload } from '../device-copy/administration-copy-d
 import { everyOfferedYear } from '../device-copy/administration-overview';
 import { OpenAlert } from '../../../core/push/open-alerts-api';
 import { OpenAlerts } from '../../../core/push/open-alerts';
+import { LOADING_TIMINGS } from '../../../shared/ui/skeleton/loading-view';
 
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
 const OVERVIEW_URL = '/api/admin/donations/overview';
@@ -48,8 +49,11 @@ const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 const RELEASE_URL = '/api/admin/operations/release';
 
+const LOADING_DELAY_MS = 10_000;
+
 describe('Given an administrator on the administration home', () => {
   const compact = signal(false);
+  const visitState = signal<VisitState>({ kind: 'checking' });
   const openAlerts = signal<readonly OpenAlert[] | null>(null);
   const refresh = vi.fn();
   let fixture: ComponentFixture<AdminHome>;
@@ -59,6 +63,7 @@ describe('Given an administrator on the administration home', () => {
   beforeEach(async () => {
     localStorage.clear();
     compact.set(false);
+    visitState.set({ kind: 'checking' });
     openAlerts.set(null);
     refresh.mockClear();
     await TestBed.configureTestingModule({
@@ -68,11 +73,15 @@ describe('Given an administrator on the administration home', () => {
         provideHttpClientTesting(),
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
         { provide: OpenAlerts, useValue: { alerts: openAlerts.asReadonly(), refresh } },
+        {
+          provide: LOADING_TIMINGS,
+          useValue: () => ({ delayMs: LOADING_DELAY_MS, minimumMs: 0, appearMs: 0 }),
+        },
         provideRouter([]),
         {
           provide: AdministrationVisit,
           useValue: {
-            state: signal<VisitState>({ kind: 'checking' }).asReadonly(),
+            state: visitState.asReadonly(),
             opened: signal(null).asReadonly(),
             dismissed: signal(false).asReadonly(),
             check: () => Promise.resolve(),
@@ -214,6 +223,7 @@ describe('Given an administrator on the administration home', () => {
   });
 
   it('when the import card is ready, then it holds the part for older payments with the default day', async () => {
+    compact.set(true);
     await respond(importState({ defaultHistoryFrom: '2025-01-01' }));
 
     const card = fixture.nativeElement.querySelector(
@@ -223,6 +233,222 @@ describe('Given an administrator on the administration home', () => {
       'Starší platby z banky',
     );
     expect((card.querySelector('input#history-from') as HTMLInputElement).value).toBe('2025-01-01');
+  });
+
+  it('when the import state is ready on a computer, then the older payments get a card of their own under the import and the backups, headed like the other cards', async () => {
+    await respond(importState({ defaultHistoryFrom: '2025-01-01' }));
+
+    const importCard = fixture.nativeElement.querySelector(
+      '.ui-card[aria-labelledby="admin-import-title"]',
+    ) as HTMLElement;
+    expect(importCard.querySelector('app-history-import')).toBeNull();
+    const historyCard = fixture.nativeElement.querySelector('.admin-status')
+      ?.nextElementSibling as HTMLElement;
+    expect(historyCard.querySelector('h2')?.textContent?.trim()).toBe('Starší platby z banky');
+    expect(historyCard.querySelector('h3')).toBeNull();
+    expect((historyCard.querySelector('input#history-from') as HTMLInputElement).value).toBe(
+      '2025-01-01',
+    );
+    expect(historyCard.nextElementSibling).toBe(
+      fixture.nativeElement.querySelector('.admin-overview'),
+    );
+  });
+
+  it('when the import state cannot be loaded on a computer, then no card for older payments stands empty', async () => {
+    await respond({}, 500);
+
+    expect(fixture.nativeElement.querySelector('app-history-import')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.admin-status')?.nextElementSibling).toBe(
+      fixture.nativeElement.querySelector('.admin-overview'),
+    );
+  });
+
+  describe('when they look at the overview on a computer', () => {
+    function order(): string[] {
+      return Array.from(
+        fixture.nativeElement.querySelectorAll('.attention, app-since-last-visit'),
+      ).map((element) => ((element as HTMLElement).matches('.attention') ? 'attention' : 'since'));
+    }
+
+    async function visit(state: VisitState): Promise<void> {
+      visitState.set(state);
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    function readyVisit(anything: boolean): VisitState {
+      const none = { count: 0, totalMinor: 0, bookedFrom: null };
+      return {
+        kind: 'ready',
+        seenAt: '2026-10-17T08:00:00Z',
+        copiedAt: null,
+        changes: {
+          payments: { count: anything ? 1 : 0, totalMinor: anything ? 50000 : 0 },
+          paired: none,
+          unpaired: anything ? { count: 1, totalMinor: 50000, bookedFrom: '2026-10-17' } : none,
+          newDonors: 0,
+          receipts: 0,
+          otherAdministrators: [],
+          anything,
+        },
+      };
+    }
+
+    it('then on a first visit of this device what needs attention comes first and the summary with nothing to compare follows it', async () => {
+      await visit({ kind: 'first' });
+
+      expect(order()).toEqual(['attention', 'since']);
+    });
+
+    it('then in a browser that keeps no administration what needs attention comes first too', async () => {
+      await visit({ kind: 'not-kept' });
+
+      expect(order()).toEqual(['attention', 'since']);
+    });
+
+    it('then with nothing new since the last visit what needs attention comes first too', async () => {
+      await visit(readyVisit(false));
+
+      expect(order()).toEqual(['attention', 'since']);
+    });
+
+    it('then with something new since the last visit the summary comes first and what needs attention follows it', async () => {
+      await visit(readyVisit(true));
+
+      expect(order()).toEqual(['since', 'attention']);
+    });
+
+    it('then while the visit is checked the summary waits out of sight, and once it settles the cards keep their order whatever the check says next', async () => {
+      await visit({ kind: 'closed' });
+      const attention = fixture.nativeElement.querySelector('.attention');
+
+      await visit({ kind: 'checking' });
+
+      expect(order()).toEqual(['attention', 'since']);
+      expect(fixture.nativeElement.querySelector('app-since-last-visit').hidden).toBe(true);
+
+      await visit(readyVisit(false));
+
+      expect(order()).toEqual(['attention', 'since']);
+      expect(fixture.nativeElement.querySelector('app-since-last-visit').hidden).toBe(false);
+
+      await visit({ kind: 'checking' });
+      await visit(readyVisit(true));
+
+      expect(order()).toEqual(['attention', 'since']);
+      expect(fixture.nativeElement.querySelector('.attention')).toBe(attention);
+    });
+
+    async function afterTheLoadingDelay(step: () => Promise<void>): Promise<void> {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(Date.now() + 2 * LOADING_DELAY_MS);
+      try {
+        await step();
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+
+    it('then something new found only after the loading delay leaves the summary under what needs attention, which does not move', async () => {
+      const attention = fixture.nativeElement.querySelector('.attention');
+
+      await afterTheLoadingDelay(() => visit(readyVisit(true)));
+
+      expect(order()).toEqual(['attention', 'since']);
+      expect(fixture.nativeElement.querySelector('app-since-last-visit').hidden).toBe(false);
+      expect(fixture.nativeElement.querySelector('.attention')).toBe(attention);
+    });
+
+    it('then a check still running when the loading delay ends puts the summary with its loading line under what needs attention, which keeps its focus, and something new found later leaves it there', async () => {
+      http.match(IMPORT_STATE_URL).forEach((pending) => pending.flush(importState()));
+      http.match(OVERVIEW_URL).forEach((pending) => pending.flush(overview()));
+      http.match(BACKUPS_URL).forEach((pending) => pending.flush(backupsView()));
+      http.match(UNPAIRED_URL).forEach((pending) => pending.flush(paymentList([])));
+      http
+        .match(ADMINISTRATORS_URL)
+        .forEach((pending) => pending.flush({ items: [administrator()] }));
+      http.match(SIGNING_KEYS_URL).forEach((pending) => pending.flush(receiptSigningKeys()));
+      http.match(SIGNATORY_URL).forEach((pending) => pending.flush(receiptSignatory()));
+      http.match(RELEASE_URL).forEach((pending) => pending.flush(releaseView()));
+      fixture.destroy();
+      vi.useFakeTimers();
+      try {
+        fixture = TestBed.createComponent(AdminHome);
+        fixture.detectChanges();
+        http.expectOne(IMPORT_STATE_URL).flush(
+          importState({
+            coveredFrom: null,
+            coveredTo: null,
+            lastAttemptedAt: null,
+            lastSucceededAt: null,
+          }),
+        );
+        await settleWithFakeTimers();
+        const attention = fixture.nativeElement.querySelector('.attention');
+        const link = fixture.nativeElement.querySelector('.attention-import a') as HTMLElement;
+        link.focus();
+
+        expect(fixture.nativeElement.querySelector('app-since-last-visit').hidden).toBe(true);
+
+        await vi.advanceTimersByTimeAsync(LOADING_DELAY_MS);
+        await settleWithFakeTimers();
+
+        expect(order()).toEqual(['attention', 'since']);
+        const summary = fixture.nativeElement.querySelector('app-since-last-visit') as HTMLElement;
+        expect(summary.hidden).toBe(false);
+        expect(summary.textContent).toContain('Zjišťujeme, co je od minula nového…');
+        expect(fixture.nativeElement.querySelector('.attention')).toBe(attention);
+        expect(document.activeElement).toBe(link);
+
+        visitState.set(readyVisit(true));
+        await settleWithFakeTimers();
+
+        expect(order()).toEqual(['attention', 'since']);
+        expect(fixture.nativeElement.querySelector('.attention')).toBe(attention);
+        expect(document.activeElement).toBe(link);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('then a check that fails only after the loading delay leaves the summary under what needs attention too', async () => {
+      await afterTheLoadingDelay(() => visit({ kind: 'failed' }));
+
+      expect(order()).toEqual(['attention', 'since']);
+    });
+
+    it('then a check that fails within the loading delay puts the summary with its alert above what needs attention', async () => {
+      await visit({ kind: 'failed' });
+
+      expect(order()).toEqual(['since', 'attention']);
+    });
+
+    it('then a summary with something new that settles on top stays there when nothing is new any more', async () => {
+      await visit(readyVisit(true));
+      await visit({ kind: 'checking' });
+      await visit(readyVisit(false));
+
+      expect(order()).toEqual(['since', 'attention']);
+    });
+
+    it('then a link they focused in what needs attention keeps the focus while the summary settles above it', async () => {
+      await respond(
+        importState({
+          coveredFrom: null,
+          coveredTo: null,
+          lastAttemptedAt: null,
+          lastSucceededAt: null,
+        }),
+      );
+      const link = fixture.nativeElement.querySelector('.attention-import a') as HTMLElement;
+      link.focus();
+
+      await visit(readyVisit(true));
+
+      expect(order()).toEqual(['since', 'attention']);
+      expect(fixture.nativeElement.querySelector('.attention-import a')).toBe(link);
+      expect(document.activeElement).toBe(link);
+    });
   });
 
   async function finishRun(added: number): Promise<void> {
@@ -1154,12 +1380,39 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
 
       expect(sections()).toBeNull();
+      expect(fixture.nativeElement.querySelector('h1')?.nextElementSibling).toBe(
+        fixture.nativeElement.querySelector('.attention'),
+      );
+      expect(fixture.nativeElement.querySelector('.attention')?.nextElementSibling).toBe(
+        fixture.nativeElement.querySelector('.since'),
+      );
+      expect(fixture.nativeElement.querySelector('.since').hidden).toBe(true);
+    });
+
+    it('and the window widens after something new came since the last visit, then the summary takes its place above what needs attention, which stays the same card', async () => {
+      const attention = fixture.nativeElement.querySelector('.attention');
+      visitState.set({
+        kind: 'ready',
+        seenAt: '2026-10-17T08:00:00Z',
+        copiedAt: null,
+        changes: {
+          payments: { count: 1, totalMinor: 50000 },
+          paired: { count: 0, totalMinor: 0, bookedFrom: null },
+          unpaired: { count: 1, totalMinor: 50000, bookedFrom: '2026-10-17' },
+          newDonors: 0,
+          receipts: 0,
+          otherAdministrators: [],
+          anything: true,
+        },
+      });
+      compact.set(false);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
       expect(fixture.nativeElement.querySelector('h1')?.nextElementSibling?.tagName).toBe(
         'APP-SINCE-LAST-VISIT',
       );
-      expect(fixture.nativeElement.querySelector('.since')?.nextElementSibling).toBe(
-        fixture.nativeElement.querySelector('.attention'),
-      );
+      expect(fixture.nativeElement.querySelector('.since')?.nextElementSibling).toBe(attention);
     });
   });
 });

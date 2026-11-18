@@ -24,6 +24,7 @@ import { FormControlDirective } from '../../../../shared/ui/form-field/form-cont
 import { FieldMessages, FormField } from '../../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { CompactLayout } from '../../../../core/layout/compact-layout';
 import {
   formatBankTime,
   formatDonationDate,
@@ -49,10 +50,12 @@ const EARLIEST_DAY = '2000-01-01';
 const TOO_EARLY = 'donations/history-start-too-early';
 const IN_FUTURE = 'donations/history-start-in-future';
 
+const FROM_HINT = $localize`:@@admin.home.history.from.hint:Platby za posledních 89 dní web stáhne i bez odemčení. Načíst je můžete i opakovaně: platby, které web už má, se nezdvojí.`;
+
 const FROM_MESSAGES: FieldMessages = {
   required: $localize`:@@admin.home.history.from.required:Zadejte prosím den, od kterého se mají platby stáhnout.`,
   max: $localize`:@@admin.home.history.from.max:Zvolte prosím den nejpozději dnes.`,
-  min: $localize`:@@admin.home.history.from.min:Zvolte prosím den nejdříve 1. 1. 2000.`,
+  min: $localize`:@@admin.home.history.from.min:Zvolte prosím den nejdříve ${formatDonationDate(EARLIEST_DAY)}:earliest:.`,
 };
 
 @Component({
@@ -74,11 +77,13 @@ export class HistoryImport {
   private readonly api = inject(AdminApi);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly compact = inject(CompactLayout).isCompact;
   private readonly fromInput = viewChild<ElementRef<HTMLInputElement>>('fromInput');
   private readonly submitButton = viewChild<ElementRef<HTMLButtonElement>>('submitButton');
   private polling: Subscription | null = null;
 
   readonly state = input.required<ImportStateResponse>();
+  readonly ownCard = input(false);
   readonly finished = output<ImportStateResponse>();
 
   protected readonly fromMessages = FROM_MESSAGES;
@@ -87,6 +92,12 @@ export class HistoryImport {
   protected readonly from = linkedSignal({
     source: () => this.state().defaultHistoryFrom,
     computation: (day) => day,
+  });
+  protected readonly fromHint = computed(() => {
+    const day = this.from();
+    return day && !this.compact()
+      ? `${$localize`:@@admin.home.history.from.chosen:Vybraný den: ${formatDonationDate(day)}:date:.`} ${FROM_HINT}`
+      : FROM_HINT;
   });
   protected readonly run = linkedSignal(() => this.state().historyImport);
   protected readonly requesting = signal(false);

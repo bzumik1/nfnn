@@ -8,6 +8,7 @@ import {
   ElementRef,
   inject,
   Injector,
+  linkedSignal,
   signal,
   untracked,
   viewChild,
@@ -33,6 +34,7 @@ import {
   TallyResponse,
 } from '../admin-api';
 import { OpenAlerts } from '../../../core/push/open-alerts';
+import { LOADING_TIMINGS } from '../../../shared/ui/skeleton/loading-view';
 import { formatSize } from '../backups/backup-format';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { formatReportMonth } from '../report/report-month';
@@ -46,6 +48,7 @@ import {
   type StoredImportState,
 } from '../device-copy/administration-reads';
 import { SinceLastVisit } from './since-last-visit/since-last-visit';
+import { AdministrationVisit, type VisitState } from '../device-copy/administration-visit';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ADMIN_DAILY, ADMIN_MORE_PATH, ADMIN_PAYMENTS_PATH } from '../shell/admin-sections';
@@ -107,6 +110,23 @@ export class AdminHome {
   private readonly openAlerts = inject(OpenAlerts);
   protected readonly donor = this.auth.donor;
   protected readonly compact = inject(CompactLayout).isCompact;
+  private readonly openedAt = Date.now();
+  private readonly loadingDelayMs = inject(LOADING_TIMINGS)()?.delayMs ?? 0;
+  private readonly loadingDelayPassed = signal(this.loadingDelayMs === 0);
+  private readonly visitState = inject(AdministrationVisit).state;
+  private readonly summaryPlace = linkedSignal<
+    { readonly state: VisitState; readonly late: boolean },
+    SummaryPlace | null
+  >({
+    source: () => ({ state: this.visitState(), late: this.loadingDelayPassed() }),
+    computation: ({ state, late }, previous) =>
+      previous?.value ??
+      (late || Date.now() - this.openedAt > this.loadingDelayMs ? 'below' : summaryPlaceOf(state)),
+  });
+  protected readonly summaryAbove = computed(
+    () => !this.compact() && this.summaryPlace() === 'above',
+  );
+  protected readonly summaryWaits = computed(() => !this.compact() && this.summaryPlace() === null);
   protected readonly sectionsLabel = $localize`:@@admin.home.sections.nav:Sekce správy`;
   protected readonly sections = computed(() => sectionRows(this.unpaired()?.count ?? 0));
   protected readonly state = signal<LoadState>('loading');
@@ -222,6 +242,10 @@ export class AdminHome {
   };
 
   constructor() {
+    if (!this.loadingDelayPassed()) {
+      const delay = setTimeout(() => this.loadingDelayPassed.set(true), this.loadingDelayMs);
+      this.destroyRef.onDestroy(() => clearTimeout(delay));
+    }
     this.openAlerts.refresh();
     this.load();
     this.loadOverview();
@@ -426,6 +450,22 @@ export class AdminHome {
       this.router.navigateByUrl('/');
       this.loginDialog.open('login', { returnTo });
     });
+  }
+}
+
+type SummaryPlace = 'above' | 'below';
+
+function summaryPlaceOf(state: VisitState): SummaryPlace | null {
+  switch (state.kind) {
+    case 'ready':
+      return state.changes.anything ? 'above' : 'below';
+    case 'first':
+    case 'not-kept':
+      return 'below';
+    case 'failed':
+      return 'above';
+    default:
+      return null;
   }
 }
 

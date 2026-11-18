@@ -12,7 +12,7 @@
           >
           @if (item.status === 'REFUNDED') {
             &ngsp;<span class="ui-list__state">
-              <span class="status-pill status-pill--refunded">{{ statusLabel(item.status) }}</span>
+              <span class="ui-badge ui-badge--neutral">{{ statusLabel(item.status) }}</span>
             </span>
           }
           @if (
@@ -58,9 +58,12 @@
             <ng-container *ngTemplateOutlet="pairingPart; context: { $implicit: item }" />
           </td>
           <td data-label="Stav" i18n-data-label="@@donor.dashboard.payments.col.status">
-            <span class="status-pill" [class.status-pill--refunded]="item.status === 'REFUNDED'">{{
-              statusLabel(item.status)
-            }}</span>
+            <span
+              class="ui-badge"
+              [class.ui-badge--success]="item.status !== 'REFUNDED'"
+              [class.ui-badge--neutral]="item.status === 'REFUNDED'"
+              >{{ statusLabel(item.status) }}</span
+            >
           </td>
           @if (withReceipts()) {
             <td

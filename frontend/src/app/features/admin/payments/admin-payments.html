@@ -72,8 +72,12 @@
         type="date"
         [value]="filters().from"
         [attr.max]="filters().to || null"
+        [attr.aria-describedby]="chosenFrom() ? 'payments-from-chosen' : null"
         (change)="choosePeriod('from', $any($event.target).value)"
       />
+      @if (chosenFrom(); as chosen) {
+        <p id="payments-from-chosen" class="payments-hint">{{ chosen }}</p>
+      }
     </div>
     <div class="payments-field">
       <label for="payments-to" i18n="@@admin.payments.period.to">Do</label>
@@ -83,8 +87,12 @@
         type="date"
         [value]="filters().to"
         [attr.min]="filters().from || null"
+        [attr.aria-describedby]="chosenTo() ? 'payments-to-chosen' : null"
         (change)="choosePeriod('to', $any($event.target).value)"
       />
+      @if (chosenTo(); as chosen) {
+        <p id="payments-to-chosen" class="payments-hint">{{ chosen }}</p>
+      }
     </div>
   </div>
 

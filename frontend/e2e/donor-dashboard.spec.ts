@@ -324,9 +324,14 @@ test.describe('Given a signed-in donor', () => {
     const card = page.locator('.send-gift');
     await expect(card.locator('.bank')).toContainText('5544332217/2010');
     const toggle = card.getByRole('button', { name: 'Jak nastavit trvalý příkaz' });
-    const toggleTop = (await toggle.boundingBox())!.y;
-    expect(toggleTop).toBeGreaterThan((await card.locator('.bank').boundingBox())!.y);
-    expect(toggleTop).toBeLessThan((await card.locator('.bank-app').boundingBox())!.y);
+    await expect
+      .poll(async () => {
+        const toggleTop = (await toggle.boundingBox())!.y;
+        const bankTop = (await card.locator('.bank').boundingBox())!.y;
+        const bankAppTop = (await card.locator('.bank-app').boundingBox())!.y;
+        return bankTop < toggleTop && toggleTop < bankAppTop;
+      })
+      .toBe(true);
 
     await toggle.click();
 
