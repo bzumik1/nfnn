@@ -450,8 +450,21 @@ async function serve(root, dist, log) {
   throw new Error(`the build in ${dist} was not served (log: ${log})`);
 }
 
+export function withoutBudgetErrors(file) {
+  const workspace = JSON.parse(readFileSync(file, 'utf8'));
+  for (const project of Object.values(workspace.projects ?? {})) {
+    for (const configuration of Object.values(project.architect?.build?.configurations ?? {})) {
+      for (const budget of configuration.budgets ?? []) {
+        delete budget.maximumError;
+      }
+    }
+  }
+  writeFileSync(file, `${JSON.stringify(workspace, null, 2)}\n`);
+}
+
 function prepareBase(root, base, tree, { headSpec, patch }) {
   git(root, 'worktree', 'add', '--detach', tree, base);
+  withoutBudgetErrors(join(tree, 'frontend/angular.json'));
   if (patch) {
     try {
       git(tree, 'apply', '--index', resolve(patch));

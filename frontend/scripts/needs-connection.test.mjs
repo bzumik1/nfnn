@@ -30,7 +30,7 @@ describe('Given the controls of the app that need a connection', () => {
 
   it('when a control listed as working without a connection no longer exists, then the stale entry is reported', () => {
     const stale = {
-      'layout/offline-status/offline-status.html#tryAgain': 'still there',
+      'layout/offline-status/offline-sheet.html#tryAgain': 'still there',
       'layout/offline-status/offline-status.html#gone': 'removed since',
       'features/nowhere/nowhere.html': 'removed since',
     };

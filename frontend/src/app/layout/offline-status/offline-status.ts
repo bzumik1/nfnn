@@ -1,6 +1,7 @@
 /// <reference types="@angular/localize" />
 
 import {
+  afterNextRender,
   afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
@@ -9,23 +10,40 @@ import {
   effect,
   ElementRef,
   inject,
+  Injector,
+  inputBinding,
+  outputBinding,
   signal,
+  Type,
   untracked,
   viewChild,
+  ViewContainerRef,
 } from '@angular/core';
 
 import { Connectivity } from '../../core/connectivity/connectivity';
 import { formatDataTime } from '../../core/connectivity/data-time';
 import { ShownAnswers } from '../../core/connectivity/shown-answers';
-import { Dialog } from '../../shared/ui/dialog/dialog';
+import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { keepRoomForOfflinePill } from './offline-pill-room';
+import type { OfflineSheet } from './offline-sheet';
 
-type TryOutcome = 'trying' | 'reached' | 'still-offline';
+const loadSheet = (): Promise<Type<OfflineSheet>> =>
+  import('./offline-sheet').then((loaded) => loaded.OfflineSheet);
+
+const LESS_MOTION = '(prefers-reduced-motion: reduce)';
+const PULSE = 'motion-pulse';
+
+function whenIdle(view: Window | null, run: () => void): void {
+  if (view?.requestIdleCallback) {
+    view.requestIdleCallback(run);
+  } else {
+    setTimeout(run);
+  }
+}
 
 @Component({
   selector: 'app-offline-status',
-  imports: [Dialog],
   templateUrl: './offline-status.html',
   styleUrl: './offline-status.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,13 +53,19 @@ export class OfflineStatus {
   private readonly shown = inject(ShownAnswers);
   private readonly document = inject(DOCUMENT);
   private readonly dialogAnnouncer = inject(DialogAnnouncer);
+  private readonly chunkLoadRecovery = inject(ChunkLoadRecovery);
+  private readonly injector = inject(Injector);
 
   protected readonly sheetOpen = signal(false);
-  protected readonly tryOutcome = signal<TryOutcome | null>(null);
   protected readonly announcement = signal<string | null>(null);
-  protected readonly serverDown = computed(() => this.connectivity.cause() === 'server');
+  protected readonly pulsing = signal(false);
   private readonly pill = viewChild<ElementRef<HTMLElement>>('pill');
-  private readonly closeButton = viewChild<ElementRef<HTMLButtonElement>>('closeButton');
+  private readonly sheetHost = viewChild.required('sheetHost', { read: ViewContainerRef });
+  private readonly sheetView = signal<Type<OfflineSheet> | null>(null);
+  private sheetLoading: Promise<Type<OfflineSheet>> | null = null;
+  private pulseDelay: ReturnType<typeof setTimeout> | undefined;
+  private oneBreathTaken = false;
+  private endsAfterBreath = false;
 
   protected readonly dataTime = computed(() => {
     const oldest = this.shown.oldest();
@@ -56,6 +80,25 @@ export class OfflineStatus {
   });
 
   constructor() {
+    afterNextRender(() =>
+      whenIdle(this.document.defaultView, () => this.fetchSheet().catch(() => undefined)),
+    );
+    effect(() => {
+      const host = this.sheetHost();
+      const view = this.sheetView();
+      const open = this.sheetOpen();
+      untracked(() => {
+        host.clear();
+        if (open && view !== null) {
+          host.createComponent(view, {
+            bindings: [
+              inputBinding('dataTime', this.dataTime),
+              outputBinding('closed', () => this.closeSheet()),
+            ],
+          });
+        }
+      });
+    });
     let wasOffline = false;
     effect(() => {
       const offline = this.connectivity.offline();
@@ -65,7 +108,7 @@ export class OfflineStatus {
           this.announcement.set(this.offlineAnnouncement(cause === 'server'));
         } else if (wasOffline) {
           this.announcement.set($localize`:@@layout.offline.backOnline:Připojení je zpět.`);
-          this.tryOutcome.set(this.sheetOpen() ? 'reached' : null);
+          this.stopPulse(true);
         }
         wasOffline = offline;
       });
@@ -82,34 +125,133 @@ export class OfflineStatus {
         onCleanup(keepRoomForOfflinePill(this.document, pill));
       }
     });
-    afterRenderEffect(() => {
-      if (this.tryOutcome() === 'reached') {
-        untracked(() => this.closeButton()?.nativeElement.focus());
-      }
-    });
   }
 
   protected openSheet(): void {
-    this.tryOutcome.set(null);
-    this.sheetOpen.set(true);
+    if (this.sheetView() !== null) {
+      this.showSheet();
+      return;
+    }
+    if (this.sheetLoading === null) {
+      this.startPulse();
+    }
+    this.fetchSheet().then(
+      () => {
+        this.stopPulse(true);
+        this.showSheet();
+      },
+      (error: unknown) => this.sheetFailedToLoad(error),
+    );
+  }
+
+  protected breathTaken(event: AnimationEvent): void {
+    if (event.animationName !== PULSE) {
+      return;
+    }
+    this.oneBreathTaken = true;
+    if (this.endsAfterBreath) {
+      this.pulsing.set(false);
+    }
+  }
+
+  protected pulseEnded(event: AnimationEvent): void {
+    if (event.animationName === PULSE) {
+      this.pulsing.set(false);
+    }
   }
 
   protected closeSheet(): void {
     this.sheetOpen.set(false);
   }
 
-  protected tryAgain(): void {
-    if (this.tryOutcome() === 'trying') {
+  private showSheet(): void {
+    this.chunkLoadRecovery.importRecovered();
+    this.sheetOpen.set(true);
+  }
+
+  private sheetFailedToLoad(error: unknown): void {
+    this.stopPulse(false);
+    if (this.connectivity.cause() === 'network') {
+      this.announceAgain(this.offlineAnnouncement(false));
+    } else {
+      this.chunkLoadRecovery.handleImportFailure(error);
+    }
+  }
+
+  private announceAgain(message: string): void {
+    this.announcement.set(null);
+    afterNextRender(
+      () => {
+        const view = this.document.defaultView;
+        const nextFrame = view?.requestAnimationFrame?.bind(view) ?? setTimeout;
+        nextFrame(() => this.announcement.set(message));
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private startPulse(): void {
+    if (this.pulsing() || this.pulseDelay !== undefined || this.asksForLessMotion()) {
       return;
     }
-    this.tryOutcome.set('trying');
-    this.connectivity.tryAgain().subscribe((reached) => {
-      if (!reached || this.connectivity.offline()) {
-        this.tryOutcome.set('still-offline');
-      } else {
-        this.tryOutcome.set('reached');
-      }
-    });
+    if (this.connectivity.cause() === 'network') {
+      this.beginPulse();
+      return;
+    }
+    this.pulseDelay = setTimeout(() => {
+      this.pulseDelay = undefined;
+      this.beginPulse();
+    }, this.loadingDelayMs());
+  }
+
+  private beginPulse(): void {
+    this.oneBreathTaken = false;
+    this.endsAfterBreath = false;
+    this.pulsing.set(true);
+  }
+
+  private stopPulse(atOnce: boolean): void {
+    clearTimeout(this.pulseDelay);
+    this.pulseDelay = undefined;
+    if (!this.pulsing()) {
+      return;
+    }
+    if (atOnce || this.oneBreathTaken) {
+      this.pulsing.set(false);
+    } else {
+      this.endsAfterBreath = true;
+    }
+  }
+
+  private asksForLessMotion(): boolean {
+    return this.document.defaultView?.matchMedia?.(LESS_MOTION).matches ?? false;
+  }
+
+  private loadingDelayMs(): number {
+    const token =
+      this.document.defaultView
+        ?.getComputedStyle(this.document.documentElement)
+        .getPropertyValue('--delay-loading')
+        .trim() ?? '';
+    const value = Number.parseFloat(token);
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+    return token.endsWith('ms') ? value : value * 1000;
+  }
+
+  private fetchSheet(): Promise<Type<OfflineSheet>> {
+    this.sheetLoading ??= loadSheet().then(
+      (view) => {
+        this.sheetView.set(view);
+        return view;
+      },
+      (error: unknown) => {
+        this.sheetLoading = null;
+        throw error;
+      },
+    );
+    return this.sheetLoading;
   }
 
   private offlineAnnouncement(serverDown: boolean): string {
