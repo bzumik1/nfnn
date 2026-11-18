@@ -14,11 +14,12 @@
   block-size: 0;
   overflow-wrap: anywhere;
   opacity: 0;
-  @include motion.state(opacity);
+  transition-property: none;
 }
 
 .busy-label__face--shown {
   block-size: auto;
   overflow-wrap: normal;
   opacity: 1;
+  @include motion.state(opacity);
 }
