@@ -17,12 +17,13 @@ import { loadingView } from '../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { reloadWhenOnlineAgain } from '../device-copy/online-again';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'offline';
 
 @Component({
   selector: 'app-project-order-card',
-  imports: [Skeleton, LiveNotice, NeedsConnection],
+  imports: [BusyLabel, Skeleton, LiveNotice, NeedsConnection],
   templateUrl: './project-order-card.html',
   styleUrl: './project-order-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

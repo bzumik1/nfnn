@@ -25,6 +25,8 @@ import {
   yearlyResult,
 } from '../testing/admin-fixtures';
 import { AdminYearlyReceipts } from './admin-yearly-receipts';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { SCREEN_WAKE_LOCKS, WakeLockSentinelLike } from './screen-wake-lock';
 
 const URL = '/api/admin/donations/receipts/yearly';
@@ -140,7 +142,9 @@ describe('Given an administrator on the bulk receipts page', () => {
     const found = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
     ).find((candidate) =>
-      typeof name === 'string' ? text(candidate) === name : name.test(text(candidate)),
+      typeof name === 'string'
+        ? accessibleText(candidate) === name
+        : name.test(accessibleText(candidate)),
     );
     if (found === undefined) {
       throw new Error(`No button named ${name}`);
@@ -381,6 +385,18 @@ describe('Given an administrator on the bulk receipts page', () => {
       expect(running.disabled).toBe(false);
       expect(running.getAttribute('aria-disabled')).toBe('true');
       running.click();
+      expectIssue();
+    });
+
+    it('then the button keeps both labels under the issuing name, so its width does not change', () => {
+      const running = query<HTMLButtonElement>('button[type="submit"]')!;
+
+      expect(running.getAttribute('aria-disabled')).toBe('true');
+      expect(labelFaces(running)).toEqual([
+        'Vystavit a připravit PDF k tisku',
+        'Vystavujeme potvrzení…',
+      ]);
+      expect(accessibleText(running)).toBe('Vystavujeme potvrzení…');
       expectIssue();
     });
 

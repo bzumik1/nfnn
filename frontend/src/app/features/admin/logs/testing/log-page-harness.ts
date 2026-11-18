@@ -97,8 +97,7 @@ export class LogPageHarness {
 
   button(name: string): HTMLButtonElement {
     const found = this.buttons().find(
-      (candidate) =>
-        squash(candidate.textContent) === name || candidate.getAttribute('aria-label') === name,
+      (candidate) => readable(candidate) === name || candidate.getAttribute('aria-label') === name,
     );
     if (found === undefined) {
       throw new Error(`No button ${name}`);
@@ -107,7 +106,7 @@ export class LogPageHarness {
   }
 
   hasButton(name: string): boolean {
-    return this.buttons().some((candidate) => squash(candidate.textContent) === name);
+    return this.buttons().some((candidate) => readable(candidate) === name);
   }
 
   async settle(): Promise<void> {
@@ -157,9 +156,17 @@ function readable(node: Node | null): string {
 function spoken(node: Node): string {
   return Array.from(node.childNodes)
     .map((child) =>
-      child.nodeType === Node.TEXT_NODE ? (child.textContent ?? '') : ` ${spoken(child)} `,
+      child.nodeType === Node.TEXT_NODE
+        ? (child.textContent ?? '')
+        : hidden(child)
+          ? ''
+          : ` ${spoken(child)} `,
     )
     .join('');
+}
+
+function hidden(node: Node): boolean {
+  return node instanceof Element && node.getAttribute('aria-hidden') === 'true';
 }
 
 function squash(text: string | null | undefined): string {

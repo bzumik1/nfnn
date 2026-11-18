@@ -15,6 +15,7 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminReport } from './admin-report';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import {
   copyOf,
   openOfflineFromCopy,
@@ -451,6 +452,27 @@ describe('Given an administrator on the monthly report page', () => {
     expect(element<HTMLSelectElement>('#report-month').options[0]?.textContent).toBe(
       'září 2026 (zatím neodesláno)',
     );
+  });
+
+  it('when the sending is confirmed and the answer has not come yet, then the button is locked and keeps both labels under the sending name', async () => {
+    await respond(reportView());
+    await type('#report-month', '2026-08');
+    button('Poslat přehled').click();
+    await settle();
+    button('Poslat přehled').click();
+    await settle();
+
+    const send = element<HTMLButtonElement>('.confirm .ui-button--primary');
+    expect(send.disabled).toBe(true);
+    expect(labelFaces(send)).toEqual(['Poslat přehled', 'Posíláme…']);
+    expect(accessibleText(send)).toBe('Posíláme…');
+    http.expectOne(SEND_URL).flush({
+      month: '2026-08',
+      recipients: ['info@nfnn.cz'],
+      sentAt: '2026-10-23T08:00:00Z',
+    });
+    await settle();
+    await respond(reportView());
   });
 
   it('when a month is chosen and the sending is confirmed, then the report goes out and the page says to whom', async () => {

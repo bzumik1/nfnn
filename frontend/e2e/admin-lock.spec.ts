@@ -168,10 +168,10 @@ test.describe('Given an administrator whose administration locks on this device'
     await expect(
       page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
     ).toBeVisible();
-    await expect(page.locator('.lock-actions').getByRole('button')).toHaveText([
-      'Odemknout přístupovým klíčem',
-      'Použít heslo',
-    ]);
+    const unlockButtons = page.locator('.lock-actions').getByRole('button');
+    await expect(unlockButtons).toHaveCount(2);
+    await expect(unlockButtons.first()).toHaveAccessibleName('Odemknout přístupovým klíčem');
+    await expect(unlockButtons.last()).toHaveAccessibleName('Použít heslo');
   });
 
   test('when the administrator has just signed in, then the administration opens without asking again', async ({

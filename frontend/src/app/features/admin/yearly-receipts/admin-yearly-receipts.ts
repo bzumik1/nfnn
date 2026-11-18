@@ -51,6 +51,7 @@ import {
   READ_FAILED,
   skipReason,
 } from './yearly-receipt-texts';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'no-year';
 type RunState = 'idle' | 'issuing' | 'drawing' | 'done' | 'failed';
@@ -80,6 +81,7 @@ interface SkippedLine {
 @Component({
   selector: 'app-admin-yearly-receipts',
   imports: [
+    BusyLabel,
     DownloadProgress,
     FocusFirstInvalid,
     FormControlDirective,

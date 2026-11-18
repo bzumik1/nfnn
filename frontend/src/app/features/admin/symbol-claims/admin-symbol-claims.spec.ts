@@ -8,6 +8,8 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { symbolClaim } from '../testing/admin-fixtures';
 import { AdminSymbolClaims } from './admin-symbol-claims';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const LIST_URL = '/api/admin/donations/symbol-claims';
 const YES_ID = '019a1c00-0000-7000-8000-00000000c001';
@@ -87,7 +89,7 @@ describe('Given an administrator on the older symbols page', () => {
 
   function button(row: HTMLElement, name: string): HTMLButtonElement {
     const found = Array.from(row.querySelectorAll('button')).find(
-      (candidate) => candidate.textContent?.trim() === name,
+      (candidate) => accessibleText(candidate) === name,
     );
     if (found === undefined) {
       throw new Error(`No button "${name}" in "${rowText(row)}"`);
@@ -219,6 +221,43 @@ describe('Given an administrator on the older symbols page', () => {
     );
     await listed([yes]);
     expect(rows()).toHaveLength(1);
+  });
+
+  describe('when an answer has not come yet', () => {
+    it('then the button reversing a "Yes" is locked and keeps both labels under the reversing name', async () => {
+      await listed();
+      button(rows()[0], 'Vrátit přiřazení darů').click();
+      fixture.detectChanges();
+      button(rows()[0], 'Vrátit přiřazení').click();
+      fixture.detectChanges();
+
+      const reverse = button(rows()[0], 'Rušíme…');
+      expect(reverse.disabled).toBe(true);
+      expect(labelFaces(reverse)).toEqual(['Vrátit přiřazení', 'Rušíme…']);
+      http
+        .expectOne(`/api/admin/donations/symbol-claims/${YES_ID}/reverse`)
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      await listed();
+    });
+
+    it('then the button deleting a "No" is locked and keeps both labels under the deleting name', async () => {
+      await listed();
+      button(rows()[1], 'Zeptat se dárce znovu').click();
+      fixture.detectChanges();
+      button(rows()[1], 'Zeptat se znovu').click();
+      fixture.detectChanges();
+
+      const remove = button(rows()[1], 'Mažeme…');
+      expect(remove.disabled).toBe(true);
+      expect(labelFaces(remove)).toEqual(['Zeptat se znovu', 'Mažeme…']);
+      http
+        .expectOne(`/api/admin/donations/symbol-claims/${NO_ID}`)
+        .flush(null, { status: 204, statusText: 'No Content' });
+      fixture.detectChanges();
+      await listed([yes]);
+    });
   });
 
   it('when "Ponechat" answers the confirmation, then nothing is sent and the focus goes from Ponechat back to the opener', async () => {

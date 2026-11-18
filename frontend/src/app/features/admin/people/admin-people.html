@@ -352,17 +352,20 @@
                   class="ui-button ui-button--primary"
                   [disabled]="busy()"
                 >
-                  @if (saving()) {
-                    <ng-container i18n="@@admin.people.saving">Ukládáme…</ng-container>
-                  } @else if (adding()) {
-                    <ng-container i18n="@@admin.people.save.add"
-                      >Přidat a ukázat na webu</ng-container
-                    >
-                  } @else {
-                    <ng-container i18n="@@admin.people.save.edit"
-                      >Uložit a ukázat na webu</ng-container
-                    >
-                  }
+                  <app-busy-label [busy]="saving()">
+                    <span when-idle>
+                      @if (adding()) {
+                        <ng-container i18n="@@admin.people.save.add"
+                          >Přidat a ukázat na webu</ng-container
+                        >
+                      } @else {
+                        <ng-container i18n="@@admin.people.save.edit"
+                          >Uložit a ukázat na webu</ng-container
+                        >
+                      }
+                    </span>
+                    <span when-busy i18n="@@admin.people.saving">Ukládáme…</span>
+                  </app-busy-label>
                 </button>
                 <button
                   type="button"
@@ -535,13 +538,12 @@
                             class="ui-button ui-button--primary"
                             [disabled]="busy()"
                           >
-                            @if (savingReceipt()) {
-                              <ng-container i18n="@@admin.people.saving">Ukládáme…</ng-container>
-                            } @else {
-                              <ng-container i18n="@@admin.people.receipt.save"
-                                >Uložit pro potvrzení</ng-container
+                            <app-busy-label [busy]="savingReceipt()">
+                              <span when-idle i18n="@@admin.people.receipt.save"
+                                >Uložit pro potvrzení</span
                               >
-                            }
+                              <span when-busy i18n="@@admin.people.saving">Ukládáme…</span>
+                            </app-busy-label>
                           </button>
                         </div>
                       }
@@ -594,13 +596,10 @@
                         [disabled]="removing()"
                         (click)="remove()"
                       >
-                        @if (removing()) {
-                          <ng-container i18n="@@admin.people.removing">Odebíráme…</ng-container>
-                        } @else {
-                          <ng-container i18n="@@admin.people.remove.yes"
-                            >Odebrat a smazat</ng-container
-                          >
-                        }
+                        <app-busy-label [busy]="removing()">
+                          <span when-idle i18n="@@admin.people.remove.yes">Odebrat a smazat</span>
+                          <span when-busy i18n="@@admin.people.removing">Odebíráme…</span>
+                        </app-busy-label>
                       </button>
                       <button
                         id="person-remove-cancel"
@@ -677,13 +676,10 @@
               class="ui-button ui-button--primary"
               [disabled]="savingNote()"
             >
-              @if (savingNote()) {
-                <ng-container i18n="@@admin.people.note.saving">Ukládáme…</ng-container>
-              } @else {
-                <ng-container i18n="@@admin.people.note.save"
-                  >Uložit slovo zakladatelů</ng-container
-                >
-              }
+              <app-busy-label [busy]="savingNote()">
+                <span when-idle i18n="@@admin.people.note.save">Uložit slovo zakladatelů</span>
+                <span when-busy i18n="@@admin.people.note.saving">Ukládáme…</span>
+              </app-busy-label>
             </button>
           </div>
           <app-live-notice class="card-notice" [notice]="noteNotice()" />
@@ -735,11 +731,10 @@
               class="ui-button ui-button--primary"
               [disabled]="savingFootnote()"
             >
-              @if (savingFootnote()) {
-                <ng-container i18n="@@admin.people.footnote.saving">Ukládáme…</ng-container>
-              } @else {
-                <ng-container i18n="@@admin.people.footnote.save">Uložit řádek</ng-container>
-              }
+              <app-busy-label [busy]="savingFootnote()">
+                <span when-idle i18n="@@admin.people.footnote.save">Uložit řádek</span>
+                <span when-busy i18n="@@admin.people.footnote.saving">Ukládáme…</span>
+              </app-busy-label>
             </button>
           </div>
           <app-live-notice class="card-notice" [notice]="footnoteNotice()" />

@@ -101,15 +101,10 @@
                       [disabled]="busy()"
                       (click)="revoke(item)"
                     >
-                      @if (busy()) {
-                        <ng-container i18n="@@admin.administrators.revoke.busy"
-                          >Odebíráme…</ng-container
-                        >
-                      } @else {
-                        <ng-container i18n="@@admin.administrators.revoke.yes"
-                          >Ano, odebrat</ng-container
-                        >
-                      }
+                      <app-busy-label [busy]="busy()">
+                        <span when-idle i18n="@@admin.administrators.revoke.yes">Ano, odebrat</span>
+                        <span when-busy i18n="@@admin.administrators.revoke.busy">Odebíráme…</span>
+                      </app-busy-label>
                     </button>
                     <button
                       #confirmCancel
@@ -143,15 +138,10 @@
                       [disabled]="busy()"
                       (click)="reset(item)"
                     >
-                      @if (busy()) {
-                        <ng-container i18n="@@admin.administrators.reset.busy"
-                          >Vypínáme…</ng-container
-                        >
-                      } @else {
-                        <ng-container i18n="@@admin.administrators.reset.yes"
-                          >Ano, vypnout</ng-container
-                        >
-                      }
+                      <app-busy-label [busy]="busy()">
+                        <span when-idle i18n="@@admin.administrators.reset.yes">Ano, vypnout</span>
+                        <span when-busy i18n="@@admin.administrators.reset.busy">Vypínáme…</span>
+                      </app-busy-label>
                     </button>
                     <button
                       #confirmCancel
@@ -240,11 +230,10 @@
         class="ui-button ui-button--primary grant-submit"
         [disabled]="busy()"
       >
-        @if (busy()) {
-          <span i18n="@@admin.administrators.grant.busy">Přidáváme…</span>
-        } @else {
-          <span i18n="@@admin.administrators.grant.submit">Přidat správce</span>
-        }
+        <app-busy-label [busy]="busy()">
+          <span when-idle i18n="@@admin.administrators.grant.submit">Přidat správce</span>
+          <span when-busy i18n="@@admin.administrators.grant.busy">Přidáváme…</span>
+        </app-busy-label>
       </button>
     </form>
   </section>

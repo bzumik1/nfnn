@@ -37,6 +37,7 @@ import {
 import { MAX_IMAGE_BYTES, NewsApi } from '../../content/news-api';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -56,6 +57,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 @Component({
   selector: 'app-admin-about',
   imports: [
+    BusyLabel,
     FormsModule,
     FormField,
     FormControlDirective,
