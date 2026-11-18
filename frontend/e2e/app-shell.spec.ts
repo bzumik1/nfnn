@@ -217,6 +217,27 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await expect(page).toHaveURL('/o-nas');
   });
 
+  test('when they open the question about written input from Zavřít with the keyboard and close it with its ×, then it fades out over the whole screen and the focus returns to Zavřít', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const sheet = await openSheetSection(page, 'Údaje a zabezpečení');
+    await sheet.getByRole('button', { name: 'Upravit údaje' }).click();
+    await sheet.getByLabel('Jméno a příjmení').fill('Jana Rozepsaná');
+    const close = sheet.getByRole('button', { name: 'Zavřít' });
+    await close.focus();
+    await page.keyboard.press('Enter');
+    const ask = page.getByRole('dialog', { name: 'Zahodit rozepsané údaje?' });
+    await expect(ask).toBeVisible();
+
+    await ask.getByRole('button', { name: 'Zavřít' }).click();
+
+    await expect(page.locator('dialog.dialog--leaving')).toBeAttached();
+    await expect(ask).toHaveCount(0);
+    await expect(close).toBeFocused();
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+  });
+
   test('when they have written into a form of Údaje a zabezpečení and press Zavřít, then a dialog asks first, and only discarding closes the sheet', async ({
     page,
   }) => {

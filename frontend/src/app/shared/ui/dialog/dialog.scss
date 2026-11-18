@@ -143,7 +143,7 @@
   .dialog-panel--tall {
     --dialog-tall-top: max(0px, (100dvh - var(--sheet-form-height)) / 2 - var(--space-5));
     margin-top: var(--dialog-tall-top);
-    max-block-size: calc(100dvh - 2 * var(--space-5) - var(--dialog-tall-top));
+    max-block-size: min(var(--sheet-form-height), calc(100dvh - 2 * var(--space-5)));
   }
 }
 

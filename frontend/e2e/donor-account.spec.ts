@@ -12,6 +12,35 @@ import { drawnModulesMatch, PAYMENT_QR_500_WITH_SYMBOL } from './qr-matrices';
 import { expectActionInSightOrCuedBelow } from './dialog-edge';
 
 test.describe('Given a visitor who wants a donor account', () => {
+  test('when the registration opens in a window of 1280 by 900, then it ends as far from the bottom edge as it starts from the top', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    await openSignInDialog(page);
+    await page.getByRole('button', { name: 'Registrace' }).click();
+    const panel = page.getByRole('dialog').locator('.dialog-panel');
+    await expect(
+      page.getByRole('dialog').getByRole('button', { name: 'Vytvořit účet' }),
+    ).toBeAttached();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            document
+              .querySelector('dialog')!
+              .getAnimations({ subtree: true })
+              .filter((animation) => animation.playState === 'running').length,
+        ),
+      )
+      .toBe(0);
+
+    const box = (await panel.boundingBox())!;
+
+    expect(Math.abs(box.y - (900 - box.y - box.height))).toBeLessThanOrEqual(2);
+  });
+
   test('when the registration opens in a low window on a computer, then its button is in sight or the edge of the dialog shows there is more below', async ({
     page,
   }) => {
