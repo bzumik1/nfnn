@@ -219,7 +219,7 @@ describe('Given the pages of the tabs kept while another tab is shown', () => {
   });
 });
 
-describe('Given the news scrolled and left for the Pomáháme tab, whose link opened an article of the news', () => {
+describe('Given the app on the home screen with the news scrolled and left for the Pomáháme tab, whose link opened an article of the news', () => {
   let harness: RouterTestingHarness;
   let router: Router;
   let preview: NavigationPreview;
@@ -258,8 +258,13 @@ describe('Given the news scrolled and left for the Pomáháme tab, whose link op
         { provide: RouteReuseStrategy, useExisting: PreviewingReuse },
       ],
     });
+    Object.defineProperty(Navigator.prototype, 'standalone', {
+      get: () => true,
+      configurable: true,
+    });
     TestBed.inject(TabMemory);
     harness = await RouterTestingHarness.create('/aktuality');
+    await vi.dynamicImportSettled();
     router = TestBed.inject(Router);
     preview = TestBed.inject(NavigationPreview);
     scrolledBy(420);
@@ -271,6 +276,7 @@ describe('Given the news scrolled and left for the Pomáháme tab, whose link op
   });
 
   afterEach(() => {
+    delete (Navigator.prototype as { standalone?: boolean }).standalone;
     vi.restoreAllMocks();
     scrolledBy(0);
   });

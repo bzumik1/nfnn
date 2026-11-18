@@ -8,13 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import {
-  Event as RouterEvent,
-  NavigationEnd,
-  NavigationStart,
-  Router,
-  Scroll,
-} from '@angular/router';
+import { NavigationEnd, NavigationStart, Router, Scroll } from '@angular/router';
 import { AppTab, AppTabId, pathOf, tabOf } from './app-tabs';
 import { ReloadPlace } from '../reload/reload-place';
 import { KeptTabPages } from './kept-tab-pages';
@@ -37,18 +31,14 @@ export class TabMemory {
   private keptTop: { readonly top: number; readonly navigation: number } | null = null;
   private returnedToKeptPage = false;
   private placements = 0;
-  private waits = 0;
-  private stopGrowingPage: (() => void) | null = null;
 
   constructor() {
     this.reloadPlace.followTabs(() => this.lastUrls);
     const navigations = this.router.events.subscribe((event) => {
       if (this.preview.drives()) {
-        this.followPreview(event);
         return;
       }
       if (event instanceof NavigationStart) {
-        this.stopWaitingForHeight();
         this.keptPages.takeReturningTop();
       } else if (event instanceof NavigationEnd) {
         this.visited(event.urlAfterRedirects);
@@ -92,23 +82,14 @@ export class TabMemory {
     }
   }
 
-  private followPreview(event: RouterEvent): void {
-    if (event instanceof NavigationEnd) {
-      const top = this.keptPages.takeReturningTop();
-      if (top !== null) {
-        this.keptTop = { top, navigation: event.id };
-        this.placeAt(top);
-      }
-    } else if (event instanceof Scroll && this.keptTop?.navigation === event.routerEvent.id) {
-      this.overRouterScrolling(event);
-    }
-  }
-
   private overRouterScrolling(event: Scroll): void {
     const kept = this.keptTop;
     if (kept === null || kept.navigation !== event.routerEvent.id) {
-      if (event.position) {
-        this.keepPlaceWhileGrowing(event.position[1]);
+      const position = event.position;
+      if (position) {
+        void import('./growing-page').then((page) =>
+          page.placeOnceGrown(position[1], event.routerEvent.id, this.injector),
+        );
       } else if (event.anchor === null && event.scrollBehavior !== 'manual') {
         this.scrollTo(0);
       }
@@ -118,30 +99,6 @@ export class TabMemory {
     if (event.anchor === null && event.scrollBehavior !== 'manual') {
       queueMicrotask(() => this.scrollTo(kept.top));
     }
-  }
-
-  private keepPlaceWhileGrowing(top: number): void {
-    this.stopWaitingForHeight();
-    const view = this.window;
-    if (view === null || typeof ResizeObserver === 'undefined') {
-      return;
-    }
-    const wait = this.waits;
-    void import('./growing-page').then(({ placeOnceGrown }) => {
-      if (wait === this.waits) {
-        this.stopGrowingPage = placeOnceGrown(top, {
-          view,
-          scrollHold: this.scrollHold,
-          scrollTo: (to) => this.scrollTo(to),
-        });
-      }
-    });
-  }
-
-  private stopWaitingForHeight(): void {
-    this.waits++;
-    this.stopGrowingPage?.();
-    this.stopGrowingPage = null;
   }
 
   private startNewPageAtTop(): void {

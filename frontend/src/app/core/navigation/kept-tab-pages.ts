@@ -13,7 +13,7 @@ import {
 } from '@angular/router';
 import { filter } from 'rxjs';
 import { AppTabId, tabOf } from './app-tabs';
-import { NavigationPreview, PREVIEW_BACK, PREVIEW_OUT } from './navigation-preview';
+import { NavigationPreview } from './navigation-preview';
 
 export const KEPT_PAGES_OWNER = new InjectionToken<() => string | null>('KEPT_PAGES_OWNER', {
   providedIn: 'root',
@@ -33,11 +33,6 @@ interface KeptPage {
   readonly top: number;
 }
 
-interface LentPage {
-  readonly place: Place;
-  readonly page: KeptPage;
-}
-
 @Injectable({ providedIn: 'root' })
 export class KeptTabPages extends BaseRouteReuseStrategy {
   private readonly injector = inject(Injector);
@@ -45,14 +40,12 @@ export class KeptTabPages extends BaseRouteReuseStrategy {
   private readonly roots = new Map<AppTabId, KeptPage>();
   private readonly lastPages = new Map<AppTabId, KeptPage>();
   private returningTop: number | null = null;
-  private lent: LentPage | null = null;
   private leftTop = 0;
   private owner: string | null | undefined = undefined;
   private ownerChanged = false;
   private checkedNavigation: number | null | undefined = undefined;
 
   override shouldDetach(route: ActivatedRouteSnapshot): boolean {
-    this.lent = null;
     const place = placeOf(route);
     const kept =
       !this.ownerChangedInThisNavigation() &&
@@ -106,51 +99,6 @@ export class KeptTabPages extends BaseRouteReuseStrategy {
     return page.handle;
   }
 
-  lendsToPreview(route: ActivatedRouteSnapshot): boolean {
-    const place = placeOf(route);
-    if (
-      this.previewStep() !== PREVIEW_OUT ||
-      this.ownerChangedInThisNavigation() ||
-      place === null
-    ) {
-      return false;
-    }
-    if (this.lent !== null && isPageOf(this.lent.page, route)) {
-      return true;
-    }
-    const page = this.keptFor(route, place);
-    if (page === null) {
-      return false;
-    }
-    this.pagesFor(place).delete(place.tab);
-    this.lent = { place, page };
-    return true;
-  }
-
-  lentHandle(route: ActivatedRouteSnapshot): DetachedRouteHandle | null {
-    const lent = this.lent;
-    if (this.previewStep() !== PREVIEW_OUT || lent === null || !isPageOf(lent.page, route)) {
-      return null;
-    }
-    this.returningTop = lent.page.top;
-    return lent.page.handle;
-  }
-
-  takesBackFromPreview(route: ActivatedRouteSnapshot, handle: DetachedRouteHandle | null): boolean {
-    const lent = this.lent;
-    if (
-      this.previewStep() !== PREVIEW_BACK ||
-      handle === null ||
-      lent === null ||
-      !isPageOf(lent.page, route)
-    ) {
-      return false;
-    }
-    this.lent = null;
-    this.pagesFor(lent.place).set(lent.place.tab, { ...lent.page, handle });
-    return true;
-  }
-
   takeReturningTop(): number | null {
     const top = this.returningTop;
     this.returningTop = null;
@@ -162,7 +110,6 @@ export class KeptTabPages extends BaseRouteReuseStrategy {
     this.roots.clear();
     this.lastPages.clear();
     this.returningTop = null;
-    this.lent = null;
     pages.forEach((page) => destroyDetachedRouteHandle(page.handle));
   }
 
@@ -186,11 +133,9 @@ export class KeptTabPages extends BaseRouteReuseStrategy {
 
   private keptFor(route: ActivatedRouteSnapshot, place: Place): KeptPage | null {
     const page = this.pagesFor(place).get(place.tab);
-    return page !== undefined && isPageOf(page, route) ? page : null;
-  }
-
-  private previewStep(): unknown {
-    return untracked(this.injector.get(Router).currentNavigation)?.extras.info;
+    return page !== undefined && page.route === route.routeConfig && page.path === place.path
+      ? page
+      : null;
   }
 
   private letGoOfLastPageOtherThan(place: Place): void {
@@ -254,10 +199,6 @@ function isShown(router: Router, route: ActivatedRoute): boolean {
     }
   }
   return false;
-}
-
-function isPageOf(page: KeptPage, route: ActivatedRouteSnapshot): boolean {
-  return page.route === route.routeConfig && page.path === placeOf(route)?.path;
 }
 
 function placeOf(route: ActivatedRouteSnapshot): Place | null {

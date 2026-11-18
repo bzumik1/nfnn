@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { DOCUMENT, inject, Injectable, Injector } from '@angular/core';
 import {
   ActivatedRouteSnapshot,
   BaseRouteReuseStrategy,
@@ -6,18 +6,33 @@ import {
 } from '@angular/router';
 import { KeptTabPages } from './kept-tab-pages';
 import { NavigationPreview } from './navigation-preview';
+import type { PreviewLending } from './preview-lending';
+
+type HomeScreenNavigator = Navigator & { readonly standalone?: boolean };
 
 @Injectable({ providedIn: 'root' })
 export class PreviewingReuse extends BaseRouteReuseStrategy {
   private readonly kept = inject(KeptTabPages);
   private readonly preview = inject(NavigationPreview);
+  private lending: PreviewLending | null = null;
+
+  constructor() {
+    super();
+    const injector = inject(Injector);
+    const navigator = inject(DOCUMENT).defaultView?.navigator as HomeScreenNavigator | undefined;
+    if (navigator?.standalone === true) {
+      void import('./preview-lending').then(
+        ({ PreviewLending }) => (this.lending = new PreviewLending(injector, this.kept)),
+      );
+    }
+  }
 
   override shouldDetach(route: ActivatedRouteSnapshot): boolean {
     return this.preview.drives() || this.kept.shouldDetach(route);
   }
 
   override store(route: ActivatedRouteSnapshot, handle: DetachedRouteHandle | null): void {
-    if (this.kept.takesBackFromPreview(route, handle)) {
+    if (this.lending?.takesBack(route, handle)) {
       return;
     }
     if (!this.preview.took(route, handle)) {
@@ -27,14 +42,13 @@ export class PreviewingReuse extends BaseRouteReuseStrategy {
 
   override shouldAttach(route: ActivatedRouteSnapshot): boolean {
     return (
-      this.kept.lendsToPreview(route) ||
-      (this.preview.holds(route) ?? this.kept.shouldAttach(route))
+      this.lending?.lends(route) || (this.preview.holds(route) ?? this.kept.shouldAttach(route))
     );
   }
 
   override retrieve(route: ActivatedRouteSnapshot): DetachedRouteHandle | null {
     return (
-      this.kept.lentHandle(route) ?? this.preview.handleFor(route) ?? this.kept.retrieve(route)
+      this.lending?.handleFor(route) ?? this.preview.handleFor(route) ?? this.kept.retrieve(route)
     );
   }
 }
