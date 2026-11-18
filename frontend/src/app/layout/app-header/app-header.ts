@@ -31,7 +31,7 @@ import { followLargeTitle, LargeTitleWatch } from './large-title';
 import { initialsOf } from '../../core/auth/initials';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AccountPortrait } from '../account-sheet/account-portrait';
-import { accountLeftIn } from '../account-sheet/account-return';
+import { AccountReturn, accountLeftIn } from '../account-sheet/account-return';
 import { AccountSheet } from '../account-sheet/account-sheet';
 
 @Component({
@@ -44,6 +44,7 @@ import { AccountSheet } from '../account-sheet/account-sheet';
 export class AppHeader {
   private readonly loginDialog = inject(LoginDialogService);
   private readonly backTarget = inject(BackTarget);
+  private readonly accountReturn = inject(AccountReturn);
   private readonly chrome = inject(RouteChrome).current;
   private readonly injector = inject(Injector);
   private readonly header = viewChild.required<ElementRef<HTMLElement>>('header');
@@ -107,10 +108,9 @@ export class AppHeader {
     });
     effect(() => {
       const left = this.backTarget.steppedBackFrom();
-      const section = accountLeftIn(left);
-      if (section !== null && left !== this.answeredStep && this.auth.signedIn()) {
+      if (left !== null && left !== this.answeredStep && this.auth.signedIn()) {
         this.answeredStep = left;
-        untracked(() => this.answerStepIntoAccount(section));
+        untracked(() => this.answerStep(left));
       }
     });
     effect(() => {
@@ -148,8 +148,9 @@ export class AppHeader {
     this.accountReopenedOn.set(null);
   }
 
-  private answerStepIntoAccount(section: string): void {
-    if (this.compact()) {
+  private answerStep(left: HistoryState): void {
+    const section = accountLeftIn(left);
+    if (this.accountReturn.returnsByStep() && section !== null && this.compact()) {
       this.accountReopenedOn.set(section);
       this.accountOpen.set(true);
     }

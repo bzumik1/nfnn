@@ -21,6 +21,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from '../../../core/navigation/back-target';
 import { RouteChrome } from '../../../core/navigation/route-chrome';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { AccountReturn } from '../../../layout/account-sheet/account-return';
 import { AppHeader } from '../../../layout/app-header/app-header';
 import { AlertsOffer } from '../alerts/offer/alerts-offer';
 import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
@@ -63,6 +64,7 @@ export class AdminShell {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly backTarget = inject(BackTarget);
+  private readonly accountReturn = inject(AccountReturn);
   private readonly chrome = inject(RouteChrome).current;
   private readonly fullScreen = toSignal(
     this.router.events.pipe(
@@ -121,6 +123,7 @@ export class AdminShell {
     const entry = this.keptEntry() ?? this.entryDepth ?? 0;
     const steps = depthOf(this.location.getState()) - entry + 1;
     if (entry > 0 && steps > 0) {
+      this.accountReturn.closeAdministration();
       this.backTarget.backBy(steps);
     } else {
       void this.router.navigateByUrl('/', { replaceUrl: true, info: BACK_NAVIGATION });

@@ -14,7 +14,7 @@ import { BackTarget, HistoryState } from '../../core/navigation/back-target';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { OpenAlerts } from '../../core/push/open-alerts';
 import { OpenAlert } from '../../core/push/open-alerts-api';
-import { APP_ACCOUNT_KEY } from '../account-sheet/account-return';
+import { AccountReturn, APP_ACCOUNT_KEY } from '../account-sheet/account-return';
 import { AccountSheet } from '../account-sheet/account-sheet';
 import { AppHeader } from './app-header';
 
@@ -206,6 +206,24 @@ describe('Given the header of the app', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('app-account-sheet')).toBeNull();
+  });
+
+  it('when Správa is closed with Zavřít, then that step opens no sheet, and the next step back from a page the sheet opened does', async () => {
+    donor.set(sampleDonor({ name: 'Jana Nováková' }));
+    await openAt('/aktuality');
+    TestBed.inject(AccountReturn).closeAdministration();
+
+    steppedBackFrom.set({ [APP_ACCOUNT_KEY]: '' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-account-sheet')).toBeNull();
+
+    steppedBackFrom.set({ [APP_ACCOUNT_KEY]: '' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-account-sheet')).not.toBeNull();
   });
 
   it('when a step back leaves a page the account sheet did not open, then no sheet opens', async () => {

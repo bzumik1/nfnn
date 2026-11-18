@@ -28,8 +28,6 @@ export class BackTarget {
   private buttonPressed = false;
   private byButton = false;
   private entry: HistoryState = {};
-  private skipPressed = false;
-  private skipped = false;
   private readonly leftByStep = signal<HistoryState | null>(null);
   readonly steppedBackFrom = this.leftByStep.asReadonly();
 
@@ -39,8 +37,6 @@ export class BackTarget {
         this.popped = event.navigationTrigger === 'popstate';
         this.byButton = this.popped && this.buttonPressed;
         this.buttonPressed = false;
-        this.skipped = this.popped && this.skipPressed;
-        this.skipPressed = false;
         this.leftByStep.set(null);
         this.restoredDepth = depthIn(event.restoredState);
         this.restoredBehind = behindIn(event.restoredState);
@@ -80,7 +76,6 @@ export class BackTarget {
 
   backBy(steps: number): void {
     this.buttonPressed = true;
-    this.skipPressed = true;
     this.location.historyGo(-steps);
   }
 
@@ -107,7 +102,7 @@ export class BackTarget {
     const extras = this.router.lastSuccessfulNavigation()?.extras ?? {};
     const handedOver = depthIn(extras.state);
     if (this.popped) {
-      if (!this.skipped && this.restoredDepth < this.depth) {
+      if (this.restoredDepth < this.depth) {
         this.leftByStep.set(this.entry);
       }
       this.depth = this.restoredDepth;
@@ -126,7 +121,7 @@ export class BackTarget {
     this.left = this.path;
     this.path = pathOf(this.router.url);
     if (!extras.skipLocationChange) {
-      this.entry = { ...stateOf(this.location.getState()) };
+      this.entry = stateOf(this.location.getState());
       this.location.replaceState(this.location.path(true), '', {
         ...stateOf(this.location.getState()),
         [APP_DEPTH_KEY]: this.depth,

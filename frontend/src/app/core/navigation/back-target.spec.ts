@@ -272,14 +272,15 @@ describe('Given the back target of the app', () => {
       expect(sectionLeft()).toBe('');
     });
 
-    it('and Správa is closed, stepping over all its pages at once, then no step back is reported', async () => {
+    it('and Správa is closed, stepping over all its pages at once, then the entry reported is the deepest page it left, without the mark of the sheet', async () => {
       await openFromTheSheet('/sprava', '');
       await router.navigateByUrl('/sprava/darci');
 
       await stepBack(() => back.backBy(2));
 
       expect(router.url).toBe('/aktuality/clanek');
-      expect(back.steppedBackFrom()).toBeNull();
+      expect(back.steppedBackFrom()).not.toBeNull();
+      expect(sectionLeft()).toBeUndefined();
     });
 
     it('and another page opens after the step back, then the step is no longer reported', async () => {

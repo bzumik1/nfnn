@@ -4,6 +4,7 @@ import { Component, inject, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
+import { AccountReturn } from '../../../layout/account-sheet/account-return';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
 import { DIALOG_SUSPENSION } from '../../../shared/ui/dialog/dialog-suspension';
@@ -469,6 +470,15 @@ describe('Given an administrator who opened the administration on a phone over a
     close();
 
     expect(steps).toHaveBeenCalledWith(2);
+  });
+
+  it('when Zavřít steps back, then the account sheet is told that the step closes Správa, so it does not open again', () => {
+    vi.spyOn(TestBed.inject(BackTarget), 'backBy').mockImplementation(() => undefined);
+    const closing = vi.spyOn(TestBed.inject(AccountReturn), 'closeAdministration');
+
+    close();
+
+    expect(closing).toHaveBeenCalledOnce();
   });
 
   it('when the page is reloaded deeper in the administration, then Zavřít still knows where the administration was opened', async () => {
