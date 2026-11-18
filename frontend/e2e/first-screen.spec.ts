@@ -190,6 +190,43 @@ async function heroControlsInTabBarBand(page: Page): Promise<string[]> {
 }
 
 const EDGE_ROUNDING_PX = 1;
+const LEAD_NARROWEST_EM = 18;
+const SAME_PIXEL_TOLERANCE = 2;
+
+async function shadeChangeOverFace(page: Page, face: Box): Promise<number> {
+  await page.addStyleTag({ content: '#uvod .hero-content { visibility: hidden; }' });
+  const shaded = await page.screenshot({ animations: 'disabled' });
+  const unshade = await page.addStyleTag({
+    content: '#uvod .hero-overlay::before { display: none; }',
+  });
+  const unshaded = await page.screenshot({ animations: 'disabled' });
+  await unshade.evaluate((style) => style.remove());
+  await page.addStyleTag({ content: '#uvod .hero-content { visibility: visible; }' });
+  return page.evaluate(
+    async ({ withShade, withoutShade, box }) => {
+      const pixels = async (base64: string) => {
+        const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+        const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const context = canvas.getContext('2d', { willReadFrequently: true })!;
+        context.drawImage(bitmap, 0, 0);
+        const scale = bitmap.width / window.innerWidth;
+        const x = Math.max(0, Math.floor(box.left * scale));
+        const y = Math.max(0, Math.floor(box.top * scale));
+        const width = Math.max(0, Math.min(bitmap.width, Math.ceil(box.right * scale)) - x);
+        const height = Math.max(0, Math.min(bitmap.height, Math.ceil(box.bottom * scale)) - y);
+        return width > 0 && height > 0 ? context.getImageData(x, y, width, height).data : [];
+      };
+      const [shadedPixels, unshadedPixels] = [await pixels(withShade), await pixels(withoutShade)];
+      let largest = 0;
+      for (let index = 0; index < shadedPixels.length; index++) {
+        largest = Math.max(largest, Math.abs(shadedPixels[index] - unshadedPixels[index]));
+      }
+      return largest;
+    },
+    { withShade: shaded.toString('base64'), withoutShade: unshaded.toString('base64'), box: face },
+  );
+}
 
 async function heroControlsPartlyBehindTabBar(page: Page): Promise<string[]> {
   return page.evaluate((rounding) => {
@@ -203,23 +240,19 @@ async function heroControlsPartlyBehindTabBar(page: Page): Promise<string[]> {
   }, EDGE_ROUNDING_PX);
 }
 
-async function lowestContrastOverPhoto(page: Page, selector: string): Promise<number> {
-  const { color, lines } = await page.locator(selector).evaluate((element) => {
-    const range = document.createRange();
-    range.selectNodeContents(element);
-    return {
-      color: getComputedStyle(element).color,
-      lines: [...range.getClientRects()].map((rect) => ({
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-      })),
-    };
-  });
-  await page.addStyleTag({ content: '#uvod .hero-content { visibility: hidden; }' });
-  const photo = await page.screenshot({ animations: 'disabled' });
-  await page.addStyleTag({ content: '#uvod .hero-content { visibility: visible; }' });
+interface TextBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+async function lowestContrastInShot(
+  page: Page,
+  shot: Buffer,
+  color: string,
+  lines: TextBox[],
+): Promise<number> {
   return page.evaluate(
     async ({ base64, textColor, textLines }) => {
       const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
@@ -258,8 +291,60 @@ async function lowestContrastOverPhoto(page: Page, selector: string): Promise<nu
       }
       return lowest;
     },
-    { base64: photo.toString('base64'), textColor: color, textLines: lines },
+    { base64: shot.toString('base64'), textColor: color, textLines: lines },
   );
+}
+
+async function lowestContrastOverPhoto(
+  page: Page,
+  selector: string,
+  area: 'lines' | 'box' = 'lines',
+): Promise<number> {
+  const { color, lines } = await page.locator(selector).evaluate((element, over) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const rects = over === 'box' ? [element.getBoundingClientRect()] : [...range.getClientRects()];
+    return {
+      color: getComputedStyle(element).color,
+      lines: rects.map((rect) => ({
+        left: rect.left,
+        top: rect.top + window.scrollY,
+        width: rect.width,
+        height: rect.height,
+      })),
+    };
+  }, area);
+  const hidden =
+    area === 'box'
+      ? '#uvod .hero-content, app-header, app-tab-bar { visibility: hidden; }'
+      : '#uvod .hero-content { visibility: hidden; }';
+  const hide = await page.addStyleTag({ content: hidden });
+  const resting = await page.evaluate(() => window.scrollY);
+  const windowHeight = page.viewportSize()!.height;
+  const textTop = Math.min(...lines.map((line) => line.top));
+  const textBottom = Math.max(...lines.map((line) => line.top + line.height));
+  let lowest = Infinity;
+  let windowTop = area === 'box' ? textTop : resting;
+  for (;;) {
+    await page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), windowTop);
+    const scrolled = await page.evaluate(() => window.scrollY);
+    const shot = await page.screenshot({ animations: 'disabled' });
+    const shown = lines
+      .map((line) => {
+        const top = Math.max(line.top, scrolled);
+        const bottom = Math.min(line.top + line.height, scrolled + windowHeight);
+        return { ...line, top: top - scrolled, height: bottom - top };
+      })
+      .filter((line) => line.height > 0);
+    lowest = Math.min(lowest, await lowestContrastInShot(page, shot, color, shown));
+    if (area !== 'box' || scrolled + windowHeight >= textBottom || scrolled < windowTop - 1) {
+      break;
+    }
+    windowTop = scrolled + windowHeight;
+  }
+  await page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), resting);
+  await hide.evaluate((style) => style.remove());
+  return lowest;
 }
 
 test.describe('Given the landing page, whose photo shows a child looking at the visitor', () => {
@@ -589,17 +674,26 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
         );
       });
 
-      test("then buttons moved below the window's edge start right at it, so the space under the lead is no larger than the buttons took", async ({
+      test("then the buttons either follow the lead at its own margin or, moved below the window's edge, start right at it, so the space under the lead is no larger than the buttons took", async ({
         page,
       }) => {
-        const buttons = await page.locator('#uvod .hero-btns').evaluate((row) => ({
-          top: row.getBoundingClientRect().top,
-          edge: window.innerHeight,
-        }));
+        const layout = await page.evaluate(() => {
+          const lead = document.querySelector<HTMLElement>('#uvod .hero-lead')!;
+          return {
+            buttonsTop: document.querySelector('#uvod .hero-btns')!.getBoundingClientRect().top,
+            leadBottom: lead.getBoundingClientRect().bottom,
+            leadMargin: parseFloat(getComputedStyle(lead).marginBottom),
+            edge: window.innerHeight,
+          };
+        });
+        const gapUnderLead = layout.buttonsTop - layout.leadBottom;
+        const followLead = Math.abs(gapUnderLead - layout.leadMargin) <= EDGE_ROUNDING_PX;
+        const startAtEdge = Math.abs(layout.buttonsTop - layout.edge) <= EDGE_ROUNDING_PX;
 
-        if (buttons.top >= buttons.edge - EDGE_ROUNDING_PX) {
-          expect(Math.abs(buttons.top - buttons.edge)).toBeLessThanOrEqual(EDGE_ROUNDING_PX);
-        }
+        expect(
+          followLead || startAtEdge,
+          `the buttons start ${gapUnderLead} px under the lead and ${layout.buttonsTop - layout.edge} px under the edge`,
+        ).toBe(true);
       });
     });
   }
@@ -677,10 +771,10 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
     { name: 'a computer', width: 1280, height: 748 },
   ]) {
     for (const colorScheme of ['light', 'dark'] as const) {
-      test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height}) with text at 200 % in the ${colorScheme} appearance`, () => {
+      test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height}) with text at 200 % in the ${colorScheme} appearance, where the hero no longer fits one screen`, () => {
         test.use({ viewport: { width: screen.width, height: screen.height }, colorScheme });
 
-        test("then the lead keeps clear of the child's face and reads against the brightest part of the photo behind it", async ({
+        test("then the lead keeps clear of the child's face, the shade behind it leaves the face as it is, and the lead reads at AA contrast anywhere in its box", async ({
           page,
         }) => {
           await page.goto('/');
@@ -692,12 +786,62 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
             expect(overlaps(box, layout.face), `"${text}" lies over the child's face`).toBe(false);
           }
           expect(
-            await lowestContrastOverPhoto(page, '#uvod .hero-lead'),
-            'the lead falls below WCAG AA contrast over the photo',
+            await shadeChangeOverFace(page, layout.face),
+            "the shade behind the lead darkens the child's face",
+          ).toBeLessThanOrEqual(SAME_PIXEL_TOLERANCE);
+          expect(
+            await lowestContrastOverPhoto(page, '#uvod .hero-lead', 'box'),
+            'the lead falls below WCAG AA contrast somewhere in its box',
           ).toBeGreaterThanOrEqual(NORMAL_TEXT_CONTRAST);
         });
       });
     }
+  }
+
+  for (const colorScheme of ['light', 'dark'] as const) {
+    test.describe(`when it opens on an iPad mini on its side (1133 × 744) with the largest system text (a root of 53 px, above 200 %) in the ${colorScheme} appearance`, () => {
+      test.use({ viewport: { width: 1133, height: 744 }, colorScheme });
+
+      test(`then the lead shows whole, lies over the face only where the column beside it would be narrower than ${LEAD_NARROWEST_EM} em, and reads at AA contrast anywhere in its box`, async ({
+        page,
+      }) => {
+        await page.goto('/');
+        await page.addStyleTag({ content: 'html { font-size: 53px; }' });
+        await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+        const layout = await heroLayout(page, FACE_IN_HERO_PHOTO);
+        const lead = page.locator('#uvod .hero-lead');
+
+        await expect(lead).toHaveText(
+          'Pomáháme zdravotně postiženým dětem k\u00a0lepšímu životu. Každý příspěvek mění příběh.',
+        );
+        expect(await leadShows(page), 'the lead is hidden').toBe(true);
+        const leadBox = layout.shown.find(({ text }) => text.startsWith('Pomáháme'))!.box;
+        if (overlaps(leadBox, layout.face)) {
+          const column = await lead.evaluate((element) => {
+            const content = element.parentElement!;
+            const padding = getComputedStyle(content);
+            return {
+              width: element.getBoundingClientRect().width,
+              em: parseFloat(getComputedStyle(element).fontSize),
+              whole:
+                content.clientWidth -
+                parseFloat(padding.paddingLeft) -
+                parseFloat(padding.paddingRight),
+            };
+          });
+          expect(
+            column.width,
+            `the lead lies over the face in a column narrower than ${LEAD_NARROWEST_EM} em`,
+          ).toBeGreaterThanOrEqual(
+            Math.min(column.em * LEAD_NARROWEST_EM, column.whole) - EDGE_ROUNDING_PX,
+          );
+        }
+        expect(
+          await lowestContrastOverPhoto(page, '#uvod .hero-lead', 'box'),
+          'the lead falls below WCAG AA contrast somewhere in its box',
+        ).toBeGreaterThanOrEqual(NORMAL_TEXT_CONTRAST);
+      });
+    });
   }
 
   test.describe('when it opens on an iPhone SE with the largest system text (a root of 53 px), turns on its side and back, and Safari shows and hides its toolbar', () => {
