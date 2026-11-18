@@ -253,6 +253,10 @@ describe('Given an administrator on the bank logos page', () => {
     expect(request.request.headers.get('If-Match')).toBe(`"${csas.version}"`);
     expect(heldRecordOf(request.request.context)).toEqual(csas);
     expect(button(row('0800'), 'Stahujeme…').disabled).toBe(true);
+    expect(labelFaces(button(row('0800'), 'Stahujeme…'))).toEqual([
+      'Uložit a stáhnout',
+      'Stahujeme…',
+    ]);
     request.flush({
       ...csas,
       sourceUrl: NEW_SOURCE,
@@ -338,6 +342,7 @@ describe('Given an administrator on the bank logos page', () => {
     await settle();
     const request = http.expectOne({ method: 'POST', url: `${LIST_URL}/0800/refresh` });
     expect(button(row('0800'), 'Stahujeme…').disabled).toBe(true);
+    expect(labelFaces(button(row('0800'), 'Stahujeme…'))).toEqual(['Stáhnout znovu', 'Stahujeme…']);
     request.flush({ ...csas, checkedAt: '2026-11-12T08:00:00Z' });
     await settle();
 
@@ -599,6 +604,9 @@ describe('Given an administrator on the bank logos page', () => {
     await type('#bank-logo-new-code', '0100');
     await type('#bank-logo-new-source', NEW_SOURCE);
     await submit(element('.add-card'));
+    const adding = button(element('.add-card'), 'Stahujeme…');
+    expect(adding.disabled).toBe(true);
+    expect(labelFaces(adding)).toEqual(['Přidat a stáhnout', 'Stahujeme…']);
     const refusal = problem(409, 'donations/changed-meanwhile', 'Mezitím se to změnilo', '');
     const kb = adminBankLogo({
       code: '0100',

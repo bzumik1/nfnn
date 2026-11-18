@@ -15,6 +15,8 @@ import {
 import { Connectivity } from '../../../../core/connectivity/connectivity';
 import { DonorCopySync, type SyncOutcome } from '../../../donations/device-copy/donor-copy-sync';
 import { DeviceDataCard } from './device-data-card';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 
 const DONOR = sampleDonor();
 
@@ -52,7 +54,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
 
   function button(text: string): HTMLButtonElement {
     const found = Array.from(document.querySelectorAll('button')).find(
-      (candidate) => normalized(candidate.textContent) === text,
+      (candidate) => accessibleText(candidate) === text,
     );
     if (found === undefined) {
       throw new Error(`No button ${text}`);
@@ -170,6 +172,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
       const running = button('Načítáme data…');
 
       expect(running.disabled).toBe(true);
+      expect(labelFaces(running)).toEqual(['Načíst data znovu', 'Načítáme data…']);
       expect(download.reload).toHaveBeenCalledTimes(1);
     });
 
@@ -304,6 +307,10 @@ describe('Given the card "Data v tomto zařízení"', () => {
       await settle();
 
       expect(button('Mažeme data…').disabled).toBe(true);
+      expect(labelFaces(button('Mažeme data…'))).toEqual([
+        'Smazat data a odhlásit',
+        'Mažeme data…',
+      ]);
       expect(button('Zrušit').disabled).toBe(true);
       expect(document.querySelector<HTMLButtonElement>('.dialog-close')?.disabled).toBe(true);
     });

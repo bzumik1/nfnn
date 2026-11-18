@@ -280,6 +280,7 @@ describe('Given an administrator on the backups page', () => {
       expect(request.request.method).toBe('POST');
       expect(request.request.body).toEqual({ kind: 'BACKUP' });
       expect(button('Zálohujeme…').disabled).toBe(true);
+      expect(labelFaces(button('Zálohujeme…'))).toEqual(['Zálohovat teď', 'Zálohujeme…']);
       expect(button('Ověřit obnovu teď').disabled).toBe(true);
       request.flush({ requestId: 'req-1', kind: 'BACKUP', requestedAt: '2026-10-23T08:00:00Z' });
       await settle();
@@ -386,6 +387,10 @@ describe('Given an administrator on the backups page', () => {
     const request = http.expectOne(REQUESTS_URL);
     expect(request.request.body).toEqual({ kind: 'TEST_RESTORE' });
     expect(button('Ověřujeme obnovu…').disabled).toBe(true);
+    expect(labelFaces(button('Ověřujeme obnovu…'))).toEqual([
+      'Ověřit obnovu teď',
+      'Ověřujeme obnovu…',
+    ]);
     request.flush({
       requestId: 'req-2',
       kind: 'TEST_RESTORE',
@@ -594,6 +599,7 @@ describe('Given an administrator on the backups page', () => {
     expect(request.request.responseType).toBe('blob');
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
     expect(button('Stahujeme…').disabled).toBe(true);
+    expect(labelFaces(button('Stahujeme…'))).toEqual(['Stáhnout', 'Stahujeme…']);
     expect(TestBed.inject(RunningWork).any()).toBe(true);
     request.flush(new Blob([new Uint8Array(1590)], { type: 'application/octet-stream' }), {
       headers: { 'Content-Disposition': 'attachment; filename="nfnn-2026-10-23_0300.dump.age"' },

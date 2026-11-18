@@ -22,6 +22,8 @@ import { ADMINISTRATION_LOCK } from '../../shell/administration-lock';
 import { adminPush, PUSH_PUBLIC_KEY, pushSubscription } from '../../testing/admin-fixtures';
 import { DeviceAlertMarks } from '../device-alert-marks';
 import { AlertsOffer } from './alerts-offer';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 
 const PUSH_URL = '/api/admin/operations/push';
 
@@ -142,7 +144,7 @@ describe('Given an administrator in the administration', () => {
   function button(name: string): HTMLButtonElement {
     const found = Array.from(
       (sheet()?.querySelectorAll('button, a') ?? []) as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.trim() === name);
+    ).find((candidate) => accessibleText(candidate) === name);
     if (found === undefined) {
       throw new Error(`No button named ${name}`);
     }
@@ -189,6 +191,9 @@ describe('Given an administrator in the administration', () => {
       await settle();
 
       expect(push.requestSubscription).toHaveBeenCalledWith(PUSH_PUBLIC_KEY);
+      const turningOn = button('Zapínáme…');
+      expect(turningOn.disabled).toBe(true);
+      expect(labelFaces(turningOn)).toEqual(['Zapnout', 'Zapínáme…']);
       const subscribe = http.expectOne({ method: 'POST', url: `${PUSH_URL}/subscriptions` });
       expect(subscribe.request.body).toEqual({
         endpoint: DEVICE.endpoint,

@@ -7,6 +7,8 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { ContactForm } from './contact-form';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
 
 function answerAccountingDetails(http: HttpTestingController): void {
@@ -222,12 +224,15 @@ describe('Given the contact form', () => {
     expect(element('#contact-message').hasAttribute('enterkeyhint')).toBe(false);
   });
 
-  it('when the message is on its way, then the button says the foundation is sending it', async () => {
+  it('when the message is on its way, then the button is locked and keeps both labels under the sending name', async () => {
     await fillInValidMessage();
 
     await submit();
 
-    expect(element('.form-submit').textContent?.trim()).toBe('Odesíláme…');
+    const send = element('.form-submit') as HTMLButtonElement;
+    expect(send.disabled).toBe(true);
+    expect(labelFaces(send)).toEqual(['Odeslat zprávu', 'Odesíláme…']);
+    expect(accessibleText(send)).toBe('Odesíláme…');
     http.expectOne('/api/contact/messages').flush(null, { status: 202, statusText: 'Accepted' });
   });
 
