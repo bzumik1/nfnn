@@ -1,6 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { signal } from '@angular/core';
+import { Location } from '@angular/common';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -24,6 +25,7 @@ import type { AccountStore, CopyContents } from '../../../core/device/store/acco
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
 import { FORCED_REFRESH_GAP_MS } from '../device-copy/administration-reads';
+import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
 
 const PAYMENTS_URL = '/api/admin/donations/payments';
 const DONORS_URL = '/api/admin/donations/donors';
@@ -1042,8 +1044,12 @@ describe('Given an administrator on the bank payments page', () => {
   });
 });
 
+@Component({ selector: 'app-donor-card-stand-in', template: '<h1>Karta dárce</h1>' })
+class DonorCardStandIn {}
+
 describe('Given an administrator on the bank payments page where lists show as rows', () => {
   let fixture: ComponentFixture<unknown>;
+  let harness: RouterTestingHarness;
   let http: HttpTestingController;
 
   beforeEach(async () => {
@@ -1053,7 +1059,10 @@ describe('Given an administrator on the bank payments page where lists show as r
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'sprava/platby', component: AdminPayments }]),
+        provideRouter([
+          { path: 'sprava/platby', component: AdminPayments },
+          { path: 'sprava/darci/:id', component: DonorCardStandIn },
+        ]),
         {
           provide: CompactLayout,
           useValue: {
@@ -1068,7 +1077,7 @@ describe('Given an administrator on the bank payments page where lists show as r
     http
       .expectOne('/api/donors/auth/login')
       .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
-    const harness = await RouterTestingHarness.create('/sprava/platby');
+    harness = await RouterTestingHarness.create('/sprava/platby');
     fixture = harness.fixture;
     await settle();
   });
@@ -1223,6 +1232,53 @@ describe('Given an administrator on the bank payments page where lists show as r
       expect(sheet().querySelector('.pair-payment a')?.getAttribute('href')).toBe(
         '/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369',
       );
+    });
+
+    it("then following the donor from the sheet hands the donor card the history's next step", async () => {
+      await openPaired();
+      const depth = TestBed.inject(BackTarget).nextDepth();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+      sheet()
+        .querySelector<HTMLAnchorElement>('.pair-payment a')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+
+      expect(navigate).toHaveBeenCalledWith('/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369', {
+        replaceUrl: true,
+        state: { [APP_DEPTH_KEY]: depth },
+      });
+    });
+
+    it("then a step back by the system from the donor card focuses the payment's row and brings it into view", async () => {
+      await listResponds(paymentList([unpairedPayment()]));
+      button('Přiřazené').click();
+      await settle();
+      await listResponds(
+        paymentList([unpairedPayment({ donation: pairedDonation() })], { availableYears: [2026] }),
+        PAIRED_PAGE,
+      );
+      TestBed.inject(Router).setUpLocationChangeListener();
+      await harness.navigateByUrl('/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369');
+
+      const scrolled = vi.fn();
+      Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+        value: scrolled,
+        configurable: true,
+      });
+      onTestFinished(() => {
+        Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+      });
+      TestBed.inject(Location).back();
+      await vi.waitFor(() => expect(TestBed.inject(Router).url).toContain('/sprava/platby'));
+      await settle();
+      await listResponds(
+        paymentList([unpairedPayment({ donation: pairedDonation() })], { availableYears: [2026] }),
+        PAIRED_PAGE,
+      );
+
+      expect(document.activeElement).toBe(paymentRows()[0]);
+      expect(scrolled.mock.contexts).toEqual([paymentRows()[0]]);
+      expect(scrolled).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
     });
 
     it('then a gift with an issued receipt cannot be unpaired from the sheet', async () => {
