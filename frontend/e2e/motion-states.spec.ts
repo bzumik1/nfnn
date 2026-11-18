@@ -403,9 +403,9 @@ async function sendTheSignInWithAnInvalidEmail(page: Page): Promise<ErrorArrival
   await page.goto('/');
   await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
   const dialog = page.getByRole('dialog');
+  await page.evaluate(recordTheEmailErrorArrival);
   await dialog.locator('#login-email').fill('jana');
   await dialog.locator('#login-password').fill('correct horse battery');
-  await page.evaluate(recordTheEmailErrorArrival);
   await dialog.getByRole('button', { name: 'Přihlásit se', exact: true }).click();
   await expect(dialog.locator('#login-email-error')).toBeVisible();
   await expect(dialog.locator('#login-email')).toBeFocused();
