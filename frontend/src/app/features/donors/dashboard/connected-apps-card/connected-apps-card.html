@@ -42,11 +42,10 @@
               [disabled]="disconnecting() !== null"
               (click)="disconnect(app)"
             >
-              @if (disconnecting() === app.id) {
-                <span i18n="@@donor.account.connections.disconnecting">Odpojujeme…</span>
-              } @else {
-                <span i18n="@@donor.account.connections.disconnect">Odpojit</span>
-              }
+              <app-busy-label [busy]="disconnecting() === app.id">
+                <span when-idle i18n="@@donor.account.connections.disconnect">Odpojit</span>
+                <span when-busy i18n="@@donor.account.connections.disconnecting">Odpojujeme…</span>
+              </app-busy-label>
             </button>
           </li>
         }

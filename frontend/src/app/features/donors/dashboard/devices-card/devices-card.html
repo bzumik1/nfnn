@@ -106,11 +106,10 @@
                 [attr.aria-busy]="signingOutOthers()"
                 (click)="signOutOthers()"
               >
-                @if (signingOutOthers()) {
-                  <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
-                } @else {
-                  <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
-                }
+                <app-busy-label [busy]="signingOutOthers()">
+                  <span when-idle i18n="@@donor.account.devices.signOut">Odhlásit</span>
+                  <span when-busy i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+                </app-busy-label>
               </button>
               <button
                 #confirmCancel
@@ -262,11 +261,10 @@
             [attr.aria-busy]="signingOut() === device.id"
             (click)="signOut(device)"
           >
-            @if (signingOut() === device.id) {
-              <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
-            } @else {
-              <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
-            }
+            <app-busy-label [busy]="signingOut() === device.id">
+              <span when-idle i18n="@@donor.account.devices.signOut">Odhlásit</span>
+              <span when-busy i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+            </app-busy-label>
           </button>
           <button
             #confirmCancel

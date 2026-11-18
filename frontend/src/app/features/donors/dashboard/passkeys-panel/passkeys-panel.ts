@@ -34,6 +34,7 @@ import { FormControlDirective } from '../../../../shared/ui/form-field/form-cont
 import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { AccountUsername } from '../../../../shared/ui/account-username/account-username';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
@@ -44,6 +45,7 @@ const PASSKEY_NAME_MAX_LENGTH = 64;
 @Component({
   selector: 'app-passkeys-panel',
   imports: [
+    BusyLabel,
     FormsModule,
     FormField,
     FormControlDirective,

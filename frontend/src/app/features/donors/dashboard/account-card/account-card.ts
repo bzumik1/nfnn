@@ -35,6 +35,7 @@ import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-r
 import { QrCode } from '../../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../../shared/ui/qr-code/qr-encoder';
 import { PasskeysPanel } from '../passkeys-panel/passkeys-panel';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 
 type Panel =
@@ -53,6 +54,7 @@ const SECRET_GROUP = 4;
 @Component({
   selector: 'app-account-card',
   imports: [
+    BusyLabel,
     FormsModule,
     FormField,
     FormControlDirective,

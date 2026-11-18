@@ -1075,6 +1075,39 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
       expect(switchesUnderTheirText).toEqual([]);
     });
   }
+
+  test('when they open the monthly report, then Uložit nastavení keeps room for Ukládáme… and both labels wrap within the button and its form instead of being cut', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/prehledy');
+    const save = page.locator('form.settings-form button[type="submit"]');
+    await expect(save).toHaveAccessibleName('Uložit nastavení');
+    await page.evaluate(() => document.fonts.ready);
+
+    const cut = await save.evaluate((button) => {
+      const box = button.getBoundingClientRect();
+      const style = getComputedStyle(button);
+      const left = box.left + parseFloat(style.paddingLeft) - 0.5;
+      const right = box.right - parseFloat(style.paddingRight) + 0.5;
+      return Array.from(button.querySelectorAll('.busy-label__face'))
+        .filter((face) => {
+          const range = document.createRange();
+          range.selectNodeContents(face);
+          return Array.from(range.getClientRects()).some(
+            (rect) => rect.left < left || rect.right > right,
+          );
+        })
+        .map((face) => face.textContent?.trim());
+    });
+    expect(cut).toEqual([]);
+    expect(await wordsBrokenInside(save)).toEqual([]);
+    expect(
+      await save.evaluate(
+        (button) =>
+          button.getBoundingClientRect().right - button.form!.getBoundingClientRect().right,
+      ),
+    ).toBeLessThanOrEqual(0.5);
+  });
 });
 
 interface SummaryPair {

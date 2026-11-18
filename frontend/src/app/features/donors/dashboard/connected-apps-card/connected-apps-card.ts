@@ -7,6 +7,7 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { ConnectedApp } from '../../../../core/auth/donor';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { describeScopes } from '../../connect-app/oauth-scopes';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
@@ -15,7 +16,7 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 
 @Component({
   selector: 'app-connected-apps-card',
-  imports: [NeedsConnection],
+  imports: [BusyLabel, NeedsConnection],
   templateUrl: './connected-apps-card.html',
   styleUrl: './connected-apps-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

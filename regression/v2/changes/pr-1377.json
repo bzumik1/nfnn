@@ -1,0 +1,34 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-report.spec.ts > Given an administrator on the monthly report page > when they save and the server takes a while, then the button says so at once under its new name without changing its width",
+    "reason": "PR #1377 (#1250, both polish teams): a busy label changes only after the loading delay (--delay-loading), so the journey and the spec now name when the label changes; the old tests asserted the change at once",
+    "replacement": "e2e/admin-report.spec.ts > Given an administrator on the monthly report page > when they save and the server takes a while, then the button is locked at once and says so under its new name after the loading delay without changing its width",
+    "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving > then its name changes at once to the saving label alone",
+    "reason": "PR #1377 (#1250, both polish teams): a busy label changes only after the loading delay (--delay-loading), so the journey and the spec now name when the label changes; the old tests asserted the change at once",
+    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving without the theme's loading delay > then its name changes at once to the saving label alone",
+    "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving > then the resting label keeps its room but is hidden from screen readers",
+    "reason": "PR #1377 (#1250, both polish teams): a busy label changes only after the loading delay (--delay-loading), so the journey and the spec now name when the label changes; the old tests asserted the change at once",
+    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving without the theme's loading delay > then the resting label keeps its room but is hidden from screen readers",
+    "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving > then nothing on the button announces itself",
+    "reason": "PR #1377 (#1250, both polish teams): a busy label changes only after the loading delay (--delay-loading), so the journey and the spec now name when the label changes; the old tests asserted the change at once",
+    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving without the theme's loading delay > then nothing on the button announces itself",
+    "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
+  }
+]

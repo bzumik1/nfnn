@@ -20,6 +20,7 @@ import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { DevicePlatform, SignedInDevice } from '../../../../core/auth/donor';
 import { formatBankTime, formatDonationDate, pragueDay } from '../../../donations/donation-date';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
@@ -50,7 +51,7 @@ const SHAPES: Record<DevicePlatform, DeviceShape> = {
 
 @Component({
   selector: 'app-devices-card',
-  imports: [NeedsConnection, NgTemplateOutlet],
+  imports: [BusyLabel, NeedsConnection, NgTemplateOutlet],
   templateUrl: './devices-card.html',
   styleUrl: './devices-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
