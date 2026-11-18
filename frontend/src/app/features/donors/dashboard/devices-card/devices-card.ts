@@ -90,10 +90,7 @@ export class DevicesCard {
   );
   protected readonly signingOutOthers = computed(() => this.signingOut() === ALL_OTHERS);
   protected readonly confirmingOthers = computed(() => this.confirming() === ALL_OTHERS);
-  private readonly rowLeft = signal(false);
-  protected readonly emptyEntrance = computed(() =>
-    this.rowLeft() ? 'devices-empty--after-rows' : '',
-  );
+  protected readonly rowLeft = signal(false);
 
   constructor() {
     this.loadDevices(true);

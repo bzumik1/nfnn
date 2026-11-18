@@ -36,7 +36,7 @@
         <li
           class="account"
           [class.account--disconnected]="account.status === 'DISCONNECTED'"
-          [animate.enter]="rowEntrance(account)"
+          [class.account--entering]="entering(account)"
         >
           <div class="ui-list__row account-row">
             <span class="ui-list__lead account-lead">

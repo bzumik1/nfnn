@@ -155,7 +155,7 @@
       } @else {
         <p
           class="devices-empty"
-          [animate.enter]="emptyEntrance()"
+          [class.devices-empty--after-rows]="rowLeft()"
           i18n="@@donor.account.devices.empty"
         >
           Jinde přihlášení nejste.

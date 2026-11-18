@@ -4,7 +4,6 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
-  computed,
   DOCUMENT,
   effect,
   ElementRef,
@@ -53,10 +52,7 @@ export class ConnectedAppsCard {
   protected readonly connectionsError = signal('');
   protected readonly disconnecting = signal<string | null>(null);
   protected readonly disconnected = signal('');
-  private readonly rowLeft = signal(false);
-  protected readonly emptyEntrance = computed(() =>
-    this.rowLeft() ? 'connections-empty--after-rows' : '',
-  );
+  protected readonly rowLeft = signal(false);
 
   constructor() {
     this.loadConnections(true);

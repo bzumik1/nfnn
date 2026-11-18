@@ -27,7 +27,7 @@
           <li
             class="passkey-slot"
             [id]="rowId(passkey)"
-            [animate.enter]="rowEntrance(passkey)"
+            [class.passkey-slot--entering]="added() === passkey.id"
             animate.leave="passkey-slot--leaving"
           >
             <div>
@@ -183,13 +183,17 @@
         </p>
       }
     } @else if (hasPassword()) {
-      <p class="passkeys-empty" [animate.enter]="emptyEntrance()" i18n="@@donor.passkeys.empty">
+      <p
+        class="passkeys-empty"
+        [class.passkeys-empty--after-rows]="rowLeft()"
+        i18n="@@donor.passkeys.empty"
+      >
         Zatím nemáte žádný přístupový klíč. Přihlašujete se e-mailem a heslem.
       </p>
     } @else {
       <p
         class="passkeys-warning"
-        [animate.enter]="emptyEntrance()"
+        [class.passkeys-empty--after-rows]="rowLeft()"
         i18n="@@donor.passkeys.emptyPasswordless"
       >
         Účet nemá heslo ani přístupový klíč. Vytvořte si klíč hned; jinak se příště přihlásíte jen

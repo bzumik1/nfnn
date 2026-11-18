@@ -110,11 +110,8 @@ export class PasskeysPanel {
   protected readonly renameSaving = signal(false);
   protected readonly renameError = signal('');
   protected readonly status = signal('');
-  private readonly added = signal<string | null>(null);
-  private readonly rowLeft = signal(false);
-  protected readonly emptyEntrance = computed(() =>
-    this.rowLeft() ? 'passkeys-empty--after-rows' : '',
-  );
+  protected readonly added = signal<string | null>(null);
+  protected readonly rowLeft = signal(false);
   protected readonly nameMaxLength = PASSKEY_NAME_MAX_LENGTH;
 
   protected readonly nameHint = $localize`:@@donor.passkeys.name.hint:Podle názvu klíč později poznáte, třeba „iPhone“ nebo „Pracovní notebook“.`;
@@ -368,10 +365,6 @@ export class PasskeysPanel {
 
   protected rowId(passkey: Passkey): string {
     return `passkey-row-${passkey.id}`;
-  }
-
-  protected rowEntrance(passkey: Passkey): string {
-    return this.added() === passkey.id ? 'passkey-slot--entering' : '';
   }
 
   protected renameButtonId(passkey: Passkey): string {
