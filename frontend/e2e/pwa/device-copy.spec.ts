@@ -29,6 +29,7 @@ test.describe('Given a donor who signs in with a password to the site behind its
     page,
     context,
     idbDump,
+    swReady,
   }) => {
     await mockDonorApi(context, {
       ...twoGifts,
@@ -42,6 +43,8 @@ test.describe('Given a donor who signs in with a password to the site behind its
     );
     const gifts = page.locator('.payments-card tbody tr, .payments-card .donation-rows > li');
 
+    await page.goto('/');
+    await swReady();
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
