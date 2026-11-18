@@ -71,6 +71,12 @@ export class ChunkLoadRecovery {
     this.failed.set({ url: this.router.url, initial: false });
   }
 
+  importRecovered(): void {
+    if (this.failed()?.initial === false) {
+      this.failed.set(null);
+    }
+  }
+
   reload(): void {
     const failure = this.failed();
     if (failure !== null) {

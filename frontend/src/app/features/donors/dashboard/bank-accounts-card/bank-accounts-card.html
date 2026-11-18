@@ -147,14 +147,14 @@
                 }
               } @else {
                 <div
-                  class="account-confirm"
+                  class="ui-confirm account-confirm"
                   role="group"
                   [attr.aria-labelledby]="actionButtonId(account) + '-confirm'"
                 >
                   @if (account.confirmedSymbols.length > 0) {
                     <p
                       [id]="actionButtonId(account) + '-confirm'"
-                      class="account-confirm-text"
+                      class="ui-confirm__text account-confirm-text"
                       i18n="@@donor.bankAccounts.confirm.textWithSymbols"
                     >
                       Platby bez variabilního symbolu ani platby se symbolem
@@ -165,7 +165,7 @@
                   } @else {
                     <p
                       [id]="actionButtonId(account) + '-confirm'"
-                      class="account-confirm-text"
+                      class="ui-confirm__text account-confirm-text"
                       i18n="@@donor.bankAccounts.confirm.text"
                     >
                       Platby bez variabilního symbolu, které z tohoto účtu přijdou od zítřka, vám už
@@ -173,7 +173,7 @@
                       <a href="mailto:info@nfnn.cz">napište nám</a>.
                     </p>
                   }
-                  <div class="account-confirm-actions">
+                  <div class="ui-confirm__actions account-confirm-actions">
                     <button
                       appNeedsConnection
                       type="button"

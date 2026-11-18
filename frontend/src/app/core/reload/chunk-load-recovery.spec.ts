@@ -190,6 +190,15 @@ describe('Given the chunk-load recovery', () => {
     expect(recovery.failure()).toEqual({ url: '/darce/prehled', initial: true });
   });
 
+  it('when the first page failed to load and code outside the router loads later, then the page that says no page is shown stays', async () => {
+    claim.mockReturnValue(false);
+    await recovery.handleNavigationError(failure(CHROME));
+
+    recovery.importRecovered();
+
+    expect(recovery.failure()).toEqual({ url: '/darce/prehled', initial: true });
+  });
+
   describe('when a lazy page fails to load while the browser is offline', () => {
     beforeEach(async () => {
       await showPage();
@@ -226,6 +235,12 @@ describe('Given the chunk-load recovery', () => {
       expect(reloadWouldLand).not.toHaveBeenCalled();
       expect(claim).not.toHaveBeenCalled();
       expect(loadFromServer).not.toHaveBeenCalled();
+    });
+
+    it('and the same code loads on a later try, then the offer goes away', () => {
+      recovery.importRecovered();
+
+      expect(recovery.failure()).toBeNull();
     });
   });
 

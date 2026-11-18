@@ -265,6 +265,26 @@ describe("Given a donor's signed-in devices card", () => {
       );
     });
 
+    it('and the donor asks to sign out the iPhone or every other device, then both questions use the shared in-card confirmation', async () => {
+      const expectShared = (confirmation: HTMLElement | null) => {
+        expect(confirmation?.classList).toContain('ui-confirm');
+        expect(confirmation?.querySelector('.devices-confirm-text')?.classList).toContain(
+          'ui-confirm__text',
+        );
+        expect(confirmation?.querySelector('.devices-confirm-actions')?.classList).toContain(
+          'ui-confirm__actions',
+        );
+      };
+
+      await ask(signOutButton(rows()[1]));
+      expectShared(rows()[1].querySelector<HTMLElement>('.devices-confirm'));
+
+      element<HTMLButtonElement>('.devices-confirm-no').click();
+      await settle();
+      await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
+      expectShared(element<HTMLElement>('.devices-footer .devices-confirm'));
+    });
+
     it('and the donor presses Odhlásit všechna ostatní zařízení, then the card asks the same way and cancelling returns focus to that button', async () => {
       await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
 

@@ -1,3 +1,5 @@
+@use 'motion';
+
 .offline-pill {
   position: fixed;
   z-index: 210;
@@ -48,15 +50,10 @@
   );
 }
 
-.offline-sheet-text {
-  margin: 0 0 var(--space-5);
-  color: var(--color-text-secondary);
-}
+.offline-pill--loading {
+  @include motion.pulse;
 
-.offline-sheet-status {
-  margin-top: var(--space-3);
-}
-
-.offline-sheet-status .offline-sheet-warning {
-  color: var(--color-warning);
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }

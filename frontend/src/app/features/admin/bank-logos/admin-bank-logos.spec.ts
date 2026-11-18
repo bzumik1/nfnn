@@ -12,6 +12,8 @@ import { BankNames } from '../../donations/bank-names';
 import { AdminBankLogoResponse } from '../admin-api';
 import { adminBankLogo } from '../testing/admin-fixtures';
 import { AdminBankLogos } from './admin-bank-logos';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const LIST_URL = '/api/admin/donations/bank-logos';
 const NEW_SOURCE = 'https://is2-ssl.mzstatic.com/image/thumb/Purple/csas-new/512x512bb.jpg';
@@ -113,7 +115,7 @@ describe('Given an administrator on the bank logos page', () => {
 
   function button(within: HTMLElement, name: string): HTMLButtonElement {
     const found = Array.from(within.querySelectorAll('button')).find(
-      (candidate) => normalized(candidate.textContent ?? '') === name,
+      (candidate) => accessibleText(candidate) === name,
     );
     if (found === undefined) {
       throw new Error(`No button "${name}" in "${normalized(within.textContent ?? '')}"`);
@@ -436,6 +438,20 @@ describe('Given an administrator on the bank logos page', () => {
       expect(forget).toHaveBeenCalledOnce();
     });
 
+    it('then confirming locks the button before the answer and keeps both labels under the removing name', async () => {
+      button(dialog(), 'Odebrat logo').click();
+      await settle();
+
+      const remove = dialog().querySelector('.ui-button--danger') as HTMLButtonElement;
+      expect(remove.disabled).toBe(true);
+      expect(labelFaces(remove)).toEqual(['Odebrat logo', 'Odebíráme…']);
+      expect(accessibleText(remove)).toBe('Odebíráme…');
+      http
+        .expectOne({ method: 'DELETE', url: `${LIST_URL}/0800` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+    });
+
     it('then a logo someone else removed meanwhile closes the dialog, the page says so in an alert and reads the list again', async () => {
       button(dialog(), 'Odebrat logo').click();
       await settle();
@@ -503,6 +519,21 @@ describe('Given an administrator on the bank logos page', () => {
       expect(text('.ui-notice--status')).toBe(
         'Logo banky 0800 jsme stáhli z nové adresy a uložili.',
       );
+    });
+
+    it('then saving it again locks the button before the answer and keeps both labels under the saving name', async () => {
+      const sheet = element('app-changed-meanwhile-dialog dialog');
+      button(sheet, 'Uložit svou verzi místo novější').click();
+      await settle();
+
+      const overwrite = sheet.querySelector('.changed-meanwhile-overwrite') as HTMLButtonElement;
+      expect(overwrite.disabled).toBe(true);
+      expect(labelFaces(overwrite)).toEqual(['Uložit svou verzi místo novější', 'Ukládáme…']);
+      expect(accessibleText(overwrite)).toBe('Ukládáme…');
+      http
+        .expectOne({ method: 'PUT', url: `${LIST_URL}/0800` })
+        .flush({ ...csas, sourceUrl: NEW_SOURCE, version: '0f0f0f0f0f0f0f0f' });
+      await settle();
     });
 
     it('then discarding reads the list again and the form shows what is stored', async () => {

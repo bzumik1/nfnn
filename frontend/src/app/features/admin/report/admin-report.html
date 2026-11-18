@@ -246,11 +246,10 @@
                   [disabled]="sending()"
                   (click)="send()"
                 >
-                  @if (sending()) {
-                    <ng-container i18n="@@admin.report.send.busy">Posíláme…</ng-container>
-                  } @else {
-                    <ng-container i18n="@@admin.report.send.yes">Poslat přehled</ng-container>
-                  }
+                  <app-busy-label [busy]="sending()">
+                    <span when-idle i18n="@@admin.report.send.yes">Poslat přehled</span>
+                    <span when-busy i18n="@@admin.report.send.busy">Posíláme…</span>
+                  </app-busy-label>
                 </button>
                 <button
                   #sendCancel

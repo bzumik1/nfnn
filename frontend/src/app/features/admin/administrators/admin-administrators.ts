@@ -27,6 +27,7 @@ import { portraitsByEmail } from '../people/portraits-by-email';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../core/kept/list-changes';
 import { KeptAdministrationAnswers } from '../kept-administration-answers';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -40,6 +41,7 @@ const FORBIDDEN = 'auth/forbidden';
 @Component({
   selector: 'app-admin-administrators',
   imports: [
+    BusyLabel,
     LiveNotice,
     FormsModule,
     FormField,

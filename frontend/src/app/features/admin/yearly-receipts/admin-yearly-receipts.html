@@ -124,13 +124,12 @@
                 [attr.aria-busy]="busy()"
                 appNeedsConnection
               >
-                @if (busy()) {
-                  <span>{{ busyLabel() }}</span>
-                } @else {
-                  <span i18n="@@admin.yearlyReceipts.issue.start"
+                <app-busy-label [busy]="busy()">
+                  <span when-idle i18n="@@admin.yearlyReceipts.issue.start"
                     >Vystavit a připravit PDF k tisku</span
                   >
-                }
+                  <span when-busy>{{ busyLabel() }}</span>
+                </app-busy-label>
               </button>
               @if (file() === null) {
                 <p class="keep-open" i18n="@@admin.yearlyReceipts.keepOpen">

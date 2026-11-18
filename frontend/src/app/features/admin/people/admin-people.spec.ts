@@ -22,6 +22,8 @@ import {
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { heldRecordOf } from '../../../core/version/row-version';
 import { AdminPeople } from './admin-people';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import {
   contentCopy,
   openOfflineFromCopy,
@@ -97,7 +99,7 @@ function findButton(fixture: ComponentFixture<unknown>, name: string): HTMLButto
   return (
     Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name) ?? null
+    ).find((candidate) => accessibleText(candidate) === name) ?? null
   );
 }
 
@@ -270,6 +272,46 @@ describe('Given an administrator and no people of the foundation yet', () => {
     expect(element(fixture, '#person-name').getAttribute('aria-invalid')).toBe('true');
     expect(fixture.nativeElement.textContent).toContain('Vyplňte prosím jméno.');
     http.expectNone(PEOPLE_URL);
+  });
+
+  describe('when an answer has not come yet', () => {
+    it('then the button adding a person is locked and keeps both labels under the saving name', async () => {
+      await press(fixture, 'Přidat osobu');
+      await type(fixture, '#person-name', 'Eva Vzorová');
+      await submit(fixture, '#person-editor form');
+
+      const save = button(fixture, 'Ukládáme…');
+      expect(save.disabled).toBe(true);
+      expect(labelFaces(save)).toEqual(['Přidat a ukázat na webu', 'Ukládáme…']);
+      http.expectOne(PEOPLE_URL).flush(person({ name: 'Eva Vzorová' }));
+      await settle(fixture);
+    });
+
+    it('then the button saving the founders note is locked and keeps both labels under the saving name', async () => {
+      await type(fixture, '#founders-note', 'Děkujeme všem.');
+      await submit(fixture, 'form:has(#founders-note)');
+
+      const save = button(fixture, 'Ukládáme…');
+      expect(save.disabled).toBe(true);
+      expect(labelFaces(save)).toEqual(['Uložit slovo zakladatelů', 'Ukládáme…']);
+      http
+        .expectOne(`${PEOPLE_URL}/note`)
+        .flush({ text: 'Děkujeme všem.', version: '00000000000000a2' });
+      await settle(fixture);
+    });
+
+    it('then the button saving the line under the board is locked and keeps both labels under the saving name', async () => {
+      await type(fixture, '#people-footnote', 'Web zajišťuje Petr Vzor.');
+      await submit(fixture, 'form:has(#people-footnote)');
+
+      const save = button(fixture, 'Ukládáme…');
+      expect(save.disabled).toBe(true);
+      expect(labelFaces(save)).toEqual(['Uložit řádek', 'Ukládáme…']);
+      http
+        .expectOne(`${PEOPLE_URL}/footnote`)
+        .flush({ text: 'Web zajišťuje Petr Vzor.', version: '00000000000000b2' });
+      await settle(fixture);
+    });
   });
 
   it('when they write the founders note, then the trimmed text is saved, and an emptied note goes as none', async () => {
@@ -491,6 +533,30 @@ describe('Given an administrator and two people of the foundation', () => {
 
     expect(fixture.nativeElement.querySelector('[role="group"]')).toBeNull();
     expect(document.activeElement).toBe(element(fixture, '#person-remove'));
+  });
+
+  it('when they save an edited person and the answer has not come yet, then the button is locked and keeps both labels under the saving name', async () => {
+    await click(fixture, `#person-edit-${PERSON_ID}`);
+    await type(fixture, '#person-role', 'Zakladatelka');
+    await submit(fixture, '#person-editor form');
+
+    const save = button(fixture, 'Ukládáme…');
+    expect(save.disabled).toBe(true);
+    expect(labelFaces(save)).toEqual(['Uložit a ukázat na webu', 'Ukládáme…']);
+    http.expectOne(`${PEOPLE_URL}/${PERSON_ID}`).flush(person({ role: 'Zakladatelka' }));
+    await settle(fixture);
+  });
+
+  it('when they confirm the removal and the answer has not come yet, then the button is locked and keeps both labels under the removing name', async () => {
+    await click(fixture, `#person-edit-${PERSON_ID}`);
+    await press(fixture, 'Odebrat osobu z webu');
+    await press(fixture, 'Odebrat a smazat');
+
+    const yes = button(fixture, 'Odebíráme…');
+    expect(yes.disabled).toBe(true);
+    expect(labelFaces(yes)).toEqual(['Odebrat a smazat', 'Odebíráme…']);
+    http.expectOne(`${PEOPLE_URL}/${PERSON_ID}`).flush(null);
+    await settle(fixture);
   });
 
   it('when they confirm the removal, then the person goes from the list and the page says what was deleted', async () => {
@@ -725,6 +791,25 @@ describe('Given an administrator and two people of the foundation, one of whom s
       'Podpis je uložený. Ukáže se pod slovem zakladatelů a vytiskne se na potvrzeních o daru vystavených od teď; správci o změně dostanou e-mail.',
     );
     expect(kept.kept('receipt-signatory')).toBeNull();
+  });
+
+  it('when they let another person sign and the answer has not come yet, then the button is locked and keeps both labels under the saving name', async () => {
+    await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
+    await check(fixture, 'signsReceipts');
+    await type(fixture, '#person-receipt-role', 'místopředseda správní rady');
+    await submit(fixture, '.receipt-form');
+
+    const save = button(fixture, 'Ukládáme…');
+    expect(save.disabled).toBe(true);
+    expect(labelFaces(save)).toEqual(['Uložit pro potvrzení', 'Ukládáme…']);
+    http.expectOne(SIGNATORY_URL).flush(
+      receiptSignatory({
+        personId: OTHER_PERSON_ID,
+        name: 'Adam Vzor',
+        receiptRole: 'místopředseda správní rady',
+      }).signatory,
+    );
+    await settle(fixture);
   });
 
   it('when they let another person sign without a receipt role, then the field says so and nothing is sent', async () => {

@@ -74,13 +74,12 @@
           [disabled]="busy()"
           (click)="overwriteChosen.emit()"
         >
-          @if (busy()) {
-            <ng-container i18n="@@admin.changedMeanwhile.saving">Ukládáme…</ng-container>
-          } @else {
-            <ng-container i18n="@@admin.changedMeanwhile.overwrite"
-              >Uložit svou verzi místo novější</ng-container
+          <app-busy-label [busy]="busy()">
+            <span when-idle i18n="@@admin.changedMeanwhile.overwrite"
+              >Uložit svou verzi místo novější</span
             >
-          }
+            <span when-busy i18n="@@admin.changedMeanwhile.saving">Ukládáme…</span>
+          </app-busy-label>
         </button>
       } @else {
         <button

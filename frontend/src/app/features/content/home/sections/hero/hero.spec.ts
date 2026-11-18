@@ -75,8 +75,14 @@ describe('Given the hero', () => {
     await fixture.whenStable();
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Pomáháme zdravotně postiženým dětem k lepšímu životu.',
+      'Pomáháme zdravotně postiženým dětem',
     );
+  });
+
+  it('when its lead wraps, then the preposition „k“ stays with the next word instead of ending a line alone', () => {
+    const lead = (fixture.nativeElement as HTMLElement).querySelector('.hero-lead')!;
+
+    expect(lead.textContent).toContain('k\u00a0lepšímu');
   });
   it('when the layout is wide, then the figures of O nás stand under its actions, read with their final values', () => {
     const host = fixture.nativeElement as HTMLElement;

@@ -14,6 +14,8 @@ import {
   waitsForConnection,
 } from '../device-copy/testing/opened-copy';
 import { donateBandPhoto as heldPhoto } from '../../content/testing/donate-band-fixtures';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const BAND_URL = '/api/admin/content/donate-band';
 const MEDIA_URL = '/api/admin/content/media';
@@ -70,7 +72,7 @@ function findButton(fixture: ComponentFixture<unknown>, name: string): HTMLButto
   return (
     Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name) ?? null
+    ).find((candidate) => accessibleText(candidate) === name) ?? null
   );
 }
 
@@ -235,6 +237,30 @@ describe('Given an administrator and a Přispět band with a saved photo', () =>
     http.expectNone(BAND_URL);
 
     expect(text(fixture, '.ui-notice--status')).toBe('Uloženo. Fotka je na webu v pruhu Přispět.');
+  });
+
+  it('when they save and the answer has not come yet, then the button is locked and keeps both labels under the saving name', async () => {
+    await type(fixture, '#donate-band-photo-alt', 'Dívka na zahradě');
+    await submit(fixture);
+
+    const save = element<HTMLButtonElement>(fixture, 'button[type="submit"]');
+    expect(save.disabled).toBe(true);
+    expect(labelFaces(save)).toEqual(['Uložit a ukázat na webu', 'Ukládáme…']);
+    expect(accessibleText(save)).toBe('Ukládáme…');
+    http.expectOne(BAND_URL).flush({ photo: donateBandPhoto() });
+    await settle(fixture);
+  });
+
+  it('when they confirm the removal and the answer has not come yet, then the button is locked and keeps both labels under the removing name', async () => {
+    await click(fixture, 'Odebrat fotku z webu');
+    await click(fixture, 'Odebrat a smazat');
+
+    const yes = element<HTMLButtonElement>(fixture, '.confirm .ui-button--danger');
+    expect(yes.disabled).toBe(true);
+    expect(labelFaces(yes)).toEqual(['Odebrat a smazat', 'Odebíráme…']);
+    expect(accessibleText(yes)).toBe('Odebíráme…');
+    http.expectOne(BAND_URL).flush({ photo: null });
+    await settle(fixture);
   });
 
   it('when they confirm the removal, then the photo goes and the page says the placeholder shows again', async () => {

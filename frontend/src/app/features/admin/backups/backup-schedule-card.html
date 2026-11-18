@@ -88,11 +88,10 @@
         class="ui-button ui-button--primary"
         [disabled]="saving() || disabled()"
       >
-        @if (saving()) {
-          <span i18n="@@admin.backups.schedule.saving">Ukládáme…</span>
-        } @else {
-          <span i18n="@@admin.backups.schedule.save">Uložit plán</span>
-        }
+        <app-busy-label [busy]="saving()">
+          <span when-idle i18n="@@admin.backups.schedule.save">Uložit plán</span>
+          <span when-busy i18n="@@admin.backups.schedule.saving">Ukládáme…</span>
+        </app-busy-label>
       </button>
       <p class="ui-form-status" role="status">
         @if (status(); as status) {

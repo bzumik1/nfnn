@@ -25,6 +25,7 @@ import { FieldMessages, FormField } from '../../../shared/ui/form-field/form-fie
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
 import { AdministrationLockService } from './administration-lock-service';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 const PASSWORD_MESSAGES: FieldMessages = {
   required: $localize`:@@admin.lock.password.required:Zadejte prosím své heslo.`,
@@ -46,6 +47,7 @@ type View = 'locked' | 'password';
 @Component({
   selector: 'app-administration-lock-panel',
   imports: [
+    BusyLabel,
     AccountUsername,
     FocusFirstInvalid,
     FormControlDirective,
