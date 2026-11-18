@@ -1,4 +1,4 @@
-import { placeThumb, restThumbOn } from './segment-thumb';
+import { labelSegments, placeThumb, restThumbOn } from './segment-thumb';
 
 interface SegmentBox {
   left: number;
@@ -212,5 +212,38 @@ describe('Given a thumb gliding to the newly selected segment', () => {
 
     expect(choice.classList.contains('ui-segmented--thumb-glides')).toBe(false);
     expect(choice.classList.contains('ui-segmented--thumb')).toBe(false);
+  });
+});
+
+function choiceOf(...labels: string[]): HTMLElement {
+  const choice = document.createElement('div');
+  for (const label of labels) {
+    const segment = document.createElement('button');
+    segment.textContent = label;
+    choice.append(segment);
+  }
+  choice.append(document.createElement('span'));
+  return choice;
+}
+
+describe('Given a choice whose segments show their labels', () => {
+  it('when they are labelled, then each segment carries its own visible label for the reserve of its chosen weight', () => {
+    const choice = choiceOf('  Čekají na\n  přiřazení (1) ', 'Přiřazené');
+
+    labelSegments(choice);
+
+    expect(
+      [...choice.querySelectorAll('button')].map((segment) => segment.dataset['label']),
+    ).toEqual(['Čekají na přiřazení (1)', 'Přiřazené']);
+  });
+
+  it('when a label changes, then labelling again follows it', () => {
+    const choice = choiceOf('Čekají na přiřazení (1)', 'Přiřazené');
+    labelSegments(choice);
+
+    choice.querySelector('button')!.textContent = 'Čekají na přiřazení (2)';
+    labelSegments(choice);
+
+    expect(choice.querySelector('button')!.dataset['label']).toBe('Čekají na přiřazení (2)');
   });
 });
