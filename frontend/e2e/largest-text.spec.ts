@@ -510,6 +510,52 @@ for (const { width, height } of [
       expect(glyph.x + glyph.width).toBeLessThanOrEqual(button.x + button.width + 1);
       expect(await contentPastTheSides(dialog)).toEqual([]);
     });
+
+    test('when they open the sign-in dialog, then the eye beside Heslo grows with the text, stands in the middle of its row clear of the password and reaches a finger', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
+      const field = page
+        .getByRole('dialog')
+        .locator('app-form-field')
+        .filter({
+          has: page.locator('#login-password'),
+        });
+      const eye = field.getByRole('button', { name: 'Zobrazit heslo' });
+      await expect(eye).toBeVisible();
+
+      const measured = await field.evaluate((row) => {
+        const label = row.querySelector('.field-label')!.getBoundingClientRect();
+        const input = row.querySelector('input')!;
+        const inputBox = input.getBoundingClientRect();
+        const button = row.querySelector('.password-reveal')!;
+        const buttonBox = button.getBoundingClientRect();
+        const glyph = button.querySelector('svg')!.getBoundingClientRect();
+        const touchTarget = parseFloat(
+          getComputedStyle(button).getPropertyValue('--touch-target-size'),
+        );
+        const reachesAround = getComputedStyle(button, '::before').content !== 'none';
+        const typing = getComputedStyle(input);
+        return {
+          rootPx: parseFloat(getComputedStyle(document.documentElement).fontSize),
+          glyph: glyph.height,
+          offCentre: Math.abs((glyph.top + glyph.bottom) / 2 - (label.top + inputBox.bottom) / 2),
+          typingEnd: inputBox.right - parseFloat(typing.paddingRight),
+          eyeStart: glyph.left,
+          reach: Math.min(
+            Math.max(buttonBox.width, reachesAround ? touchTarget : 0),
+            Math.max(buttonBox.height, reachesAround ? touchTarget : 0),
+          ),
+          touchTarget,
+        };
+      });
+
+      expect(measured.glyph).toBeGreaterThanOrEqual(measured.rootPx);
+      expect(measured.offCentre).toBeLessThanOrEqual(1);
+      expect(measured.typingEnd).toBeLessThanOrEqual(measured.eyeStart);
+      expect(measured.reach).toBeGreaterThanOrEqual(measured.touchTarget);
+    });
   });
 }
 
