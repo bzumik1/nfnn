@@ -1034,6 +1034,68 @@ describe('Given a dialog that the visitor closes', () => {
     expect(native()?.classList).toContain('dialog--leaving');
     expect(host().dismissals).toBe(0);
   });
+
+  describe('when it shows a photo over the whole screen of a phone', () => {
+    let opener: HTMLButtonElement;
+
+    const expectLeaving = (): void => {
+      expect(native()?.open).toBe(true);
+      expect(native()?.classList).toContain('dialog--leaving');
+      expect(panel().inert).toBe(true);
+      expect(document.activeElement).toBe(native());
+      expect(host().dismissals).toBe(0);
+    };
+
+    beforeEach(async () => {
+      opener = document.createElement('button');
+      opener.textContent = 'Zvětšit fotku';
+      document.body.appendChild(opener);
+      opener.focus();
+      await open('viewer', true);
+    });
+
+    afterEach(() => opener.remove());
+
+    it('and its close button is pressed, then it fades out inert and the focus returns to the opener only once it has gone', async () => {
+      closeButton().click();
+      fixture.detectChanges();
+
+      expectLeaving();
+      await settle();
+      expect(host().dismissals).toBe(1);
+      expect(native()).toBeNull();
+      expect(document.activeElement).toBe(opener);
+    });
+
+    it('and Esc is pressed, then the browser is kept from hiding it and it fades out', async () => {
+      const cancel = new Event('cancel', { cancelable: true });
+      native()!.dispatchEvent(cancel);
+      fixture.detectChanges();
+
+      expect(cancel.defaultPrevented).toBe(true);
+      expectLeaving();
+      await settle();
+      expect(host().dismissals).toBe(1);
+    });
+
+    it('and the visitor goes back, then it fades out and asks for no new history entry', async () => {
+      history.listener?.close();
+      fixture.detectChanges();
+
+      expectLeaving();
+      await settle();
+      expect(host().dismissals).toBe(1);
+      expect(history.opened).toBe(1);
+    });
+
+    it('and the visitor asks for less motion, then it asks to be dismissed at once', () => {
+      deviceAsksForLessMotion(true);
+
+      closeButton().click();
+
+      expect(host().dismissals).toBe(1);
+    });
+  });
 });
 
 @Component({
