@@ -344,7 +344,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
   describe('when the donor removes a passkey', () => {
     beforeEach(() => render());
 
-    it("then neither the start nor the result is announced by the button, and the result comes from the card's status line", async () => {
+    it("then the card's status line, never the button, says first that it removes and then only the result", async () => {
       const status = element('.passkeys > .ui-form-status');
       expect(status.getAttribute('role')).toBe('status');
       await clickButton('Odebrat');
@@ -352,7 +352,8 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
       const yes = element<HTMLButtonElement>('.passkey-confirm .ui-button--danger-soft');
       expect(announcers(yes)).toEqual([]);
-      expect(status.textContent?.trim()).toBe('');
+      expect(status.textContent?.trim()).toBe('Odebíráme…');
+      expect(status.querySelector('.visually-hidden')?.textContent?.trim()).toBe('Odebíráme…');
       http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`).flush(null);
       await settle();
 
@@ -367,7 +368,8 @@ describe('Given the passkeys panel of the sign-in card', () => {
       await clickButton('Ano, odebrat');
       const yes = element<HTMLButtonElement>('.passkey-confirm .ui-button--danger-soft');
       expect(yes.disabled).toBe(true);
-      expect(accessibleText(yes)).toBe('Odebíráme…');
+      expect(accessibleText(yes)).toBe('Ano, odebrat');
+      expect(yes.getAttribute('aria-busy')).toBe('true');
       expect(labels(yes)).toEqual(['Ano, odebrat', 'Odebíráme…']);
       const removal = http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`);
       expect(removal.request.method).toBe('DELETE');

@@ -697,7 +697,11 @@ describe('Given the sign-in and security card of the details page', () => {
     it('and the donor sends the link again, then the button waits, the request goes out and the card says a new link is on its way', async () => {
       await card.clickButton('Poslat znovu potvrzovací odkaz');
 
-      expect(accessibleText(card.element('.account-resend'))).toBe('Posíláme…');
+      expect(accessibleText(card.element('.account-resend'))).toBe(
+        'Poslat znovu potvrzovací odkaz',
+      );
+      expect(card.element('.account-resend').getAttribute('aria-busy')).toBe('true');
+      expect(normalized(card.element('.account-status').textContent)).toBe('Posíláme…');
       expect(labels(card.element('.account-resend'))).toEqual([
         'Poslat znovu potvrzovací odkaz',
         'Posíláme…',
@@ -720,6 +724,31 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(card.element<HTMLButtonElement>('.account-resend').disabled).toBe(false);
     });
 
+    it('and the password was changed before and sending the link again fails, then the status line does not say the earlier result again', async () => {
+      await card.clickButton('Změnit heslo');
+      await card.fillIn('#account-current-password', 'correct horse battery');
+      await card.fillIn('#account-new-password', 'a brand new passphrase');
+      await card.fillIn('#account-new-password-confirm', 'a brand new passphrase');
+      await card.submit();
+      http.expectOne('/api/donors/me/password').flush(authResponse('token-2'));
+      await card.settle();
+      await card.showDonor(sampleDonor({ pendingEmailChange: PENDING }));
+      expect(normalized(card.element('.account-status').textContent)).toContain(
+        'Heslo jsme změnili.',
+      );
+
+      await card.clickButton('Poslat znovu potvrzovací odkaz');
+      http
+        .expectOne(`${EMAIL_CHANGE_URL}/resend`)
+        .flush(problem('donors/rate-limited', 'Příliš mnoho požadavků', 'Zkuste to za hodinu.'), {
+          status: 429,
+          statusText: 'Too Many Requests',
+        });
+      await card.settle();
+
+      expect(normalized(card.element('.account-status').textContent)).toBe('');
+    });
+
     it('and the server refuses to send it again, then the row shows the reason and nothing else changes', async () => {
       await card.clickButton('Poslat znovu potvrzovací odkaz');
       http
@@ -740,7 +769,9 @@ describe('Given the sign-in and security card of the details page', () => {
     it('and the donor cancels the change, then the request goes out, the pending address goes and the focus moves to the change action', async () => {
       await card.clickButton('Zrušit změnu e-mailu');
 
-      expect(accessibleText(card.element('.account-cancel-change'))).toBe('Rušíme…');
+      expect(accessibleText(card.element('.account-cancel-change'))).toBe('Zrušit změnu e-mailu');
+      expect(card.element('.account-cancel-change').getAttribute('aria-busy')).toBe('true');
+      expect(normalized(card.element('.account-status').textContent)).toBe('Rušíme…');
       expect(labels(card.element('.account-cancel-change'))).toEqual([
         'Zrušit změnu e-mailu',
         'Rušíme…',

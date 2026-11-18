@@ -1,11 +1,13 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { BusyAnnouncement } from './busy-announcement';
 import { BusyLabel } from './busy-label';
 import { accessibleText } from './testing/accessible-text';
 
 @Component({
   imports: [BusyLabel],
+  providers: [BusyAnnouncement],
   template: `
     <button type="button" class="ui-button">
       <app-busy-label [busy]="saving()">
@@ -13,14 +15,23 @@ import { accessibleText } from './testing/accessible-text';
         <span when-busy>Ukládáme…</span>
       </app-busy-label>
     </button>
+    <p class="card-status" role="status">
+      @if (announcement.text(); as starting) {
+        <span class="visually-hidden">{{ starting }}</span>
+      } @else if (result()) {
+        <span>{{ result() }}</span>
+      }
+    </p>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class Host {
   readonly saving = signal(false);
+  readonly result = signal('');
+  protected readonly announcement = inject(BusyAnnouncement);
 }
 
-describe('Given a button whose label says when it saves', () => {
+describe('Given a button whose label says when it saves, inside a card with a status line', () => {
   let fixture: ComponentFixture<Host>;
 
   beforeEach(async () => {
@@ -28,43 +39,66 @@ describe('Given a button whose label says when it saves', () => {
     await fixture.whenStable();
   });
 
-  const button = () =>
-    (fixture.nativeElement as HTMLElement).querySelector('button') as HTMLElement;
+  const root = () => fixture.nativeElement as HTMLElement;
+  const button = () => root().querySelector('button') as HTMLElement;
   const faces = () => Array.from(button().querySelectorAll<HTMLElement>('.busy-label__face'));
+  const shownFace = () => button().querySelector('.busy-label__face--shown')?.textContent?.trim();
+  const status = () => root().querySelector('.card-status') as HTMLElement;
+  const statusText = () => (status().textContent ?? '').trim();
 
   async function setSaving(saving: boolean): Promise<void> {
     fixture.componentInstance.saving.set(saving);
     await fixture.whenStable();
   }
 
-  it('when nothing runs, then its name is the resting label alone', () => {
+  async function finish(result: string): Promise<void> {
+    fixture.componentInstance.result.set(result);
+    await setSaving(false);
+  }
+
+  it('when nothing runs, then its name is the resting label, it is not busy and the status line is empty', () => {
     expect(accessibleText(button())).toBe('Uložit nastavení');
+    expect(button().hasAttribute('aria-busy')).toBe(false);
+    expect(statusText()).toBe('');
   });
 
-  it('when nothing runs, then both labels stand in the button, so it keeps the width of the longer one', () => {
+  it('when nothing runs, then both labels stand in the button, so it keeps the width of the longer one, and the busy one is hidden from screen readers', () => {
     expect(faces().map((face) => face.textContent?.trim())).toEqual([
       'Uložit nastavení',
       'Ukládáme…',
     ]);
     expect(faces()[0].parentElement).toBe(faces()[1].parentElement);
+    expect(faces()[1].getAttribute('aria-hidden')).toBe('true');
   });
 
   describe("when it starts saving without the theme's loading delay", () => {
     beforeEach(() => setSaving(true));
 
-    it('then its name changes at once to the saving label alone', () => {
-      expect(accessibleText(button())).toBe('Ukládáme…');
+    it('then the button is busy but keeps its resting name, and shows the saving label', () => {
+      expect(button().getAttribute('aria-busy')).toBe('true');
+      expect(accessibleText(button())).toBe('Uložit nastavení');
+      expect(shownFace()).toBe('Ukládáme…');
+      expect(faces()[0].hasAttribute('aria-hidden')).toBe(false);
+      expect(faces()[1].getAttribute('aria-hidden')).toBe('true');
     });
 
-    it('then the resting label keeps its room but is hidden from screen readers', () => {
-      expect(faces()[0].textContent?.trim()).toBe('Uložit nastavení');
-      expect(faces()[0].getAttribute('aria-hidden')).toBe('true');
-      expect(faces()[1].hasAttribute('aria-hidden')).toBe(false);
+    it("then the card's status line says the saving label for screen readers only", () => {
+      expect(statusText()).toBe('Ukládáme…');
+      expect(status().querySelector('.visually-hidden')?.textContent?.trim()).toBe('Ukládáme…');
     });
 
     it('then nothing on the button announces itself', () => {
       expect(button().querySelector('[aria-live], [role="status"], [role="alert"]')).toBeNull();
       expect(button().hasAttribute('aria-live')).toBe(false);
+    });
+
+    it('and it ends, then the result replaces the saving label in the status line, the button is no longer busy and its name is its visible label', async () => {
+      await finish('Nastavení jsme uložili.');
+
+      expect(statusText()).toBe('Nastavení jsme uložili.');
+      expect(button().hasAttribute('aria-busy')).toBe(false);
+      expect(accessibleText(button())).toBe('Uložit nastavení');
+      expect(shownFace()).toBe('Uložit nastavení');
     });
   });
 
@@ -78,22 +112,21 @@ describe('Given a button whose label says when it saves', () => {
     (fixture.nativeElement as HTMLElement).remove();
   });
 
-  it('when the save ends, then its name is the resting label again', async () => {
-    await setSaving(true);
-
-    await setSaving(false);
-
-    expect(accessibleText(button())).toBe('Uložit nastavení');
-    expect(faces()[1].getAttribute('aria-hidden')).toBe('true');
-  });
-
   describe("with the theme's loading delay", () => {
-    beforeEach(async () => {
+    let heard: string[];
+
+    beforeEach(() => {
       vi.useFakeTimers();
       document.documentElement.style.setProperty('--delay-loading', '0.3s');
       fixture.destroy();
       fixture = TestBed.createComponent(Host);
       fixture.detectChanges();
+      heard = [];
+      new MutationObserver(() => heard.push(statusText())).observe(status(), {
+        subtree: true,
+        childList: true,
+        characterData: true,
+      });
     });
 
     afterEach(() => {
@@ -101,47 +134,53 @@ describe('Given a button whose label says when it saves', () => {
       vi.useRealTimers();
     });
 
-    async function saving(value: boolean): Promise<void> {
-      fixture.componentInstance.saving.set(value);
-      await wait(0);
-    }
-
     async function wait(ms: number): Promise<void> {
       await vi.advanceTimersByTimeAsync(ms);
       fixture.detectChanges();
     }
 
-    it('when it starts saving, then its name stays the resting label until the delay is over', async () => {
+    async function saving(value: boolean): Promise<void> {
+      fixture.componentInstance.saving.set(value);
+      await wait(0);
+    }
+
+    it('when it starts saving, then the button is busy at once while the label and the status line wait for the delay and then change together', async () => {
       await saving(true);
       await wait(299);
 
+      expect(button().getAttribute('aria-busy')).toBe('true');
       expect(accessibleText(button())).toBe('Uložit nastavení');
-      expect(faces()[1].getAttribute('aria-hidden')).toBe('true');
+      expect(shownFace()).toBe('Uložit nastavení');
+      expect(statusText()).toBe('');
 
       await wait(1);
 
-      expect(accessibleText(button())).toBe('Ukládáme…');
-      expect(faces()[0].getAttribute('aria-hidden')).toBe('true');
+      expect(shownFace()).toBe('Ukládáme…');
+      expect(statusText()).toBe('Ukládáme…');
+      expect(accessibleText(button())).toBe('Uložit nastavení');
     });
 
-    it('when the save ends before the delay is over, then the saving label never shows', async () => {
+    it('when the save ends before the delay is over, then the status line says only the result', async () => {
       await saving(true);
       await wait(200);
+      fixture.componentInstance.result.set('Nastavení jsme uložili.');
       await saving(false);
 
       await wait(500);
 
-      expect(accessibleText(button())).toBe('Uložit nastavení');
-      expect(faces()[1].getAttribute('aria-hidden')).toBe('true');
+      expect(heard.filter((text) => text !== '')).toEqual(['Nastavení jsme uložili.']);
+      expect(shownFace()).toBe('Uložit nastavení');
     });
 
-    it('when the save ends after the saving label showed, then the resting label is back at once', async () => {
+    it('when the save ends after the delay, then the status line says the saving label and then only the result', async () => {
       await saving(true);
       await wait(300);
-
+      fixture.componentInstance.result.set('Nastavení jsme uložili.');
       await saving(false);
 
-      expect(accessibleText(button())).toBe('Uložit nastavení');
+      expect(heard.filter((text) => text !== '')).toEqual(['Ukládáme…', 'Nastavení jsme uložili.']);
+      expect(shownFace()).toBe('Uložit nastavení');
+      expect(button().hasAttribute('aria-busy')).toBe(false);
     });
 
     it('when a second save starts soon after a fast one, then it waits the whole delay again', async () => {
@@ -152,11 +191,13 @@ describe('Given a button whose label says when it saves', () => {
 
       await wait(200);
 
-      expect(accessibleText(button())).toBe('Uložit nastavení');
+      expect(shownFace()).toBe('Uložit nastavení');
+      expect(statusText()).toBe('');
 
       await wait(100);
 
-      expect(accessibleText(button())).toBe('Ukládáme…');
+      expect(shownFace()).toBe('Ukládáme…');
+      expect(statusText()).toBe('Ukládáme…');
     });
   });
 });
