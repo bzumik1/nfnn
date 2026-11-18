@@ -23,14 +23,17 @@ import { DialogHistory, DialogHistoryListener } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { DIALOG_SUSPENSION } from './dialog-suspension';
 import { canPullSheetFrom, PullIntent, pullIntent, SheetDrag, TouchOrigin } from './sheet-drag';
+import { Appearance } from '../../../core/appearance/appearance';
 import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
-const SLIDE_GRACE_MS = 1000;
+const CLOSING_GRACE_MS = 300;
+const SHEET_DURATION = '--duration-sheet';
+const REPAINTING = 'dialog--repainting';
 
-type SheetExit = 'open' | 'sliding' | 'down';
+type Exit = 'open' | 'leaving' | 'gone';
 
 let nextDialog = 0;
 
@@ -72,14 +75,15 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private readonly dragOffset = signal(0);
   private readonly sheetPull = signal(0);
   protected readonly dragging = signal(false);
-  private readonly exit = signal<SheetExit>('open');
+  private readonly exit = signal<Exit>('open');
+  protected readonly settleEasing = signal<string | null>(null);
   protected readonly leaving = computed(() => this.exit() !== 'open');
   protected readonly askingToDiscard = signal(false);
   protected readonly discardTitleId = `dialog-discard-title-${++nextDialog}`;
   protected readonly pull = computed(() => Math.max(this.pulledAway(), this.sheetPull()));
   protected readonly dragTranslate = computed(() => {
     if (this.leaving()) {
-      return '0 100%';
+      return null;
     }
     const offset = this.dragOffset();
     return offset > 0 ? `0 ${offset}px` : null;
@@ -94,6 +98,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private readonly suspension = inject(DIALOG_SUSPENSION);
   private readonly layout = inject(CompactLayout);
   private readonly modality = inject(InputModality);
+  private readonly appearance = inject(Appearance);
   private dragPointer: number | null = null;
   private touchOrigin: TouchOrigin | null = null;
   private touchIntent: PullIntent = 'content';
@@ -102,7 +107,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private viewReady = false;
   private steppedAside = false;
   private entryTakenBackWhileLeaving = false;
-  private slideTimer: ReturnType<typeof setTimeout> | undefined;
+  private leaveTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     effect(() => {
@@ -113,6 +118,32 @@ export class Dialog implements AfterViewInit, OnDestroy {
       const depth = this.depth();
       untracked(() => this.showDepth(depth));
     });
+    let shownAppearance: boolean | null = null;
+    effect(() => {
+      const dark = this.appearance.dark();
+      if (shownAppearance !== null && shownAppearance !== dark) {
+        untracked(() => this.repaintStatusBar());
+      }
+      shownAppearance = dark;
+    });
+  }
+
+  private repaintStatusBar(): void {
+    const dialog = this.element().nativeElement;
+    const view = this.document.defaultView;
+    if (!this.viewReady || !dialog.open || view === null || dialog.classList.contains(REPAINTING)) {
+      return;
+    }
+    const focused = this.document.activeElement;
+    dialog.classList.add(REPAINTING);
+    view.requestAnimationFrame(() =>
+      view.requestAnimationFrame(() => {
+        dialog.classList.remove(REPAINTING);
+        if (focused instanceof HTMLElement && dialog.contains(focused)) {
+          focused.focus({ preventScroll: true });
+        }
+      }),
+    );
   }
 
   ngAfterViewInit(): void {
@@ -130,7 +161,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
-    clearTimeout(this.slideTimer);
+    clearTimeout(this.leaveTimer);
     if (this.pushesHistory()) {
       this.history.close(this.historyEntry);
     }
@@ -149,8 +180,8 @@ export class Dialog implements AfterViewInit, OnDestroy {
     if (!this.dismissible() || this.leaving()) {
       return;
     }
-    if (this.slidesAway()) {
-      this.slideAway();
+    if (this.closesWithMotion()) {
+      this.startLeaving();
     } else {
       this.dismissed.emit();
     }
@@ -161,7 +192,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
       return;
     }
     if (this.leaving()) {
-      this.slidDown();
+      this.finishLeaving();
     } else if (this.dismissible()) {
       this.dismissed.emit();
     } else if (!this.destroyed) {
@@ -172,9 +203,9 @@ export class Dialog implements AfterViewInit, OnDestroy {
   protected onCancel(event: Event): void {
     if (!this.dismissible()) {
       event.preventDefault();
-    } else if (event.cancelable && !this.leaving() && this.slidesAway()) {
+    } else if (event.cancelable && !this.leaving() && this.closesWithMotion()) {
       event.preventDefault();
-      this.slideAway();
+      this.startLeaving();
     }
   }
 
@@ -297,6 +328,12 @@ export class Dialog implements AfterViewInit, OnDestroy {
     this.dismiss();
   }
 
+  protected settled(event: TransitionEvent): void {
+    if (event.target === this.panel().nativeElement && event.propertyName === 'translate') {
+      this.settleEasing.set(null);
+    }
+  }
+
   protected keepFocusAboveActions(event: FocusEvent): void {
     const target = event.target;
     const panel = this.panel().nativeElement;
@@ -354,6 +391,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
 
   private beginPull(y: number, time: number): void {
     this.drag.start(y, time, !this.dismissible() || this.unsavedInput());
+    this.settleEasing.set(null);
     this.dragging.set(true);
   }
 
@@ -365,8 +403,12 @@ export class Dialog implements AfterViewInit, OnDestroy {
 
   private letGo(time: number): void {
     const height = this.panelHeight();
+    const wayDown = this.wayBelowTheWindow();
+    const wayBack = this.dragOffset();
     const release = this.drag.end(height, time);
     this.stopDrag();
+    const way = release === 'dismiss' ? wayDown : wayBack;
+    this.settleEasing.set(this.drag.settleEasing(way, this.sheetDurationMs()));
     if (release !== 'dismiss' || !this.dismissible()) {
       return;
     }
@@ -377,40 +419,43 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
   }
 
-  private slidesAway(): boolean {
+  private closesWithMotion(): boolean {
     const view = this.document.defaultView;
     return (
-      this.look() === 'sheet' &&
-      this.layout.isCompact() &&
+      (this.look() === 'sheet' || !this.layout.isCompact()) &&
       !this.steppedAside &&
       this.element().nativeElement.open &&
       view?.matchMedia?.(LESS_MOTION).matches === false
     );
   }
 
-  private slideAway(): void {
-    this.exit.set('sliding');
+  private startLeaving(): void {
+    this.exit.set('leaving');
     this.sheetPull.set(1);
-    this.element().nativeElement.focus({ preventScroll: true });
+    const dialog = this.element().nativeElement;
+    dialog.focus({ preventScroll: true });
     afterNextRender(
       () => {
         const panel = this.panel().nativeElement;
-        const longest = longestTransitionMs(getComputedStyle(panel).transitionDuration);
-        const slide = panel.getAnimations?.().find(slidesPanel);
-        const slidDown = (): void => this.slidDown();
-        (slide?.finished ?? Promise.resolve()).then(slidDown, slidDown);
-        this.slideTimer = setTimeout(slidDown, longest + SLIDE_GRACE_MS);
+        const longest = Math.max(
+          longestTransitionMs(getComputedStyle(dialog).transitionDuration),
+          longestTransitionMs(getComputedStyle(panel).transitionDuration),
+        );
+        const leaving = dialog.getAnimations?.({ subtree: true }).filter(endsLeaving) ?? [];
+        const left = (): void => this.finishLeaving();
+        Promise.all(leaving.map((transition) => transition.finished)).then(left, left);
+        this.leaveTimer = setTimeout(left, longest + CLOSING_GRACE_MS);
       },
       { injector: this.injector },
     );
   }
 
-  private slidDown(): void {
-    if (this.exit() !== 'sliding' || this.destroyed) {
+  private finishLeaving(): void {
+    if (this.exit() !== 'leaving' || this.destroyed) {
       return;
     }
-    clearTimeout(this.slideTimer);
-    this.exit.set('down');
+    clearTimeout(this.leaveTimer);
+    this.exit.set('gone');
     this.dismissed.emit();
     afterNextRender(() => this.comeBackUp(), { injector: this.injector });
   }
@@ -421,6 +466,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
     this.exit.set('open');
     this.sheetPull.set(0);
+    this.settleEasing.set(null);
     if (!this.steppedAside && !this.element().nativeElement.open) {
       this.showModal();
     }
@@ -428,6 +474,16 @@ export class Dialog implements AfterViewInit, OnDestroy {
       this.entryTakenBackWhileLeaving = false;
       this.history.open(this.historyEntry);
     }
+  }
+
+  private wayBelowTheWindow(): number {
+    const windowHeight = this.document.defaultView?.innerHeight ?? 0;
+    return windowHeight - this.panel().nativeElement.getBoundingClientRect().top;
+  }
+
+  private sheetDurationMs(): number {
+    const root = this.document.documentElement;
+    return longestTransitionMs(getComputedStyle(root).getPropertyValue(SHEET_DURATION));
   }
 
   private panelHeight(): number {
@@ -471,8 +527,11 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 }
 
-function slidesPanel(animation: Animation): boolean {
-  return 'transitionProperty' in animation && animation.transitionProperty === 'translate';
+function endsLeaving(animation: Animation): boolean {
+  return (
+    'transitionProperty' in animation &&
+    (animation.transitionProperty === 'translate' || animation.transitionProperty === 'opacity')
+  );
 }
 
 function longestTransitionMs(durations: string): number {

@@ -30,6 +30,8 @@ export interface Findings {
   smallTargets: string[];
   clippedText: string[];
   offCentreQr: string[];
+  tabBarEdge: string[];
+  tabLabels: string[];
 }
 
 export function collectFindings(limits: typeof LIMITS): Findings {
@@ -382,6 +384,80 @@ export function collectFindings(limits: typeof LIMITS): Findings {
         : [];
     });
 
+  const tabBarEdge: string[] = [];
+  const tabBar = document.getElementById('navigace');
+  if (tabBar && shown(tabBar)) {
+    const probe = document.createElement('div');
+    probe.style.cssText =
+      'position: fixed; bottom: 0; width: 0; height: env(safe-area-inset-bottom); visibility: hidden';
+    document.body.append(probe);
+    const homeIndicator = probe.getBoundingClientRect().height;
+    probe.remove();
+    const style = getComputedStyle(tabBar);
+    const overlap = parseFloat(style.getPropertyValue('--tab-bar-home-indicator-overlap')) || 0;
+    const gap = viewportHeight - tabBar.getBoundingClientRect().bottom;
+    const lift = homeIndicator - overlap;
+    if (gap < lift - 1) {
+      tabBarEdge.push(`${gap.toFixed(1)} px above the bottom, ${lift.toFixed(1)} px needed`);
+    }
+    const lengths = /(-?[\d.]+)px\s+(-?[\d.]+)px\s+([\d.]+)px(?:\s+(-?[\d.]+)px)?/g;
+    const reach = Math.max(
+      0,
+      ...[...style.boxShadow.matchAll(lengths)].map(
+        ([, , y, blur, spread]) => Number(y) + Number(blur) + Number(spread ?? 0),
+      ),
+    );
+    if (reach > gap + 1) {
+      tabBarEdge.push(`shadow reaches ${reach.toFixed(1)} px, ${gap.toFixed(1)} px to the bottom`);
+    }
+  }
+
+  const tabLabels: string[] = [];
+  if (tabBar && shown(tabBar)) {
+    const inner = tabBar.getBoundingClientRect();
+    for (const label of tabBar.querySelectorAll('.tab-label')) {
+      const text = [...label.childNodes].find(
+        (node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim().length > 0,
+      );
+      if (!text) {
+        continue;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const boxes = [...range.getClientRects()].filter((box) => box.width > 0);
+      const lines = new Set(boxes.map((box) => Math.round(box.top))).size;
+      const words = (text.textContent ?? '').trim();
+      if (lines > 1) {
+        tabLabels.push(`${words} on ${lines} lines`);
+      }
+      const outside = boxes.some(
+        (box) =>
+          box.left < inner.left + tabBar.clientLeft - 0.5 ||
+          box.right > inner.left + tabBar.clientLeft + tabBar.clientWidth + 0.5,
+      );
+      if (outside) {
+        tabLabels.push(`${words} reaches past the bar's side`);
+      }
+      const current = label.closest('a[aria-current]');
+      if (current && boxes.length > 0) {
+        const restingPill = tabBar.querySelector('.tab-bar-pill');
+        const pill = (
+          restingPill && shown(restingPill) ? restingPill : current
+        ).getBoundingClientRect();
+        const spills = boxes.some(
+          (box) =>
+            box.left < pill.left - 1 ||
+            box.right > pill.right + 1 ||
+            box.top < pill.top - 1 ||
+            box.bottom > pill.bottom + 1,
+        );
+        if (spills) {
+          tabLabels.push(`${words} of the current tab spills out of its pill`);
+        }
+      }
+    }
+  }
+
   return {
     pageWidth,
     viewportWidth,
@@ -394,6 +470,8 @@ export function collectFindings(limits: typeof LIMITS): Findings {
     smallTargets,
     clippedText,
     offCentreQr,
+    tabBarEdge,
+    tabLabels,
   };
 }
 
@@ -459,6 +537,16 @@ export function checksFrom(found: Findings, pageErrors: string[]): Check[] {
       name: 'every QR code in the middle of its frame',
       pass: found.offCentreQr.length === 0,
       detail: list(found.offCentreQr),
+    },
+    {
+      name: 'the tab bar above the home indicator, its shadow inside the gap',
+      pass: found.tabBarEdge.length === 0,
+      detail: list(found.tabBarEdge),
+    },
+    {
+      name: 'every tab label on one line inside the tab bar',
+      pass: found.tabLabels.length === 0,
+      detail: list(found.tabLabels),
     },
   ];
 }

@@ -8,7 +8,7 @@
 .lock-panel {
   display: grid;
   gap: var(--space-4);
-  max-width: var(--dialog-max-width);
+  max-width: min(var(--dialog-max-width), 100% - 2 * var(--space-5));
   margin: var(--space-6) auto;
   text-align: center;
   @include motion.appear;

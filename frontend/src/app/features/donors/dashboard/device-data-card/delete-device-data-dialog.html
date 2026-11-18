@@ -1,5 +1,7 @@
 <app-dialog
   labelledBy="device-data-delete-title"
+  [alert]="true"
+  describedBy="device-data-delete-lead"
   [dismissible]="!deleting()"
   (dismissed)="cancelled.emit()"
 >
@@ -8,21 +10,26 @@
     class="ui-dialog__title"
     i18n="@@donor.deviceData.deleteDialog.title"
   >
-    Smazat data z tohoto zařízení?
+    Smazat data z&nbsp;tohoto zařízení?
   </h2>
-  <p class="ui-dialog__lead" i18n="@@donor.deviceData.deleteDialog.lead">
-    Kopie vašich darů, potvrzení a bankovních účtů se z tohoto zařízení smaže a odhlásíme vás. Na
-    serveru zůstane vše, jak je; po dalším přihlášení se kopie stáhne znovu.
+  <p
+    id="device-data-delete-lead"
+    class="ui-dialog__lead"
+    i18n="@@donor.deviceData.deleteDialog.lead"
+  >
+    Kopie vašich darů, potvrzení a&nbsp;bankovních účtů se z&nbsp;tohoto zařízení smaže
+    a&nbsp;odhlásíme vás. Na serveru zůstane vše, jak je; po dalším přihlášení se kopie stáhne
+    znovu.
   </p>
   @if (failed()) {
     <p class="ui-notice ui-notice--alert device-data-delete-failed" role="alert">
       <span i18n="@@donor.deviceData.deleteDialog.failed"
-        >Data z tohoto zařízení se nepodařilo smazat. Zkuste to prosím znovu. Když to nepůjde,
+        >Data z&nbsp;tohoto zařízení se nepodařilo smazat. Zkuste to prosím znovu. Když to nepůjde,
         smažte data webu nfnn.cz v nastavení prohlížeče.</span
       >
     </p>
   }
-  <div class="device-data-dialog-actions">
+  <div class="ui-dialog__actions device-data-dialog-actions">
     <button
       type="button"
       #confirm

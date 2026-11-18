@@ -110,7 +110,7 @@ const BADGE_TONES: Record<AccountLabel, string> = {
 const EXCLUDED_HINT = $localize`:@@donor.bankAccounts.hint.excluded:Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem. Posílejte z něj prosím vždy s vaším variabilním symbolem.`;
 
 const HINTS: Record<AccountLabel, string> = {
-  active: $localize`:@@donor.bankAccounts.hint.active:Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.`,
+  active: $localize`:@@donor.bankAccounts.hint.active:Platby z něj vám přiřazujeme i bez variabilního symbolu.`,
   shared: $localize`:@@donor.bankAccounts.hint.shared:Tento účet ověřil i jiný dárce, proto z něj platby bez variabilního symbolu nepřiřazujeme nikomu. Pokud z něj dary neposíláte vy, stiskněte „Nepřiřazovat platby z tohoto účtu“. Jinak z něj prosím posílejte vždy s vaším variabilním symbolem.`,
   awaiting: $localize`:@@donor.bankAccounts.hint.awaiting:Pošlete z účtu 1 Kč s vaším variabilním symbolem. Jakmile dorazí, přiřadíme vám z něj i platby bez symbolu ode dne zapnutí.`,
   excluded: EXCLUDED_HINT,

@@ -3520,6 +3520,17 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(document.activeElement).toBe(element('.accounts-add'));
     });
 
+    it('then a dialog the page opens comes up as a sheet from the bottom', async () => {
+      await open('/darce/ucty?pridat=ucet');
+      sectionAccountRequests.forEach((request) => request.flush({ items: [] }));
+      await respond(emptySummary(), emptyDonations());
+      await settle();
+      http.expectOne(PAYMENT_DETAILS_URL_MATCH).flush(foundationPaymentDetails());
+      await settle();
+
+      expect(element('dialog')?.getAttribute('data-presentation')).toBe('sheet');
+    });
+
     it('then the bank accounts card shows with the variable symbol for adding one', async () => {
       await openBankAccounts();
       await respond(twoYearSummary(), twoYearDonations());

@@ -179,4 +179,24 @@ test.describe('Given a visitor tapping small controls on a phone', () => {
       page.locator('.notifications').getByRole('button', { name: 'Zkusit znovu' }),
     );
   });
+
+  test('when the text is large and they tap near the edges of the tabs of the tab bar, then a finger-sized area around each still reaches it, and the finger areas of neighbouring tabs never overlap', async ({
+    page,
+  }) => {
+    await page.goto('/prispet');
+    await page.addStyleTag({ content: 'html { font-size: 24px !important; }' });
+    const tabs = page.getByRole('navigation', { name: 'Hlavní sekce' }).getByRole('link');
+    await expect(tabs).toHaveCount(4);
+
+    const centres: number[] = [];
+    for (const tab of await tabs.all()) {
+      await expectFingerSized(tab);
+      const box = await tab.boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(FINGER_PX);
+      centres.push((box?.x ?? 0) + (box?.width ?? 0) / 2);
+    }
+    for (const [index, centre] of centres.slice(1).entries()) {
+      expect(centre - centres[index]).toBeGreaterThanOrEqual(FINGER_PX);
+    }
+  });
 });

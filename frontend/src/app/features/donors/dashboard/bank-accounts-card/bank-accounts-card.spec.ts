@@ -149,9 +149,7 @@ describe('Given the bank accounts card in the overview', () => {
 
     expect(text('.account-number')).toBe('2900233333/2010');
     expect(text('.account-status')).toBe('Ověřený');
-    expect(text('.account-hint')).toBe(
-      'Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.',
-    );
+    expect(text('.account-hint')).toBe('Platby z něj vám přiřazujeme i bez variabilního symbolu.');
     expect(texts('.account-meta > li')).toEqual([
       'Fio banka',
       'ověřeno 12. 3. 2026',
@@ -449,6 +447,49 @@ describe('Given the bank accounts card in the overview', () => {
     expect(normalized(wbr?.nextSibling?.textContent ?? '')).toBe('2010');
   });
 
+  it('when a verified account arrives, then its verification day reads as one inline line with a space after ověřeno', async () => {
+    await respond([bankAccount()]);
+
+    const verified = [
+      ...((fixture.nativeElement as HTMLElement).querySelectorAll(
+        '.account-meta > li',
+      ) as NodeListOf<HTMLElement>),
+    ].find((item) => normalized(item.textContent ?? '').startsWith('ověřeno'));
+    expect(verified?.childNodes).toHaveLength(1);
+    const line = verified?.firstElementChild;
+    expect(line?.tagName).toBe('SPAN');
+    expect(line?.textContent).toBe('ověřeno 12.\u00a03. 2026');
+  });
+
+  it('when two accounts can be disconnected, then each Nepřiřazovat platby z tohoto účtu is named by its label and its own account number, as the VoiceOver rotor lists names', async () => {
+    await respond([
+      bankAccount(),
+      bankAccount({
+        id: '0192f0c4-0000-7000-8000-000000000002',
+        accountNumber: '19-2000145399/0800',
+      }),
+    ]);
+
+    const names = [
+      ...((fixture.nativeElement as HTMLElement).querySelectorAll(
+        '.account-action',
+      ) as NodeListOf<HTMLButtonElement>),
+    ].map((button) => {
+      const ids = (button.getAttribute('aria-labelledby') ?? '').split(' ').filter(Boolean);
+      return ids.map((id) => normalized(document.getElementById(id)?.textContent ?? '')).join(' ');
+    });
+    expect(names).toEqual([
+      'Nepřiřazovat platby z tohoto účtu 2900233333/2010',
+      'Nepřiřazovat platby z tohoto účtu 19-2000145399/0800',
+    ]);
+  });
+
+  it('when an account can be disconnected, then Nepřiřazovat platby z tohoto účtu is a quiet button, as a rare action', async () => {
+    await respond([bankAccount()]);
+
+    expect(element('.account-action')?.classList).toContain('ui-button--quiet');
+  });
+
   it('when the donor has no known account, then the card explains how one becomes known', async () => {
     await respond([]);
 
@@ -509,7 +550,7 @@ describe('Given the bank accounts card in the overview', () => {
     await respond([bankAccount({ confirmedSymbols: ['6123456789', '7001234567'] })]);
 
     expect(texts('.account-hint')).toEqual([
-      'Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.',
+      'Platby z něj vám přiřazujeme i bez variabilního symbolu.',
       'Platby se symbolem 6123456789 z tohoto účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez symbolu.',
       'Platby se symbolem 7001234567 z tohoto účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez symbolu.',
     ]);
@@ -880,7 +921,7 @@ describe('Given the bank accounts card in the overview', () => {
 
       expect(element('app-symbol-claim')).toBeNull();
       expect(texts('.account-hint')).toEqual([
-        'Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.',
+        'Platby z něj vám přiřazujeme i bez variabilního symbolu.',
       ]);
       expect(text('.accounts-status')).toBe(
         'Odpověď jsme uložili. Platby se symbolem 6123456789 z účtu 2900233333/2010 vám nepřiřadíme.',
@@ -1393,7 +1434,7 @@ describe('Given the bank accounts card in the overview', () => {
       expect(element('.watch-icon--waiting')).toBeNull();
       expect(text('.add-account-watch .watch-title')).toBe('Účet 1234567890/0800 je ověřený');
       expect(text('.add-account-watch .watch-detail')).toBe(
-        'Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.',
+        'Platby z něj vám přiřazujeme i bez variabilního symbolu.',
       );
       expect(bankChecks).toEqual([{ bankDataAsOf: LATER, checking: false }]);
 
@@ -1557,7 +1598,7 @@ describe('Given the bank accounts card in the overview', () => {
         'Platba z účtu 2900233333/2010 dorazila',
       );
       expect(texts('.add-account-watch .watch-detail')).toEqual([
-        'Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.',
+        'Platby z něj vám přiřazujeme i bez variabilního symbolu.',
       ]);
       expect(element('.add-account-watch .watch-earlier')).toBeNull();
 

@@ -2,6 +2,11 @@
 
 $lead-width: 34rem;
 
+@function fade-stop($share, $from, $to, $along) {
+  @return color-mix(in srgb, var(--color-surface-inverse) $share, transparent)
+    calc(var(#{$from}) + (var(#{$to}) - var(#{$from})) * #{$along});
+}
+
 :host {
   display: block;
   padding: var(--space-16) 0;
@@ -52,13 +57,21 @@ $lead-width: 34rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  --fade-solid: calc(100% - var(--band-photo-share));
+  --fade-text: max(52%, calc(var(--space-16) + #{$lead-width}));
+  --fade-end: max(72%, calc(var(--space-16) + #{$lead-width} + 15%));
   padding: var(--space-14) var(--space-16);
   background: linear-gradient(
     90deg,
-    var(--color-surface-inverse) calc(100% - var(--band-photo-share)),
-    color-mix(in srgb, var(--color-surface-inverse) 78%, transparent)
-      max(52%, calc(var(--space-16) + #{$lead-width})),
-    transparent max(72%, calc(var(--space-16) + #{$lead-width} + 15%))
+    var(--color-surface-inverse) var(--fade-solid),
+    #{fade-stop(97%, '--fade-solid', '--fade-text', 0.25)},
+    #{fade-stop(89%, '--fade-solid', '--fade-text', 0.5)},
+    #{fade-stop(81%, '--fade-solid', '--fade-text', 0.75)},
+    color-mix(in srgb, var(--color-surface-inverse) 78%, transparent) var(--fade-text),
+    #{fade-stop(66%, '--fade-text', '--fade-end', 0.25)},
+    #{fade-stop(39%, '--fade-text', '--fade-end', 0.5)},
+    #{fade-stop(12%, '--fade-text', '--fade-end', 0.75)},
+    transparent var(--fade-end)
   );
 }
 
@@ -94,6 +107,12 @@ $lead-width: 34rem;
   }
 }
 
+@include bp.down(nav) {
+  .band {
+    box-shadow: var(--shadow-media-tight);
+  }
+}
+
 @include bp.down(tablet) {
   :host {
     padding: var(--space-10) 0;
@@ -117,7 +136,16 @@ $lead-width: 34rem;
       position: absolute;
       inset: auto 0 0;
       height: 45%;
-      background: linear-gradient(180deg, transparent, var(--color-surface-inverse));
+      background: linear-gradient(
+        180deg,
+        transparent,
+        color-mix(in srgb, var(--color-surface-inverse) 7%, transparent) 17%,
+        color-mix(in srgb, var(--color-surface-inverse) 26%, transparent) 33%,
+        color-mix(in srgb, var(--color-surface-inverse) 50%, transparent) 50%,
+        color-mix(in srgb, var(--color-surface-inverse) 74%, transparent) 67%,
+        color-mix(in srgb, var(--color-surface-inverse) 93%, transparent) 83%,
+        var(--color-surface-inverse)
+      );
     }
   }
 

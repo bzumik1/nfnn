@@ -241,6 +241,12 @@
   }
 }
 
+@include bp.down(nav) {
+  .founders {
+    padding-bottom: 0;
+  }
+}
+
 @include bp.container-down(about-founders, pair) {
   .signers {
     grid-template-columns: minmax(0, 1fr);

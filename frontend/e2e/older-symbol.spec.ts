@@ -11,7 +11,7 @@ import {
 const ACCOUNT_ID = '0192f0c4-0000-7000-8000-000000000001';
 const ACCOUNT = '19-2000145399/0800';
 const SYMBOL = '6123456789';
-const ACTIVE_HINT = 'Platby bez variabilního symbolu z něj vám přiřazujeme automaticky.';
+const ACTIVE_HINT = 'Platby z něj vám přiřazujeme i bez variabilního symbolu.';
 
 const verification = donationItem({
   id: '0192f0f1-0000-7000-8000-000000000002',

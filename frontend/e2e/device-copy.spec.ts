@@ -122,7 +122,7 @@ test.describe('Given a donor who signs in with a password on a device that keeps
     await expect(page.getByText(/Uloženo v zařízení\u00a0· aktualizováno /)).toBeVisible();
 
     await page.getByRole('button', { name: 'Smazat data z tohoto zařízení' }).click();
-    const dialog = page.getByRole('dialog');
+    const dialog = page.getByRole('alertdialog');
     await expect(
       dialog.getByRole('heading', { name: 'Smazat data z tohoto zařízení?' }),
     ).toBeVisible();

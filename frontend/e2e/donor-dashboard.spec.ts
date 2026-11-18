@@ -63,6 +63,51 @@ const receiptsFrom2026 = {
 };
 
 test.describe('Given a signed-in donor', () => {
+  for (const [width, stacked] of [
+    [900, true],
+    [940, true],
+    [1024, false],
+  ] as const) {
+    test(`when Přihlášení a zabezpečení shows in a window ${width} px wide, then its rows keep one left axis and their buttons stand on one right edge, ${stacked ? 'with each value under its label' : 'with each value beside its label'}`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await signIn(page);
+      await page.setViewportSize({ width, height: 900 });
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      const card = page.locator('app-account-card');
+      await expect(card.locator('.account-row').first()).toBeVisible();
+
+      const axes = await card.evaluate((element) => {
+        const left = (selector: string): number[] =>
+          [...element.querySelectorAll(selector)].map((cell) =>
+            Math.round(cell.getBoundingClientRect().left),
+          );
+        const right = (selector: string): number[] =>
+          [...element.querySelectorAll(selector)].map((cell) =>
+            Math.round(cell.getBoundingClientRect().right),
+          );
+        return {
+          labels: left('.account-row > dt'),
+          rows: left('.account-row'),
+          buttons: right('.account-row .account-actions .ui-button:last-child'),
+          rowEnds: right('.account-row'),
+          valueUnderLabel:
+            element.querySelector('.account-row > .account-value')!.getBoundingClientRect().top >=
+            element.querySelector('.account-row > dt')!.getBoundingClientRect().bottom,
+        };
+      });
+
+      expect(axes.labels.length).toBeGreaterThan(1);
+      expect(new Set(axes.labels).size).toBe(1);
+      expect(axes.labels[0]).toBe(axes.rows[0]);
+      expect(axes.buttons.length).toBeGreaterThan(1);
+      expect(new Set(axes.buttons).size).toBe(1);
+      expect(axes.buttons[0]).toBe(axes.rowEnds[0]);
+      expect(axes.valueUnderLabel).toBe(stacked);
+    });
+  }
+
   test('when they have given in two years, then the sections show their totals, their payments and each year on its own', async ({
     page,
   }) => {
@@ -279,9 +324,14 @@ test.describe('Given a signed-in donor', () => {
     const card = page.locator('.send-gift');
     await expect(card.locator('.bank')).toContainText('5544332217/2010');
     const toggle = card.getByRole('button', { name: 'Jak nastavit trvalý příkaz' });
-    const toggleTop = (await toggle.boundingBox())!.y;
-    expect(toggleTop).toBeGreaterThan((await card.locator('.bank').boundingBox())!.y);
-    expect(toggleTop).toBeLessThan((await card.locator('.bank-app').boundingBox())!.y);
+    await expect
+      .poll(async () => {
+        const toggleTop = (await toggle.boundingBox())!.y;
+        const bankTop = (await card.locator('.bank').boundingBox())!.y;
+        const bankAppTop = (await card.locator('.bank-app').boundingBox())!.y;
+        return bankTop < toggleTop && toggleTop < bankAppTop;
+      })
+      .toBe(true);
 
     await toggle.click();
 

@@ -336,12 +336,19 @@ describe('Given the header of the app', () => {
         configurable: true,
         value: () => [document.body],
       });
+      Object.defineProperty(Range.prototype, 'getClientRects', {
+        configurable: true,
+        value(this: Range): DOMRect[] {
+          return [(this.startContainer as HTMLElement).getBoundingClientRect()];
+        },
+      });
     });
 
     afterEach(() => {
       main.remove();
       delete (window as { scrollY?: number }).scrollY;
       delete (document as { elementsFromPoint?: unknown }).elementsFromPoint;
+      delete (Range.prototype as { getClientRects?: unknown }).getClientRects;
     });
 
     async function scrolledPast(header: HTMLElement): Promise<void> {

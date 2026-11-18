@@ -9,8 +9,26 @@ import {
   session,
 } from './donor-session';
 import { drawnModulesMatch, PAYMENT_QR_500_WITH_SYMBOL } from './qr-matrices';
+import { expectActionInSightOrCuedBelow } from './dialog-edge';
 
 test.describe('Given a visitor who wants a donor account', () => {
+  test('when the registration opens in a low window on a computer, then its button is in sight or the edge of the dialog shows there is more below', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    await openSignInDialog(page);
+    await page.getByRole('button', { name: 'Registrace' }).click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('button', { name: 'Vytvořit účet' })).toBeAttached();
+    await expectActionInSightOrCuedBelow(
+      dialog.locator('.dialog-panel'),
+      dialog.getByRole('button', { name: 'Vytvořit účet' }),
+    );
+  });
+
   test('when they register as a person, then the dialog asks them to confirm the e-mail and nobody is signed in', async ({
     page,
   }) => {

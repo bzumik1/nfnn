@@ -259,6 +259,7 @@
   --shadow-card-hover: 0 3px 0 var(--color-border-field);
   --shadow-panel: 0 1px 0 var(--color-border);
   --shadow-media: 0 4px 0 var(--color-border-field);
+  --shadow-media-tight: 0 4px 0 var(--color-border-field);
   --shadow-dialog: 0 6px 0 var(--color-border-field);
   --shadow-sheet: 0 -3px 0 var(--color-border-field);
   --shadow-tab-bar: 0 3px 0 var(--color-surface-inverse);
@@ -291,8 +292,8 @@
   --side-nav-width: 230px;
   --floating-notice-height: 0rem;
   --offline-pill-height: 0rem;
-  --dialog-max-width: 420px;
-  --dialog-max-width-wide: 520px;
+  --dialog-max-width: 26.25rem;
+  --dialog-max-width-wide: 32.5rem;
   --dialog-close-inset: 14px;
   --dialog-close-size: 32px;
   --text-dialog-close: min(var(--text-4xl), var(--dialog-close-size));
@@ -303,6 +304,7 @@
   --blend-ink: normal;
   --blend-ink-on-paper: multiply;
   --sheet-max-width: 640px;
+  --sheet-form-height: 620px;
   --sheet-grabber-width: 40px;
   --sheet-grabber-height: 4px;
   --sheet-close-size: var(--back-button-size);
@@ -315,6 +317,7 @@
   --sheet-row-height: 3rem;
   --sheet-row-padding-inline: var(--space-3);
   --sheet-profile-padding: var(--space-3);
+  --text-sheet-avatar-initials: min(var(--text-md), var(--sheet-avatar-size) * 0.34);
   --sheet-avatar-size: var(--back-button-size);
   --sheet-logo-height: 32px;
   --header-logo-width-wide: 140px;
@@ -329,12 +332,19 @@
   --tab-bar-gap: 15px;
   --tab-bar-gap-browser: 15px;
   --tab-pill-inset: 5px;
+  --tab-bar-padding-inline: max(var(--tab-pill-inset), 0.25rem);
+  --tab-bar-item-gap: 0.25rem;
   --tab-pill-drag-scale: 1.04;
   --tab-bar-max-width: 400px;
   --tab-bar-home-indicator-overlap: 15px;
   --tab-icon-size: 1.25rem;
-  --text-tab-label: min(var(--text-2xs), (100cqi - 40px) / 19);
+  --tab-label-fit: calc(
+    (100cqi - 32px - 2 * var(--tab-bar-padding-inline) - 3 * var(--tab-bar-item-gap)) / 19
+  );
+  --text-tab-label: min(var(--text-2xs), var(--tab-label-fit));
+  --text-tab-label-wide: min(var(--text-xs), var(--tab-label-fit));
   --back-icon-size: min(1.25rem, var(--back-button-size) * 0.5);
+  --text-account-initials: min(var(--text-sm), var(--back-button-size) * 0.34);
   --list-chevron-size: 1rem;
   --sheet-close-icon-size: min(1.125rem, var(--sheet-close-size) * 0.5);
   --launch-icon-size: 96px;
@@ -356,6 +366,7 @@
   --safe-area-top: env(safe-area-inset-top);
   --full-screen-height: 100svh;
   --scroll-edge-fade: 25px;
+  --scroll-shade-amount: 14%;
   --touch-target-size: 45px;
   --list-row-min-height: 55px;
   --list-inset-row-min-height: 2.8rem;
@@ -494,4 +505,10 @@
 
 :root[data-appearance='light'] {
   color-scheme: light;
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --scroll-shade-amount: 21%;
+  }
 }
