@@ -36,5 +36,5 @@ textarea.form-control {
 }
 
 app-password-reveal .form-control {
-  padding-right: var(--space-13);
+  padding-right: calc(1.25rem + var(--space-2-5) * 2 + var(--space-3));
 }
