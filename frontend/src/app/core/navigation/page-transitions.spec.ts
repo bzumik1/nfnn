@@ -256,6 +256,7 @@ interface Painted {
   readonly sheet?: boolean;
   readonly account?: string;
   readonly head?: string;
+  readonly photo?: boolean;
 }
 
 function paint(layer: HTMLElement, page: Painted): void {
@@ -285,6 +286,11 @@ function paint(layer: HTMLElement, page: Painted): void {
   const heading = document.createElement('h1');
   heading.textContent = page.title;
   main.append(heading);
+  if (page.photo === true) {
+    const photo = document.createElement('img');
+    photo.alt = 'Zahrada';
+    main.append(photo);
+  }
   layer.append(header, main);
   if (page.tabBar === true) {
     layer.append(document.createElement('app-tab-bar'));
@@ -599,6 +605,56 @@ describe('Given the app on the home screen of a phone, where the news led to the
     return () => clones;
   }
 
+  it('when the news kept under the overview holds a photo, then the overview follows the finger at once, never waiting for the photo it already drew', async () => {
+    await openOverviewFromTheNews(
+      { title: 'Aktuality', sheet: true, photo: true },
+      { title: 'Přehled' },
+    );
+    const swipe = swipeBack();
+    expect(under().querySelector('img')).not.toBeNull();
+
+    swipe.follow(195);
+
+    expect(over().style.transform).toBe('translateX(195px)');
+  });
+
+  it('when the swipe has stepped back, then the page it returned to stands at once as its copy showed it, its entrance not played again', async () => {
+    await openOverviewFromTheNews({ title: 'Aktuality', sheet: true }, { title: 'Přehled' });
+    const entrance = {
+      effect: { getComputedTiming: () => ({ endTime: 500 }) },
+      finish: vi.fn(),
+    };
+    const breathing = {
+      effect: { getComputedTiming: () => ({ endTime: Infinity }) },
+      finish: vi.fn(),
+    };
+    Object.defineProperty(layer, 'getAnimations', {
+      configurable: true,
+      value: (options?: GetAnimationsOptions) =>
+        options?.subtree === true ? [entrance, breathing] : [],
+    });
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => ({ finished: Promise.resolve() }),
+    });
+    vi.useFakeTimers();
+    try {
+      expect(await swipeBack().settle(LET_GO_PAST_HALF)).toBe(true);
+      expect(entrance.finish).not.toHaveBeenCalled();
+
+      await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+      await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS);
+
+      expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+      expect(entrance.finish).toHaveBeenCalledTimes(1);
+      expect(breathing.finish).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+      delete (layer as { getAnimations?: unknown }).getAnimations;
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
   it('when both pages have the round back button, then one back button stands still above the moving pages', async () => {
     await openOverviewFromTheNews(
       { title: 'Aktuality', back: true, sheet: true },
@@ -731,7 +787,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
               return new Promise<T | null>((done) => {
                 cannotDraw = () => done(null);
                 finishVisit = () => {
-                  paint(layer, { title: 'Úvod' });
+                  paint(layer, { title: 'Úvod', account: 'JN' });
                   const captured = capture();
                   paint(layer, { title: 'Přehled' });
                   done(captured);
@@ -842,6 +898,20 @@ describe('Given the app on the home screen of a phone opened straight on the don
       frames.restore();
       document.documentElement.style.removeProperty('--duration-fast');
     }
+  });
+
+  it('when the page Zpět leads to is drawn under a page that has not moved yet, then the header of the page under it shows no more than the page does, so its avatar never flashes', async () => {
+    const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+    await vi.dynamicImportSettled();
+    swipe.follow(39);
+
+    finishVisit();
+    await Promise.resolve();
+
+    const avatar = document.querySelector<HTMLElement>(
+      `.${PAGE_TRANSITION_CLASS}__bar .account-button`,
+    );
+    expect(avatar?.style.opacity).toBe('0');
   });
 
   it('when the page Zpět leads to cannot be drawn, then letting go past half leaves the page where it is and says it did not leave', async () => {
@@ -1000,6 +1070,11 @@ describe('Given the app on a wide screen, where the header and the side navigati
     );
     expect(standing.length).toBeGreaterThan(0);
     expect(standing.filter((part) => part.style.visibility !== 'hidden')).toEqual([]);
+    expect(
+      standing
+        .filter((part) => part.localName === 'app-tab-bar')
+        .map((tabBar) => tabBar.style.display),
+    ).toEqual(['none', 'none']);
   });
 
   it('when a step without a finger opens the article, then nothing slides, as on a computer today', async () => {

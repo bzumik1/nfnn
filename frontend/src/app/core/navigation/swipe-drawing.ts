@@ -89,13 +89,13 @@ export async function withoutFocus<T>(
   }
 }
 
-export function standSheetsAtOnce(document: Document): void {
-  document.querySelectorAll('dialog[open]').forEach((sheet) =>
-    sheet
+export function standAtOnce(parts: Iterable<Element>): void {
+  for (const part of parts) {
+    part
       .getAnimations?.({ subtree: true })
       .filter((motion) => motion.effect?.getComputedTiming().endTime !== Infinity)
-      .forEach((motion) => motion.finish()),
-  );
+      .forEach((motion) => motion.finish());
+  }
 }
 
 export interface ContentArea {
@@ -122,9 +122,12 @@ export function clipToContent(document: Document, overlay: HTMLElement): Content
       overlay
         .querySelectorAll<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__scroller`)
         .forEach((scroller) => (scroller.style.inset = `${-top}px 0 ${-bottom}px ${-start}px`));
-      overlay
-        .querySelectorAll<HTMLElement>(STANDING_PARTS)
-        .forEach((part) => (part.style.visibility = 'hidden'));
+      overlay.querySelectorAll<HTMLElement>(STANDING_PARTS).forEach((part) => {
+        part.style.visibility = 'hidden';
+        if (part.localName === 'app-tab-bar') {
+          part.style.display = 'none';
+        }
+      });
       overlay
         .querySelectorAll<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`)
         .forEach((page) => (page.style.borderRadius = '0'));
@@ -236,7 +239,7 @@ export function startSwipe(
   const width = Math.max(1, content?.width ?? view.innerWidth);
   let progress = 0;
   let offset = 0;
-  let ready = behind !== null && under.querySelector('img') === null;
+  let ready = behind !== null;
   let shown = 0;
   let catchingUp = false;
   const follow = (): void => {
@@ -270,11 +273,10 @@ export function startSwipe(
     behind === null && destination.path !== null && !stage.dirtyForms.any()
       ? drawUnder(stage, destination.path, running, arriving, (into) => {
           bar.items = dress(into);
+          followBar(bar.items, progress);
           return takeOver();
         })
-      : ready
-        ? Promise.resolve()
-        : takeOver();
+      : photosDrawn(under, FRAME_LATE_MS);
   const settle = async (end: SwipeSettle): Promise<boolean> => {
     catchingUp = false;
     if (stage.running !== running) {
@@ -313,6 +315,7 @@ export function startSwipe(
       return false;
     }
     if (end.completes) {
+      running.stepped = true;
       stage.handingOver = true;
       stage.finishing = view.setTimeout(() => stage.finish(), PAGE_COVER_LONGEST_MS);
     } else {

@@ -51,6 +51,7 @@ export interface Running {
   readonly swiping: boolean;
   readonly sheet: HTMLElement | null;
   revealed: boolean;
+  stepped?: boolean;
 }
 
 export interface KeptPage {
@@ -530,13 +531,16 @@ export class PageTransitions {
       this.finishing = null;
     }
     this.lent.splice(0).forEach((giveBack) => giveBack());
+    if (this.running?.stepped) {
+      this.drawing?.standAtOnce([this.layer() ?? this.document.body]);
+    }
     this.running?.overlay.remove();
     this.running = null;
     this.handingOver = false;
     const root = this.document.documentElement;
     if (root.classList.contains(SHEET_UNDER_CLASS)) {
       root.classList.remove(SHEET_UNDER_CLASS);
-      this.drawing?.standSheetsAtOnce(this.document);
+      this.drawing?.standAtOnce(this.document.querySelectorAll('dialog[open]'));
     }
   }
 }
