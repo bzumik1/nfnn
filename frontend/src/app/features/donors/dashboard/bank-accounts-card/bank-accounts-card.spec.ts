@@ -582,6 +582,16 @@ describe('Given the bank accounts card in the overview', () => {
     );
   });
 
+  it('when the donor switches off pairing at an account, then the question uses the shared in-card confirmation', async () => {
+    await respond([bankAccount()]);
+
+    await click('.account-action');
+
+    expect(element('.account-confirm')?.classList).toContain('ui-confirm');
+    expect(element('.account-confirm-text')?.classList).toContain('ui-confirm__text');
+    expect(element('.account-confirm-actions')?.classList).toContain('ui-confirm__actions');
+  });
+
   it('when the donor switches off pairing at an account with two confirmed symbols, then the confirmation names both', async () => {
     await respond([bankAccount({ confirmedSymbols: ['6123456789', '7001234567'] })]);
 

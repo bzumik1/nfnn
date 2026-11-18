@@ -63,6 +63,39 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
     }
   });
 
+  for (const width of [390, 834]) {
+    test(`when they read the receipts ${width} px wide, then the status of every single receipt stands beside its PDF button and no empty line stays under it`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, donorWithDonations);
+      await page.setViewportSize({ width, height: 900 });
+      await openReceiptsAfterSignIn(page);
+      const buttons = page.locator('.single-gifts .download-btn');
+      await expect(buttons.first()).toBeVisible();
+
+      const places = await buttons.evaluateAll((all) =>
+        all.map((button) => {
+          const status = button.parentElement!.querySelector('.receipt-saved')!;
+          const own = button.getBoundingClientRect();
+          const line = status.getBoundingClientRect();
+          return {
+            buttonBottom: own.bottom,
+            lineBottom: line.bottom,
+            besideButton: line.left >= own.right,
+          };
+        }),
+      );
+
+      expect(places.length).toBeGreaterThan(0);
+      for (const place of places) {
+        expect(place.besideButton, JSON.stringify(places)).toBe(true);
+        expect(place.lineBottom, JSON.stringify(places)).toBeLessThanOrEqual(
+          place.buttonBottom + 1,
+        );
+      }
+    });
+  }
+
   test('when the data takes a while, then a progress line names each step, the focused button keeps the focus, and the PDF drawn in the browser is saved and holds the receipt', async ({
     page,
   }) => {
