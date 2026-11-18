@@ -1296,6 +1296,53 @@ test.describe('Given an administrator on a tablet 768 pt wide opening the card o
   });
 });
 
+for (const { phone, viewport } of [
+  { phone: 'an iPhone Pro Max', viewport: { width: 440, height: 956 } },
+  { phone: 'an iPhone SE', viewport: { width: 375, height: 667 } },
+]) {
+  test.describe(`Given an administrator on ${phone} with the text at 200 % whose device could not store the administration`, () => {
+    test.use({ viewport });
+
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript(() => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = 'html { font-size: 200%; }';
+          document.head.append(style);
+        });
+      });
+      await mockDonorApi(page, donorWithDonations);
+      await mockAdministration(page);
+      await rememberedSession(page);
+    });
+
+    test('when they open the card of a donor, then Uložit znovu stands under the notice text at its start, the text keeps whole phrases on each line and the notice keeps a gap above the summary', async ({
+      page,
+    }) => {
+      await page.goto(PETR_DETAIL_PATH);
+      const notice = page.locator('.first-download');
+      const retry = notice.getByRole('button', { name: 'Uložit znovu' });
+      await expect(retry).toBeVisible();
+      const summary = page.getByRole('region', { name: 'Shrnutí dárce' });
+      await expect(summary).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      const text = notice.locator('.first-download__title');
+      const textBox = (await text.boundingBox())!;
+      const retryBox = (await retry.boundingBox())!;
+      expect(retryBox.y).toBeGreaterThanOrEqual(textBox.y + textBox.height - 0.5);
+      expect(Math.abs(retryBox.x - textBox.x)).toBeLessThanOrEqual(0.5);
+
+      const characters = (await text.textContent())!.trim().replace(/\s+/g, ' ').length;
+      expect(characters / (await linesOf(text))).toBeGreaterThanOrEqual(12);
+
+      const noticeBox = (await notice.boundingBox())!;
+      const summaryBox = (await summary.boundingBox())!;
+      expect(summaryBox.y - (noticeBox.y + noticeBox.height)).toBeGreaterThanOrEqual(8);
+    });
+  });
+}
+
 async function datesPastTheirCells(scope: Locator): Promise<string[]> {
   await scope.evaluate(() => document.fonts.ready);
   return scope.evaluate((element) => {
