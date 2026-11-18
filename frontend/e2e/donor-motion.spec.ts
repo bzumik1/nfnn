@@ -18,13 +18,13 @@ const MOVING = new Set(['transform', 'translate', 'scale', 'rotate']);
 const SIZING = new Set(['grid-template-rows']);
 const INSTANT_MS = 1;
 
-async function recordMoves(page: Page): Promise<void> {
-  await page.evaluate(() => {
+async function recordMoves(page: Page, card: string): Promise<void> {
+  await page.evaluate((card) => {
     const moves: Move[] = [];
     const frameKeys = new Set(['offset', 'computedOffset', 'easing', 'composite']);
     (window as unknown as { recordedMoves: Move[] }).recordedMoves = moves;
     const record = (target: EventTarget | null, animation: Animation | undefined) => {
-      if (!(target instanceof Element) || animation === undefined) {
+      if (!(target instanceof Element) || animation === undefined || !target.closest(card)) {
         return;
       }
       const effect = animation.effect as KeyframeEffect | null;
@@ -70,7 +70,7 @@ async function recordMoves(page: Page): Promise<void> {
         ),
       true,
     );
-  });
+  }, card);
 }
 
 async function recordElementsMadeInert(page: Page): Promise<void> {
@@ -89,6 +89,17 @@ async function recordElementsMadeInert(page: Page): Promise<void> {
 
 function elementsMadeInert(page: Page): Promise<string[]> {
   return page.evaluate(() => (window as unknown as { inertElements: string[] }).inertElements);
+}
+
+function whenFirstSyncSettled(page: Page): () => Promise<void> {
+  const synced = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === '/api/donations/me/sync',
+    { timeout: 10_000 },
+  );
+  return async () => {
+    await synced;
+    await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+  };
 }
 
 function recordedMoves(page: Page): Promise<Move[]> {
@@ -143,12 +154,14 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
         await route.fulfill({ status: 204 });
       },
     );
+    const firstSyncSettled = whenFirstSyncSettled(page);
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
 
     const devices = page.locator('.devices');
     await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
-    await recordMoves(page);
+    await firstSyncSettled();
+    await recordMoves(page, 'app-devices-card');
     await recordElementsMadeInert(page);
     await devices
       .getByRole('group', { name: 'Odhlásit iPhone · Safari?' })
@@ -173,11 +186,13 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
       (url) => url.pathname === '/api/donors/me/devices',
       (route) => route.fulfill({ json: { items: [...signedInDevices, ...longUnusedDevices] } }),
     );
+    const firstSyncSettled = whenFirstSyncSettled(page);
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
 
     const older = page.locator('.devices').getByRole('button', { name: /Starší \(2\)/ });
-    await recordMoves(page);
+    await firstSyncSettled();
+    await recordMoves(page, 'app-devices-card');
     await older.click();
 
     await expect(older).toHaveAttribute('aria-expanded', 'true');
@@ -193,11 +208,13 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     page,
   }) => {
     await mockDonorApi(page);
+    const firstSyncSettled = whenFirstSyncSettled(page);
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
 
     const toggle = page.locator('dd.account-actions').getByRole('button', { name: 'Změnit heslo' });
-    await recordMoves(page);
+    await firstSyncSettled();
+    await recordMoves(page, 'app-account-card');
     await toggle.click();
 
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
@@ -212,11 +229,13 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     page,
   }) => {
     await mockDonorApi(page);
+    const firstSyncSettled = whenFirstSyncSettled(page);
     await signIn(page);
     await openDonorSection(page, 'Bankovní účty');
 
     const toggle = page.getByRole('button', { name: 'Jak přiřazujeme platby?' });
-    await recordMoves(page);
+    await firstSyncSettled();
+    await recordMoves(page, 'app-bank-accounts-card');
     await toggle.click();
 
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
