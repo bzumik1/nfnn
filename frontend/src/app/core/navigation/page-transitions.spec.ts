@@ -408,6 +408,57 @@ describe('Given the app on the home screen of a phone, where the news led to the
     }
   });
 
+  it('when the real sheet comes back while the page moves, then once the page has stopped the sheet and its backdrop stand fully at once, their fade in cut short, so the page under them never shows through', async () => {
+    await openOverviewFromTheNews({ title: 'Aktuality', sheet: true }, { title: 'Přehled' }, true);
+    const sheet = document.createElement('dialog');
+    const fades = ['', '::backdrop'].map((pseudoElement) => ({
+      effect: {
+        target: sheet,
+        pseudoElement,
+        getComputedTiming: () => ({ endTime: 300 }),
+      },
+      finish: vi.fn(),
+    }));
+    const breathing = {
+      effect: { target: sheet, getComputedTiming: () => ({ endTime: Infinity }) },
+      finish: vi.fn(),
+    };
+    const elsewhere = {
+      effect: { target: layer, getComputedTiming: () => ({ endTime: 300 }) },
+      finish: vi.fn(),
+    };
+    Object.defineProperty(sheet, 'getAnimations', {
+      configurable: true,
+      value: (options?: GetAnimationsOptions) =>
+        options?.subtree === true ? [...fades, breathing] : [fades[0], breathing],
+    });
+    Object.defineProperty(layer, 'getAnimations', {
+      configurable: true,
+      value: () => [elsewhere],
+    });
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => ({ finished: Promise.resolve() }),
+    });
+    try {
+      const swipe = swipeBack();
+      sheet.setAttribute('open', '');
+      document.body.append(sheet);
+      await vi.dynamicImportSettled();
+      expect(fades.every((fade) => fade.finish.mock.calls.length === 0)).toBe(true);
+
+      await swipe.slideBack();
+
+      expect(fades.map((fade) => fade.finish.mock.calls.length)).toEqual([1, 1]);
+      expect(breathing.finish).not.toHaveBeenCalled();
+      expect(elsewhere.finish).not.toHaveBeenCalled();
+    } finally {
+      sheet.remove();
+      delete (layer as { getAnimations?: unknown }).getAnimations;
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
   it('when both pages are sheets of the administration, then the head of the sheet stands while the pages move and its title changes in place', async () => {
     await openOverviewFromTheNews(
       { title: 'Dárci', head: 'Dárci' },
@@ -870,6 +921,7 @@ describe('Given the app on a wide screen, where the header and the side navigati
     });
     router = TestBed.inject(Router);
     transitions = TestBed.inject(PageTransitions);
+    await transitions.loadDrawing();
     await router.navigateByUrl('/aktuality');
     paintWide('Aktuality');
   });

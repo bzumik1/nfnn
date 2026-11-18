@@ -48,8 +48,6 @@ const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
 const STANDING_DIALOG = 'dialog[open]:not(.dialog--leaving)';
 const SHEET_HEAD = 'app-sheet-head';
 const SECTION_LINKS = 'nav a[href]';
-const HEADER = 'app-header .app-header';
-const SIDE_NAVIGATION = '.side-nav-panel';
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
 
 interface Running {
@@ -81,6 +79,8 @@ interface BarItem {
   readonly curve: BarCurve;
 }
 
+type SwipeDrawing = typeof import('./swipe-drawing');
+
 export interface SwipePreview {
   follow(offset: number): void;
   settle(settle: SwipeSettle): Promise<boolean>;
@@ -97,6 +97,7 @@ export class PageTransitions {
   private readonly preview = inject(NavigationPreview);
   private readonly dirtyForms = inject(DirtyForms);
   private readonly placement = inject(PagePlacement);
+  private drawing: SwipeDrawing | null = null;
   private readonly kept = new Map<number, KeptPage>();
   private handingOver = false;
   private trigger: NavigationFacts['trigger'] = 'imperative';
@@ -173,6 +174,7 @@ export class PageTransitions {
       this.running !== null ||
       !motionAllowed(view) ||
       !this.stepsBySwipe() ||
+      (!this.compact() && this.drawing === null) ||
       this.document.querySelector(SHOWN_DIALOG) !== null
     ) {
       return null;
@@ -180,16 +182,12 @@ export class PageTransitions {
     const behind = destination.kind === 'step' ? this.keptAt(destination.depth, view) : null;
     const overlay = this.overlay('pop');
     overlay.classList.add(`${PAGE_TRANSITION_CLASS}--swipe`);
-    const content = this.compact() ? null : this.contentArea(overlay);
+    const content = this.compact()
+      ? null
+      : (this.drawing?.clipToContent(this.document, overlay) ?? null);
     const arriving = this.place(overlay, behind ?? this.placeholder(), 'under');
     const leaving = this.place(overlay, this.keep(layer), 'over');
-    if (content !== null) {
-      overlay
-        .querySelectorAll<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__scroller`)
-        .forEach(
-          (scroller) => (scroller.style.inset = `${-content.top}px 0 0 ${-content.start}px`),
-        );
-    }
+    content?.lineUp();
     const dress = (into: PlacedPage): BarItem[] =>
       content === null ? this.dressChrome(overlay, leaving, into) : [];
     const bar = { items: dress(arriving) };
@@ -199,7 +197,7 @@ export class PageTransitions {
     const sheet = behind?.sheet ?? null;
     const running: Running = { kind: 'pop', overlay, swiping: true, sheet, revealed: false };
     this.running = running;
-    this.document.documentElement.classList.toggle(SHEET_UNDER_CLASS, sheet !== null);
+    this.sheetUnder(sheet);
     const width = Math.max(1, content?.width ?? view.innerWidth);
     let progress = 0;
     let offset = 0;
@@ -225,7 +223,7 @@ export class PageTransitions {
             }
             ready = true;
             catchingUp = true;
-            void import('./swipe-drawing').then(({ closeInOnFinger }) =>
+            void this.loadDrawing().then(({ closeInOnFinger }) =>
               closeInOnFinger(view, this.durationOf('--duration-fast'), {
                 finger: () => offset,
                 from: shown,
@@ -310,7 +308,7 @@ export class PageTransitions {
     arriving: PlacedPage,
     redressed: (into: PlacedPage) => void,
   ): Promise<boolean> {
-    const { withoutFocus } = await import('./swipe-drawing');
+    const { withoutFocus } = await this.loadDrawing();
     const drawn = await withoutFocus(this.document, this.layer(), () =>
       this.preview.visit(path, () => {
         const layer = this.layer();
@@ -326,6 +324,17 @@ export class PageTransitions {
     scroller.style.backgroundColor = drawn.ground;
     redressed({ box: arriving.box, copy: drawn.copy, scrollY: drawn.scrollY });
     return true;
+  }
+
+  loadDrawing(): Promise<SwipeDrawing> {
+    return import('./swipe-drawing').then((drawing) => (this.drawing = drawing));
+  }
+
+  private sheetUnder(sheet: HTMLElement | null): void {
+    this.document.documentElement.classList.toggle(SHEET_UNDER_CLASS, sheet !== null);
+    if (sheet !== null) {
+      void this.loadDrawing();
+    }
   }
 
   private cover(event: GuardsCheckEnd): void {
@@ -381,7 +390,7 @@ export class PageTransitions {
         ? (this.keptAt(this.restoredDepth, view)?.sheet ?? null)
         : null;
     this.running = { kind, overlay, swiping: false, sheet, revealed: false };
-    this.document.documentElement.classList.toggle(SHEET_UNDER_CLASS, sheet !== null);
+    this.sheetUnder(sheet);
     this.finishing = view.setTimeout(() => this.finish(), PAGE_COVER_LONGEST_MS);
   }
 
@@ -604,17 +613,6 @@ export class PageTransitions {
     return copy;
   }
 
-  private contentArea(overlay: HTMLElement): { top: number; start: number; width: number } {
-    const view = this.document.defaultView;
-    const header = this.document.querySelector(`.${PAGE_LAYER_CLASS} ${HEADER}`);
-    const sideNavigation = this.document.querySelector(`.${PAGE_LAYER_CLASS} ${SIDE_NAVIGATION}`);
-    const top = Math.max(0, header?.getBoundingClientRect().bottom ?? 0);
-    const start = Math.max(0, sideNavigation?.getBoundingClientRect().right ?? 0);
-    overlay.classList.add(`${PAGE_TRANSITION_CLASS}--content`);
-    overlay.style.inset = `${top}px 0 0 ${start}px`;
-    return { top, start, width: (view?.innerWidth ?? 0) - start };
-  }
-
   private standingSheetCopy(): HTMLElement | null {
     const dialogs = this.document.querySelectorAll<HTMLElement>(STANDING_DIALOG);
     const top = dialogs.item(dialogs.length - 1);
@@ -693,7 +691,11 @@ export class PageTransitions {
     this.running?.overlay.remove();
     this.running = null;
     this.handingOver = false;
-    this.document.documentElement.classList.remove(SHEET_UNDER_CLASS);
+    const root = this.document.documentElement;
+    if (root.classList.contains(SHEET_UNDER_CLASS)) {
+      root.classList.remove(SHEET_UNDER_CLASS);
+      this.drawing?.standSheetsAtOnce(this.document);
+    }
   }
 }
 

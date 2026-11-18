@@ -53,7 +53,7 @@ export class EdgeSwipeBack {
     if (view === null || !isHomeScreenApp(view.navigator)) {
       return;
     }
-    void import('./swipe-drawing');
+    void this.transitions.loadDrawing();
     this.document.addEventListener('touchstart', this.onStart, PASSIVE);
     this.document.addEventListener('touchmove', this.onMove, PASSIVE);
     this.document.addEventListener('touchend', this.onEnd, PASSIVE);

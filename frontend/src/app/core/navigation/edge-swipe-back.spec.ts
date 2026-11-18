@@ -35,6 +35,7 @@ let transitions: {
   startSwipe: ReturnType<typeof vi.fn>;
   stepsBySwipe: ReturnType<typeof vi.fn>;
   followsFinger: ReturnType<typeof vi.fn>;
+  loadDrawing: ReturnType<typeof vi.fn>;
 };
 let dirty: boolean;
 let chrome: ReturnType<typeof signal<Chrome>>;
@@ -152,6 +153,7 @@ beforeEach(() => {
     startSwipe: vi.fn(() => null),
     stepsBySwipe: vi.fn(() => true),
     followsFinger: vi.fn(() => false),
+    loadDrawing: vi.fn(() => Promise.resolve()),
   };
   dirty = false;
   chrome = signal(chromeWith('/aktuality'));
