@@ -115,7 +115,7 @@ class DeviceSignOutRulesTest {
     @ArchTest
     static final ArchRule a_device_ends_only_through_its_repository_never_in_memory = noClasses()
             .should().setFieldWhere(A_WRITE_OF_THE_END_STATE_OF_A_DEVICE_OUTSIDE_ITS_CONSTRUCTION)
-            .because("the adapter maps these columns updatable = false and ends a device only by a conditional update, so an end set in memory"
+            .because("the adapter maps these columns updatable = false and ends a device only by a conditional or targeted update, so an end set in memory"
                     + " and saved is silently dropped: the device stays signed in, no token is revoked and no DeviceSignedOut is published"
                     + " (architecture audit #621)");
 

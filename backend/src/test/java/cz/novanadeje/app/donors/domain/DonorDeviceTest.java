@@ -67,7 +67,6 @@ class DonorDeviceTest {
 
             assertThat(device.lastUsedAt()).isEqualTo(NOW.plusSeconds(600));
         }
-
     }
 
     @Nested
