@@ -286,6 +286,8 @@ tr.is-verification td.amount {
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-1-5) var(--space-2);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
 
   .receipt-download .receipt-saved {
