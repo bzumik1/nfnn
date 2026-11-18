@@ -1,4 +1,4 @@
-<span class="account">
+<span class="account ui-separated">
   <span class="number">
     @if (czech()) {
       <app-bank-logo class="logo" [account]="account()" [size]="24" />
@@ -6,6 +6,8 @@
     <span class="ui-figures">{{ account() }}</span>
   </span>
   @if (bank(); as bank) {
-    &ngsp;<span class="bank"><span class="separator">·&nbsp;</span>{{ bank }}</span>
+    &ngsp;<span class="bank ui-separated__item"
+      ><span class="separator ui-separated__separator">·&nbsp;</span>{{ bank }}</span
+    >
   }
 </span>

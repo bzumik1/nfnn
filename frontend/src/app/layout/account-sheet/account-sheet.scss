@@ -163,23 +163,6 @@
     margin: 0;
   }
 
-  .registry {
-    display: flex;
-    flex-wrap: wrap;
-    column-gap: var(--space-inline-separator);
-    clip-path: inset(-100vh -100vw -100vh 0);
-  }
-
-  .registry-id {
-    position: relative;
-  }
-
-  .registry-separator {
-    position: absolute;
-    inset-inline-end: 100%;
-    white-space: pre;
-  }
-
   a {
     display: inline-block;
     min-height: var(--space-6);

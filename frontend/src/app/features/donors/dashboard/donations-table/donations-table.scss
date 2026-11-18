@@ -74,6 +74,10 @@ tr.is-verification td.amount {
   font-variant-numeric: var(--numeric-figures);
 }
 
+.receipt-download {
+  display: contents;
+}
+
 .receipt-saved {
   max-width: 12rem;
 }
@@ -259,5 +263,24 @@ tr.is-verification td.amount {
 
   .donation-rows .pairing-tag {
     overflow-wrap: normal;
+  }
+}
+
+@include bp.down(nav) {
+  .receipt-download {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1-5) var(--space-2);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  .receipt-download .receipt-saved {
+    flex: none;
+    flex-wrap: nowrap;
+    inline-size: var(--pdf-status-reserve-compact);
+    max-inline-size: 100%;
+    margin-top: 0;
   }
 }

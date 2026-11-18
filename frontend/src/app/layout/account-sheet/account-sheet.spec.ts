@@ -598,6 +598,16 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(navigate).toHaveBeenCalledWith('/darce/potvrzeni');
   });
 
+  it('when it opens, then the register entry and the IČO use the shared separator that hides at a line break', () => {
+    const registry = open().querySelector('.account-foundation .registry')!;
+
+    expect(registry.classList).toContain('ui-separated');
+    expect(registry.querySelector('.registry-id')?.classList).toContain('ui-separated__item');
+    expect(registry.querySelector('.registry-id > span')?.classList).toContain(
+      'ui-separated__separator',
+    );
+  });
+
   it('when it opens, then under the sign-out it names how to reach the foundation, its register entry and the privacy policy', async () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
     const sheet = open();
