@@ -15,7 +15,11 @@ export const PDF_CANCEL_OFFERED_AFTER_MS = 8000;
   selector: 'app-pdf-progress',
   templateUrl: './pdf-progress.html',
   styleUrl: './pdf-progress.scss',
-  host: { class: 'pdf-progress', '[class.pdf-progress--compact]': 'compact()' },
+  host: {
+    class: 'pdf-progress',
+    '[class.pdf-progress--compact]': 'compact()',
+    '[class.pdf-progress--idle]': '!shown() && !slow()',
+  },
 })
 export class PdfProgress {
   readonly progress = input<PdfProgressState | null>(null);

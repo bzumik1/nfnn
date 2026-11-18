@@ -1,4 +1,13 @@
+import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import {
+  donations as receiptDonations,
+  ISSUING,
+  openReceiptsAfterSignIn,
+  pretendIphoneThatShares,
+} from './receipt-donations';
+import { answerReceiptIssuing, RECEIPT_ISSUING_URL } from './receipt-issuing';
+import { donorWithDonations } from './baseline/screen-mocks';
 import {
   donationItem,
   donor,
@@ -563,4 +572,479 @@ test.describe('Given a signed-in donor', () => {
     );
     await expect(page.getByLabel('Nový e-mail')).toHaveValue('jana.nova@example.cz');
   });
+});
+
+test.describe('Given a signed-in donor on a computer', () => {
+  test('when the window leaves the gift list too narrow for its columns, then each gift is a card and Stáhnout PDF stays on one line inside it', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, withReceipts);
+    await signIn(page);
+    await openDonorSection(page, 'Moje dary');
+    await page.setViewportSize({ width: 1000, height: 800 });
+
+    const card = page.locator('.payments-card');
+    await expect(card.locator('thead').first()).toHaveCSS('position', 'absolute');
+    const buttons = card.getByRole('button', { name: /^Stáhnout PDF/ });
+    await expect(buttons).toHaveCount(3);
+    const lines = await buttons.evaluateAll((elements) =>
+      elements.map((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(
+          element.querySelector(
+            '.pdf-button__layer--current .pdf-button__label:not(.pdf-button__reserve)',
+          )!,
+        );
+        return new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top))).size;
+      }),
+    );
+    expect(lines).toEqual([1, 1, 1]);
+    const overflow = await card.evaluate((element) => element.scrollWidth - element.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+
+  test('when the window is as wide as an iPad mini held sideways, then the gifts with a receipt column are cards, so neither the purpose nor the account tag has to wrap', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, withReceipts);
+    await signIn(page);
+    await openDonorSection(page, 'Moje dary');
+    await page.setViewportSize({ width: 1133, height: 744 });
+
+    await expect(page.locator('.payments-card thead').first()).toHaveCSS('position', 'absolute');
+  });
+
+  test('when the gifts are cards at a 1180 px window with the larger text of the home-screen app, then each button keeps its whole name and no column label is read twice', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, withReceipts);
+    await signIn(page);
+    await openDonorSection(page, 'Moje dary');
+    await page.setViewportSize({ width: 1180, height: 820 });
+    await page.addStyleTag({ content: 'html { font-size: 106.25%; }' });
+
+    const card = page.locator('.payments-card');
+    await expect(card.locator('thead').first()).toHaveCSS('position', 'absolute');
+    const row = card.locator('tbody tr').first();
+    await expect(
+      row.getByRole('button', { name: /^Stáhnout PDF\s*, dar z 15\. 3\. 2026, 500\sKč$/ }),
+    ).toBeVisible();
+    await expect(row.getByRole('cell', { name: 'Obecný příspěvek', exact: true })).toBeVisible();
+    await expect(row.getByRole('cell', { name: 'Přijato', exact: true })).toBeVisible();
+  });
+
+  test('when the gifts of two years are listed, then their columns start at the same places', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, withReceipts);
+    await signIn(page);
+    await openDonorSection(page, 'Moje dary');
+
+    const tables = page.locator('.payments-card table');
+    await expect(tables).toHaveCount(2);
+    const starts = await tables.evaluateAll((elements) =>
+      elements.map((table) =>
+        Array.from(table.querySelectorAll('thead th')).map((cell) =>
+          Math.round(cell.getBoundingClientRect().left),
+        ),
+      ),
+    );
+    expect(starts[1]).toEqual(starts[0]);
+  });
+
+  test('when the browser shows text twice as large, then no year of the yearly receipts runs into its count of gifts', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, withReceipts);
+    await signIn(page);
+    await openDonorSection(page, 'Potvrzení o daru');
+    await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+    await expect(page.locator('.year-row')).toHaveCount(2);
+
+    const overlaps = await page.locator('.year-row').evaluateAll((rows) =>
+      rows.flatMap((row) => {
+        const textBox = (selector: string) => {
+          const range = document.createRange();
+          range.selectNodeContents(row.querySelector(selector)!);
+          return range.getBoundingClientRect();
+        };
+        const year = textBox('.year');
+        const count = textBox('.year-count');
+        const apart =
+          year.right <= count.left ||
+          count.right <= year.left ||
+          year.bottom <= count.top ||
+          count.bottom <= year.top;
+        return apart ? [] : [row.querySelector('.year')!.textContent!.trim()];
+      }),
+    );
+    expect(overlaps).toEqual([]);
+  });
+
+  const PDF_PLACES = [
+    {
+      name: 'a gift in the table of Moje dary',
+      statusAfterButton: true,
+      section: 'Moje dary',
+      wrappedStatus: 'beside',
+      row: (page: Page) => page.locator('.payments-card tbody tr').first(),
+      button: (row: Locator) => row.locator('.download-btn'),
+    },
+    {
+      name: 'a year on Moje dary',
+      statusAfterButton: false,
+      section: 'Moje dary',
+      wrappedStatus: 'beside',
+      row: (page: Page) => page.locator('.gift-year-head').last(),
+      button: (row: Locator) => row.locator('.yearly-pdf'),
+    },
+    {
+      name: 'a year on Potvrzení o daru',
+      statusAfterButton: false,
+      section: 'Potvrzení o daru',
+      wrappedStatus: 'beside',
+      row: (page: Page) => page.locator('.year-row').last(),
+      button: (row: Locator) => row.locator('.yearly-pdf'),
+    },
+    {
+      name: 'the ready receipt on Můj přehled',
+      statusAfterButton: true,
+      section: 'Můj přehled',
+      wrappedStatus: 'below',
+      row: (page: Page) => page.locator('.receipt-ready'),
+      button: (row: Locator) => row.locator('.receipt-ready-pdf'),
+    },
+  ];
+
+  async function placement(row: Locator, button: Locator): Promise<number[]> {
+    const rowBox = (await row.boundingBox())!;
+    const buttonBox = (await button.boundingBox())!;
+    return [rowBox.height, buttonBox.x, buttonBox.y, buttonBox.width].map((value) =>
+      Math.round(value),
+    );
+  }
+
+  for (const place of PDF_PLACES) {
+    test(`when the PDF of ${place.name} takes long to prepare, then the button stays put, the row keeps its height or the status opens under it, and Tab meets Zrušit in the order it is seen`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, receiptDonations);
+      await page.clock.install();
+      await page.route(
+        (url) => url.pathname === RECEIPT_ISSUING_URL,
+        () => new Promise<void>(() => undefined),
+      );
+      await openReceiptsAfterSignIn(page);
+      await openDonorSection(page, place.section);
+      const row = place.row(page);
+      const button = place.button(row);
+      await expect(button).toBeVisible();
+      const resting = await placement(row, button);
+
+      const kept = (values: number[]) => (place.statusAfterButton ? values.slice(1) : values);
+
+      await button.click();
+      const status = row.getByRole('status');
+      await expect(status).toHaveText('Připravujeme údaje potvrzení…');
+      expect(kept(await placement(row, button))).toEqual(kept(resting));
+
+      await page.clock.fastForward(8000);
+      const cancel = row.getByRole('button', { name: 'Zrušit' });
+      await expect(cancel).toBeVisible();
+      expect(kept(await placement(row, button))).toEqual(kept(resting));
+
+      if (place.statusAfterButton) {
+        const buttonBox = (await button.boundingBox())!;
+        expect((await status.boundingBox())!.y).toBeGreaterThanOrEqual(
+          buttonBox.y + buttonBox.height,
+        );
+        await button.focus();
+        await page.keyboard.press('Tab');
+        await expect(cancel).toBeFocused();
+      } else {
+        await cancel.focus();
+        await page.keyboard.press('Tab');
+        await expect(button).toBeFocused();
+      }
+    });
+
+    test(`when the PDF of ${place.name} waits for the second tap, then its row keeps its height and the button stays put`, async ({
+      page,
+    }) => {
+      await pretendIphoneThatShares(page);
+      await mockDonorApi(page, receiptDonations);
+      await page.route(
+        (url) => url.pathname === RECEIPT_ISSUING_URL,
+        (route) => answerReceiptIssuing(route, ISSUING),
+      );
+      await openReceiptsAfterSignIn(page);
+      await openDonorSection(page, place.section);
+      const row = place.row(page);
+      const button = place.button(row);
+      await expect(button).toBeVisible();
+      const resting = await placement(row, button);
+
+      await button.click();
+      await expect(button).toHaveText(/^Otevřít/);
+      await expect(row.locator('.pdf-progress__brief')).toHaveAttribute(
+        'data-brief',
+        'PDF je připravené',
+      );
+      const ready = await placement(row, button);
+      const settled = (values: number[]) =>
+        place.statusAfterButton
+          ? [values[1] + values[3], values[2]]
+          : [values[0], values[1] + values[3], values[2]];
+      expect(settled(ready)).toEqual(settled(resting));
+    });
+  }
+
+  for (const place of PDF_PLACES.filter(
+    (each) => each.name !== 'a gift in the table of Moje dary',
+  )) {
+    test(`when the window wraps ${place.name} and its PDF takes long, then the button keeps the right edge with Zrušit beside or under it and Tab meets Zrušit in the order it is seen`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, receiptDonations);
+      await page.clock.install();
+      await page.route(
+        (url) => url.pathname === RECEIPT_ISSUING_URL,
+        () => new Promise<void>(() => undefined),
+      );
+      await page.setViewportSize({ width: 900, height: 800 });
+      await openReceiptsAfterSignIn(page);
+      await openDonorSection(page, place.section);
+      const row = place.row(page);
+      const button = place.button(row);
+      await expect(button).toBeVisible();
+      const contentEnd = await row.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return Math.round(
+          box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight),
+        );
+      });
+
+      await button.click();
+      await expect(row.getByRole('status')).toHaveText('Připravujeme údaje potvrzení…');
+      await page.clock.fastForward(8000);
+      const cancel = row.getByRole('button', { name: 'Zrušit' });
+      await expect(cancel).toBeVisible();
+      const buttonBox = (await button.boundingBox())!;
+      const cancelBox = (await cancel.boundingBox())!;
+      expect(Math.round(buttonBox.x + buttonBox.width)).toBe(contentEnd);
+      if (place.wrappedStatus === 'beside') {
+        expect(cancelBox.x + cancelBox.width).toBeLessThanOrEqual(buttonBox.x);
+      } else {
+        expect(cancelBox.y).toBeGreaterThanOrEqual(buttonBox.y + buttonBox.height);
+      }
+
+      if (place.statusAfterButton) {
+        await button.focus();
+        await page.keyboard.press('Tab');
+        await expect(cancel).toBeFocused();
+      } else {
+        await cancel.focus();
+        await page.keyboard.press('Tab');
+        await expect(button).toBeFocused();
+      }
+    });
+  }
+
+  test('when the text is twice as large on an iPad held sideways, then the ready receipt on Můj přehled keeps its button text on one line', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, receiptDonations);
+    await page.setViewportSize({ width: 1194, height: 834 });
+    await openReceiptsAfterSignIn(page);
+    await openDonorSection(page, 'Můj přehled');
+    await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+
+    const label = page.locator(
+      '.receipt-ready-pdf .pdf-button__layer--current .pdf-button__label:not(.pdf-button__reserve)',
+    );
+    await expect(label).toHaveText('Stáhnout potvrzení za rok 2025 (PDF)');
+    const lines = await label.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top))).size;
+    });
+    expect(lines).toBe(1);
+  });
+
+  test('when the gifts are cards in a 900 px window, then the date, the purpose and the account tag keep whole words inside their column', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await signIn(page);
+    await openDonorSection(page, 'Moje dary');
+    await page.setViewportSize({ width: 900, height: 800 });
+
+    const card = page.locator('.payments-card');
+    await expect(card.locator('thead').first()).toHaveCSS('position', 'absolute');
+    await expect(card.locator('.pairing-tag').first()).toBeVisible();
+    const problems = await card.locator('tbody tr').evaluateAll((rows) =>
+      rows.flatMap((row) => {
+        const found: string[] = [];
+        const rowBox = row.getBoundingClientRect();
+        const cell = row.querySelector('td.purpose-cell')!.getBoundingClientRect();
+        const texts = [
+          row.querySelector('td.date'),
+          row.querySelector('.purpose > span'),
+          row.querySelector('.pairing-tag [aria-hidden="true"]'),
+        ].filter((element): element is Element => element !== null);
+        for (const element of texts) {
+          const content = element.textContent ?? '';
+          const box = element.getBoundingClientRect();
+          if (box.right > rowBox.right + 0.5 || box.left < rowBox.left - 0.5) {
+            found.push(`outside the card: ${content.trim()}`);
+          }
+          if (element.closest('td.purpose-cell') && box.right > cell.right + 0.5) {
+            found.push(`outside its column: ${content.trim()}`);
+          }
+          const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+          for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+            for (const match of (node.textContent ?? '').matchAll(/\S+/g)) {
+              const range = document.createRange();
+              range.setStart(node, match.index);
+              range.setEnd(node, match.index + match[0].length);
+              const lines = new Set(
+                Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+              );
+              if (lines.size > 1) {
+                found.push(`split word: ${match[0]}`);
+              }
+            }
+          }
+        }
+        return found;
+      }),
+    );
+    expect(problems).toEqual([]);
+  });
+
+  for (const { width, textSize, wraps } of [
+    { width: 1194, textSize: '100 %', wraps: false },
+    { width: 1194, textSize: '200 %', wraps: true },
+    { width: 1280, textSize: '100 %', wraps: false },
+  ]) {
+    test(`when the ready receipt on Můj přehled shows in a ${width} px window with text at ${textSize}, then its button ends at the card's edge, ${wraps ? 'under the title with no empty strip above it' : 'beside the title on its axis with the card no taller than that row'}`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, receiptDonations);
+      await page.setViewportSize({ width, height: 834 });
+      await openReceiptsAfterSignIn(page);
+      await openDonorSection(page, 'Můj přehled');
+      if (textSize === '200 %') {
+        await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+      }
+      const card = page.locator('.receipt-ready');
+      await expect(card.locator('.receipt-ready-pdf')).toBeVisible();
+
+      const layout = await card.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        const heading = element.querySelector('.ui-card__title')!;
+        const title = heading.getBoundingClientRect();
+        const titleEnd = title.bottom + parseFloat(getComputedStyle(heading).marginBottom);
+        const button = element.querySelector('.receipt-ready-pdf')!.getBoundingClientRect();
+        const rowHeight = Math.max(title.height, button.height);
+        return {
+          cardHeight: Math.round(box.height),
+          rowWithPadding: Math.round(
+            rowHeight +
+              parseFloat(style.paddingTop) +
+              parseFloat(style.paddingBottom) +
+              parseFloat(style.borderTopWidth) +
+              parseFloat(style.borderBottomWidth),
+          ),
+          axisOffset: Math.abs((button.top + button.bottom) / 2 - (title.top + title.bottom) / 2),
+          contentEnd: Math.round(
+            box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight),
+          ),
+          buttonEnd: Math.round(button.right),
+          wrapped: button.top >= title.bottom,
+          gapAbove: Math.round(button.top - titleEnd),
+          rowGap: Math.round(parseFloat(style.rowGap)),
+        };
+      });
+      expect(layout.buttonEnd).toBe(layout.contentEnd);
+      expect(layout.wrapped).toBe(wraps);
+      if (wraps) {
+        expect(layout.gapAbove).toBeLessThanOrEqual(layout.rowGap);
+      } else {
+        expect(layout.axisOffset).toBeLessThanOrEqual(2);
+        expect(layout.cardHeight).toBeLessThanOrEqual(layout.rowWithPadding + 1);
+      }
+    });
+  }
+
+  test('when the ready receipt on Můj přehled shows on a 390 px phone, then only the card padding stands under its button until the status text opens the line', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, receiptDonations);
+    await page.clock.install();
+    await page.route(
+      (url) => url.pathname === RECEIPT_ISSUING_URL,
+      () => new Promise<void>(() => undefined),
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openReceiptsAfterSignIn(page);
+    await page.goto('/darce/prehled');
+    const card = page.locator('.receipt-ready');
+    const button = card.locator('.receipt-ready-pdf');
+    await expect(button).toBeVisible();
+
+    const spaceUnder = () =>
+      card.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        const pdf = element.querySelector('.receipt-ready-pdf')!.getBoundingClientRect();
+        return {
+          under: Math.round(box.bottom - parseFloat(style.borderBottomWidth) - pdf.bottom),
+          padding: Math.round(parseFloat(style.paddingBottom)),
+        };
+      });
+    const resting = await spaceUnder();
+    expect(resting.under).toBe(resting.padding);
+
+    await button.click();
+    await expect(button).toHaveAttribute('aria-busy', 'true');
+    await page.clock.runFor(200);
+    await expect(card.getByRole('status')).toHaveText('');
+    expect(await spaceUnder()).toEqual(resting);
+
+    await page.clock.runFor(100);
+    await expect(card.getByRole('status')).toHaveText('Připravujeme údaje potvrzení…');
+    const status = (await card.getByRole('status').boundingBox())!;
+    expect(status.height).toBeGreaterThan(0);
+    expect((await spaceUnder()).under).toBeGreaterThan(resting.padding);
+  });
+
+  for (const width of [1280, 1000]) {
+    test(`when the gifts of Moje dary show in a ${width} px window, then each account tag stays on one line and the card does not overflow`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, donorWithDonations);
+      await signIn(page);
+      await openDonorSection(page, 'Moje dary');
+      await page.setViewportSize({ width, height: 800 });
+
+      const card = page.locator('.payments-card');
+      const tags = card.locator('.pairing-tag [aria-hidden="true"]');
+      await expect(tags.first()).toBeVisible();
+      const lines = await tags.evaluateAll((elements) =>
+        elements.map((element) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          return new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)))
+            .size;
+        }),
+      );
+      expect(lines.length).toBeGreaterThan(0);
+      expect(lines.every((count) => count === 1)).toBe(true);
+      const overflow = await card.evaluate((element) => element.scrollWidth - element.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+    });
+  }
 });

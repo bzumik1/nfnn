@@ -9,6 +9,27 @@
 table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.column-date {
+  width: var(--donations-column-date);
+}
+
+.column-amount {
+  width: var(--donations-column-amount);
+}
+
+.column-status {
+  width: var(--donations-column-status);
+
+  &:last-child {
+    width: calc(var(--donations-column-status) + var(--space-3));
+  }
+}
+
+.column-receipt {
+  width: var(--donations-column-receipt);
 }
 
 thead tr {
@@ -16,7 +37,7 @@ thead tr {
 }
 
 th {
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3);
   text-align: left;
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
@@ -32,9 +53,54 @@ tbody tr {
 }
 
 td {
-  padding: var(--space-3-5) var(--space-5);
+  padding: var(--space-3-5) var(--space-3);
   font-size: var(--text-md);
   color: var(--color-text-secondary);
+}
+
+th:first-child,
+td:first-child {
+  padding-inline-start: var(--space-6);
+}
+
+th:last-child,
+td:last-child {
+  padding-inline-end: var(--space-6);
+}
+
+td.date,
+td.amount {
+  white-space: nowrap;
+}
+
+th:last-child,
+td:last-child {
+  text-align: end;
+}
+
+td {
+  vertical-align: top;
+}
+
+td.receipt {
+  padding-block: var(--space-2);
+}
+
+td.receipt .receipt-note {
+  display: inline-block;
+  margin-top: calc(var(--space-3-5) - var(--space-2));
+}
+
+.purpose {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+}
+
+td .pairing-tag {
+  max-inline-size: 100%;
+  white-space: normal;
 }
 
 td.amount {
@@ -60,7 +126,6 @@ tr.is-verification td.amount {
 
 .pairing-tag {
   display: inline-block;
-  margin-left: var(--space-2);
   padding: var(--space-0-5) var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--color-badge-accent-bg);
@@ -72,8 +137,8 @@ tr.is-verification td.amount {
   font-variant-numeric: var(--numeric-figures);
 }
 
-.receipt-download {
-  display: contents;
+.account-end {
+  white-space: nowrap;
 }
 
 .receipt-saved {
@@ -91,6 +156,16 @@ tr.is-verification td.amount {
   font-size: var(--text-sm);
 }
 
+td .row-receipt-error,
+td .receipt-diagnostics {
+  margin-inline-start: auto;
+  text-align: start;
+}
+
+.receipt-download {
+  display: contents;
+}
+
 .receipt-note {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
@@ -106,6 +181,7 @@ tr.is-verification td.amount {
   font-size: var(--text-xs);
   cursor: pointer;
   font-family: var(--font-sans);
+  white-space: nowrap;
 
   &[aria-disabled='true'] {
     cursor: progress;
@@ -132,6 +208,8 @@ tr.is-verification td.amount {
   tbody tr {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    align-content: start;
     gap: var(--space-1-5) var(--space-3);
     padding: var(--space-3-5) var(--space-5);
 
@@ -142,12 +220,14 @@ tr.is-verification td.amount {
     }
   }
 
-  td {
+  td,
+  td:first-child,
+  td:last-child {
     padding: 0;
   }
 
   td::before {
-    content: attr(data-label);
+    content: attr(data-label) / '';
     display: block;
     font-family: var(--font-sans);
     font-size: var(--text-md);
@@ -167,14 +247,24 @@ tr.is-verification td.amount {
     color: var(--color-text);
   }
 
-  td.receipt {
-    grid-column: 1 / -1;
-    min-width: 0;
+  td.purpose-cell {
+    grid-row: span 2;
   }
 
-  .pairing-tag {
-    display: table;
-    margin: var(--space-1) 0 0;
+  td.status,
+  td.receipt {
+    grid-column: 2;
+    min-width: 0;
+    text-align: end;
+  }
+
+  .purpose {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  td.receipt .receipt-note {
+    margin-top: 0;
   }
 
   td.receipt.is-empty {
@@ -192,8 +282,45 @@ tr.is-verification td.amount {
   @include table-as-cards;
 }
 
-@include bp.container-down(donations-table, phone) {
+@include bp.container-down(donations-table, tablet) {
   @include table-as-cards;
+}
+
+@include bp.container-down(donations-table, ledger) {
+  :host(.with-receipts) {
+    @include table-as-cards;
+  }
+}
+
+@include bp.up(nav) {
+  .receipt-download {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .donation-rows .receipt-download {
+    justify-self: stretch;
+  }
+
+  .download-btn {
+    flex: none;
+  }
+
+  .receipt-download .receipt-saved {
+    max-width: 100%;
+    justify-content: flex-end;
+    text-align: end;
+
+    &.pdf-progress--idle {
+      position: absolute;
+      inline-size: 0;
+      min-inline-size: 0;
+      block-size: 0;
+      margin-top: 0;
+      overflow: hidden;
+    }
+  }
 }
 
 .donation-rows {

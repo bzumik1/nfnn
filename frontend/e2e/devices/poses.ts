@@ -24,6 +24,7 @@ export const POSES: Pose[] = [
     textScale: LARGE_TEXT,
   },
   { id: 'ipad-pro-11', device: 'iPad Pro 11', form: 'tablet' },
+  { id: 'ipad-pro-11-landscape', device: 'iPad Pro 11 landscape', form: 'tablet' },
   {
     id: 'ipad-pro-11-landscape-large-text',
     device: 'iPad Pro 11 landscape',

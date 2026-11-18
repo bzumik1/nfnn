@@ -29,6 +29,15 @@
   </ul>
 } @else {
   <table [attr.aria-labelledby]="labelledBy()">
+    <colgroup>
+      <col class="column-date" />
+      <col class="column-amount" />
+      <col />
+      <col class="column-status" />
+      @if (withReceipts()) {
+        <col class="column-receipt" />
+      }
+    </colgroup>
     <thead>
       <tr>
         <th i18n="@@donor.dashboard.payments.col.date">Datum</th>
@@ -36,7 +45,7 @@
         <th i18n="@@donor.dashboard.payments.col.purpose">Účel</th>
         <th i18n="@@donor.dashboard.payments.col.status">Stav</th>
         @if (withReceipts()) {
-          <th i18n="@@donor.dashboard.payments.col.receipt">Potvrzení</th>
+          <th class="receipt" i18n="@@donor.dashboard.payments.col.receipt">Potvrzení</th>
         }
       </tr>
     </thead>
@@ -53,11 +62,21 @@
           >
             {{ crowns(item.amountMinor) }}&nbsp;Kč
           </td>
-          <td data-label="Účel" i18n-data-label="@@donor.dashboard.payments.col.purpose">
-            {{ item.purpose }}
-            <ng-container *ngTemplateOutlet="pairingPart; context: { $implicit: item }" />
+          <td
+            class="purpose-cell"
+            data-label="Účel"
+            i18n-data-label="@@donor.dashboard.payments.col.purpose"
+          >
+            <div class="purpose">
+              <span>{{ item.purpose }}</span>
+              <ng-container *ngTemplateOutlet="pairingPart; context: { $implicit: item }" />
+            </div>
           </td>
-          <td data-label="Stav" i18n-data-label="@@donor.dashboard.payments.col.status">
+          <td
+            class="status"
+            data-label="Stav"
+            i18n-data-label="@@donor.dashboard.payments.col.status"
+          >
             <span
               class="ui-badge"
               [class.ui-badge--success]="item.status !== 'REFUNDED'"
@@ -87,7 +106,8 @@
   @if (item.pairedBy === 'SENDER_ACCOUNT' && item.senderAccount) {
     <span class="pairing-tag">
       <span aria-hidden="true" i18n="@@donor.dashboard.payments.withoutSymbol"
-        >bez symbolu · účet {{ senderAccountEnd(item.senderAccount) }}</span
+        >bez symbolu · účet
+        <span class="account-end">{{ senderAccountEnd(item.senderAccount) }}</span></span
       >
       <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByAccount"
         >Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez variabilního symbolu</span
@@ -97,7 +117,8 @@
   @if (item.pairedBy === 'CONFIRMED_SYMBOL' && item.senderAccount && item.confirmedSymbol) {
     <span class="pairing-tag">
       <span aria-hidden="true" i18n="@@donor.dashboard.payments.symbolPrefix"
-        >symbol {{ item.confirmedSymbol }} · účet {{ senderAccountEnd(item.senderAccount) }}</span
+        >symbol {{ item.confirmedSymbol }} · účet
+        <span class="account-end">{{ senderAccountEnd(item.senderAccount) }}</span></span
       >
       <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByConfirmedSymbol"
         >Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu
