@@ -19,6 +19,7 @@
 }
 
 .donor-summary {
+  container: donor-summary / inline-size;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -38,7 +39,12 @@
 
   dd {
     margin: 0;
+    overflow-wrap: break-word;
   }
+}
+
+.summary-email-label {
+  white-space: nowrap;
 }
 
 @include bp.down(nav) {
@@ -47,7 +53,7 @@
 
     div {
       display: flex;
-      align-items: center;
+      align-items: first baseline;
       gap: var(--space-2);
     }
 
@@ -62,6 +68,36 @@
       font-size: var(--text-md);
     }
   }
+
+  @include bp.container-up(donor-summary, narrow) {
+    .summary-list {
+      flex-basis: 100%;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: var(--space-2);
+
+      div {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: subgrid;
+      }
+    }
+  }
+
+  @include bp.container-down(donor-summary, pair) {
+    .summary-list {
+      flex-basis: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: var(--space-3);
+
+      div {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: var(--space-0-5);
+      }
+    }
+  }
 }
 
 @include bp.up(nav) {
@@ -72,6 +108,7 @@
 
 .summary-symbol {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
