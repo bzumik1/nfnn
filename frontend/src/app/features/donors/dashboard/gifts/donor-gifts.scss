@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .payments-card {
   margin-bottom: 0;
 }
@@ -100,5 +102,25 @@
 
   &[aria-disabled='true'] {
     opacity: 1;
+  }
+}
+
+@include bp.down(nav) {
+  .gift-year-action {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1-5) var(--space-2);
+  }
+
+  .receipt-saved {
+    flex: none;
+    flex-wrap: nowrap;
+    inline-size: var(--pdf-status-reserve);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    margin-top: 0;
+    justify-content: flex-start;
+    text-align: start;
   }
 }

@@ -85,15 +85,19 @@
     <div class="devices-inset devices-footer">
       @if (hasOthers()) {
         @if (confirmingOthers()) {
-          <div class="devices-confirm" role="group" aria-labelledby="devices-confirm-others">
+          <div
+            class="ui-confirm devices-confirm"
+            role="group"
+            aria-labelledby="devices-confirm-others"
+          >
             <p
               id="devices-confirm-others"
-              class="devices-confirm-text"
+              class="ui-confirm__text devices-confirm-text"
               i18n="@@donor.account.devices.confirmOthers"
             >
               Odhlásit všechna ostatní zařízení?
             </p>
-            <div class="devices-confirm-actions">
+            <div class="ui-confirm__actions devices-confirm-actions">
               <button
                 appNeedsConnection
                 type="button"
@@ -238,18 +242,18 @@
     </div>
     @if (confirming() === device.id) {
       <div
-        class="devices-confirm device-confirm"
+        class="ui-confirm devices-confirm device-confirm"
         role="group"
         [attr.aria-labelledby]="confirmQuestionId(device)"
       >
         <p
           [id]="confirmQuestionId(device)"
-          class="devices-confirm-text"
+          class="ui-confirm__text devices-confirm-text"
           i18n="@@donor.account.devices.confirm"
         >
           Odhlásit {{ nameInSentence(device) }}?
         </p>
-        <div class="devices-confirm-actions">
+        <div class="ui-confirm__actions devices-confirm-actions">
           <button
             appNeedsConnection
             type="button"

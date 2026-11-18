@@ -1,3 +1,5 @@
+@use 'motion';
+
 :host {
   display: flex;
   flex-wrap: wrap;
@@ -19,6 +21,10 @@
 
 :host(.pdf-progress--compact) .pdf-progress__line {
   font-size: var(--text-xs);
+}
+
+.pdf-progress__line > * {
+  @include motion.appear($rises: false);
 }
 
 .pdf-progress__line--done {

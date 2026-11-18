@@ -144,10 +144,31 @@
   text-align: right;
 }
 
+@include bp.down(nav) {
+  .receipt-ready-action {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-1-5) var(--space-2);
+  }
+
+  .receipt-saved {
+    flex: none;
+    flex-wrap: nowrap;
+    inline-size: var(--pdf-status-reserve);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    margin-top: 0;
+    justify-content: flex-start;
+    text-align: start;
+  }
+}
+
 @include bp.down(cards) {
   .receipt-ready-action {
     flex-basis: 100%;
-    justify-items: start;
+    justify-content: flex-start;
   }
 
   .receipt-saved {
