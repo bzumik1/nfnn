@@ -472,7 +472,9 @@ export class AdminPayments {
     const link = Array.from(row.querySelectorAll<HTMLElement>('a[href]')).find(
       (candidate) => candidate.getAttribute('href') === left,
     );
-    (link ?? row).focus({ preventScroll: true });
+    const target = link ?? row;
+    target.focus({ preventScroll: true });
+    target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }
 
   private leaveOnRefusal(failure: unknown): boolean {
