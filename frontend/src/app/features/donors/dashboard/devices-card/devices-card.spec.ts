@@ -298,12 +298,12 @@ describe("Given a donor's signed-in devices card", () => {
       };
 
       await ask(signOutButton(rows()[1]));
-      expectShared(rows()[1].querySelector<HTMLElement>('.devices-confirm'));
+      expectShared(rows()[1].querySelector<HTMLElement>('.devices-confirm-box'));
 
       element<HTMLButtonElement>('.devices-confirm-no').click();
       await settle();
       await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
-      expectShared(element<HTMLElement>('.devices-footer .devices-confirm'));
+      expectShared(element<HTMLElement>('.devices-footer .devices-confirm-box'));
     });
 
     it("and the donor signs out the iPhone, then the card's status line, never the button, says first that it signs out and then only the result", async () => {
