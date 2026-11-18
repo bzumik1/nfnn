@@ -7,8 +7,9 @@
 
   <div class="admin-toolbar">
     <div
-      class="admin-tabs"
+      class="ui-segmented admin-tabs"
       role="group"
+      [appSegmentThumb]="filter() === 'paired' ? 1 : 0"
       aria-label="Zobrazit"
       i18n-aria-label="@@admin.payments.filter.label"
     >
@@ -37,6 +38,7 @@
       >
         Přiřazené
       </button>
+      <span class="ui-segmented__thumb" aria-hidden="true"></span>
     </div>
   </div>
 

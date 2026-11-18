@@ -177,6 +177,7 @@ describe('Given an administrator on the bank payments page', () => {
     ]);
     expect(fixture.nativeElement.querySelector('.held-tag')?.getAttribute('title')).toBeNull();
     expect(text('.admin-tabs')).toBe('Čekají na přiřazení (2) Přiřazené');
+    expect(element('.admin-tabs > .ui-segmented__thumb').getAttribute('aria-hidden')).toBe('true');
     expect(text('#payments-title')).toBe('Platby čekající na přiřazení');
   });
 

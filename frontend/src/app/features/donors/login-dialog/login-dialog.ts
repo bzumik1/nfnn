@@ -69,7 +69,7 @@ import {
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import { CompactLayout } from '../../../core/layout/compact-layout';
-import { SegmentThumb } from './segment-thumb';
+import { SegmentThumb } from '../../../shared/ui/segment-thumb/segment-thumb';
 
 interface RegistrationFields {
   name: string;

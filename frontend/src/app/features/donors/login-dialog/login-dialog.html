@@ -20,7 +20,7 @@
   </h2>
 
   @if (atCrossroads() && !offlineAtCrossroads()) {
-    <div class="segmented tab-switch" [appSegmentThumb]="mode() === 'register' ? 1 : 0">
+    <div class="ui-segmented tab-switch" [appSegmentThumb]="mode() === 'register' ? 1 : 0">
       <button
         type="button"
         [class.is-active]="mode() === 'login'"
@@ -39,7 +39,7 @@
       >
         Registrace
       </button>
-      <span class="segment-thumb" aria-hidden="true"></span>
+      <span class="ui-segmented__thumb" aria-hidden="true"></span>
     </div>
   }
 
@@ -553,7 +553,7 @@
               Registruji se jako
             </p>
             <div
-              class="segmented type-switch"
+              class="ui-segmented type-switch"
               appRadioGroup
               aria-labelledby="register-type-label"
               [appSegmentThumb]="donorType() === 'COMPANY' ? 1 : 0"
@@ -580,7 +580,7 @@
               >
                 Firma
               </button>
-              <span class="segment-thumb" aria-hidden="true"></span>
+              <span class="ui-segmented__thumb" aria-hidden="true"></span>
             </div>
 
             @if (donorType() === 'COMPANY') {
@@ -777,7 +777,7 @@
                 zařízení, bez hesla. Když si nejste jistí, zvolte heslo.
               </p>
               <div
-                class="segmented type-switch"
+                class="ui-segmented type-switch"
                 appRadioGroup
                 aria-labelledby="register-method-label"
                 aria-describedby="register-method-hint"
@@ -805,7 +805,7 @@
                 >
                   Přístupovým klíčem
                 </button>
-                <span class="segment-thumb" aria-hidden="true"></span>
+                <span class="ui-segmented__thumb" aria-hidden="true"></span>
               </div>
             }
 

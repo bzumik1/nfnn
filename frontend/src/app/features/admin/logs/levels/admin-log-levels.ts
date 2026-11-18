@@ -25,6 +25,7 @@ import { formatBankTime } from '../../../donations/donation-date';
 import { AdminApi, LogLevel, LoggerResponse } from '../../admin-api';
 import { LogPageAccess } from '../log-page-access';
 import { canTrace, loggerDescription, remainingText } from './level-texts';
+import { SegmentThumb } from '../../../../shared/ui/segment-thumb/segment-thumb';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -56,6 +57,7 @@ const LOGGER_NAME = /^(ROOT|[A-Za-z0-9_$][A-Za-z0-9_$.]*)$/;
     LiveNotice,
     NeedsConnection,
     RadioGroup,
+    SegmentThumb,
   ],
   templateUrl: './admin-log-levels.html',
   styleUrl: './admin-log-levels.scss',

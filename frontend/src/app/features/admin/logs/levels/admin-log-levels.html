@@ -245,7 +245,12 @@
       >
         Na jak dlouho
       </h3>
-      <div class="ui-segmented" appRadioGroup aria-labelledby="level-duration-title">
+      <div
+        class="ui-segmented"
+        appRadioGroup
+        aria-labelledby="level-duration-title"
+        [appSegmentThumb]="durations.indexOf(duration())"
+      >
         @for (option of durations; track option.minutes) {
           <button
             type="button"
@@ -258,6 +263,7 @@
             {{ option.label }}
           </button>
         }
+        <span class="ui-segmented__thumb" aria-hidden="true"></span>
       </div>
 
       @if (sheetError() !== '') {

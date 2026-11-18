@@ -1828,10 +1828,10 @@ describe('Given the sign-in dialog', () => {
     it('then each segmented choice has one thumb under its buttons that assistive technology skips, and the buttons keep their states', async () => {
       await render('register');
 
-      const choices = [...fixture.nativeElement.querySelectorAll('.segmented')] as HTMLElement[];
+      const choices = [...fixture.nativeElement.querySelectorAll('.ui-segmented')] as HTMLElement[];
       expect(choices.length).toBeGreaterThan(1);
       for (const choice of choices) {
-        const thumbs = choice.querySelectorAll(':scope > .segment-thumb');
+        const thumbs = choice.querySelectorAll(':scope > .ui-segmented__thumb');
         expect(thumbs.length).toBe(1);
         expect(thumbs[0].getAttribute('aria-hidden')).toBe('true');
       }

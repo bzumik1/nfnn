@@ -8,27 +8,30 @@ import {
   input,
 } from '@angular/core';
 
-const THUMB_RESTS = 'segmented--thumb';
-const THUMB_GLIDES = 'segmented--thumb-glides';
+const THUMB_RESTS = 'ui-segmented--thumb';
+const THUMB_GLIDES = 'ui-segmented--thumb-glides';
 
 export function restThumbOn(group: HTMLElement, thumb: HTMLElement, selected: number): boolean {
-  const segments = [...group.querySelectorAll<HTMLElement>(':scope > button')];
-  const first = segments[0];
-  const segment = segments[selected];
-  if (first === undefined || segment === undefined || segment.offsetWidth === 0) {
+  const boxes = [...group.querySelectorAll<HTMLElement>(':scope > button')].map((each) =>
+    each.getBoundingClientRect(),
+  );
+  const first = boxes[0];
+  const segment = boxes[selected];
+  const choice = group.getBoundingClientRect();
+  if (first === undefined || segment === undefined || segment.width === 0 || choice.width === 0) {
     return false;
   }
-  if (segments.some((each) => each.offsetTop !== first.offsetTop)) {
+  if (boxes.some((each) => Math.abs(each.top - first.top) >= 1)) {
     return false;
   }
-  const shift = ((segment.offsetLeft - first.offsetLeft) / segment.offsetWidth) * 100;
-  thumb.style.width = `${segment.offsetWidth}px`;
+  const shift = ((segment.left - first.left) / segment.width) * 100;
+  thumb.style.width = `${(segment.width / choice.width) * 100}%`;
   thumb.style.translate = `${shift}% 0`;
   return true;
 }
 
 export function placeThumb(group: HTMLElement, selected: number, glides: boolean): void {
-  const thumb = group.querySelector<HTMLElement>(':scope > .segment-thumb');
+  const thumb = group.querySelector<HTMLElement>(':scope > .ui-segmented__thumb');
   if (thumb === null) {
     return;
   }

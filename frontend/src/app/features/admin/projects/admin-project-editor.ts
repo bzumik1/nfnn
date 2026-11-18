@@ -76,6 +76,7 @@ import {
   DRAFT_RESUMED_TEXT,
   DraftOffer,
 } from '../../../shared/ui/draft-offer/draft-offer';
+import { SegmentThumb } from '../../../shared/ui/segment-thumb/segment-thumb';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type EditorMode = 'edit' | 'preview';
@@ -123,6 +124,7 @@ const PUBLISH_DATE_MOVED_TEXT = $localize`:@@admin.projectEditor.draft.dateMoved
     FocalPointPicker,
     NeedsConnection,
     DraftOffer,
+    SegmentThumb,
   ],
   templateUrl: './admin-project-editor.html',
   styleUrl: './admin-project-editor.scss',
