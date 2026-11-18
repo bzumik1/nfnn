@@ -438,6 +438,23 @@ export function collectFindings(limits: typeof LIMITS): Findings {
       if (outside) {
         tabLabels.push(`${words} reaches past the bar's side`);
       }
+      const current = label.closest('a[aria-current]');
+      if (current && boxes.length > 0) {
+        const restingPill = tabBar.querySelector('.tab-bar-pill');
+        const pill = (
+          restingPill && shown(restingPill) ? restingPill : current
+        ).getBoundingClientRect();
+        const spills = boxes.some(
+          (box) =>
+            box.left < pill.left - 1 ||
+            box.right > pill.right + 1 ||
+            box.top < pill.top - 1 ||
+            box.bottom > pill.bottom + 1,
+        );
+        if (spills) {
+          tabLabels.push(`${words} of the current tab spills out of its pill`);
+        }
+      }
     }
   }
 

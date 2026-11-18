@@ -380,9 +380,20 @@ test.describe('Given a page checked as on a phone', () => {
     expect(
       await failingChecks(
         page,
-        '<nav id="navigace" style="position: fixed; bottom: 16px; left: 20px; right: 20px; display: flex"><a href="#" style="height: 44px; flex: 1"><span class="tab-label">O nás</span></a><a href="#" style="height: 44px; flex: 1"><span class="tab-label">Přispět</span></a></nav>',
+        '<nav id="navigace" style="position: fixed; bottom: 16px; left: 20px; right: 20px; display: flex"><a href="#" style="height: 44px; flex: 1"><span class="tab-label">O nás</span></a><a href="#" aria-current="page" style="height: 44px; flex: 1"><span class="tab-label">Přispět</span></a></nav>',
       ),
     ).toEqual([]);
+  });
+
+  test('when the label of the current tab spills out of its pill, then the label check fails', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<nav id="navigace" style="position: fixed; bottom: 16px; left: 20px; right: 20px; display: flex; justify-content: space-around"><a href="#" style="height: 44px; width: 44px"><span class="tab-label">O nás</span></a><a href="#" aria-current="page" style="display: flex; justify-content: center; height: 44px; width: 44px"><span class="tab-label" style="white-space: nowrap">Aktuality a příběhy</span></a></nav>',
+      ),
+    ).toEqual(['every tab label on one line inside the tab bar']);
   });
 
   test('when a tab label breaks onto two lines, then the label check fails', async ({ page }) => {
