@@ -11,10 +11,14 @@
 
 .busy-label__face {
   grid-area: 1 / 1;
+  block-size: 0;
+  overflow-wrap: anywhere;
   opacity: 0;
   @include motion.state(opacity);
 }
 
 .busy-label__face--shown {
+  block-size: auto;
+  overflow-wrap: normal;
   opacity: 1;
 }
