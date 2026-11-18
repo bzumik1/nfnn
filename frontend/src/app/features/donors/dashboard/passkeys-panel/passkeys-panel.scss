@@ -112,15 +112,11 @@
   flex: 1 1 100%;
   font-size: var(--text-sm);
   color: var(--color-text);
-  @include motion.expand;
+  @include motion.expand($closes-by: class);
 
   p {
     margin-bottom: var(--space-2);
   }
-}
-
-.passkey-confirm--closing {
-  @include motion.collapse;
 }
 
 .passkeys-buttons {

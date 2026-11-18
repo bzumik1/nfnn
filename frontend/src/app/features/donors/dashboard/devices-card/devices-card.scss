@@ -33,11 +33,7 @@
 }
 
 .devices-older {
-  @include motion.expand;
-}
-
-.devices-older--closing {
-  @include motion.collapse;
+  @include motion.expand($closes-by: class);
 }
 
 .device-slot--leaving {
@@ -74,11 +70,7 @@
 }
 
 .devices-confirm {
-  @include motion.expand;
-}
-
-.devices-confirm--closing {
-  @include motion.collapse;
+  @include motion.expand($closes-by: class);
 }
 
 .devices-confirm-box {

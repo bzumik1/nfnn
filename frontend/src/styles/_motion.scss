@@ -248,7 +248,7 @@ $_pressed: (--pressed-tint, filter);
   }
 }
 
-@mixin expand {
+@mixin expand($closes-by: hidden) {
   display: grid;
   grid-template-rows: 1fr;
   transition:
@@ -262,9 +262,17 @@ $_pressed: (--pressed-tint, filter);
     transition: overflow var(--duration-base) step-end allow-discrete;
   }
 
-  &[hidden] {
-    display: none;
-    @include _closed;
+  @if $closes-by == hidden {
+    &[hidden] {
+      display: none;
+      @include _closed;
+    }
+  } @else if $closes-by == class {
+    &--closing {
+      @include _closed;
+    }
+  } @else {
+    @error 'motion.expand closes by hidden or by its --closing class, not #{$closes-by}';
   }
 
   @starting-style {
@@ -280,10 +288,6 @@ $_pressed: (--pressed-tint, filter);
       transition: none !important;
     }
   }
-}
-
-@mixin collapse {
-  @include _closed;
 }
 
 @mixin expand-content-leave {

@@ -248,11 +248,7 @@
 }
 
 .account-confirm {
-  @include motion.expand;
-}
-
-.account-confirm--closing {
-  @include motion.collapse;
+  @include motion.expand($closes-by: class);
 }
 
 .account-confirm-box {
@@ -440,18 +436,18 @@
   stroke-width: 3;
 }
 
-.watch-arc {
+.watch-arc,
+.watch-hands {
   fill: none;
   stroke: var(--color-accent);
   stroke-width: 3;
   stroke-linecap: round;
+}
+
+.watch-arc {
   stroke-dasharray: 20 62;
   transform-origin: center;
   @include motion.spin;
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
 }
 
 .watch-spinner {
@@ -459,10 +455,6 @@
 }
 
 .watch-hands {
-  fill: none;
-  stroke: var(--color-accent);
-  stroke-width: 3;
-  stroke-linecap: round;
   stroke-linejoin: round;
   @include motion.wait-calm;
 }
