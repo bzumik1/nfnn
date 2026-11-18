@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ScrollHold } from '../../../core/navigation/scroll-hold';
 import { Reveal } from './reveal';
 
 type Sighting = (
@@ -78,9 +79,16 @@ describe('Given a block of a public page that reveals itself', () => {
     });
   }
 
-  async function renderWithTopAt(top: number, order = 0): Promise<ComponentFixture<RevealHost>> {
+  async function renderWithTopAt(
+    top: number,
+    order = 0,
+    { scrollHeld = false }: { scrollHeld?: boolean } = {},
+  ): Promise<ComponentFixture<RevealHost>> {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(rectAt(top));
     await TestBed.configureTestingModule({ imports: [RevealHost] }).compileComponents();
+    if (scrollHeld) {
+      TestBed.inject(ScrollHold).hold();
+    }
     const fixture = TestBed.createComponent(RevealHost);
     fixture.componentInstance.order.set(order);
     fixture.detectChanges();
@@ -258,6 +266,55 @@ describe('Given a block of a public page that reveals itself', () => {
       const fixture = await renderWithTopAt(VIEWPORT_HEIGHT + 200, 9);
 
       expect(block(fixture).style.getPropertyValue('--reveal-order')).toBe('6');
+    });
+  });
+
+  describe('when the page fade holds the scroll of the page before', () => {
+    async function letScrollGo(fixture: ComponentFixture<RevealHost>, top: number): Promise<void> {
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(rectAt(top));
+      TestBed.inject(ScrollHold).release();
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+
+    it('then it neither shows nor hides itself until the scroll is let go', async () => {
+      allowMotion();
+
+      const fixture = await renderWithTopAt(300, 0, { scrollHeld: true });
+
+      expect(standsStill(fixture)).toBe(true);
+      expect(FakeIntersectionObserver.all).toEqual([]);
+      expect(fixture.componentInstance.revealed()).toBe(0);
+    });
+
+    it('then a block below the screen where the new page stands waits hidden', async () => {
+      allowMotion();
+      const fixture = await renderWithTopAt(300, 0, { scrollHeld: true });
+
+      await letScrollGo(fixture, VIEWPORT_HEIGHT + 200);
+
+      expect(waits(fixture)).toBe(true);
+      expect(fixture.componentInstance.revealed()).toBe(0);
+    });
+
+    it('then a block on the screen where the new page stands tells the page it is shown', async () => {
+      allowMotion();
+      const fixture = await renderWithTopAt(-2000, 0, { scrollHeld: true });
+
+      await letScrollGo(fixture, 300);
+
+      expect(standsStill(fixture)).toBe(true);
+      expect(fixture.componentInstance.revealed()).toBe(1);
+    });
+
+    it('then leaving the page before the scroll is let go never watches it', async () => {
+      allowMotion();
+      const fixture = await renderWithTopAt(300, 0, { scrollHeld: true });
+      fixture.destroy();
+
+      TestBed.inject(ScrollHold).release();
+
+      expect(FakeIntersectionObserver.all).toEqual([]);
     });
   });
 
