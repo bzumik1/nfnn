@@ -3,6 +3,8 @@
 import { Type } from '@angular/core';
 import { Routes } from '@angular/router';
 
+import { DIALOG_PRESENTATION } from '../../shared/ui/dialog/dialog-presentation';
+
 export const DONOR_SECTION_PAGES: Readonly<Record<string, () => Promise<Type<unknown>>>> = {
   '/darce/prehled': () =>
     import('./dashboard/overview/donor-overview').then((m) => m.DonorOverview),
@@ -18,6 +20,7 @@ export const donorsRoutes: Routes = [
   {
     path: '',
     loadComponent: () => import('./dashboard/donor-area').then((m) => m.DonorArea),
+    providers: [{ provide: DIALOG_PRESENTATION, useValue: 'sheet' }],
     children: [
       {
         path: 'prehled',

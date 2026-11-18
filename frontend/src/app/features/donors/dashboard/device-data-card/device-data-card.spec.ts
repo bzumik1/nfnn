@@ -243,6 +243,33 @@ describe('Given the card "Data v tomto zařízení"', () => {
       expect(vault.forget).not.toHaveBeenCalled();
     });
 
+    it('then the dialog is an alert whose buttons stand in the action row, the less destructive one asking for the focus', () => {
+      const dialog = document.querySelector('dialog')!;
+
+      expect(dialog.getAttribute('role')).toBe('alertdialog');
+      expect(
+        normalized(document.getElementById(dialog.getAttribute('aria-describedby')!)?.textContent),
+      ).toBe(
+        'Kopie vašich darů, potvrzení a bankovních účtů se z tohoto zařízení smaže a odhlásíme vás. Na serveru zůstane vše, jak je; po dalším přihlášení se kopie stáhne znovu.',
+      );
+      expect(
+        [...dialog.querySelectorAll('.ui-dialog__actions button')].map((action) =>
+          normalized(action.textContent),
+        ),
+      ).toEqual(['Smazat data a odhlásit', 'Zrušit']);
+      expect(button('Zrušit').hasAttribute('autofocus')).toBe(true);
+    });
+
+    it('then no one-letter word of its title and lead ends a line, as Czech typography asks', () => {
+      const dialog = document.querySelector('dialog')!;
+      const lead = dialog.querySelector('.ui-dialog__lead')?.textContent ?? '';
+
+      expect(dialog.querySelector('h2')?.textContent).toContain('z\u00a0tohoto');
+      expect(lead).toContain('a\u00a0bankovních');
+      expect(lead).toContain('z\u00a0tohoto');
+      expect(lead).toContain('a\u00a0odhlásíme');
+    });
+
     it('and cancels, then nothing is deleted and the dialog closes', async () => {
       button('Zrušit').click();
       await settle();
@@ -293,6 +320,9 @@ describe('Given the card "Data v tomto zařízení"', () => {
         ).toBe(
           'Data z tohoto zařízení se nepodařilo smazat. Zkuste to prosím znovu. Když to nepůjde, smažte data webu nfnn.cz v nastavení prohlížeče.',
         ),
+      );
+      expect(document.querySelector('dialog [role="alert"]')?.textContent).toContain(
+        'Data z\u00a0tohoto zařízení',
       );
       expect(logout).not.toHaveBeenCalled();
       expect(TestBed.inject(SignedOutNotice).shown()).toBe(false);

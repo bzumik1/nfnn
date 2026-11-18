@@ -2,6 +2,7 @@
 
 :host {
   display: block;
+  container: account-card / inline-size;
 }
 
 .ui-card__title {
@@ -25,7 +26,7 @@
     padding-top: 0;
   }
 
-  @include bp.down(tablet) {
+  @include bp.container-down(account-card, cards) {
     grid-template-columns: minmax(0, 1fr) auto;
 
     .account-value {
@@ -50,7 +51,7 @@
   color: var(--color-text-soft);
   overflow-wrap: anywhere;
 
-  @include bp.down(tablet) {
+  @include bp.container-down(account-card, cards) {
     padding-top: 0;
   }
 }

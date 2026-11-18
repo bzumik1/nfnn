@@ -298,6 +298,50 @@ describe('Given the colours a theme sets for the light and the dark appearance',
     );
   });
 
+  it('when the shade at the bottom edge of a long dialog is so strong that muted text there is hard to read, then its contrast is reported over the panel', () => {
+    const strong = NOVA_NADEJE.replace(
+      '  --scroll-shade-amount: 14%;',
+      '  --scroll-shade-amount: 70%;',
+    );
+
+    assert.notEqual(strong, NOVA_NADEJE);
+    assert.match(
+      appearanceProblems('strong', strong).join('\n'),
+      /^theme strong in the light appearance: --color-text-muted on the --scroll-shade-amount \(70 %\) shade of --color-text over --color-surface-elevated is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when the shade is strong only for more contrast, then it is reported in that block alone', () => {
+    const strongForContrast = NOVA_NADEJE.replace(
+      '    --scroll-shade-amount: 30%;',
+      '    --scroll-shade-amount: 90%;',
+    );
+
+    assert.notEqual(strongForContrast, NOVA_NADEJE);
+    const problems = appearanceProblems('contrast', strongForContrast).join('\n');
+    assert.match(
+      problems,
+      /^theme contrast in the light appearance with more contrast: --color-text-muted on the --scroll-shade-amount \(90 %\) shade of --color-text over --color-surface-elevated is [0-9.]+:1, below 4.5:1$/m,
+    );
+    assert.doesNotMatch(
+      problems,
+      /^theme contrast in the light appearance: .*scroll-shade-amount/m,
+    );
+  });
+
+  it('when the strength of the shade is not a percentage, then it is reported, because its contrast cannot be measured', () => {
+    const named = NOVA_NADEJE.replace(
+      '  --scroll-shade-amount: 14%;',
+      '  --scroll-shade-amount: #eeeeee;',
+    );
+
+    assert.ok(
+      appearanceProblems('named', named).includes(
+        'theme named in the light appearance: --scroll-shade-amount is #eeeeee, not a percentage of the text colour',
+      ),
+    );
+  });
+
   it('when a ground is a translucent mix, then it is laid over the page before the text on it is measured', () => {
     const translucent = NOVA_NADEJE.replace(
       '  --color-accent-soft: #162a4d;',

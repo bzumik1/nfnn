@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures';
 import { bankAccountItem, mockDonorApi, openDonorSection, signIn } from './donor-session';
+import { expectActionInSightOrCuedBelow } from './dialog-edge';
 
 const newAccount = bankAccountItem({
   id: '0192f0c4-0000-7000-8000-000000000002',
@@ -9,6 +10,22 @@ const newAccount = bankAccountItem({
 });
 
 test.describe('Given a signed-in donor adding a bank account', () => {
+  test('when the dialog opens in a window of 1280 by 900, then its close button is in sight or the edge of the dialog shows there is more below', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await signIn(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openDonorSection(page, 'Bankovní účty');
+
+    await page.getByRole('button', { name: 'Přidat účet' }).click();
+
+    const dialog = page.getByRole('dialog');
+    const close = dialog.locator('.add-account-close');
+    await expect(close).toBeAttached();
+    await expectActionInSightOrCuedBelow(dialog.locator('.dialog-panel'), close);
+  });
+
   test('when the verification payment arrives while the dialog is open, then the waiting turns into a tick that replaces the payment details and takes the focus', async ({
     page,
   }) => {

@@ -612,10 +612,25 @@ describe('Given a sheet whose content the visitor pulls with a finger', () => {
     fixture.detectChanges();
 
     expect(panel().inert).toBe(true);
-    expect(panel().style.translate).toBe('0 100%');
+    expect(fixture.nativeElement.querySelector('dialog').classList).toContain('dialog--leaving');
+    expect(panel().style.translate).toBe('');
     expect(panel().classList).not.toContain('dialog-panel--dragging');
     await settle();
     expect(fixture.componentInstance.dismissals).toBe(1);
+  });
+
+  describe('when the theme gives the sheet its duration', () => {
+    beforeEach(() => document.documentElement.style.setProperty('--duration-sheet', '0.3s'));
+    afterEach(() => document.documentElement.style.removeProperty('--duration-sheet'));
+
+    it('and the finger flicks the sheet down, then it slides the rest of the way to the bottom edge from the speed of the finger', async () => {
+      panel().getBoundingClientRect = () => ({ top: 100, height: 400 }) as DOMRect;
+      await pull(150);
+      touch('touchend', text(), [], 45);
+      fixture.detectChanges();
+
+      expect(panel().style.transitionTimingFunction).toBe('cubic-bezier(0.25, 0.168, 0.25, 1)');
+    });
   });
 
   it('when the finger lets go after a short way, then the sheet returns and stays open', async () => {
@@ -745,7 +760,7 @@ describe('Given a sheet on a phone that the visitor closes', () => {
   const expectSliding = (): void => {
     expect(native()?.open).toBe(true);
     expect(native()?.classList).toContain('dialog--leaving');
-    expect(panel().style.translate).toBe('0 100%');
+    expect(panel().style.translate).toBe('');
     expect(panel().inert).toBe(true);
     expect(host().dismissals).toBe(0);
   };
@@ -859,6 +874,135 @@ describe('Given a sheet on a phone that the visitor closes', () => {
 
   it('when the visitor asks for less motion, then it asks to be dismissed at once without sliding', () => {
     deviceAsksForLessMotion(true);
+
+    closeButton().click();
+
+    expect(host().dismissals).toBe(1);
+  });
+});
+
+describe('Given a dialog that the visitor closes', () => {
+  let fixture: ComponentFixture<PresentedHost>;
+  let history: FakeDialogHistory;
+  const compact = signal(false);
+
+  const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement | null;
+  const panel = () => fixture.nativeElement.querySelector('.dialog-panel') as HTMLElement;
+  const closeButton = () => panel().querySelector('.dialog-close') as HTMLButtonElement;
+  const host = () => fixture.componentInstance;
+  const settle = async (): Promise<void> => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+  const open = async (presentation: DialogPresentation, onPhone = false): Promise<void> => {
+    compact.set(onPhone);
+    host().presentation.set(presentation);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [PresentedHost],
+      providers: [
+        { provide: DialogHistory, useClass: FakeDialogHistory },
+        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+      ],
+    });
+    history = TestBed.inject(DialogHistory) as unknown as FakeDialogHistory;
+    deviceAsksForLessMotion(false);
+    fixture = TestBed.createComponent(PresentedHost);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    window.matchMedia = realMatchMedia;
+    fixture.nativeElement.remove();
+  });
+
+  describe('when it floats on a wide screen', () => {
+    beforeEach(() => open('centered'));
+
+    it('and the close button is pressed, then it leaves inert with the focus on itself and asks to be dismissed only once it has gone', async () => {
+      closeButton().click();
+      fixture.detectChanges();
+
+      expect(native()?.open).toBe(true);
+      expect(native()?.classList).toContain('dialog--leaving');
+      expect(panel().inert).toBe(true);
+      expect(document.activeElement).toBe(native());
+      expect(host().dismissals).toBe(0);
+      await settle();
+      expect(host().dismissals).toBe(1);
+      expect(native()).toBeNull();
+    });
+
+    it('and its fade never ends, then it asks to be dismissed at the latest 0.3 s after its duration', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      native()!.style.transitionDuration = '0.2s';
+      native()!.getAnimations = () =>
+        [{ transitionProperty: 'opacity', finished: new Promise(() => undefined) }] as never;
+
+      closeButton().click();
+      fixture.detectChanges();
+      vi.advanceTimersByTime(499);
+      expect(host().dismissals).toBe(0);
+      vi.advanceTimersByTime(1);
+
+      expect(host().dismissals).toBe(1);
+    });
+
+    it('and the visitor goes back while it leaves, then it asks to be dismissed once and for no new history entry', async () => {
+      closeButton().click();
+      fixture.detectChanges();
+      history.listener?.close();
+      await settle();
+
+      expect(host().dismissals).toBe(1);
+      expect(history.opened).toBe(1);
+    });
+
+    it('and Esc is pressed twice, then the first starts its leaving and the second lets the browser end it at once', () => {
+      const first = new Event('cancel', { cancelable: true });
+      native()!.dispatchEvent(first);
+      fixture.detectChanges();
+      const second = new Event('cancel', { cancelable: true });
+      native()!.dispatchEvent(second);
+      native()!.close();
+      native()!.dispatchEvent(new Event('close'));
+
+      expect(first.defaultPrevented).toBe(true);
+      expect(second.defaultPrevented).toBe(false);
+      expect(host().dismissals).toBe(1);
+    });
+
+    it('and the page keeps it open after it left, then it is open again and can be pressed', async () => {
+      host().busy.set(true);
+
+      closeButton().click();
+      await settle();
+
+      expect(host().dismissals).toBe(1);
+      expect(native()?.open).toBe(true);
+      expect(native()?.classList).not.toContain('dialog--leaving');
+      expect(panel().inert).toBe(false);
+    });
+
+    it('and the visitor asks for less motion, then it asks to be dismissed at once', () => {
+      deviceAsksForLessMotion(true);
+
+      closeButton().click();
+
+      expect(host().dismissals).toBe(1);
+    });
+  });
+
+  it('when it fills the screen of a phone, then it asks to be dismissed at once', async () => {
+    await open('full', true);
 
     closeButton().click();
 

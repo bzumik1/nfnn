@@ -68,6 +68,54 @@ describe('Given a sheet that the visitor drags by its top edge', () => {
   });
 });
 
+describe('Given a sheet that the finger lets go of', () => {
+  let drag: SheetDrag;
+
+  beforeEach(() => {
+    drag = new SheetDrag();
+    drag.start(100, 0);
+  });
+
+  it('when the finger flicks it away, then it leaves on a curve that starts at the speed of the finger', () => {
+    drag.move(120, 1000);
+    drag.move(150, 1040);
+    drag.end(400, 1050);
+
+    expect(drag.settleEasing(300, 300)).toBe('cubic-bezier(0.25, 0.188, 0.25, 1)');
+  });
+
+  it('when the finger heads back up as it lets go, then the sheet returns on a curve that starts at the speed of the finger', () => {
+    drag.move(250, 1000);
+    drag.move(240, 1040);
+    drag.end(400, 1050);
+
+    expect(drag.settleEasing(140, 300)).toBe('cubic-bezier(0.25, 0.134, 0.25, 1)');
+  });
+
+  it('when the finger rested before letting go, then the sheet keeps its own curve', () => {
+    drag.move(220, 1000);
+    drag.end(400, 1300);
+
+    expect(drag.settleEasing(180, 300)).toBeNull();
+  });
+
+  it('when the finger still moves down as the sheet returns, then the sheet keeps its own curve', () => {
+    drag.move(130, 1000);
+    drag.move(140, 1040);
+    drag.end(400, 1050);
+
+    expect(drag.settleEasing(40, 300)).toBeNull();
+  });
+
+  it('when the sheet has no way left to go, then it keeps its own curve', () => {
+    drag.move(120, 1000);
+    drag.move(150, 1040);
+    drag.end(400, 1050);
+
+    expect(drag.settleEasing(0, 300)).toBeNull();
+  });
+});
+
 describe('Given a sheet that the visitor drags while letting go', () => {
   let drag: SheetDrag;
 
