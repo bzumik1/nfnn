@@ -346,11 +346,13 @@ test.describe('Given an administrator on the alerts page without a service worke
     await servePush(page, pushView());
     await page.goto('/sprava/upozorneni');
     const device = page.getByRole('region', { name: 'Toto zařízení' });
-    await expect(device).toContainText('Pokud zpráva nezmizí, prohlížeč ji nejspíš nepovoluje');
+    const footer = device.locator('.device-retry');
+    await expect(footer).toContainText('Pokud zpráva nezmizí, prohlížeč ji nejspíš nepovoluje');
+    await expect(footer.getByRole('button', { name: 'Zkusit znovu' })).toBeVisible();
     await page.evaluate(() => Object.assign(window, { e2eBeforeReload: true }));
 
     const reloaded = page.waitForEvent('load');
-    await device.getByRole('button', { name: 'Zkusit znovu' }).click();
+    await footer.getByRole('button', { name: 'Zkusit znovu' }).click();
     await reloaded;
 
     await expect.poll(() => page.evaluate(() => 'e2eBeforeReload' in window)).toBe(false);

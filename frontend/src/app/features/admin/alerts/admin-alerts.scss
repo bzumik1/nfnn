@@ -33,5 +33,6 @@
 }
 
 .device-retry > .ui-button {
+  margin-top: var(--space-3);
   @include touch-target.reaches-finger-size;
 }

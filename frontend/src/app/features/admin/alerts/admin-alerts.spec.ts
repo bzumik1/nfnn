@@ -797,6 +797,13 @@ describe('Given an administrator on the alerts page', () => {
       expect(sectionText('Toto zařízení')).not.toContain('Načtěte stránku znovu');
     });
 
+    it('then the button to try again sits with the sentence in the footer of the device card', () => {
+      const footer = section('Toto zařízení').querySelector('.ui-card__footer.device-retry');
+
+      expect(footer?.textContent).toContain('Prohlížeč zatím nespustil část webu');
+      expect(footer?.querySelector('button')?.textContent?.trim()).toBe('Zkusit znovu');
+    });
+
     it('then trying again loads the page again and asks for the focus on the device heading after it', () => {
       button('Zkusit znovu').click();
 
