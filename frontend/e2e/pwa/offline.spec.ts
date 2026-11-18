@@ -67,6 +67,39 @@ test.describe('Given a visitor who opened the site once with a connection', () =
     });
   });
 
+  test.describe('when the app starts without a connection and the page never had an idle moment to fetch the offline sheet', () => {
+    test.use({ allowedConsoleErrors: [OFFLINE_REQUESTS] });
+
+    test('then pressing the offline label opens the sheet from what the service worker keeps', async ({
+      page,
+      goOffline,
+    }) => {
+      await page.addInitScript(() =>
+        Object.defineProperty(window, 'requestIdleCallback', { value: () => 0 }),
+      );
+      const chunks: { readonly path: string; readonly fromServiceWorker: boolean }[] = [];
+      page.on('response', (response) => {
+        const path = new URL(response.url()).pathname;
+        if (/^\/chunk-[\w-]+\.js$/.test(path)) {
+          chunks.push({ path, fromServiceWorker: response.fromServiceWorker() });
+        }
+      });
+      await goOffline();
+      await page.reload();
+      const label = page.getByRole('button', { name: /^Offline/ });
+      await expect(label).toBeVisible(SETTLED_OFFLINE);
+      const beforePress = chunks.length;
+
+      await label.click();
+
+      const sheet = page.getByRole('dialog', { name: 'Jste offline' });
+      await expect(sheet).toBeVisible();
+      await expect(sheet.getByRole('button', { name: 'Zkusit znovu' })).toBeVisible();
+      expect(chunks.length, 'the sheet came only with the press').toBeGreaterThan(beforePress);
+      expect(chunks.filter((chunk) => !chunk.fromServiceWorker)).toEqual([]);
+    });
+  });
+
   test.describe('when the server answers every API call with 522 and the visitor opens the site again', () => {
     test.use({ allowedConsoleErrors: [APP_API_DOWN] });
 
