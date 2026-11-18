@@ -9,6 +9,12 @@
   overflow-wrap: anywhere;
 }
 
+@include bp.container-down(dialog-panel, tabs) {
+  .ui-dialog__title {
+    font-size: var(--text-xl);
+  }
+}
+
 .ui-dialog__lead {
   font-size: var(--text-lg);
   line-height: var(--leading-normal);

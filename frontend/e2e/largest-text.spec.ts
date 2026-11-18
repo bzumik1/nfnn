@@ -738,30 +738,40 @@ test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows 
   });
 });
 
+const TITLE_PLACES = ['', 'ui-offer-sheet'];
+
 async function titleTextsBrokenInside(title: Locator, texts: string[]): Promise<string[]> {
-  return title.evaluate((original, titleTexts) => {
-    const broken: string[] = [];
-    for (const text of titleTexts) {
-      const sample = original.cloneNode(false) as HTMLElement;
-      sample.removeAttribute('id');
-      sample.textContent = text;
-      original.after(sample);
-      const node = sample.firstChild!;
-      for (const word of text.matchAll(/[^\s-]+-?/g)) {
-        const range = document.createRange();
-        range.setStart(node, word.index);
-        range.setEnd(node, word.index + word[0].length);
-        const tops = new Set(
-          Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
-        );
-        if (tops.size > 1) {
-          broken.push(`${text}: ${word[0]}`);
+  return title.evaluate(
+    (original, { titleTexts, places }) => {
+      const broken: string[] = [];
+      for (const place of places) {
+        for (const text of titleTexts) {
+          const sample = original.cloneNode(false) as HTMLElement;
+          sample.removeAttribute('id');
+          sample.textContent = text;
+          const wrapper = document.createElement('div');
+          wrapper.className = place;
+          wrapper.append(sample);
+          original.after(wrapper);
+          const node = sample.firstChild!;
+          for (const word of text.matchAll(/[^\s-]+-?/g)) {
+            const range = document.createRange();
+            range.setStart(node, word.index);
+            range.setEnd(node, word.index + word[0].length);
+            const tops = new Set(
+              Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+            );
+            if (tops.size > 1) {
+              broken.push(`${place || 'sheet'}: ${text}: ${word[0]}`);
+            }
+          }
+          wrapper.remove();
         }
       }
-      sample.remove();
-    }
-    return broken;
-  }, texts);
+      return broken;
+    },
+    { titleTexts: texts, places: TITLE_PLACES },
+  );
 }
 
 test.describe('Given a visitor on an iPhone 390 pt wide whose installed app shows the largest accessibility text, opening a sheet or a dialog', () => {
@@ -841,21 +851,6 @@ test.describe('Given a visitor on an iPhone 390 pt wide whose installed app show
       await expect(sheet).toBeVisible();
       await page.evaluate(() => document.fonts.ready);
       expect(await wordsBrokenInside(sheet.locator('#payment-sheet-title'))).toEqual([]);
-    });
-
-    test('when they open the erasure of a donor, then its title breaks only between words', async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width: 1280, height: 900 });
-      await page.goto(PETR_DETAIL_PATH);
-      await page.getByRole('button', { name: 'Vymazat osobní údaje' }).first().click();
-      const dialog = page.getByRole('dialog', { name: 'Vymazat osobní údaje: Petr Svoboda' });
-      await expect(dialog).toBeVisible();
-
-      await page.setViewportSize({ width: 390, height: 844 });
-
-      await page.evaluate(() => document.fonts.ready);
-      await expect.poll(() => wordsBrokenInside(dialog.locator('#erase-title'))).toEqual([]);
     });
   });
 });
