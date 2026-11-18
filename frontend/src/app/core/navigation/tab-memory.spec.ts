@@ -354,6 +354,7 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
   let harness: RouterTestingHarness;
   let scrolledTo: number[];
   let grown: (() => void) | null;
+  let placed: HTMLElement[];
 
   function scrolledBy(top: number): void {
     Object.defineProperty(window, 'scrollY', { value: top, configurable: true });
@@ -366,12 +367,24 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     });
   }
 
+  function grows(height: number): void {
+    pageHeight(height);
+    grown?.();
+  }
+
+  function farthestPlace(): number {
+    return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  }
+
   beforeEach(async () => {
     scrolledTo = [];
     grown = null;
+    placed = [];
     vi.spyOn(window, 'scrollTo').mockImplementation((options?: ScrollToOptions | number) => {
       if (typeof options === 'object') {
-        scrolledTo.push(options.top ?? 0);
+        const top = Math.min(options.top ?? 0, farthestPlace());
+        scrolledBy(top);
+        scrolledTo.push(top);
       }
     });
     vi.stubGlobal(
@@ -405,21 +418,23 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     routerScrollerOf(scrolling).init();
     harness = await RouterTestingHarness.create('/o-nas');
     TestBed.inject(Router).setUpLocationChangeListener();
+    pageHeight(3000);
     scrolledBy(900);
-    await harness.navigateByUrl('/sprava');
+    await untilScrolled(() => harness.navigateByUrl('/sprava'));
     scrolledBy(0);
     pageHeight(300);
     scrolledTo = [];
   });
 
   afterEach(() => {
+    placed.forEach((element) => element.remove());
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     scrolledBy(0);
     pageHeight(0);
   });
 
-  async function stepBack(): Promise<void> {
+  async function untilScrolled(act: () => unknown): Promise<void> {
     const router = TestBed.inject(Router);
     const shown = router.lastSuccessfulNavigation()?.id ?? 0;
     const scrolled = new Promise<void>((done) =>
@@ -429,27 +444,91 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
         }
       }),
     );
-    TestBed.inject(Location).back();
+    await act();
     await scrolled;
+  }
+
+  function stepBack(): Promise<void> {
+    return untilScrolled(() => TestBed.inject(Location).back());
+  }
+
+  function focusedHeadingAt(top: number): void {
+    const main = document.createElement('main');
+    const heading = document.createElement('h1');
+    heading.tabIndex = -1;
+    main.append(heading);
+    document.body.append(main);
+    placed.push(main);
+    vi.spyOn(heading, 'getBoundingClientRect').mockReturnValue(
+      DOMRect.fromRect({ x: 0, y: top - window.scrollY, width: 300, height: 40 }),
+    );
+    heading.focus();
   }
 
   it('when the page grows tall enough, then it is put where they left it', async () => {
     await stepBack();
     scrolledTo = [];
-    pageHeight(3000);
-    grown?.();
+    grows(3000);
 
     expect(scrolledTo).toEqual([900]);
   });
 
-  it('when the visitor scrolls by themselves before it grows, then the page is left where they put it', async () => {
+  it('when the page grows in two steps, then it moves once, from where it opened straight to where they left it', async () => {
+    await stepBack();
+    grows(1200);
+    grows(3000);
+
+    expect([...new Set(scrolledTo)]).toEqual([0, 900]);
+  });
+
+  it('when the visitor touches the page before it grows, then the page is left where they put it', async () => {
     await stepBack();
     window.dispatchEvent(new Event('touchstart'));
     scrolledTo = [];
-    pageHeight(3000);
-    grown?.();
+    grows(3000);
 
     expect(scrolledTo).toEqual([]);
+  });
+
+  it('when the focus moves before it grows, as a screen reader moves it, then the page is left where the focus took it', async () => {
+    await stepBack();
+    document.body.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    scrolledTo = [];
+    grows(3000);
+
+    expect(scrolledTo).toEqual([]);
+  });
+
+  it('when the page is scrolled by something else than the app before it grows, as by a scroll bar or three fingers of VoiceOver, then it is left there', async () => {
+    await stepBack();
+    scrolledBy(120);
+    window.dispatchEvent(new Event('scroll'));
+    scrolledTo = [];
+    grows(3000);
+
+    expect(scrolledTo).toEqual([]);
+  });
+
+  it('when the heading holding the focus would leave the screen by the move, then the page stays where the heading is seen', async () => {
+    focusedHeadingAt(80);
+    await stepBack();
+    scrolledTo = [];
+    grows(3000);
+
+    expect(scrolledTo).toEqual([]);
+  });
+
+  it('when the content fades through on a computer, then the page waits for the fade to let the scroll go and is put where they left it only then', async () => {
+    const hold = TestBed.inject(ScrollHold);
+    hold.hold();
+    await stepBack();
+    scrolledTo = [];
+    grows(3000);
+    expect(scrolledTo).toEqual([]);
+
+    hold.release();
+
+    expect(scrolledTo).toEqual([900]);
   });
 
   it('when another page opens before it grows, then that page is not moved', async () => {
@@ -457,8 +536,7 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     scrolledTo = [];
     await harness.navigateByUrl('/projekty');
     scrolledTo = [];
-    pageHeight(3000);
-    grown?.();
+    grows(3000);
 
     expect(scrolledTo).not.toContain(900);
   });

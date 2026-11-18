@@ -1,5 +1,11 @@
 import type { Page } from '@playwright/test';
-import { mockDonorApi } from './donor-session';
+import {
+  administrator,
+  mockDonorApi,
+  openAccountItem,
+  session,
+  whenAdministrationCopied,
+} from './donor-session';
 import { expect, test } from './fixtures';
 
 const FLICK_REST_MS = 100;
@@ -76,12 +82,27 @@ function scrollY(page: Page): Promise<number> {
   return page.evaluate(() => Math.round(window.scrollY));
 }
 
-async function listScrolledAndLeftForAnotherTab(page: Page): Promise<number> {
+async function newsScrolledFarDown(page: Page): Promise<number> {
   await page.goto('/aktuality');
   await expect(page.getByRole('heading', { name: 'Zpráva 9' })).toBeVisible();
   await page.evaluate(() => window.scrollTo({ top: 1000, behavior: 'instant' }));
   await expect.poll(() => scrollY(page)).toBeGreaterThan(500);
-  const listTop = await scrollY(page);
+  return scrollY(page);
+}
+
+function oneLine(page: Page): Promise<number> {
+  return page
+    .getByRole('main')
+    .locator('p')
+    .first()
+    .evaluate((text) => {
+      const style = getComputedStyle(text);
+      return Number.parseFloat(style.lineHeight) || Number.parseFloat(style.fontSize) * 1.5;
+    });
+}
+
+async function listScrolledAndLeftForAnotherTab(page: Page): Promise<number> {
+  const listTop = await newsScrolledFarDown(page);
 
   await tab(page, 'Pomáháme').click();
   await expect(page).toHaveURL('/projekty');
@@ -169,5 +190,38 @@ test.describe('Given the app on the home screen of a phone with the news scrolle
     await expect(page).toHaveURL('/aktuality');
     await expect(page.locator('.page-transition')).toHaveCount(0);
     await expect.poll(() => scrollY(page)).toBe(listTop);
+  });
+});
+
+test.describe('Given an administrator on a phone with the news scrolled far down', () => {
+  test.use({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await publishedContent(page);
+    await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
+  });
+
+  test('when they open Správa from the account sheet and press Zpět, then the news, drawn again, returns where they left it', async ({
+    page,
+  }) => {
+    const copied = whenAdministrationCopied(page);
+    const listTop = await newsScrolledFarDown(page);
+    const line = await oneLine(page);
+    await openAccountItem(page, 'Správa');
+    await expect(page).toHaveURL(/\/sprava$/);
+    await copied();
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.getByRole('heading', { name: 'Zpráva 9' })).toBeAttached();
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    await expect
+      .poll(async () => Math.abs((await scrollY(page)) - listTop))
+      .toBeLessThanOrEqual(line);
   });
 });
