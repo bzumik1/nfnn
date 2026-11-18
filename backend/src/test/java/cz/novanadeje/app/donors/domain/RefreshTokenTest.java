@@ -195,6 +195,17 @@ class RefreshTokenTest {
         assertThat(token.isUsableAt(NOW.plusSeconds(20))).isFalse();
     }
 
+    @Test
+    @DisplayName("Given a connected application's grant, when its token is issued without the application or a scope, then it is refused")
+    void should_refuse_when_issued_given_a_client_grant_without_the_client_or_a_scope() {
+        ClientId client = new ClientId("https://claude.ai/.well-known/oauth-client");
+
+        assertThatIllegalArgumentException().isThrownBy(() -> RefreshToken.issueForClient(RefreshTokenSecret.generate(), DONOR, null,
+                Set.of(OAuthScope.ADMIN_READ), NOW, NOW, Duration.ofDays(14)));
+        assertThatIllegalArgumentException().isThrownBy(() -> RefreshToken.issueForClient(RefreshTokenSecret.generate(), DONOR, client, Set.of(),
+                NOW, NOW, Duration.ofDays(14)));
+    }
+
     @Nested
     @DisplayName("Given the parts of a stored token")
     class GivenStoredParts {
@@ -254,15 +265,6 @@ class RefreshTokenTest {
 
             assertThat(token.deviceId()).isEmpty();
             assertThat(token.clientId()).isEmpty();
-        }
-
-        @Test
-        @DisplayName("when a connected application's token is issued without the application or a scope, then it is refused")
-        void should_refuse_when_issued_for_a_client_without_the_client_or_a_scope() {
-            assertThatIllegalArgumentException().isThrownBy(() -> RefreshToken.issueForClient(RefreshTokenSecret.generate(), DONOR, null, SCOPES, NOW,
-                    NOW, Duration.ofDays(14)));
-            assertThatIllegalArgumentException().isThrownBy(() -> RefreshToken.issueForClient(RefreshTokenSecret.generate(), DONOR, CLIENT, Set.of(),
-                    NOW, NOW, Duration.ofDays(14)));
         }
 
         private static RefreshToken token(UUID id, DonorId donor, String hash, Instant issued, Instant expires, Instant granted, ClientId client,
