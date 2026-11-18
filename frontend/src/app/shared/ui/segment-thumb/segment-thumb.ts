@@ -30,6 +30,24 @@ export function restThumbOn(group: HTMLElement, thumb: HTMLElement, selected: nu
   return true;
 }
 
+interface ThumbBox {
+  left: number;
+  width: number;
+}
+
+function thumbBox(group: HTMLElement, thumb: HTMLElement): ThumbBox | null {
+  const first = group.querySelector<HTMLElement>(':scope > button')?.getBoundingClientRect();
+  const box = thumb.getBoundingClientRect();
+  if (first === undefined || box.width === 0) {
+    return null;
+  }
+  return { left: box.left - first.left, width: box.width };
+}
+
+function settle(thumb: HTMLElement): void {
+  void thumb.ownerDocument.defaultView?.getComputedStyle(thumb).translate;
+}
+
 export function placeThumb(group: HTMLElement, selected: number, glides: boolean): void {
   const thumb = group.querySelector<HTMLElement>(':scope > .ui-segmented__thumb');
   if (thumb === null) {
@@ -37,17 +55,31 @@ export function placeThumb(group: HTMLElement, selected: number, glides: boolean
   }
   const classes = group.classList;
   const restedAt = thumb.style.translate;
+  const from = glides && classes.contains(THUMB_RESTS) ? thumbBox(group, thumb) : null;
   const rests = restThumbOn(group, thumb, selected);
   classes.toggle(THUMB_RESTS, rests);
-  const movedBySize = !glides && thumb.style.translate !== restedAt;
-  if (!rests || movedBySize) {
+  const moves = thumb.style.translate !== restedAt;
+  if (!rests || (!glides && moves)) {
     classes.remove(THUMB_GLIDES);
+    thumb.style.scale = '';
   }
   if (!rests) {
     return;
   }
+  const to = glides && moves && from !== null ? thumbBox(group, thumb) : null;
+  if (from !== null && to !== null) {
+    const restsAt = thumb.style.translate;
+    classes.remove(THUMB_GLIDES);
+    thumb.style.translate = `${(from.left / to.width) * 100}% 0`;
+    thumb.style.scale = `${from.width / to.width} 1`;
+    settle(thumb);
+    classes.add(THUMB_GLIDES);
+    thumb.style.translate = restsAt;
+    thumb.style.scale = '';
+    return;
+  }
   if (!classes.contains(THUMB_GLIDES)) {
-    void group.ownerDocument.defaultView?.getComputedStyle(thumb).translate;
+    settle(thumb);
     classes.add(THUMB_GLIDES);
   }
 }
