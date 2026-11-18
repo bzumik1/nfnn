@@ -11,7 +11,7 @@
 }
 
 .content--unsettled {
-  min-height: 100vh;
+  min-height: var(--full-screen-height);
 }
 
 .list-state {
