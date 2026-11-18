@@ -907,7 +907,12 @@ describe('Given the app on a wide screen, where the header and the side navigati
     const inMain = document.createElement('a');
     inMain.setAttribute('href', '/aktuality/clanek');
     main.append(heading, inMain);
-    layer.append(header, main);
+    const tabBar = document.createElement('app-tab-bar');
+    const tabs = document.createElement('nav');
+    tabs.className = 'tab-bar';
+    tabs.textContent = 'Záložky';
+    tabBar.append(tabs);
+    layer.append(header, main, tabBar);
   }
 
   function overlay(): HTMLElement | null {
@@ -979,6 +984,18 @@ describe('Given the app on a wide screen, where the header and the side navigati
       'Aktuality',
     );
     expect(overlay()?.querySelector(`.${PAGE_TRANSITION_CLASS}__bar`)).toBeNull();
+  });
+
+  it('when a finger takes the article, then the copies carry no header, side navigation or tab bar of their own, which stand live beside the content', async () => {
+    await openArticle();
+
+    transitions.startSwipe(TestBed.inject(BackTarget).destination('/aktuality'));
+
+    const standing = Array.from(
+      overlay()?.querySelectorAll<HTMLElement>('app-header, .side-nav-panel, app-tab-bar') ?? [],
+    );
+    expect(standing.length).toBeGreaterThan(0);
+    expect(standing.filter((part) => part.style.visibility !== 'hidden')).toEqual([]);
   });
 
   it('when a step without a finger opens the article, then nothing slides, as on a computer today', async () => {

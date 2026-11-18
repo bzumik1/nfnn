@@ -13,6 +13,14 @@ const SCROLLS_SIDEWAYS = new Set(['auto', 'scroll']);
 const OPEN_DIALOG = 'dialog[open]';
 const LEAVING_DIALOG = 'dialog.dialog--leaving';
 const SHEET_SECTION_BACK = 'app-sheet-head .sheet-head-back';
+const DRAGGING_CLASS = 'edge-swipe-dragging';
+const PRESS_TAKEN_OVER = `.${DRAGGING_CLASS} :active {
+  --pressed-tint: 0% !important;
+  --pressed-tint-amount: 0% !important;
+  filter: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}`;
 
 const PASSIVE: AddEventListenerOptions = { passive: true, capture: true };
 
@@ -35,6 +43,7 @@ export class EdgeSwipeBack {
   private readonly dirtyForms = inject(DirtyForms);
   private readonly sheetSteps = inject(SheetSteps);
   private swipe: Swipe | null = null;
+  private pressCancel: CSSStyleSheet | null = null;
   private pops = 0;
 
   private readonly onStart = (event: TouchEvent): void => this.started(event);
@@ -42,7 +51,7 @@ export class EdgeSwipeBack {
   private readonly onEnd = (event: TouchEvent): void => this.ended(event);
   private readonly onCancel = (): void => {
     void this.swipe?.preview?.slideBack();
-    this.swipe = null;
+    this.letGo();
   };
   private readonly onLeave = (): void => {
     this.pops++;
@@ -70,11 +79,11 @@ export class EdgeSwipeBack {
     this.document.removeEventListener('touchcancel', this.onCancel, PASSIVE);
     view?.removeEventListener('popstate', this.onLeave, PASSIVE);
     view?.removeEventListener('pagehide', this.onLeave, PASSIVE);
-    this.swipe = null;
+    this.letGo();
   }
 
   private started(event: TouchEvent): void {
-    this.swipe = null;
+    this.letGo();
     const touch = event.changedTouches[0];
     if (event.touches.length > 1 || touch === undefined || keepsItsOwnSwipe(event.target)) {
       return;
@@ -118,6 +127,21 @@ export class EdgeSwipeBack {
     };
   }
 
+  private takeOverPress(): void {
+    this.document.documentElement.classList.add(DRAGGING_CLASS);
+    const adopted = this.document.adoptedStyleSheets;
+    if (this.pressCancel === null && Array.isArray(adopted)) {
+      this.pressCancel = new CSSStyleSheet();
+      this.pressCancel.replaceSync(PRESS_TAKEN_OVER);
+      this.document.adoptedStyleSheets = [...adopted, this.pressCancel];
+    }
+  }
+
+  private letGo(): void {
+    this.swipe = null;
+    this.document.documentElement.classList.remove(DRAGGING_CLASS);
+  }
+
   private moved(event: TouchEvent): void {
     const swipe = this.swipe;
     const touch = swipe === null ? undefined : touchOf(event, swipe.id);
@@ -126,7 +150,7 @@ export class EdgeSwipeBack {
     }
     swipe.motion.move(pointOf(touch, event));
     if (swipe.motion.abandoned) {
-      this.swipe = null;
+      this.letGo();
       return;
     }
     if (swipe.motion.dragging && !swipe.previewAsked) {
@@ -134,10 +158,11 @@ export class EdgeSwipeBack {
       if (this.transitions.followsFinger()) {
         swipe.preview = swipe.steps.startSwipe();
         if (swipe.preview === null && swipe.ofPage) {
-          this.swipe = null;
+          this.letGo();
           return;
         }
       }
+      this.takeOverPress();
     }
     swipe.preview?.follow(swipe.motion.offset);
   }
@@ -148,7 +173,7 @@ export class EdgeSwipeBack {
     if (swipe === null || touch === undefined) {
       return;
     }
-    this.swipe = null;
+    this.letGo();
     const settle = swipe.motion.release(pointOf(touch, event));
     const goesBack = settle?.completes === true && swipe.pops === this.pops;
     const back = (): void => swipe.steps.back();

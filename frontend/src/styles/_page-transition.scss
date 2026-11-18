@@ -31,16 +31,6 @@
   visibility: hidden;
 }
 
-.page-transition--content {
-  .page-transition__page--over {
-    border-radius: 0;
-  }
-
-  .page-transition__scroller :is(app-header, .side-nav-panel) {
-    visibility: hidden;
-  }
-}
-
 .page-transition--heads-held .page-transition__scroller app-sheet-head {
   visibility: hidden;
 }

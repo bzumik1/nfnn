@@ -529,6 +529,19 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
     expect(preview.follow.mock.calls).toEqual([[40], [120]]);
   });
 
+  it('when the swipe takes the gesture, then the control under the finger loses its pressed look until the finger lets go', () => {
+    const pressedLookOff = () => document.documentElement.classList.contains('edge-swipe-dragging');
+
+    touch('touchstart', page, { x: 20, y: 300, at: 0 });
+    touch('touchmove', page, { x: 25, y: 300, at: 20 });
+    const beforeTaking = pressedLookOff();
+    touch('touchmove', page, { x: 140, y: 304, at: 80 });
+    const whileDragging = pressedLookOff();
+    touch('touchend', page, { x: 140, y: 304, at: 300 });
+
+    expect([beforeTaking, whileDragging, pressedLookOff()]).toEqual([false, true, false]);
+  });
+
   it('when the finger has not taken the page yet, then nothing shows under it', () => {
     touch('touchstart', page, { x: 20, y: 300, at: 0 });
     touch('touchmove', page, { x: 25, y: 302, at: 40 });

@@ -188,9 +188,8 @@ export class PageTransitions {
       : (this.drawing?.clipToContent(this.document, overlay) ?? null);
     const arriving = this.place(overlay, behind ?? this.placeholder(), 'under');
     const leaving = this.place(overlay, this.keep(layer), 'over');
-    content?.lineUp();
     const dress = (into: PlacedPage): BarItem[] =>
-      content === null ? this.dressChrome(overlay, leaving, into) : [];
+      content?.lineUp() ?? this.dressChrome(overlay, leaving, into);
     const bar = { items: dress(arriving) };
     const under = arriving.box;
     const over = leaving.box;
@@ -218,10 +217,6 @@ export class PageTransitions {
       behind === null && destination.path !== null && !this.dirtyForms.any()
         ? this.drawUnder(destination.path, running, arriving, (into) => {
             bar.items = dress(into);
-          }).then((under) => {
-            if (!under || this.running !== running) {
-              return;
-            }
             ready = true;
             catchingUp = true;
             void this.loadDrawing().then(({ closeInOnFinger }) =>
@@ -268,6 +263,7 @@ export class PageTransitions {
         Promise.allSettled(motions.map((motion) => motion.finished)),
         new Promise((done) => view.setTimeout(done, PAGE_TRANSITION_LONGEST_MS)),
       ]);
+      await drawn;
       if (!end.completes) {
         this.preview.discard();
       }
@@ -307,24 +303,25 @@ export class PageTransitions {
     path: string,
     running: Running,
     arriving: PlacedPage,
-    redressed: (into: PlacedPage) => void,
-  ): Promise<boolean> {
+    drawnUnder: (into: PlacedPage) => void,
+  ): Promise<void> {
     const { withoutFocus } = await this.loadDrawing();
-    const drawn = await withoutFocus(this.document, this.layer(), () =>
+    await withoutFocus(this.document, this.layer(), () =>
       this.preview.visit(path, () => {
         const layer = this.layer();
-        return layer === null ? null : this.keep(layer);
+        const scroller = arriving.box.querySelector<HTMLElement>(
+          `.${PAGE_TRANSITION_CLASS}__scroller`,
+        );
+        const drawn = layer === null ? null : this.keep(layer);
+        if (drawn?.copy == null || scroller === null || this.running !== running) {
+          return;
+        }
+        scroller.replaceChildren(drawn.copy);
+        scroller.scrollTop = drawn.scrollY;
+        scroller.style.backgroundColor = drawn.ground;
+        drawnUnder({ box: arriving.box, copy: drawn.copy, scrollY: drawn.scrollY });
       }),
     );
-    const scroller = arriving.box.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__scroller`);
-    if (drawn === null || drawn.copy === null || scroller === null || this.running !== running) {
-      return false;
-    }
-    scroller.replaceChildren(drawn.copy);
-    scroller.scrollTop = drawn.scrollY;
-    scroller.style.backgroundColor = drawn.ground;
-    redressed({ box: arriving.box, copy: drawn.copy, scrollY: drawn.scrollY });
-    return true;
   }
 
   loadDrawing(): Promise<SwipeDrawing> {

@@ -508,7 +508,7 @@ test.describe('Given the app on the home screen of an iPad held across with an a
     await expect(page.locator('.page-transition, .page-fade')).toHaveCount(0);
   });
 
-  test('when a finger takes the article from the edge, then only the content area follows it over the news while the header stands, and past half the news returns', async ({
+  test('when a finger takes the article from the edge, then only the content area follows it over the news while the header and the tab bar stand, and past half the news returns', async ({
     page,
   }) => {
     await takeWithFinger(page, 20);
@@ -518,6 +518,12 @@ test.describe('Given the app on the home screen of an iPad held across with an a
     const header = await page.locator('.page-layer app-header header').first().boundingBox();
     const area = await swipeOverlay(page).boundingBox();
     expect(area?.y).toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.height ?? 0) - 1);
+    const tabBar = await page.locator('.page-layer app-tab-bar .tab-bar').first().boundingBox();
+    expect(tabBar).not.toBeNull();
+    expect((area?.y ?? 0) + (area?.height ?? 0)).toBeLessThanOrEqual((tabBar?.y ?? 0) + 1);
+    for (const copied of await swipeOverlay(page).locator('app-tab-bar .tab-bar').all()) {
+      await expect(copied).toBeHidden();
+    }
     await expect.poll(() => overPageOffset(page)).toBeCloseTo(680, 0);
     await letGo(page, 700);
 
