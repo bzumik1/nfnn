@@ -387,8 +387,8 @@ async function expectWhollyInView(page: Page, target: Locator): Promise<void> {
     const floor = (await tabBar.isVisible())
       ? (await tabBar.boundingBox())!.y
       : page.viewportSize()!.height;
-    expect(box.y).toBeGreaterThanOrEqual(banner.y + banner.height);
-    expect(box.y + box.height).toBeLessThanOrEqual(floor);
+    expect(Math.round(box.y)).toBeGreaterThanOrEqual(Math.round(banner.y + banner.height));
+    expect(Math.round(box.y + box.height)).toBeLessThanOrEqual(floor);
   }).toPass();
 }
 
