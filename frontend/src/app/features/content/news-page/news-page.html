@@ -10,7 +10,7 @@
     </div>
   </header>
 
-  <div class="content ui-container">
+  <div class="content ui-container" [class.content--unsettled]="!settledOnce()">
     <p #listState class="list-state" role="status" tabindex="-1">
       @if (state() === 'loading') {
         @if (loadingShown()) {
@@ -178,15 +178,13 @@
     }
   </div>
 
-  @if (settledOnce()) {
-    <app-donate-band
-      appReveal
-      i18n-heading="@@content.news.band.heading.nextHelp"
-      heading="O další pomoci napíšeme i díky vám"
-      i18n-lead="@@content.news.band.lead"
-      lead="Pravidelný příspěvek nám pomáhá plánovat pomoc na celý rok."
-      [photo]="bandPhoto()"
-      [wide]="true"
-    />
-  }
+  <app-donate-band
+    appReveal
+    i18n-heading="@@content.news.band.heading.nextHelp"
+    heading="O další pomoci napíšeme i díky vám"
+    i18n-lead="@@content.news.band.lead"
+    lead="Pravidelný příspěvek nám pomáhá plánovat pomoc na celý rok."
+    [photo]="bandPhoto()"
+    [wide]="true"
+  />
 </section>
