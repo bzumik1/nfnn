@@ -657,6 +657,7 @@ test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows 
     const add = page.getByRole('button', { name: 'Přidat bankovní účet' });
     await expect(add).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
+    await expect.poll(() => layoutAtRest(add)).toBe(true);
     const label = add.locator('.ui-list__title');
 
     expect(await wordsBrokenInside(label)).toEqual([]);
@@ -679,11 +680,31 @@ test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows 
     await expect(dialog.locator('.add-account-watch')).toContainText('je ověřený');
     await dialog.getByRole('button', { name: 'Hotovo' }).click();
     await expect(page.locator('.accounts-list .account-number')).toHaveText('1234567890/0800');
+    await expect.poll(() => layoutAtRest(add)).toBe(true);
 
     expect((await add.boundingBox())!.height).toBe(height);
     expect(await iconBesideTheFirstLineOf(add)).toBe(true);
   });
 });
+
+async function layoutAtRest(element: Locator): Promise<boolean> {
+  return element.evaluate(async (target) => {
+    const nextFrame = () => new Promise((settled) => requestAnimationFrame(settled));
+    const before = target.getBoundingClientRect();
+    await nextFrame();
+    await nextFrame();
+    const after = target.getBoundingClientRect();
+    return (
+      document.fonts.status === 'loaded' &&
+      document.querySelector('dialog[open]') === null &&
+      document.getAnimations().length === 0 &&
+      before.left === after.left &&
+      before.top === after.top &&
+      before.width === after.width &&
+      before.height === after.height
+    );
+  });
+}
 
 async function iconBesideTheFirstLineOf(row: Locator): Promise<boolean> {
   return row.evaluate((button) => {
