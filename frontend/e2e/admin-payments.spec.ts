@@ -473,6 +473,27 @@ test.describe('Given an administrator on the payments page on a wide screen', ()
 
     await expect(page.locator('table tbody tr')).toHaveCount(1);
   });
+
+  for (const width of [1280, 390]) {
+    test(`when they open the payments ${width} px wide, then each choice of what to show keeps its label on one line`, async ({
+      page,
+    }) => {
+      await page.goto('/sprava/platby');
+      await page.setViewportSize({ width, height: 800 });
+      const choices = page.getByRole('group', { name: 'Zobrazit' }).getByRole('button');
+      await expect(choices.first()).toContainText('(1)');
+
+      const lines = await choices.evaluateAll((buttons) =>
+        buttons.map((button) => {
+          const range = document.createRange();
+          range.selectNodeContents(button);
+          return new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)))
+            .size;
+        }),
+      );
+      expect(lines).toEqual([1, 1]);
+    });
+  }
 });
 
 test.describe('Given an administrator with a 1 Kč account verification waiting for a donor', () => {
