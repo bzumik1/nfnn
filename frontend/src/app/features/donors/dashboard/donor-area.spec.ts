@@ -3554,6 +3554,23 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(footers[0].parentElement?.lastElementChild).toBe(footers[0]);
     });
 
+    it('then the footer of the yearly receipts card holds the tax note first and the year the receipts start from after it, as Moje dary does', async () => {
+      for (const [summary, list, startsFrom] of [
+        [twoYearSummary(), twoYearDonations(), 'yearly-earlier'],
+        [summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026(), 'yearly-hint'],
+      ] as const) {
+        await open('/darce/potvrzeni');
+        await respond(summary, list);
+
+        const footers = [...root().querySelectorAll<HTMLElement>('.yearly-card .ui-card__footer')];
+        expect(footers).toHaveLength(1);
+        expect([...footers[0].children].map((line) => line.className)).toEqual([
+          'receipts-tax-note',
+          startsFrom,
+        ]);
+      }
+    });
+
     it('then a donor without donations reads no line about the tax return on the receipts page', async () => {
       await open('/darce/potvrzeni');
       await respond(emptySummary(), emptyDonations());
