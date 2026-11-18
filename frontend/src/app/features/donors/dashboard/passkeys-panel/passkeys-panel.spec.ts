@@ -204,6 +204,24 @@ describe('Given the passkeys panel of the sign-in card', () => {
     expect(texts('.passkey-name')).toEqual(['iPhone']);
   });
 
+  it('when the list already holds the new key before the server answers its creation, then that row is listed once and does not enter again', async () => {
+    const macBook = samplePasskey({ id: 'new', name: 'MacBook', lastUsedAt: null });
+    await render([IPHONE, macBook]);
+    await clickButton('Přidat přístupový klíč');
+    await fillIn('#passkey-name', 'MacBook');
+    await fillIn('#passkey-password', 'correct horse battery');
+    await submit();
+    http.expectOne(OPTIONS_URL).flush(passkeyCreationOptions());
+    await vi.waitFor(() => expect(passkeys.created).toHaveLength(1));
+    await settle();
+
+    http.expectOne({ method: 'POST', url: PASSKEYS_URL }).flush(macBook);
+    await settle();
+
+    expect(texts('.passkey-name')).toEqual(['iPhone', 'MacBook']);
+    expect(element('#passkey-row-new').classList).not.toContain('passkey-slot--entering');
+  });
+
   describe('when the donor adds a passkey', () => {
     beforeEach(async () => {
       await render([IPHONE]);
