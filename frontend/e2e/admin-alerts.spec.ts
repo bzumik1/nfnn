@@ -345,11 +345,17 @@ test.describe('Given an administrator on the alerts page without a service worke
     await rememberedSession(page);
     await servePush(page, pushView());
     await page.goto('/sprava/upozorneni');
+    const copyOpened = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+        '/api/admin/donors/devices/current/administration-copy',
+    );
     const device = page.getByRole('region', { name: 'Toto zařízení' });
     const footer = device.locator('.device-retry');
     await expect(footer).toContainText('Pokud zpráva nezmizí, prohlížeč ji nejspíš nepovoluje');
     await expect(footer.getByRole('button', { name: 'Zkusit znovu' })).toBeVisible();
     await page.evaluate(() => Object.assign(window, { e2eBeforeReload: true }));
+    await copyOpened;
 
     const reloaded = page.waitForEvent('load');
     await footer.getByRole('button', { name: 'Zkusit znovu' }).click();
