@@ -3555,20 +3555,27 @@ describe('Given a signed-in donor in the donor area', () => {
     });
 
     it('then the footer of the yearly receipts card holds the tax note first and the year the receipts start from after it, as Moje dary does', async () => {
-      for (const [summary, list, startsFrom] of [
-        [twoYearSummary(), twoYearDonations(), 'yearly-earlier'],
-        [summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026(), 'yearly-hint'],
-      ] as const) {
-        await open('/darce/potvrzeni');
-        await respond(summary, list);
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
 
-        const footers = [...root().querySelectorAll<HTMLElement>('.yearly-card .ui-card__footer')];
-        expect(footers).toHaveLength(1);
-        expect([...footers[0].children].map((line) => line.className)).toEqual([
-          'receipts-tax-note',
-          startsFrom,
-        ]);
-      }
+      const footers = [...root().querySelectorAll<HTMLElement>('.yearly-card .ui-card__footer')];
+      expect(footers).toHaveLength(1);
+      expect([...footers[0].children].map((line) => line.className)).toEqual([
+        'receipts-tax-note',
+        'yearly-earlier',
+      ]);
+    });
+
+    it('then the footer of the yearly receipts card keeps the tax note first when a year has no receipt and the hint follows it', async () => {
+      await open('/darce/potvrzeni');
+      await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+      const footers = [...root().querySelectorAll<HTMLElement>('.yearly-card .ui-card__footer')];
+      expect(footers).toHaveLength(1);
+      expect([...footers[0].children].map((line) => line.className)).toEqual([
+        'receipts-tax-note',
+        'yearly-hint',
+      ]);
     });
 
     it('then a donor without donations reads no line about the tax return on the receipts page', async () => {
