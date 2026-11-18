@@ -56,28 +56,8 @@
   padding-top: var(--space-4);
 }
 
-.devices-confirm {
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-surface-alt);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
 .device-confirm {
   margin: 0 var(--space-6) var(--space-3);
-}
-
-.devices-confirm-text {
-  font-size: var(--text-md);
-  line-height: var(--leading-relaxed);
-  color: var(--color-text-secondary);
-}
-
-.devices-confirm-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2-5);
-  margin-top: var(--space-3);
 }
 
 .devices-sign-out-others {

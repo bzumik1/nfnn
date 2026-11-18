@@ -1,10 +1,7 @@
 .account {
   display: inline-flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  column-gap: var(--space-inline-separator);
   max-width: 100%;
-  clip-path: inset(-100vh -100vw -100vh 0);
 }
 
 .logo {
@@ -12,13 +9,6 @@
 }
 
 .bank {
-  position: relative;
   color: var(--color-text-muted);
   font-weight: var(--weight-regular);
-}
-
-.separator {
-  position: absolute;
-  inset-inline-end: 100%;
-  white-space: pre;
 }

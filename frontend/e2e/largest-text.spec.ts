@@ -1077,6 +1077,191 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
   }
 });
 
+interface SummaryPair {
+  label: { left: number; right: number; top: number; bottom: number };
+  value: { left: number; top: number };
+}
+
+async function summaryPairs(summary: Locator): Promise<SummaryPair[]> {
+  return summary.locator('dl > div').evaluateAll((rows) =>
+    rows.map((row) => {
+      const label = row.querySelector('dt')!.getBoundingClientRect();
+      const value = row.querySelector('dd')!.getBoundingClientRect();
+      return {
+        label: { left: label.left, right: label.right, top: label.top, bottom: label.bottom },
+        value: { left: value.left, top: value.top },
+      };
+    }),
+  );
+}
+
+async function firstLines(
+  summary: Locator,
+): Promise<{ label: { bottom: number }; value: { bottom: number } }[]> {
+  return summary.locator('dl > div').evaluateAll((rows) => {
+    const firstLine = (element: Element): { bottom: number } => {
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) =>
+          node.textContent?.trim() &&
+          !node.parentElement?.closest('.visually-hidden, [aria-hidden="true"]')
+            ? NodeFilter.FILTER_ACCEPT
+            : NodeFilter.FILTER_REJECT,
+      });
+      const text = walker.nextNode()!;
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      return { bottom: range.getClientRects()[0].bottom };
+    };
+    return rows.map((row) => ({
+      label: firstLine(row.querySelector('dt')!),
+      value: firstLine(row.querySelector('dd')!),
+    }));
+  });
+}
+
+async function pastTheirCard(card: Locator): Promise<string[]> {
+  return card.evaluate((root) => {
+    const style = getComputedStyle(root);
+    const box = root.getBoundingClientRect();
+    const left = box.left + root.clientLeft + parseFloat(style.paddingLeft);
+    const right = box.left + root.clientLeft + root.clientWidth - parseFloat(style.paddingRight);
+    return Array.from(root.querySelectorAll<HTMLElement>('dt, dd, dd *'))
+      .filter((element) => !element.closest('.visually-hidden'))
+      .filter((element) => element.getClientRects().length > 0)
+      .filter((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.left < left - 0.5 || rect.right > right + 0.5;
+      })
+      .map(
+        (element) =>
+          `${element.tagName.toLowerCase()} "${(element.textContent ?? '').trim()}" ${Math.round(element.getBoundingClientRect().right)} past ${Math.round(right)}`,
+      );
+  });
+}
+
+test.describe('Given an administrator on a phone 390 pt wide opening the card of a donor', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await mockAdministration(page);
+    await rememberedSession(page);
+  });
+
+  const openSummary = async (page: Page): Promise<Locator> => {
+    await page.goto(PETR_DETAIL_PATH);
+    await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeAttached();
+    const summary = page.getByRole('region', { name: 'Shrnutí dárce' });
+    await expect(summary.locator('dt').last()).toHaveText('Dvoufaktorové ověření');
+    await page.evaluate(() => document.fonts.ready);
+    return summary;
+  };
+
+  test.describe('with the text at 200 %', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript(() => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = 'html { font-size: 200%; }';
+          document.head.append(style);
+        });
+      });
+    });
+
+    test('when they look at the summary, then every label stands above its value on one left axis, no word breaks inside, E-mail stays on one line and Kopírovat stays whole within the card', async ({
+      page,
+    }) => {
+      const summary = await openSummary(page);
+
+      const words = summary.locator(
+        ':is(dt, dd:not(.summary-symbol):not(:has(.email)), dd .tag, .summary-symbol .ui-figures, .summary-symbol .copy-button__action > span:not(.visually-hidden))',
+      );
+      for (const text of await words.all()) {
+        expect(await wordsBrokenInside(text)).toEqual([]);
+      }
+      const emailLabel = summary.locator('dt').nth(1);
+      await expect(emailLabel).toHaveText('E-mail');
+      const emailLabelLines = await emailLabel.evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        return new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top))).size;
+      });
+      expect(emailLabelLines).toBe(1);
+
+      const pairs = await summaryPairs(summary);
+      const axis = pairs[0].label.left;
+      for (const { label, value } of pairs) {
+        expect(value.top).toBeGreaterThanOrEqual(label.bottom - 0.5);
+        expect(Math.abs(label.left - axis)).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(value.left - axis)).toBeLessThanOrEqual(0.5);
+      }
+
+      expect(await pastTheirCard(summary)).toEqual([]);
+      const copy = summary.getByRole('button', { name: 'Kopírovat variabilní symbol' });
+      await expect(copy).toBeInViewport({ ratio: 1 });
+      const copyBox = (await copy.boundingBox())!;
+      expect(copyBox.height).toBeGreaterThanOrEqual(24);
+      expect(copyBox.width).toBeGreaterThanOrEqual(24);
+    });
+  });
+
+  test('when they look at the summary at the default text size, then every label stays beside the first line of its value, Kopírovat stays on the line of the symbol and ověřen on the line of the e-mail', async ({
+    page,
+  }) => {
+    const summary = await openSummary(page);
+
+    const pairs = await summaryPairs(summary);
+    for (const { label, value } of pairs) {
+      expect(value.left).toBeGreaterThanOrEqual(label.right - 0.5);
+    }
+    for (const { label, value } of await firstLines(summary)) {
+      expect(Math.abs(label.bottom - value.bottom)).toBeLessThanOrEqual(2);
+    }
+    const symbol = (await summary.locator('.summary-symbol .ui-figures').boundingBox())!;
+    const copy = (await summary
+      .getByRole('button', { name: 'Kopírovat variabilní symbol' })
+      .boundingBox())!;
+    expect(copy.y).toBeLessThan(symbol.y + symbol.height / 2);
+    expect(copy.y + copy.height).toBeGreaterThan(symbol.y + symbol.height / 2);
+    const email = (await summary.locator('.email').boundingBox())!;
+    const verified = (await summary.getByText('ověřen', { exact: true }).boundingBox())!;
+    expect(verified.y).toBeLessThan(email.y + email.height / 2);
+    expect(verified.y + verified.height).toBeGreaterThan(email.y + email.height / 2);
+    expect(await pastTheirCard(summary)).toEqual([]);
+  });
+});
+
+test.describe('Given an administrator on a tablet 768 pt wide opening the card of a donor', () => {
+  test.use({ viewport: { width: 768, height: 1024 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await mockAdministration(page);
+    await rememberedSession(page);
+  });
+
+  test('when they look at the summary at the default text size, then every label stays beside the first line of its value and the values share one column', async ({
+    page,
+  }) => {
+    await page.goto(PETR_DETAIL_PATH);
+    await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeAttached();
+    const summary = page.getByRole('region', { name: 'Shrnutí dárce' });
+    await expect(summary.locator('dt').last()).toHaveText('Dvoufaktorové ověření');
+    await page.evaluate(() => document.fonts.ready);
+
+    const pairs = await summaryPairs(summary);
+    const column = pairs[0].value.left;
+    for (const { label, value } of pairs) {
+      expect(value.left).toBeGreaterThanOrEqual(label.right - 0.5);
+      expect(Math.abs(value.left - column)).toBeLessThanOrEqual(0.5);
+    }
+    for (const { label, value } of await firstLines(summary)) {
+      expect(Math.abs(label.bottom - value.bottom)).toBeLessThanOrEqual(2);
+    }
+    expect(await pastTheirCard(summary)).toEqual([]);
+  });
+});
+
 async function datesPastTheirCells(scope: Locator): Promise<string[]> {
   await scope.evaluate(() => document.fonts.ready);
   return scope.evaluate((element) => {

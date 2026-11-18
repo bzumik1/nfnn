@@ -41,6 +41,18 @@ describe('Given a Czech account of a bank the site names itself', () => {
   });
 });
 
+describe('Given an account with the name of its bank', () => {
+  it('when it renders, then the number and the bank use the shared separator that hides at a line break', () => {
+    const element = host(render('2000145399/0800'));
+
+    expect(element.querySelector('.account')?.classList).toContain('ui-separated');
+    expect(element.querySelector('.bank')?.classList).toContain('ui-separated__item');
+    expect(element.querySelector('.bank > .separator')?.classList).toContain(
+      'ui-separated__separator',
+    );
+  });
+});
+
 describe('Given an account whose bank code the site does not name itself', () => {
   it('when the list the server keeps names the bank, then its short name follows the number', () => {
     const fixture = render('1234567890/4000');

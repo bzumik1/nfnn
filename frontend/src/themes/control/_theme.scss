@@ -259,7 +259,7 @@
   --shadow-card-hover: 0 3px 0 var(--color-border-field);
   --shadow-panel: 0 1px 0 var(--color-border);
   --shadow-media: 0 4px 0 var(--color-border-field);
-  --shadow-media-tight: 0 4px 0 var(--color-border-field);
+  --shadow-media-sm: 0 4px 0 var(--color-border-field);
   --shadow-dialog: 0 6px 0 var(--color-border-field);
   --shadow-sheet: 0 -3px 0 var(--color-border-field);
   --shadow-tab-bar: 0 3px 0 var(--color-surface-inverse);
@@ -346,6 +346,8 @@
   --back-icon-size: min(1.25rem, var(--back-button-size) * 0.5);
   --text-account-initials: min(var(--text-sm), var(--back-button-size) * 0.34);
   --list-chevron-size: 1rem;
+  --pdf-status-reserve: 13rem;
+  --pdf-status-reserve-compact: 12rem;
   --sheet-close-icon-size: min(1.125rem, var(--sheet-close-size) * 0.5);
   --launch-icon-size: 96px;
   --tab-bar-rendered-height: var(--tab-bar-height);

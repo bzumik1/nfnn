@@ -109,43 +109,45 @@
 
 <ng-template #receiptPart let-item>
   @if (item.receiptAvailable && !donations.onYearlyReceipt(item)) {
-    <button
-      type="button"
-      class="download-btn"
-      [attr.aria-disabled]="donations.singleDownloading(item) ? 'true' : null"
-      [attr.aria-busy]="donations.singleDownloading(item)"
-      [attr.data-receipt-download]="donations.singleTarget(item)"
-      (click)="donations.downloadSingleReceipt(item)"
-    >
-      <app-pdf-button-face
-        [state]="donations.singleButton(item)"
-        downloadLabel="Stáhnout PDF"
-        i18n-downloadLabel="@@donor.dashboard.payments.download"
-        preparingLabel="Připravujeme PDF…"
-        i18n-preparingLabel="@@donor.dashboard.receipt.preparing"
-        openLabel="Otevřít PDF"
-        i18n-openLabel="@@donor.dashboard.payments.open"
+    <div class="receipt-download">
+      <button
+        type="button"
+        class="download-btn"
+        [attr.aria-disabled]="donations.singleDownloading(item) ? 'true' : null"
+        [attr.aria-busy]="donations.singleDownloading(item)"
+        [attr.data-receipt-download]="donations.singleTarget(item)"
+        (click)="donations.downloadSingleReceipt(item)"
+      >
+        <app-pdf-button-face
+          [state]="donations.singleButton(item)"
+          downloadLabel="Stáhnout PDF"
+          i18n-downloadLabel="@@donor.dashboard.payments.download"
+          preparingLabel="Připravujeme PDF…"
+          i18n-preparingLabel="@@donor.dashboard.receipt.preparing"
+          openLabel="Otevřít PDF"
+          i18n-openLabel="@@donor.dashboard.payments.open"
+        />
+        @if (donations.singleReady(item)) {
+          <span class="visually-hidden" i18n="@@donor.dashboard.payments.openOf"
+            >, dar z {{ formatDate(item.receivedAt) }}, {{ crowns(item.amountMinor) }}&nbsp;Kč</span
+          >
+        } @else if (!donations.singleDownloading(item)) {
+          <span class="visually-hidden" i18n="@@donor.dashboard.payments.downloadOf"
+            >, dar z {{ formatDate(item.receivedAt) }}, {{ crowns(item.amountMinor) }}&nbsp;Kč</span
+          >
+        }
+      </button>
+      <app-pdf-progress
+        class="receipt-saved"
+        [progress]="donations.singleProgress(item)"
+        [compact]="true"
+        cancelOf="přípravu potvrzení, dar z {{ formatDate(item.receivedAt) }}, {{
+          crowns(item.amountMinor)
+        }}&nbsp;Kč"
+        i18n-cancelOf="@@donor.dashboard.payments.cancelOf"
+        (cancelled)="donations.cancelSingleReceipt(item)"
       />
-      @if (donations.singleReady(item)) {
-        <span class="visually-hidden" i18n="@@donor.dashboard.payments.openOf"
-          >, dar z {{ formatDate(item.receivedAt) }}, {{ crowns(item.amountMinor) }}&nbsp;Kč</span
-        >
-      } @else if (!donations.singleDownloading(item)) {
-        <span class="visually-hidden" i18n="@@donor.dashboard.payments.downloadOf"
-          >, dar z {{ formatDate(item.receivedAt) }}, {{ crowns(item.amountMinor) }}&nbsp;Kč</span
-        >
-      }
-    </button>
-    <app-pdf-progress
-      class="receipt-saved"
-      [progress]="donations.singleProgress(item)"
-      [compact]="true"
-      cancelOf="přípravu potvrzení, dar z {{ formatDate(item.receivedAt) }}, {{
-        crowns(item.amountMinor)
-      }}&nbsp;Kč"
-      i18n-cancelOf="@@donor.dashboard.payments.cancelOf"
-      (cancelled)="donations.cancelSingleReceipt(item)"
-    />
+    </div>
   } @else {
     @switch (missingReceipt(item)) {
       @case ('on-yearly-receipt') {
