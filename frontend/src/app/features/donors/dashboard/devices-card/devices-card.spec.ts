@@ -10,6 +10,14 @@ import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessi
 import { deviceNameInSentence } from './device-labels';
 import { DevicesCard } from './devices-card';
 
+function announcers(element: Element): Element[] {
+  return [element, ...Array.from(element.querySelectorAll('*'))].filter(
+    (node) =>
+      node.hasAttribute('aria-live') ||
+      ['status', 'alert', 'log'].includes(node.getAttribute('role') ?? ''),
+  );
+}
+
 const DEVICES_URL = '/api/donors/me/devices';
 const THIS_MAC: SignedInDevice = {
   id: '019a5a3c-0000-7000-8000-000000000001',
@@ -278,6 +286,27 @@ describe("Given a donor's signed-in devices card", () => {
       await settle();
       await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
       expectShared(element<HTMLElement>('.devices-footer .devices-confirm'));
+    });
+
+    it("and the donor signs out the iPhone, then neither the start nor the result is announced by the button, and the result comes from the card's status line", async () => {
+      const status = element('.devices-status');
+      expect(status.getAttribute('role')).toBe('status');
+      await ask(signOutButton(rows()[1]));
+      await confirmSignOut();
+
+      const yes = element<HTMLButtonElement>('.devices-confirm-yes');
+      expect(announcers(yes)).toEqual([]);
+      expect(element('.devices-status')).toBe(status);
+      expect(text(status)).toBe('');
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(element('.devices-status')).toBe(status);
+      expect(text(status)).toBe(
+        'Zařízení jsme odhlásili: iPhone · Safari. Pokud jste se na něm nepřihlásili vy, změňte si heslo.',
+      );
     });
 
     it('and the donor signs out the iPhone, then its button is locked at once and keeps both labels, so its width does not change', async () => {

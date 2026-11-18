@@ -20,6 +20,14 @@ import {
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { PasskeysPanel } from './passkeys-panel';
 
+function announcers(element: Element): Element[] {
+  return [element, ...Array.from(element.querySelectorAll('*'))].filter(
+    (node) =>
+      node.hasAttribute('aria-live') ||
+      ['status', 'alert', 'log'].includes(node.getAttribute('role') ?? ''),
+  );
+}
+
 function labels(button: Element | null): string[] {
   return Array.from(button?.querySelectorAll('.busy-label__face') ?? []).map((face) =>
     (face.textContent ?? '').replace(/\s+/g, ' ').trim(),
@@ -335,6 +343,22 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
   describe('when the donor removes a passkey', () => {
     beforeEach(() => render());
+
+    it("then neither the start nor the result is announced by the button, and the result comes from the card's status line", async () => {
+      const status = element('.passkeys > .ui-form-status');
+      expect(status.getAttribute('role')).toBe('status');
+      await clickButton('Odebrat');
+      await clickButton('Ano, odebrat');
+
+      const yes = element<HTMLButtonElement>('.passkey-confirm .ui-button--danger-soft');
+      expect(announcers(yes)).toEqual([]);
+      expect(status.textContent?.trim()).toBe('');
+      http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`).flush(null);
+      await settle();
+
+      expect(status.isConnected).toBe(true);
+      expect(status.textContent).toContain('Přístupový klíč iPhone je odebraný');
+    });
 
     it('then the removal asks first and the confirmed key disappears', async () => {
       await clickButton('Odebrat');

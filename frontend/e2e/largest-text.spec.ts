@@ -11,6 +11,7 @@ import {
 import {
   administrator,
   bankAccountItem,
+  claudeConnection,
   donationItem,
   mockDonorApi,
   noDonations,
@@ -1458,6 +1459,91 @@ for (const { screen, viewport, rootPx } of [
         card.locator('.accounting-value').filter({ hasText: 'CZ26' }),
       )) {
         expect(line).toMatch(/^([A-Z0-9]{4})+$/);
+      }
+    });
+  });
+}
+
+for (const { pose, width, rootSize } of [
+  { pose: 'an iPhone SE 320 pt wide with the text at 200 %', width: 320, rootSize: '200%' },
+  {
+    pose: 'an iPhone Pro Max 430 pt wide with the largest accessibility text',
+    width: 430,
+    rootSize: `${LARGEST_SYSTEM_TEXT_PX}px`,
+  },
+]) {
+  test.describe(`Given an administrator on ${pose} on Údaje a zabezpečení`, () => {
+    test('when they ask to sign out a device, disconnect an application or remove a passkey, then each resting label stays on one line within its row as before, though it keeps room for its busy label', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/connections',
+        (route) => route.fulfill({ json: { items: [claudeConnection] } }),
+      );
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/passkeys',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                {
+                  id: '019a1b2c-3d4e-7f00-8000-000000000001',
+                  name: 'iPhone',
+                  createdAt: '2026-10-17T10:00:00Z',
+                  lastUsedAt: '2026-10-22T09:00:00Z',
+                },
+              ],
+            },
+          }),
+      );
+      await signIn(page, administrator);
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
+      await openDonorSection(page, 'Údaje a zabezpečení');
+
+      const devices = page.locator('.devices');
+      await devices.getByRole('button', { name: /^Odhlásit iPhone/ }).click();
+      const signOut = devices.locator('.devices-confirm-yes');
+      await expect(signOut).toHaveAccessibleName('Odhlásit');
+      const disconnect = page.locator('.connection-disconnect');
+      await expect(disconnect).toHaveAccessibleName('Odpojit');
+      await page.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
+      const passkeys = page.getByRole('region', { name: 'Přístupové klíče' });
+      await passkeys.getByRole('button', { name: 'Odebrat', exact: true }).click();
+      const remove = passkeys.locator('.passkey-confirm .ui-button--danger-soft');
+      await expect(remove).toHaveAccessibleName('Ano, odebrat');
+      await page.evaluate(() => document.fonts.ready);
+
+      for (const [button, row] of [
+        [signOut, page.locator('.device-confirm')],
+        [disconnect, page.locator('.connection')],
+        [remove, passkeys.locator('.passkey-confirm')],
+      ] as const) {
+        const placed = await button.evaluate(
+          (control, box) => {
+            const shown = control.querySelector('.busy-label__face--shown') ?? control;
+            const range = document.createRange();
+            range.selectNodeContents(shown);
+            const lines = new Set(
+              Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+            ).size;
+            const style = getComputedStyle(box!);
+            const rowBox = box!.getBoundingClientRect();
+            const own = control.getBoundingClientRect();
+            return {
+              lines,
+              within:
+                own.left >= rowBox.left + parseFloat(style.paddingLeft) - 1 &&
+                own.right <= rowBox.right - parseFloat(style.paddingRight) + 1,
+            };
+          },
+          await row.elementHandle(),
+        );
+        expect(placed, await button.evaluate((control) => control.textContent?.trim())).toEqual({
+          lines: 1,
+          within: true,
+        });
       }
     });
   });

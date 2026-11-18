@@ -7,6 +7,14 @@ import { authResponse, problem, sampleDonor } from '../../../../core/auth/testin
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { ConnectedAppsCard } from './connected-apps-card';
 
+function announcers(element: Element): Element[] {
+  return [element, ...Array.from(element.querySelectorAll('*'))].filter(
+    (node) =>
+      node.hasAttribute('aria-live') ||
+      ['status', 'alert', 'log'].includes(node.getAttribute('role') ?? ''),
+  );
+}
+
 function labels(button: Element | null): string[] {
   return Array.from(button?.querySelectorAll('.busy-label__face') ?? []).map((face) =>
     (face.textContent ?? '').replace(/\s+/g, ' ').trim(),
@@ -93,6 +101,27 @@ describe("Given an administrator's connected applications card", () => {
     expect(root().querySelectorAll('.connection-scopes li')).toHaveLength(2);
     expect(element('.connection-scopes').textContent).toContain('Čtení:');
     expect(element('.connection-scopes').textContent).toContain('Změny:');
+  });
+
+  it("when the administrator disconnects Claude, then neither the start nor the result is announced by the button, and the result comes from the card's status line", async () => {
+    http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
+    await settle();
+    const status = element('.connections-status');
+    expect(status.getAttribute('role')).toBe('status');
+
+    element<HTMLButtonElement>('.connection-disconnect').click();
+    await settle();
+
+    expect(announcers(element('.connection-disconnect'))).toEqual([]);
+    expect(element('.connections-status')).toBe(status);
+    expect(status.textContent?.trim()).toBe('');
+    http
+      .expectOne({ method: 'DELETE', url: `${CONNECTIONS_URL}/${CLAUDE_CONNECTION.id}` })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+
+    expect(element('.connections-status')).toBe(status);
+    expect(status.textContent).toContain('Aplikace claude.ai je odpojená');
   });
 
   it('when the administrator disconnects Claude, then the API is told, the row disappears and the status says so', async () => {
