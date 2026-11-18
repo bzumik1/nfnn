@@ -161,6 +161,13 @@ async function pairedPayments(page: Page): Promise<void> {
   );
 }
 
+function paymentRow(page: Page) {
+  return page
+    .getByRole('row')
+    .filter({ hasText: '10. 10. 2026' })
+    .filter({ hasText: 'Nováková Jana' });
+}
+
 async function followPairedPaymentsDonor(page: Page): Promise<void> {
   await page.goto('/aktuality');
   await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
@@ -304,6 +311,15 @@ test.describe("Given an administrator on a phone who opened the administration f
     await expect(overlays(page)).toHaveCount(0);
   });
 
+  test("when the app steps back without Zpět, then the payments return with the payment's row focused", async ({
+    page,
+  }) => {
+    await stepBack(page);
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ })).toBeFocused();
+  });
+
   test('when they close the administration on the donor card, then the news it was opened over return', async ({
     page,
   }) => {
@@ -311,6 +327,29 @@ test.describe("Given an administrator on a phone who opened the administration f
 
     await expect(page).toHaveURL('/aktuality');
     await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeVisible();
+  });
+});
+
+test.describe("Given an administrator on a wide screen who followed a paired payment's donor from the payments", () => {
+  test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await pairedPayments(page);
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/platby?stav=prirazene');
+    await paymentRow(page).getByRole('link', { name: 'Jana Nováková' }).click();
+    await expect(page).toHaveURL(new RegExp(`/sprava/darci/${administrator.id}$`));
+  });
+
+  test("when the app steps back without Zpět, then the payments return with focus in the payment's row on the donor it left", async ({
+    page,
+  }) => {
+    await stepBack(page);
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(paymentRow(page).getByRole('link', { name: 'Jana Nováková' })).toBeFocused();
   });
 });
 
