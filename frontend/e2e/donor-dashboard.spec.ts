@@ -376,10 +376,10 @@ test.describe('Given a signed-in donor', () => {
       'Platební údaje se nepodařilo načíst. Zkuste to prosím znovu. Když to nepomůže, napište na info@nfnn.cz.',
     );
     expect(Math.abs((await bank.boundingBox())!.height - loadingHeight)).toBeLessThanOrEqual(1);
-    await expect(card.locator('.bank-app')).toHaveCount(0);
-    await expect(card.locator('.other-device')).toHaveCount(0);
-    await expect(card.locator('.qr')).toHaveCount(0);
-    await expect(card.locator('.qr-code')).toHaveCount(0);
+    await expect(card.locator('.pay-actions')).toHaveAttribute('inert', '');
+    await expect(card.locator('.bank-app')).toBeHidden();
+    await expect(card.locator('.other-device')).toBeHidden();
+    await expect(card.locator('.qr')).toBeHidden();
   });
 
   test('when no donation has arrived yet and they sent a gift without the symbol, then the overview opens Přidat účet for the account it came from', async ({

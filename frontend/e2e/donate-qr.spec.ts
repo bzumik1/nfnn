@@ -17,6 +17,8 @@ const PAYMENT_QR_1000_SPAYD = paymentSpayd('1 000 Kč without a variable symbol'
 const PAYMENT_DETAILS_PATH = '/api/donations/payment-details';
 const QR_NAME = 'QR platba na účet Nadačního fondu Nová naděje';
 const PHONE_LAYOUT_MAX_WIDTH = 899;
+const GAP_WITHOUT_ACTIONS = 64;
+const ONE_FRAME_MS = 17;
 const DETAILS_FAILED =
   'Platební údaje se nepodařilo načíst. Zkuste to prosím znovu. Když to nepomůže, napište na info@nfnn.cz.';
 
@@ -99,6 +101,76 @@ async function tokenMilliseconds(page: Page, token: string): Promise<number> {
     return value.endsWith('ms') ? Number.parseFloat(value) : Number.parseFloat(value) * 1000;
   }, token);
 }
+
+interface FoldedFailure {
+  alertAt: number;
+  focusAt: number;
+  foldedAt: number;
+  inertAtAlert: boolean;
+}
+
+async function failureAfterRefusedQr(page: Page): Promise<FoldedFailure> {
+  let answers = 0;
+  await page.route(
+    (url) => url.pathname === PAYMENT_DETAILS_PATH,
+    async (route) => {
+      answers += 1;
+      await (answers === 1
+        ? route.fulfill({
+            json: {
+              ...FOUNDATION_PAYMENT_DETAILS,
+              messages: { ...FOUNDATION_PAYMENT_DETAILS.messages, donation: 'Dar*AM:1' },
+            },
+          })
+        : route.fulfill({ status: 500, json: { title: 'Chyba serveru' } }));
+    },
+  );
+  await page.goto('/prispet');
+  const retry = page.locator('#prispet .qr-retry');
+  await expect(retry).toBeVisible();
+  await page.evaluate(() => {
+    const seen: Partial<FoldedFailure> = {};
+    (window as FoldedFailureWindow).foldedFailure = seen;
+    const frame = (): void => {
+      const now = performance.now();
+      const actions = document.querySelector<HTMLElement>('#prispet .pay-actions');
+      if (seen.alertAt === undefined && document.querySelector('#prispet .bank [role="alert"]')) {
+        seen.alertAt = now;
+        seen.inertAtAlert = actions?.hasAttribute('inert') ?? false;
+      }
+      if (
+        seen.focusAt === undefined &&
+        document.activeElement?.matches('#prispet .bank-failure-retry')
+      ) {
+        seen.focusAt = now;
+      }
+      if (
+        seen.alertAt !== undefined &&
+        seen.foldedAt === undefined &&
+        (actions === null || actions.getBoundingClientRect().height < 1)
+      ) {
+        seen.foldedAt = now;
+      }
+      if (seen.focusAt === undefined || seen.foldedAt === undefined) {
+        requestAnimationFrame(frame);
+      }
+    };
+    requestAnimationFrame(frame);
+  });
+  await retry.focus();
+  await retry.click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const seen = (window as FoldedFailureWindow).foldedFailure!;
+        return seen.focusAt !== undefined && seen.foldedAt !== undefined;
+      }),
+    )
+    .toBe(true);
+  return page.evaluate(() => (window as FoldedFailureWindow).foldedFailure as FoldedFailure);
+}
+
+type FoldedFailureWindow = Window & { foldedFailure?: Partial<FoldedFailure> };
 
 async function heldPaymentDetails(page: Page): Promise<{ fail: () => void }> {
   let fail: () => void = () => undefined;
@@ -401,10 +473,35 @@ test.describe('Given a visitor on the Přispět page', () => {
 
       await expect(card.getByRole('alert')).toHaveText(DETAILS_FAILED);
       expect(Math.abs((await cardHeight(page)) - loadingHeight)).toBeLessThanOrEqual(1);
-      await expect(page.locator('#prispet .bank-app')).toHaveCount(0);
-      await expect(page.locator('#prispet .other-device')).toHaveCount(0);
-      await expect(page.locator('#prispet .qr')).toHaveCount(0);
-      await expect(page.locator('#prispet .qr-code')).toHaveCount(0);
+      await expect(page.locator('#prispet .pay-actions')).toHaveAttribute('inert', '');
+      await expect(page.locator('#prispet .bank-app')).toBeHidden();
+      await expect(page.locator('#prispet .other-device')).toBeHidden();
+      await expect(page.locator('#prispet .qr')).toBeHidden();
+    });
+
+    test('when the payment details fail after the code could not be made, then the bank actions are inert at once, the alert and the focus on Zkusit znovu come before they fold away, and Co bude dál then follows the note without a gap', async ({
+      page,
+    }) => {
+      const failure = await failureAfterRefusedQr(page);
+
+      expect(failure.inertAtAlert).toBe(true);
+      expect(failure.alertAt).toBeLessThan(failure.foldedAt);
+      expect(failure.focusAt).toBeLessThan(failure.foldedAt);
+      await expect(page.locator('#prispet .pay-actions')).toBeHidden();
+      const note = (await page.locator('#prispet .bank-receipt-note').boundingBox())!;
+      const next = (await page.locator('#prispet .next').boundingBox())!;
+      expect(next.y - (note.y + note.height)).toBeLessThan(GAP_WITHOUT_ACTIONS);
+    });
+
+    test('when the payment details fail with reduced motion, then the bank actions are gone in the frame the alert comes', async ({
+      page,
+    }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+
+      const failure = await failureAfterRefusedQr(page);
+
+      expect(failure.inertAtAlert).toBe(true);
+      expect(failure.foldedAt - failure.alertAt).toBeLessThanOrEqual(ONE_FRAME_MS * 2);
     });
 
     test('when the payment details failed and the visitor retries, then the focus stays on Zkusit znovu and then rests on Otevřít v aplikaci banky', async ({
