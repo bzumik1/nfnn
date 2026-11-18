@@ -49,16 +49,12 @@
 
 @include bp.down(nav) {
   .summary-list {
-    flex-basis: 100%;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: var(--space-2);
+    gap: var(--space-2) var(--space-6);
 
     div {
-      display: grid;
-      grid-column: 1 / -1;
-      grid-template-columns: subgrid;
-      align-items: center;
+      display: flex;
+      align-items: first baseline;
+      gap: var(--space-2);
     }
 
     dt {
@@ -73,12 +69,31 @@
     }
   }
 
+  @include bp.container-up(donor-summary, narrow) {
+    .summary-list {
+      flex-basis: 100%;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: var(--space-2);
+
+      div {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: subgrid;
+      }
+    }
+  }
+
   @include bp.container-down(donor-summary, pair) {
     .summary-list {
+      flex-basis: 100%;
+      display: grid;
       grid-template-columns: minmax(0, 1fr);
       row-gap: var(--space-3);
 
       div {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
         row-gap: var(--space-0-5);
       }
     }
