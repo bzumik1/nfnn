@@ -911,6 +911,8 @@ describe('Given an administrator on the bank payments page', () => {
       expect(url()).toBe('/sprava/platby');
       expect(element<HTMLInputElement>('#payments-from').value).toBe('');
       expect(element<HTMLInputElement>('#payments-to').value).toBe('');
+      expect(fixture.nativeElement.querySelector('#payments-from-chosen')).toBeNull();
+      expect(element('#payments-from').getAttribute('aria-describedby')).toBeNull();
       expect(document.activeElement).toBe(element('#payments-search'));
       expect(rows()).toHaveLength(1);
     });
@@ -926,6 +928,16 @@ describe('Given an administrator on the bank payments page', () => {
       expect(element<HTMLInputElement>('#payments-search').value).toBe('jana');
       expect(element<HTMLInputElement>('#payments-from').value).toBe('2026-01-01');
       expect(element<HTMLInputElement>('#payments-to').value).toBe('2026-03-31');
+      expect(element('#payments-from').getAttribute('aria-describedby')).toBe(
+        'payments-from-chosen',
+      );
+      expect(element('#payments-from-chosen').textContent?.trim()).toBe(
+        'Vybraný den: 1.\u00a01. 2026.',
+      );
+      expect(element('#payments-to').getAttribute('aria-describedby')).toBe('payments-to-chosen');
+      expect(element('#payments-to-chosen').textContent?.trim()).toBe(
+        'Vybraný den: 31.\u00a03. 2026.',
+      );
       expect(element('.admin-tab.is-active').textContent?.trim()).toBe('Přiřazené');
       expect(text('.payments-count')).toBe('Nalezena 1 platba.');
     });
@@ -1087,6 +1099,21 @@ describe('Given an administrator on the bank payments page where lists show as r
   function paymentRows(): HTMLButtonElement[] {
     return Array.from(fixture.nativeElement.querySelectorAll('button.payment-row'));
   }
+
+  it('when they choose a day of the period on a phone, then no Czech line repeats it under the field, as the phone shows the date in its own words', async () => {
+    await listResponds(paymentList([unpairedPayment()]));
+    const from = fixture.nativeElement.querySelector('#payments-from') as HTMLInputElement;
+    from.value = '2026-10-01';
+    from.dispatchEvent(new Event('change'));
+    await settle();
+    await listResponds(
+      paymentList([unpairedPayment()]),
+      'pairing=unpaired&from=2026-10-01&limit=50',
+    );
+
+    expect(fixture.nativeElement.querySelector('#payments-from-chosen')).toBeNull();
+    expect(from.getAttribute('aria-describedby')).toBeNull();
+  });
 
   function button(name: string): HTMLButtonElement {
     const found = Array.from(document.querySelectorAll('button')).find(
