@@ -299,7 +299,7 @@ test.describe('Given a visitor switching between the tabs', () => {
     const photosAsked = await newsWithPhotos(page);
     await page.goto('/aktuality');
     const article = page.getByRole('main').getByRole('link', { name: 'Zpráva 4' }).first();
-    await article.scrollIntoViewIfNeeded();
+    await article.evaluate((link) => link.scrollIntoView({ block: 'center', behavior: 'instant' }));
     const card = page
       .getByRole('main')
       .locator('.grid-item', { has: page.getByRole('link', { name: 'Zpráva 4' }) });

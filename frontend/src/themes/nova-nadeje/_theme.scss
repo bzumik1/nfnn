@@ -357,8 +357,8 @@
   --shadow-media-tight: 0 8px 24px rgb(0 0 0 / 0.25);
   --shadow-dialog: 0 24px 80px rgb(0 0 0 / 0.2);
   --shadow-sheet: 0 -8px 40px rgb(0 0 0 / 0.16);
-  --shadow-tab-bar: 0 6px 24px rgb(15 23 42 / 0.12);
-  --shadow-tab-bar-on-dark: 0 6px 24px rgb(0 0 0 / 0.4);
+  --shadow-tab-bar: 0 4px 12px rgb(15 23 42 / 0.12);
+  --shadow-tab-bar-on-dark: 0 4px 12px rgb(0 0 0 / 0.4);
   --shadow-header: 0 2px 20px rgb(0 0 0 / 0.08);
   --shadow-menu: 0 8px 24px rgb(0 0 0 / 0.1);
   --shadow-action-bar: 0 6px 28px rgb(0 0 0 / 0.14);
@@ -426,12 +426,18 @@
   --tab-bar-height: 62px;
   --tab-bar-gap: 20px;
   --tab-bar-gap-browser: 16px;
-  --tab-pill-inset: 2px;
+  --tab-pill-inset: 4px;
+  --tab-bar-padding-inline: max(var(--tab-pill-inset), 0.25rem);
+  --tab-bar-item-gap: 0.25rem;
   --tab-pill-drag-scale: 1.08;
   --tab-bar-max-width: 420px;
   --tab-bar-home-indicator-overlap: 13px;
   --tab-icon-size: 1.5rem;
-  --text-tab-label: min(var(--text-2xs), (100cqi - 40px) / 19);
+  --tab-label-fit: calc(
+    (100cqi - 32px - 2 * var(--tab-bar-padding-inline) - 3 * var(--tab-bar-item-gap)) / 19
+  );
+  --text-tab-label: min(var(--text-2xs), var(--tab-label-fit));
+  --text-tab-label-wide: min(var(--text-xs), var(--tab-label-fit));
   --back-icon-size: min(1.375rem, var(--back-button-size) * 0.68);
   --text-account-initials: min(var(--text-sm), var(--back-button-size) * 0.34);
   --list-chevron-size: 1rem;
@@ -552,7 +558,7 @@
   --color-tab-active: #93c5fd;
   --color-on-tab-bar: #e6e8ee;
   --color-tab-focus-ring: #ffffff;
-  --shadow-tab-bar: 0 6px 24px rgb(0 0 0 / 0.4);
+  --shadow-tab-bar: 0 4px 12px rgb(0 0 0 / 0.4);
   --color-accent: #6ea8ff;
   --color-accent-soft: #162a4d;
   --color-accent-bg: #121d33;

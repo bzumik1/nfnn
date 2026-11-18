@@ -332,11 +332,17 @@
   --tab-bar-gap: 15px;
   --tab-bar-gap-browser: 15px;
   --tab-pill-inset: 5px;
+  --tab-bar-padding-inline: max(var(--tab-pill-inset), 0.25rem);
+  --tab-bar-item-gap: 0.25rem;
   --tab-pill-drag-scale: 1.04;
   --tab-bar-max-width: 400px;
   --tab-bar-home-indicator-overlap: 15px;
   --tab-icon-size: 1.25rem;
-  --text-tab-label: min(var(--text-2xs), (100cqi - 40px) / 19);
+  --tab-label-fit: calc(
+    (100cqi - 32px - 2 * var(--tab-bar-padding-inline) - 3 * var(--tab-bar-item-gap)) / 19
+  );
+  --text-tab-label: min(var(--text-2xs), var(--tab-label-fit));
+  --text-tab-label-wide: min(var(--text-xs), var(--tab-label-fit));
   --back-icon-size: min(1.25rem, var(--back-button-size) * 0.5);
   --text-account-initials: min(var(--text-sm), var(--back-button-size) * 0.34);
   --list-chevron-size: 1rem;
