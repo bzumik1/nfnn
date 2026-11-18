@@ -103,14 +103,12 @@
                 type="button"
                 class="ui-button ui-button--danger devices-confirm-yes"
                 [disabled]="signingOut() !== null"
-                [attr.aria-busy]="signingOutOthers()"
                 (click)="signOutOthers()"
               >
-                @if (signingOutOthers()) {
-                  <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
-                } @else {
-                  <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
-                }
+                <app-busy-label [busy]="signingOutOthers()">
+                  <span when-idle i18n="@@donor.account.devices.signOut">Odhlásit</span>
+                  <span when-busy i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+                </app-busy-label>
               </button>
               <button
                 #confirmCancel
@@ -153,7 +151,9 @@
       <p class="ui-field-error" role="alert">{{ actionError() }}</p>
     }
     <p #status class="ui-form-status devices-status" role="status" tabindex="-1">
-      @if (signedOut(); as message) {
+      @if (busyAnnouncement.text(); as starting) {
+        <span class="visually-hidden">{{ starting }}</span>
+      } @else if (signedOut(); as message) {
         <span>{{ message }}</span>
       }
     </p>
@@ -261,14 +261,12 @@
             type="button"
             class="ui-button ui-button--danger devices-confirm-yes"
             [disabled]="signingOut() !== null"
-            [attr.aria-busy]="signingOut() === device.id"
             (click)="signOut(device)"
           >
-            @if (signingOut() === device.id) {
-              <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
-            } @else {
-              <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
-            }
+            <app-busy-label [busy]="signingOut() === device.id">
+              <span when-idle i18n="@@donor.account.devices.signOut">Odhlásit</span>
+              <span when-busy i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+            </app-busy-label>
           </button>
           <button
             #confirmCancel

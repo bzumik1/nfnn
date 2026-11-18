@@ -17,7 +17,22 @@ import {
   sampleDonor,
   samplePasskey,
 } from '../../../../core/auth/testing/donor-fixtures';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { PasskeysPanel } from './passkeys-panel';
+
+function announcers(element: Element): Element[] {
+  return [element, ...Array.from(element.querySelectorAll('*'))].filter(
+    (node) =>
+      node.hasAttribute('aria-live') ||
+      ['status', 'alert', 'log'].includes(node.getAttribute('role') ?? ''),
+  );
+}
+
+function labels(button: Element | null): string[] {
+  return Array.from(button?.querySelectorAll('.busy-label__face') ?? []).map((face) =>
+    (face.textContent ?? '').replace(/\s+/g, ' ').trim(),
+  );
+}
 
 const PASSKEYS_URL = '/api/donors/me/passkeys';
 const OPTIONS_URL = '/api/donors/me/passkeys/options';
@@ -69,9 +84,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
   }
 
   function texts(selector: string): string[] {
-    return Array.from(root().querySelectorAll(selector)).map(
-      (node) => node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
-    );
+    return Array.from(root().querySelectorAll(selector)).map((node) => accessibleText(node));
   }
 
   async function settle(): Promise<void> {
@@ -82,7 +95,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
   async function clickButton(text: string): Promise<void> {
     const button = Array.from(root().querySelectorAll('button')).find((candidate) =>
-      candidate.textContent?.includes(text),
+      accessibleText(candidate).includes(text),
     );
     expect(button, `button "${text}"`).toBeDefined();
     button?.click();
@@ -347,11 +360,33 @@ describe('Given the passkeys panel of the sign-in card', () => {
   describe('when the donor removes a passkey', () => {
     beforeEach(() => render());
 
+    it("then the card's status line, never the button, says first that it removes and then only the result", async () => {
+      const status = element('.passkeys > .ui-form-status');
+      expect(status.getAttribute('role')).toBe('status');
+      await clickButton('Odebrat');
+      await clickButton('Ano, odebrat');
+
+      const yes = element<HTMLButtonElement>('.passkey-confirm .ui-button--danger-soft');
+      expect(announcers(yes)).toEqual([]);
+      expect(status.textContent?.trim()).toBe('Odebíráme…');
+      expect(status.querySelector('.visually-hidden')?.textContent?.trim()).toBe('Odebíráme…');
+      http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`).flush(null);
+      await settle();
+
+      expect(status.isConnected).toBe(true);
+      expect(status.textContent).toContain('Přístupový klíč iPhone je odebraný');
+    });
+
     it('then the removal asks first and the confirmed key disappears', async () => {
       await clickButton('Odebrat');
       expect(element('.passkey-confirm').textContent).toContain('Odebrat klíč iPhone?');
 
       await clickButton('Ano, odebrat');
+      const yes = element<HTMLButtonElement>('.passkey-confirm .ui-button--danger-soft');
+      expect(yes.disabled).toBe(true);
+      expect(accessibleText(yes)).toBe('Ano, odebrat');
+      expect(yes.getAttribute('aria-busy')).toBe('true');
+      expect(labels(yes)).toEqual(['Ano, odebrat', 'Odebíráme…']);
       const removal = http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`);
       expect(removal.request.method).toBe('DELETE');
       removal.flush(null);
@@ -527,9 +562,7 @@ describe('Given the passkeys panel of a donor without a password', () => {
   }
 
   function texts(selector: string): string[] {
-    return Array.from(root().querySelectorAll(selector)).map(
-      (node) => node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
-    );
+    return Array.from(root().querySelectorAll(selector)).map((node) => accessibleText(node));
   }
 
   async function settle(): Promise<void> {
@@ -540,7 +573,7 @@ describe('Given the passkeys panel of a donor without a password', () => {
 
   async function clickButton(text: string): Promise<void> {
     const button = Array.from(root().querySelectorAll('button')).find((candidate) =>
-      candidate.textContent?.includes(text),
+      accessibleText(candidate).includes(text),
     );
     expect(button, `button "${text}"`).toBeDefined();
     button?.click();

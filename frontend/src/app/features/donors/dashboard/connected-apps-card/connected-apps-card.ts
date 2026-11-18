@@ -7,6 +7,8 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { ConnectedApp } from '../../../../core/auth/donor';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { describeScopes } from '../../connect-app/oauth-scopes';
+import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
@@ -15,12 +17,14 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 
 @Component({
   selector: 'app-connected-apps-card',
-  imports: [NeedsConnection],
+  providers: [BusyAnnouncement],
+  imports: [BusyLabel, NeedsConnection],
   templateUrl: './connected-apps-card.html',
   styleUrl: './connected-apps-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConnectedAppsCard {
+  protected readonly busyAnnouncement = inject(BusyAnnouncement);
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly kept = inject(KeptDonorAnswers);

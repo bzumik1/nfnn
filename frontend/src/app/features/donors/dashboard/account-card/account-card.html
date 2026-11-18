@@ -44,13 +44,12 @@
                 [disabled]="pendingAction() !== null"
                 (click)="resendEmailChange()"
               >
-                @if (pendingAction() === 'resend') {
-                  <span i18n="@@donor.account.email.resending">Posíláme…</span>
-                } @else {
-                  <span i18n="@@donor.account.email.resend"
+                <app-busy-label [busy]="pendingAction() === 'resend'">
+                  <span when-idle i18n="@@donor.account.email.resend"
                     >Poslat znovu<span class="visually-hidden"> potvrzovací odkaz</span></span
                   >
-                }
+                  <span when-busy i18n="@@donor.account.email.resending">Posíláme…</span>
+                </app-busy-label>
               </button>
               <button
                 appNeedsConnection
@@ -59,13 +58,12 @@
                 [disabled]="pendingAction() !== null"
                 (click)="cancelEmailChange()"
               >
-                @if (pendingAction() === 'cancel') {
-                  <span i18n="@@donor.account.email.cancelling">Rušíme…</span>
-                } @else {
-                  <span i18n="@@donor.account.email.cancelChange"
+                <app-busy-label [busy]="pendingAction() === 'cancel'">
+                  <span when-idle i18n="@@donor.account.email.cancelChange"
                     >Zrušit<span class="visually-hidden"> změnu e-mailu</span></span
                   >
-                }
+                  <span when-busy i18n="@@donor.account.email.cancelling">Rušíme…</span>
+                </app-busy-label>
               </button>
             </span>
             @if (pendingError()) {
@@ -167,11 +165,12 @@
                 class="ui-button ui-button--primary account-save"
                 [disabled]="saving()"
               >
-                @if (saving()) {
-                  <span i18n="@@donor.account.email.sending">Odesíláme…</span>
-                } @else {
-                  <span i18n="@@donor.account.email.submit">Poslat potvrzovací odkaz</span>
-                }
+                <app-busy-label [busy]="saving()">
+                  <span when-idle i18n="@@donor.account.email.submit"
+                    >Poslat potvrzovací odkaz</span
+                  >
+                  <span when-busy i18n="@@donor.account.email.sending">Odesíláme…</span>
+                </app-busy-label>
               </button>
               <button
                 type="button"
@@ -338,13 +337,16 @@
                 class="ui-button ui-button--primary account-save"
                 [disabled]="saving()"
               >
-                @if (saving()) {
-                  <span i18n="@@donor.account.password.saving">Ukládáme…</span>
-                } @else if (hasPassword()) {
-                  <span i18n="@@donor.account.password.submit">Změnit heslo</span>
-                } @else {
-                  <span i18n="@@donor.account.setPassword">Nastavit heslo</span>
-                }
+                <app-busy-label [busy]="saving()">
+                  <span when-idle>
+                    @if (hasPassword()) {
+                      <span i18n="@@donor.account.password.submit">Změnit heslo</span>
+                    } @else {
+                      <span i18n="@@donor.account.setPassword">Nastavit heslo</span>
+                    }
+                  </span>
+                  <span when-busy i18n="@@donor.account.password.saving">Ukládáme…</span>
+                </app-busy-label>
               </button>
               <button
                 type="button"
@@ -413,11 +415,10 @@
                 class="ui-button ui-button--primary account-save"
                 [disabled]="saving()"
               >
-                @if (saving()) {
-                  <span i18n="@@donor.account.removePassword.saving">Odebíráme…</span>
-                } @else {
-                  <span i18n="@@donor.account.removePassword">Odebrat heslo</span>
-                }
+                <app-busy-label [busy]="saving()">
+                  <span when-idle i18n="@@donor.account.removePassword">Odebrat heslo</span>
+                  <span when-busy i18n="@@donor.account.removePassword.saving">Odebíráme…</span>
+                </app-busy-label>
               </button>
               <button
                 type="button"
@@ -569,11 +570,10 @@
                 class="ui-button ui-button--primary account-save"
                 [disabled]="saving()"
               >
-                @if (saving()) {
-                  <span i18n="@@donor.account.secondFactor.preparing">Připravujeme…</span>
-                } @else {
-                  <span i18n="@@donor.account.secondFactor.continue">Pokračovat</span>
-                }
+                <app-busy-label [busy]="saving()">
+                  <span when-idle i18n="@@donor.account.secondFactor.continue">Pokračovat</span>
+                  <span when-busy i18n="@@donor.account.secondFactor.preparing">Připravujeme…</span>
+                </app-busy-label>
               </button>
               <button
                 type="button"
@@ -674,11 +674,14 @@
                 class="ui-button ui-button--primary account-save"
                 [disabled]="saving()"
               >
-                @if (saving()) {
-                  <span i18n="@@donor.account.secondFactor.verifying">Ověřujeme kód…</span>
-                } @else {
-                  <span i18n="@@donor.account.secondFactor.turnOn">Zapnout kód z aplikace</span>
-                }
+                <app-busy-label [busy]="saving()">
+                  <span when-idle i18n="@@donor.account.secondFactor.turnOn"
+                    >Zapnout kód z aplikace</span
+                  >
+                  <span when-busy i18n="@@donor.account.secondFactor.verifying"
+                    >Ověřujeme kód…</span
+                  >
+                </app-busy-label>
               </button>
               <button
                 type="button"
@@ -777,11 +780,12 @@
                 class="ui-button ui-button--primary account-save"
                 [disabled]="saving()"
               >
-                @if (saving()) {
-                  <span i18n="@@donor.account.secondFactor.turningOff">Vypínáme…</span>
-                } @else {
-                  <span i18n="@@donor.account.secondFactor.turnOff">Vypnout kód z aplikace</span>
-                }
+                <app-busy-label [busy]="saving()">
+                  <span when-idle i18n="@@donor.account.secondFactor.turnOff"
+                    >Vypnout kód z aplikace</span
+                  >
+                  <span when-busy i18n="@@donor.account.secondFactor.turningOff">Vypínáme…</span>
+                </app-busy-label>
               </button>
               <button
                 type="button"
@@ -842,7 +846,9 @@
   </dl>
 
   <p class="ui-form-status account-status" role="status">
-    @if (linkSentTo(); as address) {
+    @if (busyAnnouncement.text(); as starting) {
+      <span class="visually-hidden">{{ starting }}</span>
+    } @else if (linkSentTo(); as address) {
       <span i18n="@@donor.account.email.sent">
         Odkaz jsme poslali na {{ address }}. Platí 24 hodin; po jeho otevření se účet přepne na
         novou adresu a na tu současnou pošleme oznámení.
