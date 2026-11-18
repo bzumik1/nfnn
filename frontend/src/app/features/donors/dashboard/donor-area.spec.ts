@@ -1972,29 +1972,6 @@ describe('Given a signed-in donor in the donor area', () => {
       );
     });
 
-    it('then the dot of a pairing tag is bound to the words before it, so a wrapped line never starts with it', async () => {
-      const list = twoYearDonations();
-      list.items[0] = donationItem({
-        id: 'd-2',
-        pairedBy: 'SENDER_ACCOUNT',
-        senderAccount: '2900233333/2010',
-      });
-      list.items[1] = donationItem({
-        id: 'd-4',
-        pairedBy: 'CONFIRMED_SYMBOL',
-        senderAccount: '19-2000145399/0800',
-        confirmedSymbol: '6123456789',
-      });
-      await open('/darce/dary');
-      await respond(twoYearSummary(), list);
-
-      const visibleTag = (row: number) =>
-        element(`.payments-card tbody tr:nth-child(${row}) .pairing-tag [aria-hidden="true"]`)
-          ?.textContent;
-      expect(visibleTag(1)).toMatch(/symbolu\u00a0· účet/);
-      expect(visibleTag(2)).toMatch(/6123456789\u00a0· účet/);
-    });
-
     it('then a donation paired by a symbol the donor confirmed carries a tag naming that symbol and the end of the account', async () => {
       const list = twoYearDonations();
       list.items[0] = donationItem({

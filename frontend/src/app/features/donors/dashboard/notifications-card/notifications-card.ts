@@ -72,6 +72,7 @@ export class NotificationsCard {
   private readonly holders = inject(BrowserPushHolders);
   private readonly notified = inject(DonorNotifiedDevices);
   private readonly pageReload = inject(PageReload);
+  private focusAfterLoad = inject(ReloadPlace).takeFocus(HEADING_ID);
   private readonly window = inject(DOCUMENT).defaultView;
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -118,9 +119,6 @@ export class NotificationsCard {
 
   constructor() {
     this.load();
-    if (inject(ReloadPlace).takeFocus(HEADING_ID)) {
-      this.focusHeading();
-    }
   }
 
   protected retryWithReload(): void {
@@ -238,7 +236,13 @@ export class NotificationsCard {
       .view()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (view) => this.show(view),
+        next: (view) => {
+          this.show(view);
+          if (this.focusAfterLoad) {
+            this.focusAfterLoad = false;
+            this.focusHeading();
+          }
+        },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
             this.sessionEnded.emit();

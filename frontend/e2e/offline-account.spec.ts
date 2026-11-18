@@ -28,7 +28,7 @@ async function signInAs(page: Page, remembered: boolean): Promise<void> {
   await page.getByRole('dialog').locator('.ui-button--block').click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await openAccountItem(page, 'Údaje a zabezpečení');
-  await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+  await expect(page.getByText(/Uloženo v zařízení\u00a0· aktualizováno /)).toBeVisible();
 }
 
 async function cutOffTheServer(page: Page): Promise<string[]> {

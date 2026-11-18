@@ -3377,7 +3377,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   }) => {
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
-    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await expect(page.getByText(/Uloženo v zařízení\u00a0· aktualizováno /)).toBeVisible();
     await page.getByRole('button', { name: 'Načíst data znovu' }).click();
     await expect(
       page.getByRole('status').filter({ hasText: 'Data jsou načtená znovu.' }),
