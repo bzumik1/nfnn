@@ -1088,6 +1088,14 @@ describe('Given a dialog that the visitor closes', () => {
       expect(history.opened).toBe(1);
     });
 
+    it('and it fades out, then its dark ground fades with it instead of going at once', () => {
+      closeButton().click();
+      fixture.detectChanges();
+
+      expect(native()?.classList).toContain('dialog--leaving');
+      expect(native()?.style.getPropertyValue('--dialog-pull')).toBe('0');
+    });
+
     it('and the visitor asks for less motion, then it asks to be dismissed at once', () => {
       deviceAsksForLessMotion(true);
 
