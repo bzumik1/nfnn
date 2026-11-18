@@ -935,7 +935,7 @@ describe('Given the donate section', () => {
     expect(element('.qr-error')).toBeNull();
   });
 
-  it('when the visitor types keys 300 ms apart, then the old QR stays dimmed until the loading delay after the last key and is redrawn once, for the finished amount', async () => {
+  it('when the visitor types keys 200 ms apart, then the old QR stays dimmed until the loading delay after the last key and is redrawn once, for the finished amount', async () => {
     await openWithQr();
     button('Jiná částka').click();
     fixture.detectChanges();

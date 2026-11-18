@@ -54,6 +54,45 @@ async function decodedQrText(page: Page, png: Buffer): Promise<string | undefine
     ?.data;
 }
 
+interface QrSwap {
+  amountAt: number | null;
+  shownAt: number | null;
+}
+
+type QrSwapWindow = Window & { qrSwap?: QrSwap };
+
+async function watchQrSwap(page: Page, amount: string): Promise<void> {
+  await page.evaluate((expected) => {
+    const swap: QrSwap = { amountAt: null, shownAt: null };
+    (window as QrSwapWindow).qrSwap = swap;
+    const frame = (): void => {
+      const now = performance.now();
+      const shown = document
+        .querySelector('#prispet .bank-row-amount .bank-value')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim();
+      if (swap.amountAt === null && shown === expected) {
+        swap.amountAt = now;
+      }
+      const drawn = document.querySelector('#prispet app-qr-code.qr-image-swapped');
+      if (
+        drawn !== null &&
+        !drawn.classList.contains('qr-image-stale') &&
+        Number(getComputedStyle(drawn).opacity) >= 0.999
+      ) {
+        swap.shownAt = now;
+        return;
+      }
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }, amount);
+}
+
+async function qrSwap(page: Page): Promise<QrSwap> {
+  return page.evaluate(() => ({ ...(window as QrSwapWindow).qrSwap! }));
+}
+
 async function tokenMilliseconds(page: Page, token: string): Promise<number> {
   return page.evaluate((name) => {
     const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -117,7 +156,7 @@ test.describe('Given a visitor on the Přispět page', () => {
     expect(asked).toEqual([PAYMENT_DETAILS_PATH]);
   });
 
-  test('when they choose another amount, then the QR reads as the new payment within --duration-page of Částka showing it', async ({
+  test('when they choose another amount, then the page shows the new QR in full within --duration-page of Částka showing it, and that QR reads as the new payment', async ({
     page,
   }) => {
     await servePaymentDetails(page, []);
@@ -126,29 +165,19 @@ test.describe('Given a visitor on the Přispět page', () => {
     const qrCode = page.getByRole('img', { name: QR_NAME });
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
     const budget = await tokenMilliseconds(page, '--duration-page');
+    await watchQrSwap(page, '1 000 Kč');
 
     await page.getByRole('radio', { name: '1 000 Kč' }).click();
-    await expect(page.locator('#prispet .bank-row-amount .bank-value')).toHaveText('1 000\u00a0Kč');
-    const shownAt = await page.evaluate(() => performance.now());
-    const read: { at: number | null } = { at: null };
-    await expect
-      .poll(
-        async () => {
-          const shotAt = await page.evaluate(() => performance.now());
-          const text = await decodedQrText(
-            page,
-            await page.locator('#prispet app-qr-code').screenshot({ animations: 'allow' }),
-          );
-          if (text === PAYMENT_QR_1000_SPAYD) {
-            read.at ??= shotAt;
-          }
-          return read.at !== null;
-        },
-        { intervals: [16] },
-      )
-      .toBe(true);
 
-    expect((read.at ?? Infinity) - shownAt).toBeLessThanOrEqual(budget);
+    await expect.poll(() => qrSwap(page).then((swap) => swap.shownAt !== null)).toBe(true);
+    const swap = await qrSwap(page);
+    expect(swap.amountAt).not.toBeNull();
+    expect(swap.shownAt! - swap.amountAt!).toBeLessThanOrEqual(budget);
+    expect(await drawnModulesMatch(qrCode, PAYMENT_QR_1000)).toBe(true);
+    const picture = await page
+      .locator('#prispet app-qr-code')
+      .screenshot({ animations: 'disabled', scale: 'css' });
+    expect(await decodedQrText(page, picture)).toBe(PAYMENT_QR_1000_SPAYD);
   });
 
   test('when the payment details fail, then the card says so with the address to write to, and an amount chosen meanwhile loads nothing until Zkusit znovu, which says the QR is ready', async ({
