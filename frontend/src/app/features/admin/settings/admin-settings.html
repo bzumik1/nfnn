@@ -364,9 +364,7 @@
             </button>
           }
           <p class="ui-form-status" role="status">
-            @if (busyAnnouncement.text(); as starting) {
-              <span class="visually-hidden">{{ starting }}</span>
-            } @else if (saveStatus(); as status) {
+            @if (saveStatus(); as status) {
               <span>{{ status }}</span>
             }
           </p>

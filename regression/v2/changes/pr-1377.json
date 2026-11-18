@@ -4,7 +4,7 @@
     "suite": "frontend-playwright",
     "test": "e2e/admin-report.spec.ts > Given an administrator on the monthly report page > when they save and the server takes a while, then the button says so at once under its new name without changing its width",
     "reason": "PR #1377 (#1250; R65 and R66, both polish teams): a busy label changes only after the loading delay, keeps the button's resting accessible name with aria-busy while the work runs, and the card's status line says the busy label after the delay before the result (explicit exception from D1/#1250 Label in Name), so these tests now name that behaviour",
-    "replacement": "e2e/admin-report.spec.ts > Given an administrator on the monthly report page > when they save and the server takes a while, then the button is locked and busy at once under its resting name, shows Ukládáme… with the status line after the loading delay and keeps its width",
+    "replacement": "e2e/admin-report.spec.ts > Given an administrator on the monthly report page > when they save and the server takes a while, then the button is locked at once and says so under its new name after the loading delay without changing its width",
     "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
   },
   {

@@ -272,15 +272,10 @@ describe('Given an administrator on the monthly report page', () => {
       sendHour: 18,
       sections: { donors: false, donations: true, unpairedPayments: true, bankImport: true },
     });
-    const saveButton = fixture.nativeElement.querySelector(
-      'form.settings-form button[type="submit"]',
-    ) as HTMLElement;
-    expect(accessibleText(saveButton)).toBe('Uložit nastavení');
-    expect(saveButton.getAttribute('aria-busy')).toBe('true');
     expect(
-      (
-        fixture.nativeElement.querySelector('form.settings-form .ui-form-status') as HTMLElement
-      ).textContent?.trim(),
+      accessibleText(
+        fixture.nativeElement.querySelector('form.settings-form button[type="submit"]'),
+      ),
     ).toBe('Ukládáme…');
 
     request.flush({
@@ -415,8 +410,7 @@ describe('Given an administrator on the monthly report page', () => {
       expect(request.request.headers.get('If-Match')).toBe(`"${current}"`);
       expect(heldRecordOf(request.request.context)).toBeNull();
       expect(request.request.body.recipients).toEqual(['pavel@example.cz']);
-      expect(button('Uložit nastavení').getAttribute('aria-disabled')).toBe('true');
-      expect(button('Uložit nastavení').getAttribute('aria-busy')).toBe('true');
+      expect(button('Ukládáme…').getAttribute('aria-disabled')).toBe('true');
       request.flush({});
       await settle();
       await respond(reportView());

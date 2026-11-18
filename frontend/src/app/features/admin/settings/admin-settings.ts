@@ -20,7 +20,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { describeProblem, problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
-import { BusyAnnouncement } from '../../../shared/ui/busy-label/busy-announcement';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { PasswordReveal } from '../../../shared/ui/password-reveal/password-reveal';
@@ -203,7 +202,6 @@ const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše 
 
 @Component({
   selector: 'app-admin-settings',
-  providers: [BusyAnnouncement],
   imports: [
     BusyButton,
     BusyLabel,
@@ -225,7 +223,6 @@ const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše 
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminSettings {
-  protected readonly busyAnnouncement = inject(BusyAnnouncement);
   private readonly api = inject(AdminApi);
   private readonly setupApi = inject(SetupApi);
   private readonly reads = inject(AdministrationPageReads);
