@@ -339,6 +339,89 @@ function expectSlidOffTheScreen(leave: SheetLeave, from: number): void {
   expect(leave.blurTo!).toBeLessThan(0.5);
 }
 
+interface VeilFrame {
+  readonly veil: number;
+  readonly blur: number;
+}
+
+function veilNow(page: Page): Promise<VeilFrame & { readonly pull: number }> {
+  return page.evaluate(() => {
+    const dialog = document.querySelector('dialog')!;
+    const alpha = (color: string): number => {
+      const slash = /\/\s*([\d.]+)\s*\)$/.exec(color);
+      return slash === null
+        ? color.startsWith('rgba')
+          ? Number(color.split(',').at(-1)!.replace(')', ''))
+          : 1
+        : Number(slash[1]);
+    };
+    return {
+      veil: alpha(getComputedStyle(dialog).backgroundColor),
+      blur: Number(getComputedStyle(dialog, '::backdrop').opacity),
+      pull: Number(dialog.style.getPropertyValue('--dialog-pull') || '0'),
+    };
+  });
+}
+
+async function watchVeilAfterRelease(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const record = window as unknown as {
+      veilFrames: { veil: number; blur: number }[];
+      veilSettled: boolean;
+    };
+    record.veilFrames = [];
+    record.veilSettled = false;
+    const alpha = (color: string): number => {
+      const slash = /\/\s*([\d.]+)\s*\)$/.exec(color);
+      return slash === null
+        ? color.startsWith('rgba')
+          ? Number(color.split(',').at(-1)!.replace(')', ''))
+          : 1
+        : Number(slash[1]);
+    };
+    const sample = (): void => {
+      const dialog = document.querySelector('dialog');
+      const moving =
+        dialog !== null &&
+        dialog
+          .getAnimations({ subtree: true })
+          .some((animation) => animation.playState === 'running');
+      if (dialog !== null) {
+        record.veilFrames.push({
+          veil: alpha(getComputedStyle(dialog).backgroundColor),
+          blur: Number(getComputedStyle(dialog, '::backdrop').opacity),
+        });
+      }
+      if (dialog === null || (!moving && record.veilFrames.length > 1)) {
+        record.veilSettled = true;
+        return;
+      }
+      requestAnimationFrame(sample);
+    };
+    document.addEventListener('pointerup', () => requestAnimationFrame(sample), {
+      once: true,
+      capture: true,
+    });
+  });
+}
+
+async function veilAfterRelease(page: Page): Promise<VeilFrame[]> {
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { veilSettled: boolean }).veilSettled))
+    .toBe(true);
+  return page.evaluate(() => (window as unknown as { veilFrames: VeilFrame[] }).veilFrames);
+}
+
+function movedThrough(
+  frames: readonly VeilFrame[],
+  from: VeilFrame,
+  key: keyof VeilFrame,
+): boolean {
+  const to = frames.at(-1)![key];
+  const [low, high] = [Math.min(from[key], to), Math.max(from[key], to)];
+  return frames.some((frame) => frame[key] > low + 0.01 && frame[key] < high - 0.01);
+}
+
 function veilTransitions(page: Page): Promise<string[]> {
   return page.evaluate(() =>
     document
@@ -681,13 +764,17 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await page.mouse.down();
     await page.mouse.move(x, y + 120, { steps: 6 });
     await expect(page.locator('.dialog-panel--dragging')).toBeAttached();
+    await expect.poll(async () => (await veilNow(page)).pull).toBeGreaterThan(0);
     const whileDragging = await veilTransitions(page);
+    const released = await veilNow(page);
+    await watchVeilAfterRelease(page);
     await page.mouse.up();
+    const settle = await veilAfterRelease(page);
 
     expect(whileDragging).toEqual([]);
-    await expect
-      .poll(() => veilTransitions(page))
-      .toEqual(expect.arrayContaining(['dialog background-color', 'dialog::backdrop opacity']));
+    expect(released.blur).toBeCloseTo(1 - released.pull, 2);
+    expect(movedThrough(settle, released, 'veil')).toBe(true);
+    expect(movedThrough(settle, released, 'blur')).toBe(true);
   });
 
   test('when a finger pulls the content of the sheet down from its top on a phone, then the sheet follows it, slides away and takes its entry back', async ({
