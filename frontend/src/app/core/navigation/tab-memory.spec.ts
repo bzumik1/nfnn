@@ -1,12 +1,14 @@
 import { Location } from '@angular/common';
 import { provideLocationMocks, SpyLocation } from '@angular/common/testing';
-import { Component } from '@angular/core';
+import { Component, ProviderToken } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
+  InMemoryScrollingFeature,
   NavigationEnd,
   provideRouter,
   Router,
   RouteReuseStrategy,
+  Scroll,
   withInMemoryScrolling,
 } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -18,6 +20,11 @@ import { TabMemory } from './tab-memory';
 
 @Component({ template: '' })
 class Blank {}
+
+function routerScrollerOf(scrolling: InMemoryScrollingFeature): { init(): void } {
+  const [scroller] = scrolling.ɵproviders as { provide: ProviderToken<{ init(): void }> }[];
+  return TestBed.inject(scroller.provide);
+}
 
 const [about, news, projects, donate] = APP_TABS;
 
@@ -340,5 +347,119 @@ describe('Given a visitor who goes back through the history of the browser', () 
     TestBed.tick();
 
     expect(scrolledTo).toEqual([]);
+  });
+});
+
+describe('Given a visitor who steps back to a page drawn afresh, shorter at first than the place they left', () => {
+  let harness: RouterTestingHarness;
+  let scrolledTo: number[];
+  let grown: (() => void) | null;
+
+  function scrolledBy(top: number): void {
+    Object.defineProperty(window, 'scrollY', { value: top, configurable: true });
+  }
+
+  function pageHeight(height: number): void {
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      value: height,
+      configurable: true,
+    });
+  }
+
+  beforeEach(async () => {
+    scrolledTo = [];
+    grown = null;
+    vi.spyOn(window, 'scrollTo').mockImplementation((options?: ScrollToOptions | number) => {
+      if (typeof options === 'object') {
+        scrolledTo.push(options.top ?? 0);
+      }
+    });
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        readonly observe = vi.fn();
+
+        constructor(changed: () => void) {
+          grown = changed;
+        }
+
+        disconnect(): void {
+          grown = null;
+        }
+      },
+    );
+    const scrolling = withInMemoryScrolling({ scrollPositionRestoration: 'enabled' });
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(
+          [
+            ...APP_TABS.map((tab) => ({ path: tab.path.slice(1), component: Blank })),
+            { path: 'sprava', component: Blank },
+          ],
+          scrolling,
+        ),
+        provideLocationMocks(),
+      ],
+    });
+    TestBed.inject(TabMemory);
+    routerScrollerOf(scrolling).init();
+    harness = await RouterTestingHarness.create('/o-nas');
+    TestBed.inject(Router).setUpLocationChangeListener();
+    scrolledBy(900);
+    await harness.navigateByUrl('/sprava');
+    scrolledBy(0);
+    pageHeight(300);
+    scrolledTo = [];
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    scrolledBy(0);
+    pageHeight(0);
+  });
+
+  async function stepBack(): Promise<void> {
+    const router = TestBed.inject(Router);
+    const shown = router.lastSuccessfulNavigation()?.id ?? 0;
+    const scrolled = new Promise<void>((done) =>
+      router.events.subscribe((event) => {
+        if (event instanceof Scroll && event.routerEvent.id > shown) {
+          queueMicrotask(done);
+        }
+      }),
+    );
+    TestBed.inject(Location).back();
+    await scrolled;
+  }
+
+  it('when the page grows tall enough, then it is put where they left it', async () => {
+    await stepBack();
+    scrolledTo = [];
+    pageHeight(3000);
+    grown?.();
+
+    expect(scrolledTo).toEqual([900]);
+  });
+
+  it('when the visitor scrolls by themselves before it grows, then the page is left where they put it', async () => {
+    await stepBack();
+    window.dispatchEvent(new Event('touchstart'));
+    scrolledTo = [];
+    pageHeight(3000);
+    grown?.();
+
+    expect(scrolledTo).toEqual([]);
+  });
+
+  it('when another page opens before it grows, then that page is not moved', async () => {
+    await stepBack();
+    scrolledTo = [];
+    await harness.navigateByUrl('/projekty');
+    scrolledTo = [];
+    pageHeight(3000);
+    grown?.();
+
+    expect(scrolledTo).not.toContain(900);
   });
 });

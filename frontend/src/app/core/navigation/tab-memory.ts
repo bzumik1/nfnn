@@ -8,12 +8,22 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { NavigationEnd, NavigationStart, Router, Scroll } from '@angular/router';
+import {
+  Event as RouterEvent,
+  NavigationEnd,
+  NavigationStart,
+  Router,
+  Scroll,
+} from '@angular/router';
 import { AppTab, AppTabId, pathOf, tabOf } from './app-tabs';
 import { ReloadPlace } from '../reload/reload-place';
 import { KeptTabPages } from './kept-tab-pages';
 import { NavigationPreview } from './navigation-preview';
 import { ScrollHold } from './scroll-hold';
+
+const PLACE_WAIT_LONGEST_MS = 3000;
+const VISITOR_MOVES = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
+const LISTENING: AddEventListenerOptions = { passive: true, capture: true };
 
 @Injectable({ providedIn: 'root' })
 export class TabMemory {
@@ -21,7 +31,8 @@ export class TabMemory {
   private readonly injector = inject(Injector);
   private readonly keptPages = inject(KeptTabPages);
   private readonly preview = inject(NavigationPreview);
-  private readonly window = inject(DOCUMENT).defaultView;
+  private readonly document = inject(DOCUMENT);
+  private readonly window = this.document.defaultView;
   private readonly reloadPlace = inject(ReloadPlace);
   private readonly scrollHold = inject(ScrollHold);
   private readonly lastUrls = new Map<AppTabId, string>(this.reloadPlace.keptTabs());
@@ -31,14 +42,17 @@ export class TabMemory {
   private keptTop: { readonly top: number; readonly navigation: number } | null = null;
   private returnedToKeptPage = false;
   private placements = 0;
+  private stopWaitingForHeight: (() => void) | null = null;
 
   constructor() {
     this.reloadPlace.followTabs(() => this.lastUrls);
     const navigations = this.router.events.subscribe((event) => {
       if (this.preview.drives()) {
+        this.followPreview(event);
         return;
       }
       if (event instanceof NavigationStart) {
+        this.stopWaitingForHeight?.();
         this.keptPages.takeReturningTop();
       } else if (event instanceof NavigationEnd) {
         this.visited(event.urlAfterRedirects);
@@ -82,10 +96,24 @@ export class TabMemory {
     }
   }
 
+  private followPreview(event: RouterEvent): void {
+    if (event instanceof NavigationEnd) {
+      const top = this.keptPages.takeReturningTop();
+      if (top !== null) {
+        this.keptTop = { top, navigation: event.id };
+        this.placeAt(top);
+      }
+    } else if (event instanceof Scroll && this.keptTop?.navigation === event.routerEvent.id) {
+      this.overRouterScrolling(event);
+    }
+  }
+
   private overRouterScrolling(event: Scroll): void {
     const kept = this.keptTop;
     if (kept === null || kept.navigation !== event.routerEvent.id) {
-      if (!event.position && event.anchor === null && event.scrollBehavior !== 'manual') {
+      if (event.position) {
+        this.keepPlaceWhileGrowing(event.position[1]);
+      } else if (event.anchor === null && event.scrollBehavior !== 'manual') {
         this.scrollTo(0);
       }
       return;
@@ -94,6 +122,37 @@ export class TabMemory {
     if (event.anchor === null && event.scrollBehavior !== 'manual') {
       queueMicrotask(() => this.scrollTo(kept.top));
     }
+  }
+
+  private keepPlaceWhileGrowing(top: number): void {
+    this.stopWaitingForHeight?.();
+    const view = this.window;
+    if (view === null || typeof ResizeObserver === 'undefined' || this.reaches(top)) {
+      return;
+    }
+    const growth = new ResizeObserver(() => {
+      this.scrollTo(top);
+      if (this.reaches(top)) {
+        stop();
+      }
+    });
+    const stop = (): void => {
+      growth.disconnect();
+      view.clearTimeout(timer);
+      VISITOR_MOVES.forEach((type) => view.removeEventListener(type, stop, LISTENING));
+      if (this.stopWaitingForHeight === stop) {
+        this.stopWaitingForHeight = null;
+      }
+    };
+    const timer = view.setTimeout(stop, PLACE_WAIT_LONGEST_MS);
+    VISITOR_MOVES.forEach((type) => view.addEventListener(type, stop, LISTENING));
+    growth.observe(this.document.body);
+    this.stopWaitingForHeight = stop;
+  }
+
+  private reaches(top: number): boolean {
+    const view = this.window;
+    return view !== null && this.document.documentElement.scrollHeight - view.innerHeight >= top;
   }
 
   private startNewPageAtTop(): void {

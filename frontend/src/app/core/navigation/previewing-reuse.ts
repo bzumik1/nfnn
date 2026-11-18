@@ -17,16 +17,24 @@ export class PreviewingReuse extends BaseRouteReuseStrategy {
   }
 
   override store(route: ActivatedRouteSnapshot, handle: DetachedRouteHandle | null): void {
+    if (this.kept.takesBackFromPreview(route, handle)) {
+      return;
+    }
     if (!this.preview.took(route, handle)) {
       this.kept.store(route, handle);
     }
   }
 
   override shouldAttach(route: ActivatedRouteSnapshot): boolean {
-    return this.preview.holds(route) ?? this.kept.shouldAttach(route);
+    return (
+      this.kept.lendsToPreview(route) ||
+      (this.preview.holds(route) ?? this.kept.shouldAttach(route))
+    );
   }
 
   override retrieve(route: ActivatedRouteSnapshot): DetachedRouteHandle | null {
-    return this.preview.handleFor(route) ?? this.kept.retrieve(route);
+    return (
+      this.kept.lentHandle(route) ?? this.preview.handleFor(route) ?? this.kept.retrieve(route)
+    );
   }
 }
