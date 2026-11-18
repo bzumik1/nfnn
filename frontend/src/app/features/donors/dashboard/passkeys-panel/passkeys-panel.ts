@@ -227,8 +227,10 @@ export class PasskeysPanel {
         next: (passkey) => {
           this.saving.set(false);
           const first = (this.passkeys()?.length ?? 0) === 0;
-          this.added.set(passkey.id);
-          this.passkeys.update((list) => [...(list ?? []), passkey]);
+          if (!this.listed(passkey)) {
+            this.added.set(passkey.id);
+            this.passkeys.update((list) => [...(list ?? []), passkey]);
+          }
           this.status.set(
             first && this.hasPassword()
               ? $localize`:@@donor.passkeys.addedFirst:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla; heslo teď můžete u\u00a0řádku „Heslo“ i\u00a0odebrat.`
@@ -361,6 +363,10 @@ export class PasskeysPanel {
 
   protected formatDate(isoInstant: string): string {
     return formatDonationDate(isoInstant);
+  }
+
+  private listed(passkey: Passkey): boolean {
+    return this.passkeys()?.some((known) => known.id === passkey.id) ?? false;
   }
 
   protected rowId(passkey: Passkey): string {
