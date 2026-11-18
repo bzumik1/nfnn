@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/scroll-edge.spec.ts > Given a visitor on a phone reading an article > when the visitor asks for reduced motion, then the title appears without fading",
+    "replacement": "e2e/scroll-edge.spec.ts > Given a visitor on a phone reading an article > when the visitor asks for reduced motion, then the title appears by a short fade at most",
+    "reason": "#1259 (team Mobile + PWA, audit round 2, 2026-11-16): the title in the bar fades in by motion.state(opacity), which under reduced motion keeps a fade of --duration-reduced instead of none, as the Motion section allows (an instant change or a short fade)",
+    "contract": "docs/frontend-overview.md, Theme, fonts, assets: Motion"
+  }
+]

@@ -128,16 +128,23 @@ test.describe('Given a visitor on a phone reading an article', () => {
     await expect(title).toHaveCSS('opacity', '0');
   });
 
-  test('when the visitor asks for reduced motion, then the title appears without fading', async ({
+  test('when the visitor asks for reduced motion, then the title appears by a short fade at most', async ({
     page,
   }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
 
-    const duration = await page
-      .locator('.edge-title')
-      .evaluate((title) => parseFloat(getComputedStyle(title).transitionDuration));
+    const fade = await page.locator('.edge-title').evaluate((title) => {
+      const style = getComputedStyle(title);
+      const properties = style.transitionProperty.split(',').map((name) => name.trim());
+      const durations = style.transitionDuration.split(',').map((time) => parseFloat(time));
+      const reduced = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--duration-reduced'),
+      );
+      return { duration: durations[properties.indexOf('opacity')], reduced };
+    });
 
-    expect(duration).toBeLessThan(0.001);
+    expect(fade.reduced).toBeGreaterThan(0);
+    expect(fade.duration).toBeLessThanOrEqual(fade.reduced);
   });
 });
 

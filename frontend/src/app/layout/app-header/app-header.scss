@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 @use 'pressed';
 @use 'touch-target';
 
@@ -120,7 +121,7 @@
   font-weight: var(--weight-semibold);
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--duration-fast);
+  @include motion.state(opacity);
 }
 
 .edge-title--shown {
@@ -251,7 +252,7 @@
   border-radius: var(--radius-pill);
   color: var(--color-tab-active);
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-size: var(--text-account-initials);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-wide);
   cursor: pointer;

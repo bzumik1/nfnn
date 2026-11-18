@@ -46,9 +46,16 @@ function scrolledAwayTitle(document: Document, view: Window, header: HTMLElement
   if (heading === null || view.scrollY <= 0) {
     return null;
   }
-  if (heading.getBoundingClientRect().bottom > header.getBoundingClientRect().height) {
+  if (firstLineBottomOf(document, heading) > header.getBoundingClientRect().height) {
     return null;
   }
   const text = (heading.textContent ?? '').replace(/\s+/g, ' ').trim();
   return text === '' ? null : text;
+}
+
+function firstLineBottomOf(document: Document, heading: HTMLElement): number {
+  const range = document.createRange();
+  range.selectNodeContents(heading);
+  const firstLine = range.getClientRects()[0];
+  return firstLine?.bottom ?? heading.getBoundingClientRect().bottom;
 }
