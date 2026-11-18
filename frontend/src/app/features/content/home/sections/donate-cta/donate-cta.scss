@@ -175,13 +175,17 @@
 
 @include bp.up(nav) {
   @supports (text-box: trim-start cap alphabetic) {
-    .donate-columns {
-      padding-top: calc(var(--page-top) + var(--space-10) + var(--space-3));
-    }
-
     .ui-intro__title,
     .pay-title {
       text-box: trim-start cap alphabetic;
+    }
+
+    .ui-intro__title {
+      padding-top: var(--space-3);
+    }
+
+    .pay-title {
+      margin-top: var(--space-3);
     }
   }
 }
@@ -210,5 +214,13 @@
   .ui-intro__title,
   .pay-title {
     text-box: normal;
+  }
+
+  .ui-intro__title {
+    padding-top: 0;
+  }
+
+  .pay-title {
+    margin-top: 0;
   }
 }
