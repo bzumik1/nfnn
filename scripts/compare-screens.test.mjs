@@ -27,6 +27,7 @@ import {
   undeclaredShots,
   useHeadPlaywright,
   withinTolerance,
+  withoutBudgetErrors,
 } from './compare-screens.mjs';
 import { decodePng } from './png-pixels.mjs';
 
@@ -537,5 +538,39 @@ describe('Given a base checkout whose lock file installed another Playwright tha
     assert.equal(version('playwright-core'), '1.65.0');
     assert.equal(realpathSync(join(baseModules, 'playwright-core')), realpathSync(join(headModules, 'playwright-core')));
     assert.equal(version('@angular/core'), '1.64.1');
+  });
+});
+
+describe('Given a base whose build would exceed a size budget', () => {
+  it('when the base is prepared, then its budgets keep their warnings but lose their errors, so the base still builds as the reference of the screens', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'nfnn-budget-'));
+    const file = join(folder, 'angular.json');
+    const budgets = [
+      { type: 'initial', maximumWarning: '575kB', maximumError: '600kB' },
+      { type: 'anyComponentStyle', maximumWarning: '4kB', maximumError: '12kB' },
+    ];
+    writeFileSync(
+      file,
+      JSON.stringify({
+        projects: {
+          frontend: {
+            architect: {
+              build: {
+                configurations: { production: { budgets }, development: { optimization: false } },
+              },
+            },
+          },
+        },
+      }),
+    );
+    withoutBudgetErrors(file);
+    const written = JSON.parse(readFileSync(file, 'utf8'));
+    assert.deepEqual(written.projects.frontend.architect.build.configurations.production.budgets, [
+      { type: 'initial', maximumWarning: '575kB' },
+      { type: 'anyComponentStyle', maximumWarning: '4kB' },
+    ]);
+    assert.deepEqual(written.projects.frontend.architect.build.configurations.development, {
+      optimization: false,
+    });
   });
 });
