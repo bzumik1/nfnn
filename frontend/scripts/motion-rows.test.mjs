@@ -66,7 +66,7 @@ function transitionedProperties(declarations) {
 describe('Given a disclosure that opens and closes through motion.expand', () => {
   const css = compiled(
     `.panel { @include motion.expand; }
-    .panel--leaving { @include motion.collapse; }
+    .question { @include motion.expand($closes-by: class); }
     .form--leaving { @include motion.expand-content-leave; }`,
   );
 
@@ -105,7 +105,7 @@ describe('Given a disclosure that opens and closes through motion.expand', () =>
   it('when it closes, then its height and opacity change by tokens and it stays visible until the height has closed', () => {
     for (const closing of [
       blocksOf(css, '.panel[hidden]')[0] ?? '',
-      plainOf(css, '.panel--leaving'),
+      plainOf(css, '.question--closing'),
     ]) {
       assert.deepEqual(transitionedProperties(closing).sort(), [
         'display',
@@ -122,7 +122,7 @@ describe('Given a disclosure that opens and closes through motion.expand', () =>
     for (const closed of [
       blocksOf(css, '.panel[hidden]')[0] ?? '',
       startingOf(css, '.panel'),
-      plainOf(css, '.panel--leaving'),
+      plainOf(css, '.question--closing'),
     ]) {
       assert.equal(valueOf(closed, 'grid-template-rows'), '0fr');
       assert.match(closed, /opacity:\s*0/);
@@ -133,11 +133,22 @@ describe('Given a disclosure that opens and closes through motion.expand', () =>
   it('when it closes, then no pointer reaches it while its height still closes', () => {
     for (const closing of [
       blocksOf(css, '.panel[hidden]')[0] ?? '',
-      plainOf(css, '.panel--leaving'),
+      plainOf(css, '.question--closing'),
     ]) {
       assert.equal(valueOf(closing, 'pointer-events'), 'none');
     }
     assert.equal(valueOf(plainOf(css, '.panel'), 'pointer-events'), '');
+  });
+
+  it('when an @if removes it, then it closes by its own --closing class alone and carries no closed state by hidden', () => {
+    assert.equal(blocksOf(css, '.question[hidden]').length, 0);
+    assert.equal(blocksOf(css, '.panel--closing').length, 0);
+    assert.equal(valueOf(plainOf(css, '.question'), 'grid-template-rows'), '1fr');
+    assert.equal(valueOf(startingOf(css, '.question'), 'visibility'), 'hidden');
+  });
+
+  it('when it is asked to close by anything but hidden or a class, then Sass refuses it', () => {
+    assert.throws(() => compiled('.other { @include motion.expand($closes-by: timer); }'));
   });
 
   it('when it carries hidden and has closed, then it leaves the layout, so a closed panel adds no gap', () => {
@@ -165,7 +176,7 @@ describe('Given a disclosure that opens and closes through motion.expand', () =>
   });
 
   it('when the visitor asks for less motion and it closes, then its height changes at once and it fades and hides in the reduced duration', () => {
-    for (const selector of ['.panel[hidden]', '.panel--leaving']) {
+    for (const selector of ['.panel[hidden]', '.question--closing']) {
       const reduced = reducedOf(css, selector);
 
       assert.deepEqual(transitionedProperties(reduced).sort(), [
