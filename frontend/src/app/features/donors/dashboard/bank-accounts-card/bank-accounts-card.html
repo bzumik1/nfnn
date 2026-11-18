@@ -44,7 +44,7 @@
             </span>
             @let number = accountParts(account.accountNumber);
             <span class="ui-list__title account-line"
-              ><span class="account-number ui-figures"
+              ><span class="account-number ui-figures" [id]="actionButtonId(account) + '-number'"
                 >{{ number.head }}<wbr />{{ number.bankCode }}</span
               >&ngsp;<span class="ui-badge account-status" [class]="labelModifier(account)">{{
                 label(account)
@@ -61,8 +61,10 @@
                     <li class="account-bank">{{ bank }}</li>
                   }
                   @if (account.verifiedOn; as verifiedOn) {
-                    <li i18n="@@donor.bankAccounts.verifiedOn">
-                      ověřeno <span class="ui-date">{{ formatDate(verifiedOn) }}</span>
+                    <li>
+                      <span i18n="@@donor.bankAccounts.verifiedOn"
+                        >ověřeno <span class="ui-date">{{ formatDate(verifiedOn) }}</span></span
+                      >
                     </li>
                   }
                   @if (account.status === 'DISCONNECTED' && account.disconnectedOn) {
@@ -131,9 +133,12 @@
                 } @else if (offersDisconnect(account)) {
                   <button
                     type="button"
-                    class="ui-button account-action"
+                    class="ui-button ui-button--quiet account-action"
                     [class.account-action--apart]="account.symbolOffer !== null"
                     [id]="actionButtonId(account)"
+                    [attr.aria-labelledby]="
+                      actionButtonId(account) + ' ' + actionButtonId(account) + '-number'
+                    "
                     (click)="askToDisconnect(account)"
                     i18n="@@donor.bankAccounts.disconnect"
                   >
