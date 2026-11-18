@@ -10,10 +10,11 @@ import { Donor } from '../../core/auth/donor';
 import { LoginDialogService } from '../../core/auth/login-dialog.service';
 import { sampleDonor } from '../../core/auth/testing/donor-fixtures';
 import { CompactLayout } from '../../core/layout/compact-layout';
-import { BackTarget } from '../../core/navigation/back-target';
+import { BackTarget, HistoryState } from '../../core/navigation/back-target';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { OpenAlerts } from '../../core/push/open-alerts';
 import { OpenAlert } from '../../core/push/open-alerts-api';
+import { APP_ACCOUNT_KEY } from '../account-sheet/account-return';
 import { AccountSheet } from '../account-sheet/account-sheet';
 import { AppHeader } from './app-header';
 
@@ -27,12 +28,7 @@ describe('Given the header of the app', () => {
   const compact = signal(true);
   const loginOpen = vi.fn();
   const back = vi.fn();
-  const accountToReopen = signal<string | null>(null);
-  const takeAccountToReopen = (): string | null => {
-    const section = accountToReopen();
-    accountToReopen.set(null);
-    return section;
-  };
+  const steppedBackFrom = signal<HistoryState | null>(null);
   let fixture: ComponentFixture<AppHeader>;
 
   beforeEach(async () => {
@@ -42,7 +38,7 @@ describe('Given the header of the app', () => {
     compact.set(true);
     loginOpen.mockClear();
     back.mockClear();
-    accountToReopen.set(null);
+    steppedBackFrom.set(null);
     await TestBed.configureTestingModule({
       imports: [AppHeader],
       providers: [
@@ -68,8 +64,7 @@ describe('Given the header of the app', () => {
           provide: BackTarget,
           useValue: {
             back,
-            accountToReopen: accountToReopen.asReadonly(),
-            takeAccountToReopen,
+            steppedBackFrom: steppedBackFrom.asReadonly(),
           },
         },
         {
@@ -194,27 +189,43 @@ describe('Given the header of the app', () => {
     expect(header.querySelector('app-account-sheet')).toBeNull();
   });
 
-  it('when a step back asks for the account sheet while a donor is signed in, then it opens on the section it was left from', async () => {
+  it('when a step back leaves a page the account sheet opened while a donor is signed in, then the sheet opens on the section it was left from, once', async () => {
     donor.set(sampleDonor({ name: 'Jana Nováková' }));
     await openAt('/aktuality');
 
-    accountToReopen.set('/darce/dary');
+    steppedBackFrom.set({ [APP_ACCOUNT_KEY]: '/darce/dary' });
     fixture.detectChanges();
     await fixture.whenStable();
 
     const sheet = fixture.debugElement.query(By.directive(AccountSheet));
     expect(sheet).not.toBeNull();
     expect((sheet.componentInstance as AccountSheet).reopenedOn()).toBe('/darce/dary');
-    expect(accountToReopen()).toBeNull();
+
+    (sheet.componentInstance as AccountSheet).closed.emit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-account-sheet')).toBeNull();
   });
 
-  it('when a step back asks for the account sheet after the window widened to a computer, then no sheet opens over the side panel, nor later when it narrows again', async () => {
+  it('when a step back leaves a page the account sheet did not open, then no sheet opens', async () => {
+    donor.set(sampleDonor({ name: 'Jana Nováková' }));
+    await openAt('/aktuality');
+
+    steppedBackFrom.set({ nfnnAppDepth: 2 });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-account-sheet')).toBeNull();
+  });
+
+  it('when a step back leaves a page the account sheet opened after the window widened to a computer, then no sheet opens over the side panel, nor later when it narrows again', async () => {
     donor.set(sampleDonor({ name: 'Jana Nováková' }));
     await openAt('/aktuality');
     compact.set(false);
     fixture.detectChanges();
 
-    accountToReopen.set('/darce/dary');
+    steppedBackFrom.set({ [APP_ACCOUNT_KEY]: '/darce/dary' });
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -227,10 +238,10 @@ describe('Given the header of the app', () => {
     expect(fixture.nativeElement.querySelector('app-account-sheet')).toBeNull();
   });
 
-  it('when a step back asks for the account sheet while nobody is signed in, then no sheet opens', async () => {
+  it('when a step back leaves a page the account sheet opened while nobody is signed in, then no sheet opens', async () => {
     await openAt('/aktuality');
 
-    accountToReopen.set('');
+    steppedBackFrom.set({ [APP_ACCOUNT_KEY]: '' });
     fixture.detectChanges();
     await fixture.whenStable();
 

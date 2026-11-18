@@ -5,8 +5,9 @@ import { pathOf, tabOf } from './app-tabs';
 
 export const APP_DEPTH_KEY = 'nfnnAppDepth';
 export const APP_BEHIND_KEY = 'nfnnAppBehind';
-export const APP_ACCOUNT_KEY = 'nfnnAppAccount';
 export const BACK_NAVIGATION = 'nfnn.back';
+
+export type HistoryState = Readonly<Record<string, unknown>>;
 
 export type BackDestination =
   | { readonly kind: 'step'; readonly depth: number; readonly path: string | null }
@@ -26,12 +27,11 @@ export class BackTarget {
   private restoredBehind: string | null = null;
   private buttonPressed = false;
   private byButton = false;
-  private account: string | null = null;
-  private leftAccount: string | null = null;
+  private entry: HistoryState = {};
   private skipPressed = false;
   private skipped = false;
-  private readonly reopenAccount = signal<string | null>(null);
-  readonly accountToReopen = this.reopenAccount.asReadonly();
+  private readonly leftByStep = signal<HistoryState | null>(null);
+  readonly steppedBackFrom = this.leftByStep.asReadonly();
 
   constructor() {
     const navigations = this.router.events.subscribe((event) => {
@@ -41,8 +41,7 @@ export class BackTarget {
         this.buttonPressed = false;
         this.skipped = this.popped && this.skipPressed;
         this.skipPressed = false;
-        this.leftAccount = this.popped ? this.account : null;
-        this.reopenAccount.set(null);
+        this.leftByStep.set(null);
         this.restoredDepth = depthIn(event.restoredState);
         this.restoredBehind = behindIn(event.restoredState);
       } else if (event instanceof NavigationEnd) {
@@ -94,12 +93,6 @@ export class BackTarget {
     }
   }
 
-  takeAccountToReopen(): string | null {
-    const section = this.reopenAccount();
-    this.reopenAccount.set(null);
-    return section;
-  }
-
   nextDepth(): number {
     return this.depth + 1;
   }
@@ -114,8 +107,8 @@ export class BackTarget {
     const extras = this.router.lastSuccessfulNavigation()?.extras ?? {};
     const handedOver = depthIn(extras.state);
     if (this.popped) {
-      if (!this.skipped && this.leftAccount !== null && this.restoredDepth < this.depth) {
-        this.reopenAccount.set(this.leftAccount);
+      if (!this.skipped && this.restoredDepth < this.depth) {
+        this.leftByStep.set(this.entry);
       }
       this.depth = this.restoredDepth;
       this.behind = this.restoredBehind;
@@ -133,7 +126,7 @@ export class BackTarget {
     this.left = this.path;
     this.path = pathOf(this.router.url);
     if (!extras.skipLocationChange) {
-      this.account = accountIn(this.location.getState());
+      this.entry = { ...stateOf(this.location.getState()) };
       this.location.replaceState(this.location.path(true), '', {
         ...stateOf(this.location.getState()),
         [APP_DEPTH_KEY]: this.depth,
@@ -150,11 +143,6 @@ function stateOf(state: unknown): Record<string, unknown> {
 function depthIn(state: unknown): number {
   const depth = stateOf(state)[APP_DEPTH_KEY];
   return typeof depth === 'number' && depth > 0 ? depth : 0;
-}
-
-function accountIn(state: unknown): string | null {
-  const account = stateOf(state)[APP_ACCOUNT_KEY];
-  return typeof account === 'string' ? account : null;
 }
 
 function behindIn(state: unknown): string | null {
