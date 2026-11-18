@@ -12,6 +12,9 @@ const TALL_SCREENS = [
 const ISLAND_INSET = 62;
 const HOME_INDICATOR_INSET = 21;
 
+const SHORT_WINDOW = { width: 1280, height: 420 };
+const LARGE_TEXT = '200%';
+
 const PHONES_ON_THEIR_SIDE = [
   { name: 'an iPhone 17 Pro on its side', width: 874, height: 402 },
   { name: 'an iPhone 17 Pro Max on its side', width: 956, height: 440 },
@@ -28,7 +31,14 @@ async function heightOf(page: Page, selector: string): Promise<number> {
   return page.locator(selector).evaluate((element) => element.getBoundingClientRect().height);
 }
 
-async function horizontalEdges(locator: Locator): Promise<{ left: number; right: number }> {
+async function boxEdges(locator: Locator): Promise<{ left: number; right: number }> {
+  return locator.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    return { left: box.left, right: box.right };
+  });
+}
+
+async function textEdges(locator: Locator): Promise<{ left: number; right: number }> {
   return locator.evaluate((element) => {
     const range = document.createRange();
     range.selectNodeContents(element);
@@ -53,6 +63,28 @@ test.describe('Given a signed-in donor on a short portal page in a browser whose
   }
 });
 
+test.describe('Given a signed-in donor with text at 200 % in a short browser window whose screen shows less than 100vh, as Safari does above its toolbar', () => {
+  test('when they scroll the portal to its end, then the side navigation that stays in place ends where the screen ends', async ({
+    page,
+  }) => {
+    const visible = SHORT_WINDOW.height - SAFARI_TOOLBAR_HEIGHT;
+    await page.setViewportSize(SHORT_WINDOW);
+    await openBankAccounts(page);
+    await page.addStyleTag({
+      content: `:root { --full-screen-height: ${visible}px; font-size: ${LARGE_TEXT}; }`,
+    });
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+
+    const sideNav = page.locator('.side-nav');
+    await expect
+      .poll(() => sideNav.evaluate((element) => element.getBoundingClientRect().top))
+      .toBeLessThanOrEqual(0);
+    const bottom = await sideNav.evaluate((element) => element.getBoundingClientRect().bottom);
+    expect(bottom).toBeLessThanOrEqual(visible);
+  });
+});
+
 test.describe('Given a signed-in donor on an iPhone held on its side, with the Dynamic Island at one edge', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
@@ -72,13 +104,15 @@ test.describe('Given a signed-in donor on an iPhone held on its side, with the D
       await openBankAccounts(page);
 
       const main = page.locator('main#obsah');
+      const column = await boxEdges(main.locator('.contact-line'));
+      expect(column.left).toBeGreaterThanOrEqual(ISLAND_INSET);
+      expect(column.right).toBeLessThanOrEqual(phone.width - ISLAND_INSET);
       const texts = [
         main.getByRole('heading', { level: 1, name: 'Bankovní účty' }),
-        main.locator('.contact-line'),
         ...(await page.getByRole('navigation', { name: 'Můj účet' }).getByRole('link').all()),
       ];
       for (const text of texts) {
-        const edges = await horizontalEdges(text);
+        const edges = await textEdges(text);
         expect(edges.left).toBeGreaterThanOrEqual(ISLAND_INSET);
         expect(edges.right).toBeLessThanOrEqual(phone.width - ISLAND_INSET);
       }
