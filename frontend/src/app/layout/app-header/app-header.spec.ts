@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth-store';
 import { Donor } from '../../core/auth/donor';
@@ -13,6 +14,7 @@ import { BackTarget } from '../../core/navigation/back-target';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { OpenAlerts } from '../../core/push/open-alerts';
 import { OpenAlert } from '../../core/push/open-alerts-api';
+import { AccountSheet } from '../account-sheet/account-sheet';
 import { AppHeader } from './app-header';
 
 @Component({ template: '' })
@@ -25,6 +27,12 @@ describe('Given the header of the app', () => {
   const compact = signal(true);
   const loginOpen = vi.fn();
   const back = vi.fn();
+  const accountToReopen = signal<string | null>(null);
+  const takeAccountToReopen = (): string | null => {
+    const section = accountToReopen();
+    accountToReopen.set(null);
+    return section;
+  };
   let fixture: ComponentFixture<AppHeader>;
 
   beforeEach(async () => {
@@ -34,6 +42,7 @@ describe('Given the header of the app', () => {
     compact.set(true);
     loginOpen.mockClear();
     back.mockClear();
+    accountToReopen.set(null);
     await TestBed.configureTestingModule({
       imports: [AppHeader],
       providers: [
@@ -55,7 +64,14 @@ describe('Given the header of the app', () => {
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
         { provide: OpenAlerts, useValue: { alerts: openAlerts.asReadonly() } },
         { provide: LoginDialogService, useValue: { open: loginOpen } },
-        { provide: BackTarget, useValue: { back } },
+        {
+          provide: BackTarget,
+          useValue: {
+            back,
+            accountToReopen: accountToReopen.asReadonly(),
+            takeAccountToReopen,
+          },
+        },
         {
           provide: AuthStore,
           useValue: {
@@ -176,6 +192,30 @@ describe('Given the header of the app', () => {
     fixture.detectChanges();
 
     expect(header.querySelector('app-account-sheet')).toBeNull();
+  });
+
+  it('when a step back asks for the account sheet while a donor is signed in, then it opens on the section it was left from', async () => {
+    donor.set(sampleDonor({ name: 'Jana Nováková' }));
+    await openAt('/aktuality');
+
+    accountToReopen.set('/darce/dary');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const sheet = fixture.debugElement.query(By.directive(AccountSheet));
+    expect(sheet).not.toBeNull();
+    expect((sheet.componentInstance as AccountSheet).reopenedOn()).toBe('/darce/dary');
+    expect(accountToReopen()).toBeNull();
+  });
+
+  it('when a step back asks for the account sheet while nobody is signed in, then no sheet opens', async () => {
+    await openAt('/aktuality');
+
+    accountToReopen.set('');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-account-sheet')).toBeNull();
   });
 
   it('when the page has a light head, then the logo is the blue one, and over a photo or a dark head the white one', async () => {

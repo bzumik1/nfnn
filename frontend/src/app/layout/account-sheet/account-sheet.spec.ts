@@ -690,7 +690,7 @@ describe('Given the account sheet of a signed-in donor', () => {
     );
   });
 
-  it('when it opens, then under the sign-out it names how to reach the foundation, its register entry and the privacy policy', async () => {
+  it('when it opens, then under the sign-out it names how to reach the foundation, its register entry and the privacy policy, which a step back leaves for the list of the account', async () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
     const sheet = open();
     const foundation = sheet.querySelector('.account-foundation')!;
@@ -715,7 +715,7 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(closed).toBe(1);
     expect(navigate).toHaveBeenCalledWith('/zasady-ochrany-osobnich-udaju', {
       replaceUrl: true,
-      state: { [APP_DEPTH_KEY]: 1 },
+      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '' },
     });
   });
 
