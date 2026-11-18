@@ -208,7 +208,10 @@ export class AdminPayments {
   constructor() {
     afterNextRender(
       () => {
-        this.leftByStep = this.backTarget.returningByButton ? this.backTarget.leftPath : null;
+        this.leftByStep =
+          this.router.lastSuccessfulNavigation()?.trigger === 'popstate'
+            ? this.backTarget.leftPath
+            : null;
         this.title().nativeElement.focus();
         this.focusRowLeftBy();
       },
