@@ -50,6 +50,7 @@ const SECTION_LINKS = 'nav a[href]';
 const HEADER = 'app-header .app-header';
 const SIDE_NAVIGATION = '.side-nav-panel';
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
+const CATCHING_UP_CLASS = `${PAGE_TRANSITION_CLASS}--catching-up`;
 
 interface Running {
   readonly kind: PageTransitionKind;
@@ -82,7 +83,7 @@ interface BarItem {
 
 export interface SwipePreview {
   follow(offset: number): void;
-  settle(settle: SwipeSettle): Promise<void>;
+  settle(settle: SwipeSettle): Promise<boolean>;
   slideBack(): Promise<void>;
 }
 
@@ -197,16 +198,47 @@ export class PageTransitions {
     this.document.documentElement.classList.toggle(SHEET_UNDER_CLASS, sheet !== null);
     const width = Math.max(1, content?.width ?? view.innerWidth);
     let progress = 0;
+    let offset = 0;
+    let ready = behind !== null;
+    const follow = (): void => {
+      progress = offset / width;
+      over.style.transform = `translateX(${offset}px)`;
+      under.style.transform = parallaxAt(progress);
+      if (dim !== null) {
+        dim.style.opacity = String(1 - progress);
+      }
+      followBar(bar.items, progress);
+    };
     const drawn =
       behind === null && destination.path !== null && !this.dirtyForms.any()
         ? this.drawUnder(destination.path, running, arriving, (into) => {
             bar.items = dress(into);
-            followBar(bar.items, progress);
+          }).then((under) => {
+            if (!under || this.running !== running) {
+              return;
+            }
+            ready = true;
+            overlay.classList.add(CATCHING_UP_CLASS);
+            follow();
+            view.setTimeout(
+              () => overlay.classList.remove(CATCHING_UP_CLASS),
+              this.durationOf('--duration-fast'),
+            );
           })
         : Promise.resolve();
-    const settle = async (end: SwipeSettle): Promise<void> => {
+    const settle = async (end: SwipeSettle): Promise<boolean> => {
       if (this.running !== running) {
-        return;
+        return end.completes;
+      }
+      if (!ready) {
+        await drawn;
+      }
+      if (!ready) {
+        this.preview.discard();
+        if (this.running === running) {
+          this.finish();
+        }
+        return false;
       }
       const timing: KeyframeAnimationOptions = {
         duration: end.durationMs,
@@ -223,12 +255,11 @@ export class PageTransitions {
         Promise.allSettled(motions.map((motion) => motion.finished)),
         new Promise((done) => view.setTimeout(done, PAGE_TRANSITION_LONGEST_MS)),
       ]);
-      await drawn;
       if (!end.completes) {
         this.preview.discard();
       }
       if (this.running !== running) {
-        return;
+        return end.completes;
       }
       if (end.completes) {
         this.handingOver = true;
@@ -236,28 +267,25 @@ export class PageTransitions {
       } else {
         this.finish();
       }
+      return end.completes;
     };
-    let offset = 0;
     return {
       follow: (to) => {
         offset = Math.min(width, Math.max(0, to));
-        progress = offset / width;
-        over.style.transform = `translateX(${offset}px)`;
-        under.style.transform = parallaxAt(progress);
-        if (dim !== null) {
-          dim.style.opacity = String(1 - progress);
+        if (ready) {
+          follow();
         }
-        followBar(bar.items, progress);
       },
       settle,
-      slideBack: () =>
-        settle({
+      slideBack: async () => {
+        await settle({
           completes: false,
           from: offset,
           to: 0,
           durationMs: this.durationOf('--duration-page'),
           easing: 'ease-out',
-        }),
+        });
+      },
     };
   }
 
@@ -266,25 +294,20 @@ export class PageTransitions {
     running: Running,
     arriving: PlacedPage,
     redressed: (into: PlacedPage) => void,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const drawn = await this.preview.visit(path, () => {
       const layer = this.layer();
       return layer === null ? null : this.keep(layer);
     });
     const scroller = arriving.box.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__scroller`);
     if (drawn === null || drawn.copy === null || scroller === null || this.running !== running) {
-      return;
+      return false;
     }
     scroller.replaceChildren(drawn.copy);
     scroller.scrollTop = drawn.scrollY;
     scroller.style.backgroundColor = drawn.ground;
     redressed({ box: arriving.box, copy: drawn.copy, scrollY: drawn.scrollY });
-    if (typeof scroller.animate === 'function') {
-      scroller.animate([{ opacity: 0 }, { opacity: 1 }], {
-        duration: this.durationOf('--duration-fast'),
-        easing: 'ease-out',
-      });
-    }
+    return true;
   }
 
   private cover(event: GuardsCheckEnd): void {

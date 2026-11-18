@@ -10,6 +10,7 @@ const FIELDS = 'input, select, textarea, [contenteditable]:not([contenteditable=
 const SCROLLS_SIDEWAYS = new Set(['auto', 'scroll']);
 const OPEN_DIALOG = 'dialog[open]';
 const LEAVING_DIALOG = 'dialog.dialog--leaving';
+const SHEET_SECTION_BACK = 'app-sheet-head .sheet-head-back';
 
 const PASSIVE: AddEventListenerOptions = { passive: true, capture: true };
 
@@ -113,8 +114,9 @@ export class EdgeSwipeBack {
     }
     const dialogs = this.document.querySelectorAll<HTMLDialogElement>(OPEN_DIALOG);
     if (dialogs.length > 0) {
-      const steps = this.inside.get(dialogs.item(dialogs.length - 1));
-      return steps === undefined ? null : { steps, ofPage: false };
+      const top = dialogs.item(dialogs.length - 1);
+      const steps = this.inside.get(top) ?? sectionBackOf(top);
+      return steps === null ? null : { steps, ofPage: false };
     }
     const parent = this.chrome().parent;
     if (parent === null || !this.transitions.stepsBySwipe()) {
@@ -144,7 +146,7 @@ export class EdgeSwipeBack {
       swipe.previewAsked = true;
       if (this.transitions.followsFinger()) {
         swipe.preview = swipe.steps.startSwipe();
-        if (swipe.preview === null) {
+        if (swipe.preview === null && swipe.ofPage) {
           this.swipe = null;
           return;
         }
@@ -171,13 +173,22 @@ export class EdgeSwipeBack {
     } else if (goesBack && swipe.ofPage && this.dirtyForms.any()) {
       void preview.slideBack().then(back);
     } else if (goesBack && settle !== null) {
-      void preview.settle(settle).then(back);
+      void preview.settle(settle).then((left) => {
+        if (left) {
+          back();
+        }
+      });
     } else if (settle !== null && !settle.completes) {
       void preview.settle(settle);
     } else {
       void preview.slideBack();
     }
   }
+}
+
+function sectionBackOf(dialog: HTMLDialogElement): StepsInside | null {
+  const back = dialog.querySelector<HTMLElement>(SHEET_SECTION_BACK);
+  return back === null ? null : { startSwipe: () => null, back: () => back.click() };
 }
 
 function isHomeScreenApp(navigator: HomeScreenNavigator): boolean {

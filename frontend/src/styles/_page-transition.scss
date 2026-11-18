@@ -86,6 +86,12 @@
   transition: none !important;
 }
 
+.page-transition--catching-up :is(.page-transition__page, .page-transition__dim) {
+  transition:
+    transform var(--duration-fast) var(--ease-page),
+    opacity var(--duration-fast) var(--ease-page);
+}
+
 .page-transition__dim {
   position: absolute;
   inset: 0;

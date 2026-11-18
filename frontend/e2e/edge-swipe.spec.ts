@@ -205,6 +205,62 @@ test.describe('Given an administrator in the app on the home screen of a phone w
   });
 });
 
+test.describe('Given an administrator who opened the app on the home screen of a phone straight on Správa, so nothing of the page before it is kept', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await inTheHomeScreenApp(page);
+    await asAdministrator(page);
+    await mockDonorApi(page);
+    const copied = whenAdministrationCopied(page);
+    await page.goto('/sprava');
+    await copied();
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+
+  test('when a finger drags Správa from the edge, then the page starts to move only over the landing drawn under it, never over an empty ground, and past half the landing opens', async ({
+    page,
+  }) => {
+    await page.evaluate(() => {
+      const probe = window as unknown as { underWhenMoved: string | null };
+      probe.underWhenMoved = null;
+      const watch = new MutationObserver(() => {
+        const over = document.querySelector<HTMLElement>(
+          '.page-transition--swipe .page-transition__page--over',
+        );
+        if (over !== null && over.style.transform !== '') {
+          watch.disconnect();
+          probe.underWhenMoved =
+            document
+              .querySelector('.page-transition--swipe .page-transition__page--under h1')
+              ?.textContent?.trim() ?? '';
+        }
+      });
+      watch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['style'] });
+    });
+
+    await takeWithFinger(page, 20);
+    await expect(
+      swipeOverlay(page).locator('.page-transition__page--under h1', { hasText: 'Nová naděje' }),
+    ).toHaveCount(1);
+    await dragOn(page, 300);
+    await expect.poll(() => overPageOffset(page)).toBeCloseTo(280, 0);
+
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { underWhenMoved: string | null }).underWhenMoved,
+      ),
+    ).toBe('Nová naděje');
+    await letGo(page, 300);
+    await expect(page).toHaveURL('/');
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+});
+
 test.describe('Given a visitor in the app on the home screen of a phone with the account sheet open over an article', () => {
   test.use({
     viewport: { width: 390, height: 844 },

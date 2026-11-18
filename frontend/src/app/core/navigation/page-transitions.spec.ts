@@ -508,6 +508,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
   let layer: HTMLElement;
   let visits: string[];
   let finishVisit: () => void;
+  let cannotDraw: () => void;
 
   beforeEach(async () => {
     Object.defineProperty(window, 'matchMedia', {
@@ -533,7 +534,8 @@ describe('Given the app on the home screen of a phone opened straight on the don
             discard: () => undefined,
             visit: <T>(path: string, capture: () => T) => {
               visits.push(path);
-              return new Promise<T>((done) => {
+              return new Promise<T | null>((done) => {
+                cannotDraw = () => done(null);
                 finishVisit = () => {
                   paint(layer, { title: 'Úvod' });
                   const captured = capture();
@@ -555,6 +557,49 @@ describe('Given the app on the home screen of a phone opened straight on the don
     layer.remove();
     delete (window as { matchMedia?: unknown }).matchMedia;
     Object.defineProperty(window, 'innerWidth', jsdomWidth!);
+  });
+
+  function over(): HTMLElement {
+    return document.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`)!;
+  }
+
+  it('when a finger takes the page before the page Zpět leads to is drawn, then the page stays over it, never over an empty ground, and once drawn it catches up with the finger', async () => {
+    const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+
+    swipe.follow(120);
+    expect(over().style.transform).toBe('');
+    finishVisit();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(over().style.transform).toBe('translateX(120px)');
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)?.classList).toContain(
+      `${PAGE_TRANSITION_CLASS}--catching-up`,
+    );
+  });
+
+  it('when the page Zpět leads to cannot be drawn, then letting go past half leaves the page where it is and says it did not leave', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => ({ finished: Promise.resolve() }),
+    });
+    try {
+      const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+      swipe.follow(300);
+      const left = swipe.settle({
+        completes: true,
+        from: 300,
+        to: 390,
+        durationMs: 150,
+        easing: 'ease-out',
+      });
+      cannotDraw();
+
+      expect(await left).toBe(false);
+      expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    } finally {
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
   });
 
   it('when a finger takes the page, then the page Zpět leads to is drawn under cover and then lies under the finger', async () => {

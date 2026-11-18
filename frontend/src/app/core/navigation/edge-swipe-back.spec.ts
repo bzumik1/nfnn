@@ -100,6 +100,20 @@ function sheetSteps(preview: SwipePreview | null = null) {
   };
 }
 
+function sheetInSection(): { sheet: HTMLDialogElement; back: ReturnType<typeof vi.fn> } {
+  const sheet = openDialog();
+  const head = document.createElement('app-sheet-head');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'sheet-head-button sheet-head-back';
+  button.setAttribute('aria-label', 'Zpět');
+  const back = vi.fn();
+  button.addEventListener('click', back);
+  head.append(button);
+  sheet.append(head);
+  return { sheet, back };
+}
+
 function leavingDialog(): HTMLDialogElement {
   const dialog = document.createElement('dialog');
   dialog.classList.add('dialog--leaving');
@@ -438,6 +452,16 @@ describe('Given the app opened from the home screen of an iPhone', () => {
     expect(location.back).not.toHaveBeenCalled();
   });
 
+  it('when a sheet shows a section of its own under its ‹, then a swipe from the edge does what that ‹ does and the page stays', () => {
+    const { sheet, back } = sheetInSection();
+
+    drag(sheet, ACROSS);
+
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(location.back).not.toHaveBeenCalled();
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
   it('when a sheet took back its offer of steps, then a swipe over it does nothing', () => {
     const dialog = openDialog();
     const steps = sheetSteps();
@@ -480,7 +504,7 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
   beforeEach(() => {
     preview = {
       follow: vi.fn(),
-      settle: vi.fn(() => Promise.resolve()),
+      settle: vi.fn(() => Promise.resolve(true)),
       slideBack: vi.fn(() => Promise.resolve()),
     };
     transitions.startSwipe.mockImplementation(() => preview as SwipePreview);
@@ -524,6 +548,22 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
     await Promise.resolve();
     await Promise.resolve();
     expect(backTarget.back).toHaveBeenCalledExactlyOnceWith('/aktuality');
+  });
+
+  it('when the page Zpět leads to could not be drawn under the finger, then letting go past half leaves the page where it is and the app stays', async () => {
+    preview.settle.mockResolvedValue(false);
+
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(preview.settle).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
   });
 
   it('when the finger lets go short of half the width, then the page slides back and the app stays', async () => {
@@ -627,6 +667,34 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
     );
     expect(steps.back).toHaveBeenCalledTimes(1);
     expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when a sheet shows a section under its ‹ and offers no steps of its own yet, then nothing moves, and past half it does what that ‹ does', () => {
+    const { sheet, back } = sheetInSection();
+
+    drag(sheet, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+
+    expect(transitions.startSwipe).not.toHaveBeenCalled();
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when a sheet shows a section and the finger lets go short of half, then the section stays', () => {
+    const { sheet, back } = sheetInSection();
+
+    drag(sheet, [
+      { x: 20, y: 300, at: 0 },
+      { x: 90, y: 302, at: 200 },
+      { x: 160, y: 304, at: 400 },
+      { x: 160, y: 304, at: 700 },
+    ]);
+
+    expect(back).not.toHaveBeenCalled();
   });
 
   it('when the page is no step on a wide screen, then nothing moves under the finger', () => {
