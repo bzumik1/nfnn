@@ -49,9 +49,11 @@ test.describe('Given a donor who signs in with a password to the site behind its
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await openAccountItem(page, 'Můj přehled');
     await expect(page).toHaveURL(/\/darce\/prehled$/);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await expect.poll(async () => wrapsOf(await idbDump())).toEqual(['password', 'session']);
     await openDonorSection(page, 'Moje dary');
     await expect(gifts).toHaveCount(2);
-    await expect.poll(async () => wrapsOf(await idbDump())).toEqual(['password', 'session']);
 
     const newGift = donationItem({
       id: '0192f0f1-0000-7000-8000-000000000003',
