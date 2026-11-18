@@ -208,6 +208,25 @@ describe('Given the header of the app', () => {
     expect(accountToReopen()).toBeNull();
   });
 
+  it('when a step back asks for the account sheet after the window widened to a computer, then no sheet opens over the side panel, nor later when it narrows again', async () => {
+    donor.set(sampleDonor({ name: 'Jana Nováková' }));
+    await openAt('/aktuality');
+    compact.set(false);
+    fixture.detectChanges();
+
+    accountToReopen.set('/darce/dary');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-account-sheet')).toBeNull();
+
+    compact.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-account-sheet')).toBeNull();
+  });
+
   it('when a step back asks for the account sheet while nobody is signed in, then no sheet opens', async () => {
     await openAt('/aktuality');
 

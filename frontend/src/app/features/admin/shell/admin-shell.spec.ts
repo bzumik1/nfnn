@@ -525,6 +525,33 @@ describe('Given an administrator who opened the administration on a phone over a
     expect(escape.defaultPrevented).toBe(true);
   });
 
+  it.each([
+    ['a search field', 'input', ['type', 'search']],
+    ['a text area', 'textarea', null],
+    ['an editable text', 'div', ['contenteditable', 'true']],
+  ] as const)(
+    'when Esc is pressed while typing in %s, then the field keeps it and the site stays',
+    (_, tag, attribute) => {
+      const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
+      const field = document.createElement(tag);
+      if (attribute !== null) {
+        field.setAttribute(attribute[0], attribute[1]);
+      }
+      fixture.nativeElement.querySelector('.admin-sheet').append(field);
+      const escape = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
+      });
+
+      field.dispatchEvent(escape);
+      field.remove();
+
+      expect(back).not.toHaveBeenCalled();
+      expect(escape.defaultPrevented).toBe(false);
+    },
+  );
+
   it('when Esc is pressed while a dialog of the page is open, then the dialog keeps it and the site stays', () => {
     const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
     const dialog = document.createElement('dialog');
