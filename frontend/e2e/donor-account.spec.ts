@@ -12,6 +12,35 @@ import { drawnModulesMatch, PAYMENT_QR_500_WITH_SYMBOL } from './qr-matrices';
 import { expectActionInSightOrCuedBelow } from './dialog-edge';
 
 test.describe('Given a visitor who wants a donor account', () => {
+  test('when the registration opens in a window of 1280 by 900, then it ends as far from the bottom edge as it starts from the top', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    await openSignInDialog(page);
+    await page.getByRole('button', { name: 'Registrace' }).click();
+    const panel = page.getByRole('dialog').locator('.dialog-panel');
+    await expect(
+      page.getByRole('dialog').getByRole('button', { name: 'Vytvořit účet' }),
+    ).toBeAttached();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            document
+              .querySelector('dialog')!
+              .getAnimations({ subtree: true })
+              .filter((animation) => animation.playState === 'running').length,
+        ),
+      )
+      .toBe(0);
+
+    const box = (await panel.boundingBox())!;
+
+    expect(Math.abs(box.y - (900 - box.y - box.height))).toBeLessThanOrEqual(2);
+  });
+
   test('when the registration opens in a low window on a computer, then its button is in sight or the edge of the dialog shows there is more below', async ({
     page,
   }) => {
@@ -28,6 +57,49 @@ test.describe('Given a visitor who wants a donor account', () => {
       dialog.getByRole('button', { name: 'Vytvořit účet' }),
     );
   });
+
+  for (const iPad of [
+    { pose: 'upright', width: 834, height: 1194 },
+    { pose: 'on its side', width: 1194, height: 834 },
+  ]) {
+    test(`when they switch from Přihlášení to Registrace and back on an iPad ${iPad.pose}, then the switch stays under the finger and the button is in sight or cued below`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.setViewportSize({ width: iPad.width, height: iPad.height });
+      await openSignInDialog(page);
+      const dialog = page.getByRole('dialog');
+      const switchTop = async (): Promise<number> => {
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () =>
+                document
+                  .getAnimations()
+                  .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+                  .filter((animation) => animation.playState === 'running').length,
+            ),
+          )
+          .toBe(0);
+        return (await dialog.locator('.tab-switch').boundingBox())!.y;
+      };
+      await expect(dialog.getByRole('button', { name: 'Přihlásit se', exact: true })).toBeVisible();
+      const signInTop = await switchTop();
+
+      await dialog.getByRole('button', { name: 'Registrace' }).click();
+      await expect(dialog.getByRole('button', { name: 'Vytvořit účet' })).toBeAttached();
+      const registrationTop = await switchTop();
+      await expectActionInSightOrCuedBelow(
+        dialog.locator('.dialog-panel'),
+        dialog.getByRole('button', { name: 'Vytvořit účet' }),
+      );
+      await dialog.getByRole('button', { name: 'Přihlášení', exact: true }).click();
+      await expect(dialog.getByRole('button', { name: 'Přihlásit se', exact: true })).toBeVisible();
+
+      expect(registrationTop).toBeCloseTo(signInTop, 0);
+      expect(await switchTop()).toBeCloseTo(signInTop, 0);
+    });
+  }
 
   test('when they register as a person, then the dialog asks them to confirm the e-mail and nobody is signed in', async ({
     page,
@@ -239,7 +311,7 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await expect(page).toHaveURL(/\/$/);
     await expect(
-      page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }),
+      page.getByRole('banner').getByRole('button', { name: 'Přihlásit se', exact: true }),
     ).toBeVisible();
     await expect(page.getByRole('status').getByText('Odhlásili jste se.')).toBeVisible();
 
@@ -269,7 +341,7 @@ test.describe('Given a visitor who wants a donor account', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Odhlásit se' }).click();
 
     await expect(
-      page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }),
+      page.getByRole('banner').getByRole('button', { name: 'Přihlásit se', exact: true }),
     ).toBeVisible();
     await expect(page.getByText('Server se o odhlášení zatím nedozvěděl')).toBeVisible();
     await expect
