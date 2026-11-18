@@ -1,8 +1,8 @@
 import { Locator, Page } from '@playwright/test';
 import {
-  administrator,
-  claudeConnection,
+  donor,
   mockDonorApi,
+  noDonations,
   openDonorSection,
   problem,
   signedInDevices,
@@ -101,45 +101,49 @@ test.describe('Given a donor signing out another device on Údaje a zabezpečen�
   });
 });
 
-test.describe('Given an administrator disconnecting Claude on Údaje a zabezpečení', () => {
-  test('when the server refuses after the loading delay, then the button is no longer busy and its name is again its visible label', async ({
+test.describe('Given a donor sending the e-mail change link again on Údaje a zabezpečení', () => {
+  test('when the server refuses after the loading delay, then the button is busy under its resting name meanwhile and afterwards no longer busy, its name again its visible label', async ({
     page,
   }) => {
     await page.clock.install();
-    await mockDonorApi(page);
+    await mockDonorApi(page, noDonations);
+    const pending = { newEmail: 'jana.nova@example.cz', expiresAt: '2026-10-21T10:00:00Z' };
     await page.route(
-      (url) => url.pathname === '/api/donors/me/connections',
-      (route) => route.fulfill({ json: { items: [claudeConnection] } }),
+      (url) => url.pathname === '/api/donors/me',
+      (route) => route.fulfill({ json: { ...donor, pendingEmailChange: pending } }),
     );
     let answer: () => void = () => undefined;
     const answered = new Promise<void>((resolve) => (answer = resolve));
-    await page.route(
-      (url) => url.pathname.startsWith('/api/donors/me/connections/'),
-      async (route) => {
-        await answered;
-        await route.fulfill(
-          problem(500, 'server-error', 'Chyba serveru', 'Zkuste to prosím za chvíli.'),
-        );
-      },
-    );
-    await signIn(page, administrator);
+    await page.route('**/api/donors/me/email-change/resend', async (route) => {
+      await answered;
+      await route.fulfill(
+        problem(429, 'donors/rate-limited', 'Příliš mnoho požadavků', 'Zkuste to za hodinu.'),
+      );
+    });
+    await signIn(page, { ...donor, pendingEmailChange: pending });
     await openDonorSection(page, 'Údaje a zabezpečení');
-    const disconnect = page.locator('.connection-disconnect');
-    await expect(disconnect).toHaveAccessibleName('Odpojit');
+    const row = page.locator('.account-row').filter({ hasText: 'Čeká na potvrzení' });
+    const resend = row.locator('.account-resend');
+    await expect(resend).toHaveAccessibleName('Poslat znovu potvrzovací odkaz');
+    const status = page.locator('.account-status');
     await lengthenLoadingDelay(page);
 
-    await disconnect.click();
+    await resend.click();
     await page.clock.fastForward(10_000);
 
-    await expect(disconnect.locator('.busy-label__face--shown')).toHaveText('Odpojujeme…');
-    await expect(disconnect).toHaveAccessibleName('Odpojit');
-    await expect(disconnect).toHaveAttribute('aria-busy', 'true');
+    await expect(resend.locator('.busy-label__face--shown')).toHaveText('Posíláme…');
+    await expect(status).toHaveText('Posíláme…');
+    await expect(resend).toHaveAccessibleName('Poslat znovu potvrzovací odkaz');
+    await expect(resend).toHaveAttribute('aria-busy', 'true');
 
     answer();
 
-    await expect(page.getByRole('alert')).toContainText('Chyba serveru');
-    await expect(disconnect).not.toHaveAttribute('aria-busy');
-    await expect(disconnect.locator('.busy-label__face--shown')).toHaveText('Odpojit');
-    await expect(disconnect).toHaveAccessibleName('Odpojit');
+    await expect(row.getByRole('alert')).toContainText('Příliš mnoho požadavků');
+    await expect(status).toHaveText('');
+    await expect(resend).not.toHaveAttribute('aria-busy');
+    await expect(resend.locator('.busy-label__face--shown')).toHaveText(
+      'Poslat znovu potvrzovací odkaz',
+    );
+    await expect(resend).toHaveAccessibleName('Poslat znovu potvrzovací odkaz');
   });
 });

@@ -1,14 +1,11 @@
-<span
-  class="busy-label__face"
-  [class.busy-label__face--shown]="!showsBusy()"
-  [attr.aria-hidden]="showsBusy() ? 'true' : null"
->
+<span class="busy-label__face" [class.busy-label__face--shown]="!showsBusy()">
   <ng-content select="[when-idle]" />
 </span>
 <span
+  #busyFace
   class="busy-label__face"
   [class.busy-label__face--shown]="showsBusy()"
-  [attr.aria-hidden]="showsBusy() ? null : 'true'"
+  aria-hidden="true"
 >
   <ng-content select="[when-busy]" />
 </span>

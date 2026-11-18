@@ -26,6 +26,7 @@ import {
   PasskeyCeremonyError,
 } from '../../../../core/auth/passkey-authenticator';
 import { formatBankTime } from '../../../donations/donation-date';
+import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
@@ -53,6 +54,7 @@ const SECRET_GROUP = 4;
 
 @Component({
   selector: 'app-account-card',
+  providers: [BusyAnnouncement],
   imports: [
     BusyLabel,
     FormsModule,
@@ -71,6 +73,7 @@ const SECRET_GROUP = 4;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountCard {
+  protected readonly busyAnnouncement = inject(BusyAnnouncement);
   private readonly auth = inject(AuthStore);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -386,6 +389,8 @@ export class AccountCard {
     this.pendingError.set('');
     this.emailChange.set(null);
     this.linkSentTo.set('');
+    this.passwordChanged.set(null);
+    this.secondFactorChanged.set(null);
   }
 
   private pendingActionFailed(failure: unknown, fallback: string): void {

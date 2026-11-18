@@ -194,7 +194,9 @@
               </app-busy-label>
             </button>
             <p class="ui-form-status" role="status">
-              @if (settingsStatus(); as status) {
+              @if (busyAnnouncement.text(); as starting) {
+                <span class="visually-hidden">{{ starting }}</span>
+              } @else if (settingsStatus(); as status) {
                 <span>{{ status }}</span>
               }
             </p>

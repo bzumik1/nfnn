@@ -19,6 +19,7 @@ import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-pro
 import { AuthStore } from '../../../core/auth/auth-store';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { BusyAnnouncement } from '../../../shared/ui/busy-label/busy-announcement';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
@@ -84,6 +85,7 @@ const SEND_HOURS = Array.from({ length: 24 }, (_, index) => index);
 
 @Component({
   selector: 'app-admin-report',
+  providers: [BusyAnnouncement],
   imports: [
     BusyButton,
     BusyLabel,
@@ -103,6 +105,7 @@ const SEND_HOURS = Array.from({ length: 24 }, (_, index) => index);
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminReport {
+  protected readonly busyAnnouncement = inject(BusyAnnouncement);
   private readonly api = inject(AdminApi);
   private readonly reads = inject(AdministrationPageReads);
   private readonly auth = inject(AuthStore);

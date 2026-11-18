@@ -293,7 +293,9 @@
   }
 
   <p class="ui-form-status" role="status">
-    @if (status()) {
+    @if (busyAnnouncement.text(); as starting) {
+      <span class="visually-hidden">{{ starting }}</span>
+    } @else if (status()) {
       <span>{{ status() }}</span>
     }
   </p>

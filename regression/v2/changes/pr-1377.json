@@ -3,32 +3,64 @@
     "kind": "retired",
     "suite": "frontend-playwright",
     "test": "e2e/admin-report.spec.ts > Given an administrator on the monthly report page > when they save and the server takes a while, then the button says so at once under its new name without changing its width",
-    "reason": "PR #1377 (#1250, both polish teams): a busy label changes only after the loading delay (--delay-loading), so the journey and the spec now name when the label changes; the old tests asserted the change at once",
-    "replacement": "e2e/admin-report.spec.ts > Given an administrator on the monthly report page > when they save and the server takes a while, then the button is locked at once and says so under its new name after the loading delay without changing its width",
+    "reason": "PR #1377 (#1250; R65 and R66, both polish teams): a busy label changes only after the loading delay, keeps the button's resting accessible name with aria-busy while the work runs, and the card's status line says the busy label after the delay before the result (explicit exception from D1/#1250 Label in Name), so these tests now name that behaviour",
+    "replacement": "e2e/admin-report.spec.ts > Given an administrator on the monthly report page > when they save and the server takes a while, then the button is locked and busy at once under its resting name, shows Ukládáme… with the status line after the loading delay and keeps its width",
+    "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when nothing runs, then its name is the resting label alone",
+    "reason": "PR #1377 (#1250; R65 and R66, both polish teams): a busy label changes only after the loading delay, keeps the button's resting accessible name with aria-busy while the work runs, and the card's status line says the busy label after the delay before the result (explicit exception from D1/#1250 Label in Name), so these tests now name that behaviour",
+    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves, inside a card with a status line > when nothing runs, then its name is the resting label, it is not busy and the status line is empty",
+    "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when nothing runs, then both labels stand in the button, so it keeps the width of the longer one",
+    "reason": "PR #1377 (#1250; R65 and R66, both polish teams): a busy label changes only after the loading delay, keeps the button's resting accessible name with aria-busy while the work runs, and the card's status line says the busy label after the delay before the result (explicit exception from D1/#1250 Label in Name), so these tests now name that behaviour",
+    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves, inside a card with a status line > when nothing runs, then both labels stand in the button, so it keeps the width of the longer one, and the busy one is hidden from screen readers",
     "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
   },
   {
     "kind": "retired",
     "suite": "frontend-vitest",
     "test": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving > then its name changes at once to the saving label alone",
-    "reason": "PR #1377 (#1250, both polish teams): a busy label changes only after the loading delay (--delay-loading), so the journey and the spec now name when the label changes; the old tests asserted the change at once",
-    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving without the theme's loading delay > then its name changes at once to the saving label alone",
+    "reason": "PR #1377 (#1250; R65 and R66, both polish teams): a busy label changes only after the loading delay, keeps the button's resting accessible name with aria-busy while the work runs, and the card's status line says the busy label after the delay before the result (explicit exception from D1/#1250 Label in Name), so these tests now name that behaviour",
+    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves, inside a card with a status line > when it starts saving without the theme's loading delay > then the button is busy but keeps its resting name, and shows the saving label",
     "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
   },
   {
     "kind": "retired",
     "suite": "frontend-vitest",
     "test": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving > then the resting label keeps its room but is hidden from screen readers",
-    "reason": "PR #1377 (#1250, both polish teams): a busy label changes only after the loading delay (--delay-loading), so the journey and the spec now name when the label changes; the old tests asserted the change at once",
-    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving without the theme's loading delay > then the resting label keeps its room but is hidden from screen readers",
+    "reason": "PR #1377 (#1250; R65 and R66, both polish teams): a busy label changes only after the loading delay, keeps the button's resting accessible name with aria-busy while the work runs, and the card's status line says the busy label after the delay before the result (explicit exception from D1/#1250 Label in Name), so these tests now name that behaviour",
+    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves, inside a card with a status line > when it starts saving without the theme's loading delay > then the button is busy but keeps its resting name, and shows the saving label",
     "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
   },
   {
     "kind": "retired",
     "suite": "frontend-vitest",
     "test": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving > then nothing on the button announces itself",
-    "reason": "PR #1377 (#1250, both polish teams): a busy label changes only after the loading delay (--delay-loading), so the journey and the spec now name when the label changes; the old tests asserted the change at once",
-    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving without the theme's loading delay > then nothing on the button announces itself",
+    "reason": "PR #1377 (#1250; R65 and R66, both polish teams): a busy label changes only after the loading delay, keeps the button's resting accessible name with aria-busy while the work runs, and the card's status line says the busy label after the delay before the result (explicit exception from D1/#1250 Label in Name), so these tests now name that behaviour",
+    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves, inside a card with a status line > when it starts saving without the theme's loading delay > then nothing on the button announces itself",
+    "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when it starts saving while the button has the focus, then the focus stays on the button",
+    "reason": "PR #1377 (#1250; R65 and R66, both polish teams): a busy label changes only after the loading delay, keeps the button's resting accessible name with aria-busy while the work runs, and the card's status line says the busy label after the delay before the result (explicit exception from D1/#1250 Label in Name), so these tests now name that behaviour",
+    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves, inside a card with a status line > when it starts saving while the button has the focus, then the focus stays on the button",
+    "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves > when the save ends, then its name is the resting label again",
+    "reason": "PR #1377 (#1250; R65 and R66, both polish teams): a busy label changes only after the loading delay, keeps the button's resting accessible name with aria-busy while the work runs, and the card's status line says the busy label after the delay before the result (explicit exception from D1/#1250 Label in Name), so these tests now name that behaviour",
+    "replacement": "src/app/shared/ui/busy-label/busy-label.spec.ts > Given a button whose label says when it saves, inside a card with a status line > when it starts saving without the theme's loading delay > and it ends, then the result replaces the saving label in the status line, the button is no longer busy and its name is its visible label",
     "contract": "docs/frontend-overview.md, Shared UI (busy-label) and Motion (busy button label)"
   }
 ]

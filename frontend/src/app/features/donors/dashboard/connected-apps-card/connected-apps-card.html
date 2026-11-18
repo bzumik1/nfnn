@@ -63,7 +63,9 @@
   }
 
   <p class="ui-form-status connections-status" role="status">
-    @if (disconnected(); as client) {
+    @if (busyAnnouncement.text(); as starting) {
+      <span class="visually-hidden">{{ starting }}</span>
+    } @else if (disconnected(); as client) {
       <span i18n="@@donor.account.connections.disconnected">
         Aplikace {{ client }} je odpojená. Přístup získá znovu jen novým připojením, které povolíte.
       </span>

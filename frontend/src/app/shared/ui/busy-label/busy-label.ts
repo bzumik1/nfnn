@@ -5,10 +5,14 @@ import {
   DestroyRef,
   DOCUMENT,
   effect,
+  ElementRef,
   inject,
   input,
   linkedSignal,
+  viewChild,
 } from '@angular/core';
+
+import { BusyAnnouncement } from './busy-announcement';
 
 @Component({
   selector: 'app-busy-label',
@@ -17,14 +21,17 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BusyLabel {
-  readonly busy = input.required<boolean>();
+  readonly busy = input(false);
   private readonly delayMs = loadingDelayMs(inject(DOCUMENT));
   private readonly delayOver = linkedSignal({ source: this.busy, computation: () => false });
   protected readonly showsBusy = computed(
     () => this.busy() && (this.delayMs === 0 || this.delayOver()),
   );
+  private readonly busyFace = viewChild.required<ElementRef<HTMLElement>>('busyFace');
 
   constructor() {
+    const host: HTMLElement = inject(ElementRef<HTMLElement>).nativeElement;
+    const destroyRef = inject(DestroyRef);
     let timer: ReturnType<typeof setTimeout> | undefined;
     const stopTimer = () => {
       clearTimeout(timer);
@@ -36,7 +43,23 @@ export class BusyLabel {
         timer = setTimeout(() => this.delayOver.set(true), this.delayMs);
       }
     });
-    inject(DestroyRef).onDestroy(stopTimer);
+    effect(() => {
+      const button = host.closest('button');
+      if (this.busy()) {
+        button?.setAttribute('aria-busy', 'true');
+      } else {
+        button?.removeAttribute('aria-busy');
+      }
+    });
+    const announcement = inject(BusyAnnouncement, { optional: true });
+    if (announcement !== null) {
+      const remove = announcement.add({
+        showsBusy: this.showsBusy,
+        busyText: () => (this.busyFace().nativeElement.textContent ?? '').trim(),
+      });
+      destroyRef.onDestroy(remove);
+    }
+    destroyRef.onDestroy(stopTimer);
   }
 }
 

@@ -155,7 +155,7 @@ test.describe('Given an administrator on the monthly report page', () => {
     ]);
   });
 
-  test('when they save and the server takes a while, then the button is locked at once and says so under its new name after the loading delay without changing its width', async ({
+  test('when they save and the server takes a while, then the button is locked and busy at once under its resting name, shows Ukládáme… with the status line after the loading delay and keeps its width', async ({
     page,
   }) => {
     await page.clock.install();
@@ -187,9 +187,14 @@ test.describe('Given an administrator on the monthly report page', () => {
     await expect(save).toHaveAccessibleName('Uložit nastavení');
     expect((await save.boundingBox())?.width).toBe(restingWidth);
 
+    await expect(save).toHaveAttribute('aria-busy', 'true');
+    await expect(page.locator('form.settings-form .ui-form-status')).toHaveText('');
+
     await page.clock.fastForward(10_000);
 
-    await expect(save).toHaveAccessibleName('Ukládáme…');
+    await expect(save.locator('.busy-label__face--shown')).toHaveText('Ukládáme…');
+    await expect(page.locator('form.settings-form .ui-form-status')).toHaveText('Ukládáme…');
+    await expect(save).toHaveAccessibleName('Uložit nastavení');
     await expect(save).toHaveAttribute('aria-disabled', 'true');
     await expect(save).toBeFocused();
     await expect(save).not.toHaveAttribute('aria-live');
@@ -248,9 +253,9 @@ test.describe('Given an administrator on the monthly report page', () => {
       );
       await save.click();
       await page.clock.fastForward(10_000);
-      await expect(save).toHaveAccessibleName('Ukládáme…');
+      await expect(save.locator('.busy-label__face--shown')).toHaveText('Ukládáme…');
       answer();
-      await expect(save).toHaveAccessibleName('Uložit nastavení');
+      await expect(save.locator('.busy-label__face--shown')).toHaveText('Uložit nastavení');
 
       expect(
         await page.evaluate(() => (window as unknown as { faceChanges: string[] }).faceChanges),

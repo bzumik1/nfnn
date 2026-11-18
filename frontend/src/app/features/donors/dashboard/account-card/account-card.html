@@ -843,7 +843,9 @@
   </dl>
 
   <p class="ui-form-status account-status" role="status">
-    @if (linkSentTo(); as address) {
+    @if (busyAnnouncement.text(); as starting) {
+      <span class="visually-hidden">{{ starting }}</span>
+    } @else if (linkSentTo(); as address) {
       <span i18n="@@donor.account.email.sent">
         Odkaz jsme poslali na {{ address }}. Platí 24 hodin; po jeho otevření se účet přepne na
         novou adresu a na tu současnou pošleme oznámení.
