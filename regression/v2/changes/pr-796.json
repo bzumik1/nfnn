@@ -1,0 +1,194 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/scroll-edge.spec.ts > Given the app opened from the home screen of an iPad in a window smaller than the screen, whose controls float over the top of the page > when a tab root scrolls, then an edge rises under the window controls, so no text runs under them",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the light appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/scroll-edge.spec.ts > Given a visitor on a computer, where nothing covers the top of the window > when a tab root scrolls, then no edge covers the top of the page",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the light appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-button-edge.spec.ts > Given a visitor reading a long article on a phone 320 px wide > when the text scrolls up under the back button, then an edge at the top covers it down past the button, so no line runs under it, and a focused link lands below it",
+    "replacement": "e2e/back-button-focus.spec.ts > Given a visitor reading a long article on a phone 320 px wide > when the text scrolls up under the back button and a link in it takes the focus, then the link lands below the button",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-button-edge.spec.ts > Given a visitor reading a long article on a phone 390 px wide > when the text scrolls up under the back button, then an edge at the top covers it down past the button, so no line runs under it, and a focused link lands below it",
+    "replacement": "e2e/back-button-focus.spec.ts > Given a visitor reading a long article on a phone 390 px wide > when the text scrolls up under the back button and a link in it takes the focus, then the link lands below the button",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-button-edge.spec.ts > Given a visitor reading a long article on a phone 440 px wide > when the text scrolls up under the back button, then an edge at the top covers it down past the button, so no line runs under it, and a focused link lands below it",
+    "replacement": "e2e/back-button-focus.spec.ts > Given a visitor reading a long article on a phone 440 px wide > when the text scrolls up under the back button and a link in it takes the focus, then the link lands below the button",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-button-edge.spec.ts > Given a visitor reading a long article on a phone on its side > when the text scrolls up under the back button, then an edge at the top covers it down past the button, so no line runs under it, and a focused link lands below it",
+    "replacement": "e2e/back-button-focus.spec.ts > Given a visitor reading a long article on a phone on its side > when the text scrolls up under the back button and a link in it takes the focus, then the link lands below the button",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-button-edge.spec.ts > Given a visitor reading a long article on a phone 320 px wide with text twice as large > when the text scrolls up under the back button, then an edge at the top covers it down past the button, so no line runs under it, and a focused link lands below it",
+    "replacement": "e2e/back-button-focus.spec.ts > Given a visitor reading a long article on a phone 320 px wide with text twice as large > when the text scrolls up under the back button and a link in it takes the focus, then the link lands below the button",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-button-edge.spec.ts > Given a visitor reading a long article on a phone on its side with text twice as large > when the text scrolls up under the back button, then an edge at the top covers it down past the button, so no line runs under it, and a focused link lands below it",
+    "replacement": "e2e/back-button-focus.spec.ts > Given a visitor reading a long article on a phone on its side with text twice as large > when the text scrolls up under the back button and a link in it takes the focus, then the link lands below the button",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-button-edge.spec.ts > Given a donor on Údaje a zabezpečení in the light appearance, where cards stand on a grouped ground > when a card scrolls up under the back button, then the edge takes the ground around the cards, not the card, and blurs what fades out under it, so it never shows as a band with readable text",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the light appearance whose status bar takes the top 62 px > when an article scrolls its text under the back button, then nothing but the controls is drawn over the text at the top",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-button-edge.spec.ts > Given a donor on Údaje a zabezpečení in the light appearance, where cards stand on a grouped ground > when the device switches its appearance while the page is scrolled, then the edge takes the ground of the new appearance",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the light appearance whose status bar takes the top 62 px > when an article scrolls its text under the back button, then nothing but the controls is drawn over the text at the top",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-button-edge.spec.ts > Given a donor on Údaje a zabezpečení in the dark appearance, where cards stand on a grouped ground > when a card scrolls up under the back button, then the edge takes the ground around the cards, not the card, and blurs what fades out under it, so it never shows as a band with readable text",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when an article scrolls its text under the back button, then nothing but the controls is drawn over the text at the top",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-button-edge.spec.ts > Given a donor on Údaje a zabezpečení in the dark appearance, where cards stand on a grouped ground > when the device switches its appearance while the page is scrolled, then the edge takes the ground of the new appearance",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when an article scrolls its text under the back button, then nothing but the controls is drawn over the text at the top",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page is at its top, then the edge is not raised, so the page looks as designed",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > then the edge is raised in the colour of the content coming up under it, so no line runs under the back button",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > then the edge knows its colour is dark, so a title in it is written in light ink",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > and lighter content comes up under it, then the edge takes that colour",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > and a light ground written as a color() value comes up under it, then the edge knows it is light",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > and a card narrower than the page comes up under it, then the edge takes the ground around the card, so it never stands out as a band of the card",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > and a see-through box comes up under it, then the edge looks past it to the ground",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > and the device switches between light and dark, then the edge takes the ground of the new appearance",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > and the visitor chooses another appearance for the site, then the edge takes the ground of the chosen appearance",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > and it returns to the top, then the edge is lowered again",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page rests further down by design, as the landing page does, then the edge stays lowered there and rises only beyond it",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the edge is released, then scrolling no longer raises it",
+    "replacement": "e2e/top-of-screen.spec.ts > Given an iPhone in the dark appearance whose status bar takes the top 62 px > when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade",
+    "reason": "PR #796 (#634, Jakub 2026-11-16): nothing is drawn over the top of the page when it scrolls, so the edge these tests checked is gone; top-of-screen.spec.ts proves the top stays bare",
+    "contract": "docs/frontend-overview.md, App shell"
+  }
+]
