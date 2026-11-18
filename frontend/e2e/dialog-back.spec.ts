@@ -1,6 +1,7 @@
 import { Locator, Page, Route } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { browserEntries, stepBack } from './app-history';
+import { fingerPulls, LegacyTouchDocument } from './finger';
 import {
   administrator,
   mockDonorApi,
@@ -116,60 +117,6 @@ async function fingerTo(
     bubbles: true,
     cancelable: true,
   });
-}
-
-type LegacyTouchDocument = Document & {
-  createTouch(
-    view: Window,
-    target: EventTarget,
-    identifier: number,
-    pageX: number,
-    pageY: number,
-    screenX: number,
-    screenY: number,
-  ): Touch;
-  createTouchList(...touches: Touch[]): TouchList;
-};
-
-async function fingerPulls(target: Locator, x: number, y: number, downs: number[]): Promise<void> {
-  await target.evaluate(
-    (element, path) => {
-      const document = element.ownerDocument as LegacyTouchDocument;
-      const view = document.defaultView!;
-      const at = (clientY: number): Touch[] | TouchList =>
-        typeof document.createTouch === 'function'
-          ? document.createTouchList(
-              document.createTouch(
-                view,
-                element,
-                1,
-                path.x + view.scrollX,
-                clientY + view.scrollY,
-                path.x,
-                clientY,
-              ),
-            )
-          : [new Touch({ identifier: 1, target: element, clientX: path.x, clientY })];
-      const pressedAt = performance.now();
-      const finger = (type: string, clientY: number, when: number): void => {
-        const touches = at(clientY) as Touch[];
-        const event = new TouchEvent(type, {
-          touches,
-          targetTouches: touches,
-          changedTouches: touches,
-          bubbles: true,
-          cancelable: true,
-        });
-        Object.defineProperty(event, 'timeStamp', { value: when });
-        element.dispatchEvent(event);
-      };
-      finger('touchstart', path.y, pressedAt);
-      path.downs.forEach((down, step) =>
-        finger('touchmove', path.y + down, pressedAt + (step + 1) * 16),
-      );
-    },
-    { x, y, downs },
-  );
 }
 
 async function fingerFlicksAway(target: Locator, x: number, y: number): Promise<string[]> {

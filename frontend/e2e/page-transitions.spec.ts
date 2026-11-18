@@ -1,5 +1,6 @@
 import { Locator, Page } from '@playwright/test';
 import { stepBack } from './app-history';
+import { fingerAlong } from './finger';
 import {
   administrator,
   mockDonorApi,
@@ -549,52 +550,11 @@ for (const [screen, viewport] of [
   });
 }
 
-type LegacyTouchDocument = Document & {
-  createTouch?(
-    view: Window,
-    target: EventTarget,
-    identifier: number,
-    pageX: number,
-    pageY: number,
-    screenX: number,
-    screenY: number,
-  ): Touch;
-  createTouchList?(...touches: Touch[]): TouchList;
-};
-
-async function fingerFromEdge(page: Page, xs: readonly number[], lifts: boolean): Promise<void> {
-  await page.evaluate(
-    ({ xs, lifts }) => {
-      const y = 420;
-      const document = window.document as LegacyTouchDocument;
-      const target = document.elementFromPoint(xs[0], y) ?? document.body;
-      const at = (x: number): Touch[] =>
-        typeof document.createTouch === 'function' && typeof document.createTouchList === 'function'
-          ? Array.from(
-              document.createTouchList(
-                document.createTouch(window, target, 1, x + scrollX, y + scrollY, x, y),
-              ),
-            )
-          : [new Touch({ identifier: 1, target, clientX: x, clientY: y })];
-      const finger = (type: string, x: number, touching: boolean): void => {
-        const touches = at(x);
-        target.dispatchEvent(
-          new TouchEvent(type, {
-            touches: touching ? touches : [],
-            targetTouches: touching ? touches : [],
-            changedTouches: touches,
-            bubbles: true,
-            cancelable: true,
-          }),
-        );
-      };
-      finger('touchstart', xs[0], true);
-      xs.slice(1).forEach((x) => finger('touchmove', x, true));
-      if (lifts) {
-        finger('touchend', xs.at(-1)!, false);
-      }
-    },
-    { xs, lifts },
+async function fingerFromEdge(target: Locator, xs: readonly number[]): Promise<void> {
+  await fingerAlong(
+    target,
+    xs.map((x) => ({ x, y: 420 })),
+    true,
   );
 }
 
@@ -684,6 +644,7 @@ test.describe('Given an administrator in the app on the home screen of a phone w
     await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
     await expect(page).toHaveURL(/\/sprava$/);
     await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(overlays(page)).toHaveCount(0);
     await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
 
     await backInTheAccountSheet(page);
@@ -706,7 +667,7 @@ test.describe('Given an administrator in the app on the home screen of a phone w
   }) => {
     await openAdministration(page);
 
-    await fingerFromEdge(page, [...DRAGGED_ACROSS, 300], true);
+    await fingerFromEdge(page.getByRole('main'), [...DRAGGED_ACROSS, 300]);
 
     await backInTheAccountSheet(page);
   });
@@ -730,7 +691,10 @@ test.describe('Given an administrator in the app on the home screen of a phone w
   }) => {
     await openAccountItem(page, 'Moje dary');
 
-    await fingerFromEdge(page, [...DRAGGED_ACROSS, 300], true);
+    await fingerFromEdge(
+      page.getByRole('dialog', { name: 'Moje dary' }).locator('.account-section-body'),
+      [...DRAGGED_ACROSS, 300],
+    );
 
     await expect(accountSheet(page).getByRole('link', { name: /^Moje dary/ })).toBeFocused();
     await expect(page).toHaveURL('/aktuality');
