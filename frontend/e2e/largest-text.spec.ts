@@ -1263,6 +1263,24 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
     expect(verified.y + verified.height).toBeGreaterThan(email.y + email.height / 2);
     expect(await pastTheirCard(summary)).toEqual([]);
   });
+
+  test('when the device could not store the administration and they look at the card at the default text size, then the notice with Uložit znovu keeps the same gap above the summary as the cards keep between them', async ({
+    page,
+  }) => {
+    const summary = await openSummary(page);
+    const notice = page.locator('.first-download');
+    await expect(notice.getByRole('button', { name: 'Uložit znovu' })).toBeVisible();
+    const parts = page.getByRole('navigation', { name: 'Části karty dárce' });
+    await expect(parts).toBeVisible();
+
+    const noticeBox = (await notice.boundingBox())!;
+    const summaryBox = (await summary.boundingBox())!;
+    const partsBox = (await parts.boundingBox())!;
+    const noticeGap = summaryBox.y - (noticeBox.y + noticeBox.height);
+    const cardGap = partsBox.y - (summaryBox.y + summaryBox.height);
+    expect(noticeGap).toBeGreaterThanOrEqual(8);
+    expect(Math.abs(noticeGap - cardGap)).toBeLessThanOrEqual(0.5);
+  });
 });
 
 test.describe('Given an administrator on a tablet 768 pt wide opening the card of a donor', () => {
