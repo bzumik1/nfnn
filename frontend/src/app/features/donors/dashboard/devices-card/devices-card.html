@@ -101,15 +101,15 @@
             animate.leave="devices-confirm--closing"
           >
             <div>
-              <div class="devices-confirm-box">
+              <div class="ui-confirm devices-confirm-box">
                 <p
                   id="devices-confirm-others"
-                  class="devices-confirm-text"
+                  class="ui-confirm__text devices-confirm-text"
                   i18n="@@donor.account.devices.confirmOthers"
                 >
                   Odhlásit všechna ostatní zařízení?
                 </p>
-                <div class="devices-confirm-actions">
+                <div class="ui-confirm__actions devices-confirm-actions">
                   <button
                     appNeedsConnection
                     type="button"
@@ -271,15 +271,15 @@
             animate.leave="devices-confirm--closing"
           >
             <div>
-              <div class="devices-confirm-box">
+              <div class="ui-confirm devices-confirm-box">
                 <p
                   [id]="confirmQuestionId(device)"
-                  class="devices-confirm-text"
+                  class="ui-confirm__text devices-confirm-text"
                   i18n="@@donor.account.devices.confirm"
                 >
                   Odhlásit {{ nameInSentence(device) }}?
                 </p>
-                <div class="devices-confirm-actions">
+                <div class="ui-confirm__actions devices-confirm-actions">
                   <button
                     appNeedsConnection
                     type="button"
