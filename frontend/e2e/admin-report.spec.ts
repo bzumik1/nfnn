@@ -155,9 +155,10 @@ test.describe('Given an administrator on the monthly report page', () => {
     ]);
   });
 
-  test('when they save and the server takes a while, then the button says so at once under its new name without changing its width', async ({
+  test('when they save and the server takes a while, then the button is locked at once and says so under its new name after the loading delay without changing its width', async ({
     page,
   }) => {
+    await page.clock.install();
     await page.route(
       (url) => url.pathname === REPORT,
       (route) => route.fulfill({ json: reportView() }),
@@ -179,9 +180,20 @@ test.describe('Given an administrator on the monthly report page', () => {
     await expect(save).toHaveAccessibleName('Uložit nastavení');
     const restingWidth = (await save.boundingBox())?.width;
 
+    await page.evaluate(() => document.documentElement.style.setProperty('--delay-loading', '10s'));
     await save.click();
 
+    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    await expect(save).toHaveAccessibleName('Uložit nastavení');
+    expect((await save.boundingBox())?.width).toBe(restingWidth);
+
+    await expect(save).not.toHaveAttribute('aria-busy');
+
+    await page.clock.fastForward(10_000);
+
     await expect(save).toHaveAccessibleName('Ukládáme…');
+    await expect(page.locator('form.settings-form .ui-form-status')).toHaveText('');
+    await expect(save).not.toHaveAttribute('aria-busy');
     await expect(save).toHaveAttribute('aria-disabled', 'true');
     await expect(save).toBeFocused();
     await expect(save).not.toHaveAttribute('aria-live');
@@ -195,6 +207,65 @@ test.describe('Given an administrator on the monthly report page', () => {
     await expect(save).toHaveAccessibleName('Uložit nastavení');
     expect((await save.boundingBox())?.width).toBe(restingWidth);
   });
+
+  for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+    test(`when the save label changes and back with ${reducedMotion === 'reduce' ? 'less' : 'full'} motion, then the leaving label is gone at once and only the coming one fades in, so no frame shows a word broken inside`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.clock.install();
+      await page.route(
+        (url) => url.pathname === REPORT,
+        (route) => route.fulfill({ json: reportView() }),
+      );
+      let answer: () => void = () => undefined;
+      const answered = new Promise<void>((resolve) => (answer = resolve));
+      await page.route(
+        (url) => url.pathname === SETTINGS,
+        async (route) => {
+          const body = route.request().postDataJSON();
+          await answered;
+          await route.fulfill({ json: { ...body, changedAt: '2026-10-23T08:00:00Z' } });
+        },
+      );
+
+      await page.goto('/sprava/prehledy');
+      await page.getByLabel('Den odeslání').selectOption({ label: '5.' });
+      const save = page.locator('form.settings-form button[type="submit"]');
+      await expect(save).toHaveAccessibleName('Uložit nastavení');
+      await save.evaluate((button) => {
+        const changes: string[] = [];
+        (window as unknown as { faceChanges: string[] }).faceChanges = changes;
+        new MutationObserver((records) => {
+          for (const record of records) {
+            const face = record.target as HTMLElement;
+            const shown = face.classList.contains('busy-label__face--shown');
+            changes.push(
+              `${face.textContent?.trim()} ${shown ? 'comes' : 'leaves'} at ${getComputedStyle(face).opacity}`,
+            );
+          }
+        }).observe(button, { subtree: true, attributes: true, attributeFilter: ['class'] });
+      });
+
+      await page.evaluate(() =>
+        document.documentElement.style.setProperty('--delay-loading', '10s'),
+      );
+      await save.click();
+      await page.clock.fastForward(10_000);
+      await expect(save.locator('.busy-label__face--shown')).toHaveText('Ukládáme…');
+      answer();
+      await expect(save.locator('.busy-label__face--shown')).toHaveText('Uložit nastavení');
+
+      expect(
+        await page.evaluate(() => (window as unknown as { faceChanges: string[] }).faceChanges),
+      ).toEqual([
+        'Uložit nastavení leaves at 0',
+        'Ukládáme… comes at 0',
+        'Uložit nastavení comes at 0',
+        'Ukládáme… leaves at 0',
+      ]);
+    });
+  }
 
   test('when an address is not an e-mail, then the field says so and nothing is saved', async ({
     page,

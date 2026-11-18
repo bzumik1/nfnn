@@ -58,11 +58,10 @@
                     [disabled]="removing() !== null"
                     (click)="remove(passkey)"
                   >
-                    @if (removing() === passkey.id) {
-                      <span i18n="@@donor.passkeys.removing">Odebíráme…</span>
-                    } @else {
-                      <span i18n="@@donor.passkeys.confirmRemove">Ano, odebrat</span>
-                    }
+                    <app-busy-label [busy]="removing() === passkey.id">
+                      <span when-idle i18n="@@donor.passkeys.confirmRemove">Ano, odebrat</span>
+                      <span when-busy i18n="@@donor.passkeys.removing">Odebíráme…</span>
+                    </app-busy-label>
                   </button>
                   <button
                     type="button"
@@ -109,11 +108,10 @@
                     class="ui-button ui-button--primary passkeys-save"
                     [disabled]="renameSaving()"
                   >
-                    @if (renameSaving()) {
-                      <span i18n="@@donor.passkeys.rename.saving">Ukládáme…</span>
-                    } @else {
-                      <span i18n="@@donor.passkeys.rename.submit">Uložit název</span>
-                    }
+                    <app-busy-label [busy]="renameSaving()">
+                      <span when-idle i18n="@@donor.passkeys.rename.submit">Uložit název</span>
+                      <span when-busy i18n="@@donor.passkeys.rename.saving">Ukládáme…</span>
+                    </app-busy-label>
                   </button>
                   <button
                     type="button"
@@ -266,11 +264,10 @@
           class="ui-button ui-button--primary passkeys-save"
           [disabled]="saving()"
         >
-          @if (saving()) {
-            <span i18n="@@donor.passkeys.saving">Čekáme na zařízení…</span>
-          } @else {
-            <span i18n="@@donor.passkeys.submit">Vytvořit klíč</span>
-          }
+          <app-busy-label [busy]="saving()">
+            <span when-idle i18n="@@donor.passkeys.submit">Vytvořit klíč</span>
+            <span when-busy i18n="@@donor.passkeys.saving">Čekáme na zařízení…</span>
+          </app-busy-label>
         </button>
         <button
           type="button"
@@ -296,7 +293,9 @@
   }
 
   <p class="ui-form-status" role="status">
-    @if (status()) {
+    @if (busyAnnouncement.text(); as starting) {
+      <span class="visually-hidden">{{ starting }}</span>
+    } @else if (status()) {
       <span>{{ status() }}</span>
     }
   </p>
