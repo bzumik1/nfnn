@@ -991,6 +991,63 @@ async function datesPastTheirCells(scope: Locator): Promise<string[]> {
   });
 }
 
+const PUBLIC_PAGES_WITH_A_LEAD = [
+  '/prispet',
+  '/aktuality',
+  '/projekty',
+  '/o-nas',
+  '/zasady-ochrany-osobnich-udaju',
+  '/neexistuje',
+];
+
+async function lastWordsOfLines(element: Locator): Promise<string[]> {
+  await element.evaluate(() => document.fonts.ready);
+  return element.evaluate((root) => {
+    const lines = new Map<number, string>();
+    const range = document.createRange();
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      for (const word of (node.textContent ?? '').matchAll(/[^ \t\n]+/g)) {
+        range.setStart(node, word.index);
+        range.setEnd(node, word.index + word[0].length);
+        const rects = range.getClientRects();
+        const top = Math.round(rects[rects.length - 1].top);
+        lines.set(top, word[0].split('\u00a0').at(-1) ?? '');
+      }
+    }
+    return [...lines.entries()].sort(([a], [b]) => a - b).map(([, last]) => last);
+  });
+}
+
+test.describe('Given a visitor on an iPad on its side whose root text is 34 px', () => {
+  test.use({ viewport: { width: 1180, height: 820 } });
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent = 'html { font-size: 34px; }';
+        document.head.append(style);
+      });
+    });
+  });
+
+  for (const path of PUBLIC_PAGES_WITH_A_LEAD) {
+    test(`when they open ${path}, then no line of the intro's lead ends with a one-letter word`, async ({
+      page,
+    }) => {
+      await page.goto(path);
+      const lead = page.locator('.ui-intro__lead').first();
+      await expect(lead).toBeVisible();
+
+      expect(await lead.textContent()).not.toMatch(/(^|\s)[aikosuvz] /i);
+      expect((await lastWordsOfLines(lead)).filter((word) => /^[aikosuvz]$/i.test(word))).toEqual(
+        [],
+      );
+    });
+  }
+});
+
 for (const rootPx of [34, 53]) {
   test.describe(`Given an administrator in a window 1180 pt wide whose root text is ${rootPx} px`, () => {
     test.use({ viewport: { width: 1180, height: 820 } });
