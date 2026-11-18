@@ -13,6 +13,7 @@ const SCROLLS_SIDEWAYS = new Set(['auto', 'scroll']);
 const OPEN_DIALOG = 'dialog[open]';
 const LEAVING_DIALOG = 'dialog.dialog--leaving';
 const SHEET_SECTION_BACK = 'app-sheet-head .sheet-head-back';
+export const TOUCH_LOST_MS = 1000;
 const DRAGGING_CLASS = 'edge-swipe-dragging';
 const PRESS_TAKEN_OVER = `.${DRAGGING_CLASS} :active {
   --pressed-tint: 0% !important;
@@ -45,13 +46,16 @@ export class EdgeSwipeBack {
   private swipe: Swipe | null = null;
   private pressCancel: CSSStyleSheet | null = null;
   private pops = 0;
+  private touchLost: ReturnType<typeof setTimeout> | undefined;
 
   private readonly onStart = (event: TouchEvent): void => this.started(event);
   private readonly onMove = (event: TouchEvent): void => this.moved(event);
   private readonly onEnd = (event: TouchEvent): void => this.ended(event);
-  private readonly onCancel = (): void => {
-    void this.swipe?.preview?.slideBack();
-    this.letGo();
+  private readonly onCancel = (): void => this.callOff();
+  private readonly onHidden = (): void => {
+    if (this.document.visibilityState === 'hidden') {
+      this.callOff();
+    }
   };
   private readonly onLeave = (): void => {
     this.pops++;
@@ -67,6 +71,8 @@ export class EdgeSwipeBack {
     this.document.addEventListener('touchmove', this.onMove, PASSIVE);
     this.document.addEventListener('touchend', this.onEnd, PASSIVE);
     this.document.addEventListener('touchcancel', this.onCancel, PASSIVE);
+    this.document.addEventListener('pointercancel', this.onCancel, PASSIVE);
+    this.document.addEventListener('visibilitychange', this.onHidden, PASSIVE);
     view.addEventListener('popstate', this.onLeave, PASSIVE);
     view.addEventListener('pagehide', this.onLeave, PASSIVE);
   }
@@ -77,13 +83,15 @@ export class EdgeSwipeBack {
     this.document.removeEventListener('touchmove', this.onMove, PASSIVE);
     this.document.removeEventListener('touchend', this.onEnd, PASSIVE);
     this.document.removeEventListener('touchcancel', this.onCancel, PASSIVE);
+    this.document.removeEventListener('pointercancel', this.onCancel, PASSIVE);
+    this.document.removeEventListener('visibilitychange', this.onHidden, PASSIVE);
     view?.removeEventListener('popstate', this.onLeave, PASSIVE);
     view?.removeEventListener('pagehide', this.onLeave, PASSIVE);
     this.letGo();
   }
 
   private started(event: TouchEvent): void {
-    this.letGo();
+    this.callOff();
     const touch = event.changedTouches[0];
     if (event.touches.length > 1 || touch === undefined || keepsItsOwnSwipe(event.target)) {
       return;
@@ -137,7 +145,13 @@ export class EdgeSwipeBack {
     }
   }
 
+  private callOff(): void {
+    void this.swipe?.preview?.slideBack();
+    this.letGo();
+  }
+
   private letGo(): void {
+    clearTimeout(this.touchLost);
     this.swipe = null;
     this.document.documentElement.classList.remove(DRAGGING_CLASS);
   }
@@ -165,6 +179,10 @@ export class EdgeSwipeBack {
       this.takeOverPress();
     }
     swipe.preview?.follow(swipe.motion.offset);
+    if (swipe.motion.dragging) {
+      clearTimeout(this.touchLost);
+      this.touchLost = setTimeout(() => this.callOff(), TOUCH_LOST_MS);
+    }
   }
 
   private ended(event: TouchEvent): void {

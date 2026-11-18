@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { appConfig } from '../../app.config';
 import { DirtyForms } from '../updates/dirty-forms';
 import { BackTarget } from './back-target';
-import { EdgeSwipeBack } from './edge-swipe-back';
+import { EdgeSwipeBack, TOUCH_LOST_MS } from './edge-swipe-back';
 import { edgeSwipeBackAtStart } from './edge-swipe-back-start';
 import { SheetSteps, StepsInside } from './sheet-steps';
 import { PageTransitions, SwipePreview } from './page-transitions';
@@ -622,6 +622,94 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
 
     expect(preview.slideBack).toHaveBeenCalledTimes(1);
     expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  describe('when the finger that took the page never reports its end', () => {
+    function takePage(): void {
+      touch('touchstart', page, { x: 20, y: 300, at: 0 });
+      touch('touchmove', page, { x: 200, y: 300, at: 100 });
+    }
+
+    function stillUnderway(): boolean {
+      return document.documentElement.classList.contains('edge-swipe-dragging');
+    }
+
+    it('and a new finger lands, then the page slides back, the swipe ends and no step follows', async () => {
+      takePage();
+
+      touch('touchstart', page, { x: 180, y: 400, at: 400 });
+      touch('touchend', page, { x: 180, y: 400, at: 450 });
+      await Promise.resolve();
+
+      expect(preview.slideBack).toHaveBeenCalledTimes(1);
+      expect(stillUnderway()).toBe(false);
+      expect(backTarget.back).not.toHaveBeenCalled();
+    });
+
+    it('and a second finger joins, then the page slides back and no step follows', async () => {
+      takePage();
+
+      touch('touchstart', page, { x: 180, y: 400, at: 400 }, 2);
+      await Promise.resolve();
+
+      expect(preview.slideBack).toHaveBeenCalledTimes(1);
+      expect(stillUnderway()).toBe(false);
+      expect(backTarget.back).not.toHaveBeenCalled();
+    });
+
+    it('and the browser cancels the pointer, then the page slides back and no step follows', async () => {
+      takePage();
+
+      document.dispatchEvent(new Event('pointercancel'));
+      await Promise.resolve();
+
+      expect(preview.slideBack).toHaveBeenCalledTimes(1);
+      expect(stillUnderway()).toBe(false);
+    });
+
+    it('and the app goes to the background, then the page slides back and no step follows', async () => {
+      takePage();
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+      try {
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+
+        expect(preview.slideBack).toHaveBeenCalledTimes(1);
+        expect(stillUnderway()).toBe(false);
+      } finally {
+        delete (document as { visibilityState?: unknown }).visibilityState;
+      }
+    });
+
+    it('and no touch comes for a second, then the page slides back on its own and a late end takes no step', async () => {
+      vi.useFakeTimers();
+      try {
+        takePage();
+        await vi.advanceTimersByTimeAsync(TOUCH_LOST_MS);
+
+        expect(preview.slideBack).toHaveBeenCalledTimes(1);
+        expect(stillUnderway()).toBe(false);
+        touch('touchend', page, { x: 300, y: 300, at: 1200 });
+        expect(backTarget.back).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('and the finger rests a while before it moves on, then the swipe still follows it', async () => {
+      vi.useFakeTimers();
+      try {
+        takePage();
+        await vi.advanceTimersByTimeAsync(TOUCH_LOST_MS / 2);
+        touch('touchmove', page, { x: 240, y: 300, at: 600 });
+        await vi.advanceTimersByTimeAsync(TOUCH_LOST_MS / 2);
+
+        expect(preview.slideBack).not.toHaveBeenCalled();
+        expect(preview.follow).toHaveBeenLastCalledWith(220);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   it('when the page went back by itself during the swipe, then the page slides back and the app takes no second step', async () => {
