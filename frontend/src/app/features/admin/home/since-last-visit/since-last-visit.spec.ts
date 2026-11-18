@@ -227,7 +227,7 @@ describe('Given the block of what is new since the last visit on the administrat
       'Přiřazené dárcům': '3 platby za 7 500 Kč',
       'Čekají na přiřazení': '2 platby za 5 000 Kč',
       'Noví dárci': '3 nové registrace',
-      'Vydaná potvrzení': '2 potvrzení',
+      'Vystavená potvrzení': '2 potvrzení',
       'Úkony dalších správců': 'Pavel Znamenáček: 3 úkony, jiný správce: 1 úkon',
     });
     expect(links()).toEqual([
@@ -262,7 +262,7 @@ describe('Given the block of what is new since the last visit on the administrat
       'Přiřazené dárcům': '1 platba za 500 Kč',
       'Čekají na přiřazení': 'žádná',
       'Noví dárci': '1 nová registrace',
-      'Vydaná potvrzení': '1 potvrzení',
+      'Vystavená potvrzení': '1 potvrzení',
       'Úkony dalších správců': 'Pavel Znamenáček: 1 úkon',
     });
     expect(links().map((link) => link.href)).toEqual([
@@ -286,7 +286,7 @@ describe('Given the block of what is new since the last visit on the administrat
     );
     expect(figures()).toEqual({
       'Noví dárci': 'žádní',
-      'Vydaná potvrzení': 'žádná',
+      'Vystavená potvrzení': 'žádná',
       'Úkony dalších správců': 'Pavel Znamenáček: 4 úkony',
     });
   });

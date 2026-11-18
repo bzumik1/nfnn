@@ -63,7 +63,7 @@ export const ACCOUNT_ITEMS: readonly AccountItem[] = [
   },
   {
     path: '/darce/udaje',
-    label: $localize`:@@layout.account.details:Údaje a zabezpečení`,
+    label: $localize`:@@layout.account.details:Údaje a\u00a0zabezpečení`,
     icon: 'details',
   },
 ];

@@ -6,6 +6,7 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { Donor, SignedInDevice } from '../../../../core/auth/donor';
 import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
 import { DonorNotifiedDevices } from '../../../operations/donor-notified-devices';
+import { deviceNameInSentence } from './device-labels';
 import { DevicesCard } from './devices-card';
 
 const DEVICES_URL = '/api/donors/me/devices';
@@ -200,6 +201,19 @@ describe("Given a donor's signed-in devices card", () => {
       http.expectNone({ method: 'DELETE' });
     });
 
+    it('and the donor presses Odhlásit at the unknown device, then its name reads in lower case inside the button’s name and the question', async () => {
+      expect(rows()[2].querySelector('button')?.getAttribute('aria-label')).toBe(
+        'Odhlásit neznámé zařízení',
+      );
+
+      await ask(signOutButton(rows()[2]));
+
+      const confirmation = rows()[2].querySelector<HTMLElement>('.devices-confirm');
+      const question = document.getElementById(confirmation?.getAttribute('aria-labelledby') ?? '');
+      expect(text(question)).toBe('Odhlásit neznámé zařízení?');
+      expect(text(rows()[2].querySelector('.device-name'))).toBe('Neznámé zařízení');
+    });
+
     it('and the donor cancels the question, then nothing is signed out and focus is back on the iPhone’s Odhlásit', async () => {
       await ask(signOutButton(rows()[1]));
       element<HTMLButtonElement>('.devices-confirm-no').click();
@@ -230,6 +244,19 @@ describe("Given a donor's signed-in devices card", () => {
       );
       expect(element('.devices-confirm')).toBeNull();
       expect(document.activeElement).toBe(element('.devices-status'));
+    });
+
+    it('and the donor signs out the unknown device, then the status names it in lower case inside its sentence', async () => {
+      await ask(signOutButton(rows()[2]));
+      await confirmSignOut();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${UNKNOWN.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(text(element('.devices-status'))).toBe(
+        'Zařízení jsme odhlásili: neznámé zařízení. Pokud jste se na něm nepřihlásili vy, změňte si heslo.',
+      );
     });
 
     it('and the donor presses Odhlásit všechna ostatní zařízení, then the card asks the same way and cancelling returns focus to that button', async () => {
@@ -327,7 +354,7 @@ describe("Given a donor's signed-in devices card", () => {
       await settle();
 
       expect(text(element('.devices-status'))).toBe(
-        'Ostatní zařízení jsou odhlášená. Připojené aplikace zůstávají připojené; odpojíte je na kartě Připojené aplikace.',
+        'Ostatní zařízení jsou odhlášená. Připojené aplikace zůstávají připojené; odpojíte je v kartě „Připojené aplikace“.',
       );
     });
   });
@@ -587,5 +614,16 @@ describe("Given a donor's signed-in devices card", () => {
     await settle();
 
     expect(sessionEnded).toBe(1);
+  });
+});
+
+describe('Given a device whose platform the site does not know', () => {
+  it('when its name stands inside a sentence, then the fallback words are in lower case and a known browser keeps its name', () => {
+    expect(deviceNameInSentence({ platform: 'OTHER', browser: 'SAFARI', session: 'BROWSER' })).toBe(
+      'jiné zařízení · Safari',
+    );
+    expect(deviceNameInSentence({ platform: 'IPHONE', browser: 'OTHER', session: 'BROWSER' })).toBe(
+      'iPhone · jiný prohlížeč',
+    );
   });
 });

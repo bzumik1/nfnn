@@ -428,7 +428,7 @@ describe('Given an administrator on the backups page', () => {
       expect(texts('.restore-points li')[1]).toContain('vymazaní dárci zůstanou vymazaní');
       expect(texts('.restore-points li')[1]).toContain('historie správy se nezkrátí');
       expect(texts('.restore-points li')[2]).toContain(
-        'Potvrzení o daru vydaná po vytvoření zálohy z databáze zmizí',
+        'Potvrzení o daru vystavená po vytvoření zálohy z databáze zmizí',
       );
       expect(texts('.restore-points li')[3]).toContain('záloha „Před obnovou“');
 

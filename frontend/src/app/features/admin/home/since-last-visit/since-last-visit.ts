@@ -153,7 +153,7 @@ function figuresOf(changes: VisitChanges): VisitFigure[] {
       query: null,
     },
     {
-      label: $localize`:@@admin.home.visit.receipts:Vydaná potvrzení`,
+      label: $localize`:@@admin.home.visit.receipts:Vystavená potvrzení`,
       text:
         changes.receipts > 0
           ? $localize`:@@admin.home.visit.receipts.count:${changes.receipts}:count: potvrzení`

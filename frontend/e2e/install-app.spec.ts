@@ -86,7 +86,7 @@ test.describe('Given a signed-in donor in Safari on an iPhone', () => {
     await signIn(page);
 
     await expect(card(page)).toContainText(
-      'Klepněte na Sdílet (v Safari ho najdete i pod tlačítkem ⋯) a pak na Přidat na plochu. V aplikaci se přihlásíte ještě jednou.',
+      'Klepněte na „Sdílet“ (v Safari ho najdete i pod tlačítkem ⋯) a pak na „Přidat na plochu“. V aplikaci se přihlásíte ještě jednou.',
     );
     await expect(card(page).getByRole('button', { name: 'Nainstalovat aplikaci' })).toHaveCount(0);
   });

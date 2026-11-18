@@ -280,13 +280,15 @@ test.describe('Given an administrator', () => {
     await expect(attention.getByRole('listitem')).toHaveText([
       '1 platba čeká na přiřazení 150 Kč',
       'Naléhavé: Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
-      'Podepisující nemá nahraný podpis Potvrzení o daru mají zatím jen čáru se jménem.',
+      'Osoba, která podepisuje potvrzení, nemá nahraný podpis Potvrzení o daru mají zatím jen čáru se jménem.',
     ]);
     await expect(
       attention.getByRole('link', { name: '1 platba čeká na přiřazení 150 Kč' }),
     ).toHaveAttribute('href', '/sprava/platby');
     await expect(
-      attention.getByRole('link', { name: 'Podepisující nemá nahraný podpis' }),
+      attention.getByRole('link', {
+        name: 'Osoba, která podepisuje potvrzení, nemá nahraný podpis',
+      }),
     ).toHaveAttribute('href', '/sprava/lide-fondu');
     const backupsCard = page.getByRole('region', { name: 'Zálohy databáze' });
     await expect(backupsCard).toContainText('23. 10. 2026 3:00 (2 kB)');

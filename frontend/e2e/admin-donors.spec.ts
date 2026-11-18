@@ -284,7 +284,7 @@ test.describe('Given an administrator on the donors page', () => {
     await expect(page.getByRole('region', { name: 'Dary' })).toContainText(
       'Celkem 2 dary za 800 Kč.',
     );
-    await expect(page.getByRole('region', { name: 'Vydaná potvrzení' })).toContainText(
+    await expect(page.getByRole('region', { name: 'Vystavená potvrzení' })).toContainText(
       '2026-000001',
     );
 
@@ -329,7 +329,7 @@ test.describe('Given an administrator on the donors page', () => {
     await accountsCard.getByRole('button', { name: 'Ano, odebrat' }).click();
     const accountsResult = accountsCard.getByRole('status').filter({ hasNotText: 'Načítáme' });
     await expect(accountsResult).toHaveText(
-      'Účet 2900233333/2010 jsme dárci odebrali: 2 dary přiřazené přes něj jsme smazali a platby jsou zase nespárované.',
+      'Bankovní účet 2900233333/2010 jsme dárci odebrali: 2 dary přiřazené přes něj jsme smazali a platby jsou zase nespárované.',
     );
     await expect(accountsCard.locator('app-live-notice')).toBeFocused();
     await expect(accountsCard).toContainText('Z žádného účtu zatím nepřišla platba');
@@ -352,7 +352,7 @@ test.describe('Given an administrator on the donors page', () => {
     await expect(
       page.getByRole('status').filter({ hasText: /\S/ }).filter({ hasNotText: 'Načítáme' }),
     ).toHaveText(
-      'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít. Dary a vydaná potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají beze změny, i se jménem a adresou.',
+      'Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít. Dary a vystavená potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají beze změny, i se jménem a adresou.',
     );
     await expect(page.getByRole('heading', { level: 1, name: 'Vymazaný dárce' })).toBeVisible();
     await expect(page.getByRole('note')).toContainText(
@@ -433,7 +433,7 @@ test.describe('Given an administrator on the donors page', () => {
     );
 
     await page.goto(`/sprava/darci/${PETR_ID}`);
-    const receiptsCard = page.getByRole('region', { name: 'Vydaná potvrzení' });
+    const receiptsCard = page.getByRole('region', { name: 'Vystavená potvrzení' });
     const choice = receiptsCard.getByLabel('Potvrzení k vystavení');
     await expect(choice).toHaveValue(/dar-/);
     await choice.selectOption({ label: 'Dar z 12.\u00a010. 2026, 300\u00a0Kč' });
@@ -471,7 +471,7 @@ test.describe('Given an administrator on the donors page', () => {
     );
     await page.goto(`/sprava/darci/${PETR_ID}`);
     const row = page
-      .getByRole('region', { name: 'Vydaná potvrzení' })
+      .getByRole('region', { name: 'Vystavená potvrzení' })
       .getByRole('row')
       .filter({ hasText: receipt.number });
     const download = row.getByRole('button', { name: `Stáhnout PDF potvrzení ${receipt.number}` });
@@ -518,7 +518,7 @@ test.describe('Given an administrator on the donors page', () => {
       );
       await page.goto(`/sprava/darci/${PETR_ID}`);
       const row = page
-        .getByRole('region', { name: 'Vydaná potvrzení' })
+        .getByRole('region', { name: 'Vystavená potvrzení' })
         .getByRole('row')
         .filter({ hasText: receipt.number });
       await expect(
@@ -559,7 +559,7 @@ test.describe('Given an administrator on the donors page', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(`/sprava/darci/${PETR_ID}`);
     const row = page
-      .getByRole('region', { name: 'Vydaná potvrzení' })
+      .getByRole('region', { name: 'Vystavená potvrzení' })
       .getByRole('row')
       .filter({ hasText: receipt.number });
     await expect(
@@ -653,7 +653,7 @@ test.describe('Given an administrator on the donors page', () => {
     expect(Math.max(...baselines) - Math.min(...baselines)).toBeLessThanOrEqual(1);
 
     const row = page
-      .getByRole('region', { name: 'Vydaná potvrzení' })
+      .getByRole('region', { name: 'Vystavená potvrzení' })
       .getByRole('row')
       .filter({ hasText: petrDetail.receipts[0].number });
     const lines = async (cell: RegExp, selector: string | null) =>
@@ -682,7 +682,11 @@ test.describe('Given an administrator on the donors page', () => {
 
     for (const [card, name, hint] of [
       ['Přihlášení', 'Vypnout dvoufaktorové ověření', 'Pro dárce, který přišel o telefon'],
-      ['Přihlášení', 'Odebrat přístupové klíče', 'Pro dárce, který přišel o zařízení s klíčem.'],
+      [
+        'Přihlášení',
+        'Odebrat přístupové klíče',
+        'Pro dárce, který přišel o zařízení s přístupovým klíčem.',
+      ],
       ['Výmaz osobních údajů (GDPR)', 'Vymazat osobní údaje', 'Pro dárce, který požádal o výmaz'],
     ]) {
       const region = page.getByRole('region', { name: card });

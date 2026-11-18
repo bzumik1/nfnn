@@ -28,17 +28,37 @@ const SESSION_KINDS: Record<BrowserSessionKind, string> = {
   PUBLIC: $localize`:@@donor.account.devices.kind.public:cizí počítač`,
 };
 
-export function deviceName(
-  device: Pick<SignedInDevice, 'platform' | 'browser' | 'session'>,
-): string {
+type DeviceLabelFields = Pick<SignedInDevice, 'platform' | 'browser' | 'session'>;
+
+interface FallbackWords {
+  readonly unknown: string;
+  readonly otherPlatform: string;
+}
+
+const AS_TITLE: FallbackWords = {
+  unknown: $localize`:@@donor.account.devices.unknown:Neznámé zařízení`,
+  otherPlatform: $localize`:@@donor.account.devices.platform.other:Jiné zařízení`,
+};
+
+const IN_SENTENCE: FallbackWords = {
+  unknown: $localize`:@@donor.account.devices.unknown.inSentence:neznámé zařízení`,
+  otherPlatform: $localize`:@@donor.account.devices.platform.other.inSentence:jiné zařízení`,
+};
+
+export function deviceName(device: DeviceLabelFields): string {
+  return labelWith(device, AS_TITLE);
+}
+
+export function deviceNameInSentence(device: DeviceLabelFields): string {
+  return labelWith(device, IN_SENTENCE);
+}
+
+function labelWith(device: DeviceLabelFields, words: FallbackWords): string {
   const installedApp = device.session === 'APP';
   if (device.platform === 'OTHER' && device.browser === 'OTHER' && !installedApp) {
-    return $localize`:@@donor.account.devices.unknown:Neznámé zařízení`;
+    return words.unknown;
   }
-  const platform =
-    device.platform === 'OTHER'
-      ? $localize`:@@donor.account.devices.platform.other:Jiné zařízení`
-      : PLATFORMS[device.platform];
+  const platform = device.platform === 'OTHER' ? words.otherPlatform : PLATFORMS[device.platform];
   return `${platform} · ${installedApp ? APP : browserName(device.browser)}`;
 }
 

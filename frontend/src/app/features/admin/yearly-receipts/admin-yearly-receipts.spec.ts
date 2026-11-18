@@ -341,7 +341,7 @@ describe('Given an administrator on the bulk receipts page', () => {
     fixture.detectChanges();
 
     expect(text(query('.no-year'))).toBe(
-      'Roční potvrzení půjde hromadně vystavit po skončení prvního roku, za který je fond vydává.',
+      'Roční potvrzení půjde hromadně vystavit po skončení prvního roku, za který je fond vystavuje.',
     );
     expect(query('button[type="submit"]')).toBeNull();
   });

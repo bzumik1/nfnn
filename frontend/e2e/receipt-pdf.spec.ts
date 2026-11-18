@@ -191,7 +191,7 @@ test.describe('Given a signed-in donor on an iPhone, whose browser shares files'
     await yearlyButton(page).click();
 
     await expect(yearlyLine(page)).toHaveText(
-      'Potvrzení potvrzeni-o-darech-2025.pdf je připravené. Otevřete ho tlačítkem Otevřít potvrzení.',
+      'Potvrzení potvrzeni-o-darech-2025.pdf je připravené. Otevřete ho tlačítkem „Otevřít potvrzení“.',
     );
     await expect(yearlyButton(page)).toHaveText('Otevřít potvrzení za rok 2025 (PDF)');
     await expect(

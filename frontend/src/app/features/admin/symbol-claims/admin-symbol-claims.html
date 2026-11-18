@@ -56,7 +56,7 @@
             <thead>
               <tr>
                 <th i18n="@@admin.symbolClaims.col.donor">Dárce</th>
-                <th i18n="@@admin.symbolClaims.col.account">Účet</th>
+                <th i18n="@@admin.symbolClaims.col.account">Bankovní účet</th>
                 <th i18n="@@admin.symbolClaims.col.symbol">Variabilní symbol</th>
                 <th i18n="@@admin.symbolClaims.col.answer">Odpověď</th>
                 <th i18n="@@admin.symbolClaims.col.donations">Přiřazené dary</th>
@@ -77,7 +77,7 @@
                       <span class="muted">{{ donorName(item) }}</span>
                     }
                   </td>
-                  <td data-label="Účet" i18n-data-label="@@admin.symbolClaims.col.account">
+                  <td data-label="Bankovní účet" i18n-data-label="@@admin.symbolClaims.col.account">
                     <app-bank-account [account]="item.account" />
                   </td>
                   <td

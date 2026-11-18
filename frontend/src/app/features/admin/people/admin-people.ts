@@ -371,7 +371,7 @@ export class AdminPeople {
             kind: 'alert',
             text: describeProblem(
               failure,
-              $localize`:@@admin.people.receipt.failed:Podepisujícího se nepodařilo uložit. Zkuste to prosím znovu.`,
+              $localize`:@@admin.people.receipt.failed:Osobu, která podepisuje potvrzení, se nepodařilo uložit. Zkuste to prosím znovu.`,
             ),
           });
         },

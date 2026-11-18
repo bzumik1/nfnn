@@ -489,7 +489,7 @@ export class AdminDonorDetail {
   protected typeLabel(account: DonorAccountResponse): string {
     return account.type === 'COMPANY'
       ? $localize`:@@admin.donorDetail.type.company:Firma`
-      : $localize`:@@admin.donorDetail.type.person:Osoba`;
+      : $localize`:@@admin.donorDetail.type.person:Člověk`;
   }
 
   protected address(account: DonorAccountResponse): string {
@@ -673,7 +673,7 @@ export class AdminDonorDetail {
     const name = this.name() ?? '';
     this.run(
       this.api.removePasskeys(this.donorId),
-      $localize`:@@admin.donorDetail.passkeys.done:Přístupové klíče u ${name}:name: jsme odebrali a všechna přihlášení ukončili. Dárce dostal e-mail; po přihlášení heslem si může přidat nový klíč.`,
+      $localize`:@@admin.donorDetail.passkeys.done:Přístupové klíče u ${name}:name: jsme odebrali a všechna přihlášení ukončili. Dárce dostal e-mail; po přihlášení heslem si může přidat nový přístupový klíč.`,
       $localize`:@@admin.donorDetail.passkeys.failed:Přístupové klíče se nepodařilo odebrat. Zkuste to prosím znovu.`,
       (onLoaded) => this.refreshAccount(onLoaded),
       'signIn',
@@ -697,7 +697,7 @@ export class AdminDonorDetail {
             card: 'erasure',
             notice: {
               kind: 'status',
-              text: $localize`:@@admin.donorDetail.erase.done:Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít. Dary a vydaná potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají beze změny, i se jménem a adresou.`,
+              text: $localize`:@@admin.donorDetail.erase.done:Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít. Dary a vystavená potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají beze změny, i se jménem a adresou.`,
             },
           });
           this.refreshAccount();
@@ -778,8 +778,8 @@ export class AdminDonorDetail {
   protected remove(item: AdminBankAccountItem): void {
     this.run(
       this.api.removeDonorAccount(this.donorId, item.id, item.version),
-      $localize`:@@admin.donorDetail.remove.done:Účet ${item.accountNumber}:account: jsme dárci odebrali: ${this.donationsCount(item.donationCount)}:donations: přiřazené přes něj jsme smazali a platby jsou zase nespárované.`,
-      $localize`:@@admin.donorDetail.remove.failed:Účet se nepodařilo odebrat. Zkuste to prosím znovu.`,
+      $localize`:@@admin.donorDetail.remove.done:Bankovní účet ${item.accountNumber}:account: jsme dárci odebrali: ${this.donationsCount(item.donationCount)}:donations: přiřazené přes něj jsme smazali a platby jsou zase nespárované.`,
+      $localize`:@@admin.donorDetail.remove.failed:Bankovní účet se nepodařilo odebrat. Zkuste to prosím znovu.`,
       (onLoaded) => this.loadDonations(onLoaded),
       'accounts',
     );
@@ -954,10 +954,10 @@ function accountsCount(count: number): string {
 function receiptsCount(count: number): string {
   switch (pluralCategory(count)) {
     case 'one':
-      return $localize`:@@admin.donorDetail.rows.receipts.one:1 vydané potvrzení`;
+      return $localize`:@@admin.donorDetail.rows.receipts.one:1 vystavené potvrzení`;
     case 'few':
-      return $localize`:@@admin.donorDetail.rows.receipts.few:${count}:count: vydaná potvrzení`;
+      return $localize`:@@admin.donorDetail.rows.receipts.few:${count}:count: vystavená potvrzení`;
     case 'other':
-      return $localize`:@@admin.donorDetail.rows.receipts.many:${count}:count: vydaných potvrzení`;
+      return $localize`:@@admin.donorDetail.rows.receipts.many:${count}:count: vystavených potvrzení`;
   }
 }

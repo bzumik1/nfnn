@@ -40,7 +40,7 @@ export function cancelledReceiptProgress(text: string): PdfProgressState {
 }
 
 export function readySingleReceiptText(fileName: string): string {
-  return $localize`:@@donor.dashboard.receipt.readySingle:Potvrzení ${fileName}:fileName: je připravené. Otevřete ho tlačítkem Otevřít PDF.`;
+  return $localize`:@@donor.dashboard.receipt.readySingle:Potvrzení ${fileName}:fileName: je připravené. Otevřete ho tlačítkem „Otevřít PDF“.`;
 }
 
 function phaseText(phase: ReceiptPdfPhase, page: number): string {

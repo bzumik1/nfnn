@@ -121,7 +121,7 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
   }) => {
     await openSignInDialog(page);
     await page.getByRole('dialog').getByRole('button', { name: 'Registrace' }).click();
-    const person = page.getByRole('radio', { name: 'Fyzická osoba' });
+    const person = page.getByRole('radio', { name: 'Člověk' });
     await person.focus();
 
     await page.keyboard.press('ArrowRight');
