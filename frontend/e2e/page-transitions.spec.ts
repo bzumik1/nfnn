@@ -169,6 +169,66 @@ async function expectWhollyInView(page: Page, target: Locator): Promise<void> {
   }).toPass();
 }
 
+interface FocusRing {
+  readonly visible: boolean;
+  readonly width: number;
+  readonly outside: number;
+}
+
+function focusRingOfActive(page: Page): Promise<FocusRing> {
+  return page.evaluate(() => {
+    const focused = document.activeElement as HTMLElement;
+    const style = getComputedStyle(focused);
+    const width = style.outlineStyle === 'none' ? 0 : parseFloat(style.outlineWidth);
+    const ring = Math.max(0, width + parseFloat(style.outlineOffset));
+    const box = focused.getBoundingClientRect();
+    let clipping = focused.parentElement;
+    while (
+      clipping !== null &&
+      clipping !== document.documentElement &&
+      getComputedStyle(clipping).overflowX === 'visible' &&
+      getComputedStyle(clipping).overflowY === 'visible'
+    ) {
+      clipping = clipping.parentElement;
+    }
+    const area =
+      clipping === null || clipping === document.documentElement || clipping === document.body
+        ? { left: 0, top: 0, right: innerWidth, bottom: innerHeight }
+        : (() => {
+            const edge = clipping.getBoundingClientRect();
+            const left = edge.left + clipping.clientLeft;
+            const top = edge.top + clipping.clientTop;
+            return {
+              left,
+              top,
+              right: left + clipping.clientWidth,
+              bottom: top + clipping.clientHeight,
+            };
+          })();
+    const outside = Math.max(
+      area.left - (box.left - ring),
+      area.top - (box.top - ring),
+      box.right + ring - area.right,
+      box.bottom + ring - area.bottom,
+    );
+    return { visible: focused.matches(':focus-visible'), width, outside };
+  });
+}
+
+async function expectFocusRingWhole(page: Page): Promise<void> {
+  await expect(async () => {
+    const ring = await focusRingOfActive(page);
+    expect(ring.visible).toBe(true);
+    expect(ring.width).toBeGreaterThan(0);
+    expect(Math.round(ring.outside)).toBeLessThanOrEqual(0);
+  }).toPass();
+}
+
+async function pressZpetByKeyboard(page: Page): Promise<void> {
+  await back(page).focus();
+  await page.keyboard.press('Enter');
+}
+
 async function pairedPayments(page: Page): Promise<void> {
   await page.route('**/api/donors/auth/refresh', (route) =>
     route.fulfill(session(200, administrator)),
@@ -343,6 +403,16 @@ test.describe("Given an administrator on a phone who opened the administration f
     await expect(overlays(page)).toHaveCount(0);
   });
 
+  test("when they press Zpět on the donor card by keyboard, then the payment's row shows its whole focus ring", async ({
+    page,
+  }) => {
+    await pressZpetByKeyboard(page);
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ })).toBeFocused();
+    await expectFocusRingWhole(page);
+  });
+
   test("when the app steps back without Zpět, then the payments return with the payment's row focused", async ({
     page,
   }) => {
@@ -387,6 +457,17 @@ test.describe("Given an administrator on a wide screen who followed a paired pay
     await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
     await expect(paymentRow(page).getByRole('link', { name: 'Jana Nováková' })).toBeFocused();
     await expectWhollyInView(page, paymentRow(page).getByRole('link', { name: 'Jana Nováková' }));
+  });
+
+  test("when a keyboard user steps back from the donor card, then the donor link in the payment's row shows its whole focus ring", async ({
+    page,
+  }) => {
+    await page.keyboard.press('Tab');
+    await stepBack(page);
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(paymentRow(page).getByRole('link', { name: 'Jana Nováková' })).toBeFocused();
+    await expectFocusRingWhole(page);
   });
 });
 
