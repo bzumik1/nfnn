@@ -52,6 +52,15 @@ export function placeThumb(group: HTMLElement, selected: number, glides: boolean
   }
 }
 
+export function labelSegments(group: HTMLElement): void {
+  for (const segment of group.querySelectorAll<HTMLElement>(':scope > button')) {
+    const label = (segment.textContent ?? '').replace(/\s+/g, ' ').trim();
+    if (segment.dataset['label'] !== label) {
+      segment.dataset['label'] = label;
+    }
+  }
+}
+
 @Directive({
   selector: '[appSegmentThumb]',
 })
@@ -64,6 +73,12 @@ export class SegmentThumb {
     afterRenderEffect(() => placeThumb(this.group, this.selected(), true));
     afterNextRender(() => {
       const view = this.group.ownerDocument.defaultView;
+      labelSegments(this.group);
+      if (view?.MutationObserver) {
+        const labels = new view.MutationObserver(() => labelSegments(this.group));
+        labels.observe(this.group, { subtree: true, childList: true, characterData: true });
+        this.destroyRef.onDestroy(() => labels.disconnect());
+      }
       if (!view?.ResizeObserver) {
         return;
       }
