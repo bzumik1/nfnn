@@ -39,6 +39,8 @@ describe('Given the offline status of the app', () => {
     document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
     await fixture.whenStable();
+    vi.advanceTimersByTime(0);
+    await vi.dynamicImportSettled();
   });
 
   afterEach(() => {

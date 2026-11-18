@@ -29,11 +29,13 @@ import {
 import { deviceName } from '../../../../core/auth/device-name';
 import { deviceAccountOf, SESSION_DEVICE } from '../../../../core/auth/session-device';
 import { formatDonationDate } from '../../../donations/donation-date';
+import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { AccountUsername } from '../../../../shared/ui/account-username/account-username';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
@@ -43,7 +45,9 @@ const PASSKEY_NAME_MAX_LENGTH = 64;
 
 @Component({
   selector: 'app-passkeys-panel',
+  providers: [BusyAnnouncement],
   imports: [
+    BusyLabel,
     FormsModule,
     FormField,
     FormControlDirective,
@@ -57,6 +61,7 @@ const PASSKEY_NAME_MAX_LENGTH = 64;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PasskeysPanel {
+  protected readonly busyAnnouncement = inject(BusyAnnouncement);
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly kept = inject(KeptDonorAnswers);
