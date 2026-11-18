@@ -1,10 +1,13 @@
 package cz.novanadeje.app.architecture;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.AccessTarget.CodeUnitAccessTarget;
+import com.tngtech.archunit.core.domain.AccessTarget.ConstructorCallTarget;
+import com.tngtech.archunit.core.domain.AccessTarget.ConstructorReferenceTarget;
 import com.tngtech.archunit.core.domain.JavaAccess;
+import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaConstructor;
 import com.tngtech.archunit.core.domain.JavaFieldAccess;
-import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
@@ -53,7 +56,12 @@ class DeviceSignOutRulesTest {
 
     private static final Set<String> DEVICE_END_STATE = Set.of("endedAt", "endReason", "wipe");
 
+    private static final String REBUILD = "reconstitute";
+    private static final Set<String> DEVICE_FACTORIES = Set.of("signIn", REBUILD);
+
     private static final String PERSISTENCE = "cz.novanadeje.app.donors.infrastructure.persistence.";
+    private static final String DEVICE_ENTITY = PERSISTENCE + "DonorDeviceJpaEntity";
+    private static final String DEVICE_ENTITY_MAPPING = "toDomain";
     private static final String TOKEN_ADAPTER = PERSISTENCE + "JpaRefreshTokenRepository";
     private static final String DEVICE_ADAPTER = PERSISTENCE + "JpaDonorDeviceRepository";
     private static final String TOKEN_ROWS = PERSISTENCE + "RefreshTokenJpaRepository";
@@ -81,6 +89,18 @@ class DeviceSignOutRulesTest {
             "a write of " + DonorDevice.class.getSimpleName() + "'s " + String.join(", ", DEVICE_END_STATE.stream().sorted().toList())
                     + " outside its own constructor",
             access -> writesTheEndStateOfADevice(access) && !fromTheConstructorOfADevice(access));
+
+    private static final DescribedPredicate<JavaAccess<?>> A_DEVICE_BUILT_OUTSIDE_ITS_FACTORIES_AND_ITS_STORED_ROW = DescribedPredicate.describe(
+            "a construction of " + DonorDevice.class.getSimpleName() + " outside its own " + String.join(" and ", DEVICE_FACTORIES.stream().sorted().toList())
+                    + ", or its " + REBUILD + " outside " + DEVICE_ENTITY.substring(PERSISTENCE.length()) + "." + DEVICE_ENTITY_MAPPING,
+            access -> buildsADevice(access) && !fromAFactoryOfTheDevice(access) && !rebuildsTheStoredRow(access));
+
+    @ArchTest
+    static final ArchRule a_device_is_rebuilt_with_its_end_only_from_its_stored_row = noClasses()
+            .should().accessTargetWhere(A_DEVICE_BUILT_OUTSIDE_ITS_FACTORIES_AND_ITS_STORED_ROW)
+            .because("a device rebuilt with an end it does not have in the database and saved keeps its row active, since the adapter maps the end"
+                    + " columns updatable = false: the device stays signed in, no token is revoked and no DeviceSignedOut is published"
+                    + " (architecture audit #621)");
 
     @ArchTest
     static final ArchRule a_device_ends_only_through_its_repository_never_in_memory = noClasses()
@@ -136,12 +156,35 @@ class DeviceSignOutRulesTest {
         assertThat(Arrays.stream(DonorDevice.class.getDeclaredFields()).map(Field::getName)).containsAll(DEVICE_END_STATE);
     }
 
+    @Test
+    @DisplayName("Given the device's factories and its stored row, when they are read, then each named method exists, so the rule exempts no name that is gone")
+    void should_find_every_exempted_method_when_read_given_the_device_and_its_row() throws ClassNotFoundException {
+        assertThat(Arrays.stream(DonorDevice.class.getDeclaredMethods()).map(Method::getName)).containsAll(DEVICE_FACTORIES);
+        assertThat(Arrays.stream(Class.forName(DEVICE_ENTITY).getDeclaredMethods()).map(Method::getName)).contains(DEVICE_ENTITY_MAPPING);
+    }
+
     private static boolean writesTheEndStateOfADevice(JavaFieldAccess access) {
         return access.getTargetOwner().getName().equals(DonorDevice.class.getName()) && DEVICE_END_STATE.contains(access.getTarget().getName());
     }
 
     private static boolean fromTheConstructorOfADevice(JavaFieldAccess access) {
         return access.getOrigin() instanceof JavaConstructor && access.getOriginOwner().getName().equals(DonorDevice.class.getName());
+    }
+
+    private static boolean buildsADevice(JavaAccess<?> access) {
+        return access.getTargetOwner().getName().equals(DonorDevice.class.getName())
+                && (access.getTarget() instanceof ConstructorCallTarget || access.getTarget() instanceof ConstructorReferenceTarget
+                || access.getTarget() instanceof CodeUnitAccessTarget target && REBUILD.equals(target.getName()));
+    }
+
+    private static boolean fromAFactoryOfTheDevice(JavaAccess<?> access) {
+        return access.getOriginOwner().getName().equals(DonorDevice.class.getName()) && DEVICE_FACTORIES.contains(access.getOrigin().getName())
+                && (access.getTarget() instanceof ConstructorCallTarget || access.getTarget() instanceof ConstructorReferenceTarget);
+    }
+
+    private static boolean rebuildsTheStoredRow(JavaAccess<?> access) {
+        return access.getOriginOwner().getName().equals(DEVICE_ENTITY) && DEVICE_ENTITY_MAPPING.equals(access.getOrigin().getName())
+                && REBUILD.equals(access.getTarget().getName());
     }
 
     private static boolean fromTheTokenAdapter(JavaAccess<?> access) {
@@ -256,16 +299,135 @@ class DeviceSignOutRulesTest {
                         void orderWipe(DeviceWipe order) {
                             wipe = order;
                         }
+
+                        static final class Ender {
+
+                            Ender(DonorDevice device, Instant at) {
+                                device.endedAt = at;
+                            }
+                        }
                     }
                     """));
 
             assertThat(a_device_ends_only_through_its_repository_never_in_memory.evaluate(planted).getFailureReport().getDetails())
-                    .hasSize(3)
+                    .hasSize(4)
                     .anySatisfy(line -> assertThat(line).contains("endAt(").contains("endedAt"))
                     .anySatisfy(line -> assertThat(line).contains("endFor(").contains("endReason"))
                     .anySatisfy(line -> assertThat(line).contains("orderWipe(").contains("wipe"))
+                    .anySatisfy(line -> assertThat(line).contains("DonorDevice$Ender.<init>(").contains("endedAt"))
                     .noneSatisfy(line -> assertThat(line).contains("lastUsedAt"))
-                    .noneSatisfy(line -> assertThat(line).contains("<init>"));
+                    .noneSatisfy(line -> assertThat(line).contains("DonorDevice.<init>("));
+        }
+    }
+
+    @Nested
+    @DisplayName("Given planted classes that build a device outside its factories and its stored row")
+    class GivenPlantedDeviceBuilders {
+
+        @Test
+        @DisplayName("when the rule checks them, then each construction and rebuild outside the factories and the row's mapping is reported and those are not")
+        void should_report_each_build_outside_the_factories_and_the_mapping_when_checked_given_planted_builders(@TempDir Path folder) throws IOException {
+            JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
+                    DonorDevice.class.getName(), """
+                            package cz.novanadeje.app.donors.domain;
+
+                            import java.time.Instant;
+                            import java.util.function.Function;
+
+                            public final class DonorDevice {
+
+                                private final Instant endedAt;
+
+                                public DonorDevice(Instant endedAt) {
+                                    this.endedAt = endedAt;
+                                }
+
+                                public static DonorDevice signIn(Instant at) {
+                                    return new DonorDevice(null);
+                                }
+
+                                public static DonorDevice reconstitute(Instant endedAt) {
+                                    return new DonorDevice(endedAt);
+                                }
+
+                                static DonorDevice signIn(Instant at, boolean ended) {
+                                    return reconstitute(at);
+                                }
+
+                                DonorDevice copy() {
+                                    return new DonorDevice(endedAt);
+                                }
+
+                                static Function<Instant, DonorDevice> maker() {
+                                    return DonorDevice::new;
+                                }
+
+                                static final class Copier {
+
+                                    static DonorDevice signIn(Instant at) {
+                                        return new DonorDevice(at);
+                                    }
+                                }
+                            }
+                            """,
+                    "cz.novanadeje.app.donors.application.PlantedDeviceEnding", """
+                            package cz.novanadeje.app.donors.application;
+
+                            import cz.novanadeje.app.donors.domain.DonorDevice;
+
+                            import java.time.Instant;
+                            import java.util.function.Function;
+
+                            class PlantedDeviceEnding {
+
+                                DonorDevice toDomain(Instant at) {
+                                    return DonorDevice.reconstitute(at);
+                                }
+
+                                Function<Instant, DonorDevice> ender() {
+                                    return DonorDevice::reconstitute;
+                                }
+                            }
+                            """,
+                    DEVICE_ENTITY, """
+                            package cz.novanadeje.app.donors.infrastructure.persistence;
+
+                            import cz.novanadeje.app.donors.domain.DonorDevice;
+
+                            import java.time.Instant;
+
+                            class DonorDeviceJpaEntity {
+
+                                private Instant endedAt;
+
+                                DonorDevice toDomain() {
+                                    return DonorDevice.reconstitute(endedAt);
+                                }
+
+                                DonorDevice endedCopy(Instant at) {
+                                    return DonorDevice.reconstitute(at);
+                                }
+
+                                DonorDevice toDomain(Instant at) {
+                                    DonorDevice built = new DonorDevice(at);
+                                    return built;
+                                }
+                            }
+                            """));
+
+            assertThat(a_device_is_rebuilt_with_its_end_only_from_its_stored_row.evaluate(planted).getFailureReport().getDetails())
+                    .hasSize(8)
+                    .anySatisfy(line -> assertThat(line).contains("DonorDevice.signIn(java.time.Instant, boolean)").contains("reconstitute"))
+                    .anySatisfy(line -> assertThat(line).contains("DonorDevice.copy()").contains("<init>"))
+                    .anySatisfy(line -> assertThat(line).contains("DonorDevice.maker()").contains("<init>"))
+                    .anySatisfy(line -> assertThat(line).contains("DonorDevice$Copier.signIn(").contains("<init>"))
+                    .anySatisfy(line -> assertThat(line).contains("PlantedDeviceEnding.toDomain(").contains("reconstitute"))
+                    .anySatisfy(line -> assertThat(line).contains("PlantedDeviceEnding.ender(").contains("reconstitute"))
+                    .anySatisfy(line -> assertThat(line).contains("DonorDeviceJpaEntity.endedCopy(").contains("reconstitute"))
+                    .anySatisfy(line -> assertThat(line).contains("DonorDeviceJpaEntity.toDomain(java.time.Instant)").contains("<init>"))
+                    .noneSatisfy(line -> assertThat(line).startsWith("Method <cz.novanadeje.app.donors.domain.DonorDevice.signIn(java.time.Instant)>"))
+                    .noneSatisfy(line -> assertThat(line).startsWith("Method <cz.novanadeje.app.donors.domain.DonorDevice.reconstitute("))
+                    .noneSatisfy(line -> assertThat(line).contains("DonorDeviceJpaEntity.toDomain()"));
         }
     }
 
