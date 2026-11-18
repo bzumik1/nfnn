@@ -2,6 +2,7 @@ import { BrowserPlatformLocation, Location, PlatformLocation } from '@angular/co
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { Appearance } from '../../../core/appearance/appearance';
 import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { Dialog } from './dialog';
@@ -1402,5 +1403,63 @@ describe('Given a dialog inside a part of the page that something may cover for 
     await fixture.whenStable();
 
     expect(native().open).toBe(true);
+  });
+});
+
+describe('Given an open sheet and the appearance chosen for the site', () => {
+  let fixture: ComponentFixture<Host>;
+  let frames: FrameRequestCallback[];
+
+  const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+  const nextFrame = () => frames.splice(0).forEach((frame) => frame(0));
+
+  beforeEach(async () => {
+    frames = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
+      frames.push(frame);
+      return frames.length;
+    });
+    await TestBed.configureTestingModule({ imports: [Host] }).compileComponents();
+    fixture = TestBed.createComponent(Host);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    fixture.componentInstance.open.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    nextFrame();
+    (fixture.nativeElement.querySelector('#first') as HTMLInputElement).focus();
+  });
+
+  afterEach(() => {
+    fixture.nativeElement.remove();
+    vi.restoreAllMocks();
+  });
+
+  it('when it opens, then it stays in view', () => {
+    expect(native().classList).not.toContain('dialog--repainting');
+  });
+
+  describe('when the visitor switches the appearance while it is open', () => {
+    beforeEach(async () => {
+      TestBed.inject(Appearance).choose('dark');
+      await fixture.whenStable();
+    });
+
+    it('then it steps out of view for two frames, so Safari paints the status bar in the new appearance', () => {
+      expect(native().classList).toContain('dialog--repainting');
+
+      nextFrame();
+      expect(native().classList).toContain('dialog--repainting');
+
+      nextFrame();
+      expect(native().classList).not.toContain('dialog--repainting');
+    });
+
+    it('then the focus is back on the control that had it once it shows again', () => {
+      nextFrame();
+      nextFrame();
+
+      expect(document.activeElement?.id).toBe('first');
+    });
   });
 });
