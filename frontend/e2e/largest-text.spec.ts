@@ -1,4 +1,4 @@
-import { Locator, Page } from '@playwright/test';
+import { Locator, Page, Route } from '@playwright/test';
 import { DIAGNOSTICS, logsApi, routeLogsApi } from './admin-logs-api';
 import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
 import {
@@ -8,6 +8,7 @@ import {
   rememberedSession,
   renamePetr,
 } from './baseline/screen-mocks';
+import { everyDialogTitleText } from './dialog-titles';
 import {
   administrator,
   bankAccountItem,
@@ -734,6 +735,128 @@ test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows 
 
     expect((await add.boundingBox())!.height).toBe(height);
     expect(await iconBesideTheFirstLineOf(add)).toBe(true);
+  });
+});
+
+async function titleTextsBrokenInside(title: Locator, texts: string[]): Promise<string[]> {
+  return title.evaluate((original, titleTexts) => {
+    const broken: string[] = [];
+    for (const text of titleTexts) {
+      const sample = original.cloneNode(false) as HTMLElement;
+      sample.removeAttribute('id');
+      sample.textContent = text;
+      original.after(sample);
+      const node = sample.firstChild!;
+      for (const word of text.matchAll(/[^\s-]+-?/g)) {
+        const range = document.createRange();
+        range.setStart(node, word.index);
+        range.setEnd(node, word.index + word[0].length);
+        const tops = new Set(
+          Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+        );
+        if (tops.size > 1) {
+          broken.push(`${text}: ${word[0]}`);
+        }
+      }
+      sample.remove();
+    }
+    return broken;
+  }, texts);
+}
+
+test.describe('Given a visitor on an iPhone 390 pt wide whose installed app shows the largest accessibility text, opening a sheet or a dialog', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ page }) => {
+    await showLargestSystemText(page);
+  });
+
+  test('when the server stops answering and they open Server neodpovídá, then its title and the title of every other sheet and dialog break only between words', async ({
+    page,
+  }) => {
+    await page.addInitScript(() =>
+      Object.defineProperty(window, 'requestIdleCallback', { value: () => 0 }),
+    );
+    await page.route('**/api/**', (route: Route) =>
+      route.fulfill({ status: 522, contentType: 'text/html', body: 'origin down' }),
+    );
+    await page.goto('/');
+    const label = page.getByRole('button', { name: /^Offline/ });
+    await expect(label).toBeVisible({ timeout: 10_000 });
+    await label.click();
+    const sheet = page.getByRole('dialog', { name: 'Server neodpovídá' });
+    await expect(sheet).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const title = sheet.locator('.ui-dialog__title');
+    const texts = everyDialogTitleText();
+
+    expect(texts).toEqual(expect.arrayContaining(['Server neodpovídá', 'Upozornění jsou zapnutá']));
+    expect(await wordsBrokenInside(title)).toEqual([]);
+    expect(await titleTextsBrokenInside(title, texts)).toEqual([]);
+  });
+
+  test('when a signed-in donor opens Přidat bankovní účet, then its title breaks only between words', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-check',
+      (route) =>
+        route.fulfill({
+          status: 202,
+          json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-accounts',
+      (route) => route.fulfill({ json: { items: [] } }),
+    );
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+
+    const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
+    await expect(dialog).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    expect(await wordsBrokenInside(dialog.locator('#add-account-title'))).toEqual([]);
+  });
+
+  test.describe('signed in as an administrator', () => {
+    test.beforeEach(async ({ page }) => {
+      await mockDonorApi(page, donorWithDonations);
+      await mockAdministration(page);
+      await rememberedSession(page);
+    });
+
+    test('when they open a paired payment, then the title Přiřazená platba breaks only between words', async ({
+      page,
+    }) => {
+      await page.goto('/sprava/platby?stav=prirazene');
+      await page.locator('button.payment-row').first().click();
+
+      const sheet = page.getByRole('dialog', { name: 'Přiřazená platba' });
+      await expect(sheet).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      expect(await wordsBrokenInside(sheet.locator('#payment-sheet-title'))).toEqual([]);
+    });
+
+    test('when they open the erasure of a donor, then its title breaks only between words', async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto(PETR_DETAIL_PATH);
+      await page.getByRole('button', { name: 'Vymazat osobní údaje' }).first().click();
+      const dialog = page.getByRole('dialog', { name: 'Vymazat osobní údaje: Petr Svoboda' });
+      await expect(dialog).toBeVisible();
+
+      await page.setViewportSize({ width: 390, height: 844 });
+
+      await page.evaluate(() => document.fonts.ready);
+      await expect.poll(() => wordsBrokenInside(dialog.locator('#erase-title'))).toEqual([]);
+    });
   });
 });
 
