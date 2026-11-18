@@ -1,13 +1,11 @@
 import { Location } from '@angular/common';
-import { DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { DestroyRef, inject, Injectable } from '@angular/core';
 import { NavigationEnd, NavigationStart, Router } from '@angular/router';
 import { pathOf, tabOf } from './app-tabs';
 
 export const APP_DEPTH_KEY = 'nfnnAppDepth';
 export const APP_BEHIND_KEY = 'nfnnAppBehind';
 export const BACK_NAVIGATION = 'nfnn.back';
-
-export type HistoryState = Readonly<Record<string, unknown>>;
 
 export type BackDestination =
   | { readonly kind: 'step'; readonly depth: number; readonly path: string | null }
@@ -27,9 +25,6 @@ export class BackTarget {
   private restoredBehind: string | null = null;
   private buttonPressed = false;
   private byButton = false;
-  private entry: HistoryState = {};
-  private readonly leftByStep = signal<HistoryState | null>(null);
-  readonly steppedBackFrom = this.leftByStep.asReadonly();
 
   constructor() {
     const navigations = this.router.events.subscribe((event) => {
@@ -37,7 +32,6 @@ export class BackTarget {
         this.popped = event.navigationTrigger === 'popstate';
         this.byButton = this.popped && this.buttonPressed;
         this.buttonPressed = false;
-        this.leftByStep.set(null);
         this.restoredDepth = depthIn(event.restoredState);
         this.restoredBehind = behindIn(event.restoredState);
       } else if (event instanceof NavigationEnd) {
@@ -102,9 +96,6 @@ export class BackTarget {
     const extras = this.router.lastSuccessfulNavigation()?.extras ?? {};
     const handedOver = depthIn(extras.state);
     if (this.popped) {
-      if (this.restoredDepth < this.depth) {
-        this.leftByStep.set(this.entry);
-      }
       this.depth = this.restoredDepth;
       this.behind = this.restoredBehind;
     } else if (handedOver > 0) {
@@ -121,7 +112,6 @@ export class BackTarget {
     this.left = this.path;
     this.path = pathOf(this.router.url);
     if (!extras.skipLocationChange) {
-      this.entry = stateOf(this.location.getState());
       this.location.replaceState(this.location.path(true), '', {
         ...stateOf(this.location.getState()),
         [APP_DEPTH_KEY]: this.depth,

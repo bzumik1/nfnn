@@ -25,13 +25,13 @@ import { Appearance } from '../../core/appearance/appearance';
 import { AuthStore } from '../../core/auth/auth-store';
 import { LoginDialogService } from '../../core/auth/login-dialog.service';
 import { CompactLayout } from '../../core/layout/compact-layout';
-import { BackTarget, HistoryState } from '../../core/navigation/back-target';
+import { BackTarget } from '../../core/navigation/back-target';
 import { RouteChrome } from '../../core/navigation/route-chrome';
 import { followLargeTitle, LargeTitleWatch } from './large-title';
 import { initialsOf } from '../../core/auth/initials';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AccountPortrait } from '../account-sheet/account-portrait';
-import { AccountReturn, accountLeftIn } from '../account-sheet/account-return';
+import { AccountReturn } from '../account-sheet/account-return';
 import { AccountSheet } from '../account-sheet/account-sheet';
 
 @Component({
@@ -85,7 +85,6 @@ export class AppHeader {
     computation: () => false,
   });
   protected readonly accountReopenedOn = signal<string | null>(null);
-  private answeredStep: HistoryState | null = null;
   protected readonly backLabel = $localize`:@@layout.header.back:Zpět`;
   protected readonly titleInEdge = computed(() => this.compact() && this.parent() !== null);
   protected readonly edgeTitle = signal('');
@@ -107,10 +106,8 @@ export class AppHeader {
       untracked(() => afterNextRender(() => largeTitle?.check(), { injector: this.injector }));
     });
     effect(() => {
-      const left = this.backTarget.steppedBackFrom();
-      if (left !== null && left !== this.answeredStep && this.auth.signedIn()) {
-        this.answeredStep = left;
-        untracked(() => this.answerStep(left));
+      if (this.accountReturn.sectionToReopen() !== null && this.auth.signedIn()) {
+        untracked(() => this.answerStepIntoAccount());
       }
     });
     effect(() => {
@@ -148,9 +145,9 @@ export class AppHeader {
     this.accountReopenedOn.set(null);
   }
 
-  private answerStep(left: HistoryState): void {
-    const section = accountLeftIn(left);
-    if (this.accountReturn.returnsByStep() && section !== null && this.compact()) {
+  private answerStepIntoAccount(): void {
+    const section = this.accountReturn.takeSectionToReopen();
+    if (this.compact()) {
       this.accountReopenedOn.set(section);
       this.accountOpen.set(true);
     }

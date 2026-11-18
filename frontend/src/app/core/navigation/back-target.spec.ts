@@ -2,7 +2,6 @@ import { Location } from '@angular/common';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
-import { APP_ACCOUNT_KEY } from '../../layout/account-sheet/account-return';
 import { APP_DEPTH_KEY, BackTarget } from './back-target';
 
 @Component({ template: '' })
@@ -212,85 +211,6 @@ describe('Given the back target of the app', () => {
     });
 
     expect(back.canGoBack).toBe(true);
-  });
-
-  describe('when the account sheet hands its entry over to Správa', () => {
-    async function openFromTheSheet(url: string, section: string): Promise<void> {
-      const location = TestBed.inject(Location);
-      location.go(location.path(), '', { ...(location.getState() as object), nfnnDialogDepth: 1 });
-      await router.navigateByUrl(url, {
-        replaceUrl: true,
-        state: { [APP_DEPTH_KEY]: back.nextDepth(), [APP_ACCOUNT_KEY]: section },
-      });
-    }
-
-    function stepBack(steps: () => void): Promise<void> {
-      const returned = navigated(router);
-      steps();
-      return returned;
-    }
-
-    function sectionLeft(): unknown {
-      return back.steppedBackFrom()?.[APP_ACCOUNT_KEY];
-    }
-
-    it('then no step back is reported while Správa stands', async () => {
-      await openFromTheSheet('/sprava', '');
-
-      expect(back.steppedBackFrom()).toBeNull();
-    });
-
-    it('and Zpět steps back, then the entry of Správa it left is reported with the mark of the sheet', async () => {
-      await openFromTheSheet('/sprava', '');
-
-      await stepBack(() => back.back('/'));
-
-      expect(router.url).toBe('/aktuality/clanek');
-      expect(sectionLeft()).toBe('');
-    });
-
-    it('and the page was opened from a section of the sheet, then the entry it left names that section', async () => {
-      await openFromTheSheet('/overit', '/darce/potvrzeni');
-
-      await stepBack(() => back.back('/'));
-
-      expect(sectionLeft()).toBe('/darce/potvrzeni');
-    });
-
-    it('and a deeper page of Správa steps back to it, then only the step back from Správa itself leaves an entry with the mark', async () => {
-      await openFromTheSheet('/sprava', '');
-      await router.navigateByUrl('/sprava/darci');
-
-      await stepBack(() => back.back('/sprava'));
-
-      expect(router.url).toBe('/sprava');
-      expect(back.steppedBackFrom()).not.toBeNull();
-      expect(sectionLeft()).toBeUndefined();
-
-      await stepBack(() => back.back('/'));
-
-      expect(sectionLeft()).toBe('');
-    });
-
-    it('and Správa is closed, stepping over all its pages at once, then the entry reported is the deepest page it left, without the mark of the sheet', async () => {
-      await openFromTheSheet('/sprava', '');
-      await router.navigateByUrl('/sprava/darci');
-
-      await stepBack(() => back.backBy(2));
-
-      expect(router.url).toBe('/aktuality/clanek');
-      expect(back.steppedBackFrom()).not.toBeNull();
-      expect(sectionLeft()).toBeUndefined();
-    });
-
-    it('and another page opens after the step back, then the step is no longer reported', async () => {
-      await openFromTheSheet('/sprava', '');
-      await stepBack(() => back.back('/'));
-
-      await router.navigateByUrl('/aktuality/druhy');
-
-      expect(back.steppedBackFrom()).toBeNull();
-    });
   });
 
   it('when the app starts again on an entry it made, then back still returns within the app', async () => {
