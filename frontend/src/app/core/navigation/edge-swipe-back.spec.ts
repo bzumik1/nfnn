@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { appConfig } from '../../app.config';
 import { DirtyForms } from '../updates/dirty-forms';
 import { BackTarget } from './back-target';
-import { EdgeSwipeBack, TOUCH_LOST_MS } from './edge-swipe-back';
+import { EdgeSwipeBack } from './edge-swipe-back';
 import { edgeSwipeBackAtStart } from './edge-swipe-back-start';
 import { SheetSteps, StepsInside } from './sheet-steps';
 import { PageTransitions, SwipePreview } from './page-transitions';
@@ -681,31 +681,28 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
       }
     });
 
-    it('and no touch comes for a second, then the page slides back on its own and a late end takes no step', async () => {
-      vi.useFakeTimers();
-      try {
-        takePage();
-        await vi.advanceTimersByTimeAsync(TOUCH_LOST_MS);
+    it('and the page is hidden, then the page slides back and no step follows', async () => {
+      takePage();
 
-        expect(preview.slideBack).toHaveBeenCalledTimes(1);
-        expect(stillUnderway()).toBe(false);
-        touch('touchend', page, { x: 300, y: 300, at: 1200 });
-        expect(backTarget.back).not.toHaveBeenCalled();
-      } finally {
-        vi.useRealTimers();
-      }
+      window.dispatchEvent(new Event('pagehide'));
+      await Promise.resolve();
+
+      expect(preview.slideBack).toHaveBeenCalledTimes(1);
+      expect(stillUnderway()).toBe(false);
     });
 
-    it('and the finger rests a while before it moves on, then the swipe still follows it', async () => {
+    it('and the finger rests a while before it moves on or lets go, then the swipe still follows it and steps back', async () => {
       vi.useFakeTimers();
       try {
         takePage();
-        await vi.advanceTimersByTimeAsync(TOUCH_LOST_MS / 2);
-        touch('touchmove', page, { x: 240, y: 300, at: 600 });
-        await vi.advanceTimersByTimeAsync(TOUCH_LOST_MS / 2);
+        await vi.advanceTimersByTimeAsync(2000);
+        touch('touchmove', page, { x: 240, y: 300, at: 2100 });
+        await vi.advanceTimersByTimeAsync(2000);
+        touch('touchend', page, { x: 240, y: 300, at: 4200 });
+        await vi.advanceTimersByTimeAsync(0);
 
         expect(preview.slideBack).not.toHaveBeenCalled();
-        expect(preview.follow).toHaveBeenLastCalledWith(220);
+        expect(preview.settle).toHaveBeenCalledWith(expect.objectContaining({ completes: true }));
       } finally {
         vi.useRealTimers();
       }

@@ -13,7 +13,6 @@ const SCROLLS_SIDEWAYS = new Set(['auto', 'scroll']);
 const OPEN_DIALOG = 'dialog[open]';
 const LEAVING_DIALOG = 'dialog.dialog--leaving';
 const SHEET_SECTION_BACK = 'app-sheet-head .sheet-head-back';
-export const TOUCH_LOST_MS = 1000;
 const DRAGGING_CLASS = 'edge-swipe-dragging';
 const PRESS_TAKEN_OVER = `.${DRAGGING_CLASS} :active {
   --pressed-tint: 0% !important;
@@ -46,7 +45,6 @@ export class EdgeSwipeBack {
   private swipe: Swipe | null = null;
   private pressCancel: CSSStyleSheet | null = null;
   private pops = 0;
-  private touchLost: ReturnType<typeof setTimeout> | undefined;
 
   private readonly onStart = (event: TouchEvent): void => this.started(event);
   private readonly onMove = (event: TouchEvent): void => this.moved(event);
@@ -59,6 +57,10 @@ export class EdgeSwipeBack {
   };
   private readonly onLeave = (): void => {
     this.pops++;
+  };
+  private readonly onPageHide = (): void => {
+    this.pops++;
+    this.callOff();
   };
 
   start(): void {
@@ -73,7 +75,7 @@ export class EdgeSwipeBack {
     this.document.addEventListener('touchcancel', this.onCancel, PASSIVE);
     this.document.addEventListener('visibilitychange', this.onHidden, PASSIVE);
     view.addEventListener('popstate', this.onLeave, PASSIVE);
-    view.addEventListener('pagehide', this.onLeave, PASSIVE);
+    view.addEventListener('pagehide', this.onPageHide, PASSIVE);
   }
 
   stop(): void {
@@ -84,7 +86,7 @@ export class EdgeSwipeBack {
     this.document.removeEventListener('touchcancel', this.onCancel, PASSIVE);
     this.document.removeEventListener('visibilitychange', this.onHidden, PASSIVE);
     view?.removeEventListener('popstate', this.onLeave, PASSIVE);
-    view?.removeEventListener('pagehide', this.onLeave, PASSIVE);
+    view?.removeEventListener('pagehide', this.onPageHide, PASSIVE);
     this.letGo();
   }
 
@@ -149,7 +151,6 @@ export class EdgeSwipeBack {
   }
 
   private letGo(): void {
-    clearTimeout(this.touchLost);
     this.swipe = null;
     this.document.documentElement.classList.remove(DRAGGING_CLASS);
   }
@@ -177,10 +178,6 @@ export class EdgeSwipeBack {
       this.takeOverPress();
     }
     swipe.preview?.follow(swipe.motion.offset);
-    if (swipe.motion.dragging) {
-      clearTimeout(this.touchLost);
-      this.touchLost = setTimeout(() => this.callOff(), TOUCH_LOST_MS);
-    }
   }
 
   private ended(event: TouchEvent): void {
