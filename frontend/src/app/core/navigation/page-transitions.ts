@@ -31,6 +31,7 @@ import { pathOf, tabOf } from './app-tabs';
 import { chromeOf, RouteChrome } from './route-chrome';
 import { DirtyForms } from '../updates/dirty-forms';
 import { NavigationPreview } from './navigation-preview';
+import { PagePlacement } from './page-placement';
 import { stillCopyOf } from './still-copy';
 
 export const PAGE_LAYER_CLASS = 'page-layer';
@@ -96,6 +97,7 @@ export class PageTransitions {
   private readonly backTarget = inject(BackTarget);
   private readonly preview = inject(NavigationPreview);
   private readonly dirtyForms = inject(DirtyForms);
+  private readonly placement = inject(PagePlacement);
   private readonly kept = new Map<number, KeptPage>();
   private handingOver = false;
   private trigger: NavigationFacts['trigger'] = 'imperative';
@@ -390,30 +392,36 @@ export class PageTransitions {
     }
     running.revealed = true;
     afterFrames(view, 2, () => {
-      const layer = this.layer();
       if (running.swiping) {
         if (this.running === running) {
           this.finish();
         }
         return;
       }
-      if (this.running !== running) {
-        return;
-      }
-      if (layer === null) {
-        this.finish();
-        return;
-      }
-      const shown = this.place(
-        running.overlay,
-        { ...this.keep(layer), sheet: running.sheet },
-        running.kind === 'push' ? 'over' : 'under',
-      );
-      const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
-      this.dressChrome(running.overlay, left, shown);
-      running.overlay.classList.add(`${PAGE_TRANSITION_CLASS}--moving`);
-      this.finishWhenStill(running, shown.box, view);
+      void this.placement
+        .placed(view, this.durationOf('--duration-page'))
+        .then(() => this.move(running, view));
     });
+  }
+
+  private move(running: Running, view: Window): void {
+    const layer = this.layer();
+    if (this.running !== running) {
+      return;
+    }
+    if (layer === null) {
+      this.finish();
+      return;
+    }
+    const shown = this.place(
+      running.overlay,
+      { ...this.keep(layer), sheet: running.sheet },
+      running.kind === 'push' ? 'over' : 'under',
+    );
+    const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
+    this.dressChrome(running.overlay, left, shown);
+    running.overlay.classList.add(`${PAGE_TRANSITION_CLASS}--moving`);
+    this.finishWhenStill(running, shown.box, view);
   }
 
   private finishWhenStill(running: Running, page: HTMLElement, view: Window): void {

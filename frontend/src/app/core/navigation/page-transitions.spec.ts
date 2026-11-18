@@ -8,7 +8,8 @@ import {
   withInMemoryScrolling,
 } from '@angular/router';
 import { CompactLayout } from '../layout/compact-layout';
-import { APP_DEPTH_KEY, BackTarget } from './back-target';
+import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from './back-target';
+import { PagePlacement } from './page-placement';
 import { ACCOUNT_RETURNS_KEY } from './page-transitions';
 import { NavigationPreview } from './navigation-preview';
 import {
@@ -96,6 +97,84 @@ describe('Given a phone that animates and a page of the news with an article to 
     await router.navigateByUrl('/aktuality/clanek');
 
     expect(coveredAtGuards.at(-1)).toBe(true);
+  });
+});
+
+describe('Given a phone that animates, an article opened from the news, and the news placed again on the way back', () => {
+  let router: Router;
+  let layer: HTMLElement;
+  let moved: boolean;
+  let watch: MutationObserver;
+
+  beforeEach(async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
+    });
+    document.documentElement.style.setProperty('--duration-page', '300ms');
+    layer = document.createElement('div');
+    layer.className = PAGE_LAYER_CLASS;
+    layer.textContent = 'Aktuality';
+    document.body.append(layer);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: 'aktuality', component: Blank },
+          { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
+        ]),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    router = TestBed.inject(Router);
+    TestBed.inject(PageTransitions);
+    vi.useFakeTimers();
+    await router.navigateByUrl('/aktuality');
+    await router.navigateByUrl('/aktuality/clanek');
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+    moved = false;
+    watch = new MutationObserver(() => {
+      moved ||= document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`) !== null;
+    });
+    watch.observe(document.body, { subtree: true, attributes: true, childList: true });
+  });
+
+  afterEach(() => {
+    watch.disconnect();
+    vi.useRealTimers();
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+    layer.remove();
+    document.documentElement.style.removeProperty('--duration-page');
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
+  it('when the news is not placed yet, then the step back keeps the article still over it until it is, and only then the news moves in', async () => {
+    const placed = TestBed.inject(PagePlacement).pending();
+
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
+    expect(moved).toBe(false);
+    placed();
+    await vi.advanceTimersByTimeAsync(50);
+
+    expect(moved).toBe(true);
+  });
+
+  it('when the news is never placed, then the step back moves in after the duration of a page step all the same', async () => {
+    TestBed.inject(PagePlacement).pending();
+
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
+    expect(moved).toBe(false);
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(moved).toBe(true);
+  });
+
+  it('when nothing waits to be placed, then the step back moves in at once', async () => {
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
+
+    expect(moved).toBe(true);
   });
 });
 
