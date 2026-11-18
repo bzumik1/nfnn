@@ -109,7 +109,7 @@ $lead-width: 34rem;
 
 @include bp.down(nav) {
   .band {
-    box-shadow: var(--shadow-media-tight);
+    box-shadow: var(--shadow-media-sm);
   }
 }
 
