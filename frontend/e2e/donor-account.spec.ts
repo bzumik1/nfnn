@@ -280,6 +280,24 @@ test.describe('Given a visitor who wants a donor account', () => {
     expect(inertWhenLeaving).not.toContain(false);
   });
 
+  test('when they close the signed-out notice and its leaving animation never reports its end, then the notice still goes once that animation has had its time', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedDonorSession(page);
+    await page.goto('/darce/prehled');
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Odhlásit se' }).click();
+    await expect(page.getByRole('status').getByText('Odhlásili jste se.')).toBeVisible();
+    await page.evaluate(() =>
+      window.addEventListener('animationend', (event) => event.stopImmediatePropagation(), true),
+    );
+
+    await page.getByRole('button', { name: 'Zavřít' }).click();
+
+    await expect(page.getByText('Odhlásili jste se.')).toHaveCount(0, { timeout: 2000 });
+  });
+
   test('when they sign out while the server cannot hear it, then the notice says the sign-out finishes once there is a connection', async ({
     page,
   }) => {
