@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog that the visitor closes > when it fills the screen of a phone, then it asks to be dismissed at once",
+    "replacement": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog that the visitor closes > when it fills the screen of a phone > and the close button is pressed, then it fades out inert and asks to be dismissed only once it has gone",
+    "reason": "#1349 (both polish teams 12/12, #1391): a full-screen dialog below nav no longer closes at once but fades out through dialog--leaving like the sheets, inert at once and dismissed only once it has gone, so the test that required an immediate dismissal is replaced by one that proves the fade-out",
+    "contract": "docs/frontend-overview.md, shared/ui dialog"
+  }
+]
