@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { stepBack } from './app-history';
 import { administrator, mockDonorApi, openAccountItem, session } from './donor-session';
 import { expect, test } from './fixtures';
@@ -141,6 +141,34 @@ const pairedPayment = {
   },
 };
 
+const otherPayments = Array.from({ length: 24 }, (_, index) => ({
+  ...pairedPayment,
+  id: `019a1c00-0000-7000-8000-0000000020${String(index).padStart(2, '0')}`,
+  bankTransactionId: 2000 + index,
+  bookedOn: `2026-10-${String(30 - index).padStart(2, '0')}`,
+  variableSymbol: '2222222222',
+  counterpartyName: 'Dvořák Petr',
+  donation: {
+    ...pairedPayment.donation,
+    id: `d2${index}`,
+    donorId: '0199f3e0-0000-7000-8000-00000000d002',
+    donorName: 'Petr Dvořák',
+  },
+}));
+
+async function expectWhollyInView(page: Page, target: Locator): Promise<void> {
+  await expect(async () => {
+    const box = (await target.boundingBox())!;
+    const banner = (await page.getByRole('banner').boundingBox())!;
+    const tabBar = page.getByRole('navigation', { name: 'Hlavní sekce' });
+    const floor = (await tabBar.isVisible())
+      ? (await tabBar.boundingBox())!.y
+      : page.viewportSize()!.height;
+    expect(box.y).toBeGreaterThanOrEqual(banner.y + banner.height);
+    expect(box.y + box.height).toBeLessThanOrEqual(floor);
+  }).toPass();
+}
+
 async function pairedPayments(page: Page): Promise<void> {
   await page.route('**/api/donors/auth/refresh', (route) =>
     route.fulfill(session(200, administrator)),
@@ -153,8 +181,8 @@ async function pairedPayments(page: Page): Promise<void> {
         json: {
           year: null,
           availableYears: pairedOnly ? [2026] : [],
-          items: pairedOnly ? [pairedPayment] : [],
-          total: pairedOnly ? 1 : 0,
+          items: pairedOnly ? [...otherPayments, pairedPayment] : [],
+          total: pairedOnly ? otherPayments.length + 1 : 0,
         },
       });
     },
@@ -182,7 +210,7 @@ async function followPairedPaymentsDonor(page: Page): Promise<void> {
     .click();
   await expect(page).toHaveURL(/\/sprava\/platby/);
   await page.getByRole('button', { name: 'Přiřazené', exact: true }).click();
-  await page.locator('button[data-payment-row]').click();
+  await page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ }).click();
   await page
     .getByRole('dialog', { name: 'Přiřazená platba' })
     .getByRole('link', { name: 'Jana Nováková' })
@@ -308,6 +336,10 @@ test.describe("Given an administrator on a phone who opened the administration f
 
     await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
     await expect(page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ })).toBeFocused();
+    await expectWhollyInView(
+      page,
+      page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ }),
+    );
     await expect(overlays(page)).toHaveCount(0);
   });
 
@@ -318,6 +350,10 @@ test.describe("Given an administrator on a phone who opened the administration f
 
     await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
     await expect(page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ })).toBeFocused();
+    await expectWhollyInView(
+      page,
+      page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ }),
+    );
   });
 
   test('when they close the administration on the donor card, then the news it was opened over return', async ({
@@ -350,6 +386,7 @@ test.describe("Given an administrator on a wide screen who followed a paired pay
 
     await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
     await expect(paymentRow(page).getByRole('link', { name: 'Jana Nováková' })).toBeFocused();
+    await expectWhollyInView(page, paymentRow(page).getByRole('link', { name: 'Jana Nováková' }));
   });
 });
 

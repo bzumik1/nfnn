@@ -1222,7 +1222,7 @@ describe('Given an administrator on the bank payments page where lists show as r
       });
     });
 
-    it("then a step back by the system from the donor card focuses the payment's row", async () => {
+    it("then a step back by the system from the donor card focuses the payment's row and brings it into view", async () => {
       await listResponds(paymentList([unpairedPayment()]));
       button('Přiřazené').click();
       await settle();
@@ -1233,6 +1233,14 @@ describe('Given an administrator on the bank payments page where lists show as r
       TestBed.inject(Router).setUpLocationChangeListener();
       await harness.navigateByUrl('/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369');
 
+      const scrolled = vi.fn();
+      Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+        value: scrolled,
+        configurable: true,
+      });
+      onTestFinished(() => {
+        Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+      });
       TestBed.inject(Location).back();
       await vi.waitFor(() => expect(TestBed.inject(Router).url).toContain('/sprava/platby'));
       await settle();
@@ -1242,6 +1250,8 @@ describe('Given an administrator on the bank payments page where lists show as r
       );
 
       expect(document.activeElement).toBe(paymentRows()[0]);
+      expect(scrolled.mock.contexts).toEqual([paymentRows()[0]]);
+      expect(scrolled).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
     });
 
     it('then a gift with an issued receipt cannot be unpaired from the sheet', async () => {

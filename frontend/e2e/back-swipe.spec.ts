@@ -1,4 +1,4 @@
-import { CDPSession, Page } from '@playwright/test';
+import { CDPSession, Locator, Page } from '@playwright/test';
 import {
   administrator,
   mockDonorApi,
@@ -364,6 +364,34 @@ const pairedPayment = {
   },
 };
 
+const otherPayments = Array.from({ length: 24 }, (_, index) => ({
+  ...pairedPayment,
+  id: `019a1c00-0000-7000-8000-0000000020${String(index).padStart(2, '0')}`,
+  bankTransactionId: 2000 + index,
+  bookedOn: `2026-10-${String(30 - index).padStart(2, '0')}`,
+  variableSymbol: '2222222222',
+  counterpartyName: 'Dvořák Petr',
+  donation: {
+    ...pairedPayment.donation,
+    id: `d2${index}`,
+    donorId: '0199f3e0-0000-7000-8000-00000000d002',
+    donorName: 'Petr Dvořák',
+  },
+}));
+
+async function expectWhollyInView(page: Page, target: Locator): Promise<void> {
+  await expect(async () => {
+    const box = (await target.boundingBox())!;
+    const banner = (await page.getByRole('banner').boundingBox())!;
+    const tabBar = page.getByRole('navigation', { name: 'Hlavní sekce' });
+    const floor = (await tabBar.isVisible())
+      ? (await tabBar.boundingBox())!.y
+      : page.viewportSize()!.height;
+    expect(box.y).toBeGreaterThanOrEqual(banner.y + banner.height);
+    expect(box.y + box.height).toBeLessThanOrEqual(floor);
+  }).toPass();
+}
+
 test.describe("Given the app on the home screen of a phone and an administrator who followed a paired payment's donor from the payments", () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
@@ -393,8 +421,8 @@ test.describe("Given the app on the home screen of a phone and an administrator 
           json: {
             year: null,
             availableYears: pairedOnly ? [2026] : [],
-            items: pairedOnly ? [pairedPayment] : [],
-            total: pairedOnly ? 1 : 0,
+            items: pairedOnly ? [...otherPayments, pairedPayment] : [],
+            total: pairedOnly ? otherPayments.length + 1 : 0,
           },
         });
       },
@@ -409,7 +437,7 @@ test.describe("Given the app on the home screen of a phone and an administrator 
       .click();
     await expect(page).toHaveURL(/\/sprava\/platby/);
     await page.getByRole('button', { name: 'Přiřazené', exact: true }).click();
-    await page.locator('button[data-payment-row]').click();
+    await page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ }).click();
     await page
       .getByRole('dialog', { name: 'Přiřazená platba' })
       .getByRole('link', { name: 'Jana Nováková' })
@@ -433,6 +461,10 @@ test.describe("Given the app on the home screen of a phone and an administrator 
 
     await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
     await expect(page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ })).toBeFocused();
+    await expectWhollyInView(
+      page,
+      page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ }),
+    );
     await expect(page.locator('.page-transition')).toHaveCount(0);
   });
 });
