@@ -20,6 +20,7 @@ export const PDF_CANCEL_OFFERED_AFTER_MS = 8000;
 export class PdfProgress {
   readonly progress = input<PdfProgressState | null>(null);
   readonly compact = input(false);
+  readonly cancelOf = input('');
   readonly cancelled = output<void>();
 
   protected readonly shown = signal<PdfProgressState | null>(null);

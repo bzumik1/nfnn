@@ -140,6 +140,10 @@
       class="receipt-saved"
       [progress]="donations.singleProgress(item)"
       [compact]="true"
+      cancelOf="přípravu potvrzení, dar z {{ formatDate(item.receivedAt) }}, {{
+        crowns(item.amountMinor)
+      }}&nbsp;Kč"
+      i18n-cancelOf="@@donor.dashboard.payments.cancelOf"
       (cancelled)="donations.cancelSingleReceipt(item)"
     />
   } @else {

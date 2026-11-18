@@ -99,6 +99,7 @@ describe('Given the line under a PDF button', () => {
 
       const cancel = element('.pdf-progress__cancel') as HTMLButtonElement;
       const visible = [...cancel.childNodes]
+        .filter((node) => node.nodeType !== Node.COMMENT_NODE)
         .filter((node) => !(node instanceof HTMLElement && node.matches('.visually-hidden')))
         .map((node) => node.textContent)
         .join('');
