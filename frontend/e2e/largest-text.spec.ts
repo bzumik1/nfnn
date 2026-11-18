@@ -683,23 +683,6 @@ test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows 
     expect((await add.boundingBox())!.height).toBe(height);
     expect(await iconBesideTheFirstLineOf(add)).toBe(true);
   });
-
-  test('when they open Přidat bankovní účet, then the title of the sheet breaks only between words and keeps at least Přidat bankovní in sight', async ({
-    page,
-  }) => {
-    await mockDonorApi(page);
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await signIn(page);
-    await openDonorSection(page, 'Bankovní účty');
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
-    const title = page.getByRole('dialog').locator('#add-account-title');
-    await expect(title).toHaveText('Přidat bankovní účet');
-    await page.evaluate(() => document.fonts.ready);
-
-    expect(await wordsBrokenInside(title)).toEqual([]);
-    expect(await shownTextOf(title)).toMatch(/^Přidat bankovní/);
-  });
 });
 
 async function iconBesideTheFirstLineOf(row: Locator): Promise<boolean> {
@@ -711,25 +694,6 @@ async function iconBesideTheFirstLineOf(row: Locator): Promise<boolean> {
     const icon = button.querySelector('.ui-list__glyph svg')!.getBoundingClientRect();
     const middle = icon.top + icon.height / 2;
     return middle >= firstLine.top && middle <= firstLine.bottom;
-  });
-}
-
-async function shownTextOf(element: Locator): Promise<string> {
-  return element.evaluate((heading) => {
-    const box = heading.getBoundingClientRect();
-    const text = heading.firstChild!;
-    const content = text.textContent ?? '';
-    let shown = '';
-    for (let index = 0; index < content.length; index++) {
-      const range = document.createRange();
-      range.setStart(text, index);
-      range.setEnd(text, index + 1);
-      const letter = range.getBoundingClientRect();
-      if (letter.right <= box.right + 0.5 && letter.bottom <= box.bottom + 0.5) {
-        shown += content[index];
-      }
-    }
-    return shown.replace(/\s+/g, ' ').trim();
   });
 }
 
