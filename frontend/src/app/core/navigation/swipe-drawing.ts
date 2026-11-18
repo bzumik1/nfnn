@@ -1,5 +1,8 @@
+import { pathOf } from './app-tabs';
+import { pushWithinSection } from './page-transition-kind';
 import { nextFrame, PAGE_LAYER_CLASS, PAGE_TRANSITION_CLASS } from './page-transitions';
 
+const SECTION_LINKS = 'nav a[href]';
 const HEADER = 'app-header .app-header';
 const SIDE_NAVIGATION = '.side-nav-panel';
 const TAB_BAR = 'app-tab-bar .tab-bar';
@@ -103,4 +106,11 @@ export function clipToContent(document: Document, overlay: HTMLElement): Content
       return [];
     },
   };
+}
+
+export function pushHere(layer: HTMLElement | null, url: string, parent: string | null): boolean {
+  const sections = Array.from(layer?.querySelectorAll(SECTION_LINKS) ?? [])
+    .filter((link) => link.closest('main') === null)
+    .map((link) => pathOf(link.getAttribute('href') ?? ''));
+  return pushWithinSection(pathOf(url), parent, sections);
 }

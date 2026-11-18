@@ -21,13 +21,8 @@ import {
 import { CompactLayout } from '../layout/compact-layout';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackDestination, BackTarget } from './back-target';
 import { SwipeSettle } from './back-swipe';
-import {
-  NavigationFacts,
-  PageTransitionKind,
-  pageTransitionFor,
-  pushWithinSection,
-} from './page-transition-kind';
-import { pathOf, tabOf } from './app-tabs';
+import { NavigationFacts, PageTransitionKind, pageTransitionFor } from './page-transition-kind';
+import { tabOf } from './app-tabs';
 import { chromeOf, RouteChrome } from './route-chrome';
 import { DirtyForms } from '../updates/dirty-forms';
 import { NavigationPreview } from './navigation-preview';
@@ -48,7 +43,6 @@ const BAR_ITEMS = ['.back-button', '.account-button'];
 const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
 const STANDING_DIALOG = 'dialog[open]:not(.dialog--leaving)';
 const SHEET_HEAD = 'app-sheet-head';
-const SECTION_LINKS = 'nav a[href]';
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
 
 interface Running {
@@ -153,17 +147,10 @@ export class PageTransitions {
   }
 
   stepsBySwipe(): boolean {
-    if (this.compact()) {
-      return true;
-    }
-    const layer = this.layer();
-    const sections =
-      layer === null
-        ? []
-        : Array.from(layer.querySelectorAll<HTMLAnchorElement>(SECTION_LINKS))
-            .filter((link) => link.closest('main') === null)
-            .map((link) => pathOf(link.getAttribute('href') ?? ''));
-    return pushWithinSection(pathOf(this.router.url), this.chrome().parent, sections);
+    return (
+      this.compact() ||
+      (this.drawing?.pushHere(this.layer(), this.router.url, this.chrome().parent) ?? false)
+    );
   }
 
   startSwipe(destination: BackDestination): SwipePreview | null {
