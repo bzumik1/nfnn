@@ -21,18 +21,13 @@ import { KeptTabPages } from './kept-tab-pages';
 import { NavigationPreview } from './navigation-preview';
 import { ScrollHold } from './scroll-hold';
 
-const PLACE_WAIT_LONGEST_MS = 3000;
-const VISITOR_MOVES = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'focusin'] as const;
-const LISTENING: AddEventListenerOptions = { passive: true, capture: true };
-
 @Injectable({ providedIn: 'root' })
 export class TabMemory {
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly keptPages = inject(KeptTabPages);
   private readonly preview = inject(NavigationPreview);
-  private readonly document = inject(DOCUMENT);
-  private readonly window = this.document.defaultView;
+  private readonly window = inject(DOCUMENT).defaultView;
   private readonly reloadPlace = inject(ReloadPlace);
   private readonly scrollHold = inject(ScrollHold);
   private readonly lastUrls = new Map<AppTabId, string>(this.reloadPlace.keptTabs());
@@ -42,7 +37,8 @@ export class TabMemory {
   private keptTop: { readonly top: number; readonly navigation: number } | null = null;
   private returnedToKeptPage = false;
   private placements = 0;
-  private stopWaitingForHeight: (() => void) | null = null;
+  private waits = 0;
+  private stopGrowingPage: (() => void) | null = null;
 
   constructor() {
     this.reloadPlace.followTabs(() => this.lastUrls);
@@ -52,7 +48,7 @@ export class TabMemory {
         return;
       }
       if (event instanceof NavigationStart) {
-        this.stopWaitingForHeight?.();
+        this.stopWaitingForHeight();
         this.keptPages.takeReturningTop();
       } else if (event instanceof NavigationEnd) {
         this.visited(event.urlAfterRedirects);
@@ -112,8 +108,7 @@ export class TabMemory {
     const kept = this.keptTop;
     if (kept === null || kept.navigation !== event.routerEvent.id) {
       if (event.position) {
-        const top = event.position[1];
-        queueMicrotask(() => this.keepPlaceWhileGrowing(top));
+        this.keepPlaceWhileGrowing(event.position[1]);
       } else if (event.anchor === null && event.scrollBehavior !== 'manual') {
         this.scrollTo(0);
       }
@@ -126,63 +121,27 @@ export class TabMemory {
   }
 
   private keepPlaceWhileGrowing(top: number): void {
-    this.stopWaitingForHeight?.();
+    this.stopWaitingForHeight();
     const view = this.window;
     if (view === null || typeof ResizeObserver === 'undefined') {
       return;
     }
-    let growth: ResizeObserver | null = null;
-    let timer: number | undefined;
-    let restingAt = view.scrollY;
-    const movedByOthers = (): void => {
-      if (Math.abs(view.scrollY - restingAt) > 1) {
-        stop();
+    const wait = this.waits;
+    void import('./growing-page').then(({ placeOnceGrown }) => {
+      if (wait === this.waits) {
+        this.stopGrowingPage = placeOnceGrown(top, {
+          view,
+          scrollHold: this.scrollHold,
+          scrollTo: (to) => this.scrollTo(to),
+        });
       }
-    };
-    const placeOnceReached = (): void => {
-      if (this.reaches(top)) {
-        stop();
-        if (!this.hidesFocus(top)) {
-          this.scrollTo(top);
-        }
-      }
-    };
-    const stop = (): void => {
-      waitForRelease();
-      growth?.disconnect();
-      view.clearTimeout(timer);
-      VISITOR_MOVES.forEach((type) => view.removeEventListener(type, stop, LISTENING));
-      view.removeEventListener('scroll', movedByOthers, LISTENING);
-      if (this.stopWaitingForHeight === stop) {
-        this.stopWaitingForHeight = null;
-      }
-    };
-    this.stopWaitingForHeight = stop;
-    const waitForRelease = this.scrollHold.whenReleased(() => {
-      restingAt = view.scrollY;
-      timer = view.setTimeout(stop, PLACE_WAIT_LONGEST_MS);
-      VISITOR_MOVES.forEach((type) => view.addEventListener(type, stop, LISTENING));
-      view.addEventListener('scroll', movedByOthers, LISTENING);
-      growth = new ResizeObserver(placeOnceReached);
-      growth.observe(this.document.body);
-      placeOnceReached();
     });
   }
 
-  private hidesFocus(top: number): boolean {
-    const view = this.window;
-    const focused = this.document.activeElement;
-    if (view === null || !(focused instanceof HTMLElement) || focused.closest('main') === null) {
-      return false;
-    }
-    const box = focused.getBoundingClientRect();
-    const shift = top - view.scrollY;
-    return box.bottom - shift <= 0 || box.top - shift >= view.innerHeight;
-  }
-
-  private reaches(top: number): boolean {
-    const view = this.window;
-    return view !== null && this.document.documentElement.scrollHeight - view.innerHeight >= top;
+  private stopWaitingForHeight(): void {
+    this.waits++;
+    this.stopGrowingPage?.();
+    this.stopGrowingPage = null;
   }
 
   private startNewPageAtTop(): void {

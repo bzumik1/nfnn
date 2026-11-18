@@ -446,6 +446,7 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     );
     await act();
     await scrolled;
+    await vi.dynamicImportSettled();
   }
 
   function stepBack(): Promise<void> {
