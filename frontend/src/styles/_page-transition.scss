@@ -45,8 +45,8 @@
   visibility: hidden;
 }
 
-.page-transition-sheet-under dialog[open]:not(.page-transition *),
-.page-transition-sheet-under dialog[open]:not(.page-transition *)::backdrop {
+.page-transition-sheet-under :modal,
+.page-transition-sheet-under :modal::backdrop {
   opacity: 0 !important;
 }
 

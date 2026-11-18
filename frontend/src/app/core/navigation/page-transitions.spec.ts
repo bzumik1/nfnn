@@ -687,8 +687,10 @@ describe('Given the app on the home screen of a phone opened straight on the don
     Object.defineProperty(window, 'innerWidth', jsdomWidth!);
   });
 
-  function drawnUnder(): Promise<void> {
-    return new Promise((done) => setTimeout(done, 0));
+  async function drawnUnder(): Promise<void> {
+    await vi.dynamicImportSettled();
+    await new Promise((done) => setTimeout(done, 0));
+    await vi.dynamicImportSettled();
   }
 
   function over(): HTMLElement {
@@ -719,6 +721,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
 
   it('when a finger takes the page before the page Zpět leads to is drawn, then the page stays over it, never over an empty ground', async () => {
     const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+    await vi.dynamicImportSettled();
 
     swipe.follow(120);
 
@@ -730,6 +733,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
     const frames = framesByHand();
     try {
       const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
       swipe.follow(120);
       finishVisit();
       await drawnUnder();
@@ -763,6 +767,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
     });
     try {
       const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
       swipe.follow(300);
       const left = swipe.settle({
         completes: true,
@@ -782,6 +787,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
 
   it('when a finger takes the page, then the page Zpět leads to is drawn under cover and then lies under the finger', async () => {
     TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' });
+    await vi.dynamicImportSettled();
     const under = () =>
       document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under h1`)?.textContent ?? null;
 

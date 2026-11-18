@@ -51,8 +51,6 @@ const SECTION_LINKS = 'nav a[href]';
 const HEADER = 'app-header .app-header';
 const SIDE_NAVIGATION = '.side-nav-panel';
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
-const CATCH_UP_SPANS = 3;
-const FRAME_MS = 16;
 
 interface Running {
   readonly kind: PageTransitionKind;
@@ -227,27 +225,18 @@ export class PageTransitions {
             }
             ready = true;
             catchingUp = true;
-            const closing = Math.max(1, this.durationOf('--duration-fast') / CATCH_UP_SPANS);
-            let last: number | null = null;
-            let gap = offset - shown;
-            const closeIn = (now: number): void => {
-              if (!catchingUp || this.running !== running) {
-                return;
-              }
-              const elapsed = last === null ? FRAME_MS : Math.max(0, now - last);
-              last = now;
-              gap *= Math.exp(-elapsed / closing);
-              if (Math.abs(gap) < 1) {
-                gap = 0;
-              }
-              shown = offset - gap;
-              follow();
-              catchingUp = gap !== 0;
-              if (catchingUp) {
-                view.requestAnimationFrame(closeIn);
-              }
-            };
-            view.requestAnimationFrame(closeIn);
+            void import('./swipe-drawing').then(({ closeInOnFinger }) =>
+              closeInOnFinger(view, this.durationOf('--duration-fast'), {
+                finger: () => offset,
+                from: shown,
+                show: (at) => {
+                  shown = at;
+                  follow();
+                },
+                goesOn: () => catchingUp && this.running === running,
+                caughtUp: () => (catchingUp = false),
+              }),
+            );
           })
         : Promise.resolve();
     const settle = async (end: SwipeSettle): Promise<boolean> => {
@@ -321,7 +310,8 @@ export class PageTransitions {
     arriving: PlacedPage,
     redressed: (into: PlacedPage) => void,
   ): Promise<boolean> {
-    const drawn = await this.withoutFocus(() =>
+    const { withoutFocus } = await import('./swipe-drawing');
+    const drawn = await withoutFocus(this.document, this.layer(), () =>
       this.preview.visit(path, () => {
         const layer = this.layer();
         return layer === null ? null : this.keep(layer);
@@ -336,25 +326,6 @@ export class PageTransitions {
     scroller.style.backgroundColor = drawn.ground;
     redressed({ box: arriving.box, copy: drawn.copy, scrollY: drawn.scrollY });
     return true;
-  }
-
-  private async withoutFocus<T>(draw: () => Promise<T>): Promise<T> {
-    const layer = this.layer();
-    const focused = this.document.activeElement;
-    layer?.setAttribute('inert', '');
-    try {
-      return await draw();
-    } finally {
-      layer?.removeAttribute('inert');
-      if (
-        focused instanceof HTMLElement &&
-        focused.isConnected &&
-        focused !== this.document.body &&
-        this.document.activeElement !== focused
-      ) {
-        focused.focus({ preventScroll: true });
-      }
-    }
   }
 
   private cover(event: GuardsCheckEnd): void {
