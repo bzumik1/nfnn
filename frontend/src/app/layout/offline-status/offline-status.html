@@ -29,8 +29,4 @@
   </button>
 }
 
-@defer (when sheetOpen(); prefetch on idle) {
-  @if (sheetOpen()) {
-    <app-offline-sheet [dataTime]="dataTime()" (closed)="closeSheet()" />
-  }
-}
+<ng-container #sheetHost />
