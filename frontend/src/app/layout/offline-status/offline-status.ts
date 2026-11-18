@@ -10,6 +10,7 @@ import {
   effect,
   ElementRef,
   inject,
+  Injector,
   inputBinding,
   outputBinding,
   signal,
@@ -29,6 +30,9 @@ import type { OfflineSheet } from './offline-sheet';
 
 const loadSheet = (): Promise<Type<OfflineSheet>> =>
   import('./offline-sheet').then((loaded) => loaded.OfflineSheet);
+
+const LESS_MOTION = '(prefers-reduced-motion: reduce)';
+const PULSE = 'motion-pulse';
 
 function whenIdle(view: Window | null, run: () => void): void {
   if (view?.requestIdleCallback) {
@@ -50,13 +54,18 @@ export class OfflineStatus {
   private readonly document = inject(DOCUMENT);
   private readonly dialogAnnouncer = inject(DialogAnnouncer);
   private readonly chunkLoadRecovery = inject(ChunkLoadRecovery);
+  private readonly injector = inject(Injector);
 
   protected readonly sheetOpen = signal(false);
   protected readonly announcement = signal<string | null>(null);
+  protected readonly pulsing = signal(false);
   private readonly pill = viewChild<ElementRef<HTMLElement>>('pill');
   private readonly sheetHost = viewChild.required('sheetHost', { read: ViewContainerRef });
   private readonly sheetView = signal<Type<OfflineSheet> | null>(null);
   private sheetLoading: Promise<Type<OfflineSheet>> | null = null;
+  private pulseDelay: ReturnType<typeof setTimeout> | undefined;
+  private oneBreathTaken = false;
+  private endsAfterBreath = false;
 
   protected readonly dataTime = computed(() => {
     const oldest = this.shown.oldest();
@@ -99,6 +108,7 @@ export class OfflineStatus {
           this.announcement.set(this.offlineAnnouncement(cause === 'server'));
         } else if (wasOffline) {
           this.announcement.set($localize`:@@layout.offline.backOnline:Připojení je zpět.`);
+          this.stopPulse(true);
         }
         wasOffline = offline;
       });
@@ -119,17 +129,115 @@ export class OfflineStatus {
 
   protected openSheet(): void {
     if (this.sheetView() !== null) {
-      this.sheetOpen.set(true);
+      this.showSheet();
       return;
     }
+    if (this.sheetLoading === null) {
+      this.startPulse();
+    }
     this.fetchSheet().then(
-      () => this.sheetOpen.set(true),
-      (error: unknown) => this.chunkLoadRecovery.handleImportFailure(error),
+      () => {
+        this.stopPulse(true);
+        this.showSheet();
+      },
+      (error: unknown) => this.sheetFailedToLoad(error),
     );
+  }
+
+  protected breathTaken(event: AnimationEvent): void {
+    if (event.animationName !== PULSE) {
+      return;
+    }
+    this.oneBreathTaken = true;
+    if (this.endsAfterBreath) {
+      this.pulsing.set(false);
+    }
+  }
+
+  protected pulseEnded(event: AnimationEvent): void {
+    if (event.animationName === PULSE) {
+      this.pulsing.set(false);
+    }
   }
 
   protected closeSheet(): void {
     this.sheetOpen.set(false);
+  }
+
+  private showSheet(): void {
+    this.chunkLoadRecovery.importRecovered();
+    this.sheetOpen.set(true);
+  }
+
+  private sheetFailedToLoad(error: unknown): void {
+    this.stopPulse(false);
+    if (this.connectivity.cause() === 'network') {
+      this.announceAgain(this.offlineAnnouncement(false));
+    } else {
+      this.chunkLoadRecovery.handleImportFailure(error);
+    }
+  }
+
+  private announceAgain(message: string): void {
+    this.announcement.set(null);
+    afterNextRender(
+      () => {
+        const view = this.document.defaultView;
+        const nextFrame = view?.requestAnimationFrame?.bind(view) ?? setTimeout;
+        nextFrame(() => this.announcement.set(message));
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private startPulse(): void {
+    if (this.pulsing() || this.pulseDelay !== undefined || this.asksForLessMotion()) {
+      return;
+    }
+    if (this.connectivity.cause() === 'network') {
+      this.beginPulse();
+      return;
+    }
+    this.pulseDelay = setTimeout(() => {
+      this.pulseDelay = undefined;
+      this.beginPulse();
+    }, this.loadingDelayMs());
+  }
+
+  private beginPulse(): void {
+    this.oneBreathTaken = false;
+    this.endsAfterBreath = false;
+    this.pulsing.set(true);
+  }
+
+  private stopPulse(atOnce: boolean): void {
+    clearTimeout(this.pulseDelay);
+    this.pulseDelay = undefined;
+    if (!this.pulsing()) {
+      return;
+    }
+    if (atOnce || this.oneBreathTaken) {
+      this.pulsing.set(false);
+    } else {
+      this.endsAfterBreath = true;
+    }
+  }
+
+  private asksForLessMotion(): boolean {
+    return this.document.defaultView?.matchMedia?.(LESS_MOTION).matches ?? false;
+  }
+
+  private loadingDelayMs(): number {
+    const token =
+      this.document.defaultView
+        ?.getComputedStyle(this.document.documentElement)
+        .getPropertyValue('--delay-loading')
+        .trim() ?? '';
+    const value = Number.parseFloat(token);
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+    return token.endsWith('ms') ? value : value * 1000;
   }
 
   private fetchSheet(): Promise<Type<OfflineSheet>> {

@@ -1,4 +1,4 @@
-import type { BrowserContext, Page, Route } from '@playwright/test';
+import type { BrowserContext, Locator, Page, Route } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { requestsInFlight, settled } from './settled';
 
@@ -105,36 +105,199 @@ test.describe('Given a visitor whose connection drops after the first screen, wi
   }
 });
 
+interface PulseRecord {
+  pressedAt: number | null;
+  startedAt: number | null;
+  stoppedAt: number | null;
+}
+
+const BEFORE_IDLE = () => Object.defineProperty(window, 'requestIdleCallback', { value: () => 0 });
+const SERVER_DOWN = (route: Route) =>
+  route.fulfill({ status: 522, contentType: 'text/html', body: 'origin down' });
+const CODE_GONE = (route: Route) => route.abort('connectionrefused');
+const OFFLINE_SETTLED = { timeout: 10_000 };
+
+async function recordPulse(label: Locator): Promise<void> {
+  await label.evaluate((pill) => {
+    const record: PulseRecord = { pressedAt: null, startedAt: null, stoppedAt: null };
+    Object.assign(window, { pulseRecord: record });
+    pill.addEventListener('pointerdown', (event) => (record.pressedAt ??= event.timeStamp));
+    const watch = () => {
+      const pulse = pill
+        .getAnimations()
+        .find((animation) => (animation as CSSAnimation).animationName === 'motion-pulse');
+      if (pulse !== undefined && record.startedAt === null && pulse.startTime !== null) {
+        record.startedAt = Number(pulse.startTime);
+      }
+      if (record.startedAt !== null && pulse === undefined) {
+        record.stoppedAt = performance.now();
+        return;
+      }
+      requestAnimationFrame(watch);
+    };
+    requestAnimationFrame(watch);
+  });
+}
+
+function pulseRecord(page: Page): Promise<PulseRecord> {
+  return page.evaluate(() => (window as unknown as { pulseRecord: PulseRecord }).pulseRecord);
+}
+
+function themeMs(page: Page, token: string): Promise<number> {
+  return page.evaluate(
+    (name) =>
+      Math.round(
+        Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)) * 1000,
+      ),
+    token,
+  );
+}
+
+async function nextFrames(page: Page): Promise<void> {
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+}
+
+async function recordAnnouncements(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const region = document.querySelector('app-offline-status [aria-live="polite"]')!;
+    const said: string[] = [];
+    Object.assign(window, { offlineAnnouncements: said, pageKept: true });
+    new MutationObserver(() =>
+      said.push(region.textContent?.replace(/\s+/g, ' ').trim() ?? ''),
+    ).observe(region, { childList: true, subtree: true, characterData: true });
+  });
+}
+
+function announcements(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () => (window as unknown as { offlineAnnouncements: string[] }).offlineAnnouncements,
+  );
+}
+
+function pageKept(page: Page): Promise<boolean> {
+  return page.evaluate(() => (window as unknown as { pageKept?: boolean }).pageKept === true);
+}
+
 test.describe('Given a visitor without a service worker whose connection drops before the page had an idle moment', () => {
   test.beforeEach(async ({ page, context }) => {
-    await page.addInitScript(() =>
-      Object.defineProperty(window, 'requestIdleCallback', { value: () => 0 }),
-    );
+    await page.addInitScript(BEFORE_IDLE);
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
     await dropTheConnection(page, context);
   });
 
-  test('when they press the offline label, then the page says the part could not be opened, and a press once the network is back opens the sheet', async ({
+  test('when they press the offline label, then the page says again that it is offline, keeps the focus on the label, shows no reload notice and does not reload, and a press once the network is back opens the sheet', async ({
     page,
     context,
   }) => {
     const label = page.getByRole('button', { name: /^Offline/ });
+    await expect(label).toBeVisible();
+    await recordAnnouncements(page);
+
     await label.click();
 
-    const reload = page.getByRole('button', { name: 'Načíst znovu' });
-    await expect(page.getByText('Stránku se nepodařilo otevřít.')).toBeVisible();
-    await expect(reload).toBeFocused();
-    await expect(reload).toHaveAccessibleDescription(
-      'Stránku se nepodařilo otevřít. Web byl mezitím možná aktualizován nebo vypadlo připojení. Zkuste ji načíst znovu.',
-    );
+    await expect
+      .poll(() => announcements(page))
+      .toEqual(['', expect.stringMatching(/^Jste offline\./)]);
+    await expect(label).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Načíst znovu' })).toHaveCount(0);
     await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(await pageKept(page)).toBe(true);
+
+    await label.click();
+    await expect
+      .poll(() => announcements(page))
+      .toEqual([
+        '',
+        expect.stringMatching(/^Jste offline\./),
+        '',
+        expect.stringMatching(/^Jste offline\./),
+      ]);
 
     await context.setOffline(false);
     await label.click();
 
-    const sheet = page.getByRole('dialog');
-    await expect(sheet).toBeVisible();
-    await expect(sheet.getByRole('heading', { level: 2 })).toBeVisible();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByRole('dialog').getByRole('heading', { level: 2 })).toBeVisible();
+  });
+
+  test('when they press the offline label, then the label pulses at once and for at least one whole breath, though the load fails at once', async ({
+    page,
+  }) => {
+    const label = page.getByRole('button', { name: /^Offline/ });
+    await expect(label).toBeVisible();
+    await recordPulse(label);
+
+    await label.click();
+
+    await expect.poll(async () => (await pulseRecord(page)).stoppedAt).not.toBeNull();
+    const { pressedAt, startedAt, stoppedAt } = await pulseRecord(page);
+    expect(startedAt! - pressedAt!, 'it starts at once').toBeLessThan(
+      await themeMs(page, '--delay-loading'),
+    );
+    expect(stoppedAt! - startedAt!, 'it runs one whole breath').toBeGreaterThanOrEqual(
+      await themeMs(page, '--duration-pulse'),
+    );
+  });
+
+  test('when they ask for less motion and press the offline label, then the label does not pulse', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const label = page.getByRole('button', { name: /^Offline/ });
+    await expect(label).toBeVisible();
+    await recordPulse(label);
+    await recordAnnouncements(page);
+
+    await label.click();
+
+    await expect.poll(() => announcements(page)).toHaveLength(2);
+    await nextFrames(page);
+    expect((await pulseRecord(page)).startedAt).toBeNull();
+  });
+});
+
+test.describe('Given a visitor without a service worker whose network works but whose server stops answering before the page had an idle moment', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(BEFORE_IDLE);
+    await page.route('**/api/**', SERVER_DOWN);
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Offline/ })).toBeVisible(OFFLINE_SETTLED);
+  });
+
+  test('when the code of the sheet cannot be loaded, then the reload notice shows, and once the code loads again a press opens the sheet and the notice goes', async ({
+    page,
+  }) => {
+    const label = page.getByRole('button', { name: /^Offline/ });
+    await page.route('**/chunk-*.js', CODE_GONE);
+
+    await label.click();
+
+    const notice = page.getByText('Stránku se nepodařilo otevřít.');
+    await expect(notice).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Načíst znovu' })).toBeFocused();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    await page.unroute('**/chunk-*.js', CODE_GONE);
+    await label.click();
+
+    await expect(page.getByRole('dialog', { name: 'Server neodpovídá' })).toBeVisible();
+    await expect(notice).toHaveCount(0);
+  });
+
+  test('when the sheet loads quickly, then it opens without the label pulsing', async ({
+    page,
+  }) => {
+    const label = page.getByRole('button', { name: /^Offline/ });
+    await recordPulse(label);
+
+    await label.click();
+
+    await expect(page.getByRole('dialog', { name: 'Server neodpovídá' })).toBeVisible();
+    await nextFrames(page);
+    expect((await pulseRecord(page)).startedAt).toBeNull();
   });
 });

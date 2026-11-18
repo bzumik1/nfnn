@@ -8,7 +8,7 @@ const app = join(frontend, 'src', 'app');
 export const WORKS_WITHOUT_CONNECTION = {
   'features/donations/verification/proof-input.html':
     'Reading a receipt code checks it in the browser against the keys it keeps, offline too (frontend.md, Receipt verification).',
-  'layout/offline-status/offline-status.html#tryAgain':
+  'layout/offline-status/offline-sheet.html#tryAgain':
     'It is the probe that ends the offline state, so it must run while offline.',
   'features/donors/login-dialog/login-dialog.html#tryConnectionAgain':
     "It is the probe that ends the offline state, as the offline sheet's Zkusit znovu, so it must run while offline.",

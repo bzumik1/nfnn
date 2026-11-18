@@ -5,7 +5,16 @@
 </div>
 
 @if (connectivity.offline()) {
-  <button #pill type="button" class="offline-pill" aria-haspopup="dialog" (click)="openSheet()">
+  <button
+    #pill
+    type="button"
+    class="offline-pill"
+    [class.offline-pill--loading]="pulsing()"
+    aria-haspopup="dialog"
+    (click)="openSheet()"
+    (animationiteration)="breathTaken($event)"
+    (animationend)="pulseEnded($event)"
+  >
     <svg
       aria-hidden="true"
       width="16"
