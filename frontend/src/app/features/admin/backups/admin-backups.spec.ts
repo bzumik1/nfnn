@@ -75,7 +75,7 @@ describe('Given an administrator on the backups page', () => {
   function texts(selector: string): string[] {
     return Array.from(
       fixture.nativeElement.querySelectorAll(selector) as NodeListOf<HTMLElement>,
-    ).map((element) => (element.textContent ?? '').replace(/\s+/g, ' ').trim());
+    ).map((element) => accessibleText(element));
   }
 
   function button(name: string): HTMLButtonElement {

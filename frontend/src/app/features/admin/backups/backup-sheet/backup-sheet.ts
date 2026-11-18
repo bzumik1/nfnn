@@ -5,10 +5,11 @@ import { formatBankTime } from '../../../donations/donation-date';
 import { BackupFileResponse } from '../../admin-api';
 import { formatSize } from '../backup-format';
 import { backupKindName } from '../backup-kinds';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 
 @Component({
   selector: 'app-backup-sheet',
-  imports: [Dialog, NeedsConnection],
+  imports: [BusyLabel, Dialog, NeedsConnection],
   templateUrl: './backup-sheet.html',
   styleUrl: './backup-sheet.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

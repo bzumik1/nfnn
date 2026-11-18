@@ -213,15 +213,18 @@
                   deciding() !== null || unknownScope || (!asksCode() && !passkeySupported)
                 "
               >
-                @if (deciding() === 'allow') {
-                  <span i18n="@@donor.connect.consent.allowing">Povolujeme…</span>
-                } @else if (asksCode()) {
-                  <span i18n="@@donor.connect.consent.allow">Povolit</span>
-                } @else {
-                  <span i18n="@@donor.connect.consent.allowWithPasskey"
-                    >Povolit přístupovým klíčem</span
-                  >
-                }
+                <app-busy-label [busy]="deciding() === 'allow'">
+                  <span when-idle>
+                    @if (asksCode()) {
+                      <span i18n="@@donor.connect.consent.allow">Povolit</span>
+                    } @else {
+                      <span i18n="@@donor.connect.consent.allowWithPasskey"
+                        >Povolit přístupovým klíčem</span
+                      >
+                    }
+                  </span>
+                  <span when-busy i18n="@@donor.connect.consent.allowing">Povolujeme…</span>
+                </app-busy-label>
               </button>
               <button
                 appNeedsConnection
@@ -230,11 +233,10 @@
                 [disabled]="deciding() !== null"
                 (click)="deny()"
               >
-                @if (deciding() === 'deny') {
-                  <span i18n="@@donor.connect.consent.denying">Odmítám…</span>
-                } @else {
-                  <span i18n="@@donor.connect.consent.deny">Odmítnout</span>
-                }
+                <app-busy-label [busy]="deciding() === 'deny'">
+                  <span when-idle i18n="@@donor.connect.consent.deny">Odmítnout</span>
+                  <span when-busy i18n="@@donor.connect.consent.denying">Odmítám…</span>
+                </app-busy-label>
               </button>
             </div>
           </form>
@@ -280,13 +282,12 @@
                 [disabled]="deciding() !== null"
                 (click)="deny()"
               >
-                @if (deciding() === 'deny') {
-                  <span i18n="@@donor.connect.consent.denying">Odmítám…</span>
-                } @else {
-                  <span i18n="@@donor.connect.notAdmin.back"
+                <app-busy-label [busy]="deciding() === 'deny'">
+                  <span when-idle i18n="@@donor.connect.notAdmin.back"
                     >Odmítnout a vrátit se do aplikace</span
                   >
-                }
+                  <span when-busy i18n="@@donor.connect.consent.denying">Odmítám…</span>
+                </app-busy-label>
               </button>
             </div>
           </div>

@@ -173,7 +173,7 @@ describe('Given an administrator on the bank logos page', () => {
     );
     expect(text('[data-code="4000"] .bank-not-allowed')).toContain('Adresa už není povolená');
     expect(
-      Array.from(row('4000').querySelectorAll('button')).map((b) => normalized(b.textContent!)),
+      Array.from(row('4000').querySelectorAll('button')).map((b) => accessibleText(b)),
     ).toEqual(['Uložit a stáhnout', 'Odebrat']);
     expect(button(row('0800'), 'Stáhnout znovu')).toBeTruthy();
   });

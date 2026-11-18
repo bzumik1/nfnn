@@ -257,7 +257,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
       );
       expect(
         [...dialog.querySelectorAll('.ui-dialog__actions button')].map((action) =>
-          normalized(action.textContent),
+          accessibleText(action),
         ),
       ).toEqual(['Smazat data a odhlásit', 'Zrušit']);
       expect(button('Zrušit').hasAttribute('autofocus')).toBe(true);

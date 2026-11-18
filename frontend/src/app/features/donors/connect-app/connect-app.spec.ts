@@ -454,7 +454,7 @@ describe('Given an application sent the browser to the connection page', () => {
 
       expect(element('#connect-app-code')).not.toBeNull();
       const labels = Array.from(root().querySelectorAll('form button')).map((button) =>
-        button.textContent?.trim(),
+        accessibleText(button),
       );
       expect(labels).toEqual(['Povolit přístupovým klíčem', 'Povolit', 'Odmítnout']);
     });
@@ -470,7 +470,7 @@ describe('Given an application sent the browser to the connection page', () => {
         'Povolení potvrďte svým přístupovým klíčem, i když jste se jím už přihlásili.',
       );
       const labels = Array.from(root().querySelectorAll('form button')).map((button) =>
-        button.textContent?.trim(),
+        accessibleText(button),
       );
       expect(labels).toEqual(['Zadat kód z aplikace', 'Povolit přístupovým klíčem', 'Odmítnout']);
 

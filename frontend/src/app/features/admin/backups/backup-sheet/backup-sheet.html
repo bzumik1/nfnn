@@ -11,11 +11,10 @@
       [disabled]="downloading()"
       (click)="download.emit()"
     >
-      @if (downloading()) {
-        <ng-container i18n="@@admin.backups.download.busy">Stahujeme…</ng-container>
-      } @else {
-        <ng-container i18n="@@admin.backups.download.start">Stáhnout</ng-container>
-      }
+      <app-busy-label [busy]="downloading()">
+        <span when-idle i18n="@@admin.backups.download.start">Stáhnout</span>
+        <span when-busy i18n="@@admin.backups.download.busy">Stahujeme…</span>
+      </app-busy-label>
     </button>
     @if (failure(); as failure) {
       <p class="ui-field-error" role="alert">{{ failure }}</p>

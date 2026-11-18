@@ -64,15 +64,10 @@
                   [disabled]="refreshing()"
                   (click)="refresh()"
                 >
-                  @if (refreshing()) {
-                    <ng-container i18n="@@admin.logs.diagnostics.refreshing"
-                      >Obnovujeme…</ng-container
-                    >
-                  } @else {
-                    <ng-container i18n="@@admin.logs.diagnostics.refresh"
-                      >Obnovit stav</ng-container
-                    >
-                  }
+                  <app-busy-label [busy]="refreshing()">
+                    <span when-idle i18n="@@admin.logs.diagnostics.refresh">Obnovit stav</span>
+                    <span when-busy i18n="@@admin.logs.diagnostics.refreshing">Obnovujeme…</span>
+                  </app-busy-label>
                 </button>
                 @if (refreshFailed()) {
                   <p

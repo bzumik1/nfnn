@@ -224,7 +224,7 @@ describe('Given the contact form', () => {
     expect(element('#contact-message').hasAttribute('enterkeyhint')).toBe(false);
   });
 
-  it('when the message is on its way, then the button is locked and keeps both labels under the sending name', async () => {
+  it('when the message is on its way, then the button says the foundation is sending it', async () => {
     await fillInValidMessage();
 
     await submit();
