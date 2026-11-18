@@ -359,6 +359,58 @@ describe('Given an administrator on the administration home', () => {
       expect(fixture.nativeElement.querySelector('.attention')).toBe(attention);
     });
 
+    it('then a check still running when the loading delay ends puts the summary with its loading line under what needs attention, which keeps its focus, and something new found later leaves it there', async () => {
+      http.match(IMPORT_STATE_URL).forEach((pending) => pending.flush(importState()));
+      http.match(OVERVIEW_URL).forEach((pending) => pending.flush(overview()));
+      http.match(BACKUPS_URL).forEach((pending) => pending.flush(backupsView()));
+      http.match(UNPAIRED_URL).forEach((pending) => pending.flush(paymentList([])));
+      http
+        .match(ADMINISTRATORS_URL)
+        .forEach((pending) => pending.flush({ items: [administrator()] }));
+      http.match(SIGNING_KEYS_URL).forEach((pending) => pending.flush(receiptSigningKeys()));
+      http.match(SIGNATORY_URL).forEach((pending) => pending.flush(receiptSignatory()));
+      http.match(RELEASE_URL).forEach((pending) => pending.flush(releaseView()));
+      fixture.destroy();
+      vi.useFakeTimers();
+      try {
+        fixture = TestBed.createComponent(AdminHome);
+        fixture.detectChanges();
+        http.expectOne(IMPORT_STATE_URL).flush(
+          importState({
+            coveredFrom: null,
+            coveredTo: null,
+            lastAttemptedAt: null,
+            lastSucceededAt: null,
+          }),
+        );
+        await settleWithFakeTimers();
+        const attention = fixture.nativeElement.querySelector('.attention');
+        const link = fixture.nativeElement.querySelector('.attention-import a') as HTMLElement;
+        link.focus();
+
+        expect(fixture.nativeElement.querySelector('app-since-last-visit').hidden).toBe(true);
+
+        await vi.advanceTimersByTimeAsync(LOADING_DELAY_MS);
+        await settleWithFakeTimers();
+
+        expect(order()).toEqual(['attention', 'since']);
+        const summary = fixture.nativeElement.querySelector('app-since-last-visit') as HTMLElement;
+        expect(summary.hidden).toBe(false);
+        expect(summary.textContent).toContain('Zjišťujeme, co je od minula nového…');
+        expect(fixture.nativeElement.querySelector('.attention')).toBe(attention);
+        expect(document.activeElement).toBe(link);
+
+        visitState.set(readyVisit(true));
+        await settleWithFakeTimers();
+
+        expect(order()).toEqual(['attention', 'since']);
+        expect(fixture.nativeElement.querySelector('.attention')).toBe(attention);
+        expect(document.activeElement).toBe(link);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('then a check that fails only after the loading delay leaves the summary under what needs attention too', async () => {
       await afterTheLoadingDelay(() => visit({ kind: 'failed' }));
 
