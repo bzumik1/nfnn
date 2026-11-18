@@ -125,11 +125,10 @@
                 class="ui-button ui-button--primary"
                 [disabled]="busy()"
               >
-                @if (saving()) {
-                  <ng-container i18n="@@admin.about.saving">Ukládáme…</ng-container>
-                } @else {
-                  <ng-container i18n="@@admin.about.save">Uložit a ukázat na webu</ng-container>
-                }
+                <app-busy-label [busy]="saving()">
+                  <span when-idle i18n="@@admin.about.save">Uložit a ukázat na webu</span>
+                  <span when-busy i18n="@@admin.about.saving">Ukládáme…</span>
+                </app-busy-label>
               </button>
             </div>
           }
@@ -164,11 +163,10 @@
                   [disabled]="removing()"
                   (click)="remove()"
                 >
-                  @if (removing()) {
-                    <ng-container i18n="@@admin.about.removing">Odebíráme…</ng-container>
-                  } @else {
-                    <ng-container i18n="@@admin.about.remove.yes">Odebrat a smazat</ng-container>
-                  }
+                  <app-busy-label [busy]="removing()">
+                    <span when-idle i18n="@@admin.about.remove.yes">Odebrat a smazat</span>
+                    <span when-busy i18n="@@admin.about.removing">Odebíráme…</span>
+                  </app-busy-label>
                 </button>
                 <button
                   #removeCancel

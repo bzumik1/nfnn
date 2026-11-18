@@ -14,6 +14,8 @@ import {
   waitsForConnection,
 } from '../device-copy/testing/opened-copy';
 import { aboutPhoto as heldPhoto } from '../../content/testing/about-fixtures';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const ABOUT_URL = '/api/admin/content/about';
 const MEDIA_URL = '/api/admin/content/media';
@@ -70,7 +72,7 @@ function findButton(fixture: ComponentFixture<unknown>, name: string): HTMLButto
   return (
     Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name) ?? null
+    ).find((candidate) => accessibleText(candidate) === name) ?? null
   );
 }
 
@@ -166,7 +168,7 @@ describe('Given an administrator and an About section without a photo', () => {
       photoAlt: 'Malý chlapec v náručí dvou dospělých',
       caption: 'Kde to všechno začalo',
     });
-    expect(text(fixture, 'button[type="submit"]')).toBe('Ukládáme…');
+    expect(accessibleText(element(fixture, 'button[type="submit"]'))).toBe('Ukládáme…');
     save.flush({ photo: aboutPhoto({ id: IMAGE_ID }) });
     await settle(fixture);
 
@@ -327,6 +329,30 @@ describe('Given an administrator and an About section with a saved photo', () =>
 
     expect(fixture.nativeElement.querySelector('.remove-card [role="group"]')).toBeNull();
     expect(document.activeElement).toBe(button(fixture, 'Odebrat fotku z webu'));
+  });
+
+  it('when they save and the answer has not come yet, then the button is locked and keeps both labels under the saving name', async () => {
+    await type(fixture, '#about-photo-caption', 'Kde to začalo');
+    await submit(fixture);
+
+    const save = element<HTMLButtonElement>(fixture, 'button[type="submit"]');
+    expect(save.disabled).toBe(true);
+    expect(labelFaces(save)).toEqual(['Uložit a ukázat na webu', 'Ukládáme…']);
+    expect(accessibleText(save)).toBe('Ukládáme…');
+    http.expectOne(ABOUT_URL).flush({ photo: aboutPhoto({ caption: 'Kde to začalo' }) });
+    await settle(fixture);
+  });
+
+  it('when they confirm the removal and the answer has not come yet, then the button is locked and keeps both labels under the removing name', async () => {
+    await click(fixture, 'Odebrat fotku z webu');
+    await click(fixture, 'Odebrat a smazat');
+
+    const yes = element<HTMLButtonElement>(fixture, '.confirm .ui-button--danger');
+    expect(yes.disabled).toBe(true);
+    expect(labelFaces(yes)).toEqual(['Odebrat a smazat', 'Odebíráme…']);
+    expect(accessibleText(yes)).toBe('Odebíráme…');
+    http.expectOne(ABOUT_URL).flush({ photo: null });
+    await settle(fixture);
   });
 
   it('when they confirm the removal, then the photo goes and the page says the placeholder shows again', async () => {

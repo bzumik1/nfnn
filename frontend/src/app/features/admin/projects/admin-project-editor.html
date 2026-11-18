@@ -385,13 +385,18 @@
                   class="ui-button ui-button--primary"
                   [disabled]="busy() || uploading()"
                 >
-                  @if (saving()) {
-                    <span i18n="@@admin.projectEditor.saving">Ukládáme…</span>
-                  } @else if (publishState() === 'live') {
-                    <span i18n="@@admin.projectEditor.save.published">Uložit a ukázat na webu</span>
-                  } @else {
-                    <span i18n="@@admin.projectEditor.save.scheduled">Uložit změny</span>
-                  }
+                  <app-busy-label [busy]="saving() !== null">
+                    <span when-idle>
+                      @if (publishState() === 'live') {
+                        <span i18n="@@admin.projectEditor.save.published"
+                          >Uložit a ukázat na webu</span
+                        >
+                      } @else {
+                        <span i18n="@@admin.projectEditor.save.scheduled">Uložit změny</span>
+                      }
+                    </span>
+                    <span when-busy i18n="@@admin.projectEditor.saving">Ukládáme…</span>
+                  </app-busy-label>
                 </button>
                 <button
                   appNeedsConnection
@@ -400,19 +405,20 @@
                   [disabled]="busy()"
                   (click)="unpublish()"
                 >
-                  @if (unpublishing()) {
-                    <ng-container i18n="@@admin.projectEditor.unpublishing"
-                      >Stahujeme…</ng-container
-                    >
-                  } @else if (publishState() === 'live') {
-                    <ng-container i18n="@@admin.projectEditor.unpublish"
-                      >Stáhnout z webu</ng-container
-                    >
-                  } @else {
-                    <ng-container i18n="@@admin.projectEditor.unpublish.scheduled"
-                      >Zrušit zveřejnění</ng-container
-                    >
-                  }
+                  <app-busy-label [busy]="unpublishing()">
+                    <span when-idle>
+                      @if (publishState() === 'live') {
+                        <ng-container i18n="@@admin.projectEditor.unpublish"
+                          >Stáhnout z webu</ng-container
+                        >
+                      } @else {
+                        <ng-container i18n="@@admin.projectEditor.unpublish.scheduled"
+                          >Zrušit zveřejnění</ng-container
+                        >
+                      }
+                    </span>
+                    <span when-busy i18n="@@admin.projectEditor.unpublishing">Stahujeme…</span>
+                  </app-busy-label>
                 </button>
                 @if (publicUrl(); as url) {
                   <a class="public-link" [href]="url" target="_blank" rel="noopener"
@@ -434,11 +440,10 @@
                   class="ui-button"
                   [disabled]="busy() || uploading()"
                 >
-                  @if (saving() === 'save') {
-                    <span i18n="@@admin.projectEditor.saving">Ukládáme…</span>
-                  } @else {
-                    <span i18n="@@admin.projectEditor.save.new">Uložit koncept</span>
-                  }
+                  <app-busy-label [busy]="saving() === 'save'">
+                    <span when-idle i18n="@@admin.projectEditor.save.new">Uložit koncept</span>
+                    <span when-busy i18n="@@admin.projectEditor.saving">Ukládáme…</span>
+                  </app-busy-label>
                 </button>
                 <button
                   appNeedsConnection
@@ -447,13 +452,12 @@
                   [disabled]="busy() || uploading()"
                   (click)="requestPublish()"
                 >
-                  @if (saving() === 'publish') {
-                    <span i18n="@@admin.projectEditor.publishing">Zveřejňujeme…</span>
-                  } @else {
-                    <span i18n="@@admin.projectEditor.publish.saveAndPublish"
+                  <app-busy-label [busy]="saving() === 'publish'">
+                    <span when-idle i18n="@@admin.projectEditor.publish.saveAndPublish"
                       >Uložit a zveřejnit</span
                     >
-                  }
+                    <span when-busy i18n="@@admin.projectEditor.publishing">Zveřejňujeme…</span>
+                  </app-busy-label>
                 </button>
               }
             </div>
@@ -496,13 +500,10 @@
                   [disabled]="deleting()"
                   (click)="delete()"
                 >
-                  @if (deleting()) {
-                    <ng-container i18n="@@admin.projectEditor.deleting">Mažeme…</ng-container>
-                  } @else {
-                    <ng-container i18n="@@admin.projectEditor.delete.yes"
-                      >Smazat natrvalo</ng-container
-                    >
-                  }
+                  <app-busy-label [busy]="deleting()">
+                    <span when-idle i18n="@@admin.projectEditor.delete.yes">Smazat natrvalo</span>
+                    <span when-busy i18n="@@admin.projectEditor.deleting">Mažeme…</span>
+                  </app-busy-label>
                 </button>
                 <button
                   #deleteCancel

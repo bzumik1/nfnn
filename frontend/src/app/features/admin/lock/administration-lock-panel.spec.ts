@@ -3,13 +3,15 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth-store';
 import type { Donor } from '../../../core/auth/donor';
 import { PasskeyAuthenticator } from '../../../core/auth/passkey-authenticator';
 import { sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { AdministrationLockPanel } from './administration-lock-panel';
 import { AdministrationLockService } from './administration-lock-service';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 describe('Given the panel of the locked administration', () => {
   let fixture: ComponentFixture<AdministrationLockPanel>;
@@ -76,7 +78,7 @@ describe('Given the panel of the locked administration', () => {
 
   function buttons(): string[] {
     return Array.from(fixture.nativeElement.querySelectorAll('button')).map((button) =>
-      (button as HTMLElement).textContent!.replace(/\s+/g, ' ').trim(),
+      accessibleText(button as HTMLElement),
     );
   }
 
@@ -128,6 +130,20 @@ describe('Given the panel of the locked administration', () => {
 
       expect(lock.unlockWithPasskey).toHaveBeenCalledOnce();
       expect(element('[role="alert"]')).toBeNull();
+    });
+
+    it('and the passkey is pressed and has not answered yet, then the button is locked and keeps both labels under the waiting name', async () => {
+      lock.unlockWithPasskey.mockReturnValue(new Promise<boolean>(() => undefined));
+      element('button.lock-passkey')!.click();
+      await settle();
+
+      const passkey = element('button.lock-passkey') as HTMLButtonElement;
+      expect(passkey.disabled).toBe(true);
+      expect(labelFaces(passkey)).toEqual([
+        'Odemknout přístupovým klíčem',
+        'Čekáme na přístupový klíč…',
+      ]);
+      expect(accessibleText(passkey)).toBe('Čekáme na přístupový klíč…');
     });
 
     it('and the passkey does not open it, then it says so and offers the password', async () => {
@@ -193,6 +209,20 @@ describe('Given the panel of the locked administration', () => {
       expect(lock.unlockWithAccountPasskey).toHaveBeenCalledOnce();
       expect(lock.unlockWithPasskey).not.toHaveBeenCalled();
       expect(element('[role="alert"]')).toBeNull();
+    });
+
+    it('and the passkey is pressed and the server has not answered yet, then the button is locked and keeps both labels under the waiting name', async () => {
+      lock.unlockWithAccountPasskey.mockReturnValue(new Promise<boolean>(() => undefined));
+      element('button.lock-passkey')!.click();
+      await settle();
+
+      const passkey = element('button.lock-passkey') as HTMLButtonElement;
+      expect(passkey.disabled).toBe(true);
+      expect(labelFaces(passkey)).toEqual([
+        'Odemknout přístupovým klíčem',
+        'Čekáme na přístupový klíč…',
+      ]);
+      expect(accessibleText(passkey)).toBe('Čekáme na přístupový klíč…');
     });
 
     it('and the passkey is cancelled, then it says so and offers the password', async () => {
@@ -281,6 +311,20 @@ describe('Given the panel of the locked administration', () => {
         await settle();
         expect((element('#zamek-heslo') as HTMLInputElement).value).toBe('');
         expect((element('#zamek-kod') as HTMLInputElement).value).toBe('');
+      });
+
+      it('and both are sent and the server has not answered yet, then the button is locked and keeps both labels under the unlocking name', async () => {
+        lock.unlockWithPassword.mockReturnValue(NEVER);
+        type('#zamek-heslo', 'správné heslo');
+        type('#zamek-kod', '482913');
+        await settle();
+        element('form')!.dispatchEvent(new Event('submit'));
+        await settle();
+
+        const unlock = element('button.lock-unlock') as HTMLButtonElement;
+        expect(unlock.disabled).toBe(true);
+        expect(labelFaces(unlock)).toEqual(['Odemknout', 'Odemykáme…']);
+        expect(accessibleText(unlock)).toBe('Odemykáme…');
       });
 
       it('and the code is not six digits, then the field says so and nothing is sent', async () => {

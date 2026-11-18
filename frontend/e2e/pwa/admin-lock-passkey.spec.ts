@@ -303,7 +303,9 @@ test.describe('Given an administrator who signs in with the password and has a p
     await page.goto('/sprava/prehledy');
     await expect(page.getByRole('heading', { level: 1, name: LOCKED })).toBeVisible();
     const unlockButtons = page.locator('.lock-actions').getByRole('button');
-    await expect(unlockButtons).toHaveText(['Odemknout přístupovým klíčem', 'Použít heslo']);
+    await expect(unlockButtons).toHaveCount(2);
+    await expect(unlockButtons.first()).toHaveAccessibleName('Odemknout přístupovým klíčem');
+    await expect(unlockButtons.last()).toHaveAccessibleName('Použít heslo');
     await unlockButtons.first().click();
 
     await expect(page.getByRole('heading', { level: 1, name: 'Měsíční e-mail' })).toBeVisible();

@@ -1,6 +1,8 @@
 import { loggerEntry, logOverride } from '../../testing/admin-fixtures';
 import { LOGGERS_URL, LogPageHarness, problem } from '../testing/log-page-harness';
 import { AdminLogLevels } from './admin-log-levels';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 
 const LOGGERS = [
   loggerEntry({ logger: 'ROOT' }),
@@ -76,6 +78,43 @@ describe('Given an administrator on the log levels page', () => {
       'Logger cz.novanadeje.app má zase původní úroveň.',
     );
     expect(page.has('.overrides')).toBe(false);
+  });
+
+  it('when they end a raised level and the answer has not come yet, then the button is locked and keeps both labels under the returning name', async () => {
+    await load(RAISED);
+
+    await page.click('Vrátit úroveň loggeru cz.novanadeje.app');
+
+    const reset = page.element<HTMLButtonElement>('.overrides button');
+    expect(reset.disabled).toBe(true);
+    expect(labelFaces(reset)).toEqual(['Vrátit', 'Vracíme…']);
+    expect(page.text('.overrides .ui-list__value')).toBe('Vracíme…');
+    page.http
+      .expectOne(`${LOGGERS_URL}/cz.novanadeje.app`)
+      .flush(null, { status: 204, statusText: 'No Content' });
+    page.http.expectOne(LOGGERS_URL).flush({ loggers: LOGGERS });
+    await page.settle();
+  });
+
+  it('when they put a level and the answer has not come yet, then the button is locked and keeps both labels under the setting name', async () => {
+    await load();
+    page.element<HTMLButtonElement>('.watched button.ui-list__row').click();
+    await page.settle();
+    radio('WARN').click();
+    await page.settle();
+    await page.click('1 h');
+
+    await page.click('Nastavit na 1 h');
+
+    const submit = page.element<HTMLButtonElement>('dialog button.submit');
+    expect(submit.disabled).toBe(true);
+    expect(labelFaces(submit)).toEqual(['Nastavit na 1 h', 'Nastavujeme…']);
+    expect(accessibleText(submit)).toBe('Nastavujeme…');
+    page.http
+      .expectOne(`${LOGGERS_URL}/ROOT`)
+      .flush(logOverride({ logger: 'ROOT', level: 'WARN', until: '2026-10-23T11:07:30Z' }));
+    page.http.expectOne(LOGGERS_URL).flush({ loggers: LOGGERS });
+    await page.settle();
   });
 
   it('when a level is raised, then the raised and the watched loggers are cards with their heading inside, above their rows', async () => {

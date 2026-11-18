@@ -39,11 +39,10 @@
           [disabled]="busy()"
           (click)="withPasskey()"
         >
-          @if (busy()) {
-            <ng-container i18n="@@admin.lock.passkey.busy">Čekáme na přístupový klíč…</ng-container>
-          } @else {
-            <ng-container i18n="@@admin.lock.passkey">Odemknout přístupovým klíčem</ng-container>
-          }
+          <app-busy-label [busy]="busy()">
+            <span when-idle i18n="@@admin.lock.passkey">Odemknout přístupovým klíčem</span>
+            <span when-busy i18n="@@admin.lock.passkey.busy">Čekáme na přístupový klíč…</span>
+          </app-busy-label>
         </button>
       } @else if (accountPasskeyUnlocks()) {
         <button
@@ -53,11 +52,10 @@
           [disabled]="busy() || !online()"
           (click)="withAccountPasskey()"
         >
-          @if (busy()) {
-            <ng-container i18n="@@admin.lock.passkey.busy">Čekáme na přístupový klíč…</ng-container>
-          } @else {
-            <ng-container i18n="@@admin.lock.passkey">Odemknout přístupovým klíčem</ng-container>
-          }
+          <app-busy-label [busy]="busy()">
+            <span when-idle i18n="@@admin.lock.passkey">Odemknout přístupovým klíčem</span>
+            <span when-busy i18n="@@admin.lock.passkey.busy">Čekáme na přístupový klíč…</span>
+          </app-busy-label>
         </button>
       }
       @if (passwordUnlocks()) {
@@ -146,11 +144,10 @@
         appNeedsConnection
         [disabled]="busy() || !online()"
       >
-        @if (busy()) {
-          <ng-container i18n="@@admin.lock.password.busy">Odemykáme…</ng-container>
-        } @else {
-          <ng-container i18n="@@admin.lock.password.submit">Odemknout</ng-container>
-        }
+        <app-busy-label [busy]="busy()">
+          <span when-idle i18n="@@admin.lock.password.submit">Odemknout</span>
+          <span when-busy i18n="@@admin.lock.password.busy">Odemykáme…</span>
+        </app-busy-label>
       </button>
       <button
         type="button"

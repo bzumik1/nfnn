@@ -347,14 +347,14 @@ test.describe('Given a signed-in donor', () => {
     await mockDonorApi(page, noDonations);
     await signIn(page);
 
-    await page.getByRole('link', { name: 'Přidat účet, ze kterého jste platili' }).click();
+    await page.getByRole('link', { name: 'Přidat bankovní účet, ze kterého jste platili' }).click();
 
     await expect(page).toHaveURL(/\/darce\/ucty$/);
-    const dialog = page.getByRole('dialog', { name: 'Přidat účet' });
+    const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
     await expect(dialog).toBeVisible();
     await dialog.locator('.add-account-close').click();
     await expect(dialog).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Přidat účet' })).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Přidat bankovní účet' })).toBeFocused();
   });
 
   test('when they check for new payments and a gift has arrived, then the page says so and lists it', async ({

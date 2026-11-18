@@ -22,6 +22,8 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminProjectEditor } from './admin-project-editor';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import {
   contentCopy,
   openOfflineFromCopy,
@@ -91,7 +93,7 @@ function text(fixture: ComponentFixture<unknown>, selector: string): string {
 function button(fixture: ComponentFixture<unknown>, name: string): HTMLButtonElement {
   const found = Array.from(
     fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-  ).find((candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name);
+  ).find((candidate) => accessibleText(candidate) === name);
   if (found === undefined) {
     throw new Error(`No button ${name}`);
   }
@@ -309,6 +311,41 @@ describe('Given an administrator writing a new project', () => {
       'Příběh jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.',
     );
     expect(titled).toHaveBeenCalledWith('Úprava příběhu | Správa | Nová naděje – nadační fond');
+  });
+
+  it('when they save a draft and the answer has not come yet, then the button is locked and keeps both labels under the saving name', async () => {
+    await type(fixture, '#projects-title', 'Benefiční koncert');
+    await type(fixture, '#projects-year', '2026');
+    await type(fixture, '#projects-perex', 'Zveme vás na koncert.');
+    await type(fixture, '#projects-body', 'Text o koncertu.');
+    await submit(fixture);
+
+    const save = element<HTMLButtonElement>(fixture, '.bar-actions button[type="submit"]');
+    expect(save.disabled).toBe(true);
+    expect(labelFaces(save)).toEqual(['Uložit koncept', 'Ukládáme…']);
+    expect(accessibleText(save)).toBe('Ukládáme…');
+    http.expectOne(PROJECTS_URL).flush(draftProject());
+    await settle(fixture);
+  });
+
+  it('when they save and publish and the answer has not come yet, then the button is locked and keeps both labels under the publishing name', async () => {
+    await type(fixture, '#projects-title', 'Benefiční koncert');
+    await type(fixture, '#projects-perex', 'Zveme vás na koncert.');
+    await type(fixture, '#projects-body', 'Text o koncertu.');
+    await type(fixture, '#projects-publish-date', '2026-10-30');
+    button(fixture, 'Uložit a zveřejnit').click();
+    await settle(fixture);
+
+    const publish = element<HTMLButtonElement>(fixture, '.bar-actions .ui-button--primary');
+    expect(publish.disabled).toBe(true);
+    expect(labelFaces(publish)).toEqual(['Uložit a zveřejnit', 'Zveřejňujeme…']);
+    expect(accessibleText(publish)).toBe('Zveřejňujeme…');
+    http.expectOne(PROJECTS_URL).flush(draftProject());
+    await settle(fixture);
+    http
+      .expectOne(`${PROJECTS_URL}/${draftProject().id}/publish`)
+      .flush(draftProject({ publishedOn: '2026-10-30', live: false }));
+    await settle(fixture);
   });
 
   it('when they write it and save and publish at once, then it is created and published with the chosen date', async () => {
@@ -924,6 +961,35 @@ describe('Given an administrator editing a published project', () => {
     );
   });
 
+  it('when they save it and the answer has not come yet, then the button is locked and keeps both labels under the saving name', async () => {
+    await loaded();
+    await type(fixture, '#projects-perex', 'Nový perex.');
+    button(fixture, 'Uložit a ukázat na webu').click();
+    await settle(fixture);
+
+    const save = element<HTMLButtonElement>(fixture, '.bar-actions button[type="submit"]');
+    expect(save.disabled).toBe(true);
+    expect(labelFaces(save)).toEqual(['Uložit a ukázat na webu', 'Ukládáme…']);
+    expect(accessibleText(save)).toBe('Ukládáme…');
+    http.expectOne(`${PROJECTS_URL}/${project().id}`).flush(project());
+    await settle(fixture);
+  });
+
+  it('when they take it off the site and the answer has not come yet, then the button is locked and keeps both labels under the taking-off name', async () => {
+    await loaded();
+    button(fixture, 'Stáhnout z webu').click();
+    await settle(fixture);
+
+    const unpublish = element<HTMLButtonElement>(fixture, '.bar-actions .ui-button--quiet');
+    expect(unpublish.disabled).toBe(true);
+    expect(labelFaces(unpublish)).toEqual(['Stáhnout z webu', 'Stahujeme…']);
+    expect(accessibleText(unpublish)).toBe('Stahujeme…');
+    http
+      .expectOne(`${PROJECTS_URL}/${project().id}/unpublish`)
+      .flush(project({ publishedOn: null }));
+    await settle(fixture);
+  });
+
   it('when they take the project off the site, then it becomes a draft and the page says so', async () => {
     await loaded();
     button(fixture, 'Stáhnout z webu').click();
@@ -1096,6 +1162,21 @@ describe('Given an administrator editing a published project', () => {
         state: { deleted: 'Zahrada pro děti' },
       });
       expect(fixture.componentInstance.canLeave()).toBe(true);
+    });
+
+    it('and confirm and the answer has not come yet, then the button is locked and keeps both labels under the deleting name', async () => {
+      vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      element<HTMLButtonElement>(fixture, '.confirm .ui-button--danger').click();
+      await settle(fixture);
+
+      const yes = element<HTMLButtonElement>(fixture, '.confirm .ui-button--danger');
+      expect(yes.disabled).toBe(true);
+      expect(labelFaces(yes)).toEqual(['Smazat natrvalo', 'Mažeme…']);
+      expect(accessibleText(yes)).toBe('Mažeme…');
+      http
+        .expectOne(`${PROJECTS_URL}/${project().id}`)
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle(fixture);
     });
 
     it('and the deletion fails, then the delete card says so and the focus returns to its button', async () => {

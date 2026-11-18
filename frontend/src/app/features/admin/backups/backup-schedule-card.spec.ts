@@ -4,6 +4,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BackupScheduleResponse } from '../admin-api';
 import { backupSchedule } from '../testing/admin-fixtures';
 import { BackupScheduleCard } from './backup-schedule-card';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const SCHEDULE_URL = '/api/admin/operations/backups/schedule';
 
@@ -33,6 +35,10 @@ describe('Given the backup plan card', () => {
 
   function field<T extends HTMLElement>(id: string): T {
     return fixture.nativeElement.querySelector(`#${id}`) as T;
+  }
+
+  function saveButton(): HTMLButtonElement {
+    return fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
   }
 
   function text(selector: string): string {
@@ -90,7 +96,7 @@ describe('Given the backup plan card', () => {
         testRestoreDay: 6,
         testRestoreTime: '05:15',
       });
-      expect(text('button[type="submit"]')).toBe('Ukládáme…');
+      expect(accessibleText(saveButton())).toBe('Ukládáme…');
       const answer = backupSchedule({
         backupTime: '02:30',
         testRestoreDay: 6,
@@ -100,10 +106,21 @@ describe('Given the backup plan card', () => {
       await settle();
 
       expect(saved).toEqual([answer]);
-      expect(text('button[type="submit"]')).toBe('Uložit plán');
+      expect(accessibleText(saveButton())).toBe('Uložit plán');
       expect(text('button[type="submit"] + .ui-form-status')).toBe(
         'Plán záloh jsme uložili: denní záloha 2:30, zkušební obnova v sobotu 5:15.',
       );
+    });
+
+    it('and the administrator saves and the answer has not come yet, then the button is locked and keeps both labels under the saving name', async () => {
+      await type('backup-time', '02:30');
+      await submit();
+
+      expect(saveButton().disabled).toBe(true);
+      expect(labelFaces(saveButton())).toEqual(['Uložit plán', 'Ukládáme…']);
+      expect(accessibleText(saveButton())).toBe('Ukládáme…');
+      http.expectOne(SCHEDULE_URL).flush(backupSchedule({ backupTime: '02:30' }));
+      await settle();
     });
 
     it('and a time is cleared, then the field says what to enter and nothing is sent', async () => {

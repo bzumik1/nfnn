@@ -75,6 +75,7 @@ import {
   DraftOffer,
 } from '../../../shared/ui/draft-offer/draft-offer';
 import { SegmentThumb } from '../../../shared/ui/segment-thumb/segment-thumb';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type EditorMode = 'edit' | 'preview';
@@ -107,6 +108,7 @@ const PUBLISH_DATE_MOVED_TEXT = $localize`:@@admin.newsEditor.draft.dateMoved:Da
 @Component({
   selector: 'app-admin-news-editor',
   imports: [
+    BusyLabel,
     LiveNotice,
     RouterLink,
     FormsModule,

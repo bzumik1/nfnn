@@ -38,21 +38,22 @@
     <li i18n="@@donor.bankAccounts.help.byAccount">
       <span class="help-lead">Co když pošlu platbu bez symbolu?</span> Přiřadíme ji podle účtu, ze
       kterého přišla, pokud jste ho ověřili platbou s vaším symbolem (stačí 1&nbsp;Kč přes „Přidat
-      účet“). Když účet ověříte jako první dárce, přiřadíme vám i dřívější platby z něj bez symbolu.
+      bankovní účet“). Když účet ověříte jako první dárce, přiřadíme vám i dřívější platby z něj bez
+      symbolu.
     </li>
     @if (variableSymbol(); as symbol) {
       <li i18n="@@donor.bankAccounts.help.otherSymbol">
         <span class="help-lead">Posílám trvalým příkazem se starým symbolem</span> Nejjistější je
         změnit v příkazu symbol na váš <strong class="help-symbol ui-figures">{{ symbol }}</strong
-        >. Jinak pošlete z účtu 1&nbsp;Kč se zprávou z QR kódu v „Přidat účet“ (běžný dar nestačí) a
-        my se vás u účtu obvykle zeptáme, jestli jsou platby se starým symbolem vaše.
+        >. Jinak pošlete z účtu 1&nbsp;Kč se zprávou z QR kódu v „Přidat bankovní účet“ (běžný dar
+        nestačí) a my se vás u účtu obvykle zeptáme, jestli jsou platby se starým symbolem vaše.
       </li>
     } @else {
       <li i18n="@@donor.bankAccounts.help.otherSymbolWithoutNumber">
         <span class="help-lead">Posílám trvalým příkazem se starým symbolem</span> Nejjistější je
         změnit v příkazu symbol na váš. Jinak pošlete z účtu 1&nbsp;Kč se zprávou z QR kódu v
-        „Přidat účet“ (běžný dar nestačí) a my se vás u účtu obvykle zeptáme, jestli jsou platby se
-        starým symbolem vaše.
+        „Přidat bankovní účet“ (běžný dar nestačí) a my se vás u účtu obvykle zeptáme, jestli jsou
+        platby se starým symbolem vaše.
       </li>
     }
     <li i18n="@@donor.bankAccounts.help.olderSymbol">

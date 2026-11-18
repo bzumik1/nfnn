@@ -405,7 +405,7 @@ describe('Given the bank accounts card in the overview', () => {
     const rows = [...(element('ul:has(> li.account)')?.children ?? [])];
     expect(rows.map((row) => row.tagName)).toEqual(['LI', 'LI', 'LI']);
     expect(rows.at(-1)?.querySelector('button')).toBe(element('.accounts-add'));
-    expect(normalized(rows.at(-1)?.textContent ?? '')).toBe('Přidat účet');
+    expect(normalized(rows.at(-1)?.textContent ?? '')).toBe('Přidat bankovní účet');
   });
 
   it('when accounts arrive, then the card holds its title and lists the accounts as plain rows edge to edge, with no group title or group note around them', async () => {
@@ -494,11 +494,11 @@ describe('Given the bank accounts card in the overview', () => {
     await respond([]);
 
     expect(element('li.account')).toBeNull();
-    expect(texts('ul:has(.accounts-add) > li')).toEqual(['Přidat účet']);
+    expect(texts('ul:has(.accounts-add) > li')).toEqual(['Přidat bankovní účet']);
     expect(text('.accounts-empty')).toBe(
       'Bankovní účet se tu objeví sám, jakmile z něj pošlete dar s vaším variabilním symbolem. ' +
         'Poslali jste dar bez symbolu, s jiným symbolem nebo ještě před registrací? ' +
-        'Přidejte účet, ze kterého jste platili, tlačítkem „Přidat účet“ a dřívější dary z něj vám obvykle přiřadíme také.',
+        'Přidejte účet, ze kterého jste platili, tlačítkem „Přidat bankovní účet“ a dřívější dary z něj vám obvykle přiřadíme také.',
     );
   });
 
@@ -509,7 +509,7 @@ describe('Given the bank accounts card in the overview', () => {
     expect(text('.accounts-nudge')).toBe(
       'Posíláte trvalým příkazem s jiným symbolem? ' +
         'Nejjednodušší je změnit v příkazu variabilní symbol na 9876543210. ' +
-        'Jinak pošlete 1 Kč přes „Přidat účet“.',
+        'Jinak pošlete 1 Kč přes „Přidat bankovní účet“.',
     );
     expect(text('.accounts-nudge strong')).toBe('9876543210');
   });
@@ -519,7 +519,7 @@ describe('Given the bank accounts card in the overview', () => {
     await respond([]);
 
     expect(text('.accounts-nudge')).toContain(
-      'Nejjednodušší je změnit v příkazu variabilní symbol na váš. Jinak pošlete 1 Kč přes „Přidat účet“.',
+      'Nejjednodušší je změnit v příkazu variabilní symbol na váš. Jinak pošlete 1 Kč přes „Přidat bankovní účet“.',
     );
     expect(element('.accounts-nudge strong')).toBeNull();
   });
@@ -1135,7 +1135,7 @@ describe('Given the bank accounts card in the overview', () => {
       const dialog = element<HTMLDialogElement>('dialog');
       expect(dialog?.open).toBe(true);
       expect(dialog?.getAttribute('aria-labelledby')).toBe('add-account-title');
-      expect(text('#add-account-title')).toBe('Přidat účet');
+      expect(text('#add-account-title')).toBe('Přidat bankovní účet');
       expect(texts('.add-account-text')).toEqual([
         'Pošlete z účtu, který chcete přidat, 1 Kč podle údajů níže. ' +
           'Jakmile platba dorazí, účet se tu objeví a platby z něj vám budeme přiřazovat i bez variabilního symbolu.',

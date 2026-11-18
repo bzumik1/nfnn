@@ -75,11 +75,10 @@
             class="ui-button ui-button--primary"
             [disabled]="saving()"
           >
-            @if (saving()) {
-              <span i18n="@@admin.projects.order.saving">Ukládáme…</span>
-            } @else {
-              <span i18n="@@admin.projects.order.save">Uložit řazení</span>
-            }
+            <app-busy-label [busy]="saving()">
+              <span when-idle i18n="@@admin.projects.order.save">Uložit řazení</span>
+              <span when-busy i18n="@@admin.projects.order.saving">Ukládáme…</span>
+            </app-busy-label>
           </button>
         </form>
       }

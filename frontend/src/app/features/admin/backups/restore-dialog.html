@@ -37,13 +37,12 @@
   }
   <div class="ui-dialog__actions restore-actions">
     <button type="button" class="restore-confirm" [disabled]="busy()" (click)="confirm()">
-      @if (busy()) {
-        <ng-container i18n="@@admin.backups.restoreDialog.busy">Předáváme obnovu…</ng-container>
-      } @else {
-        <ng-container i18n="@@admin.backups.restoreDialog.confirm"
-          >Obnovit a restartovat web</ng-container
+      <app-busy-label [busy]="busy()">
+        <span when-idle i18n="@@admin.backups.restoreDialog.confirm"
+          >Obnovit a restartovat web</span
         >
-      }
+        <span when-busy i18n="@@admin.backups.restoreDialog.busy">Předáváme obnovu…</span>
+      </app-busy-label>
     </button>
     <button
       type="button"

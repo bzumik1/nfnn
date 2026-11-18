@@ -2,6 +2,8 @@
 
 .hero {
   --floating-room: 0rem;
+  --hero-lead-end: 0rem;
+  --hero-shade-end: 0rem;
 
   position: relative;
   min-height: 100vh;
@@ -19,6 +21,22 @@
   height: var(--full-screen-height);
   visibility: hidden;
   pointer-events: none;
+}
+
+.hero-tab-bar-strip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: var(--tab-bar-clearance);
+}
+
+.hero-shade-fade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--hero-shade-fade);
+  height: 0;
 }
 
 .hero-img {
@@ -86,7 +104,7 @@
 .hero-lead {
   color: var(--color-on-image);
   font-size: var(--text-2xl);
-  max-width: 500px;
+  max-width: 31.25rem;
   line-height: var(--leading-loose);
   margin-bottom: var(--space-9);
 }
@@ -112,6 +130,18 @@
   .hero-title {
     width: min-content;
   }
+}
+
+.hero--shaded .hero-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--color-image-shade) 85%, transparent) 0,
+    color-mix(in srgb, var(--color-image-shade) 85%, transparent) var(--hero-lead-end),
+    transparent var(--hero-shade-end)
+  );
 }
 
 .hero-content:has(> .hero-figures) {

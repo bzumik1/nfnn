@@ -58,11 +58,10 @@
                         [attr.aria-label]="resetLabel(entry)"
                         (click)="reset(entry)"
                       >
-                        @if (resetting() === entry.logger) {
-                          <ng-container i18n="@@admin.logs.level.resetting">Vracíme…</ng-container>
-                        } @else {
-                          <ng-container i18n="@@admin.logs.level.resetNow">Vrátit</ng-container>
-                        }
+                        <app-busy-label [busy]="resetting() === entry.logger">
+                          <span when-idle i18n="@@admin.logs.level.resetNow">Vrátit</span>
+                          <span when-busy i18n="@@admin.logs.level.resetting">Vracíme…</span>
+                        </app-busy-label>
                       </button>
                     </span>
                   </div>
@@ -275,11 +274,10 @@
         class="ui-button ui-button--primary submit"
         [disabled]="saving()"
       >
-        @if (saving()) {
-          <ng-container i18n="@@admin.logs.level.busy">Nastavujeme…</ng-container>
-        } @else {
-          {{ submitLabel() }}
-        }
+        <app-busy-label [busy]="saving()">
+          <span when-idle>{{ submitLabel() }}</span>
+          <span when-busy i18n="@@admin.logs.level.busy">Nastavujeme…</span>
+        </app-busy-label>
       </button>
     </form>
   </app-dialog>
