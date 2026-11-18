@@ -34,18 +34,18 @@ export const PAGE_TRANSITION_CLASS = 'page-transition';
 export const PAGE_TRANSITION_LONGEST_MS = 2000;
 export const PAGE_COVER_LONGEST_MS = 5000;
 export const KEPT_PAGES = 3;
-const FRAME_LATE_MS = 100;
+export const FRAME_LATE_MS = 100;
 export const ACCOUNT_RETURNS_KEY = 'nfnnAppAccount';
 
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
 const BAR_ITEMS = ['.back-button', '.account-button'];
-const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
+export const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
 const STANDING_DIALOG = 'dialog[open]:not(.dialog--leaving)';
 const SHEET_HEAD = 'app-sheet-head';
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
 
-interface Running {
+export interface Running {
   readonly kind: PageTransitionKind;
   readonly overlay: HTMLElement;
   readonly swiping: boolean;
@@ -53,7 +53,7 @@ interface Running {
   revealed: boolean;
 }
 
-interface KeptPage {
+export interface KeptPage {
   readonly copy: HTMLElement | null;
   readonly scrollY: number;
   readonly ground: string;
@@ -61,15 +61,15 @@ interface KeptPage {
   readonly sheet?: HTMLElement | null;
 }
 
-interface PlacedPage {
+export interface PlacedPage {
   readonly box: HTMLElement;
   readonly copy: HTMLElement | null;
   readonly scrollY: number;
 }
 
-type BarCurve = 'still' | 'out' | 'out-early' | 'in';
+export type BarCurve = 'still' | 'out' | 'out-early' | 'in';
 
-interface BarItem {
+export interface BarItem {
   readonly element: HTMLElement;
   readonly curve: BarCurve;
 }
@@ -84,22 +84,23 @@ export interface SwipePreview {
 
 @Injectable({ providedIn: 'root' })
 export class PageTransitions {
-  private readonly document = inject(DOCUMENT);
-  private readonly router = inject(Router);
+  readonly document = inject(DOCUMENT);
+  readonly router = inject(Router);
   private readonly chrome = inject(RouteChrome).current;
-  private readonly compact = inject(CompactLayout).isCompact;
+  readonly compact = inject(CompactLayout).isCompact;
   private readonly backTarget = inject(BackTarget);
-  private readonly preview = inject(NavigationPreview);
-  private readonly dirtyForms = inject(DirtyForms);
+  readonly preview = inject(NavigationPreview);
+  readonly dirtyForms = inject(DirtyForms);
   private readonly placement = inject(PagePlacement);
-  private drawing: SwipeDrawing | null = null;
+  drawing: SwipeDrawing | null = null;
+  private readonly lent: (() => void)[] = [];
   private readonly kept = new Map<number, KeptPage>();
-  private handingOver = false;
+  handingOver = false;
   private trigger: NavigationFacts['trigger'] = 'imperative';
   private restoredDepth: number | null = null;
   private standingSheet: HTMLElement | null = null;
-  private running: Running | null = null;
-  private finishing: number | null = null;
+  running: Running | null = null;
+  finishing: number | null = null;
 
   constructor() {
     const events = this.router.events.subscribe((event) => this.follow(event));
@@ -154,168 +155,14 @@ export class PageTransitions {
   }
 
   startSwipe(destination: BackDestination): SwipePreview | null {
-    const view = this.document.defaultView;
-    const layer = this.layer();
-    if (
-      view === null ||
-      layer === null ||
-      this.running !== null ||
-      !motionAllowed(view) ||
-      !this.stepsBySwipe() ||
-      (!this.compact() && this.drawing === null) ||
-      this.document.querySelector(SHOWN_DIALOG) !== null
-    ) {
-      return null;
-    }
-    const behind = destination.kind === 'step' ? this.keptAt(destination.depth, view) : null;
-    const overlay = this.overlay('pop');
-    overlay.classList.add(`${PAGE_TRANSITION_CLASS}--swipe`);
-    const content = this.compact()
-      ? null
-      : (this.drawing?.clipToContent(this.document, overlay) ?? null);
-    const arriving = this.place(overlay, behind ?? this.placeholder(), 'under');
-    const leaving = this.place(overlay, this.keep(layer), 'over');
-    const dress = (into: PlacedPage): BarItem[] =>
-      content?.lineUp() ?? this.dressChrome(overlay, leaving, into);
-    const bar = { items: dress(arriving) };
-    const under = arriving.box;
-    const over = leaving.box;
-    const dim = under.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__dim`);
-    const sheet = behind?.sheet ?? null;
-    const running: Running = { kind: 'pop', overlay, swiping: true, sheet, revealed: false };
-    this.running = running;
-    this.sheetUnder(sheet);
-    const width = Math.max(1, content?.width ?? view.innerWidth);
-    let progress = 0;
-    let offset = 0;
-    let ready = behind !== null;
-    let shown = 0;
-    let catchingUp = false;
-    const follow = (): void => {
-      progress = shown / width;
-      over.style.transform = `translateX(${shown}px)`;
-      under.style.transform = parallaxAt(progress);
-      if (dim !== null) {
-        dim.style.opacity = String(1 - progress);
-      }
-      followBar(bar.items, progress);
-    };
-    const drawn =
-      behind === null && destination.path !== null && !this.dirtyForms.any()
-        ? this.drawUnder(destination.path, running, arriving, (into) => {
-            bar.items = dress(into);
-            ready = true;
-            catchingUp = true;
-            void this.loadDrawing().then(({ closeInOnFinger }) =>
-              closeInOnFinger(view, this.durationOf('--duration-fast'), {
-                finger: () => offset,
-                from: shown,
-                show: (at) => {
-                  shown = at;
-                  follow();
-                },
-                goesOn: () => catchingUp && this.running === running,
-                caughtUp: () => (catchingUp = false),
-              }),
-            );
-          })
-        : Promise.resolve();
-    const settle = async (end: SwipeSettle): Promise<boolean> => {
-      catchingUp = false;
-      if (this.running !== running) {
-        return false;
-      }
-      if (!ready) {
-        await drawn;
-      }
-      if (!ready) {
-        this.preview.discard();
-        if (this.running === running) {
-          this.finish();
-        }
-        return false;
-      }
-      const timing: KeyframeAnimationOptions = {
-        duration: end.durationMs,
-        easing: end.easing,
-        fill: 'forwards',
-      };
-      const motions = [
-        over.animate([{ transform: `translateX(${end.to}px)` }], timing),
-        under.animate([{ transform: end.completes ? 'none' : parallaxAt(0) }], timing),
-        ...(dim === null ? [] : [dim.animate([{ opacity: end.completes ? 0 : 1 }], timing)]),
-        ...barMotions(bar.items, end.completes ? 1 : 0, timing),
-      ];
-      await Promise.race([
-        Promise.allSettled(motions.map((motion) => motion.finished)),
-        new Promise((done) => view.setTimeout(done, PAGE_TRANSITION_LONGEST_MS)),
-      ]);
-      await drawn;
-      if (!end.completes) {
-        this.preview.discard();
-      }
-      if (this.running !== running) {
-        return false;
-      }
-      if (end.completes) {
-        this.handingOver = true;
-        this.finishing = view.setTimeout(() => this.finish(), PAGE_COVER_LONGEST_MS);
-      } else {
-        this.finish();
-      }
-      return end.completes;
-    };
-    return {
-      follow: (to) => {
-        offset = Math.min(width, Math.max(0, to));
-        if (ready && !catchingUp) {
-          shown = offset;
-          follow();
-        }
-      },
-      settle,
-      slideBack: async () => {
-        await settle({
-          completes: false,
-          from: offset,
-          to: 0,
-          durationMs: this.durationOf('--duration-page'),
-          easing: 'ease-out',
-        });
-      },
-    };
-  }
-
-  private async drawUnder(
-    path: string,
-    running: Running,
-    arriving: PlacedPage,
-    drawnUnder: (into: PlacedPage) => void,
-  ): Promise<void> {
-    const { withoutFocus } = await this.loadDrawing();
-    await withoutFocus(this.document, this.layer(), () =>
-      this.preview.visit(path, () => {
-        const layer = this.layer();
-        const scroller = arriving.box.querySelector<HTMLElement>(
-          `.${PAGE_TRANSITION_CLASS}__scroller`,
-        );
-        const drawn = layer === null ? null : this.keep(layer);
-        if (drawn?.copy == null || scroller === null || this.running !== running) {
-          return;
-        }
-        scroller.replaceChildren(drawn.copy);
-        scroller.scrollTop = drawn.scrollY;
-        scroller.style.backgroundColor = drawn.ground;
-        drawnUnder({ box: arriving.box, copy: drawn.copy, scrollY: drawn.scrollY });
-      }),
-    );
+    return this.drawing?.startSwipe(this, destination) ?? null;
   }
 
   loadDrawing(): Promise<SwipeDrawing> {
     return import('./swipe-drawing').then((drawing) => (this.drawing = drawing));
   }
 
-  private sheetUnder(sheet: HTMLElement | null): void {
+  sheetUnder(sheet: HTMLElement | null): void {
     this.document.documentElement.classList.toggle(SHEET_UNDER_CLASS, sheet !== null);
     if (sheet !== null) {
       void this.loadDrawing();
@@ -364,7 +211,7 @@ export class PageTransitions {
       return;
     }
     const overlay = this.overlay(kind);
-    const left = this.keep(layer);
+    const left = this.shown(layer);
     if (kind === 'push') {
       this.keepBehind(this.backTarget.nextDepth() - 1, { ...left, sheet: returningSheet });
     }
@@ -422,7 +269,7 @@ export class PageTransitions {
     }
     const shown = this.place(
       running.overlay,
-      { ...this.keep(layer), sheet: running.sheet },
+      { ...this.shown(layer), sheet: running.sheet },
       running.kind === 'push' ? 'over' : 'under',
     );
     const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
@@ -445,7 +292,7 @@ export class PageTransitions {
     });
   }
 
-  private overlay(kind: PageTransitionKind): HTMLElement {
+  overlay(kind: PageTransitionKind): HTMLElement {
     const overlay = this.document.createElement('div');
     overlay.className = `${PAGE_TRANSITION_CLASS} ${PAGE_TRANSITION_CLASS}--${kind}`;
     overlay.setAttribute('aria-hidden', 'true');
@@ -464,7 +311,7 @@ export class PageTransitions {
     };
   }
 
-  private placeholder(): KeptPage {
+  placeholder(): KeptPage {
     return {
       copy: null,
       scrollY: 0,
@@ -473,7 +320,7 @@ export class PageTransitions {
     };
   }
 
-  private keptAt(depth: number, view: Window): KeptPage | null {
+  keptAt(depth: number, view: Window): KeptPage | null {
     const kept = this.kept.get(depth);
     return kept !== undefined && kept.width === view.innerWidth ? kept : null;
   }
@@ -490,7 +337,7 @@ export class PageTransitions {
     }
   }
 
-  private place(overlay: HTMLElement, kept: KeptPage, position: 'under' | 'over'): PlacedPage {
+  place(overlay: HTMLElement, kept: KeptPage, position: 'under' | 'over'): PlacedPage {
     const page = this.document.createElement('div');
     page.className = `${PAGE_TRANSITION_CLASS}__page ${PAGE_TRANSITION_CLASS}__page--${position}`;
     page.style.backgroundColor = kept.ground;
@@ -529,7 +376,7 @@ export class PageTransitions {
     };
   }
 
-  private dressChrome(
+  dressChrome(
     overlay: HTMLElement,
     leaving: PlacedPage | null,
     arriving: PlacedPage | null,
@@ -598,6 +445,15 @@ export class PageTransitions {
     return copy;
   }
 
+  shown(layer: HTMLElement): KeptPage {
+    const kept = this.keep(layer);
+    const giveBack = this.drawing?.lendPhotos(layer, kept.copy);
+    if (giveBack !== undefined) {
+      this.lent.push(giveBack);
+    }
+    return kept;
+  }
+
   private standingSheetCopy(): HTMLElement | null {
     const dialogs = this.document.querySelectorAll<HTMLElement>(STANDING_DIALOG);
     const top = dialogs.item(dialogs.length - 1);
@@ -644,7 +500,7 @@ export class PageTransitions {
     );
   }
 
-  private durationOf(name: string): number {
+  durationOf(name: string): number {
     const view = this.document.defaultView;
     const token = view?.getComputedStyle(this.document.documentElement).getPropertyValue(name);
     const value = Number.parseFloat(token ?? '');
@@ -663,16 +519,17 @@ export class PageTransitions {
     return view?.getComputedStyle(this.document.documentElement).backgroundColor ?? '';
   }
 
-  private layer(): HTMLElement | null {
+  layer(): HTMLElement | null {
     return this.document.querySelector<HTMLElement>(`.${PAGE_LAYER_CLASS}`);
   }
 
-  private finish(): void {
+  finish(): void {
     const view = this.document.defaultView;
     if (this.finishing !== null) {
       view?.clearTimeout(this.finishing);
       this.finishing = null;
     }
+    this.lent.splice(0).forEach((giveBack) => giveBack());
     this.running?.overlay.remove();
     this.running = null;
     this.handingOver = false;
@@ -684,7 +541,7 @@ export class PageTransitions {
   }
 }
 
-function motionAllowed(view: Window): boolean {
+export function motionAllowed(view: Window): boolean {
   return view.matchMedia?.(LESS_MOTION).matches === false;
 }
 
@@ -704,43 +561,10 @@ function depthIn(state: unknown): number {
   return typeof depth === 'number' ? depth : 0;
 }
 
-function barOpacity(curve: BarCurve, progress: number): string {
-  switch (curve) {
-    case 'out':
-      return String(1 - progress);
-    case 'out-early':
-      return String(Math.max(0, 1 - 2 * progress));
-    case 'in':
-      return String(progress);
-    default:
-      return '';
-  }
-}
-
-function followBar(bar: BarItem[], progress: number): void {
-  bar.forEach((item) => (item.element.style.opacity = barOpacity(item.curve, progress)));
-}
-
-function barMotions(
-  bar: BarItem[],
-  progress: number,
-  timing: KeyframeAnimationOptions,
-): Animation[] {
-  return bar
-    .filter((item) => item.curve !== 'still')
-    .map((item) =>
-      item.element.animate([{ opacity: Number(barOpacity(item.curve, progress)) }], timing),
-    );
-}
-
 function sameTab(from: string, to: string): boolean {
   const here = tabOf(from);
   const there = tabOf(to);
   return here === null || there === null || here.id === there.id;
-}
-
-function parallaxAt(progress: number): string {
-  return `translateX(calc(var(--page-parallax) * ${1 - progress}))`;
 }
 
 export function nextFrame(view: Window, then: (now: number) => void): void {

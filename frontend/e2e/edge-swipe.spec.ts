@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import { deflateSync } from 'node:zlib';
 import {
   administrator,
   mockDonorApi,
@@ -449,6 +450,170 @@ test.describe('Given the app on the home screen of a phone with an article opene
 
     await expect(page).toHaveURL('/aktuality');
     await expect(linkToArticle(page)).toBeFocused();
+  });
+});
+
+const PHOTO_ID = '0199f3e0-0000-7000-8000-00000000a0c1';
+
+function widePhoto(): Buffer {
+  const width = 1600;
+  const height = 1000;
+  const rows = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const at = y * (width * 3 + 1) + 1 + x * 3;
+      rows[at] = (x * 7 + y) % 256;
+      rows[at + 1] = (y * 5) % 256;
+      rows[at + 2] = (x ^ y) % 256;
+    }
+  }
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    let crc = 0xffffffff;
+    for (const byte of body) {
+      crc ^= byte;
+      for (let bit = 0; bit < 8; bit++) {
+        crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+      }
+    }
+    const check = Buffer.alloc(4);
+    check.writeUInt32BE((crc ^ 0xffffffff) >>> 0);
+    return Buffer.concat([length, body, check]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.writeUInt8(8, 8);
+  header.writeUInt8(2, 9);
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(rows)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+async function publishedArticleWithPhoto(page: Page): Promise<void> {
+  const photo = widePhoto();
+  const withPhoto = {
+    ...article,
+    coverImage: { id: PHOTO_ID, url: `/api/content/media/${PHOTO_ID}`, alt: 'Zahrada za školou' },
+  };
+  await page.route(
+    (url) => url.pathname.startsWith('/api/content/media/'),
+    (route) => route.fulfill({ contentType: 'image/png', body: photo }),
+  );
+  await page.route(
+    (url) => url.pathname === `/api/content/news/${article.slug}`,
+    (route) => route.fulfill({ json: withPhoto }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/content/news',
+    (route) =>
+      route.fulfill({ json: { items: [withPhoto], page: 0, size: 10, total: 1, hasMore: false } }),
+  );
+}
+
+interface PhotoProbe {
+  copied: { onScreen: boolean; drawn: boolean }[] | null;
+}
+
+async function markPhotosOnScreen(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    document
+      .querySelectorAll<HTMLImageElement>('.page-layer main img')
+      .forEach((photo) => Object.assign(photo, { nfnnOnScreen: true }));
+  });
+}
+
+async function watchCopiedPhotos(
+  page: Page,
+): Promise<() => Promise<{ onScreen: boolean; drawn: boolean }[]>> {
+  await page.evaluate(() => {
+    const probe = window as unknown as PhotoProbe;
+    probe.copied = null;
+    const watch = new MutationObserver(() => {
+      const over = document.querySelector('.page-transition .page-transition__page--over');
+      if (over === null) {
+        return;
+      }
+      watch.disconnect();
+      probe.copied = Array.from(over.querySelectorAll('main img, .page-transition__scroller img'))
+        .filter((photo): photo is HTMLImageElement => photo instanceof HTMLImageElement)
+        .filter((photo) => photo.alt === 'Zahrada za školou')
+        .map((photo) => ({
+          onScreen: (photo as unknown as { nfnnOnScreen?: boolean }).nfnnOnScreen === true,
+          drawn: photo.complete && photo.naturalWidth > 0,
+        }));
+    });
+    watch.observe(document.body, { childList: true, subtree: true });
+  });
+  return async () => {
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as PhotoProbe).copied))
+      .not.toBeNull();
+    return (await page.evaluate(() => (window as unknown as PhotoProbe).copied)) ?? [];
+  };
+}
+
+function livePhotoStillOnScreen(page: Page): Promise<boolean> {
+  return page
+    .locator('.page-layer main img[alt="Zahrada za školou"]')
+    .first()
+    .evaluate((photo) => (photo as unknown as { nfnnOnScreen?: boolean }).nfnnOnScreen === true);
+}
+
+test.describe('Given the app on the home screen of a phone with an article with a photo', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await inTheHomeScreenApp(page);
+    await mockDonorApi(page);
+    await publishedArticleWithPhoto(page);
+  });
+
+  test('when a finger takes the article opened from the news and lets go short, then the copy shows the very photo already drawn on screen, never one drawn again, and the article gets it back', async ({
+    page,
+  }) => {
+    await page.goto('/aktuality');
+    await linkToArticle(page).click();
+    await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+    await expect(page.getByRole('img', { name: 'Zahrada za školou' })).toBeVisible();
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    await markPhotosOnScreen(page);
+    const copied = await watchCopiedPhotos(page);
+
+    await takeWithFinger(page, 20);
+
+    expect(await copied()).toEqual([{ onScreen: true, drawn: true }]);
+    await restLongerThanAFlick(page);
+    await letGo(page, 120);
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    expect(await livePhotoStillOnScreen(page)).toBe(true);
+  });
+
+  test('when Zpět is pressed on an article opened straight, then the article sliding away shows the very photo already drawn on screen', async ({
+    page,
+  }) => {
+    await page.goto(`/aktuality/${article.slug}`);
+    const photo = page.getByRole('img', { name: 'Zahrada za školou' });
+    await expect(photo).toBeVisible();
+    await expect
+      .poll(() => photo.evaluate((shown: HTMLImageElement) => shown.naturalWidth))
+      .toBeGreaterThan(0);
+    await markPhotosOnScreen(page);
+    const copied = await watchCopiedPhotos(page);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+
+    expect(await copied()).toEqual([{ onScreen: true, drawn: true }]);
+    await expect(page).toHaveURL('/aktuality');
   });
 });
 

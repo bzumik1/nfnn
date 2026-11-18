@@ -220,6 +220,7 @@ describe('Given the app on the home screen of a phone, scrolling restored, with 
     TestBed.inject(PageTransitions);
     document.body.append(document.createElement('app-scrolled-shell'));
     TestBed.inject(ApplicationRef).bootstrap(ScrolledShell);
+    await TestBed.inject(PageTransitions).loadDrawing();
     await router.navigateByUrl('/aktuality');
     vi.useFakeTimers();
     await router.navigateByUrl('/aktuality/clanek');
@@ -369,6 +370,7 @@ describe('Given the app on the home screen of a phone, where the news led to the
     });
     router = TestBed.inject(Router);
     transitions = TestBed.inject(PageTransitions);
+    await TestBed.inject(PageTransitions).loadDrawing();
     await router.navigateByUrl('/aktuality');
   });
 
@@ -722,6 +724,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
           provide: NavigationPreview,
           useValue: {
             active: () => false,
+            drives: () => false,
             discard: () => undefined,
             visit: <T>(path: string, capture: () => T) => {
               visits.push(path);
@@ -739,6 +742,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
         },
       ],
     });
+    await TestBed.inject(PageTransitions).loadDrawing();
     await TestBed.inject(Router).navigateByUrl('/darce/prehled');
     paint(layer, { title: 'Přehled' });
   });
@@ -1028,5 +1032,89 @@ describe('Given the app on a wide screen, where the header and the side navigati
 
     expect(transitions.stepsBySwipe()).toBe(true);
     expect(transitions.followsFinger()).toBe(false);
+  });
+});
+
+describe('Given the app on the home screen of a phone opened straight on the donor overview, whose drawing of the page Zpět leads to gives up while the router still moves', () => {
+  let layer: HTMLElement;
+  let router: Router;
+  let landingMayOpen: (opens: boolean) => void;
+  let previewing: boolean;
+
+  beforeEach(async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
+    });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => ({ finished: Promise.resolve() }),
+    });
+    layer = document.createElement('div');
+    layer.className = PAGE_LAYER_CLASS;
+    document.body.append(layer);
+    previewing = false;
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          {
+            path: '',
+            component: Blank,
+            canActivate: [() => new Promise<boolean>((opens) => (landingMayOpen = opens))],
+          },
+          { path: 'darce/prehled', component: Blank, data: { parent: '/' } },
+        ]),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+        {
+          provide: NavigationPreview,
+          useValue: {
+            active: () => previewing,
+            drives: () => previewing,
+            discard: () => undefined,
+            visit: () => {
+              previewing = true;
+              void router.navigateByUrl('/', { skipLocationChange: true });
+              return Promise.resolve(null);
+            },
+          },
+        },
+      ],
+    });
+    router = TestBed.inject(Router);
+    await TestBed.inject(PageTransitions).loadDrawing();
+    await router.navigateByUrl('/darce/prehled');
+    paint(layer, { title: 'Přehled' });
+  });
+
+  afterEach(() => {
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+    layer.remove();
+    delete (window as { matchMedia?: unknown }).matchMedia;
+    delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    Object.defineProperty(window, 'innerWidth', jsdomWidth!);
+  });
+
+  it('when the finger lets go past half before the router has come to rest, then the still copy keeps covering the page until it has, and the swipe ends without a step', async () => {
+    const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+    swipe.follow(300);
+    const left = swipe.settle({
+      completes: true,
+      from: 300,
+      to: 390,
+      durationMs: 150,
+      easing: 'ease-out',
+    });
+    let ended = false;
+    void left.then(() => (ended = true));
+
+    await vi.dynamicImportSettled();
+    await new Promise((done) => setTimeout(done, 50));
+    expect(ended).toBe(false);
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).not.toBeNull();
+    landingMayOpen(false);
+
+    expect(await left).toBe(false);
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
   });
 });
