@@ -18,6 +18,10 @@ import {
 } from '../../../core/auth/testing/donor-fixtures';
 import { PasswordReset } from './password-reset';
 
+function normalized(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
 describe('Given the page that sets a new password from the e-mail link', () => {
   let harness: RouterTestingHarness;
   let http: HttpTestingController;
@@ -305,6 +309,9 @@ describe('Given the reset link opened in a browser with passkeys', () => {
 
   it('when a new passkey is created, then the link and the device register it and the page asks to sign in with it', async () => {
     await choosePasskey();
+    expect(normalized(element('form').textContent ?? '')).toContain(
+      'ty ztracené pak odeberete v části „Údaje a zabezpečení“.',
+    );
     await fillIn('#reset-passkey-name', 'Nový telefon');
     await submit();
 
@@ -325,6 +332,9 @@ describe('Given the reset link opened in a browser with passkeys', () => {
     await settle();
 
     expect(element('#password-reset-title').textContent).toContain('Přístupový klíč je uložený');
+    expect(normalized(element('.ui-status').textContent ?? '')).toContain(
+      'ztracené klíče pak odeberete v části „Údaje a zabezpečení“.',
+    );
     element<HTMLButtonElement>('.ui-button--primary').click();
     expect(dialog.isOpen()).toBe(true);
   });

@@ -19,6 +19,10 @@ import {
 } from '../../../core/auth/testing/donor-fixtures';
 import { EmailVerification } from './email-verification';
 
+function normalized(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
 describe('Given the page that confirms the e-mail from the registration link', () => {
   let harness: RouterTestingHarness;
   let http: HttpTestingController;
@@ -435,6 +439,9 @@ describe('Given the registration link of a donor who chose a passkey instead of 
     await settle();
 
     expect(element('[role="status"]').textContent).toContain('Přístupový klíč je uložený');
+    expect(normalized(element('[role="status"]').textContent ?? '')).toContain(
+      'Doporučujeme přidat v části „Údaje a zabezpečení“ ještě klíč v dalším zařízení.',
+    );
     element<HTMLButtonElement>('.ui-button--primary').click();
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
   });
@@ -447,7 +454,7 @@ describe('Given the registration link of a donor who chose a passkey instead of 
     await vi.waitFor(() => expect(element('.ui-field-error')).not.toBeNull());
 
     expect(element('.ui-field-error').textContent).toContain(
-      'jde to i později v části Údaje a zabezpečení',
+      'jde to i později v části „Údaje a zabezpečení“.',
     );
     element<HTMLButtonElement>('.link-action').click();
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
