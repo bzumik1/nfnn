@@ -4,7 +4,7 @@ import { QrCode } from './qr-code';
 import { byteSegment, encodeSegments, encodeText, numericSegment } from './qr-encoder';
 import { isDark, QrMatrix } from './qr-matrix';
 import { decodePlainQr } from './testing/plain-qr-decoder';
-import { checkerboard, inverseCheckerboard, qrMatrix } from './testing/qr-matrices';
+import { checkerboard, inverseCheckerboard } from './testing/qr-matrices';
 
 const SIZE = 25;
 
@@ -73,75 +73,6 @@ describe('Given a branded QR code', () => {
         expect(isDark(matrix, column, row)).toBe(true);
       }
     });
-  });
-});
-
-describe('Given a branded QR code whose theme names the times of its wave', () => {
-  const times: Record<string, string> = {
-    '--duration-qr-wave-start': '11ms',
-    '--duration-qr-wave-step': '2ms',
-    '--duration-qr-wave-jitter': '0ms',
-    '--duration-qr-stay': '333ms',
-    '--duration-qr-leave': '0.444s',
-    '--duration-qr-leave-lead': '1ms',
-    '--duration-qr-enter': '222ms',
-    '--duration-qr-enter-lag': '3ms',
-    '--duration-qr-settle': '111ms',
-    '--duration-qr-settle-lag': '4ms',
-    '--duration-qr-star': '777ms',
-    '--duration-qr-badge': '555ms',
-  };
-  let durations: number[];
-
-  beforeEach(() => {
-    durations = [];
-    vi.stubGlobal('matchMedia', () => ({ matches: false }));
-    Object.defineProperty(Element.prototype, 'animate', {
-      configurable: true,
-      value: (_keyframes: Keyframe[], options: KeyframeAnimationOptions) => {
-        durations.push(Number(options.duration));
-        return { cancel: () => undefined };
-      },
-    });
-  });
-
-  afterEach(() => {
-    Reflect.deleteProperty(Element.prototype, 'animate');
-    vi.unstubAllGlobals();
-  });
-
-  it('when half of the matrix changes, then every part of the wave takes its time from the theme', async () => {
-    const fixture = render(checkerboard(SIZE), 'branded');
-    const svg = fixture.nativeElement.querySelector('svg') as SVGSVGElement;
-    for (const [token, value] of Object.entries(times)) {
-      svg.style.setProperty(token, value);
-    }
-    const half = qrMatrix(SIZE, (column, row) =>
-      row < SIZE / 2 ? (column + row) % 2 === 0 : (column + row) % 2 === 1,
-    );
-
-    fixture.componentRef.setInput('matrix', half);
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const themed = [333, 444, 222, 111, 777, 555];
-    for (const duration of themed) {
-      expect(durations).toContain(duration);
-    }
-    const ring = [...new Set(durations)].filter((duration) => !themed.includes(duration));
-    expect(ring).toHaveLength(1);
-    expect(ring[0]).toBeGreaterThan(11);
-    expect(ring[0]).toBeLessThan(11 + 2 * SIZE);
-  });
-
-  it('when the theme names no times, then the matrix changes without a wave', async () => {
-    const fixture = render(checkerboard(SIZE), 'branded');
-
-    fixture.componentRef.setInput('matrix', inverseCheckerboard(SIZE));
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    expect(durations).toEqual([]);
   });
 });
 

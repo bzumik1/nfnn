@@ -149,7 +149,7 @@ function themeTimings(document: Document): LoadingTimings | null {
     : { delayMs, minimumMs, appearMs };
 }
 
-export function milliseconds(token: string): number | null {
+function milliseconds(token: string): number | null {
   const trimmed = token.trim();
   const value = Number.parseFloat(trimmed);
   if (!Number.isFinite(value)) {

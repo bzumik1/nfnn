@@ -10,7 +10,6 @@ import {
   viewChildren,
 } from '@angular/core';
 import { brandedQrLayout, Position, QUIET_ZONE, STAR_BODY, STAR_FACE } from './qr-branded-layout';
-import { milliseconds } from '../skeleton/loading-view';
 import { isDark, QrMatrix } from './qr-matrix';
 
 export type QrVariant = 'branded' | 'plain';
@@ -21,22 +20,18 @@ interface Dot extends Position {
   readonly dark: boolean;
 }
 
-const WAVE_TOKENS = {
-  start: '--duration-qr-wave-start',
-  perModule: '--duration-qr-wave-step',
-  jitter: '--duration-qr-wave-jitter',
-  stay: '--duration-qr-stay',
-  leave: '--duration-qr-leave',
-  leaveLead: '--duration-qr-leave-lead',
-  enter: '--duration-qr-enter',
-  enterLag: '--duration-qr-enter-lag',
-  settle: '--duration-qr-settle',
-  settleLag: '--duration-qr-settle-lag',
-  star: '--duration-qr-star',
-  badge: '--duration-qr-badge',
-} as const;
-
-type WaveTimings = Readonly<Record<keyof typeof WAVE_TOKENS, number>>;
+const WAVE_START_MS = 180;
+const WAVE_MS_PER_MODULE = 45;
+const WAVE_JITTER_MS = 60;
+const STAY_MS = 1140;
+const LEAVE_MS = 720;
+const LEAVE_LEAD_MS = 150;
+const ENTER_MS = 1260;
+const ENTER_LAG_MS = 90;
+const SETTLE_MS = 1950;
+const SETTLE_LAG_MS = 1350;
+const STAR_MS = 1860;
+const BADGE_MS = 1560;
 
 @Component({
   selector: 'app-qr-code',
@@ -153,10 +148,6 @@ export class QrCode {
       return;
     }
     const styles = getComputedStyle(this.svg().nativeElement);
-    const wave = waveTimings(styles);
-    if (wave === null) {
-      return;
-    }
     const module = styles.getPropertyValue('--color-qr-module').trim();
     const mark = styles.getPropertyValue('--color-qr-mark').trim();
     const positions = this.layout().positions;
@@ -167,8 +158,7 @@ export class QrCode {
       if (!was && !now) {
         return;
       }
-      const delay =
-        wave.start + position.distance * wave.perModule + jitter(position.index, wave.jitter);
+      const delay = WAVE_START_MS + position.distance * WAVE_MS_PER_MODULE + jitter(position.index);
       const dot = element.nativeElement;
       if (was && now) {
         this.play(
@@ -178,7 +168,7 @@ export class QrCode {
             { transform: 'scale(1.22)', offset: 0.35 },
             { transform: 'scale(1)' },
           ],
-          wave.stay,
+          STAY_MS,
           delay,
           'ease-out',
         );
@@ -190,8 +180,8 @@ export class QrCode {
             { transform: 'scale(1.15)', opacity: 1, offset: 0.25 },
             { transform: 'scale(0)', opacity: 0 },
           ],
-          wave.leave,
-          delay - wave.leaveLead,
+          LEAVE_MS,
+          delay - LEAVE_LEAD_MS,
           'cubic-bezier(.5,0,.75,0)',
         );
       } else {
@@ -203,15 +193,15 @@ export class QrCode {
             { transform: 'scale(0.92)', fill: mark, offset: 0.7 },
             { transform: 'scale(1)', opacity: 1, fill: mark, offset: 0.85 },
           ],
-          wave.enter,
-          delay + wave.enterLag,
+          ENTER_MS,
+          delay + ENTER_LAG_MS,
           'ease-out',
         );
         this.play(
           dot,
           [{ fill: mark }, { fill: module }],
-          wave.settle,
-          delay + wave.settleLag,
+          SETTLE_MS,
+          delay + SETTLE_LAG_MS,
           'ease-in-out',
         );
       }
@@ -222,7 +212,7 @@ export class QrCode {
     const star = svg.querySelector('.qr-star');
     const badge = svg.querySelector('.qr-badge');
     if (ring) {
-      const reach = wave.start + layout.farthest * wave.perModule;
+      const reach = WAVE_START_MS + layout.farthest * WAVE_MS_PER_MODULE;
       const scale = (layout.farthest + layout.badgeRadius) / (layout.badgeRadius + 1);
       this.play(
         ring,
@@ -244,7 +234,7 @@ export class QrCode {
           { transform: 'rotate(6deg) scale(1.04)', offset: 0.6 },
           { transform: 'rotate(0) scale(1)' },
         ],
-        wave.star,
+        STAR_MS,
         0,
         'ease-in-out',
       );
@@ -258,7 +248,7 @@ export class QrCode {
           { transform: 'scale(1.03)', offset: 0.6 },
           { transform: 'scale(1)' },
         ],
-        wave.badge,
+        BADGE_MS,
         0,
         'ease-out',
       );
@@ -290,18 +280,8 @@ function canAnimate(element: Element): boolean {
   return !reduced && typeof element.animate === 'function';
 }
 
-function jitter(index: number, spread: number): number {
-  return (((Math.imul(index, 2654435761) >>> 0) % 1000) / 1000) * spread * 2 - spread;
-}
-
-function waveTimings(styles: CSSStyleDeclaration): WaveTimings | null {
-  const timings: Partial<Record<keyof typeof WAVE_TOKENS, number>> = {};
-  for (const [name, token] of Object.entries(WAVE_TOKENS) as [keyof typeof WAVE_TOKENS, string][]) {
-    const value = milliseconds(styles.getPropertyValue(token));
-    if (value === null) {
-      return null;
-    }
-    timings[name] = value;
-  }
-  return timings as WaveTimings;
+function jitter(index: number): number {
+  return (
+    (((Math.imul(index, 2654435761) >>> 0) % 1000) / 1000) * WAVE_JITTER_MS * 2 - WAVE_JITTER_MS
+  );
 }
