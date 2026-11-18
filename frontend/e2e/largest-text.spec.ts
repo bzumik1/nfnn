@@ -8,7 +8,13 @@ import {
   rememberedSession,
   renamePetr,
 } from './baseline/screen-mocks';
-import { everyDialogTitleText } from './dialog-titles';
+import {
+  DialogTitle,
+  dialogsWithABoundTitle,
+  everyDialogTitle,
+  SHARED_TITLE_CLASS,
+  titleGroup,
+} from './dialog-titles';
 import {
   administrator,
   bankAccountItem,
@@ -738,41 +744,165 @@ test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows 
   });
 });
 
-const TITLE_PLACES = ['', 'ui-offer-sheet'];
+const DIALOGS_TITLED_ELSEWHERE: Record<string, string> = {
+  'layout/account-sheet/account-sheet.html':
+    'the account sheet shows its logo, or a section title on one line in its head row (sheet-head)',
+  'shared/ui/dialog/dialog.html':
+    'its own title, Zahodit rozepsané údaje?, carries ui-dialog__title',
+  'shared/ui/zoom-viewer/zoom-viewer.html': 'the zoom viewer names itself for screen readers only',
+};
 
-async function titleTextsBrokenInside(title: Locator, texts: string[]): Promise<string[]> {
-  return title.evaluate(
-    (original, { titleTexts, places }) => {
-      const broken: string[] = [];
-      for (const place of places) {
-        for (const text of titleTexts) {
-          const sample = original.cloneNode(false) as HTMLElement;
-          sample.removeAttribute('id');
-          sample.textContent = text;
-          const wrapper = document.createElement('div');
-          wrapper.className = place;
-          wrapper.append(sample);
-          original.after(wrapper);
-          const node = sample.firstChild!;
-          for (const word of text.matchAll(/[^\s-]+-?/g)) {
-            const range = document.createRange();
-            range.setStart(node, word.index);
-            range.setEnd(node, word.index + word[0].length);
-            const tops = new Set(
-              Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
-            );
-            if (tops.size > 1) {
-              broken.push(`${place || 'sheet'}: ${text}: ${word[0]}`);
-            }
-          }
-          wrapper.remove();
+const TITLES_FOR_SCREEN_READERS_ONLY = [
+  'features/donors/login-dialog/login-dialog.html#visually-hidden',
+];
+
+interface OpenedTitle {
+  readonly title: Locator;
+  readonly column: Locator;
+}
+
+async function openOfflineSheet(page: Page): Promise<OpenedTitle> {
+  await page.addInitScript(() =>
+    Object.defineProperty(window, 'requestIdleCallback', { value: () => 0 }),
+  );
+  await page.route('**/api/**', (route: Route) =>
+    route.fulfill({ status: 522, contentType: 'text/html', body: 'origin down' }),
+  );
+  await page.goto('/');
+  const label = page.getByRole('button', { name: /^Offline/ });
+  await expect(label).toBeVisible({ timeout: 10_000 });
+  await label.click();
+  const sheet = page.getByRole('dialog', { name: 'Server neodpovídá' });
+  await expect(sheet).toBeVisible();
+  return { title: sheet.locator('.ui-dialog__title'), column: sheet };
+}
+
+async function openAddAccount(page: Page): Promise<OpenedTitle> {
+  await mockDonorApi(page);
+  await page.route(
+    (url) => url.pathname === '/api/donations/me/bank-check',
+    (route) =>
+      route.fulfill({
+        status: 202,
+        json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false },
+      }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/donations/me/bank-accounts',
+    (route) => route.fulfill({ json: { items: [] } }),
+  );
+  const viewport = page.viewportSize()!;
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page);
+  await openDonorSection(page, 'Bankovní účty');
+  await page.setViewportSize(viewport);
+  await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
+  await expect(dialog).toBeVisible();
+  return { title: dialog.locator('#add-account-title'), column: dialog };
+}
+
+async function openPairedPayment(page: Page): Promise<OpenedTitle> {
+  await mockDonorApi(page, donorWithDonations);
+  await mockAdministration(page);
+  await rememberedSession(page);
+  await page.goto('/sprava/platby?stav=prirazene');
+  await page.locator('button.payment-row').first().click();
+  const sheet = page.getByRole('dialog', { name: 'Přiřazená platba' });
+  await expect(sheet).toBeVisible();
+  return { title: sheet.locator('#payment-sheet-title'), column: sheet };
+}
+
+async function openErasure(page: Page): Promise<OpenedTitle> {
+  await mockDonorApi(page, donorWithDonations);
+  await mockAdministration(page);
+  await rememberedSession(page);
+  await page.goto(`${PETR_DETAIL_PATH}/vymaz`);
+  await page.getByRole('button', { name: 'Vymazat osobní údaje' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Vymazat osobní údaje: Petr Svoboda' });
+  await expect(dialog).toBeVisible();
+  return { title: dialog.locator('#erase-title'), column: dialog };
+}
+
+async function openOtherLoggerLevel(page: Page): Promise<OpenedTitle> {
+  await mockDonorApi(page);
+  await routeLogsApi(page);
+  await rememberedSession(page);
+  await page.goto('/sprava/logy/urovne');
+  await page.getByRole('button', { name: 'Jiný logger…' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Úroveň jiného loggeru' });
+  await expect(sheet).toBeVisible();
+  return { title: sheet.locator('#level-sheet-title'), column: sheet };
+}
+
+const TITLE_OPENERS: Record<string, (page: Page) => Promise<OpenedTitle>> = {
+  [SHARED_TITLE_CLASS]: openOfflineSheet,
+  'features/donors/dashboard/bank-accounts-card/bank-accounts-card.html#add-account-title':
+    openAddAccount,
+  'features/admin/payments/admin-payments.html#pair-title': openPairedPayment,
+  'features/admin/donor-detail/admin-donor-detail.html#erase-title': openErasure,
+  'features/admin/logs/levels/admin-log-levels.html#sheet-title': openOtherLoggerLevel,
+};
+
+async function titleTextsBrokenInside(
+  title: Locator,
+  titles: readonly DialogTitle[],
+): Promise<string[]> {
+  const samples = titles.flatMap(({ place, texts }) => texts.map((text) => ({ place, text })));
+  return title.evaluate((original, texts) => {
+    const broken: string[] = [];
+    for (const { text, place } of texts) {
+      const sample = original.cloneNode(false) as HTMLElement;
+      sample.removeAttribute('id');
+      sample.textContent = text;
+      const wrapper = document.createElement('div');
+      wrapper.className = place === 'ui-offer-sheet' ? place : '';
+      wrapper.append(sample);
+      original.after(wrapper);
+      const node = sample.firstChild!;
+      for (const word of text.matchAll(/[^\s-]+-?/g)) {
+        const range = document.createRange();
+        range.setStart(node, word.index);
+        range.setEnd(node, word.index + word[0].length);
+        const tops = new Set(
+          Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+        );
+        if (tops.size > 1) {
+          broken.push(`${place}: ${text}: ${word[0]}`);
         }
       }
-      return broken;
-    },
-    { titleTexts: texts, places: TITLE_PLACES },
-  );
+      wrapper.remove();
+    }
+    return broken;
+  }, samples);
 }
+
+async function fontSizes(title: Locator, token: string): Promise<{ title: number; token: number }> {
+  return title.evaluate((element, name) => {
+    const probe = document.createElement('span');
+    probe.style.fontSize = `var(${name})`;
+    element.after(probe);
+    const sizes = {
+      title: parseFloat(getComputedStyle(element).fontSize),
+      token: parseFloat(getComputedStyle(probe).fontSize),
+    };
+    probe.remove();
+    return sizes;
+  }, token);
+}
+
+test.describe('Given every title of a sheet or a dialog in the templates', () => {
+  test('when they are listed, then each one is measured at the largest text, has no static text or is for screen readers only', () => {
+    const measured = new Set(Object.keys(TITLE_OPENERS));
+    const unmeasured = everyDialogTitle()
+      .filter((title) => title.texts.length > 0)
+      .map(titleGroup)
+      .filter((group) => !measured.has(group) && !TITLES_FOR_SCREEN_READERS_ONLY.includes(group));
+
+    expect(unmeasured).toEqual([]);
+    expect(dialogsWithABoundTitle()).toEqual(Object.keys(DIALOGS_TITLED_ELSEWHERE).sort());
+  });
+});
 
 test.describe('Given a visitor on an iPhone 390 pt wide whose installed app shows the largest accessibility text, opening a sheet or a dialog', () => {
   test.use({ viewport: { width: 390, height: 844 } });
@@ -781,79 +911,58 @@ test.describe('Given a visitor on an iPhone 390 pt wide whose installed app show
     await showLargestSystemText(page);
   });
 
-  test('when the server stops answering and they open Server neodpovídá, then its title and the title of every other sheet and dialog break only between words', async ({
-    page,
-  }) => {
-    await page.addInitScript(() =>
-      Object.defineProperty(window, 'requestIdleCallback', { value: () => 0 }),
-    );
-    await page.route('**/api/**', (route: Route) =>
-      route.fulfill({ status: 522, contentType: 'text/html', body: 'origin down' }),
-    );
-    await page.goto('/');
-    const label = page.getByRole('button', { name: /^Offline/ });
-    await expect(label).toBeVisible({ timeout: 10_000 });
-    await label.click();
-    const sheet = page.getByRole('dialog', { name: 'Server neodpovídá' });
-    await expect(sheet).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
-    const title = sheet.locator('.ui-dialog__title');
-    const texts = everyDialogTitleText();
-
-    expect(texts).toEqual(expect.arrayContaining(['Server neodpovídá', 'Upozornění jsou zapnutá']));
-    expect(await wordsBrokenInside(title)).toEqual([]);
-    expect(await titleTextsBrokenInside(title, texts)).toEqual([]);
-  });
-
-  test('when a signed-in donor opens Přidat bankovní účet, then its title breaks only between words', async ({
-    page,
-  }) => {
-    await mockDonorApi(page);
-    await page.route(
-      (url) => url.pathname === '/api/donations/me/bank-check',
-      (route) =>
-        route.fulfill({
-          status: 202,
-          json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false },
-        }),
-    );
-    await page.route(
-      (url) => url.pathname === '/api/donations/me/bank-accounts',
-      (route) => route.fulfill({ json: { items: [] } }),
-    );
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await signIn(page);
-    await openDonorSection(page, 'Bankovní účty');
-    await page.setViewportSize({ width: 390, height: 844 });
-
-    await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
-
-    const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
-    await expect(dialog).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
-    expect(await wordsBrokenInside(dialog.locator('#add-account-title'))).toEqual([]);
-  });
-
-  test.describe('signed in as an administrator', () => {
-    test.beforeEach(async ({ page }) => {
-      await mockDonorApi(page, donorWithDonations);
-      await mockAdministration(page);
-      await rememberedSession(page);
-    });
-
-    test('when they open a paired payment, then the title Přiřazená platba breaks only between words', async ({
+  for (const [group, open] of Object.entries(TITLE_OPENERS)) {
+    test(`when they open a dialog titled by ${group}, then its title and every title of the templates in its place break only between words and stay at least as large as the sheet's body text`, async ({
       page,
     }) => {
-      await page.goto('/sprava/platby?stav=prirazene');
-      await page.locator('button.payment-row').first().click();
-
-      const sheet = page.getByRole('dialog', { name: 'Přiřazená platba' });
-      await expect(sheet).toBeVisible();
+      const { title } = await open(page);
       await page.evaluate(() => document.fonts.ready);
-      expect(await wordsBrokenInside(sheet.locator('#payment-sheet-title'))).toEqual([]);
+      const titles = everyDialogTitle().filter((candidate) => titleGroup(candidate) === group);
+
+      expect(titles.flatMap((candidate) => candidate.texts)).not.toEqual([]);
+      expect(await wordsBrokenInside(title)).toEqual([]);
+      expect(await titleTextsBrokenInside(title, titles)).toEqual([]);
+      const sizes = await fontSizes(title, '--text-sheet-body');
+      expect(sizes.title).toBeGreaterThanOrEqual(sizes.token);
     });
+  }
+
+  test('when the shared title is gathered from the templates, then Server neodpovídá and the offers Upozornění jsou zapnutá and Zapnout upozornění? are among them', () => {
+    const shared = everyDialogTitle().filter((title) => title.titleClass === SHARED_TITLE_CLASS);
+
+    expect(
+      shared.filter((title) => title.place === 'sheet').flatMap((title) => title.texts),
+    ).toContain('Server neodpovídá');
+    expect(
+      shared.filter((title) => title.place === 'ui-offer-sheet').flatMap((title) => title.texts),
+    ).toEqual(expect.arrayContaining(['Upozornění jsou zapnutá', 'Zapnout upozornění?']));
   });
 });
+
+for (const width of [390, 320]) {
+  test.describe(`Given a visitor on a phone ${width} pt wide with the text at 200 %`, () => {
+    test.use({ viewport: { width, height: 844 } });
+
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript(() => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = 'html { font-size: 32px; }';
+          document.head.append(style);
+        });
+      });
+    });
+
+    test('when they open Server neodpovídá, then its title takes the whole xl step, never less', async ({
+      page,
+    }) => {
+      const { title } = await openOfflineSheet(page);
+
+      const sizes = await fontSizes(title, '--text-xl');
+      expect(sizes.title).toBe(sizes.token);
+    });
+  });
+}
 
 async function layoutAtRest(element: Locator): Promise<boolean> {
   return element.evaluate(async (target) => {

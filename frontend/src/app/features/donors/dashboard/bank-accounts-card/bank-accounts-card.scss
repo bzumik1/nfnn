@@ -255,6 +255,12 @@
   padding-right: var(--space-8);
 }
 
+@include bp.container-down(dialog-panel, tabs) {
+  .add-account-title {
+    font-size: var(--text-dialog-title-large);
+  }
+}
+
 .add-account-text {
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);

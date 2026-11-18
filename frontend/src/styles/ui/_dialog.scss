@@ -11,7 +11,7 @@
 
 @include bp.container-down(dialog-panel, tabs) {
   .ui-dialog__title {
-    font-size: var(--text-xl);
+    font-size: var(--text-dialog-title-large);
   }
 }
 

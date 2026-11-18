@@ -258,6 +258,12 @@
   margin-bottom: var(--space-4);
 }
 
+@include bp.container-down(dialog-panel, tabs) {
+  .pair-title {
+    font-size: var(--text-dialog-title-large);
+  }
+}
+
 .pair-payment {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
