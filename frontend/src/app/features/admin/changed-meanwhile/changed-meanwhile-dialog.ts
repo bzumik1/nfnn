@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { formatBankTime } from '../../donations/donation-date';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 export type ChangedSubject = 'payment' | 'donorAccount' | 'symbolClaim' | 'content';
 
 @Component({
   selector: 'app-changed-meanwhile-dialog',
-  imports: [Dialog],
+  imports: [BusyLabel, Dialog],
   templateUrl: './changed-meanwhile-dialog.html',
   styleUrl: './changed-meanwhile-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

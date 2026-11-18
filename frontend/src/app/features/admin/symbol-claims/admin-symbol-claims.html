@@ -126,15 +126,14 @@
                             [disabled]="busy()"
                             (click)="reverse(item)"
                           >
-                            @if (busy()) {
-                              <ng-container i18n="@@admin.symbolClaims.reverse.busy"
-                                >Rušíme…</ng-container
+                            <app-busy-label [busy]="busy()">
+                              <span when-idle i18n="@@admin.symbolClaims.reverse.yes"
+                                >Vrátit přiřazení</span
                               >
-                            } @else {
-                              <ng-container i18n="@@admin.symbolClaims.reverse.yes"
-                                >Vrátit přiřazení</ng-container
+                              <span when-busy i18n="@@admin.symbolClaims.reverse.busy"
+                                >Rušíme…</span
                               >
-                            }
+                            </app-busy-label>
                           </button>
                           <button
                             #confirmCancel
@@ -165,15 +164,12 @@
                             [disabled]="busy()"
                             (click)="reset(item)"
                           >
-                            @if (busy()) {
-                              <ng-container i18n="@@admin.symbolClaims.reset.busy"
-                                >Mažeme…</ng-container
+                            <app-busy-label [busy]="busy()">
+                              <span when-idle i18n="@@admin.symbolClaims.reset.yes"
+                                >Zeptat se znovu</span
                               >
-                            } @else {
-                              <ng-container i18n="@@admin.symbolClaims.reset.yes"
-                                >Zeptat se znovu</ng-container
-                              >
-                            }
+                              <span when-busy i18n="@@admin.symbolClaims.reset.busy">Mažeme…</span>
+                            </app-busy-label>
                           </button>
                           <button
                             #confirmCancel

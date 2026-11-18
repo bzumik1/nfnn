@@ -206,11 +206,10 @@
                 [disabled]="loadingMore()"
                 (click)="loadMore()"
               >
-                @if (loadingMore()) {
-                  <ng-container i18n="@@admin.actions.more.busy">Načítáme starší…</ng-container>
-                } @else {
-                  <ng-container i18n="@@admin.actions.more">Načíst starší</ng-container>
-                }
+                <app-busy-label [busy]="loadingMore()">
+                  <span when-idle i18n="@@admin.actions.more">Načíst starší</span>
+                  <span when-busy i18n="@@admin.actions.more.busy">Načítáme starší…</span>
+                </app-busy-label>
               </button>
               @if (moreFailed()) {
                 <span role="alert" i18n="@@admin.actions.more.failed"

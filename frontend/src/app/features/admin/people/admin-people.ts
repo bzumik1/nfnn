@@ -61,6 +61,7 @@ import { formatBankTime } from '../../donations/donation-date';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { reloadWhenOnlineAgain } from '../device-copy/online-again';
 import { KeptAdministrationAnswers } from '../kept-administration-answers';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type SignatoryState = LoadState | 'offline';
@@ -115,6 +116,7 @@ const TEXT_RELOAD_FAILED = $localize`:@@admin.people.text.reloadFailed:Uložený
 @Component({
   selector: 'app-admin-people',
   imports: [
+    BusyLabel,
     Avatar,
     FormsModule,
     FormField,

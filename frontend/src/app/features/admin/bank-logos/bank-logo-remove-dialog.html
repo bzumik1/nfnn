@@ -21,11 +21,10 @@
       [disabled]="busy()"
       (click)="confirmed.emit()"
     >
-      @if (busy()) {
-        <ng-container i18n="@@admin.bankLogos.remove.busy">Odebíráme…</ng-container>
-      } @else {
-        <ng-container i18n="@@admin.bankLogos.remove.confirm">Odebrat logo</ng-container>
-      }
+      <app-busy-label [busy]="busy()">
+        <span when-idle i18n="@@admin.bankLogos.remove.confirm">Odebrat logo</span>
+        <span when-busy i18n="@@admin.bankLogos.remove.busy">Odebíráme…</span>
+      </app-busy-label>
     </button>
     <button
       type="button"

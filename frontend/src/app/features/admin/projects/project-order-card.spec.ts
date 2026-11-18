@@ -202,7 +202,7 @@ describe('Given an administrator choosing the order of the projects', () => {
       'Řazení se nepodařilo uložit. Zkuste to prosím znovu.',
     );
     expect(radio('YEAR').checked).toBe(true);
-    expect(text(query('button[type="submit"]'))).toBe('Uložit řazení');
+    expect(accessibleText(query('button[type="submit"]'))).toBe('Uložit řazení');
     expect(changes).toEqual([]);
   });
 

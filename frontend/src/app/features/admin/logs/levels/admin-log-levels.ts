@@ -25,6 +25,7 @@ import { formatBankTime } from '../../../donations/donation-date';
 import { AdminApi, LogLevel, LoggerResponse } from '../../admin-api';
 import { LogPageAccess } from '../log-page-access';
 import { canTrace, loggerDescription, remainingText } from './level-texts';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -47,6 +48,7 @@ const LOGGER_NAME = /^(ROOT|[A-Za-z0-9_$][A-Za-z0-9_$.]*)$/;
 @Component({
   selector: 'app-admin-log-levels',
   imports: [
+    BusyLabel,
     Skeleton,
     Dialog,
     FocusFirstInvalid,

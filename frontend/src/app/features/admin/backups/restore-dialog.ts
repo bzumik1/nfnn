@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { formatBankTime } from '../../donations/donation-date';
 import { BackupFileResponse } from '../admin-api';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 @Component({
   selector: 'app-restore-dialog',
-  imports: [Dialog],
+  imports: [BusyLabel, Dialog],
   templateUrl: './restore-dialog.html',
   styleUrl: './restore-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
