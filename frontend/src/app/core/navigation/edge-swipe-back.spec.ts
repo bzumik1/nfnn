@@ -657,14 +657,14 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
       expect(backTarget.back).not.toHaveBeenCalled();
     });
 
-    it('and the browser cancels the pointer, then the page slides back and no step follows', async () => {
+    it('and the browser takes over the pointer for its own pan while touches still come, then the swipe goes on', async () => {
       takePage();
 
       document.dispatchEvent(new Event('pointercancel'));
-      await Promise.resolve();
+      touch('touchmove', page, { x: 240, y: 300, at: 200 });
 
-      expect(preview.slideBack).toHaveBeenCalledTimes(1);
-      expect(stillUnderway()).toBe(false);
+      expect(preview.slideBack).not.toHaveBeenCalled();
+      expect(preview.follow).toHaveBeenLastCalledWith(220);
     });
 
     it('and the app goes to the background, then the page slides back and no step follows', async () => {

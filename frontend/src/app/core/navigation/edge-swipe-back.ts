@@ -71,7 +71,6 @@ export class EdgeSwipeBack {
     this.document.addEventListener('touchmove', this.onMove, PASSIVE);
     this.document.addEventListener('touchend', this.onEnd, PASSIVE);
     this.document.addEventListener('touchcancel', this.onCancel, PASSIVE);
-    this.document.addEventListener('pointercancel', this.onCancel, PASSIVE);
     this.document.addEventListener('visibilitychange', this.onHidden, PASSIVE);
     view.addEventListener('popstate', this.onLeave, PASSIVE);
     view.addEventListener('pagehide', this.onLeave, PASSIVE);
@@ -83,7 +82,6 @@ export class EdgeSwipeBack {
     this.document.removeEventListener('touchmove', this.onMove, PASSIVE);
     this.document.removeEventListener('touchend', this.onEnd, PASSIVE);
     this.document.removeEventListener('touchcancel', this.onCancel, PASSIVE);
-    this.document.removeEventListener('pointercancel', this.onCancel, PASSIVE);
     this.document.removeEventListener('visibilitychange', this.onHidden, PASSIVE);
     view?.removeEventListener('popstate', this.onLeave, PASSIVE);
     view?.removeEventListener('pagehide', this.onLeave, PASSIVE);
