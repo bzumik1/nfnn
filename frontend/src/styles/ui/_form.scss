@@ -56,11 +56,13 @@
   &:not(.ui-segmented--thumb) button.is-active {
     background-color: var(--color-segment-thumb);
     box-shadow: var(--shadow-segment-thumb);
+  }
+}
 
-    @media (forced-colors: active) {
-      background-color: Highlight;
-      color: HighlightText;
-    }
+@media (forced-colors: active) {
+  .ui-segmented button:is([aria-checked='true'], [aria-pressed='true'], .is-active) {
+    background-color: Highlight;
+    color: HighlightText;
   }
 }
 
@@ -75,13 +77,14 @@
   background: var(--color-segment-thumb);
   box-shadow: var(--shadow-segment-thumb);
   pointer-events: none;
+  transform-origin: left;
 
   .ui-segmented--thumb > & {
     display: block;
   }
 
   .ui-segmented--thumb-glides > & {
-    @include motion.move(translate, slow, spring);
+    @include motion.move((translate, scale), slow, spring);
 
     @media (prefers-reduced-motion: reduce) {
       transition: none;
