@@ -28,6 +28,8 @@ export class BusyLabel {
     () => this.busy() && (this.delayMs === 0 || this.delayOver()),
   );
   private readonly busyFace = viewChild.required<ElementRef<HTMLElement>>('busyFace');
+  private readonly announcement = inject(BusyAnnouncement, { optional: true });
+  protected readonly namesByBusyLabel = this.announcement === null;
 
   constructor() {
     const host: HTMLElement = inject(ElementRef<HTMLElement>).nativeElement;
@@ -45,15 +47,14 @@ export class BusyLabel {
     });
     effect(() => {
       const button = host.closest('button');
-      if (this.busy()) {
+      if (this.busy() && !this.namesByBusyLabel) {
         button?.setAttribute('aria-busy', 'true');
       } else {
         button?.removeAttribute('aria-busy');
       }
     });
-    const announcement = inject(BusyAnnouncement, { optional: true });
-    if (announcement !== null) {
-      const remove = announcement.add({
+    if (this.announcement !== null) {
+      const remove = this.announcement.add({
         showsBusy: this.showsBusy,
         busyText: () => (this.busyFace().nativeElement.textContent ?? '').trim(),
       });
