@@ -201,3 +201,93 @@ describe('Given a button whose label says when it saves, inside a card with a st
     });
   });
 });
+
+@Component({
+  imports: [BusyLabel],
+  template: `
+    <button type="button" class="ui-button">
+      <app-busy-label [busy]="saving()">
+        <span when-idle>Odeslat zprávu</span>
+        <span when-busy>Odesíláme…</span>
+      </app-busy-label>
+    </button>
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class HostWithoutStatusLine {
+  readonly saving = signal(false);
+}
+
+describe('Given a button whose label says when it sends, where no status line announces the start', () => {
+  let fixture: ComponentFixture<HostWithoutStatusLine>;
+
+  const button = () =>
+    (fixture.nativeElement as HTMLElement).querySelector('button') as HTMLElement;
+  const faces = () => Array.from(button().querySelectorAll<HTMLElement>('.busy-label__face'));
+
+  describe("without the theme's loading delay", () => {
+    beforeEach(async () => {
+      fixture = TestBed.createComponent(HostWithoutStatusLine);
+      await fixture.whenStable();
+    });
+
+    async function setSaving(saving: boolean): Promise<void> {
+      fixture.componentInstance.saving.set(saving);
+      await fixture.whenStable();
+    }
+
+    it('when nothing runs, then its name is the resting label and the sending label is hidden from screen readers', () => {
+      expect(accessibleText(button())).toBe('Odeslat zprávu');
+      expect(faces()[1].getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('when it starts sending, then its name is the sending label, the resting one is hidden from screen readers and the button carries no aria-busy', async () => {
+      await setSaving(true);
+
+      expect(accessibleText(button())).toBe('Odesíláme…');
+      expect(faces()[0].getAttribute('aria-hidden')).toBe('true');
+      expect(faces()[1].hasAttribute('aria-hidden')).toBe(false);
+      expect(button().hasAttribute('aria-busy')).toBe(false);
+    });
+
+    it('when the sending ends, then its name is the resting label again', async () => {
+      await setSaving(true);
+
+      await setSaving(false);
+
+      expect(accessibleText(button())).toBe('Odeslat zprávu');
+      expect(faces()[1].getAttribute('aria-hidden')).toBe('true');
+    });
+  });
+
+  describe("with the theme's loading delay", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      document.documentElement.style.setProperty('--delay-loading', '0.3s');
+      fixture = TestBed.createComponent(HostWithoutStatusLine);
+      fixture.detectChanges();
+    });
+
+    afterEach(() => {
+      document.documentElement.style.removeProperty('--delay-loading');
+      vi.useRealTimers();
+    });
+
+    async function wait(ms: number): Promise<void> {
+      await vi.advanceTimersByTimeAsync(ms);
+      fixture.detectChanges();
+    }
+
+    it('when it starts sending, then its name stays the resting label until the delay is over and then is the sending label', async () => {
+      fixture.componentInstance.saving.set(true);
+      await wait(299);
+
+      expect(accessibleText(button())).toBe('Odeslat zprávu');
+
+      await wait(1);
+
+      expect(accessibleText(button())).toBe('Odesíláme…');
+      expect(button().hasAttribute('aria-busy')).toBe(false);
+    });
+  });
+});
