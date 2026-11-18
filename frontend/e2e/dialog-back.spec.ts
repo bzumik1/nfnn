@@ -150,22 +150,23 @@ async function fingerPulls(target: Locator, x: number, y: number, downs: number[
               ),
             )
           : [new Touch({ identifier: 1, target: element, clientX: path.x, clientY })];
-      const finger = (type: string, clientY: number): void => {
+      const pressedAt = performance.now();
+      const finger = (type: string, clientY: number, when: number): void => {
         const touches = at(clientY) as Touch[];
-        element.dispatchEvent(
-          new TouchEvent(type, {
-            touches,
-            targetTouches: touches,
-            changedTouches: touches,
-            bubbles: true,
-            cancelable: true,
-          }),
-        );
+        const event = new TouchEvent(type, {
+          touches,
+          targetTouches: touches,
+          changedTouches: touches,
+          bubbles: true,
+          cancelable: true,
+        });
+        Object.defineProperty(event, 'timeStamp', { value: when });
+        element.dispatchEvent(event);
       };
-      finger('touchstart', path.y);
-      for (const down of path.downs) {
-        finger('touchmove', path.y + down);
-      }
+      finger('touchstart', path.y, pressedAt);
+      path.downs.forEach((down, step) =>
+        finger('touchmove', path.y + down, pressedAt + (step + 1) * 16),
+      );
     },
     { x, y, downs },
   );
@@ -338,6 +339,94 @@ function expectSlidOffTheScreen(leave: SheetLeave, from: number): void {
   expect(leave.blurTo!).toBeLessThan(0.5);
 }
 
+interface VeilFrame {
+  readonly veil: number;
+  readonly blur: number;
+}
+
+function veilNow(page: Page): Promise<VeilFrame & { readonly pull: number }> {
+  return page.evaluate(() => {
+    const dialog = document.querySelector('dialog')!;
+    const alpha = (color: string): number => {
+      const slash = /\/\s*([\d.]+)\s*\)$/.exec(color);
+      return slash === null
+        ? color.startsWith('rgba')
+          ? Number(color.split(',').at(-1)!.replace(')', ''))
+          : 1
+        : Number(slash[1]);
+    };
+    return {
+      veil: alpha(getComputedStyle(dialog).backgroundColor),
+      blur: Number(getComputedStyle(dialog, '::backdrop').opacity),
+      pull: Number(dialog.style.getPropertyValue('--dialog-pull') || '0'),
+    };
+  });
+}
+
+interface VeilRelease {
+  readonly running: readonly string[];
+  readonly veil: { readonly property: string; readonly duration: string };
+  readonly blur: { readonly property: string; readonly duration: string };
+}
+
+async function watchVeilRelease(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const record = window as unknown as { veilRelease: unknown };
+    record.veilRelease = null;
+    const dialog = document.querySelector('dialog')!;
+    const panel = dialog.querySelector('.dialog-panel')!;
+    const released = new MutationObserver(() => {
+      if (panel.classList.contains('dialog-panel--dragging')) {
+        return;
+      }
+      released.disconnect();
+      const veil = getComputedStyle(dialog);
+      const blur = getComputedStyle(dialog, '::backdrop');
+      record.veilRelease = {
+        running: dialog
+          .getAnimations()
+          .filter((animation): animation is CSSTransition => animation instanceof CSSTransition)
+          .map((transition) => transition.transitionProperty),
+        veil: { property: veil.transitionProperty, duration: veil.transitionDuration },
+        blur: { property: blur.transitionProperty, duration: blur.transitionDuration },
+      };
+    });
+    released.observe(panel, { attributes: true, attributeFilter: ['class'] });
+  });
+}
+
+async function veilRelease(page: Page): Promise<VeilRelease> {
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { veilRelease: unknown }).veilRelease))
+    .not.toBeNull();
+  return page.evaluate(() => (window as unknown as { veilRelease: VeilRelease }).veilRelease);
+}
+
+function transitions(style: { property: string; duration: string }, property: string): boolean {
+  const properties = style.property.split(',').map((name) => name.trim());
+  const durations = style.duration.split(',').map((duration) => parseFloat(duration));
+  const index = properties.findIndex((name) => name === property || name === 'all');
+  return index !== -1 && (durations[index % durations.length] ?? 0) > 0;
+}
+
+function veilTransitions(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    document
+      .getAnimations()
+      .filter((animation): animation is CSSTransition => animation instanceof CSSTransition)
+      .filter((transition) => transition.playState === 'running')
+      .map((transition) => {
+        const effect = transition.effect as KeyframeEffect;
+        return {
+          target: `${effect.target?.localName ?? ''}${effect.pseudoElement ?? ''}`,
+          property: transition.transitionProperty,
+        };
+      })
+      .filter(({ target }) => target === 'dialog' || target === 'dialog::backdrop')
+      .map(({ target, property }) => `${target} ${property}`),
+  );
+}
+
 async function phoneThatAnimates(page: Page): Promise<void> {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -418,6 +507,17 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     const opener = (page: Page): Locator =>
       page.getByRole('button', { name: /^(Přiřadit dárci|Nováková Jana .*)$/ }).first();
     const leaving = (page: Page): Locator => page.locator('dialog.dialog--leaving');
+    const holdLeaving = (page: Page): Promise<void> =>
+      page.locator('dialog').evaluate((dialog) => {
+        dialog.style.transitionDuration = '600s';
+        (window as unknown as Probe).pops = 0;
+      });
+    const finishLeavingAfterBack = async (page: Page): Promise<void> => {
+      await expect.poll(() => page.evaluate(() => (window as unknown as Probe).pops)).toBe(1);
+      await leaving(page).evaluate((dialog) =>
+        dialog.getAnimations({ subtree: true }).forEach((animation) => animation.finish()),
+      );
+    };
 
     test.beforeEach(async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 800 });
@@ -433,6 +533,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
       test('and Esc is pressed while it leaves after its button, then the focus returns to the button that opened it', async ({
         page,
       }) => {
+        await holdLeaving(page);
         await page.getByRole('dialog').getByLabel('Zavřít').click();
         await expect(leaving(page)).toBeAttached();
         await page.keyboard.press('Escape');
@@ -444,9 +545,11 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
       test('and they go back while it leaves after its button, then it closes once and the focus returns to the button that opened it', async ({
         page,
       }) => {
+        await holdLeaving(page);
         await page.getByRole('dialog').getByLabel('Zavřít').click();
         await expect(leaving(page)).toBeAttached();
         await stepBack(page);
+        await finishLeavingAfterBack(page);
 
         await expect(page.getByRole('dialog')).toHaveCount(0);
         await expect(opener(page)).toBeFocused();
@@ -476,9 +579,11 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
       test('and they go back while it leaves after its button, then it closes once and the focus returns to the button that opened it', async ({
         page,
       }) => {
+        await holdLeaving(page);
         await page.getByRole('dialog').getByLabel('Zavřít').click();
         await expect(leaving(page)).toBeAttached();
         await stepBack(page);
+        await finishLeavingAfterBack(page);
 
         await expect(page.getByRole('dialog')).toHaveCount(0);
         await expect(opener(page)).toBeFocused();
@@ -633,6 +738,33 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await expect(page).toHaveURL(/\/sprava\/platby$/);
   });
 
+  test('when they drag the sheet on a phone, then its veil and blur follow the finger at once and only the settle after letting go moves on its own', async ({
+    page,
+  }) => {
+    await phoneThatAnimates(page);
+    await sheetSettled(page);
+    const box = (await page.locator('.dialog-grabber').boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y + 120, { steps: 6 });
+    await expect(page.locator('.dialog-panel--dragging')).toBeAttached();
+    await expect.poll(async () => (await veilNow(page)).pull).toBeGreaterThan(0);
+    const whileDragging = await veilTransitions(page);
+    const released = await veilNow(page);
+    await watchVeilRelease(page);
+    await page.mouse.up();
+    const settle = await veilRelease(page);
+
+    expect(whileDragging).toEqual([]);
+    expect(released.blur).toBeCloseTo(1 - released.pull, 2);
+    expect(settle.running).toContain('background-color');
+    expect(transitions(settle.veil, 'background-color')).toBe(true);
+    expect(transitions(settle.blur, 'opacity')).toBe(true);
+  });
+
   test('when a finger pulls the content of the sheet down from its top on a phone, then the sheet follows it, slides away and takes its entry back', async ({
     page,
   }) => {
@@ -645,10 +777,9 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     const x = box.x + box.width / 2;
     const y = box.y + box.height / 2;
 
-    await fingerPulls(content, x, y, [20, 80]);
-    await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 60);
-    await fingerTo(content, 'touchmove', x, y + 400);
-    await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 300);
+    await fingerPulls(content, x, y, [20, 80, 400]);
+    await expect.poll(() => panel.evaluate((element) => element.style.translate)).toBe('0px 400px');
+    expect((await panel.boundingBox())!.y).toBeCloseTo(opened + 400, 0);
     await fingerTo(content, 'touchend', x, y + 400, false);
 
     await expect(page.getByRole('dialog')).toHaveCount(0);

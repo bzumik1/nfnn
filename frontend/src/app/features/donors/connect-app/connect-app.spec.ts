@@ -177,7 +177,7 @@ describe('Given an application sent the browser to the connection page', () => {
       expect(bullets('.write-scopes li')).toContain(
         'měnit nastavení webu kromě tajných údajů, adresy webu, pošty a příjemců reportu',
       );
-      expect(root().textContent).toContain('v části Údaje a zabezpečení → Připojené aplikace');
+      expect(root().textContent).toContain('v části „Údaje a zabezpečení“ → „Připojené aplikace“;');
       expect(document.activeElement).toBe(element('h1'));
     });
   });

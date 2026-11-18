@@ -163,10 +163,35 @@
     font-size: var(--text-sheet-body);
   }
 
-  app-password-reveal .password-reveal {
-    height: 100%;
+  app-form-field:has(> app-password-reveal) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
 
-    @include touch-target.reaches-finger-size($positioned: true);
+    > * {
+      grid-column: 1 / -1;
+    }
+
+    > .field-label {
+      grid-area: 1 / 1;
+    }
+
+    > app-password-reveal {
+      display: contents;
+    }
+
+    .form-control {
+      grid-area: 2 / 1;
+      padding-inline-end: var(--space-2);
+    }
+
+    .password-reveal {
+      grid-area: 1 / 2 / 3 / 3;
+      position: relative;
+      inset: auto;
+      transform: none;
+      margin-inline-end: var(--space-1-5);
+    }
   }
 }
 

@@ -368,3 +368,80 @@ test.describe('Given a visitor on a computer that animates, far down a page', ()
     expect(await countedWhileHidden(page)).toBe(false);
   });
 });
+
+interface ErrorArrival {
+  readonly animation: string;
+  readonly seconds: number;
+  readonly describesTheField: boolean;
+  readonly marksTheFieldInvalid: boolean;
+}
+
+function recordTheEmailErrorArrival(): void {
+  const record = window as unknown as { errorArrival?: unknown };
+  const observer = new MutationObserver(() => {
+    const error = document.querySelector('#login-email-error');
+    if (error === null) {
+      return;
+    }
+    observer.disconnect();
+    const field = document.querySelector('#login-email')!;
+    const style = getComputedStyle(error);
+    record.errorArrival = {
+      animation: style.animationName,
+      seconds: parseFloat(style.animationDuration),
+      describesTheField: (field.getAttribute('aria-describedby') ?? '')
+        .split(' ')
+        .includes(error.id),
+      marksTheFieldInvalid: field.getAttribute('aria-invalid') === 'true',
+    };
+  });
+  observer.observe(document, { childList: true, subtree: true });
+}
+
+async function sendTheSignInWithAnInvalidEmail(page: Page): Promise<ErrorArrival> {
+  await mockDonorApi(page);
+  await page.goto('/');
+  await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
+  const dialog = page.getByRole('dialog');
+  await page.evaluate(recordTheEmailErrorArrival);
+  await dialog.locator('#login-email').fill('jana');
+  await dialog.locator('#login-password').fill('correct horse battery');
+  await dialog.getByRole('button', { name: 'Přihlásit se', exact: true }).click();
+  await expect(dialog.locator('#login-email-error')).toBeVisible();
+  await expect(dialog.locator('#login-email')).toBeFocused();
+  return page.evaluate(() => (window as unknown as { errorArrival: ErrorArrival }).errorArrival);
+}
+
+test.describe('Given a visitor on a computer who sends the sign-in with an invalid e-mail', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('when the error under the field appears, then it fades in in place while the field already names it and is marked invalid', async ({
+    page,
+  }) => {
+    const arrival = await sendTheSignInWithAnInvalidEmail(page);
+
+    expect(arrival.animation).toBe('motion-fade-in');
+    expect(arrival.seconds).toBeGreaterThan(0);
+    expect(arrival.describesTheField).toBe(true);
+    expect(arrival.marksTheFieldInvalid).toBe(true);
+  });
+});
+
+test.describe('Given a visitor on a computer who asks for less motion and sends the sign-in with an invalid e-mail', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+
+  test('when the error under the field appears, then it only takes the short fade of reduced motion', async ({
+    page,
+  }) => {
+    const arrival = await sendTheSignInWithAnInvalidEmail(page);
+
+    expect(arrival.animation).toBe('motion-fade-in');
+    expect(arrival.seconds).toBe(
+      await page.evaluate(() =>
+        parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue('--duration-reduced'),
+        ),
+      ),
+    );
+  });
+});

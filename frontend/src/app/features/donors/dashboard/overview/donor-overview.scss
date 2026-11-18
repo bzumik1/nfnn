@@ -38,11 +38,6 @@
   }
 }
 
-.last-gift-status--refunded {
-  background: var(--color-border);
-  color: var(--color-text-muted);
-}
-
 .overview-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

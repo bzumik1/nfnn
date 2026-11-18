@@ -1002,12 +1002,37 @@ describe('Given a dialog that the visitor closes', () => {
     });
   });
 
-  it('when it fills the screen of a phone, then it asks to be dismissed at once', async () => {
-    await open('full', true);
+  describe('when it fills the screen of a phone', () => {
+    beforeEach(() => open('full', true));
+
+    it('and the close button is pressed, then it fades out inert and asks to be dismissed only once it has gone', async () => {
+      closeButton().click();
+      fixture.detectChanges();
+
+      expect(native()?.classList).toContain('dialog--leaving');
+      expect(panel().inert).toBe(true);
+      expect(host().dismissals).toBe(0);
+      await settle();
+      expect(host().dismissals).toBe(1);
+    });
+
+    it('and the visitor asks for less motion, then it asks to be dismissed at once', () => {
+      deviceAsksForLessMotion(true);
+
+      closeButton().click();
+
+      expect(host().dismissals).toBe(1);
+    });
+  });
+
+  it('when it floats centred on a phone, then it fades out before it asks to be dismissed', async () => {
+    await open('centered', true);
 
     closeButton().click();
+    fixture.detectChanges();
 
-    expect(host().dismissals).toBe(1);
+    expect(native()?.classList).toContain('dialog--leaving');
+    expect(host().dismissals).toBe(0);
   });
 });
 

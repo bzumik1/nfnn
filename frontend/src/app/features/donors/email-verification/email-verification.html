@@ -67,8 +67,9 @@
               </p>
               @if (!passkeysSupported) {
                 <p class="ui-panel__lead" i18n="@@donor.emailVerification.passkey.unsupported">
-                  Tento prohlížeč přístupové klíče neumí. Klíč vytvoříte v části Údaje a zabezpečení
-                  v aktuálním Safari, Chromu, Edgi nebo Firefoxu, nebo si tam nastavíte heslo.
+                  Tento prohlížeč přístupové klíče neumí. Klíč vytvoříte v části „Údaje a
+                  zabezpečení“ v aktuálním Safari, Chromu, Edgi nebo Firefoxu, nebo si tam nastavíte
+                  heslo.
                 </p>
               } @else {
                 @if (error()) {
@@ -109,7 +110,7 @@
                   i18n="@@donor.emailVerification.passkey.created"
                 >
                   Přístupový klíč je uložený a příště se jím přihlásíte. Doporučujeme přidat v části
-                  Údaje a zabezpečení ještě klíč v dalším zařízení.
+                  „Údaje a zabezpečení“ ještě klíč v dalším zařízení.
                 </p>
               } @else if (returnsToDonation) {
                 <p

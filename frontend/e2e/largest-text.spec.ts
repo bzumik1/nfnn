@@ -437,7 +437,7 @@ for (const { width, height } of [
       await page.setViewportSize({ width, height });
       const card = page.locator('section[aria-labelledby="first-gift-title"]');
       await expect(
-        card.getByRole('link', { name: 'Přidat účet, ze kterého jste platili' }),
+        card.getByRole('link', { name: 'Přidat bankovní účet, ze kterého jste platili' }),
       ).toBeVisible();
 
       for (const textSize of ['largest', 'double']) {
@@ -580,6 +580,9 @@ for (const { width, height } of [
           await expect.poll(() => numbersSplitAcrossLines(row), textSize).toEqual([]);
           await expect.poll(() => contentPastTheSides(row), textSize).toEqual([]);
         }
+        const refunded = rows.nth(2).locator('.ui-list__state .ui-badge');
+        await expect(refunded).toHaveText('Vráceno');
+        await expect.poll(() => linesOf(refunded), textSize).toBe(1);
       }
     });
 
@@ -603,6 +606,164 @@ for (const { width, height } of [
       expect(glyph.x + glyph.width).toBeLessThanOrEqual(button.x + button.width + 1);
       expect(await contentPastTheSides(dialog)).toEqual([]);
     });
+
+    test('when they open the sign-in dialog, then the eye beside Heslo grows with the text, stands in the middle of its row clear of the password and reaches a finger', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
+      const field = page
+        .getByRole('dialog')
+        .locator('app-form-field')
+        .filter({
+          has: page.locator('#login-password'),
+        });
+      const eye = field.getByRole('button', { name: 'Zobrazit heslo' });
+      await expect(eye).toBeVisible();
+
+      const measured = await field.evaluate((row) => {
+        const label = row.querySelector('.field-label')!.getBoundingClientRect();
+        const input = row.querySelector('input')!;
+        const inputBox = input.getBoundingClientRect();
+        const button = row.querySelector('.password-reveal')!;
+        const buttonBox = button.getBoundingClientRect();
+        const glyph = button.querySelector('svg')!.getBoundingClientRect();
+        const touchTarget = parseFloat(
+          getComputedStyle(button).getPropertyValue('--touch-target-size'),
+        );
+        const reachesAround = getComputedStyle(button, '::before').content !== 'none';
+        const typing = getComputedStyle(input);
+        return {
+          rootPx: parseFloat(getComputedStyle(document.documentElement).fontSize),
+          glyph: glyph.height,
+          offCentre: Math.abs((glyph.top + glyph.bottom) / 2 - (label.top + inputBox.bottom) / 2),
+          typingEnd: inputBox.right - parseFloat(typing.paddingRight),
+          eyeStart: glyph.left,
+          reach: Math.min(
+            Math.max(buttonBox.width, reachesAround ? touchTarget : 0),
+            Math.max(buttonBox.height, reachesAround ? touchTarget : 0),
+          ),
+          touchTarget,
+        };
+      });
+
+      expect(measured.glyph).toBeGreaterThanOrEqual(measured.rootPx);
+      expect(measured.offCentre).toBeLessThanOrEqual(1);
+      expect(measured.typingEnd).toBeLessThanOrEqual(measured.eyeStart);
+      expect(measured.reach).toBeGreaterThanOrEqual(measured.touchTarget);
+    });
+  });
+}
+
+test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows the largest accessibility text', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ page }) => {
+    await showLargestSystemText(page);
+  });
+
+  test('when they open Bankovní účty, press Přidat bankovní účet and add an account, then its label breaks only between words, the icon stays by its first line and the row keeps its height', async ({
+    page,
+  }) => {
+    await page.clock.install();
+    await mockDonorApi(page);
+    let dialogOpen = false;
+    let paymentBooked = false;
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-check',
+      (route) => {
+        if (route.request().method() === 'POST' && dialogOpen) {
+          paymentBooked = true;
+        }
+        return route.fulfill({
+          status: 202,
+          json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false },
+        });
+      },
+    );
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-accounts',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: paymentBooked
+              ? [
+                  bankAccountItem({
+                    id: 'a-new',
+                    accountNumber: '1234567890/0800',
+                    verifiedOn: '2026-10-18',
+                    verificationPaymentOn: '2026-10-18',
+                  }),
+                ]
+              : [],
+          },
+        }),
+    );
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const add = page.getByRole('button', { name: 'Přidat bankovní účet' });
+    await expect(add).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await expect.poll(() => layoutAtRest(add)).toBe(true);
+    const label = add.locator('.ui-list__title');
+
+    expect(await wordsBrokenInside(label)).toEqual([]);
+    expect(await label.evaluate((element) => element.scrollWidth - element.clientWidth)).toBe(0);
+    expect(await iconBesideTheFirstLineOf(add)).toBe(true);
+    const height = (await add.boundingBox())!.height;
+
+    const box = (await add.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    expect((await add.boundingBox())!.height).toBe(height);
+    await page.mouse.move(box.x + box.width / 2, box.y - 200);
+    await page.mouse.up();
+
+    await add.click();
+    dialogOpen = true;
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.locator('.add-account-watch')).toContainText('Čekáme na vaši platbu…');
+    await page.clock.fastForward(30_000);
+    await expect(dialog.locator('.add-account-watch')).toContainText('je ověřený');
+    await dialog.getByRole('button', { name: 'Hotovo' }).click();
+    await expect(page.locator('.accounts-list .account-number')).toHaveText('1234567890/0800');
+    await expect.poll(() => layoutAtRest(add)).toBe(true);
+
+    expect((await add.boundingBox())!.height).toBe(height);
+    expect(await iconBesideTheFirstLineOf(add)).toBe(true);
+  });
+});
+
+async function layoutAtRest(element: Locator): Promise<boolean> {
+  return element.evaluate(async (target) => {
+    const nextFrame = () => new Promise((settled) => requestAnimationFrame(settled));
+    const before = target.getBoundingClientRect();
+    await nextFrame();
+    await nextFrame();
+    const after = target.getBoundingClientRect();
+    return (
+      document.fonts.status === 'loaded' &&
+      document.querySelector('dialog[open]') === null &&
+      document.getAnimations().length === 0 &&
+      before.left === after.left &&
+      before.top === after.top &&
+      before.width === after.width &&
+      before.height === after.height
+    );
+  });
+}
+
+async function iconBesideTheFirstLineOf(row: Locator): Promise<boolean> {
+  return row.evaluate((button) => {
+    const label = button.querySelector('.ui-list__title')!;
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    const firstLine = range.getClientRects()[0];
+    const icon = button.querySelector('.ui-list__glyph svg')!.getBoundingClientRect();
+    const middle = icon.top + icon.height / 2;
+    return middle >= firstLine.top && middle <= firstLine.bottom;
   });
 }
 

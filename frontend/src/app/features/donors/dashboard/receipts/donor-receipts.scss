@@ -1,11 +1,7 @@
 @use 'breakpoints' as bp;
 
-.receipts-intro {
-  margin: calc(-1 * var(--space-2)) 0 var(--space-5);
-  max-inline-size: var(--measure-prose);
-  font-size: var(--text-lg);
-  line-height: var(--leading-relaxed);
-  color: var(--color-text-soft);
+.receipts-footer {
+  margin: var(--space-5) calc(-1 * var(--space-6)) calc(-1 * var(--space-5));
 }
 
 .ui-card__title {
@@ -78,9 +74,6 @@
 .yearly-hint,
 .yearly-earlier {
   margin-top: var(--space-2);
-  max-inline-size: var(--measure-prose);
-  font-size: var(--text-sm);
-  color: var(--color-text-soft);
 }
 
 .yearly-empty {

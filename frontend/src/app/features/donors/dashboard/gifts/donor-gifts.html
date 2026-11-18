@@ -9,13 +9,6 @@
         </h2>
         <app-bank-check />
       </div>
-      @if (donations.items().length > 0) {
-        <p class="gifts-tax-note" i18n="@@donor.gifts.taxNote">
-          Potvrzení k jednotlivým darům stáhnete hned, roční za celý rok od 1.&nbsp;ledna dalšího
-          roku. Do daňového přiznání přiložte buď jednotlivá, nebo roční, ne obojí: roční obsahuje
-          všechny dary roku.
-        </p>
-      }
       @if (receiptErrorAboveYears(); as message) {
         <p #receiptAlert class="ui-callout ui-callout--danger receipt-error" role="alert">
           {{ message }}
@@ -97,13 +90,6 @@
           />
         </section>
       }
-      @if (receivedWithoutReceipt()) {
-        <p class="ui-card__footer receipts-from" i18n="@@donor.dashboard.payments.receiptsFrom">
-          Potvrzení o daru tu vystavujeme za dary přijaté od 1.&nbsp;ledna&nbsp;{{
-            donations.receiptsFrom()
-          }}, u starších darů proto tlačítko „Stáhnout PDF“ chybí.
-        </p>
-      }
     } @else {
       <div class="payments-empty-state">
         <p class="payments-empty" i18n="@@donor.dashboard.payments.empty">
@@ -120,6 +106,20 @@
       </div>
     }
     <div class="ui-card__footer">
+      @if (donations.items().length > 0) {
+        <p class="gifts-tax-note" i18n="@@donor.gifts.taxNote">
+          Potvrzení k jednotlivým darům stáhnete hned, roční od 1.&nbsp;ledna dalšího roku.
+          K&nbsp;daňovému přiznání přiložte buď jednotlivá, nebo roční, ne obojí: roční obsahuje
+          všechny dary roku.
+        </p>
+        @if (receivedWithoutReceipt()) {
+          <p class="receipts-from" i18n="@@donor.dashboard.payments.receiptsFrom">
+            Potvrzení o daru tu vystavujeme za dary přijaté od 1.&nbsp;ledna&nbsp;{{
+              donations.receiptsFrom()
+            }}, u starších darů proto tlačítko „Stáhnout PDF“ chybí.
+          </p>
+        }
+      }
       <p class="bank-hint" i18n="@@donor.gifts.bank.hint">
         Nové platby hledáme v bance každou hodinu a také když otevřete tuto stránku. Okamžitá platba
         se tu obvykle objeví do minuty, běžný převod z jiné banky do dalšího pracovního dne.

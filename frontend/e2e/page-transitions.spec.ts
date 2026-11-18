@@ -1,6 +1,6 @@
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { stepBack } from './app-history';
-import { mockDonorApi } from './donor-session';
+import { administrator, mockDonorApi, openAccountItem, session } from './donor-session';
 import { expect, test } from './fixtures';
 
 const article = {
@@ -117,6 +117,169 @@ async function publishedArticle(page: Page): Promise<void> {
   );
 }
 
+const pairedPayment = {
+  id: '019a1c00-0000-7000-8000-000000001001',
+  bankTransactionId: 1001,
+  bookedOn: '2026-10-10',
+  amountMinor: 50000,
+  currency: 'CZK',
+  variableSymbol: '1111111111',
+  counterpartyAccount: '2900233333/2010',
+  counterpartyName: 'Nováková Jana',
+  messageForRecipient: 'Dar pro fond',
+  importedAt: '2026-10-17T10:00:00Z',
+  unpairedByAdminAt: null,
+  accountVerification: false,
+  donation: {
+    id: 'd1',
+    donorId: administrator.id,
+    donorName: 'Jana Nováková',
+    pairedBy: 'MANUAL',
+    status: 'RECEIVED',
+    recordedAt: '2026-10-18T09:00:00Z',
+    receiptIssued: false,
+  },
+};
+
+const otherPayments = Array.from({ length: 24 }, (_, index) => ({
+  ...pairedPayment,
+  id: `019a1c00-0000-7000-8000-0000000020${String(index).padStart(2, '0')}`,
+  bankTransactionId: 2000 + index,
+  bookedOn: `2026-10-${String(30 - index).padStart(2, '0')}`,
+  variableSymbol: '2222222222',
+  counterpartyName: 'Dvořák Petr',
+  donation: {
+    ...pairedPayment.donation,
+    id: `d2${index}`,
+    donorId: '0199f3e0-0000-7000-8000-00000000d002',
+    donorName: 'Petr Dvořák',
+  },
+}));
+
+async function expectWhollyInView(page: Page, target: Locator): Promise<void> {
+  await expect(async () => {
+    const box = (await target.boundingBox())!;
+    const banner = (await page.getByRole('banner').boundingBox())!;
+    const tabBar = page.getByRole('navigation', { name: 'Hlavní sekce' });
+    const floor = (await tabBar.isVisible())
+      ? (await tabBar.boundingBox())!.y
+      : page.viewportSize()!.height;
+    expect(Math.round(box.y)).toBeGreaterThanOrEqual(Math.round(banner.y + banner.height));
+    expect(Math.round(box.y + box.height)).toBeLessThanOrEqual(floor);
+  }).toPass();
+}
+
+interface FocusRing {
+  readonly visible: boolean;
+  readonly width: number;
+  readonly outside: number;
+}
+
+function focusRingOfActive(page: Page): Promise<FocusRing> {
+  return page.evaluate(() => {
+    const focused = document.activeElement as HTMLElement;
+    const style = getComputedStyle(focused);
+    const width = style.outlineStyle === 'none' ? 0 : parseFloat(style.outlineWidth);
+    const ring = Math.max(0, width + parseFloat(style.outlineOffset));
+    const box = focused.getBoundingClientRect();
+    let clipping = focused.parentElement;
+    while (
+      clipping !== null &&
+      clipping !== document.documentElement &&
+      getComputedStyle(clipping).overflowX === 'visible' &&
+      getComputedStyle(clipping).overflowY === 'visible'
+    ) {
+      clipping = clipping.parentElement;
+    }
+    const area =
+      clipping === null || clipping === document.documentElement || clipping === document.body
+        ? { left: 0, top: 0, right: innerWidth, bottom: innerHeight }
+        : (() => {
+            const edge = clipping.getBoundingClientRect();
+            const left = edge.left + clipping.clientLeft;
+            const top = edge.top + clipping.clientTop;
+            return {
+              left,
+              top,
+              right: left + clipping.clientWidth,
+              bottom: top + clipping.clientHeight,
+            };
+          })();
+    const outside = Math.max(
+      area.left - (box.left - ring),
+      area.top - (box.top - ring),
+      box.right + ring - area.right,
+      box.bottom + ring - area.bottom,
+    );
+    return { visible: focused.matches(':focus-visible'), width, outside };
+  });
+}
+
+async function expectFocusRingWhole(page: Page): Promise<void> {
+  await expect(async () => {
+    const ring = await focusRingOfActive(page);
+    expect(ring.visible).toBe(true);
+    expect(ring.width).toBeGreaterThan(0);
+    expect(Math.round(ring.outside)).toBeLessThanOrEqual(0);
+  }).toPass();
+}
+
+async function pressZpetByKeyboard(page: Page): Promise<void> {
+  await back(page).focus();
+  await page.keyboard.press('Enter');
+}
+
+async function pairedPayments(page: Page): Promise<void> {
+  await page.route('**/api/donors/auth/refresh', (route) =>
+    route.fulfill(session(200, administrator)),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/admin/donations/payments',
+    (route) => {
+      const pairedOnly = new URL(route.request().url()).searchParams.get('pairing') === 'paired';
+      return route.fulfill({
+        json: {
+          year: null,
+          availableYears: pairedOnly ? [2026] : [],
+          items: pairedOnly ? [...otherPayments, pairedPayment] : [],
+          total: pairedOnly ? otherPayments.length + 1 : 0,
+        },
+      });
+    },
+  );
+}
+
+function paymentRow(page: Page) {
+  return page
+    .getByRole('row')
+    .filter({ hasText: '10. 10. 2026' })
+    .filter({ hasText: 'Nováková Jana' });
+}
+
+async function followPairedPaymentsDonor(page: Page): Promise<void> {
+  await page.goto('/aktuality');
+  await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeVisible();
+  await openAccountItem(page, 'Správa');
+  await expect(page).toHaveURL(/\/sprava$/);
+  await page
+    .getByRole('main')
+    .getByRole('link', { name: /^Platby z banky/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/sprava\/platby/);
+  await page.getByRole('button', { name: 'Přiřazené', exact: true }).click();
+  await page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ }).click();
+  await page
+    .getByRole('dialog', { name: 'Přiřazená platba' })
+    .getByRole('link', { name: 'Jana Nováková' })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/sprava/darci/${administrator.id}$`));
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(overlays(page)).toHaveCount(0);
+}
+
 async function openArticleFromList(page: Page): Promise<void> {
   await page.goto('/aktuality');
   await page.getByRole('link', { name: article.title }).click();
@@ -214,6 +377,97 @@ test.describe('Given a visitor reading the news on a phone', () => {
       page.getByRole('main').locator(`a[href="/aktuality/${article.slug}"]`).first(),
     ).toBeFocused();
     expect(await seenTransitions(page)).toEqual([]);
+  });
+});
+
+test.describe("Given an administrator on a phone who opened the administration from the account sheet over the news and followed a paired payment's donor from the payments", () => {
+  test.use({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await pairedPayments(page);
+    await followPairedPaymentsDonor(page);
+  });
+
+  test("when they press Zpět on the donor card, then the payments return with the payment's row focused", async ({
+    page,
+  }) => {
+    await back(page).click();
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ })).toBeFocused();
+    await expectWhollyInView(
+      page,
+      page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ }),
+    );
+    await expect(overlays(page)).toHaveCount(0);
+  });
+
+  test("when they press Zpět on the donor card by keyboard, then the payment's row shows its whole focus ring", async ({
+    page,
+  }) => {
+    await pressZpetByKeyboard(page);
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ })).toBeFocused();
+    await expectFocusRingWhole(page);
+  });
+
+  test("when the app steps back without Zpět, then the payments return with the payment's row focused", async ({
+    page,
+  }) => {
+    await stepBack(page);
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ })).toBeFocused();
+    await expectWhollyInView(
+      page,
+      page.getByRole('button', { name: /^Nováková Jana 10\. 10\. 2026/ }),
+    );
+  });
+
+  test('when they close the administration on the donor card, then the news it was opened over return', async ({
+    page,
+  }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Zavřít' }).click();
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeVisible();
+  });
+});
+
+test.describe("Given an administrator on a wide screen who followed a paired payment's donor from the payments", () => {
+  test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await pairedPayments(page);
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/platby?stav=prirazene');
+    await paymentRow(page).getByRole('link', { name: 'Jana Nováková' }).click();
+    await expect(page).toHaveURL(new RegExp(`/sprava/darci/${administrator.id}$`));
+  });
+
+  test("when the app steps back without Zpět, then the payments return with focus in the payment's row on the donor it left", async ({
+    page,
+  }) => {
+    await stepBack(page);
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(paymentRow(page).getByRole('link', { name: 'Jana Nováková' })).toBeFocused();
+    await expectWhollyInView(page, paymentRow(page).getByRole('link', { name: 'Jana Nováková' }));
+  });
+
+  test("when a keyboard user steps back from the donor card, then the donor link in the payment's row shows its whole focus ring", async ({
+    page,
+  }) => {
+    await page.keyboard.press('Tab');
+    await stepBack(page);
+
+    await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(paymentRow(page).getByRole('link', { name: 'Jana Nováková' })).toBeFocused();
+    await expectFocusRingWhole(page);
   });
 });
 

@@ -315,7 +315,9 @@ describe('Given a signed-in donor in the donor area', () => {
         'Ověřte bankovní účet, ze kterého jste platili, platbou 1 Kč a dřívější dary z něj vám obvykle přiřadíme také.',
     );
     const link = element(`${block} a`) as HTMLAnchorElement;
-    expect(normalized(link.textContent ?? '')).toBe('Přidat účet, ze kterého jste platili');
+    expect(normalized(link.textContent ?? '')).toBe(
+      'Přidat bankovní účet, ze kterého jste platili',
+    );
     expect(link.getAttribute('href')).toBe('/darce/ucty?pridat=ucet');
   }
 
@@ -1244,6 +1246,8 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), list);
 
       expect(text('.last-gift-status')).toBe('Vráceno');
+      expect(element('.last-gift-status')?.classList).toContain('ui-badge--neutral');
+      expect(element('.last-gift-status')?.classList).not.toContain('ui-badge--success');
     });
 
     it('then the yearly receipt of the last completed year with a gift is offered for download', async () => {
@@ -1599,7 +1603,24 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(text('.payments-card .gifts-tax-note')).toBe(
-        'Potvrzení k jednotlivým darům stáhnete hned, roční za celý rok od 1. ledna dalšího roku. Do daňového přiznání přiložte buď jednotlivá, nebo roční, ne obojí: roční obsahuje všechny dary roku.',
+        'Potvrzení k jednotlivým darům stáhnete hned, roční od 1. ledna dalšího roku. K daňovému přiznání přiložte buď jednotlivá, nebo roční, ne obojí: roční obsahuje všechny dary roku.',
+      );
+    });
+
+    it("then the line about the tax return opens the card's one footer, before the receipts start and the bank hint", async () => {
+      await open('/darce/dary');
+      await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+      const footers = [...root().querySelectorAll<HTMLElement>('.payments-card .ui-card__footer')];
+      expect(footers).toHaveLength(1);
+      expect(element('.payments-card > .ui-card__bar .gifts-tax-note')).toBeNull();
+      const order = [...footers[0].querySelectorAll<HTMLElement>('p')].map(
+        (line) => line.className,
+      );
+      expect(order.indexOf('gifts-tax-note')).toBe(0);
+      expect(order.findIndex((name) => name.includes('receipts-from'))).toBeGreaterThan(0);
+      expect(order.findIndex((name) => name.includes('bank-hint'))).toBeGreaterThan(
+        order.findIndex((name) => name.includes('receipts-from')),
       );
     });
 
@@ -1849,6 +1870,39 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(normalized(row?.textContent ?? '')).toMatch(
         /^20\. 8\. 2025 Obecný příspěvek 2 000 Kč Vráceno/,
       );
+    });
+
+    it('then the state of every gift in the table is a badge, neutral for Vráceno and green for Přijato', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const badges = [
+        ...root().querySelectorAll<HTMLElement>('.payments-card td[data-label="Stav"] > *'),
+      ];
+      expect(badges.map((badge) => normalized(badge.textContent ?? ''))).toEqual([
+        'Přijato',
+        'Přijato',
+        'Přijato',
+        'Vráceno',
+      ]);
+      expect(badges.map((badge) => badge.className)).toEqual([
+        'ui-badge ui-badge--success',
+        'ui-badge ui-badge--success',
+        'ui-badge ui-badge--success',
+        'ui-badge ui-badge--neutral',
+      ]);
+    });
+
+    it('then on a phone a refunded gift says Vráceno in a neutral badge', async () => {
+      compact.set(true);
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const badge = element(
+        `${yearSection(2025)} .donation-rows > li:nth-child(2) .ui-list__state > *`,
+      );
+      expect(normalized(badge?.textContent ?? '')).toBe('Vráceno');
+      expect(badge?.className).toBe('ui-badge ui-badge--neutral');
     });
 
     it('then "Všechny dary" is the h2 title inside its own card', async () => {
@@ -3492,10 +3546,52 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/potvrzeni');
       await respond(twoYearSummary(), twoYearDonations());
 
-      expect(text('.receipts-intro')).toBe(
-        'Potvrzení k jednotlivým darům stáhnete hned, roční za celý rok od 1. ledna dalšího roku. Do daňového přiznání přiložte buď jednotlivá, nebo roční, ne obojí: roční obsahuje všechny dary roku. ' +
+      expect(text('.receipts-tax-note')).toBe(
+        'Potvrzení k jednotlivým darům stáhnete hned, roční od 1. ledna dalšího roku. K daňovému přiznání přiložte buď jednotlivá, nebo roční, ne obojí: roční obsahuje všechny dary roku. ' +
           'Když změníte jméno nebo adresu, nově stažené potvrzení dostane nové číslo a nahradí to dřívější.',
       );
+    });
+
+    it('then the line about the tax return is the footer of the yearly receipts card, not a lead above the cards', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('.receipts-intro')).toBeNull();
+      const footers = [...root().querySelectorAll<HTMLElement>('.yearly-card .ui-card__footer')];
+      expect(footers).toHaveLength(1);
+      expect(footers[0].querySelector('.receipts-tax-note')).not.toBeNull();
+      expect(footers[0].parentElement?.lastElementChild).toBe(footers[0]);
+    });
+
+    it('then the footer of the yearly receipts card holds the tax note first and the year the receipts start from after it, as Moje dary does', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const footers = [...root().querySelectorAll<HTMLElement>('.yearly-card .ui-card__footer')];
+      expect(footers).toHaveLength(1);
+      expect([...footers[0].children].map((line) => line.className)).toEqual([
+        'receipts-tax-note',
+        'yearly-earlier',
+      ]);
+    });
+
+    it('then the footer of the yearly receipts card keeps the tax note first when a year has no receipt and the hint follows it', async () => {
+      await open('/darce/potvrzeni');
+      await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+      const footers = [...root().querySelectorAll<HTMLElement>('.yearly-card .ui-card__footer')];
+      expect(footers).toHaveLength(1);
+      expect([...footers[0].children].map((line) => line.className)).toEqual([
+        'receipts-tax-note',
+        'yearly-hint',
+      ]);
+    });
+
+    it('then a donor without donations reads no line about the tax return on the receipts page', async () => {
+      await open('/darce/potvrzeni');
+      await respond(emptySummary(), emptyDonations());
+
+      expect(element('.receipts-tax-note')).toBeNull();
     });
   });
 

@@ -4,10 +4,10 @@ import { PairingHelp } from './pairing-help';
 const HELP_ITEMS = [
   'Jak se k vám dostane můj dar? Platbu s vaším variabilním symbolem 9876543210 přiřadíme vám, ať přijde z jakéhokoli účtu.',
   'Moje banka nemá pole pro variabilní symbol Napište symbol 9876543210 do zprávy pro příjemce. Platbu vám přiřadíme stejně, jako kdyby byl v poli pro symbol.',
-  'Co když pošlu platbu bez symbolu? Přiřadíme ji podle účtu, ze kterého přišla, pokud jste ho ověřili platbou s vaším symbolem (stačí 1 Kč přes „Přidat účet“). ' +
+  'Co když pošlu platbu bez symbolu? Přiřadíme ji podle účtu, ze kterého přišla, pokud jste ho ověřili platbou s vaším symbolem (stačí 1 Kč přes „Přidat bankovní účet“). ' +
     'Když účet ověříte jako první dárce, přiřadíme vám i dřívější platby z něj bez symbolu.',
   'Posílám trvalým příkazem se starým symbolem Nejjistější je změnit v příkazu symbol na váš 9876543210. ' +
-    'Jinak pošlete z účtu 1 Kč se zprávou z QR kódu v „Přidat účet“ (běžný dar nestačí) a my se vás u účtu obvykle zeptáme, jestli jsou platby se starým symbolem vaše.',
+    'Jinak pošlete z účtu 1 Kč se zprávou z QR kódu v „Přidat bankovní účet“ (běžný dar nestačí) a my se vás u účtu obvykle zeptáme, jestli jsou platby se starým symbolem vaše.',
   'Co se stane po odpovědi na otázku? Po „Ano, jsou moje“ vám platby s tímto symbolem z účtu přiřazujeme stejně jako platby bez symbolu, dřívější i další; ' +
     'po „Ne, nejsou moje“ se už neptáme. Odpověď nejde změnit; kdybyste se spletli, napište nám.',
   'Co znamená Sdílený účet? Stejný účet ověřil i jiný dárce, proto z něj platby bez symbolu ani se starším potvrzeným symbolem nepřiřazujeme nikomu. ' +
@@ -104,7 +104,7 @@ describe('Given the help on how payments are paired', () => {
             ? 'Moje banka nemá pole pro variabilní symbol Napište svůj variabilní symbol do zprávy pro příjemce. Platbu vám přiřadíme stejně, jako kdyby byl v poli pro symbol.'
             : index === 3
               ? 'Posílám trvalým příkazem se starým symbolem Nejjistější je změnit v příkazu symbol na váš. ' +
-                'Jinak pošlete z účtu 1 Kč se zprávou z QR kódu v „Přidat účet“ (běžný dar nestačí) a my se vás u účtu obvykle zeptáme, jestli jsou platby se starým symbolem vaše.'
+                'Jinak pošlete z účtu 1 Kč se zprávou z QR kódu v „Přidat bankovní účet“ (běžný dar nestačí) a my se vás u účtu obvykle zeptáme, jestli jsou platby se starým symbolem vaše.'
               : item,
       ),
     );

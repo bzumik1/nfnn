@@ -413,7 +413,7 @@ const SCREENS: Screen[] = [
       await servePaymentDetails(page);
       await rememberedSession(page, donor);
       await page.goto('/darce/ucty');
-      await page.getByRole('button', { name: 'Přidat účet' }).click();
+      await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
       await expect(
         page.getByRole('dialog').locator('.add-account-qr').getByRole('img'),
       ).toBeVisible();
