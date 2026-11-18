@@ -1,4 +1,4 @@
-import { PAGE_LAYER_CLASS, PAGE_TRANSITION_CLASS } from './page-transitions';
+import { nextFrame, PAGE_LAYER_CLASS, PAGE_TRANSITION_CLASS } from './page-transitions';
 
 const HEADER = 'app-header .app-header';
 const SIDE_NAVIGATION = '.side-nav-panel';
@@ -31,10 +31,10 @@ export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp):
     if (gap === 0) {
       catchUp.caughtUp();
     } else {
-      view.requestAnimationFrame(closeIn);
+      nextFrame(view, closeIn);
     }
   };
-  view.requestAnimationFrame(closeIn);
+  nextFrame(view, closeIn);
 }
 
 export async function withoutFocus<T>(

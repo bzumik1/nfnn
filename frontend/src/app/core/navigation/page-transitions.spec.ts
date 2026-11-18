@@ -176,6 +176,18 @@ describe('Given a phone that animates, an article opened from the news, and the 
 
     expect(moved).toBe(true);
   });
+
+  it('when the browser stops giving animation frames, then the step back still moves in on the clock instead of leaving its cover over the page', async () => {
+    const frames = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 0);
+    try {
+      await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+      await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 500);
+
+      expect(moved).toBe(true);
+    } finally {
+      frames.mockRestore();
+    }
+  });
 });
 
 describe('Given the app on the home screen of a phone, scrolling restored, with an article just opened from the news', () => {
@@ -805,6 +817,23 @@ describe('Given the app on the home screen of a phone opened straight on the don
       expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)?.classList).not.toContain(
         `${PAGE_TRANSITION_CLASS}--catching-up`,
       );
+    } finally {
+      frames.restore();
+      document.documentElement.style.removeProperty('--duration-fast');
+    }
+  });
+
+  it('when the browser stops giving animation frames while the page closes in on the finger, then the page still closes in on the clock and ends with the finger', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    const frames = framesByHand();
+    try {
+      const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(120);
+      finishVisit();
+      await drawnUnder();
+
+      await expect.poll(() => offsetOf(over()), { timeout: 2000 }).toBe(120);
     } finally {
       frames.restore();
       document.documentElement.style.removeProperty('--duration-fast');

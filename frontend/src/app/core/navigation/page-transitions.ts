@@ -39,6 +39,7 @@ export const PAGE_TRANSITION_CLASS = 'page-transition';
 export const PAGE_TRANSITION_LONGEST_MS = 2000;
 export const PAGE_COVER_LONGEST_MS = 5000;
 export const KEPT_PAGES = 3;
+const FRAME_LATE_MS = 100;
 export const ACCOUNT_RETURNS_KEY = 'nfnnAppAccount';
 
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
@@ -758,12 +759,25 @@ function parallaxAt(progress: number): string {
   return `translateX(calc(var(--page-parallax) * ${1 - progress}))`;
 }
 
+export function nextFrame(view: Window, then: (now: number) => void): void {
+  let done = false;
+  const once = (now: number): void => {
+    if (!done) {
+      done = true;
+      view.clearTimeout(late);
+      then(now);
+    }
+  };
+  const late = view.setTimeout(() => once(view.performance.now()), FRAME_LATE_MS);
+  view.requestAnimationFrame(once);
+}
+
 function afterFrames(view: Window, frames: number, then: () => void): void {
   if (frames === 0) {
     then();
     return;
   }
-  view.requestAnimationFrame(() => afterFrames(view, frames - 1, then));
+  nextFrame(view, () => afterFrames(view, frames - 1, then));
 }
 
 export const pageTransitionsAtStart: EnvironmentProviders = provideAppInitializer(
