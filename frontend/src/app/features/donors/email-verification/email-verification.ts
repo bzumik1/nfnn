@@ -71,8 +71,8 @@ export class EmailVerification {
   protected readonly portalPath = PORTAL_PATH;
 
   protected readonly emailMessages = {
-    required: $localize`:@@donor.form.email.required:Vyplňte prosím e\u2011mail.`,
-    email: $localize`:@@donor.form.email.invalid:Zadejte e\u2011mail ve tvaru jana@example.cz.`,
+    required: $localize`:@@donor.form.email.required:Vyplňte prosím e-mail.`,
+    email: $localize`:@@donor.form.email.invalid:Zadejte e-mail ve tvaru jana@example.cz.`,
   };
   protected readonly panel = signal<Panel>(this.token === null ? 'missing-link' : 'confirming');
   protected readonly loading = signal(false);

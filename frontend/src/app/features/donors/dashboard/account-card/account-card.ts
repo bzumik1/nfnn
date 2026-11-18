@@ -130,8 +130,8 @@ export class AccountCard {
   protected readonly emailChange = signal<'resent' | 'cancelled' | null>(null);
 
   protected readonly newEmailMessages = {
-    required: $localize`:@@donor.account.newEmail.required:Vyplňte prosím novou e\u2011mailovou adresu.`,
-    email: $localize`:@@donor.account.newEmail.invalid:Zadejte prosím platnou e\u2011mailovou adresu.`,
+    required: $localize`:@@donor.account.newEmail.required:Vyplňte prosím novou e-mailovou adresu.`,
+    email: $localize`:@@donor.account.newEmail.invalid:Zadejte prosím platnou e-mailovou adresu.`,
   };
   protected readonly currentPasswordMessages = {
     required: $localize`:@@donor.account.currentPassword.required:Zadejte prosím své současné heslo.`,

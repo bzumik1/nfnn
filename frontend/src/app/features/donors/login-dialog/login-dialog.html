@@ -294,7 +294,8 @@
           >
             <div class="ui-field-group">
               <app-form-field
-                label="E&#8209;mail"
+                label="E-mail"
+                [wholeLabel]="true"
                 i18n-label="@@donor.login.email"
                 [messages]="emailMessages"
               >
@@ -401,7 +402,7 @@
                   (click)="resendVerification()"
                   i18n="@@donor.login.resendVerification"
                 >
-                  Poslat ověřovací e&#8209;mail znovu
+                  Poslat ověřovací <span class="ui-word">e-mail</span> znovu
                 </button>
               </p>
             }
@@ -478,7 +479,7 @@
             </svg>
           </div>
           <h3 tabindex="-1" autofocus i18n="@@donor.register.sentTitle">
-            Zkontrolujte si e&#8209;mail
+            Zkontrolujte si <span class="ui-word">e-mail</span>
           </h3>
           <p role="status" i18n="@@donor.register.sentText">
             Na adresu {{ registration.email.trim() }} jsme poslali odkaz pro potvrzení. Platí
@@ -507,7 +508,7 @@
               (click)="editRegistration()"
               i18n="@@donor.register.editEmail"
             >
-              Opravit e&#8209;mail
+              Opravit <span class="ui-word">e-mail</span>
             </button>
           </div>
           <div role="status">
@@ -743,7 +744,8 @@
 
             <div class="ui-field-group">
               <app-form-field
-                label="E&#8209;mail"
+                label="E-mail"
+                [wholeLabel]="true"
                 i18n-label="@@donor.login.email"
                 [messages]="emailMessages"
               >
@@ -890,7 +892,7 @@
             </svg>
           </div>
           <h3 tabindex="-1" autofocus i18n="@@donor.login.reset.successTitle">
-            Zkontrolujte si e&#8209;mail
+            Zkontrolujte si <span class="ui-word">e-mail</span>
           </h3>
           <p i18n="@@donor.login.reset.successText">
             Pokud k&nbsp;adrese {{ resetEmail.trim() }} existuje účet, poslali jsme na ni odkaz pro
@@ -955,7 +957,8 @@
           >
             <div class="ui-field-group">
               <app-form-field
-                label="E&#8209;mail"
+                label="E-mail"
+                [wholeLabel]="true"
                 i18n-label="@@donor.login.email"
                 [messages]="emailMessages"
               >

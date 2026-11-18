@@ -10,7 +10,7 @@
             tabindex="-1"
             i18n="@@donor.emailVerification.confirming.title"
           >
-            Potvrzujeme váš e&#8209;mail
+            Potvrzujeme váš <span class="ui-word">e-mail</span>
           </h1>
           <p class="ui-panel__lead" role="status" i18n="@@donor.emailVerification.confirming.text">
             Chvilku strpení…
@@ -28,7 +28,7 @@
               tabindex="-1"
               i18n="@@donor.emailVerification.changed.title"
             >
-              E&#8209;mail je změněný
+              <span class="ui-word">E-mail</span> je změněný
             </h1>
             <p
               class="ui-panel__lead"
@@ -54,7 +54,7 @@
               tabindex="-1"
               i18n="@@donor.emailVerification.confirmed.title"
             >
-              E&#8209;mail je potvrzený
+              <span class="ui-word">E-mail</span> je potvrzený
             </h1>
             @if (needsPasskey()) {
               <p
@@ -167,7 +167,7 @@
             tabindex="-1"
             i18n="@@donor.emailVerification.failed.title"
           >
-            E&#8209;mail se nepodařilo potvrdit
+            <span class="ui-word">E-mail</span> se nepodařilo potvrdit
           </h1>
           <p class="ui-panel__lead" role="alert">{{ error() }}</p>
           <button
@@ -191,7 +191,7 @@
             tabindex="-1"
             i18n="@@donor.emailVerification.requested.title"
           >
-            E&#8209;mail odeslán
+            <span class="ui-word">E-mail</span> odeslán
           </h1>
           <p class="ui-panel__lead" role="status" i18n="@@donor.emailVerification.requested.text">
             Pokud účet s touto adresou čeká na potvrzení, poslali jsme na ni nový odkaz. Platí 24
@@ -250,7 +250,8 @@
           novalidate
         >
           <app-form-field
-            label="E&#8209;mail"
+            label="E-mail"
+            [wholeLabel]="true"
             i18n-label="@@donor.login.email"
             [messages]="emailMessages"
           >
