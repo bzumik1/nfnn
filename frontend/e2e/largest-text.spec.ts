@@ -937,6 +937,30 @@ async function summaryPairs(summary: Locator): Promise<SummaryPair[]> {
   );
 }
 
+async function firstLines(
+  summary: Locator,
+): Promise<{ label: { bottom: number }; value: { bottom: number } }[]> {
+  return summary.locator('dl > div').evaluateAll((rows) => {
+    const firstLine = (element: Element): { bottom: number } => {
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) =>
+          node.textContent?.trim() &&
+          !node.parentElement?.closest('.visually-hidden, [aria-hidden="true"]')
+            ? NodeFilter.FILTER_ACCEPT
+            : NodeFilter.FILTER_REJECT,
+      });
+      const text = walker.nextNode()!;
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      return { bottom: range.getClientRects()[0].bottom };
+    };
+    return rows.map((row) => ({
+      label: firstLine(row.querySelector('dt')!),
+      value: firstLine(row.querySelector('dd')!),
+    }));
+  });
+}
+
 async function pastTheirCard(card: Locator): Promise<string[]> {
   return card.evaluate((root) => {
     const style = getComputedStyle(root);
@@ -1023,17 +1047,58 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
     });
   });
 
-  test('when they look at the summary at the default text size, then every label stays beside its value and the values share one column', async ({
+  test('when they look at the summary at the default text size, then every label stays beside the first line of its value, Kopírovat stays on the line of the symbol and ověřen on the line of the e-mail', async ({
     page,
   }) => {
     const summary = await openSummary(page);
 
     const pairs = await summaryPairs(summary);
+    for (const { label, value } of pairs) {
+      expect(value.left).toBeGreaterThanOrEqual(label.right - 0.5);
+    }
+    for (const { label, value } of await firstLines(summary)) {
+      expect(Math.abs(label.bottom - value.bottom)).toBeLessThanOrEqual(2);
+    }
+    const symbol = (await summary.locator('.summary-symbol .ui-figures').boundingBox())!;
+    const copy = (await summary
+      .getByRole('button', { name: 'Kopírovat variabilní symbol' })
+      .boundingBox())!;
+    expect(copy.y).toBeLessThan(symbol.y + symbol.height / 2);
+    expect(copy.y + copy.height).toBeGreaterThan(symbol.y + symbol.height / 2);
+    const email = (await summary.locator('.email').boundingBox())!;
+    const verified = (await summary.getByText('ověřen', { exact: true }).boundingBox())!;
+    expect(verified.y).toBeLessThan(email.y + email.height / 2);
+    expect(verified.y + verified.height).toBeGreaterThan(email.y + email.height / 2);
+    expect(await pastTheirCard(summary)).toEqual([]);
+  });
+});
+
+test.describe('Given an administrator on a tablet 768 pt wide opening the card of a donor', () => {
+  test.use({ viewport: { width: 768, height: 1024 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await mockAdministration(page);
+    await rememberedSession(page);
+  });
+
+  test('when they look at the summary at the default text size, then every label stays beside the first line of its value and the values share one column', async ({
+    page,
+  }) => {
+    await page.goto(PETR_DETAIL_PATH);
+    await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeAttached();
+    const summary = page.getByRole('region', { name: 'Shrnutí dárce' });
+    await expect(summary.locator('dt').last()).toHaveText('Dvoufaktorové ověření');
+    await page.evaluate(() => document.fonts.ready);
+
+    const pairs = await summaryPairs(summary);
     const column = pairs[0].value.left;
     for (const { label, value } of pairs) {
       expect(value.left).toBeGreaterThanOrEqual(label.right - 0.5);
-      expect(value.top).toBeLessThan(label.bottom);
       expect(Math.abs(value.left - column)).toBeLessThanOrEqual(0.5);
+    }
+    for (const { label, value } of await firstLines(summary)) {
+      expect(Math.abs(label.bottom - value.bottom)).toBeLessThanOrEqual(2);
     }
     expect(await pastTheirCard(summary)).toEqual([]);
   });
