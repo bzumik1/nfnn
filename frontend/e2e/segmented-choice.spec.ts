@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures';
 import { mockDonorApi, openSignInDialog } from './donor-session';
-import { segmentLayouts, themeWeights, withoutWeight } from './segmented';
+import { highlightColours, segmentLayouts, themeWeights, withoutWeight } from './segmented';
 
 test.describe('Given a visitor at the choice between Přihlášení and Registrace', () => {
   for (const width of [1280, 390]) {
@@ -24,4 +24,18 @@ test.describe('Given a visitor at the choice between Přihlášení and Registra
       expect(withoutWeight(after)).toEqual(withoutWeight(before));
     });
   }
+
+  test('when the system forces its own colours, then the chosen tab is drawn in Highlight with HighlightText', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.emulateMedia({ forcedColors: 'active' });
+    await openSignInDialog(page);
+    const chosen = page.getByRole('dialog').locator('.tab-switch > button').first();
+    await expect(chosen).toHaveAttribute('aria-pressed', 'true');
+
+    const highlight = await highlightColours(chosen);
+    await expect(chosen).toHaveCSS('background-color', highlight.background);
+    await expect(chosen).toHaveCSS('color', highlight.text);
+  });
 });
