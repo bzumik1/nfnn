@@ -6,8 +6,8 @@ import {
   Router,
   Scroll,
 } from '@angular/router';
-import type { KeptTabPages } from './kept-tab-pages';
-import { PREVIEW_BACK, PREVIEW_OUT } from './navigation-preview';
+import { KeptTabPages } from './kept-tab-pages';
+import { PreviewingReuse, ReusedPreview } from './previewing-reuse';
 import { ScrollHold } from './scroll-hold';
 
 interface LentPage {
@@ -18,20 +18,95 @@ interface LentPage {
   readonly navigation: number;
 }
 
-export class PreviewLending {
-  private readonly router: Router;
-  private readonly scrollHold: ScrollHold;
+export function lendKeptPagesToThePreview(injector: Injector): void {
+  const reuse = injector.get(PreviewingReuse);
+  if (!(reuse.preview instanceof PreviewLending)) {
+    reuse.preview = new PreviewLending(reuse.preview, injector);
+  }
+}
+
+class PreviewLending implements ReusedPreview {
   private lent: LentPage | null = null;
   private placing: number | null = null;
   private placed: { readonly top: number; readonly navigation: number } | null = null;
+  private following = false;
 
   constructor(
-    injector: Injector,
-    private readonly kept: KeptTabPages,
-  ) {
-    this.router = injector.get(Router);
-    this.scrollHold = injector.get(ScrollHold);
-    this.router.events.subscribe((event) => {
+    private readonly preview: ReusedPreview,
+    private readonly injector: Injector,
+  ) {}
+
+  drives(): boolean {
+    return this.preview.drives();
+  }
+
+  holds(route: ActivatedRouteSnapshot): boolean | null {
+    const held = this.preview.holds(route);
+    return held === false && this.lends(route) ? true : held;
+  }
+
+  handleFor(route: ActivatedRouteSnapshot): DetachedRouteHandle | null {
+    const lent = this.lentFor(route);
+    if (lent === null) {
+      return this.preview.handleFor(route);
+    }
+    this.placing = lent.top;
+    return lent.handle;
+  }
+
+  took(route: ActivatedRouteSnapshot, handle: DetachedRouteHandle | null): boolean {
+    const lent = this.lent;
+    if (handle === null || lent === null || !this.drives() || !isPageOf(lent, route)) {
+      return this.preview.took(route, handle);
+    }
+    this.lent = null;
+    this.injector.get(KeptTabPages).store(route, handle);
+    return true;
+  }
+
+  private lends(route: ActivatedRouteSnapshot): boolean {
+    const navigation = untracked(this.router().currentNavigation);
+    if (navigation === null || !this.drives()) {
+      return false;
+    }
+    if (this.lent?.navigation === navigation.id) {
+      return isPageOf(this.lent, route);
+    }
+    const kept = this.injector.get(KeptTabPages);
+    if (!kept.shouldAttach(route)) {
+      return false;
+    }
+    const handle = kept.retrieve(route);
+    const top = kept.takeReturningTop();
+    if (handle === null || top === null) {
+      return false;
+    }
+    kept.store(route, null);
+    this.followPlacement();
+    this.lent = {
+      handle,
+      top,
+      path: pathOf(route),
+      route: route.routeConfig,
+      navigation: navigation.id,
+    };
+    return true;
+  }
+
+  private lentFor(route: ActivatedRouteSnapshot): LentPage | null {
+    const lent = this.lent;
+    const navigation = untracked(this.router().currentNavigation);
+    return lent !== null && lent.navigation === navigation?.id && isPageOf(lent, route)
+      ? lent
+      : null;
+  }
+
+  private followPlacement(): void {
+    if (this.following) {
+      return;
+    }
+    this.following = true;
+    this.router().events.subscribe((event) => {
       if (event instanceof NavigationEnd && this.placing !== null) {
         this.placed = { top: this.placing, navigation: event.id };
         this.placing = null;
@@ -44,64 +119,12 @@ export class PreviewLending {
     });
   }
 
-  lends(route: ActivatedRouteSnapshot): boolean {
-    const navigation = this.navigation();
-    if (navigation?.extras.info !== PREVIEW_OUT) {
-      return false;
-    }
-    if (this.lent !== null && this.lent.navigation === navigation.id) {
-      return isPageOf(this.lent, route);
-    }
-    this.lent = null;
-    if (!this.kept.shouldAttach(route)) {
-      return false;
-    }
-    const handle = this.kept.retrieve(route);
-    const top = this.kept.takeReturningTop();
-    if (handle === null || top === null) {
-      return false;
-    }
-    this.kept.store(route, null);
-    this.lent = {
-      handle,
-      top,
-      path: pathOf(route),
-      route: route.routeConfig,
-      navigation: navigation.id,
-    };
-    return true;
-  }
-
-  handleFor(route: ActivatedRouteSnapshot): DetachedRouteHandle | null {
-    const lent = this.lent;
-    if (this.navigation()?.extras.info !== PREVIEW_OUT || lent === null || !isPageOf(lent, route)) {
-      return null;
-    }
-    this.placing = lent.top;
-    return lent.handle;
-  }
-
-  takesBack(route: ActivatedRouteSnapshot, handle: DetachedRouteHandle | null): boolean {
-    const lent = this.lent;
-    if (
-      this.navigation()?.extras.info !== PREVIEW_BACK ||
-      handle === null ||
-      lent === null ||
-      !isPageOf(lent, route)
-    ) {
-      return false;
-    }
-    this.lent = null;
-    this.kept.store(route, handle);
-    return true;
-  }
-
-  private navigation() {
-    return untracked(this.router.currentNavigation);
+  private router(): Router {
+    return this.injector.get(Router);
   }
 
   private scrollTo(top: number): void {
-    this.scrollHold.run(() => window.scrollTo({ top, behavior: 'instant' }));
+    this.injector.get(ScrollHold).run(() => window.scrollTo({ top, behavior: 'instant' }));
   }
 }
 

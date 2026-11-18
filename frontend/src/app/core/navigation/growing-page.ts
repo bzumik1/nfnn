@@ -1,5 +1,5 @@
 import { DOCUMENT, Injector, untracked } from '@angular/core';
-import { NavigationStart, Router } from '@angular/router';
+import { NavigationStart, Router, Scroll } from '@angular/router';
 import { ScrollHold } from './scroll-hold';
 
 const PLACE_WAIT_LONGEST_MS = 3000;
@@ -9,7 +9,8 @@ const LISTENING: AddEventListenerOptions = { passive: true, capture: true };
 const followed = new WeakSet<Router>();
 let stopWaiting: (() => void) | null = null;
 
-export function placeOnceGrown(top: number, navigation: number, injector: Injector): void {
+export function placeOnceGrown(restored: Scroll, injector: Injector): void {
+  const top = restored.position?.[1] ?? 0;
   const router = injector.get(Router);
   const scrollHold = injector.get(ScrollHold);
   const view = injector.get(DOCUMENT).defaultView;
@@ -26,7 +27,7 @@ export function placeOnceGrown(top: number, navigation: number, injector: Inject
     view === null ||
     typeof ResizeObserver === 'undefined' ||
     untracked(router.currentNavigation) !== null ||
-    router.lastSuccessfulNavigation()?.id !== navigation
+    router.lastSuccessfulNavigation()?.id !== restored.routerEvent.id
   ) {
     return;
   }

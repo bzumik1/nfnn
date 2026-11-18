@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, Injector, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   provideRouter,
@@ -11,6 +11,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { BACK_NAVIGATION } from './back-target';
 import { KEPT_PAGES_OWNER, KeptTabPages, whenLeft, whenShownAgain } from './kept-tab-pages';
 import { NavigationPreview } from './navigation-preview';
+import { lendKeptPagesToThePreview } from './preview-lending';
 import { PreviewingReuse } from './previewing-reuse';
 import { TabMemory } from './tab-memory';
 
@@ -268,13 +269,9 @@ describe('Given the app on the home screen with the news scrolled and left for t
         { provide: RouteReuseStrategy, useExisting: PreviewingReuse },
       ],
     });
-    Object.defineProperty(Navigator.prototype, 'standalone', {
-      get: () => true,
-      configurable: true,
-    });
     TestBed.inject(TabMemory);
     harness = await RouterTestingHarness.create('/aktuality');
-    await vi.dynamicImportSettled();
+    lendKeptPagesToThePreview(TestBed.inject(Injector));
     router = TestBed.inject(Router);
     preview = TestBed.inject(NavigationPreview);
     scrolledBy(420);
@@ -286,7 +283,6 @@ describe('Given the app on the home screen with the news scrolled and left for t
   });
 
   afterEach(() => {
-    delete (Navigator.prototype as { standalone?: boolean }).standalone;
     vi.restoreAllMocks();
     Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
   });

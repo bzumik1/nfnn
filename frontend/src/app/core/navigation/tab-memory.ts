@@ -85,11 +85,8 @@ export class TabMemory {
   private overRouterScrolling(event: Scroll): void {
     const kept = this.keptTop;
     if (kept === null || kept.navigation !== event.routerEvent.id) {
-      const position = event.position;
-      if (position) {
-        void import('./growing-page').then((page) =>
-          page.placeOnceGrown(position[1], event.routerEvent.id, this.injector),
-        );
+      if (event.position) {
+        void import('./growing-page').then((page) => page.placeOnceGrown(event, this.injector));
       } else if (event.anchor === null && event.scrollBehavior !== 'manual') {
         this.scrollTo(0);
       }

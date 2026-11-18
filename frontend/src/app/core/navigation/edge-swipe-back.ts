@@ -1,10 +1,11 @@
 import { DOCUMENT } from '@angular/common';
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, Injector } from '@angular/core';
 import { DirtyForms } from '../updates/dirty-forms';
 import { BackSwipe, SwipePoint } from './back-swipe';
 import { BackTarget } from './back-target';
 import { isHomeScreenApp } from './edge-swipe-back-start';
 import { PageTransitions, SwipePreview } from './page-transitions';
+import { lendKeptPagesToThePreview } from './preview-lending';
 import { RouteChrome } from './route-chrome';
 import { SheetSteps, StepsInside } from './sheet-steps';
 
@@ -37,6 +38,7 @@ interface Swipe {
 @Injectable({ providedIn: 'root' })
 export class EdgeSwipeBack {
   private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
   private readonly backTarget = inject(BackTarget);
   private readonly chrome = inject(RouteChrome).current;
   private readonly transitions = inject(PageTransitions);
@@ -69,6 +71,7 @@ export class EdgeSwipeBack {
       return;
     }
     void this.transitions.loadDrawing();
+    lendKeptPagesToThePreview(this.injector);
     this.document.addEventListener('touchstart', this.onStart, PASSIVE);
     this.document.addEventListener('touchmove', this.onMove, PASSIVE);
     this.document.addEventListener('touchend', this.onEnd, PASSIVE);
