@@ -117,7 +117,10 @@ export class PageTransitions {
       return;
     }
     if (event instanceof NavigationStart) {
-      if (this.handingOver) {
+      const stepsBack =
+        event.navigationTrigger === 'popstate' ||
+        untracked(this.router.currentNavigation)?.extras.info === BACK_NAVIGATION;
+      if (this.handingOver && stepsBack) {
         this.handingOver = false;
       } else {
         this.finish();
@@ -228,7 +231,7 @@ export class PageTransitions {
         : Promise.resolve();
     const settle = async (end: SwipeSettle): Promise<boolean> => {
       if (this.running !== running) {
-        return end.completes;
+        return false;
       }
       if (!ready) {
         await drawn;
@@ -259,7 +262,7 @@ export class PageTransitions {
         this.preview.discard();
       }
       if (this.running !== running) {
-        return end.completes;
+        return false;
       }
       if (end.completes) {
         this.handingOver = true;
@@ -394,7 +397,10 @@ export class PageTransitions {
         }
         return;
       }
-      if (this.running !== running || layer === null) {
+      if (this.running !== running) {
+        return;
+      }
+      if (layer === null) {
         this.finish();
         return;
       }

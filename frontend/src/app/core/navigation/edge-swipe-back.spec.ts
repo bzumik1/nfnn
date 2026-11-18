@@ -5,7 +5,9 @@ import { Router } from '@angular/router';
 import { appConfig } from '../../app.config';
 import { DirtyForms } from '../updates/dirty-forms';
 import { BackTarget } from './back-target';
-import { EdgeSwipeBack, edgeSwipeBackAtStart, StepsInside } from './edge-swipe-back';
+import { EdgeSwipeBack } from './edge-swipe-back';
+import { edgeSwipeBackAtStart } from './edge-swipe-back-start';
+import { SheetSteps, StepsInside } from './sheet-steps';
 import { PageTransitions, SwipePreview } from './page-transitions';
 import { Chrome, RouteChrome } from './route-chrome';
 
@@ -61,7 +63,6 @@ function runOn(device: Device): void {
   });
   TestBed.configureTestingModule({
     providers: [
-      edgeSwipeBackAtStart,
       { provide: Location, useValue: location },
       { provide: BackTarget, useValue: backTarget },
       { provide: PageTransitions, useValue: transitions },
@@ -70,7 +71,7 @@ function runOn(device: Device): void {
       { provide: Router, useValue: { currentNavigation: pendingNavigation.asReadonly() } },
     ],
   });
-  TestBed.inject(EdgeSwipeBack);
+  TestBed.inject(EdgeSwipeBack).start();
 }
 
 function touch(type: string, target: EventTarget, point: Point, fingers = 1): Event {
@@ -443,7 +444,7 @@ describe('Given the app opened from the home screen of an iPhone', () => {
   it('when a sheet offers the steps of its sections, then a swipe steps back inside it as its ‹ does and the page stays', () => {
     const dialog = openDialog();
     const steps = sheetSteps();
-    TestBed.inject(EdgeSwipeBack).stepsInside(dialog, steps);
+    TestBed.inject(SheetSteps).offer(dialog, steps);
 
     drag(dialog, ACROSS);
 
@@ -465,7 +466,7 @@ describe('Given the app opened from the home screen of an iPhone', () => {
   it('when a sheet took back its offer of steps, then a swipe over it does nothing', () => {
     const dialog = openDialog();
     const steps = sheetSteps();
-    const withdraw = TestBed.inject(EdgeSwipeBack).stepsInside(dialog, steps);
+    const withdraw = TestBed.inject(SheetSteps).offer(dialog, steps);
     withdraw();
 
     drag(dialog, ACROSS);
@@ -477,7 +478,7 @@ describe('Given the app opened from the home screen of an iPhone', () => {
   it('when a second dialog opens over the sheet that offers its steps, then a swipe does nothing', () => {
     const sheet = openDialog();
     const steps = sheetSteps();
-    TestBed.inject(EdgeSwipeBack).stepsInside(sheet, steps);
+    TestBed.inject(SheetSteps).offer(sheet, steps);
     const question = openDialog();
 
     drag(question, ACROSS);
@@ -648,7 +649,7 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
   it('when a sheet offers the steps of its sections, then its content follows the finger, the page stays, and past half it steps back inside the sheet', async () => {
     const dialog = openDialog();
     const steps = sheetSteps(preview as SwipePreview);
-    TestBed.inject(EdgeSwipeBack).stepsInside(dialog, steps);
+    TestBed.inject(SheetSteps).offer(dialog, steps);
 
     drag(dialog, [
       { x: 20, y: 300, at: 0 },
@@ -755,5 +756,58 @@ describe('Given the site added to the Dock of a Mac, which has no touch screen',
 describe('Given the app’s configuration', () => {
   it('when the app starts, then the swipe back is set up', () => {
     expect(appConfig.providers).toContain(edgeSwipeBackAtStart);
+  });
+});
+
+describe('Given the app starting, whose swipe back loads only where it is used', () => {
+  function startOn(device: Device): void {
+    Object.defineProperty(navigator, 'standalone', {
+      configurable: true,
+      get: () => device.standalone,
+    });
+    Object.defineProperty(navigator, 'maxTouchPoints', {
+      configurable: true,
+      get: () => device.maxTouchPoints,
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        edgeSwipeBackAtStart,
+        { provide: Location, useValue: location },
+        { provide: BackTarget, useValue: backTarget },
+        { provide: PageTransitions, useValue: transitions },
+        { provide: DirtyForms, useValue: { any: () => dirty } },
+        { provide: RouteChrome, useValue: { current: chrome.asReadonly() } },
+        { provide: Router, useValue: { currentNavigation: pendingNavigation.asReadonly() } },
+      ],
+    });
+    TestBed.inject(Router);
+  }
+
+  it('when it starts on the home screen of an iPhone, then the swipe back is loaded and a swipe goes back as Zpět does', async () => {
+    startOn(IPHONE_HOME_SCREEN);
+    await vi.dynamicImportSettled();
+
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+
+    expect(backTarget.back).toHaveBeenCalledExactlyOnceWith('/aktuality');
+  });
+
+  it('when it starts in a tab of Safari, then nothing listens to a swipe', async () => {
+    startOn(IPHONE_SAFARI_TAB);
+    await vi.dynamicImportSettled();
+
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+
+    expect(backTarget.back).not.toHaveBeenCalled();
   });
 });

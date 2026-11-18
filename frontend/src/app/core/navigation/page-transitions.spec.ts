@@ -353,6 +353,55 @@ describe('Given the app on the home screen of a phone, where the news led to the
     expect(overlay().classList).not.toContain(`${PAGE_TRANSITION_CLASS}--heads-held`);
   });
 
+  function slidesWhenReleased(): () => void {
+    let release: () => void = () => undefined;
+    const slid = new Promise<void>((done) => (release = done));
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => ({ finished: slid }),
+    });
+    return release;
+  }
+
+  const LET_GO_PAST_HALF = {
+    completes: true,
+    from: 300,
+    to: 390,
+    durationMs: 150,
+    easing: 'ease-out',
+  } as const;
+
+  it('when another step takes the page over while it slides off under the finger, then the swipe says the page did not leave, so no second step follows', async () => {
+    const slidOff = slidesWhenReleased();
+    try {
+      await openOverviewFromTheNews({ title: 'Aktuality' }, { title: 'Přehled' });
+      const left = swipeBack().settle(LET_GO_PAST_HALF);
+
+      await router.navigateByUrl('/projekty');
+      slidOff();
+
+      expect(await left).toBe(false);
+    } finally {
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
+  it('when the page has slid off and a navigation other than its step back starts, then the cover it left goes at once', async () => {
+    const slidOff = slidesWhenReleased();
+    try {
+      await openOverviewFromTheNews({ title: 'Aktuality' }, { title: 'Přehled' });
+      const left = swipeBack().settle(LET_GO_PAST_HALF);
+      slidOff();
+      expect(await left).toBe(true);
+
+      await router.navigateByUrl('/projekty');
+
+      expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    } finally {
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
   it('when the screen changed its width since the news was left, then the copy of another width is not laid under the finger', async () => {
     await openOverviewFromTheNews({ title: 'Aktuality', sheet: true }, { title: 'Přehled' });
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 700 });

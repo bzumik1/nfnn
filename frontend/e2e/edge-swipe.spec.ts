@@ -13,6 +13,7 @@ import { waitWhileNothingMayHappen } from './fixed-waits';
 const FINGER_Y = 420;
 const LIST_TITLE = 'Co je u nás nového';
 const SETTLED_MS = 600;
+const TRANSITION_ENDS_WITHIN_MS = 4000;
 
 const article = {
   id: '0199f3e0-0000-7000-8000-00000000c021',
@@ -180,6 +181,34 @@ test.describe('Given an administrator in the app on the home screen of a phone w
 
     await expect(page).toHaveURL('/aktuality');
     await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+
+  test('when Zpět is pressed again while the first step back still slides, then the second step lands two pages back and no transition stays over it', async ({
+    page,
+  }) => {
+    await page
+      .getByRole('navigation', { name: 'Sekce správy' })
+      .getByRole('link', { name: /Lidé fondu, správci, zálohy/ })
+      .click();
+    await expect(page).toHaveURL(/\/sprava\/vice$/);
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    await page
+      .getByRole('main')
+      .getByRole('link', { name: /^Nastavení/ })
+      .click();
+    await expect(page).toHaveURL(/\/sprava\/nastaveni$/);
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    const back = page.getByRole('banner').getByRole('button', { name: 'Zpět' });
+
+    await back.evaluate((button: HTMLElement) => button.click());
+    await expect(page.locator('.page-transition--moving')).toHaveCount(1);
+    await back.evaluate((button: HTMLElement) => button.click());
+
+    await expect(page).toHaveURL(/\/sprava$/);
+    await expect(page.locator('.page-transition')).toHaveCount(0, {
+      timeout: TRANSITION_ENDS_WITHIN_MS,
+    });
+    await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeVisible();
   });
 
   test('when a finger takes a deeper section of Správa from the edge, then the head of the sheet stands while the section moves', async ({

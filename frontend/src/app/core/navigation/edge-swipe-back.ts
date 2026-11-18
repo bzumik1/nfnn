@@ -1,10 +1,12 @@
 import { DOCUMENT } from '@angular/common';
-import { EnvironmentProviders, inject, Injectable, provideAppInitializer } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { DirtyForms } from '../updates/dirty-forms';
 import { BackSwipe, SwipePoint } from './back-swipe';
 import { BackTarget } from './back-target';
+import { isHomeScreenApp } from './edge-swipe-back-start';
 import { PageTransitions, SwipePreview } from './page-transitions';
 import { RouteChrome } from './route-chrome';
+import { SheetSteps, StepsInside } from './sheet-steps';
 
 const FIELDS = 'input, select, textarea, [contenteditable]:not([contenteditable="false"])';
 const SCROLLS_SIDEWAYS = new Set(['auto', 'scroll']);
@@ -13,13 +15,6 @@ const LEAVING_DIALOG = 'dialog.dialog--leaving';
 const SHEET_SECTION_BACK = 'app-sheet-head .sheet-head-back';
 
 const PASSIVE: AddEventListenerOptions = { passive: true, capture: true };
-
-type HomeScreenNavigator = Navigator & { readonly standalone?: boolean };
-
-export interface StepsInside {
-  startSwipe(): SwipePreview | null;
-  back(): void;
-}
 
 interface Swipe {
   readonly id: number;
@@ -38,7 +33,7 @@ export class EdgeSwipeBack {
   private readonly chrome = inject(RouteChrome).current;
   private readonly transitions = inject(PageTransitions);
   private readonly dirtyForms = inject(DirtyForms);
-  private readonly inside = new Map<HTMLDialogElement, StepsInside>();
+  private readonly sheetSteps = inject(SheetSteps);
   private swipe: Swipe | null = null;
   private pops = 0;
 
@@ -55,7 +50,7 @@ export class EdgeSwipeBack {
 
   start(): void {
     const view = this.document.defaultView;
-    if (view === null || !isHomeScreenApp(view.navigator as HomeScreenNavigator)) {
+    if (view === null || !isHomeScreenApp(view.navigator)) {
       return;
     }
     this.document.addEventListener('touchstart', this.onStart, PASSIVE);
@@ -64,15 +59,6 @@ export class EdgeSwipeBack {
     this.document.addEventListener('touchcancel', this.onCancel, PASSIVE);
     view.addEventListener('popstate', this.onLeave, PASSIVE);
     view.addEventListener('pagehide', this.onLeave, PASSIVE);
-  }
-
-  stepsInside(dialog: HTMLDialogElement, steps: StepsInside): () => void {
-    this.inside.set(dialog, steps);
-    return () => {
-      if (this.inside.get(dialog) === steps) {
-        this.inside.delete(dialog);
-      }
-    };
   }
 
   stop(): void {
@@ -115,7 +101,7 @@ export class EdgeSwipeBack {
     const dialogs = this.document.querySelectorAll<HTMLDialogElement>(OPEN_DIALOG);
     if (dialogs.length > 0) {
       const top = dialogs.item(dialogs.length - 1);
-      const steps = this.inside.get(top) ?? sectionBackOf(top);
+      const steps = this.sheetSteps.of(top) ?? sectionBackOf(top);
       return steps === null ? null : { steps, ofPage: false };
     }
     const parent = this.chrome().parent;
@@ -191,10 +177,6 @@ function sectionBackOf(dialog: HTMLDialogElement): StepsInside | null {
   return back === null ? null : { startSwipe: () => null, back: () => back.click() };
 }
 
-function isHomeScreenApp(navigator: HomeScreenNavigator): boolean {
-  return navigator.standalone === true && navigator.maxTouchPoints > 0;
-}
-
 function pointOf(touch: Touch, event: TouchEvent): SwipePoint {
   return { x: touch.clientX, y: touch.clientY, at: event.timeStamp };
 }
@@ -222,7 +204,3 @@ function keepsItsOwnSwipe(target: EventTarget | null): boolean {
   }
   return false;
 }
-
-export const edgeSwipeBackAtStart: EnvironmentProviders = provideAppInitializer(() =>
-  inject(EdgeSwipeBack).start(),
-);
