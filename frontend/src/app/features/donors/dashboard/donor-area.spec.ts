@@ -315,7 +315,9 @@ describe('Given a signed-in donor in the donor area', () => {
         'Ověřte bankovní účet, ze kterého jste platili, platbou 1 Kč a dřívější dary z něj vám obvykle přiřadíme také.',
     );
     const link = element(`${block} a`) as HTMLAnchorElement;
-    expect(normalized(link.textContent ?? '')).toBe('Přidat účet, ze kterého jste platili');
+    expect(normalized(link.textContent ?? '')).toBe(
+      'Přidat bankovní účet, ze kterého jste platili',
+    );
     expect(link.getAttribute('href')).toBe('/darce/ucty?pridat=ucet');
   }
 

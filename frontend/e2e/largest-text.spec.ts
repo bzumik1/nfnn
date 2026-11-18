@@ -437,7 +437,7 @@ for (const { width, height } of [
       await page.setViewportSize({ width, height });
       const card = page.locator('section[aria-labelledby="first-gift-title"]');
       await expect(
-        card.getByRole('link', { name: 'Přidat účet, ze kterého jste platili' }),
+        card.getByRole('link', { name: 'Přidat bankovní účet, ze kterého jste platili' }),
       ).toBeVisible();
 
       for (const textSize of ['largest', 'double']) {
@@ -603,6 +603,133 @@ for (const { width, height } of [
       expect(glyph.x + glyph.width).toBeLessThanOrEqual(button.x + button.width + 1);
       expect(await contentPastTheSides(dialog)).toEqual([]);
     });
+  });
+}
+
+test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows the largest accessibility text', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ page }) => {
+    await showLargestSystemText(page);
+  });
+
+  test('when they open Bankovní účty, press Přidat bankovní účet and add an account, then its label breaks only between words, the icon stays by its first line and the row keeps its height', async ({
+    page,
+  }) => {
+    await page.clock.install();
+    await mockDonorApi(page);
+    let dialogOpen = false;
+    let paymentBooked = false;
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-check',
+      (route) => {
+        if (route.request().method() === 'POST' && dialogOpen) {
+          paymentBooked = true;
+        }
+        return route.fulfill({
+          status: 202,
+          json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false },
+        });
+      },
+    );
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-accounts',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: paymentBooked
+              ? [
+                  bankAccountItem({
+                    id: 'a-new',
+                    accountNumber: '1234567890/0800',
+                    verifiedOn: '2026-10-18',
+                    verificationPaymentOn: '2026-10-18',
+                  }),
+                ]
+              : [],
+          },
+        }),
+    );
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const add = page.getByRole('button', { name: 'Přidat bankovní účet' });
+    await expect(add).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const label = add.locator('.ui-list__title');
+
+    expect(await wordsBrokenInside(label)).toEqual([]);
+    expect(await label.evaluate((element) => element.scrollWidth - element.clientWidth)).toBe(0);
+    expect(await iconBesideTheFirstLineOf(add)).toBe(true);
+    const height = (await add.boundingBox())!.height;
+
+    const box = (await add.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    expect((await add.boundingBox())!.height).toBe(height);
+    await page.mouse.move(box.x + box.width / 2, box.y - 200);
+    await page.mouse.up();
+
+    await add.click();
+    dialogOpen = true;
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.locator('.add-account-watch')).toContainText('Čekáme na vaši platbu…');
+    await page.clock.fastForward(30_000);
+    await expect(dialog.locator('.add-account-watch')).toContainText('je ověřený');
+    await dialog.getByRole('button', { name: 'Hotovo' }).click();
+    await expect(page.locator('.accounts-list .account-number')).toHaveText('1234567890/0800');
+
+    expect((await add.boundingBox())!.height).toBe(height);
+    expect(await iconBesideTheFirstLineOf(add)).toBe(true);
+  });
+
+  test('when they open Přidat bankovní účet, then the title of the sheet breaks only between words and keeps at least Přidat bankovní in sight', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+    const title = page.getByRole('dialog').locator('#add-account-title');
+    await expect(title).toHaveText('Přidat bankovní účet');
+    await page.evaluate(() => document.fonts.ready);
+
+    expect(await wordsBrokenInside(title)).toEqual([]);
+    expect(await shownTextOf(title)).toMatch(/^Přidat bankovní/);
+  });
+});
+
+async function iconBesideTheFirstLineOf(row: Locator): Promise<boolean> {
+  return row.evaluate((button) => {
+    const label = button.querySelector('.ui-list__title')!;
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    const firstLine = range.getClientRects()[0];
+    const icon = button.querySelector('.ui-list__glyph svg')!.getBoundingClientRect();
+    const middle = icon.top + icon.height / 2;
+    return middle >= firstLine.top && middle <= firstLine.bottom;
+  });
+}
+
+async function shownTextOf(element: Locator): Promise<string> {
+  return element.evaluate((heading) => {
+    const box = heading.getBoundingClientRect();
+    const text = heading.firstChild!;
+    const content = text.textContent ?? '';
+    let shown = '';
+    for (let index = 0; index < content.length; index++) {
+      const range = document.createRange();
+      range.setStart(text, index);
+      range.setEnd(text, index + 1);
+      const letter = range.getBoundingClientRect();
+      if (letter.right <= box.right + 0.5 && letter.bottom <= box.bottom + 0.5) {
+        shown += content[index];
+      }
+    }
+    return shown.replace(/\s+/g, ' ').trim();
   });
 }
 

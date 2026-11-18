@@ -18,7 +18,7 @@ test.describe('Given a signed-in donor adding a bank account', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await openDonorSection(page, 'Bankovní účty');
 
-    await page.getByRole('button', { name: 'Přidat účet' }).click();
+    await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
 
     const dialog = page.getByRole('dialog');
     const close = dialog.locator('.add-account-close');
@@ -52,7 +52,7 @@ test.describe('Given a signed-in donor adding a bank account', () => {
     await signIn(page);
     await openDonorSection(page, 'Bankovní účty');
 
-    await page.getByRole('button', { name: 'Přidat účet' }).click();
+    await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
     dialogOpen = true;
     const dialog = page.getByRole('dialog');
     const watch = dialog.locator('.add-account-watch');
