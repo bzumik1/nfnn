@@ -117,7 +117,9 @@ describe('Given the passkeys panel of the sign-in card', () => {
   it('when it opens, then it explains passkeys and lists the donor passkeys with their dates', async () => {
     await render();
 
-    expect(element('.passkeys-intro').textContent).toContain('chráněné i bez kódu z aplikace');
+    expect(element('.passkeys-intro').textContent).toContain(
+      'chráněné i\u00a0bez kódu z\u00a0aplikace',
+    );
     expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
     expect(texts('.passkey-dates')[0]).toContain('přidáno 17. 10. 2026');
     expect(texts('.passkey-dates')[0]).toContain('naposledy použito 22. 10. 2026');
@@ -180,7 +182,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
     await settle();
 
     expect(element('[role="status"]').textContent).toContain(
-      'heslo teď můžete u řádku „Heslo“ i odebrat',
+      'heslo teď můžete u\u00a0řádku „Heslo“ i\u00a0odebrat',
     );
   });
 
@@ -329,7 +331,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
       await settle();
 
       expect(element('.ui-field-error').textContent).toContain(
-        'už přístupový klíč k vašemu účtu má',
+        'už přístupový klíč k\u00a0vašemu účtu má',
       );
     });
 
@@ -621,7 +623,7 @@ describe('Given the passkeys panel of a donor without a password', () => {
     await render([IPHONE]);
     await clickButton('Přidat přístupový klíč');
     expect(element('#passkey-password')).toBeNull();
-    expect(element('.passkeys-form-intro').textContent).toContain('jedním z vašich klíčů');
+    expect(element('.passkeys-form-intro').textContent).toContain('jedním z\u00a0vašich klíčů');
     await fillIn('#passkey-name', 'MacBook');
     await submit();
 

@@ -6,8 +6,17 @@ import { describe, it } from 'node:test';
 const APP = new URL('../src/app/', import.meta.url).pathname;
 const PORTAL = ['features/donors/dashboard', 'layout/account-sheet'];
 
-const NOT_SHOWN = {
+const SHARED_BEYOND_THE_PORTAL =
+  'its id also names the same text in the sign-in dialog, password reset or connecting an app, which #1292 leaves as they are';
+
+const NOT_CHECKED = {
   'donor.bankAccounts.hint.warningPrefix': 'visually hidden prefix of a hint',
+  'donor.form.code.required': SHARED_BEYOND_THE_PORTAL,
+  'donor.form.newPassword.tooShort': SHARED_BEYOND_THE_PORTAL,
+  'donor.login.name': SHARED_BEYOND_THE_PORTAL,
+  'donor.login.secondFactor.code': SHARED_BEYOND_THE_PORTAL,
+  'donor.register.companyStreet': SHARED_BEYOND_THE_PORTAL,
+  'donor.register.street': SHARED_BEYOND_THE_PORTAL,
 };
 
 const BREAKS = [
@@ -22,9 +31,9 @@ const BREAKS = [
 
 function decode(text) {
   return text
-    .replaceAll('&nbsp;', ' ')
+    .replaceAll('&nbsp;', '\u00a0')
     .replaceAll('&ngsp;', ' ')
-    .replaceAll('&#8209;', '‑')
+    .replaceAll('&#8209;', '\u2011')
     .replaceAll('&amp;', '&');
 }
 
@@ -32,10 +41,14 @@ export function shownTexts(template) {
   const texts = [];
   const withoutHidden = template
     .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<(\w+)\b[^>]*\bclass="[^"]*\bvisually-hidden\b[^"]*"[^>]*>[\s\S]*?<\/\1\s*>/g, '\n');
+    .replace(/<(\w+)\b[^>]*\bclass="[^"]*\bvisually-hidden\b[^"]*"[^>]*>[\s\S]*?<\/\1\s*>/g, '\n')
+    .replace(/<(\w+)\b[^>]*\si18n="@@([^"]+)"[^>]*>[\s\S]*?<\/\1\s*>/g, (element, _tag, id) =>
+      id in NOT_CHECKED ? '\n' : element,
+    );
   for (const field of withoutHidden.matchAll(/<app-form-field\b[^>]*>/g)) {
     for (const attribute of field[0].matchAll(/\s(label|hint)="([^"]*)"/g)) {
-      texts.push(decode(attribute[2]));
+      const id = new RegExp(`i18n-${attribute[1]}="@@([^"]+)"`).exec(field[0])?.[1];
+      if (id === undefined || !(id in NOT_CHECKED)) texts.push(decode(attribute[2]));
     }
   }
   const body = withoutHidden
@@ -52,11 +65,11 @@ export function shownTexts(template) {
 export function localizedTexts(source) {
   const texts = [];
   for (const message of source.matchAll(/\$localize`:@@([^:]+):((?:[^`\\]|\\.)*)`/g)) {
-    if (message[1] in NOT_SHOWN) continue;
+    if (message[1] in NOT_CHECKED) continue;
     const text = message[2]
       .replace(/\$\{[^}]*\}:count:/g, '9')
       .replace(/\$\{[^}]*\}:\w+:/g, 'X')
-      .replaceAll('\\u00a0', ' ');
+      .replaceAll('\\u00a0', '\u00a0');
     texts.push(text);
   }
   return texts;

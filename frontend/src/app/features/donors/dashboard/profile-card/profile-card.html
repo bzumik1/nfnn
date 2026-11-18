@@ -1,7 +1,7 @@
 <section class="ui-card ui-card--padded profile-card" aria-labelledby="profile-title">
   <div class="profile-head">
     <h2 id="profile-title" class="ui-card__title" i18n="@@donor.profile.title">
-      Údaje na potvrzení o daru
+      Údaje na potvrzení o&nbsp;daru
     </h2>
     @if (!editing() && draft.offer() === null) {
       <button
@@ -145,7 +145,7 @@
       <app-form-field
         label="Jazyk potvrzení"
         i18n-label="@@donor.profile.locale"
-        hint="Platí pro potvrzení, která si stáhnete poprvé. Ta, která jste si už stáhli, zůstanou v původním jazyce."
+        hint="Platí pro potvrzení, která si stáhnete poprvé. Ta, která jste si už stáhli, zůstanou v&nbsp;původním jazyce."
         i18n-hint="@@donor.profile.localeHint.firstDownload"
       >
         <select
@@ -194,8 +194,8 @@
       @if (newerVersion()) {
         <div class="ui-callout ui-callout--warning profile-changed" role="alert">
           <p i18n="@@donor.profile.changed.text">
-            Mezitím se uložené údaje změnily, třeba v jiném okně nebo na jiném zařízení. Vaše úpravy
-            jsme zatím neuložili, zůstávají ve formuláři.
+            Mezitím se uložené údaje změnily, třeba v&nbsp;jiném okně nebo na jiném zařízení. Vaše
+            úpravy jsme zatím neuložili, zůstávají ve formuláři.
           </p>
           @if (newerNotice(); as notice) {
             <p>{{ notice }}</p>
@@ -222,7 +222,7 @@
                 <span i18n="@@donor.profile.changed.loading">Načítáme…</span>
               } @else {
                 <span i18n="@@donor.profile.changed.load"
-                  >Zahodit své úpravy a načíst uložené údaje</span
+                  >Zahodit své úpravy a&nbsp;načíst uložené údaje</span
                 >
               }
             </button>
@@ -288,7 +288,7 @@
       <span>{{ status }}</span>
     } @else if (saved()) {
       <span i18n="@@donor.profile.saved.receiptScope">
-        Údaje jsme uložili. Jméno a adresu ponesou všechna potvrzení, která si stáhnete od teď,
+        Údaje jsme uložili. Jméno a&nbsp;adresu ponesou všechna potvrzení, která si stáhnete od teď,
         zvolený jazyk jen ta, která si stáhnete poprvé.
       </span>
     }

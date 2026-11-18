@@ -49,7 +49,7 @@ test.describe('Given a donor who signs in with a password on a device that keeps
     await signIn(page);
     await openDeviceData(page);
 
-    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await expect(page.getByText(/Uloženo v\s+zařízení · aktualizováno /)).toBeVisible();
     await expect.poll(async () => (await rawDevice(page)).wraps).toEqual(['password', 'session']);
     const raw = await rawDevice(page);
     expect(raw.databases).toContain(DEVICE_DATABASE);
@@ -64,7 +64,7 @@ test.describe('Given a donor who signs in with a password on a device that keeps
   }) => {
     await signIn(page);
     await openDeviceData(page);
-    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await expect(page.getByText(/Uloženo v\s+zařízení · aktualizováno /)).toBeVisible();
     const before = await rawDevice(page);
     const syncs: string[] = [];
     page.on('request', (request) => {
@@ -78,7 +78,7 @@ test.describe('Given a donor who signs in with a password on a device that keeps
       await openDeviceData(page);
     }
 
-    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await expect(page.getByText(/Uloženo v\s+zařízení · aktualizováno /)).toBeVisible();
     expect((await rawDevice(page)).copyIds).toEqual(before.copyIds);
     expect(before.copyIds).toHaveLength(1);
     await expect.poll(() => syncs.length).toBeGreaterThan(0);
@@ -92,7 +92,7 @@ test.describe('Given a donor who signs in with a password on a device that keeps
   }) => {
     await signIn(page);
     await openDeviceData(page);
-    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await expect(page.getByText(/Uloženo v\s+zařízení · aktualizováno /)).toBeVisible();
 
     await page.getByRole('button', { name: 'Načíst data znovu' }).click();
 
@@ -106,7 +106,7 @@ test.describe('Given a donor who signs in with a password on a device that keeps
   }) => {
     await signIn(page);
     await openDeviceData(page);
-    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await expect(page.getByText(/Uloženo v\s+zařízení · aktualizováno /)).toBeVisible();
 
     await (await showAccountList(page)).getByRole('button', { name: 'Odhlásit se' }).click();
     await expect(page).toHaveURL(/\/$/);
@@ -119,7 +119,7 @@ test.describe('Given a donor who signs in with a password on a device that keeps
   }) => {
     await signIn(page);
     await openDeviceData(page);
-    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await expect(page.getByText(/Uloženo v\s+zařízení · aktualizováno /)).toBeVisible();
 
     await page.getByRole('button', { name: 'Smazat data z tohoto zařízení' }).click();
     const dialog = page.getByRole('alertdialog');
@@ -165,7 +165,7 @@ test.describe('Given a donor whose copy on this device holds her gifts and her y
     await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
     await signIn(page);
     await openDeviceData(page);
-    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await expect(page.getByText(/Uloženo v\s+zařízení · aktualizováno /)).toBeVisible();
   });
 
   test('when she opens Moje dary again while the server answers nothing about her gifts, then they show from the copy, and a new gift comes in when the copy catches up, behind Zobrazit 1 nový dar', async ({

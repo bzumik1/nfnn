@@ -85,14 +85,14 @@ const LOCALE_LABELS: Record<DonorLocale, string> = {
 };
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
-const STORED_PROFILE_LOADED = $localize`:@@donor.profile.changed.loaded:Vaše úpravy jsme zahodili a načetli uložené údaje.`;
+const STORED_PROFILE_LOADED = $localize`:@@donor.profile.changed.loaded:Vaše úpravy jsme zahodili a\u00a0načetli uložené údaje.`;
 const STORED_PROFILE_FAILED = $localize`:@@donor.profile.changed.loadFailed:Uložené údaje se nepodařilo načíst. Zkuste to prosím znovu.`;
-const EDIT_CANCELLED_AND_LOADED = $localize`:@@donor.profile.changed.cancelled:Úpravy jsme zrušili a načetli uložené údaje.`;
-const ACCOUNT_CHANGED = $localize`:@@donor.profile.accountChanged:V tomto okně je teď přihlášený jiný účet. Rozepsané úpravy jsme zahodili, nic jsme neuložili.`;
+const EDIT_CANCELLED_AND_LOADED = $localize`:@@donor.profile.changed.cancelled:Úpravy jsme zrušili a\u00a0načetli uložené údaje.`;
+const ACCOUNT_CHANGED = $localize`:@@donor.profile.accountChanged:V\u00a0tomto okně je teď přihlášený jiný účet. Rozepsané úpravy jsme zahodili, nic jsme neuložili.`;
 const MERGED_TEXT = $localize`:@@donor.profile.changed.merged:Údaje, které jste neměnili, jsme ve formuláři doplnili tak, jak jsou uložené teď.`;
 const PERSON_FIELD_NAMES: Record<ProfileField, string> = {
-  name: $localize`:@@donor.profile.changed.field.personName:jméno a příjmení`,
-  street: $localize`:@@donor.profile.changed.field.street:ulice a číslo`,
+  name: $localize`:@@donor.profile.changed.field.personName:jméno a\u00a0příjmení`,
+  street: $localize`:@@donor.profile.changed.field.street:ulice a\u00a0číslo`,
   city: $localize`:@@donor.profile.changed.field.city:město`,
   postalCode: $localize`:@@donor.profile.changed.field.postalCode:PSČ`,
   preferredLocale: $localize`:@@donor.profile.changed.field.locale:jazyk potvrzení`,
@@ -157,7 +157,7 @@ export class ProfileCard {
     }
     const names = this.company() ? COMPANY_FIELD_NAMES : PERSON_FIELD_NAMES;
     const fields = newer.bothChanged.map((field) => names[field]).join(', ');
-    return $localize`:@@donor.profile.changed.conflicts:Mezitím se jinak uložilo i to, co jste změnili: ${fields}:fields:. Ve formuláři zůstávají vaše hodnoty, ostatní údaje jsou doplněné tak, jak jsou uložené teď.`;
+    return $localize`:@@donor.profile.changed.conflicts:Mezitím se jinak uložilo i\u00a0to, co jste změnili: ${fields}:fields:. Ve formuláři zůstávají vaše hodnoty, ostatní údaje jsou doplněné tak, jak jsou uložené teď.`;
   });
   private editedFrom: EditedFrom | null = null;
   protected readonly localeLabels = LOCALE_LABELS;
