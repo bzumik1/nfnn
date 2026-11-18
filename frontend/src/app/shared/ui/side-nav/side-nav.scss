@@ -13,7 +13,8 @@
 
   @include bp.up(nav) {
     max-width: var(--content-max);
-    padding-inline: var(--space-8) calc(var(--space-8) - var(--space-6));
+    padding-inline: max(var(--space-8), env(safe-area-inset-left))
+      max(var(--space-8) - var(--space-6), env(safe-area-inset-right) - var(--space-6));
   }
 
   @include bp.up(wide) {
@@ -31,7 +32,10 @@
   position: sticky;
   top: max(var(--safe-area-top), var(--window-controls-inset-block) - var(--space-8));
   max-height: calc(
-    100vh - max(var(--safe-area-top), var(--window-controls-inset-block) - var(--space-8))
+    var(--full-screen-height) - max(
+        var(--safe-area-top),
+        var(--window-controls-inset-block) - var(--space-8)
+      )
   );
   overflow-y: auto;
   margin-inline-start: calc((var(--space-3) + var(--space-1)) * -1);
