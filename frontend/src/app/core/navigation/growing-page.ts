@@ -9,7 +9,7 @@ const LISTENING: AddEventListenerOptions = { passive: true, capture: true };
 const followed = new WeakSet<Router>();
 let stopWaiting: (() => void) | null = null;
 
-export function placeOnceGrown(restored: Scroll, injector: Injector): void {
+export function placeOnceGrown(restored: Scroll, injector: Injector, placed: () => void): void {
   const top = restored.position?.[1] ?? 0;
   const router = injector.get(Router);
   const scrollHold = injector.get(ScrollHold);
@@ -29,6 +29,7 @@ export function placeOnceGrown(restored: Scroll, injector: Injector): void {
     untracked(router.currentNavigation) !== null ||
     router.lastSuccessfulNavigation()?.id !== restored.routerEvent.id
   ) {
+    placed();
     return;
   }
   let growth: ResizeObserver | null = null;
@@ -41,13 +42,14 @@ export function placeOnceGrown(restored: Scroll, injector: Injector): void {
   };
   const placeOnceReached = (): void => {
     if (reaches(view, top)) {
-      stop();
       if (!hidesFocus(view, top)) {
         scrollHold.run(() => view.scrollTo({ top, behavior: 'instant' }));
       }
+      stop();
     }
   };
   const stop = (): void => {
+    placed();
     waitForRelease();
     growth?.disconnect();
     view.clearTimeout(timer);

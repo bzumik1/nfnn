@@ -14,6 +14,7 @@ import {
 import { RouterTestingHarness } from '@angular/router/testing';
 import { APP_TABS, tabOf } from './app-tabs';
 import { KeptTabPages } from './kept-tab-pages';
+import { PagePlacement } from './page-placement';
 import { RELOAD_PLACE_KEY, ReloadPlace } from '../reload/reload-place';
 import { ScrollHold } from './scroll-hold';
 import { TabMemory } from './tab-memory';
@@ -472,6 +473,40 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     grows(3000);
 
     expect(scrolledTo).toEqual([900]);
+  });
+
+  function placedYet(): () => boolean {
+    let placed = false;
+    void TestBed.inject(PagePlacement)
+      .placed(window, 60_000)
+      .then(() => (placed = true));
+    return () => placed;
+  }
+
+  async function settledPromises(): Promise<void> {
+    await new Promise<void>((done) => setTimeout(done));
+  }
+
+  it('when the page has not grown yet, then the cover of the step back waits, and lifts once the page is put where they left it', async () => {
+    await stepBack();
+    const placed = placedYet();
+    await settledPromises();
+    expect(placed()).toBe(false);
+
+    grows(3000);
+    await settledPromises();
+
+    expect(scrolledTo.at(-1)).toBe(900);
+    expect(placed()).toBe(true);
+  });
+
+  it('when the visitor moves before the page grows, then the cover of the step back waits no longer', async () => {
+    await stepBack();
+    const placed = placedYet();
+    window.dispatchEvent(new Event('touchstart'));
+    await settledPromises();
+
+    expect(placed()).toBe(true);
   });
 
   it('when the page grows in two steps, then it moves once, from where it opened straight to where they left it', async () => {
