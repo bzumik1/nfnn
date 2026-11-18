@@ -8,6 +8,8 @@ import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixt
 import { person, PORTRAIT_ID } from '../../content/testing/people-fixtures';
 import { administrator } from '../testing/admin-fixtures';
 import { AdminAdministrators } from './admin-administrators';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const LIST_URL = '/api/admin/donors/administrators';
 const PEOPLE_URL = '/api/admin/content/people';
@@ -82,7 +84,7 @@ describe('Given an administrator on the administrators page', () => {
 
   function button(row: HTMLElement, name: string): HTMLButtonElement {
     const found = Array.from(row.querySelectorAll('button')).find(
-      (candidate) => candidate.textContent?.trim() === name,
+      (candidate) => accessibleText(candidate) === name,
     );
     if (found === undefined) {
       throw new Error(`No button "${name}" in "${rowText(row)}"`);
@@ -276,6 +278,68 @@ describe('Given an administrator on the administrators page', () => {
       'Dárce zatím nemá dvoufaktorové ověření. Správcem může být jen účet chráněný kódem z ověřovací aplikace nebo přístupovým klíčem.',
     );
     expect(element<HTMLInputElement>('#grant-email').value).toBe('petr@example.cz');
+  });
+
+  describe('when an answer has not come yet', () => {
+    it('then the button adding an administrator is locked and keeps both labels under the adding name', async () => {
+      peopleArrive();
+      await listed([jana]);
+      const input = element<HTMLInputElement>('#grant-email');
+      input.value = 'petr@example.cz';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      element<HTMLFormElement>('form').dispatchEvent(new Event('submit'));
+      fixture.detectChanges();
+
+      const submit = element<HTMLButtonElement>('.grant-submit');
+      expect(submit.disabled).toBe(true);
+      expect(labelFaces(submit)).toEqual(['Přidat správce', 'Přidáváme…']);
+      expect(accessibleText(submit)).toBe('Přidáváme…');
+      http
+        .expectOne('/api/admin/donors/administrators')
+        .flush(petr, { status: 201, statusText: 'Created' });
+      fixture.detectChanges();
+      await listed([jana, petr]);
+    });
+
+    it('then the button removing the role is locked and keeps both labels under the removing name', async () => {
+      peopleArrive();
+      await listed();
+      button(rows()[1], 'Odebrat roli správce').click();
+      fixture.detectChanges();
+      button(rows()[1], 'Ano, odebrat').click();
+      fixture.detectChanges();
+
+      const yes = rows()[1].querySelector('.confirm .ui-button--danger') as HTMLButtonElement;
+      expect(yes.disabled).toBe(true);
+      expect(labelFaces(yes)).toEqual(['Ano, odebrat', 'Odebíráme…']);
+      expect(accessibleText(yes)).toBe('Odebíráme…');
+      http
+        .expectOne(`/api/admin/donors/administrators/${PETR_ID}`)
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      await listed([jana]);
+    });
+
+    it('then the button turning off two-factor authentication is locked and keeps both labels under the turning-off name', async () => {
+      peopleArrive();
+      await listed([jana, { ...petr, secondFactorEnabled: true }]);
+      button(rows()[1], 'Vypnout dvoufaktorové ověření').click();
+      fixture.detectChanges();
+      button(rows()[1], 'Ano, vypnout').click();
+      fixture.detectChanges();
+
+      const yes = rows()[1].querySelector('.confirm .ui-button--danger') as HTMLButtonElement;
+      expect(yes.disabled).toBe(true);
+      expect(labelFaces(yes)).toEqual(['Ano, vypnout', 'Vypínáme…']);
+      expect(accessibleText(yes)).toBe('Vypínáme…');
+      http
+        .expectOne(`/api/admin/donors/${PETR_ID}/second-factor/reset`)
+        .flush(null, { status: 204, statusText: 'No Content' });
+      fixture.detectChanges();
+      await listed([jana, petr]);
+    });
   });
 
   it('when another administrator is removed after the confirmation, then the list reloads and the status says their sign-ins ended', async () => {

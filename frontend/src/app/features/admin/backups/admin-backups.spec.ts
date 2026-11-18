@@ -10,6 +10,8 @@ import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixt
 import { backupFile, backupRun, backupSchedule, backupsView } from '../testing/admin-fixtures';
 import { RESTART_POLL_MS } from '../../operations/setup/setup-api';
 import { AdminBackups, JOB_POLL_MS, RESTORE_REQUEST_KEY } from './admin-backups';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import {
   copyOf,
   openOfflineFromCopy,
@@ -79,7 +81,7 @@ describe('Given an administrator on the backups page', () => {
   function button(name: string): HTMLButtonElement {
     const found = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.trim() === name);
+    ).find((candidate) => accessibleText(candidate) === name);
     if (found === undefined) {
       throw new Error(`No button ${name}`);
     }
@@ -484,6 +486,19 @@ describe('Given an administrator on the backups page', () => {
         'Databáze je obnovená ze zálohy nfnn-2026-10-23_0300.dump.age. Stav před obnovou je uložený jako záloha „Před obnovou“.',
       );
       expect(sessionStorage.getItem(RESTORE_REQUEST_KEY)).toBeNull();
+    });
+
+    it('then confirming locks the button before the answer and keeps both labels under the handing-over name', async () => {
+      button('Obnovit a restartovat web').click();
+      await settle();
+
+      const confirm = fixture.nativeElement.querySelector('.restore-confirm') as HTMLButtonElement;
+      expect(confirm.disabled).toBe(true);
+      expect(labelFaces(confirm)).toEqual(['Obnovit a restartovat web', 'Předáváme obnovu…']);
+      expect(accessibleText(confirm)).toBe('Předáváme obnovu…');
+      const refused = problem(409, 'operations/restore-pending', 'Obnova už čeká', 'Počkejte.');
+      http.expectOne(RESTORE_URL).flush(refused.body, refused.options);
+      await settle();
     });
 
     it('then a refused restore is named in the dialog with the problem title', async () => {

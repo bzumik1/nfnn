@@ -24,6 +24,8 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminNewsEditor } from './admin-news-editor';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import {
   COPY_STORED_AT,
   contentCopy,
@@ -124,7 +126,7 @@ function text(fixture: ComponentFixture<unknown>, selector: string): string {
 function button(fixture: ComponentFixture<unknown>, name: string): HTMLButtonElement {
   const found = Array.from(
     fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-  ).find((candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name);
+  ).find((candidate) => accessibleText(candidate) === name);
   if (found === undefined) {
     throw new Error(`No button ${name}`);
   }
@@ -295,6 +297,40 @@ describe('Given an administrator writing a new news article', () => {
     );
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Zveřejní se 30. 10. 2026');
     expect(fixture.nativeElement.querySelector('.public-link')).toBeNull();
+  });
+
+  it('when they save a draft and the answer has not come yet, then the button is locked and keeps both labels under the saving name', async () => {
+    await type(fixture, '#news-title', 'Benefiční koncert');
+    await type(fixture, '#news-perex', 'Zveme vás na koncert.');
+    await type(fixture, '#news-body', 'Text o koncertu.');
+    await submit(fixture);
+
+    const save = element<HTMLButtonElement>(fixture, '.bar-actions button[type="submit"]');
+    expect(save.disabled).toBe(true);
+    expect(labelFaces(save)).toEqual(['Uložit koncept', 'Ukládáme…']);
+    expect(accessibleText(save)).toBe('Ukládáme…');
+    http.expectOne(NEWS_URL).flush(draftArticle());
+    await settle(fixture);
+  });
+
+  it('when they save and publish and the answer has not come yet, then the button is locked and keeps both labels under the publishing name', async () => {
+    await type(fixture, '#news-title', 'Benefiční koncert');
+    await type(fixture, '#news-perex', 'Zveme vás na koncert.');
+    await type(fixture, '#news-body', 'Text o koncertu.');
+    await type(fixture, '#news-publish-date', '2026-10-30');
+    button(fixture, 'Uložit a zveřejnit').click();
+    await settle(fixture);
+
+    const publish = element<HTMLButtonElement>(fixture, '.bar-actions .ui-button--primary');
+    expect(publish.disabled).toBe(true);
+    expect(labelFaces(publish)).toEqual(['Uložit a zveřejnit', 'Zveřejňujeme…']);
+    expect(accessibleText(publish)).toBe('Zveřejňujeme…');
+    http.expectOne(NEWS_URL).flush(draftArticle());
+    await settle(fixture);
+    http
+      .expectOne(`${NEWS_URL}/${draftArticle().id}/publish`)
+      .flush(draftArticle({ publishedOn: '2026-10-30', live: false }));
+    await settle(fixture);
   });
 
   it('when they save and publish a draft whose year another article already looks back on, then the alert says the draft is saved but not published, and nothing is published', async () => {
@@ -1000,6 +1036,35 @@ describe('Given an administrator editing a published news article', () => {
     expect(element<HTMLTextAreaElement>(fixture, '#news-body').value).toBe('Rozepsaný text.');
   });
 
+  it('when they save it and the answer has not come yet, then the button is locked and keeps both labels under the saving name', async () => {
+    await loaded();
+    await type(fixture, '#news-perex', 'Nový perex.');
+    button(fixture, 'Uložit a ukázat na webu').click();
+    await settle(fixture);
+
+    const save = element<HTMLButtonElement>(fixture, '.bar-actions button[type="submit"]');
+    expect(save.disabled).toBe(true);
+    expect(labelFaces(save)).toEqual(['Uložit a ukázat na webu', 'Ukládáme…']);
+    expect(accessibleText(save)).toBe('Ukládáme…');
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle());
+    await settle(fixture);
+  });
+
+  it('when they take it off the site and the answer has not come yet, then the button is locked and keeps both labels under the taking-off name', async () => {
+    await loaded();
+    button(fixture, 'Stáhnout z webu').click();
+    await settle(fixture);
+
+    const unpublish = element<HTMLButtonElement>(fixture, '.bar-actions .ui-button--quiet');
+    expect(unpublish.disabled).toBe(true);
+    expect(labelFaces(unpublish)).toEqual(['Stáhnout z webu', 'Stahujeme…']);
+    expect(accessibleText(unpublish)).toBe('Stahujeme…');
+    http
+      .expectOne(`${NEWS_URL}/${newsArticle().id}/unpublish`)
+      .flush(newsArticle({ publishedOn: null }));
+    await settle(fixture);
+  });
+
   it('when they take the article off the site, then it becomes a draft and the page says so', async () => {
     await loaded();
     button(fixture, 'Stáhnout z webu').click();
@@ -1172,6 +1237,21 @@ describe('Given an administrator editing a published news article', () => {
         state: { deleted: 'Zahrada pro děti' },
       });
       expect(fixture.componentInstance.canLeave()).toBe(true);
+    });
+
+    it('and confirm and the answer has not come yet, then the button is locked and keeps both labels under the deleting name', async () => {
+      vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      element<HTMLButtonElement>(fixture, '.confirm .ui-button--danger').click();
+      await settle(fixture);
+
+      const yes = element<HTMLButtonElement>(fixture, '.confirm .ui-button--danger');
+      expect(yes.disabled).toBe(true);
+      expect(labelFaces(yes)).toEqual(['Smazat natrvalo', 'Mažeme…']);
+      expect(accessibleText(yes)).toBe('Mažeme…');
+      http
+        .expectOne(`${NEWS_URL}/${newsArticle().id}`)
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle(fixture);
     });
 
     it('and the deletion fails, then the delete card says so and the focus returns to its button', async () => {

@@ -6,6 +6,8 @@ import { DirtyForms } from '../../../core/updates/dirty-forms';
 import { ProjectOrder } from '../../content/projects-api';
 import { type FakeConnectivity, fakeConnectivity } from '../device-copy/testing/opened-copy';
 import { ProjectOrderCard } from './project-order-card';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const ORDER_URL = '/api/admin/content/project-order';
 
@@ -144,7 +146,7 @@ describe('Given an administrator choosing the order of the projects', () => {
     await submit();
     const request = http.expectOne({ method: 'PUT', url: ORDER_URL });
     expect(request.request.body).toEqual({ order: 'CATEGORY_THEN_YEAR' });
-    expect(text(query('button[type="submit"]'))).toBe('Ukládáme…');
+    expect(accessibleText(query('button[type="submit"]'))).toBe('Ukládáme…');
     expect(query<HTMLButtonElement>('button[type="submit"]').disabled).toBe(true);
     request.flush({ order: 'CATEGORY_THEN_YEAR' });
     await settle();
@@ -154,6 +156,20 @@ describe('Given an administrator choosing the order of the projects', () => {
     );
     expect(radio('CATEGORY_THEN_YEAR').checked).toBe(true);
     expect(changes).toEqual(['CATEGORY_THEN_YEAR']);
+  });
+
+  it('when another order is saved and the answer has not come yet, then the button is locked and keeps both labels under the saving name', async () => {
+    await loaded();
+    radio('CATEGORY_THEN_YEAR').click();
+    await settle();
+    await submit();
+
+    const save = query<HTMLButtonElement>('button[type="submit"]');
+    expect(save.disabled).toBe(true);
+    expect(labelFaces(save)).toEqual(['Uložit řazení', 'Ukládáme…']);
+    expect(accessibleText(save)).toBe('Ukládáme…');
+    http.expectOne({ method: 'PUT', url: ORDER_URL }).flush({ order: 'CATEGORY_THEN_YEAR' });
+    await settle();
   });
 
   it('when another order is chosen and not saved yet, then the page counts as half-filled until it is saved, so a new version of the site waits', async () => {

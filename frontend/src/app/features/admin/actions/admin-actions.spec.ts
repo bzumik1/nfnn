@@ -15,6 +15,8 @@ import {
   openWithCopy,
   textOf,
 } from '../device-copy/testing/opened-copy';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const LIST_URL = '/api/admin/donors/actions';
 
@@ -362,7 +364,7 @@ describe('Given an administrator on the history page', () => {
 
   it('when more pages exist, then "Načíst starší" asks for the changes before the oldest one and appends them', () => {
     firstPage([paired, granted], true);
-    expect(text('.admin-more button')).toBe('Načíst starší');
+    expect(accessibleText(element('.admin-more button'))).toBe('Načíst starší');
 
     element<HTMLButtonElement>('.admin-more button').click();
     fixture.detectChanges();
@@ -377,6 +379,22 @@ describe('Given an administrator on the history page', () => {
     expect(rows()).toHaveLength(3);
     expect(rowText(rows()[2])).toContain('SOMETHING_NEW');
     expect(fixture.nativeElement.querySelector('.admin-more')).toBeNull();
+  });
+
+  it('when they load older changes and the answer has not come yet, then the button is locked and keeps both labels under the loading name', () => {
+    firstPage([paired, granted], true);
+
+    element<HTMLButtonElement>('.admin-more button').click();
+    fixture.detectChanges();
+
+    const more = element<HTMLButtonElement>('.admin-more button');
+    expect(more.disabled).toBe(true);
+    expect(labelFaces(more)).toEqual(['Načíst starší', 'Načítáme starší…']);
+    expect(accessibleText(more)).toBe('Načítáme starší…');
+    http
+      .expectOne((candidate) => candidate.url === LIST_URL)
+      .flush({ items: [byFormer], hasMore: false });
+    fixture.detectChanges();
   });
 
   it('when changes share their time at the end of a page, then "Načíst starší" names the last one listed, so none of them is skipped', () => {
@@ -598,7 +616,7 @@ describe('Given an administrator offline whose device keeps the administration c
       copyOf({ 'donors/accounts:2026-01': [], 'donors/audit:2026-10': entries }),
     );
     const more = [...page.querySelectorAll('button')].find(
-      (button) => textOf(button) === 'Načíst starší',
+      (button) => accessibleText(button) === 'Načíst starší',
     ) as HTMLButtonElement;
 
     expect(more.getAttribute('aria-disabled')).not.toBe('true');
