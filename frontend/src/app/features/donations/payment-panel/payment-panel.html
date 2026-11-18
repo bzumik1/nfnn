@@ -277,7 +277,7 @@
     }
   </div>
 
-  @if (compact()) {
+  @if (compact() && !detailsFailed()) {
     <div #bankApp class="bank-app" tabindex="-1" [attr.aria-busy]="busy()">
       <div class="bank-app-failure">
         <ng-container [ngTemplateOutlet]="failureNotice" />
@@ -436,7 +436,7 @@
     }
   </ng-template>
 
-  @if (!qrInBankDetails() && (compact() || !detailsFailed())) {
+  @if (!qrInBankDetails() && !detailsFailed()) {
     <ng-container [ngTemplateOutlet]="qrBlock" />
   }
 
