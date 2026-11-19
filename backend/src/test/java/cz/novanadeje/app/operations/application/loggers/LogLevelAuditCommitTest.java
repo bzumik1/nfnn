@@ -47,7 +47,7 @@ class LogLevelAuditCommitTest {
     }
 
     @Test
-    @DisplayName("Given a raise whose commit is refused after its audit row was inserted, when an administrator raises a logger, then the logger keeps its level, no override shows or can be reset and nothing is audited")
+    @DisplayName("Given a raise whose commit is refused after the audit listener ran, when an administrator raises a logger, then the logger keeps its level, no override shows or can be reset and nothing is audited")
     void should_leave_the_logger_as_it_was_when_raised_given_the_audit_refused_at_the_commit() {
         assertThatIllegalStateException().isThrownBy(() -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
             logLevels.override(adminId, CANARY, LogLevel.DEBUG, 5);

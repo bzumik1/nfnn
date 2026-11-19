@@ -12,7 +12,7 @@ public final class RefusedCommits {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void beforeCommit(boolean readOnly) {
-                throw new IllegalStateException("The commit was refused after the audit insert");
+                throw new IllegalStateException("The commit was refused after the audit listener ran");
             }
         });
     }
