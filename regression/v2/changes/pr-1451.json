@@ -1,0 +1,34 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.transaction.SynchronizedAfterCommitWorkTest > Given no transaction, when work is handed over, then it runs at once",
+    "reason": "PR #1451 (#621 round 5, #1084): the after-commit port and its adapter move from donations to shared, because operations defers its audited side effects behind the same port; the tests move with the adapter unchanged",
+    "replacement": "shared.infrastructure.transaction.SynchronizedAfterCommitWorkTest > Given no transaction, when work is handed over, then it runs at once",
+    "contract": "docs/system-overview.md, donations (Receipt signatory) and operations (Backups, Diagnostics)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.transaction.SynchronizedAfterCommitWorkTest > Given a transaction, when work is handed over, then it runs only once the transaction has committed",
+    "reason": "PR #1451 (#621 round 5, #1084): the after-commit port and its adapter move from donations to shared, because operations defers its audited side effects behind the same port; the tests move with the adapter unchanged",
+    "replacement": "shared.infrastructure.transaction.SynchronizedAfterCommitWorkTest > Given a transaction, when work is handed over, then it runs only once the transaction has committed",
+    "contract": "docs/system-overview.md, donations (Receipt signatory) and operations (Backups, Diagnostics)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.transaction.SynchronizedAfterCommitWorkTest > Given a transaction that rolls back, when work is handed over, then it never runs",
+    "reason": "PR #1451 (#621 round 5, #1084): the after-commit port and its adapter move from donations to shared, because operations defers its audited side effects behind the same port; the tests move with the adapter unchanged",
+    "replacement": "shared.infrastructure.transaction.SynchronizedAfterCommitWorkTest > Given a transaction that rolls back, when work is handed over, then it never runs",
+    "contract": "docs/system-overview.md, donations (Receipt signatory) and operations (Backups, Diagnostics)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.transaction.SynchronizedAfterCommitWorkTest > Given a transaction that fails, when work is handed over, then it never runs",
+    "reason": "PR #1451 (#621 round 5, #1084): the after-commit port and its adapter move from donations to shared, because operations defers its audited side effects behind the same port; the tests move with the adapter unchanged",
+    "replacement": "shared.infrastructure.transaction.SynchronizedAfterCommitWorkTest > Given a transaction that fails, when work is handed over, then it never runs",
+    "contract": "docs/system-overview.md, donations (Receipt signatory) and operations (Backups, Diagnostics)"
+  }
+]

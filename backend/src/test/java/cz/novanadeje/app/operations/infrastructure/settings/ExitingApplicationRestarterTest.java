@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import cz.novanadeje.app.support.InMemoryTransactions;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -106,6 +109,25 @@ class ExitingApplicationRestarterTest {
         assertThat(steps).containsExactly("exit");
         assertThat(Duration.between(START, clock.instant())).isEqualTo(ExitingApplicationRestarter.DELAY);
         assertThat(messages()).containsExactly(STOPPING);
+    }
+
+    @Test
+    @DisplayName("Given a restore request whose file write after the commit fails, when the restore asks for a restart after it, then the backend does not exit")
+    void should_not_exit_when_a_restore_restarts_given_the_request_write_failed_after_the_commit() {
+        ExitingApplicationRestarter restarter = new ExitingApplicationRestarter(executor, clock, clock::advance, Runnable::run, this::exit);
+
+        assertThatThrownBy(() -> InMemoryTransactions.template().executeWithoutResult(status -> {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    throw new IllegalStateException("not written");
+                }
+            });
+            restarter.restartAfterCommitForRestore();
+        })).isInstanceOf(IllegalStateException.class);
+
+        assertThat(exits).hasValue(0);
+        assertThat(steps).isEmpty();
     }
 
     @Test

@@ -39,6 +39,7 @@ import {
 } from '../../operations/backup-key/backup-key-word-check';
 import { AdminApi, BackupKeyRevealRequest, BackupKeyStatus } from '../admin-api';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 const CODE_MESSAGES: FieldMessages = {
   required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
@@ -52,6 +53,7 @@ const REVEAL_FAILED = $localize`:@@admin.backups.key.reveal.failed:Klíč se nep
 @Component({
   selector: 'app-backup-key-card',
   imports: [
+    BusyLabel,
     FormsModule,
     FormField,
     FormControlDirective,

@@ -48,6 +48,7 @@ import { loadingView } from '../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { fileNameParts } from './file-name-parts';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -82,6 +83,7 @@ function failedAt(at: string): string {
 @Component({
   selector: 'app-admin-backups',
   imports: [
+    BusyLabel,
     Skeleton,
     NeedsConnection,
     LiveNotice,

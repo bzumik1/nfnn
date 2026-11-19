@@ -77,19 +77,6 @@ public final class Donation {
 
     public static Donation reconstitute(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn,
                                         Money amount, DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy,
-                                        Instant recordedAt) {
-        return reconstitute(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, Optional.empty(), recordedAt);
-    }
-
-    public static Donation reconstitute(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn,
-                                        Money amount, DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy,
-                                        Optional<SenderAccountLinkId> pairedThrough, Instant recordedAt) {
-        return reconstitute(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, pairedThrough, Optional.empty(),
-                DonationPurpose.GENERAL, recordedAt);
-    }
-
-    public static Donation reconstitute(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn,
-                                        Money amount, DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy,
                                         Optional<SenderAccountLinkId> pairedThrough, Optional<SymbolClaimId> confirmedClaim,
                                         DonationPurpose purpose, Instant recordedAt) {
         return new Donation(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, pairedThrough, confirmedClaim, purpose,

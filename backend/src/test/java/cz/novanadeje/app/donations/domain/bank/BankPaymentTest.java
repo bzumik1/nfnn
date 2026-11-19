@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.domain.bank;
 
+import cz.novanadeje.app.donations.BankPayments;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.DisplayName;
@@ -158,5 +159,29 @@ class BankPaymentTest {
         return new BankPayment(PAYMENT_ID, new BankTransactionId(1001), LocalDate.of(2026, 10, 15), Money.czk(50000), sender, account, bankCode,
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), "Bezhotovostní příjem", NOW,
                 Optional.empty());
+    }
+
+    @Test
+    @DisplayName("Given a payment booked seven days before today in Prague, when its arrival is checked, then it arrived recently")
+    void should_have_arrived_recently_when_checked_given_booked_seven_days_ago() {
+        assertThat(bookedOn(LocalDate.of(2026, 11, 8)).arrivedRecentlyAt(Instant.parse("2026-11-15T09:00:00Z"))).isTrue();
+        assertThat(bookedOn(LocalDate.of(2026, 11, 15)).arrivedRecentlyAt(Instant.parse("2026-11-15T09:00:00Z"))).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a payment booked eight days before today in Prague, when its arrival is checked, then it did not arrive recently")
+    void should_not_have_arrived_recently_when_checked_given_booked_eight_days_ago() {
+        assertThat(bookedOn(LocalDate.of(2026, 11, 7)).arrivedRecentlyAt(Instant.parse("2026-11-15T09:00:00Z"))).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a moment after midnight in Prague but before it in UTC, when a payment's arrival is checked, then the days count from Prague's date")
+    void should_count_from_the_prague_date_when_checked_given_a_moment_past_prague_midnight() {
+        assertThat(bookedOn(LocalDate.of(2026, 11, 8)).arrivedRecentlyAt(Instant.parse("2026-11-14T23:30:00Z"))).isTrue();
+        assertThat(bookedOn(LocalDate.of(2026, 11, 7)).arrivedRecentlyAt(Instant.parse("2026-11-14T23:30:00Z"))).isFalse();
+    }
+
+    private static BankPayment bookedOn(LocalDate bookedOn) {
+        return BankPayments.payment(1, bookedOn, Money.czk(100), Optional.empty(), "558");
     }
 }

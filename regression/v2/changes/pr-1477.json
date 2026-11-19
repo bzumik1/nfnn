@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.EventListenerRulesTest > Given the plain listeners named with their reason, when they are read, then each exists, so the list names no class that is gone",
+    "reason": "PR #1477 (#621 round 5, #1475): the plain listeners are keyed by listener and event, so the stale-entry test checks each pair still hears its event plainly, not only that the class exists",
+    "replacement": "architecture.EventListenerRulesTest > Given the plain listeners named with their reason, when the site is read, then each class still hears its event with a plain @EventListener, so the list names no listener or event that is gone",
+    "contract": ".claude/rules/backend.md, Contexts and layers (plain listeners)"
+  }
+]

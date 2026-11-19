@@ -7,7 +7,9 @@ import cz.novanadeje.app.operations.domain.backup.BackupNotFound;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestPending;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.BackupsUnavailable;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.transaction.AfterCommitWork;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,12 +36,14 @@ public class BackupAdministrationService {
     private final BackupStore store;
     private final BackupLimits limits;
     private final ApplicationEventPublisher events;
+    private final AfterCommitWork afterCommit;
     private final Clock clock;
 
-    public BackupAdministrationService(BackupStore store, BackupLimits limits, ApplicationEventPublisher events, Clock clock) {
+    public BackupAdministrationService(BackupStore store, BackupLimits limits, ApplicationEventPublisher events, AfterCommitWork afterCommit, Clock clock) {
         this.store = store;
         this.limits = limits;
         this.events = events;
+        this.afterCommit = afterCommit;
         this.clock = clock;
     }
 
@@ -60,13 +64,18 @@ public class BackupAdministrationService {
         if (store.pendingRequests() > 0) {
             throw new BackupRequestPending();
         }
+        if (!store.acceptsRequests()) {
+            throw new BackupsUnavailable();
+        }
         Instant now = clock.instant();
         String id = UuidV7.generate(now).toString();
-        store.request(kind, id);
         String action = kind == BackupRequestKind.BACKUP ? REQUEST_BACKUP_ACTION : REQUEST_TEST_RESTORE_ACTION;
         String what = kind == BackupRequestKind.BACKUP ? "Záloha databáze vyžádána" : "Zkušební obnova nejnovější zálohy vyžádána";
         events.publishEvent(new AdminActionPerformed(adminId, action, Optional.empty(), what + " (požadavek " + id + ")", AdminActionPerformed.Facts.of(action), now));
-        log.info("Admin {} requested {} as request {}", adminId, kind, id);
+        afterCommit.run(() -> {
+            store.request(kind, id);
+            log.info("Admin {} requested {} as request {}", adminId, kind, id);
+        });
         return new BackupRequest(id, kind, now);
     }
 

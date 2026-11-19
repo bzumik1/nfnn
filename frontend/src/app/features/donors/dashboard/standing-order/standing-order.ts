@@ -17,6 +17,7 @@ import { splitBeforeBankCode } from '../../../donations/czech-account';
 import { formatCrowns } from '../../../donations/donation-amount';
 import { PaymentAccountState } from '../../../donations/payment-panel/payment-panel';
 import { PaymentDetailsStore } from '../../../donations/payment-details-store';
+import { Disclosure } from '../../../../shared/ui/disclosure/disclosure';
 
 type OwnAccountState = PaymentAccountState | { readonly kind: 'idle' };
 
@@ -24,7 +25,7 @@ let nextId = 0;
 
 @Component({
   selector: 'app-standing-order',
-  imports: [RouterLink, CopyButton],
+  imports: [RouterLink, CopyButton, Disclosure],
   templateUrl: './standing-order.html',
   styleUrl: './standing-order.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

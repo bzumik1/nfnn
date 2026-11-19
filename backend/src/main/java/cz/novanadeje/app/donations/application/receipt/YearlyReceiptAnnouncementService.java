@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.Month;
 import java.time.Year;
 import java.util.Optional;
 import java.util.Set;
@@ -26,8 +25,6 @@ import java.util.stream.Collectors;
 public class YearlyReceiptAnnouncementService {
 
     private static final Logger log = LoggerFactory.getLogger(YearlyReceiptAnnouncementService.class);
-
-    static final int FIRST_ANNOUNCING_DAY_OF_JANUARY = 2;
 
     private final YearlyReceiptsService yearlyReceipts;
     private final YearlyReceiptAnnouncementRepository announcements;
@@ -53,7 +50,7 @@ public class YearlyReceiptAnnouncementService {
     public Optional<YearlyReceiptAnnouncement> announceDue() {
         LocalDate today = FoundationCalendar.today(clock);
         Year year = ReceiptCalendar.lastCompleted(today);
-        if (today.getMonth() != Month.JANUARY || today.getDayOfMonth() < FIRST_ANNOUNCING_DAY_OF_JANUARY || !firstYear.admits(year)
+        if (!ReceiptCalendar.announcesYearlyReceiptsOn(today) || !firstYear.admits(year)
                 || !receiptsCanBeIssued(year) || !announcements.markAnnounced(year, clock.instant())) {
             return Optional.empty();
         }

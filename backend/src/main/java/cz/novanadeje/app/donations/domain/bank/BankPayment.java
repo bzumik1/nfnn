@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.domain.bank;
 
+import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 
@@ -36,6 +37,8 @@ public record BankPayment(
         String transactionType,
         Instant importedAt,
         Optional<Instant> unpairedByAdminAt) {
+
+    private static final int RECENT_ARRIVAL_DAYS = 7;
 
     public BankPayment {
         require(id, "Bank payment id");
@@ -92,5 +95,9 @@ public record BankPayment(
 
     public boolean hasSender() {
         return sender.isPresent();
+    }
+
+    public boolean arrivedRecentlyAt(Instant now) {
+        return !bookedOn.isBefore(LocalDate.ofInstant(now, FoundationCalendar.ZONE).minusDays(RECENT_ARRIVAL_DAYS));
     }
 }

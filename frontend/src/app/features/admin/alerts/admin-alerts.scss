@@ -29,3 +29,7 @@
 .other-remove {
   margin-top: var(--space-5);
 }
+
+.ui-list__row--action app-busy-label {
+  justify-items: start;
+}

@@ -587,7 +587,7 @@ describe('Given the bank accounts card in the overview', () => {
 
     await click('.account-action');
 
-    expect(element('.account-confirm')?.classList).toContain('ui-confirm');
+    expect(element('.account-confirm-box')?.classList).toContain('ui-confirm');
     expect(element('.account-confirm-text')?.classList).toContain('ui-confirm__text');
     expect(element('.account-confirm-actions')?.classList).toContain('ui-confirm__actions');
     expect(element('.account-confirm-no')?.classList).toContain('ui-button--quiet');

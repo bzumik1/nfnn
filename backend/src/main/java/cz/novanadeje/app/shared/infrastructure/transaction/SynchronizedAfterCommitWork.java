@@ -1,6 +1,6 @@
-package cz.novanadeje.app.donations.infrastructure.transaction;
+package cz.novanadeje.app.shared.infrastructure.transaction;
 
-import cz.novanadeje.app.donations.application.receipt.AfterCommitWork;
+import cz.novanadeje.app.shared.application.transaction.AfterCommitWork;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;

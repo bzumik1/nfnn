@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.domain.signing;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
@@ -12,6 +13,7 @@ public record ReceiptSigningKey(ReceiptSigningKeyId id, byte[] publicKey, Instan
 
     public static final String SEAL_PURPOSE = "receipt-signing-key";
     public static final int MAX_SEAL_LENGTH = 100;
+    private static final Duration RESTORE_ADOPTION_WINDOW = Duration.ofHours(1);
 
     public ReceiptSigningKey {
         if (id == null || publicKey == null || registeredAt == null || status == null || seal == null || seal.isBlank()) {
@@ -21,6 +23,10 @@ public record ReceiptSigningKey(ReceiptSigningKeyId id, byte[] publicKey, Instan
         if (seal.length() > MAX_SEAL_LENGTH) {
             throw new IllegalArgumentException("A seal is at most " + MAX_SEAL_LENGTH + " characters");
         }
+    }
+
+    public static boolean adoptableAfterRestoreFinishedAt(Instant restoreFinishedAt, Instant now) {
+        return !restoreFinishedAt.isBefore(now.minus(RESTORE_ADOPTION_WINDOW));
     }
 
     public static ReceiptSigningKey register(byte[] publicKey, Instant now, Function<byte[], String> sealing) {

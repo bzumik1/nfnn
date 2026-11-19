@@ -1,12 +1,6 @@
 name: Safari
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - "frontend/**"
-      - ".github/workflows/safari.yml"
   schedule:
     - cron: "41 4 * * 1"
   workflow_dispatch:
@@ -15,12 +9,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: safari-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: safari-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   safari:
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: macos-15
     timeout-minutes: 90
     defaults:

@@ -255,15 +255,14 @@
                         [disabled]="testingMail()"
                         (click)="sendTestEmail()"
                       >
-                        @if (testingMail()) {
-                          <span i18n="@@admin.settings.testEmail.busy"
-                            >Posíláme zkušební e-mail…</span
-                          >
-                        } @else {
-                          <span i18n="@@admin.settings.testEmail"
+                        <app-busy-label [busy]="testingMail()">
+                          <span when-idle i18n="@@admin.settings.testEmail"
                             >Poslat zkušební e-mail na moji adresu</span
                           >
-                        }
+                          <span when-busy i18n="@@admin.settings.testEmail.busy"
+                            >Posíláme zkušební e-mail…</span
+                          >
+                        </app-busy-label>
                       </button>
                       <div class="test-result-slot" role="status">
                         @if (mailNotice(); as mailNotice) {

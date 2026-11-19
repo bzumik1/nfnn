@@ -3,87 +3,93 @@
   class="accounts-help-panel"
   role="region"
   aria-labelledby="accounts-help-title"
-  [hidden]="!open()"
+  appDisclosure
+  [closed]="!open()"
   (keydown.escape)="requestClose()"
 >
-  <h3 id="accounts-help-title" class="help-title" i18n="@@donor.bankAccounts.help.title">
-    Jak přiřazujeme platby
-  </h3>
-  <ul class="help-list">
-    @if (variableSymbol(); as symbol) {
-      <li i18n="@@donor.bankAccounts.help.bySymbol">
-        <span class="help-lead">Jak se k&nbsp;vám dostane můj dar?</span> Platbu s&nbsp;vaším
-        variabilním symbolem <strong class="help-symbol ui-figures">{{ symbol }}</strong> přiřadíme
-        vám, ať přijde z&nbsp;jakéhokoli účtu.
-      </li>
-    } @else {
-      <li i18n="@@donor.bankAccounts.help.bySymbolWithoutNumber">
-        <span class="help-lead">Jak se k&nbsp;vám dostane můj dar?</span> Platbu s&nbsp;vaším
-        variabilním symbolem přiřadíme vám, ať přijde z&nbsp;jakéhokoli účtu.
-      </li>
-    }
-    @if (variableSymbol(); as symbol) {
-      <li i18n="@@donor.bankAccounts.help.symbolInMessage">
-        <span class="help-lead">Moje banka nemá pole pro variabilní symbol</span> Napište symbol
-        <strong class="help-symbol ui-figures">{{ symbol }}</strong> do zprávy pro příjemce. Platbu
-        vám přiřadíme stejně, jako kdyby byl v&nbsp;poli pro symbol.
-      </li>
-    } @else {
-      <li i18n="@@donor.bankAccounts.help.symbolInMessageWithoutNumber">
-        <span class="help-lead">Moje banka nemá pole pro variabilní symbol</span> Napište svůj
-        variabilní symbol do zprávy pro příjemce. Platbu vám přiřadíme stejně, jako kdyby byl
-        v&nbsp;poli pro symbol.
-      </li>
-    }
-    <li i18n="@@donor.bankAccounts.help.byAccount">
-      <span class="help-lead">Co když pošlu platbu bez symbolu?</span> Přiřadíme ji podle účtu, ze
-      kterého přišla, pokud jste ho ověřili platbou s&nbsp;vaším symbolem (stačí 1&nbsp;Kč přes
-      „Přidat bankovní účet“). Když účet ověříte jako první dárce, přiřadíme vám i&nbsp;dřívější
-      platby z&nbsp;něj bez symbolu.
-    </li>
-    @if (variableSymbol(); as symbol) {
-      <li i18n="@@donor.bankAccounts.help.otherSymbol">
-        <span class="help-lead">Posílám trvalým příkazem se starým symbolem</span> Nejjistější je
-        změnit v&nbsp;příkazu symbol na váš
-        <strong class="help-symbol ui-figures">{{ symbol }}</strong
-        >. Jinak pošlete z&nbsp;účtu 1&nbsp;Kč se zprávou z&nbsp;QR kódu v&nbsp;„Přidat bankovní
-        účet“ (běžný dar nestačí) a&nbsp;my se vás u&nbsp;účtu obvykle zeptáme, jestli jsou platby
-        se starým symbolem vaše.
-      </li>
-    } @else {
-      <li i18n="@@donor.bankAccounts.help.otherSymbolWithoutNumber">
-        <span class="help-lead">Posílám trvalým příkazem se starým symbolem</span> Nejjistější je
-        změnit v&nbsp;příkazu symbol na váš. Jinak pošlete z&nbsp;účtu 1&nbsp;Kč se zprávou
-        z&nbsp;QR kódu v&nbsp;„Přidat bankovní účet“ (běžný dar nestačí) a&nbsp;my se vás
-        u&nbsp;účtu obvykle zeptáme, jestli jsou platby se starým symbolem vaše.
-      </li>
-    }
-    <li i18n="@@donor.bankAccounts.help.olderSymbol">
-      <span class="help-lead">Co se stane po odpovědi na otázku?</span> Po „Ano, jsou moje“ vám
-      platby s&nbsp;tímto symbolem z&nbsp;účtu přiřazujeme stejně jako platby bez symbolu, dřívější
-      i&nbsp;další; po „Ne, nejsou moje“ se už neptáme. Odpověď nejde změnit; kdybyste se spletli,
-      napište nám.
-    </li>
-    <li i18n="@@donor.bankAccounts.help.shared">
-      <span class="help-lead">Co znamená Sdílený účet?</span> Stejný účet ověřil i&nbsp;jiný dárce,
-      proto z&nbsp;něj platby bez symbolu ani se starším potvrzeným symbolem nepřiřazujeme nikomu.
-      Posílejte z&nbsp;něj prosím vždy s&nbsp;vaším variabilním symbolem.
-    </li>
-    <li i18n="@@donor.bankAccounts.help.disconnect">
-      <span class="help-lead">Jak přestat přiřazovat platby z&nbsp;účtu?</span> Stiskněte
-      u&nbsp;účtu „Nepřiřazovat platby z&nbsp;tohoto účtu“; od dalšího dne vám z&nbsp;něj platby bez
-      symbolu ani se starším potvrzeným symbolem nepřiřadíme a&nbsp;dřívější dary zůstanou.
-      Tlačítkem „Znovu přiřazovat platby z&nbsp;účtu“ a&nbsp;platbou 1&nbsp;Kč s&nbsp;vaším symbolem
-      to vrátíte.
-    </li>
-    <li i18n="@@donor.bankAccounts.help.exceptions">
-      <span class="help-lead">Výjimky</span> Platbu se symbolem jiného dárce přiřadíme jemu
-      a&nbsp;symbol&nbsp;0 bereme jako platbu bez symbolu. Z&nbsp;účtu, přes který posílá peníze víc
-      lidí (třeba sběrný účet), přiřazujeme jen platby s&nbsp;variabilním symbolem.
-    </li>
-  </ul>
-  <p class="help-contact" i18n="@@donor.bankAccounts.help.contact">
-    Chybí vám nějaký dar, nebo tu vidíte dar, který není váš? Napište nám na
-    <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
-  </p>
+  <div>
+    <div class="accounts-help-box">
+      <h3 id="accounts-help-title" class="help-title" i18n="@@donor.bankAccounts.help.title">
+        Jak přiřazujeme platby
+      </h3>
+      <ul class="help-list">
+        @if (variableSymbol(); as symbol) {
+          <li i18n="@@donor.bankAccounts.help.bySymbol">
+            <span class="help-lead">Jak se k&nbsp;vám dostane můj dar?</span> Platbu s&nbsp;vaším
+            variabilním symbolem
+            <strong class="help-symbol ui-figures">{{ symbol }}</strong> přiřadíme vám, ať přijde
+            z&nbsp;jakéhokoli účtu.
+          </li>
+        } @else {
+          <li i18n="@@donor.bankAccounts.help.bySymbolWithoutNumber">
+            <span class="help-lead">Jak se k&nbsp;vám dostane můj dar?</span> Platbu s&nbsp;vaším
+            variabilním symbolem přiřadíme vám, ať přijde z&nbsp;jakéhokoli účtu.
+          </li>
+        }
+        @if (variableSymbol(); as symbol) {
+          <li i18n="@@donor.bankAccounts.help.symbolInMessage">
+            <span class="help-lead">Moje banka nemá pole pro variabilní symbol</span> Napište symbol
+            <strong class="help-symbol ui-figures">{{ symbol }}</strong> do zprávy pro příjemce.
+            Platbu vám přiřadíme stejně, jako kdyby byl v&nbsp;poli pro symbol.
+          </li>
+        } @else {
+          <li i18n="@@donor.bankAccounts.help.symbolInMessageWithoutNumber">
+            <span class="help-lead">Moje banka nemá pole pro variabilní symbol</span> Napište svůj
+            variabilní symbol do zprávy pro příjemce. Platbu vám přiřadíme stejně, jako kdyby byl
+            v&nbsp;poli pro symbol.
+          </li>
+        }
+        <li i18n="@@donor.bankAccounts.help.byAccount">
+          <span class="help-lead">Co když pošlu platbu bez symbolu?</span> Přiřadíme ji podle účtu,
+          ze kterého přišla, pokud jste ho ověřili platbou s&nbsp;vaším symbolem (stačí 1&nbsp;Kč
+          přes „Přidat bankovní účet“). Když účet ověříte jako první dárce, přiřadíme vám
+          i&nbsp;dřívější platby z&nbsp;něj bez symbolu.
+        </li>
+        @if (variableSymbol(); as symbol) {
+          <li i18n="@@donor.bankAccounts.help.otherSymbol">
+            <span class="help-lead">Posílám trvalým příkazem se starým symbolem</span> Nejjistější
+            je změnit v&nbsp;příkazu symbol na váš
+            <strong class="help-symbol ui-figures">{{ symbol }}</strong
+            >. Jinak pošlete z&nbsp;účtu 1&nbsp;Kč se zprávou z&nbsp;QR kódu v&nbsp;„Přidat bankovní
+            účet“ (běžný dar nestačí) a&nbsp;my se vás u&nbsp;účtu obvykle zeptáme, jestli jsou
+            platby se starým symbolem vaše.
+          </li>
+        } @else {
+          <li i18n="@@donor.bankAccounts.help.otherSymbolWithoutNumber">
+            <span class="help-lead">Posílám trvalým příkazem se starým symbolem</span> Nejjistější
+            je změnit v&nbsp;příkazu symbol na váš. Jinak pošlete z&nbsp;účtu 1&nbsp;Kč se zprávou
+            z&nbsp;QR kódu v&nbsp;„Přidat bankovní účet“ (běžný dar nestačí) a&nbsp;my se vás
+            u&nbsp;účtu obvykle zeptáme, jestli jsou platby se starým symbolem vaše.
+          </li>
+        }
+        <li i18n="@@donor.bankAccounts.help.olderSymbol">
+          <span class="help-lead">Co se stane po odpovědi na otázku?</span> Po „Ano, jsou moje“ vám
+          platby s&nbsp;tímto symbolem z&nbsp;účtu přiřazujeme stejně jako platby bez symbolu,
+          dřívější i&nbsp;další; po „Ne, nejsou moje“ se už neptáme. Odpověď nejde změnit; kdybyste
+          se spletli, napište nám.
+        </li>
+        <li i18n="@@donor.bankAccounts.help.shared">
+          <span class="help-lead">Co znamená Sdílený účet?</span> Stejný účet ověřil i&nbsp;jiný
+          dárce, proto z&nbsp;něj platby bez symbolu ani se starším potvrzeným symbolem
+          nepřiřazujeme nikomu. Posílejte z&nbsp;něj prosím vždy s&nbsp;vaším variabilním symbolem.
+        </li>
+        <li i18n="@@donor.bankAccounts.help.disconnect">
+          <span class="help-lead">Jak přestat přiřazovat platby z&nbsp;účtu?</span> Stiskněte
+          u&nbsp;účtu „Nepřiřazovat platby z&nbsp;tohoto účtu“; od dalšího dne vám z&nbsp;něj platby
+          bez symbolu ani se starším potvrzeným symbolem nepřiřadíme a&nbsp;dřívější dary zůstanou.
+          Tlačítkem „Znovu přiřazovat platby z&nbsp;účtu“ a&nbsp;platbou 1&nbsp;Kč s&nbsp;vaším
+          symbolem to vrátíte.
+        </li>
+        <li i18n="@@donor.bankAccounts.help.exceptions">
+          <span class="help-lead">Výjimky</span> Platbu se symbolem jiného dárce přiřadíme jemu
+          a&nbsp;symbol&nbsp;0 bereme jako platbu bez symbolu. Z&nbsp;účtu, přes který posílá peníze
+          víc lidí (třeba sběrný účet), přiřazujeme jen platby s&nbsp;variabilním symbolem.
+        </li>
+      </ul>
+      <p class="help-contact" i18n="@@donor.bankAccounts.help.contact">
+        Chybí vám nějaký dar, nebo tu vidíte dar, který není váš? Napište nám na
+        <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
+      </p>
+    </div>
+  </div>
 </div>

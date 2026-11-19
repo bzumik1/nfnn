@@ -73,6 +73,7 @@ public class PushSender {
         try {
             return record(recipient, outcome);
         } catch (RuntimeException notRecorded) {
+            log.warn("Push outcome {} of subscription {} could not be recorded: {}", outcome, recipient.id().value(), notRecorded.getClass().getSimpleName());
             return outcome;
         }
     }

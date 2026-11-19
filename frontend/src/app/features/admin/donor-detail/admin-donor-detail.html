@@ -441,13 +441,10 @@
                       [disabled]="busy()"
                       (click)="reset()"
                     >
-                      @if (busy()) {
-                        <ng-container i18n="@@admin.donorDetail.reset.busy">Vypínáme…</ng-container>
-                      } @else {
-                        <ng-container i18n="@@admin.donorDetail.reset.yes"
-                          >Ano, vypnout</ng-container
-                        >
-                      }
+                      <app-busy-label [busy]="busy()">
+                        <span when-idle i18n="@@admin.donorDetail.reset.yes">Ano, vypnout</span>
+                        <span when-busy i18n="@@admin.donorDetail.reset.busy">Vypínáme…</span>
+                      </app-busy-label>
                     </button>
                     <button
                       #confirmCancel
@@ -498,15 +495,10 @@
                       [disabled]="busy()"
                       (click)="removePasskeys()"
                     >
-                      @if (busy()) {
-                        <ng-container i18n="@@admin.donorDetail.passkeys.busy"
-                          >Odebíráme…</ng-container
-                        >
-                      } @else {
-                        <ng-container i18n="@@admin.donorDetail.passkeys.yes"
-                          >Ano, odebrat</ng-container
-                        >
-                      }
+                      <app-busy-label [busy]="busy()">
+                        <span when-idle i18n="@@admin.donorDetail.passkeys.yes">Ano, odebrat</span>
+                        <span when-busy i18n="@@admin.donorDetail.passkeys.busy">Odebíráme…</span>
+                      </app-busy-label>
                     </button>
                     <button
                       #confirmCancel
@@ -797,15 +789,14 @@
                                 [disabled]="busy()"
                                 (click)="disconnect(item)"
                               >
-                                @if (busy()) {
-                                  <ng-container i18n="@@admin.donorDetail.disconnect.busy"
-                                    >Vypínáme…</ng-container
+                                <app-busy-label [busy]="busy()">
+                                  <span when-idle i18n="@@admin.donorDetail.disconnect.yes"
+                                    >Ano, vypnout</span
                                   >
-                                } @else {
-                                  <ng-container i18n="@@admin.donorDetail.disconnect.yes"
-                                    >Ano, vypnout</ng-container
+                                  <span when-busy i18n="@@admin.donorDetail.disconnect.busy"
+                                    >Vypínáme…</span
                                   >
-                                }
+                                </app-busy-label>
                               </button>
                               <button
                                 #confirmCancel
@@ -837,15 +828,14 @@
                                 [disabled]="busy()"
                                 (click)="reconnect(item)"
                               >
-                                @if (busy()) {
-                                  <ng-container i18n="@@admin.donorDetail.reconnect.busy"
-                                    >Zapínáme…</ng-container
+                                <app-busy-label [busy]="busy()">
+                                  <span when-idle i18n="@@admin.donorDetail.reconnect.yes"
+                                    >Ano, zapnout</span
                                   >
-                                } @else {
-                                  <ng-container i18n="@@admin.donorDetail.reconnect.yes"
-                                    >Ano, zapnout</ng-container
+                                  <span when-busy i18n="@@admin.donorDetail.reconnect.busy"
+                                    >Zapínáme…</span
                                   >
-                                }
+                                </app-busy-label>
                               </button>
                               <button
                                 #confirmCancel
@@ -878,15 +868,14 @@
                                 [disabled]="busy()"
                                 (click)="remove(item)"
                               >
-                                @if (busy()) {
-                                  <ng-container i18n="@@admin.donorDetail.remove.busy"
-                                    >Odebíráme…</ng-container
+                                <app-busy-label [busy]="busy()">
+                                  <span when-idle i18n="@@admin.donorDetail.remove.yes"
+                                    >Ano, odebrat</span
                                   >
-                                } @else {
-                                  <ng-container i18n="@@admin.donorDetail.remove.yes"
-                                    >Ano, odebrat</ng-container
+                                  <span when-busy i18n="@@admin.donorDetail.remove.busy"
+                                    >Odebíráme…</span
                                   >
-                                }
+                                </app-busy-label>
                               </button>
                               <button
                                 #confirmCancel
@@ -1173,15 +1162,14 @@
                     class="ui-button ui-button--primary"
                     [disabled]="issuing()"
                   >
-                    @if (issuing()) {
-                      <ng-container i18n="@@admin.donorDetail.issue.busy"
-                        >Vystavujeme potvrzení…</ng-container
+                    <app-busy-label [busy]="issuing()">
+                      <span when-idle i18n="@@admin.donorDetail.issue.submit"
+                        >Vystavit potvrzení</span
                       >
-                    } @else {
-                      <ng-container i18n="@@admin.donorDetail.issue.submit"
-                        >Vystavit potvrzení</ng-container
+                      <span when-busy i18n="@@admin.donorDetail.issue.busy"
+                        >Vystavujeme potvrzení…</span
                       >
-                    }
+                    </app-busy-label>
                   </button>
                 </form>
               } @else {
@@ -1432,11 +1420,10 @@
         [disabled]="!eraseConfirmed() || busy()"
         (click)="erase()"
       >
-        @if (busy()) {
-          <ng-container i18n="@@admin.donorDetail.erase.busy">Mažeme…</ng-container>
-        } @else {
-          <ng-container i18n="@@admin.donorDetail.erase.yes">Vymazat osobní údaje</ng-container>
-        }
+        <app-busy-label [busy]="busy()">
+          <span when-idle i18n="@@admin.donorDetail.erase.yes">Vymazat osobní údaje</span>
+          <span when-busy i18n="@@admin.donorDetail.erase.busy">Mažeme…</span>
+        </app-busy-label>
       </button>
       <button
         #eraseCancel

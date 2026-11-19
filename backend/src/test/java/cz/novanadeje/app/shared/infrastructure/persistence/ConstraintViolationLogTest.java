@@ -93,8 +93,8 @@ class ConstraintViolationLogTest {
 
     private Donor donor(String email, String symbol) {
         Instant now = clock.instant();
-        return Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(CANARY_NAME), null, new PostalAddress(CANARY_STREET, "Most", "434 01"),
-                new EmailAddress(email), null, new VariableSymbol(symbol), LocaleCode.CS, now);
+        return Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(CANARY_NAME), new PostalAddress(CANARY_STREET, "Most", "434 01"),
+                new EmailAddress(email), new VariableSymbol(symbol), LocaleCode.CS, now);
     }
 
     private List<String> loggedTexts() {

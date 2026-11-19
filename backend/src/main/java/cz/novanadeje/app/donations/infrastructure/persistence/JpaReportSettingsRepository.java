@@ -2,8 +2,6 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
-import cz.novanadeje.app.donations.infrastructure.report.MonthlyReportProperties;
-import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.infrastructure.lock.AdvisoryLock;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
@@ -17,12 +15,10 @@ import java.util.Optional;
 class JpaReportSettingsRepository implements ReportSettingsRepository {
 
     private final ReportSettingsJpaRepository jpa;
-    private final MonthlyReportProperties defaults;
     private final EntityManager entityManager;
 
-    JpaReportSettingsRepository(ReportSettingsJpaRepository jpa, MonthlyReportProperties defaults, EntityManager entityManager) {
+    JpaReportSettingsRepository(ReportSettingsJpaRepository jpa, EntityManager entityManager) {
         this.jpa = jpa;
-        this.defaults = defaults;
         this.entityManager = entityManager;
     }
 
@@ -33,10 +29,8 @@ class JpaReportSettingsRepository implements ReportSettingsRepository {
     }
 
     @Override
-    public ReportSettings current() {
-        return jpa.findById(ReportSettingsJpaEntity.SINGLETON_ID)
-                .map(ReportSettingsJpaEntity::toDomain)
-                .orElseGet(() -> ReportSettings.defaults(new EmailAddress(defaults.recipient())));
+    public Optional<ReportSettings> find() {
+        return jpa.findById(ReportSettingsJpaEntity.SINGLETON_ID).map(ReportSettingsJpaEntity::toDomain);
     }
 
     @Override

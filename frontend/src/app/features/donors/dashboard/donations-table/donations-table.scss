@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 
 :host {
   display: block;
@@ -24,12 +25,9 @@ th {
 
 tbody tr {
   border-top: 1px solid var(--color-divider);
-  transition: background var(--duration-fast);
 
-  @media (hover: hover) {
-    &:hover {
-      background: var(--color-surface-alt);
-    }
+  @include motion.hover(background-color) {
+    background-color: var(--color-surface-alt);
   }
 }
 
@@ -137,9 +135,9 @@ tr.is-verification td.amount {
     gap: var(--space-1-5) var(--space-3);
     padding: var(--space-3-5) var(--space-5);
 
-    @media (hover: hover) {
-      &:hover {
-        background: none;
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not([aria-disabled='true']) {
+        background-color: transparent;
       }
     }
   }

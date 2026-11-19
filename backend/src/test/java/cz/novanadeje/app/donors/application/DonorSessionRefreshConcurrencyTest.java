@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.IntegrationTest;
@@ -56,9 +57,9 @@ class DonorSessionRefreshConcurrencyTest {
     @BeforeEach
     void aDonor() {
         new DatabaseCleaner(jdbc).emptyAllTables();
-        jana = Donor.register(DonorId.newId(clock.instant()), DonorType.PERSON, new DonorName("Jana Nováková"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"), new PasswordHash("$hash"),
-                new VariableSymbol("4821937560"), LocaleCode.CS, clock.instant());
+        jana = Donors.withPassword(Donor.register(DonorId.newId(clock.instant()), DonorType.PERSON, new DonorName("Jana Nováková"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"),
+                new VariableSymbol("4821937560"), LocaleCode.CS, clock.instant()), new PasswordHash("$hash"));
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> donors.save(jana));
     }
 

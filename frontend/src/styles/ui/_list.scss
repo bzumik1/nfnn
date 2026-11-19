@@ -120,6 +120,7 @@ div.ui-list__row {
   height: var(--list-chevron-size);
   margin-inline-start: var(--space-3);
   color: var(--color-text-subtle);
+  @include motion.move(transform);
 }
 
 .ui-list__chevron--open {
@@ -128,11 +129,6 @@ div.ui-list__row {
 
 .ui-list--inset .ui-list__chevron {
   flex-shrink: 0;
-  transition: transform var(--duration-base);
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
-  }
 }
 
 .ui-list__state {

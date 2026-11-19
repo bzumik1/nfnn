@@ -43,6 +43,7 @@ import {
   ImportNextStep,
   ImportNextStepLink,
 } from '../../import-failure-labels';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 
 const HISTORY_POLL_MS = 3000;
 const HISTORY_MAX_POLLS = 40;
@@ -61,6 +62,7 @@ const FROM_MESSAGES: FieldMessages = {
 @Component({
   selector: 'app-history-import',
   imports: [
+    BusyLabel,
     FormsModule,
     RouterLink,
     FormField,

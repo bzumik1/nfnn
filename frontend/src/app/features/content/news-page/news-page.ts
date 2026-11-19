@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -26,7 +27,6 @@ import { NewsCard } from '../news-card/news-card';
 import { ProjectResponse, ProjectsApi } from '../projects-api';
 import { StoriesOfYear, storiesOfNewestYear, YearStories } from '../year-stories/year-stories';
 import { whenShownAgain } from '../../../core/navigation/kept-tab-pages';
-import { CompactLayout } from '../../../core/layout/compact-layout';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { Reveal } from '../../../shared/ui/reveal/reveal';
 import { NEWS_PAGE_SIZE, PROJECTS_PAGE_SIZE } from '../content-page-sizes';
@@ -35,7 +35,9 @@ export const PAGE_SIZE = NEWS_PAGE_SIZE;
 export { PROJECTS_PAGE_SIZE };
 export const MAX_PROJECT_PAGES = 20;
 export const STORIES_WAIT_MS = 4000;
-const OLDER_NEWS_IN_ROW = 3;
+const LONGEST_STEP_IN_ROW = 3;
+const LINE_NAMES = /\[[^\]]*\]/g;
+const TRACK = /\d*\.?\d+px/g;
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -59,10 +61,10 @@ export class NewsPage {
   private readonly projectsApi = inject(ProjectsApi);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
-  private readonly compact = inject(CompactLayout).isCompact;
   private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('heading');
   private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
   private readonly listState = viewChild.required<ElementRef<HTMLElement>>('listState');
+  private readonly olderGrid = viewChild<ElementRef<HTMLElement>>('olderGrid');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
   private loadingDelay: ReturnType<typeof setTimeout> | undefined;
@@ -79,6 +81,7 @@ export class NewsPage {
   protected readonly pageNumber = signal(1);
   protected readonly list = signal<NewsList>({ items: [], total: 0 });
   protected readonly bandPhoto = signal<DonateBandPhotoResponse | null>(null);
+  protected readonly olderColumns = signal(1);
 
   protected readonly state = computed<LoadState>(() => {
     const news = this.newsState();
@@ -137,6 +140,12 @@ export class NewsPage {
         error: () => this.bandPhoto.set(null),
       });
     afterNextRender(() => this.heading()?.nativeElement.focus(), { injector: this.injector });
+    afterRenderEffect((onCleanup) => {
+      const grid = this.olderGrid()?.nativeElement;
+      if (grid !== undefined) {
+        onCleanup(this.watchOlderColumns(grid));
+      }
+    });
     effect(() => {
       if (this.state() !== 'loading') {
         this.stopLoadingDelay();
@@ -169,8 +178,21 @@ export class NewsPage {
     (firstCard ?? this.listState().nativeElement).focus();
   }
 
-  protected olderRow(index: number): number {
-    return this.compact() ? index : Math.floor(index / OLDER_NEWS_IN_ROW);
+  protected olderStep(index: number): number {
+    return revealStepInRow(index, this.olderColumns());
+  }
+
+  private watchOlderColumns(grid: HTMLElement): () => void {
+    const view = grid.ownerDocument.defaultView;
+    if (view === null) {
+      return () => undefined;
+    }
+    const measure = () =>
+      this.olderColumns.set(gridColumnsOf(view.getComputedStyle(grid).gridTemplateColumns));
+    measure();
+    const observer = view.ResizeObserver ? new view.ResizeObserver(measure) : null;
+    observer?.observe(grid);
+    return () => observer?.disconnect();
   }
 
   private load(quietly = false): void {
@@ -271,6 +293,14 @@ export class NewsPage {
   private projectsPage(index: number) {
     return this.projectsApi.published(index, PROJECTS_PAGE_SIZE);
   }
+}
+
+export function gridColumnsOf(trackList: string): number {
+  return Math.max(1, trackList.replace(LINE_NAMES, ' ').match(TRACK)?.length ?? 0);
+}
+
+export function revealStepInRow(index: number, columns: number): number {
+  return columns <= 1 ? 0 : Math.min((index % columns) + 1, LONGEST_STEP_IN_ROW);
 }
 
 function pageFrom(value: string | null): number {

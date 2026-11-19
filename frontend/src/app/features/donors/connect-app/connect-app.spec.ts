@@ -18,6 +18,8 @@ import {
 } from '../../../core/auth/testing/donor-fixtures';
 import { ExternalNavigation } from '../../../core/navigation/external-navigation';
 import { ConnectApp } from './connect-app';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const CLIENT_ID = 'https://claude.ai/.well-known/oauth-client';
 const REDIRECT = 'https://claude.ai/api/mcp/auth_callback';
@@ -103,6 +105,16 @@ describe('Given an application sent the browser to the connection page', () => {
     return root().querySelector(selector) as T;
   }
 
+  function button(name: string): HTMLButtonElement {
+    const found = Array.from(root().querySelectorAll('button')).find(
+      (candidate) => accessibleText(candidate) === name,
+    );
+    if (found === undefined) {
+      throw new Error(`No button ${name}`);
+    }
+    return found;
+  }
+
   async function settle(): Promise<void> {
     fixture.detectChanges();
     await fixture.whenStable();
@@ -118,7 +130,7 @@ describe('Given an application sent the browser to the connection page', () => {
 
   async function clickButton(text: string): Promise<void> {
     const button = Array.from(root().querySelectorAll('button')).find((candidate) =>
-      candidate.textContent?.includes(text),
+      accessibleText(candidate).includes(text),
     );
     expect(button, `button "${text}"`).toBeDefined();
     button?.click();
@@ -226,8 +238,10 @@ describe('Given an application sent the browser to the connection page', () => {
         approved: true,
         secondFactorCode: '123456',
       });
-      expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(true);
-      expect(element('.ui-button--primary').textContent).toContain('Povolujeme…');
+      const allow = element<HTMLButtonElement>('.ui-button--primary');
+      expect(allow.disabled).toBe(true);
+      expect(labelFaces(allow)).toEqual(['Povolit', 'Povolujeme…']);
+      expect(accessibleText(allow)).toBe('Povolujeme…');
       request.flush({
         redirectTo: `${REDIRECT}?code=abc&state=xyz&iss=http%3A%2F%2Flocalhost%3A4200`,
       });
@@ -259,6 +273,9 @@ describe('Given an application sent the browser to the connection page', () => {
     it('and declines, then the API is told and the browser leaves with the error for the application', async () => {
       await clickButton('Odmítnout');
 
+      const denying = button('Odmítám…');
+      expect(denying.disabled).toBe(true);
+      expect(labelFaces(denying)).toEqual(['Odmítnout', 'Odmítám…']);
       const request = http.expectOne({ method: 'POST', url: '/api/donors/oauth/authorize' });
       expect(request.request.body).toMatchObject({ approved: false });
       request.flush({ redirectTo: `${REDIRECT}?error=access_denied&state=xyz` });
@@ -392,6 +409,9 @@ describe('Given an application sent the browser to the connection page', () => {
       expect(element('.ui-button--primary').textContent).toContain('Přihlásit se jiným účtem');
 
       await clickButton('Odmítnout');
+      const denying = button('Odmítám…');
+      expect(denying.disabled).toBe(true);
+      expect(labelFaces(denying)).toEqual(['Odmítnout a vrátit se do aplikace', 'Odmítám…']);
       const request = http.expectOne({ method: 'POST', url: '/api/donors/oauth/authorize' });
       expect(request.request.body).toMatchObject({ approved: false });
       request.flush({ redirectTo: `${REDIRECT}?error=access_denied&state=xyz` });
@@ -434,7 +454,7 @@ describe('Given an application sent the browser to the connection page', () => {
 
       expect(element('#connect-app-code')).not.toBeNull();
       const labels = Array.from(root().querySelectorAll('form button')).map((button) =>
-        button.textContent?.trim(),
+        accessibleText(button),
       );
       expect(labels).toEqual(['Povolit přístupovým klíčem', 'Povolit', 'Odmítnout']);
     });
@@ -450,7 +470,7 @@ describe('Given an application sent the browser to the connection page', () => {
         'Povolení potvrďte svým přístupovým klíčem, i když jste se jím už přihlásili.',
       );
       const labels = Array.from(root().querySelectorAll('form button')).map((button) =>
-        button.textContent?.trim(),
+        accessibleText(button),
       );
       expect(labels).toEqual(['Zadat kód z aplikace', 'Povolit přístupovým klíčem', 'Odmítnout']);
 

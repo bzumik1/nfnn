@@ -4,6 +4,7 @@ import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.EmailVerificationToken;
 import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.LinkSecret;
@@ -383,9 +384,9 @@ class JpaDonorRepositoryTest {
     }
 
     private Donor registeredAt(String email, String variableSymbol, Instant registeredAt) {
-        Donor donor = Donor.register(DonorId.newId(registeredAt), DonorType.PERSON, new DonorName("Jana Nováková"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),
-                new VariableSymbol(variableSymbol), LocaleCode.CS, registeredAt);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(registeredAt), DonorType.PERSON, new DonorName("Jana Nováková"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email),
+                new VariableSymbol(variableSymbol), LocaleCode.CS, registeredAt), new PasswordHash("$hash"));
         donors.save(donor);
         return donor;
     }
@@ -427,9 +428,9 @@ class JpaDonorRepositoryTest {
     }
 
     private static Donor donor(String email, String variableSymbol) {
-        return Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),
-                new VariableSymbol(variableSymbol), LocaleCode.CS, NOW);
+        return Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email),
+                new VariableSymbol(variableSymbol), LocaleCode.CS, NOW), new PasswordHash("$hash"));
     }
 
     private void flushAndClear() {

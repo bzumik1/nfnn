@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donation.DonationSource;
 import cz.novanadeje.app.donations.domain.donation.DonationStatus;
 import cz.novanadeje.app.donations.domain.donation.DonationSummary;
+import cz.novanadeje.app.donations.domain.donation.Donations;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donation.YearTotal;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
@@ -219,7 +220,7 @@ class DonorDonationsServiceTest {
                 Optional.of(BankPaymentId.newId(NOW)), Optional.of(NOW), Optional.empty(), Optional.empty(), NOW, Optional.empty());
         DonorRecord record = DonorRecord.reconstitute(JANA, DonorType.PERSON, new DonorName("Jana Nováková"), null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, List.of(link), NOW, NOW, null);
-        Donation byAccount = Donation.reconstitute(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), LocalDate.of(2026, 3, 1),
+        Donation byAccount = Donations.stored(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), LocalDate.of(2026, 3, 1),
                 Money.czk(30000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.SENDER_ACCOUNT),
                 Optional.of(link.id()), NOW);
         when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(byAccount, JANUARY_2026));
@@ -244,7 +245,7 @@ class DonorDonationsServiceTest {
         Donation byClaim = Donation.reconstitute(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), LocalDate.of(2026, 3, 1),
                 Money.czk(50000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.CONFIRMED_SYMBOL),
                 Optional.of(link.id()), Optional.of(confirmed.id()), DonationPurpose.GENERAL, NOW);
-        Donation byAccount = Donation.reconstitute(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), LocalDate.of(2026, 2, 1),
+        Donation byAccount = Donations.stored(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), LocalDate.of(2026, 2, 1),
                 Money.czk(30000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.SENDER_ACCOUNT),
                 Optional.of(link.id()), NOW);
         when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(byClaim, byAccount, JANUARY_2026));

@@ -6,6 +6,7 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyAlreadyWithdrawn;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyWithdrawalPause;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyWithdrawalPaused;
 import cz.novanadeje.app.donors.domain.SecondFactorCodesPaused;
 import cz.novanadeje.app.donors.domain.Totp;
@@ -195,7 +196,7 @@ class ReceiptSigningKeyWithdrawalConcurrencyTest {
 
         assertThat(outcomes).hasSize(burst)
                 .allSatisfy(outcome -> assertThat(outcome).isIn(REJECTED_CODE, SecondFactorCodesPaused.CODE, ReceiptSigningKeyWithdrawalPaused.CODE));
-        assertThat(outcomes.stream().filter(REJECTED_CODE::equals).count()).isGreaterThanOrEqualTo(ReceiptSigningKeyWithdrawalRefusals.REFUSALS_BEFORE_PAUSE);
+        assertThat(outcomes.stream().filter(REJECTED_CODE::equals).count()).isGreaterThanOrEqualTo(ReceiptSigningKeyWithdrawalPause.REFUSALS);
         long rejected = outcomes.stream().filter(outcome -> outcome.equals(REJECTED_CODE) || outcome.equals(SecondFactorCodesPaused.CODE)).count();
         assertThat(recordedRefusals()).as("every rejected code is recorded").isEqualTo(rejected);
         assertThat(took).isLessThan(WELL_WITHIN_THE_POOL_TIMEOUT);

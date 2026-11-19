@@ -60,7 +60,10 @@ export class BusyLabel {
       });
       destroyRef.onDestroy(remove);
     }
-    destroyRef.onDestroy(stopTimer);
+    destroyRef.onDestroy(() => {
+      stopTimer();
+      host.closest('button')?.removeAttribute('aria-busy');
+    });
   }
 }
 

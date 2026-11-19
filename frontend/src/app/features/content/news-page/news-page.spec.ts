@@ -9,7 +9,7 @@ import {
   provideHttpClientTesting,
   TestRequest,
 } from '@angular/common/http/testing';
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   ActivatedRoute,
@@ -24,13 +24,18 @@ import { ProjectResponse } from '../projects-api';
 import { donateBandPhoto, DONATE_BAND_PHOTO_ID } from '../testing/donate-band-fixtures';
 import { newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
-import { MAX_PROJECT_PAGES, NewsPage, STORIES_WAIT_MS } from './news-page';
+import {
+  gridColumnsOf,
+  MAX_PROJECT_PAGES,
+  NewsPage,
+  revealStepInRow,
+  STORIES_WAIT_MS,
+} from './news-page';
 import { PROBE_PATH } from '../../../core/connectivity/connectivity';
 import { connectivityInterceptor } from '../../../core/connectivity/connectivity-interceptor';
 import { keptAnswerRefreshInterceptor } from '../../../core/connectivity/kept-answer-refresh';
 import { serviceWorkerBypassInterceptor } from '../../../core/updates/service-worker-bypass';
 import { KeptTabPages } from '../../../core/navigation/kept-tab-pages';
-import { CompactLayout } from '../../../core/layout/compact-layout';
 
 @Component({ template: '' })
 class OtherTab {}
@@ -38,7 +43,22 @@ class OtherTab {}
 const NEWS = (page: number) => `/api/content/news?page=${page}&size=10`;
 const PROJECTS = (page: number) => `/api/content/projects?page=${page}&size=50`;
 
-const compactLayout = signal(false);
+class FakeResizeObserver {
+  static latest: FakeResizeObserver | null = null;
+  disconnected = false;
+
+  constructor(readonly callback: () => void) {
+    FakeResizeObserver.latest = this;
+  }
+
+  observe(): void {
+    return;
+  }
+
+  disconnect(): void {
+    this.disconnected = true;
+  }
+}
 
 async function setUp(
   query: Record<string, string> | Observable<ParamMap> = {},
@@ -50,7 +70,6 @@ async function setUp(
       provideHttpClient(withInterceptors(interceptors)),
       provideHttpClientTesting(),
       provideRouter([]),
-      { provide: CompactLayout, useValue: { isCompact: compactLayout } },
       {
         provide: ActivatedRoute,
         useValue: {
@@ -149,7 +168,6 @@ describe('Given a visitor opening Aktuality', () => {
   let root: HTMLElement;
 
   beforeEach(() => {
-    compactLayout.set(false);
     Object.defineProperty(navigator, 'share', {
       value: () => Promise.resolve(),
       configurable: true,
@@ -157,7 +175,6 @@ describe('Given a visitor opening Aktuality', () => {
   });
 
   afterEach(() => {
-    compactLayout.set(false);
     answerHome(http);
     http.verify();
     Reflect.deleteProperty(navigator, 'share');
@@ -230,23 +247,6 @@ describe('Given a visitor opening Aktuality', () => {
       expect(texts(older, 'h3')).toEqual(['Ohlédnutí za rokem 2024', 'Ohlédnutí za rokem 2023']);
     });
 
-    it('then the heading of the older news and each card move in one after another, at most six steps apart', () => {
-      compactLayout.set(true);
-      fixture.detectChanges();
-
-      expect(revealOrder(root.querySelector('.older h2'))).toBe('0');
-      expect(
-        Array.from(root.querySelectorAll('.older .grid-item')).map((card) => revealOrder(card)),
-      ).toEqual(['1', '2']);
-    });
-
-    it('then on a computer the heading of the older news and each row of three cards move in one after another', () => {
-      expect(revealOrder(root.querySelector('.older h2'))).toBe('0');
-      expect(
-        Array.from(root.querySelectorAll('.older .grid-item')).map((card) => revealOrder(card)),
-      ).toEqual(['1', '1']);
-    });
-
     it('then the leading news and the stories do not move in with the older news', () => {
       const lead = root.querySelector('.lead') as HTMLElement;
       expect(lead.querySelector('.featured')).not.toBeNull();
@@ -268,21 +268,70 @@ describe('Given a visitor opening Aktuality', () => {
     });
   });
 
-  it('when the older news stand on a phone, then the heading and each card move in one after another, at most six steps apart', async () => {
-    compactLayout.set(true);
-    ({ fixture, http } = await setUp());
-    root = fixture.nativeElement;
-    const older = [2, 3, 4, 5, 6, 7, 8, 9].map((index) =>
-      newsArticle({ id: `n${index}`, slug: `zprava-${index}`, title: `Zpráva ${index}` }),
-    );
-    http.expectOne(NEWS(0)).flush(page([lookBack2025, ...older], 0, 9));
-    http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
-    await settle(fixture);
+  describe('when the older news fill the grid', () => {
+    let tracks: string;
 
-    expect(revealOrder(root.querySelector('.older h2'))).toBe('0');
-    expect(
-      Array.from(root.querySelectorAll('.older .grid-item')).map((card) => revealOrder(card)),
-    ).toEqual(['1', '2', '3', '4', '5', '6', '6', '6']);
+    beforeEach(async () => {
+      tracks = '400px 400px 400px';
+      vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+      const computedStyle = window.getComputedStyle.bind(window);
+      vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => {
+        const style = computedStyle(element, pseudo);
+        return element.matches('.older .grid')
+          ? new Proxy(style, {
+              get: (target, key) =>
+                key === 'gridTemplateColumns' ? tracks : Reflect.get(target, key),
+            })
+          : style;
+      });
+      ({ fixture, http } = await setUp());
+      root = fixture.nativeElement;
+      const older = [2, 3, 4, 5, 6, 7, 8, 9].map((index) =>
+        newsArticle({ id: `n${index}`, slug: `zprava-${index}`, title: `Zpráva ${index}` }),
+      );
+      http.expectOne(NEWS(0)).flush(page([lookBack2025, ...older], 0, 9));
+      http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
+      await settle(fixture);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    });
+
+    function cardOrders(): string[] {
+      return Array.from(root.querySelectorAll('.older .grid-item')).map((card) =>
+        revealOrder(card),
+      );
+    }
+
+    it('then the heading moves in first and the cards of each row one column after another', () => {
+      expect(revealOrder(root.querySelector('.older h2'))).toBe('0');
+      expect(cardOrders()).toEqual(['1', '2', '3', '1', '2', '3', '1', '2']);
+    });
+
+    it('and the grid narrows to two columns, then the cards step by their new column', async () => {
+      tracks = '400px 400px';
+      FakeResizeObserver.latest?.callback();
+      await settle(fixture);
+
+      expect(cardOrders()).toEqual(['1', '2', '1', '2', '1', '2', '1', '2']);
+    });
+
+    it('and the grid narrows to one column, then no card waits for another', async () => {
+      tracks = '343px';
+      FakeResizeObserver.latest?.callback();
+      await settle(fixture);
+
+      expect(cardOrders()).toEqual(['0', '0', '0', '0', '0', '0', '0', '0']);
+    });
+
+    it('and the visitor leaves, then the grid is no longer watched', () => {
+      answerHome(http);
+      fixture.destroy();
+
+      expect(FakeResizeObserver.latest?.disconnected).toBe(true);
+    });
   });
 
   it('when the projects come on more pages, then the stories count every project of the newest year', async () => {
@@ -901,5 +950,37 @@ describe('Given Aktuality kept while the visitor is on another tab', () => {
 
     expect(text(shown, '.featured h2')).toBe('Ohlédnutí za rokem 2025');
     expect(shown.querySelector('[role="alert"]')).toBeNull();
+  });
+});
+
+describe('Given the columns the older news grid lays out', () => {
+  function steps(trackList: string, cards: number): number[] {
+    const columns = gridColumnsOf(trackList);
+    return Array.from({ length: cards }, (_, index) => revealStepInRow(index, columns));
+  }
+
+  it('when the grid holds one column, then no card waits for another', () => {
+    expect(steps('343px', 6)).toEqual([0, 0, 0, 0, 0, 0]);
+  });
+
+  it('when the grid is not laid out as columns, then it counts as one column', () => {
+    expect(gridColumnsOf('none')).toBe(1);
+    expect(gridColumnsOf('')).toBe(1);
+  });
+
+  it('when the grid holds two columns, then each row steps by its column', () => {
+    expect(steps('416px 416px', 5)).toEqual([1, 2, 1, 2, 1]);
+  });
+
+  it('when the grid holds three columns, then each row steps by its column', () => {
+    expect(steps('405.333px 405.333px 405.333px', 7)).toEqual([1, 2, 3, 1, 2, 3, 1]);
+  });
+
+  it('when the grid names its lines, then only the tracks count as columns', () => {
+    expect(gridColumnsOf('[start] 300px [middle] 300px [end]')).toBe(2);
+  });
+
+  it('when the grid holds more than three columns, then no card waits more than three steps', () => {
+    expect(steps('200px 200px 200px 200px 200px', 6)).toEqual([1, 2, 3, 3, 3, 1]);
   });
 });

@@ -8,6 +8,7 @@ import cz.novanadeje.app.donors.domain.CodeChallenge;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.PasswordHash;
@@ -218,8 +219,8 @@ class OneTimeSecretsConcurrencyTest {
     }
 
     private Donor verified(String name, String email, String variableSymbol, Instant at) {
-        Donor donor = Donor.register(DonorId.newId(at), DonorType.PERSON, new DonorName(name), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                new EmailAddress(email), new PasswordHash("$hash"), new VariableSymbol(variableSymbol), LocaleCode.CS, at);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(at), DonorType.PERSON, new DonorName(name), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                new EmailAddress(email), new VariableSymbol(variableSymbol), LocaleCode.CS, at), new PasswordHash("$hash"));
         donor.verifyEmail(at);
         return donor;
     }

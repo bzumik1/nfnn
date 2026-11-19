@@ -213,6 +213,36 @@ test.describe('Given an administrator on the alerts page of a device with a serv
     expect((await deviceRecord(page)).unsubscribed).toBe(0);
   });
 
+  for (const width of [390, 1280]) {
+    test(`when the page is shown ${width} px wide, then the test row's label starts at the row's text edge, as every row title does`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await servePush(page, pushView({ subscriptions: [subscription()] }));
+
+      await page.goto('/sprava/upozorneni');
+
+      const send = page.getByRole('button', { name: 'Poslat zkušební upozornění' });
+      await expect(send).toBeVisible();
+      const gap = await send.evaluate((row) => {
+        const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
+        let text = walker.nextNode();
+        while (
+          text !== null &&
+          (text.textContent!.trim() === '' ||
+            text.parentElement!.closest('[aria-hidden="true"]') !== null)
+        ) {
+          text = walker.nextNode();
+        }
+        const range = document.createRange();
+        range.selectNodeContents(text!);
+        const padding = parseFloat(getComputedStyle(row).paddingLeft);
+        return range.getBoundingClientRect().left - row.getBoundingClientRect().left - padding;
+      });
+      expect(Math.abs(gap)).toBeLessThan(1);
+    });
+  }
+
   test('when an alert arrives while the app is open, then the icon badge shows the open alerts and follows the server', async ({
     page,
   }) => {
