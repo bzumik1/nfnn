@@ -5,18 +5,19 @@ import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeys;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
-import cz.novanadeje.app.donations.domain.receipt.DonationOnYearlyReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
 import cz.novanadeje.app.donations.domain.receipt.FrozenReceipt;
+import cz.novanadeje.app.donations.domain.receipt.NewReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptCalendar;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueFacts;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptIssuePolicy;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementCaps;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementInBrowserOnly;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
@@ -130,20 +131,13 @@ public class DonationReceiptIssuer {
     }
 
     private AdministratorIssue issueByAdministrator(UUID adminId, AdministrationChannel channel, ReceiptRequest request) {
-        refuseWhenAnActiveYearlyReceiptLists(request);
-        ReceiptFingerprint fingerprint = request.fingerprint();
-        Optional<DonationReceipt> active = activeReceipt(request);
-        if (active.isPresent() && active.get().certifies(fingerprint)) {
-            return new AdministratorIssue(returnedAgain(active.get(), request), active);
+        ReceiptIssueFacts facts = factsOf(request);
+        Optional<DonationReceipt> again = ReceiptIssuePolicy.activeToReturnAgain(facts);
+        if (again.isPresent()) {
+            return new AdministratorIssue(returnedAgain(again.get(), request), facts.active());
         }
-        List<DonationReceipt> singles = activeSinglesListedBy(request);
-        if (channel.isConnectedApplication()) {
-            Optional<DonationReceipt> replaced = active.or(() -> singles.stream().findFirst());
-            if (replaced.isPresent()) {
-                throw new ReceiptReplacementInBrowserOnly();
-            }
-        }
-        AdministratorIssue issue = new AdministratorIssue(issueNew(request, fingerprint, active, singles), active);
+        NewReceipt newReceipt = newReceiptFor(request, facts, channel.isConnectedApplication());
+        AdministratorIssue issue = new AdministratorIssue(issueNew(request, facts.requested(), newReceipt), facts.active());
         if (issue.tookNewNumber()) {
             events.publishEvent(new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.of(issue.receipt().id().value()), auditDetails(issue.receipt()),
                     auditFacts(issue.receipt()), issue.receipt().issuedAt()));
@@ -172,13 +166,33 @@ public class DonationReceiptIssuer {
     }
 
     private DonationReceipt issue(ReceiptRequest request) {
-        refuseWhenAnActiveYearlyReceiptLists(request);
-        ReceiptFingerprint fingerprint = request.fingerprint();
-        Optional<DonationReceipt> active = activeReceipt(request);
-        if (active.isPresent() && active.get().certifies(fingerprint)) {
-            return returnedAgain(active.get(), request);
+        ReceiptIssueFacts facts = factsOf(request);
+        Optional<DonationReceipt> again = ReceiptIssuePolicy.activeToReturnAgain(facts);
+        if (again.isPresent()) {
+            return returnedAgain(again.get(), request);
         }
-        return issueNew(request, fingerprint, active, activeSinglesListedBy(request));
+        return issueNew(request, facts.requested(), newReceiptFor(request, facts, false));
+    }
+
+    private ReceiptIssueFacts factsOf(ReceiptRequest request) {
+        return switch (request) {
+            case ReceiptRequest.ForDonation single -> {
+                Donation donation = single.donation();
+                Optional<DonationReceipt> yearlyOfItsYear = receipts.findActiveForYear(single.donor(), donation.receivedYear());
+                yield new ReceiptIssueFacts.ForGift(donation.id(), yearlyOfItsYear, single.fingerprint(), receipts.findActiveForDonation(donation.id()));
+            }
+            case ReceiptRequest.ForYear yearly -> new ReceiptIssueFacts.ForYear(yearly.fingerprint(), receipts.findActiveForYear(yearly.donor(), yearly.year()));
+        };
+    }
+
+    private NewReceipt newReceiptFor(ReceiptRequest request, ReceiptIssueFacts facts, boolean byConnectedApplication) {
+        return switch (request) {
+            case ReceiptRequest.ForDonation single -> ReceiptIssuePolicy.newReceipt(facts, List.of(), Optional.empty(), byConnectedApplication);
+            case ReceiptRequest.ForYear yearly -> {
+                List<DonationReceipt> singles = receipts.findActiveSinglesFor(yearly.donations().stream().map(Donation::id).toList());
+                yield ReceiptIssuePolicy.newReceipt(facts, singles, receipts.findLatestOutdatedForYear(yearly.donor(), yearly.year()), byConnectedApplication);
+            }
+        };
     }
 
     private static DonationReceipt returnedAgain(DonationReceipt active, ReceiptRequest request) {
@@ -186,27 +200,8 @@ public class DonationReceiptIssuer {
         return active;
     }
 
-    private void refuseWhenAnActiveYearlyReceiptLists(ReceiptRequest request) {
-        if (request instanceof ReceiptRequest.ForDonation single) {
-            Donation donation = single.donation();
-            Optional<DonationReceipt> yearly = receipts.findActiveForYear(single.donor(), donation.receivedYear())
-                    .filter(receipt -> receipt.lists(donation.id()));
-            if (yearly.isPresent()) {
-                throw new DonationOnYearlyReceipt(donation.id());
-            }
-        }
-    }
-
-    private List<DonationReceipt> activeSinglesListedBy(ReceiptRequest request) {
-        return switch (request) {
-            case ReceiptRequest.ForDonation single -> List.of();
-            case ReceiptRequest.ForYear yearly -> receipts.findActiveSinglesFor(yearly.donations().stream().map(Donation::id).toList());
-        };
-    }
-
-    private DonationReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, Optional<DonationReceipt> active,
-                                     List<DonationReceipt> singles) {
-        Optional<DonationReceipt> replaced = active.or(() -> outdatedReceipt(request));
+    private DonationReceipt issueNew(ReceiptRequest request, ReceiptFingerprint fingerprint, NewReceipt newReceipt) {
+        Optional<DonationReceipt> replaced = newReceipt.replaces();
         Instant issuedAt = clock.instant();
         SignatoryAtIssue signatory = signatories.resolve(issuedAt);
         ReceiptUnprintable.refuseUnlessPrintable(request.record(), foundation, signatory.signatory());
@@ -227,13 +222,9 @@ public class DonationReceiptIssuer {
         FrozenReceipt frozen = freezer.freeze(document, signatory.signatureImage(), signatory.portraitImage());
         DonationReceipt issued = DonationReceipt.issue(DonationReceiptId.newId(issuedAt), request.donor(), issuedAt, fingerprint, frozen,
                 replaced.map(DonationReceipt::id));
-        active.ifPresent(old -> {
+        newReceipt.supersedes().forEach(old -> {
             old.markSuperseded(issuedAt);
             receipts.save(old);
-        });
-        singles.forEach(single -> {
-            single.markSuperseded(issuedAt);
-            receipts.save(single);
         });
         receipts.save(issued);
         String replacing = replaced.map(old -> " replacing " + old.number()).orElse("");
@@ -244,19 +235,5 @@ public class DonationReceiptIssuer {
     private void refuseBeyondReplacementCaps(DonorReference donor, Instant issuedAt) {
         ReceiptReplacementCaps.refuseBeyondDay(donor, receipts.countReplacementsIssuedAfter(donor, ReceiptReplacementCaps.dayCountedSince(issuedAt)));
         ReceiptReplacementCaps.refuseBeyondYear(donor, receipts.countReplacementsIssuedSince(donor, ReceiptCalendar.yearStart(issuedAt)));
-    }
-
-    private Optional<DonationReceipt> outdatedReceipt(ReceiptRequest request) {
-        return switch (request) {
-            case ReceiptRequest.ForDonation single -> Optional.empty();
-            case ReceiptRequest.ForYear yearly -> receipts.findLatestOutdatedForYear(yearly.donor(), yearly.year());
-        };
-    }
-
-    private Optional<DonationReceipt> activeReceipt(ReceiptRequest request) {
-        return switch (request) {
-            case ReceiptRequest.ForDonation single -> receipts.findActiveForDonation(single.donation().id());
-            case ReceiptRequest.ForYear yearly -> receipts.findActiveForYear(yearly.donor(), yearly.year());
-        };
     }
 }
