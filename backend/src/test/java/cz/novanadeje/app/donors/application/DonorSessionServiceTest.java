@@ -14,6 +14,7 @@ import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.EndedDevices;
 import cz.novanadeje.app.donors.domain.InvalidRefreshToken;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.RefreshToken;
@@ -592,8 +593,7 @@ class DonorSessionServiceTest {
     void should_refuse_when_refreshed_given_device_signed_out() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken existing = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
-        DonorDevice ended = signedInDevice();
-        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(5));
+        DonorDevice ended = EndedDevices.ended(signedInDevice(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(5));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(existing));
 
@@ -610,8 +610,7 @@ class DonorSessionServiceTest {
     void should_refuse_without_ending_other_sessions_when_presented_again_given_device_signed_out_within_the_reuse_grace() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken used = SpentCredentials.revoked(rotated(secret, NOW.minusSeconds(30), UUID.randomUUID(), false), NOW.minusSeconds(10));
-        DonorDevice ended = signedInDevice();
-        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
+        DonorDevice ended = EndedDevices.ended(signedInDevice(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
 
@@ -627,8 +626,7 @@ class DonorSessionServiceTest {
     void should_end_every_session_when_presented_given_superseded_token_of_ended_device() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken superseded = SpentCredentials.superseded(rotated(secret, NOW.minusSeconds(30), UUID.randomUUID(), false), NOW.minusSeconds(20));
-        DonorDevice ended = signedInDevice();
-        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
+        DonorDevice ended = EndedDevices.ended(signedInDevice(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
         lenient().when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(superseded));
 
@@ -642,8 +640,7 @@ class DonorSessionServiceTest {
     void should_end_every_session_when_presented_again_given_used_token_of_ended_device_at_the_end_of_the_reuse_grace() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken used = SpentCredentials.revoked(rotated(secret, NOW.minus(RefreshToken.REUSE_GRACE), UUID.randomUUID(), false), NOW.minusSeconds(10));
-        DonorDevice ended = signedInDevice();
-        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
+        DonorDevice ended = EndedDevices.ended(signedInDevice(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
         lenient().when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
 
@@ -657,8 +654,7 @@ class DonorSessionServiceTest {
     void should_refuse_without_ending_other_sessions_when_presented_again_given_used_token_of_ended_device_just_within_the_reuse_grace() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken used = SpentCredentials.revoked(rotated(secret, NOW.minus(RefreshToken.REUSE_GRACE).plusMillis(1), UUID.randomUUID(), false), NOW.minusSeconds(10));
-        DonorDevice ended = signedInDevice();
-        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
+        DonorDevice ended = EndedDevices.ended(signedInDevice(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
 
@@ -672,8 +668,7 @@ class DonorSessionServiceTest {
     void should_end_every_session_when_presented_again_given_used_token_of_ended_device_after_the_reuse_grace() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken used = SpentCredentials.revoked(rotated(secret, NOW.minusSeconds(61), UUID.randomUUID(), false), NOW.minusSeconds(10));
-        DonorDevice ended = signedInDevice();
-        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
+        DonorDevice ended = EndedDevices.ended(signedInDevice(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
         lenient().when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
 
@@ -688,8 +683,7 @@ class DonorSessionServiceTest {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         UUID successorId = UUID.randomUUID();
         RefreshToken legacy = legacyUsedWithin(secret, successorId);
-        DonorDevice ended = signedInDevice();
-        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
+        DonorDevice ended = EndedDevices.ended(signedInDevice(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(legacy));
         when(refreshTokens.findById(successorId)).thenReturn(Optional.of(successorOnDevice(successorId)));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
@@ -902,8 +896,8 @@ class DonorSessionServiceTest {
     @Test
     @DisplayName("Given a session whose device was signed out a moment ago, when it continues after a credential change, then it is refused as ended and no device signs in")
     void should_refuse_as_ended_when_continued_given_its_device_just_ended() {
-        DonorDevice ended = deviceOf(SessionKind.PUBLIC, NOW.minus(Duration.ofMinutes(20)));
-        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(5));
+        DonorDevice ended = EndedDevices.ended(deviceOf(SessionKind.PUBLIC, NOW.minus(Duration.ofMinutes(20))), DeviceSignOutReason.REMOTE_SIGN_OUT,
+                NOW.minusSeconds(5));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
 
         assertThatThrownBy(() -> service.continueOn(donor(), true, new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN)))
@@ -915,8 +909,8 @@ class DonorSessionServiceTest {
     @Test
     @DisplayName("Given a session whose device just ended, when a credential change asks whether it lasts, then it is refused as ended before anything changes")
     void should_refuse_as_ended_when_asked_to_last_given_its_device_just_ended() {
-        DonorDevice ended = deviceOf(SessionKind.BROWSER, NOW.minus(Duration.ofMinutes(20)));
-        ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(5));
+        DonorDevice ended = EndedDevices.ended(deviceOf(SessionKind.BROWSER, NOW.minus(Duration.ofMinutes(20))), DeviceSignOutReason.REMOTE_SIGN_OUT,
+                NOW.minusSeconds(5));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
 
         assertThatThrownBy(() -> service.requireLasting(donor(), new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN)))

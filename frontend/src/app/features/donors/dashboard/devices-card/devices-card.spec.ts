@@ -284,6 +284,9 @@ describe("Given a donor's signed-in devices card", () => {
         expect(confirmation?.querySelector('.devices-confirm-actions')?.classList).toContain(
           'ui-confirm__actions',
         );
+        expect(confirmation?.querySelector('.devices-confirm-no')?.classList).toContain(
+          'ui-button--quiet',
+        );
       };
 
       await ask(signOutButton(rows()[1]));

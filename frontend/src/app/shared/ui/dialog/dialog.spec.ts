@@ -928,20 +928,6 @@ describe('Given a dialog that the visitor closes', () => {
   describe('when it floats on a wide screen', () => {
     beforeEach(() => open('centered'));
 
-    it('and the close button is pressed, then it leaves inert with the focus on itself and asks to be dismissed only once it has gone', async () => {
-      closeButton().click();
-      fixture.detectChanges();
-
-      expect(native()?.open).toBe(true);
-      expect(native()?.classList).toContain('dialog--leaving');
-      expect(panel().inert).toBe(true);
-      expect(document.activeElement).toBe(native());
-      expect(host().dismissals).toBe(0);
-      await settle();
-      expect(host().dismissals).toBe(1);
-      expect(native()).toBeNull();
-    });
-
     it('and its fade never ends, then it asks to be dismissed at the latest 0.3 s after its duration', async () => {
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
       native()!.style.transitionDuration = '0.2s';
@@ -992,47 +978,66 @@ describe('Given a dialog that the visitor closes', () => {
       expect(native()?.classList).not.toContain('dialog--leaving');
       expect(panel().inert).toBe(false);
     });
-
-    it('and the visitor asks for less motion, then it asks to be dismissed at once', () => {
-      deviceAsksForLessMotion(true);
-
-      closeButton().click();
-
-      expect(host().dismissals).toBe(1);
-    });
   });
 
-  describe('when it fills the screen of a phone', () => {
-    beforeEach(() => open('full', true));
+  describe('of any type, on a phone or on a wide screen', () => {
+    let opener: HTMLButtonElement;
 
-    it('and the close button is pressed, then it fades out inert and asks to be dismissed only once it has gone', async () => {
-      closeButton().click();
-      fixture.detectChanges();
-
-      expect(native()?.classList).toContain('dialog--leaving');
-      expect(panel().inert).toBe(true);
-      expect(host().dismissals).toBe(0);
-      await settle();
-      expect(host().dismissals).toBe(1);
+    beforeEach(() => {
+      opener = document.createElement('button');
+      opener.textContent = 'Otevřít';
+      document.body.appendChild(opener);
+      opener.focus();
     });
 
-    it('and the visitor asks for less motion, then it asks to be dismissed at once', () => {
-      deviceAsksForLessMotion(true);
+    afterEach(() => opener.remove());
 
-      closeButton().click();
+    for (const [presentation, onPhone] of [
+      ['centered', false],
+      ['centered', true],
+      ['full', true],
+      ['sheet', true],
+      ['viewer', true],
+      ['viewer', false],
+    ] as const) {
+      const where = onPhone ? 'on a phone' : 'on a wide screen';
 
-      expect(host().dismissals).toBe(1);
-    });
+      it(`when it is ${presentation} ${where} and its close button is pressed, then it leaves with motion, inert, and the focus returns to the opener only once it has gone`, async () => {
+        await open(presentation, onPhone);
+
+        closeButton().click();
+        fixture.detectChanges();
+
+        expect(native()?.open).toBe(true);
+        expect(native()?.classList).toContain('dialog--leaving');
+        expect(panel().inert).toBe(true);
+        expect(document.activeElement).toBe(native());
+        expect(host().dismissals).toBe(0);
+        await settle();
+        expect(host().dismissals).toBe(1);
+        expect(native()).toBeNull();
+        expect(document.activeElement).toBe(opener);
+      });
+
+      it(`when it is ${presentation} ${where} and the visitor asks for less motion, then it asks to be dismissed at once`, async () => {
+        await open(presentation, onPhone);
+        deviceAsksForLessMotion(true);
+
+        closeButton().click();
+
+        expect(host().dismissals).toBe(1);
+      });
+    }
   });
 
-  it('when it floats centred on a phone, then it fades out before it asks to be dismissed', async () => {
-    await open('centered', true);
+  it('when a photo fades out on a phone, then its dark ground fades with it instead of going at once', async () => {
+    await open('viewer', true);
 
     closeButton().click();
     fixture.detectChanges();
 
     expect(native()?.classList).toContain('dialog--leaving');
-    expect(host().dismissals).toBe(0);
+    expect(native()?.style.getPropertyValue('--dialog-pull')).toBe('0');
   });
 });
 

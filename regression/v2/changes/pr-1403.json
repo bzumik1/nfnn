@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog that the visitor closes > when it floats on a wide screen > and the close button is pressed, then it leaves inert with the focus on itself and asks to be dismissed only once it has gone",
+    "replacement": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog that the visitor closes > of any type, on a phone or on a wide screen > when it is centered on a wide screen and its close button is pressed, then it leaves with motion, inert, and the focus returns to the opener only once it has gone",
+    "reason": "#1403 (Motion, both teams 12/12): after #1391 and #1401 every type of dialog leaves with motion, so the tests of single types became one test over every type, which also asserts the focus on the opener at the end, and one for reduced motion",
+    "contract": "docs/frontend-overview.md, Shared UI (dialog/) and Motion (Dialog)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog that the visitor closes > when it floats on a wide screen > and the visitor asks for less motion, then it asks to be dismissed at once",
+    "replacement": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog that the visitor closes > of any type, on a phone or on a wide screen > when it is centered on a wide screen and the visitor asks for less motion, then it asks to be dismissed at once",
+    "reason": "#1403 (Motion, both teams 12/12): after #1391 and #1401 every type of dialog leaves with motion, so the tests of single types became one test over every type, which also asserts the focus on the opener at the end, and one for reduced motion",
+    "contract": "docs/frontend-overview.md, Shared UI (dialog/) and Motion (Dialog)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog that the visitor closes > when it fills the screen of a phone > and the close button is pressed, then it fades out inert and asks to be dismissed only once it has gone",
+    "replacement": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog that the visitor closes > of any type, on a phone or on a wide screen > when it is full on a phone and its close button is pressed, then it leaves with motion, inert, and the focus returns to the opener only once it has gone",
+    "reason": "#1403 (Motion, both teams 12/12): after #1391 and #1401 every type of dialog leaves with motion, so the tests of single types became one test over every type, which also asserts the focus on the opener at the end, and one for reduced motion",
+    "contract": "docs/frontend-overview.md, Shared UI (dialog/) and Motion (Dialog)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog that the visitor closes > when it fills the screen of a phone > and the visitor asks for less motion, then it asks to be dismissed at once",
+    "replacement": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog that the visitor closes > of any type, on a phone or on a wide screen > when it is full on a phone and the visitor asks for less motion, then it asks to be dismissed at once",
+    "reason": "#1403 (Motion, both teams 12/12): after #1391 and #1401 every type of dialog leaves with motion, so the tests of single types became one test over every type, which also asserts the focus on the opener at the end, and one for reduced motion",
+    "contract": "docs/frontend-overview.md, Shared UI (dialog/) and Motion (Dialog)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog that the visitor closes > when it floats centred on a phone, then it fades out before it asks to be dismissed",
+    "replacement": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog that the visitor closes > of any type, on a phone or on a wide screen > when it is centered on a phone and its close button is pressed, then it leaves with motion, inert, and the focus returns to the opener only once it has gone",
+    "reason": "#1403 (Motion, both teams 12/12): after #1391 and #1401 every type of dialog leaves with motion, so the tests of single types became one test over every type, which also asserts the focus on the opener at the end, and one for reduced motion",
+    "contract": "docs/frontend-overview.md, Shared UI (dialog/) and Motion (Dialog)"
+  }
+]

@@ -67,26 +67,19 @@ class DonorDeviceTest {
 
             assertThat(device.lastUsedAt()).isEqualTo(NOW.plusSeconds(600));
         }
+    }
+
+    @Nested
+    @DisplayName("Given a device stored as ended")
+    class GivenEndedDevice {
+
+        private final DonorDevice device = DonorDevice.reconstitute(DeviceId.newId(NOW), JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW, NOW,
+                NOW.plusSeconds(60), DeviceSignOutReason.SIGNED_OUT, null, null);
 
         @Test
-        @DisplayName("when it is ended, then it is no longer active and keeps the time and the reason")
-        void should_keep_time_and_reason_when_ended() {
-            boolean ended = device.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.plusSeconds(60));
-
-            assertThat(ended).isTrue();
+        @DisplayName("when it is read, then it is no longer active and keeps the time and the reason")
+        void should_keep_time_and_reason_when_read() {
             assertThat(device.isActive()).isFalse();
-            assertThat(device.endedAt()).contains(NOW.plusSeconds(60));
-            assertThat(device.endReason()).contains(DeviceSignOutReason.REMOTE_SIGN_OUT);
-        }
-
-        @Test
-        @DisplayName("when it is ended a second time, then the first end stays and the second reports nothing ended")
-        void should_keep_first_end_when_ended_twice() {
-            device.end(DeviceSignOutReason.SIGNED_OUT, NOW.plusSeconds(60));
-
-            boolean endedAgain = device.end(DeviceSignOutReason.CREDENTIALS_CHANGED, NOW.plusSeconds(120));
-
-            assertThat(endedAgain).isFalse();
             assertThat(device.endedAt()).contains(NOW.plusSeconds(60));
             assertThat(device.endReason()).contains(DeviceSignOutReason.SIGNED_OUT);
         }
@@ -94,8 +87,6 @@ class DonorDeviceTest {
         @Test
         @DisplayName("when it is used after it ended, then the last use stays")
         void should_keep_last_use_when_used_after_end() {
-            device.end(DeviceSignOutReason.SIGNED_OUT, NOW.plusSeconds(60));
-
             device.recordUse(NOW.plusSeconds(600));
 
             assertThat(device.lastUsedAt()).isEqualTo(NOW);
@@ -118,8 +109,8 @@ class DonorDeviceTest {
     @Test
     @DisplayName("Given a device that ended without an order to delete, when its status is read, then it is signed out")
     void should_be_signed_out_when_status_read_given_ended_without_wipe() {
-        DonorDevice device = DonorDevice.signIn(JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
-        device.end(DeviceSignOutReason.REPLAY, NOW.plusSeconds(60));
+        DonorDevice device = EndedDevices.ended(DonorDevice.signIn(JANA, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW), DeviceSignOutReason.REPLAY,
+                NOW.plusSeconds(60));
 
         assertThat(device.status()).isEqualTo(DeviceStatus.SIGNED_OUT);
     }
