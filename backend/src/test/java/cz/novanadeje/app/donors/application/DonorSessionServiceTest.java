@@ -16,6 +16,7 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EndedDevices;
 import cz.novanadeje.app.donors.domain.InvalidRefreshToken;
+import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.RefreshToken;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
@@ -458,7 +459,8 @@ class DonorSessionServiceTest {
         UUID successor = UUID.randomUUID();
         Instant issued = NOW.minus(Duration.ofDays(1));
         RefreshToken client = RefreshToken.reconstitute(UUID.randomUUID(), DONOR, secret.hash(), issued, issued.plus(REFRESH_TTL), true,
-                new ClientId("https://claude.ai/oauth/claude-code-client-metadata"), Set.of(), issued, NOW.minusSeconds(30), null, successor, null, null);
+                new ClientId("https://claude.ai/oauth/claude-code-client-metadata"), Set.of(OAuthScope.ADMIN_READ), issued, NOW.minusSeconds(30), null,
+                successor, null, null);
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(client));
         lenient().when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
         lenient().when(refreshTokens.supersedeIfUnused(successor, NOW)).thenReturn(true);
