@@ -203,6 +203,7 @@ class ManualPairingServiceTest {
         InOrder order = inOrder(lock, receipts, donations, payments, events);
         order.verify(lock).acquire();
         order.verify(receipts).lockDonor(janaId);
+        order.verify(receipts).findByDonorNewestFirst(janaId);
         order.verify(donations).delete(paired.id());
         order.verify(payments).save(held.capture());
         order.verify(events).publishEvent(audited.capture());
@@ -229,6 +230,7 @@ class ManualPairingServiceTest {
         InOrder order = inOrder(lock, receipts, donations);
         order.verify(lock).acquire();
         order.verify(receipts).lockDonor(janaId);
+        order.verify(receipts).findByDonorNewestFirst(janaId);
         order.verify(receipts).save(saved.capture());
         order.verify(donations).delete(paired.id());
         verify(events, times(2)).publishEvent(audited.capture());

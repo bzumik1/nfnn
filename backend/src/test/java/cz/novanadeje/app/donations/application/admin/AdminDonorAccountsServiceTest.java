@@ -122,6 +122,7 @@ class AdminDonorAccountsServiceTest {
         InOrder order = inOrder(lock, receipts, donations, claims, donorRecords, events);
         order.verify(lock).acquire();
         order.verify(receipts).lockDonor(PETR);
+        order.verify(receipts).findByDonorNewestFirst(PETR);
         order.verify(donations).delete(first.id());
         order.verify(donations).delete(second.id());
         order.verify(claims).delete(about.id());

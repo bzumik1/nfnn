@@ -132,6 +132,7 @@ class AdminSymbolClaimsServiceTest {
         InOrder order = inOrder(lock, receipts, donations, claims, events);
         order.verify(lock).acquire();
         order.verify(receipts).lockDonor(janaId);
+        order.verify(receipts).findByDonorNewestFirst(janaId);
         order.verify(donations).delete(marchDonation.id());
         order.verify(donations).delete(septemberDonation.id());
         ArgumentCaptor<SymbolClaim> saved = ArgumentCaptor.forClass(SymbolClaim.class);
