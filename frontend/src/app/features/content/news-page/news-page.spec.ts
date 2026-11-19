@@ -9,7 +9,7 @@ import {
   provideHttpClientTesting,
   TestRequest,
 } from '@angular/common/http/testing';
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   ActivatedRoute,
@@ -36,15 +36,12 @@ import { connectivityInterceptor } from '../../../core/connectivity/connectivity
 import { keptAnswerRefreshInterceptor } from '../../../core/connectivity/kept-answer-refresh';
 import { serviceWorkerBypassInterceptor } from '../../../core/updates/service-worker-bypass';
 import { KeptTabPages } from '../../../core/navigation/kept-tab-pages';
-import { CompactLayout } from '../../../core/layout/compact-layout';
 
 @Component({ template: '' })
 class OtherTab {}
 
 const NEWS = (page: number) => `/api/content/news?page=${page}&size=10`;
 const PROJECTS = (page: number) => `/api/content/projects?page=${page}&size=50`;
-
-const compactLayout = signal(false);
 
 class FakeResizeObserver {
   static latest: FakeResizeObserver | null = null;
@@ -73,7 +70,6 @@ async function setUp(
       provideHttpClient(withInterceptors(interceptors)),
       provideHttpClientTesting(),
       provideRouter([]),
-      { provide: CompactLayout, useValue: { isCompact: compactLayout } },
       {
         provide: ActivatedRoute,
         useValue: {
@@ -172,7 +168,6 @@ describe('Given a visitor opening Aktuality', () => {
   let root: HTMLElement;
 
   beforeEach(() => {
-    compactLayout.set(false);
     Object.defineProperty(navigator, 'share', {
       value: () => Promise.resolve(),
       configurable: true,
@@ -180,7 +175,6 @@ describe('Given a visitor opening Aktuality', () => {
   });
 
   afterEach(() => {
-    compactLayout.set(false);
     answerHome(http);
     http.verify();
     Reflect.deleteProperty(navigator, 'share');
@@ -333,6 +327,7 @@ describe('Given a visitor opening Aktuality', () => {
     });
 
     it('and the visitor leaves, then the grid is no longer watched', () => {
+      answerHome(http);
       fixture.destroy();
 
       expect(FakeResizeObserver.latest?.disconnected).toBe(true);
