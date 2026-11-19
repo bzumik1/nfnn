@@ -7,6 +7,7 @@ import cz.novanadeje.app.donors.domain.DeviceBrowser;
 import cz.novanadeje.app.donors.domain.DevicePlatform;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -397,8 +398,8 @@ class AdminActionSummariesTest {
     }
 
     private static Donor petr() {
-        return Donor.register(PETR, DonorType.PERSON, new DonorName("Petr Svoboda"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                new EmailAddress("petr@example.cz"), new PasswordHash("$hash"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
+        return Donors.withPassword(Donor.register(PETR, DonorType.PERSON, new DonorName("Petr Svoboda"), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                new EmailAddress("petr@example.cz"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW), new PasswordHash("$hash"));
     }
 
     private static Set<String> historyKeys(String resource) throws IOException {

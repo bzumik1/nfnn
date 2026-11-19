@@ -112,11 +112,10 @@
         class="ui-button ui-button--danger"
         [disabled]="withdrawing() || (!asksCode() && !passkeySupported)"
       >
-        @if (withdrawing()) {
-          <ng-container i18n="@@admin.signingKey.withdraw.busy">Zneplatňujeme klíč…</ng-container>
-        } @else {
-          <ng-container i18n="@@admin.signingKey.withdraw.submit">Zneplatnit klíč</ng-container>
-        }
+        <app-busy-label [busy]="withdrawing()">
+          <span when-idle i18n="@@admin.signingKey.withdraw.submit">Zneplatnit klíč</span>
+          <span when-busy i18n="@@admin.signingKey.withdraw.busy">Zneplatňujeme klíč…</span>
+        </app-busy-label>
       </button>
       <button
         type="button"

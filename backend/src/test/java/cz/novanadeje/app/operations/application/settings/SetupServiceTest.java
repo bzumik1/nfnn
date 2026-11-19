@@ -79,7 +79,7 @@ class SetupServiceTest {
             mock(BackupKeyRevealRefusals.class), new BackupKeyWordChallenges(), CzechBackupKeyWords.WORDLIST, mock(ApplicationEventPublisher.class), clock);
     private final SetupService setup = new SetupService(state, new SettingsWriter(repository, new ReversibleSealer(), validator), announcer,
             mailProbe, restarter, backups, new BackupRestoreService(backups, mock(RestoreRecordRepository.class), restarter,
-            mock(ApplicationEventPublisher.class), key -> false, clock), backupKeys, clock);
+            mock(ApplicationEventPublisher.class), key -> false, Runnable::run, clock), backupKeys, clock);
 
     private SetupCode code;
 

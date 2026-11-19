@@ -133,11 +133,10 @@
           [disabled]="loadingMore() !== null"
           (click)="loadNewer()"
         >
-          @if (loadingMore() === 'newer') {
-            <ng-container i18n="@@admin.logs.reader.loadingMore">Načítáme…</ng-container>
-          } @else {
-            <ng-container i18n="@@admin.logs.reader.newer">Načíst novější řádky</ng-container>
-          }
+          <app-busy-label [busy]="loadingMore() === 'newer'">
+            <span when-idle i18n="@@admin.logs.reader.newer">Načíst novější řádky</span>
+            <span when-busy i18n="@@admin.logs.reader.loadingMore">Načítáme…</span>
+          </app-busy-label>
         </button>
       }
       @if (searchingWithoutResults()) {
@@ -232,11 +231,12 @@
             [disabled]="loadingMore() !== null || searching()"
             (click)="loadOlder()"
           >
-            @if (loadingMore() === 'older' || (searching() && results() !== null)) {
-              <ng-container i18n="@@admin.logs.reader.loadingMore">Načítáme…</ng-container>
-            } @else {
-              <ng-container i18n="@@admin.logs.reader.older">Načíst starší řádky</ng-container>
-            }
+            <app-busy-label
+              [busy]="loadingMore() === 'older' || (searching() && results() !== null)"
+            >
+              <span when-idle i18n="@@admin.logs.reader.older">Načíst starší řádky</span>
+              <span when-busy i18n="@@admin.logs.reader.loadingMore">Načítáme…</span>
+            </app-busy-label>
           </button>
         }
         @if (entries().length > 0) {

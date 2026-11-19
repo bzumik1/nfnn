@@ -85,11 +85,10 @@
                 class="ui-button ui-button--primary"
                 [disabled]="confirming()"
               >
-                @if (confirming()) {
-                  <ng-container i18n="@@admin.backups.key.confirm.busy">Potvrzujeme…</ng-container>
-                } @else {
-                  <ng-container i18n="@@admin.backups.key.confirm">Potvrdit uložení</ng-container>
-                }
+                <app-busy-label [busy]="confirming()">
+                  <span when-idle i18n="@@admin.backups.key.confirm">Potvrdit uložení</span>
+                  <span when-busy i18n="@@admin.backups.key.confirm.busy">Potvrzujeme…</span>
+                </app-busy-label>
               </button>
               <button
                 type="button"
@@ -185,11 +184,10 @@
               class="ui-button ui-button--primary"
               [disabled]="revealing() || (!asksCode() && !passkeySupported)"
             >
-              @if (revealing()) {
-                <ng-container i18n="@@admin.backups.key.reveal.busy">Ověřujeme…</ng-container>
-              } @else {
-                <ng-container i18n="@@admin.backups.key.reveal">Zobrazit klíč</ng-container>
-              }
+              <app-busy-label [busy]="revealing()">
+                <span when-idle i18n="@@admin.backups.key.reveal">Zobrazit klíč</span>
+                <span when-busy i18n="@@admin.backups.key.reveal.busy">Ověřujeme…</span>
+              </app-busy-label>
             </button>
             <button
               type="button"

@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +26,6 @@ public class ReceiptSigningKeyRegistration {
 
     public static final String ACTION = "REGISTER_RECEIPT_SIGNING_KEY";
     public static final String ADOPT_ACTION = "ADOPT_RECEIPT_SIGNING_KEY";
-    static final Duration RESTORE_WINDOW = Duration.ofHours(1);
     private static final Logger log = LoggerFactory.getLogger(ReceiptSigningKeyRegistration.class);
 
     private final ReceiptSigner signer;
@@ -113,7 +111,8 @@ public class ReceiptSigningKeyRegistration {
     }
 
     private Optional<FinishedRestore> restoreToAdoptFrom(Instant now) {
-        Optional<FinishedRestore> last = restores.lastSucceeded().filter(restore -> !restore.finishedAt().isBefore(now.minus(RESTORE_WINDOW)));
+        Optional<FinishedRestore> last = restores.lastSucceeded()
+                .filter(restore -> ReceiptSigningKey.adoptableAfterRestoreFinishedAt(restore.finishedAt(), now));
         if (last.isEmpty() || !keys.recordRestoreAdoption(last.get().id(), now)) {
             return Optional.empty();
         }

@@ -27,6 +27,8 @@ public interface BackupStore {
 
     int pendingRequests();
 
+    boolean acceptsRequests();
+
     void request(BackupRequestKind kind, String requestId);
 
     Optional<BackupDownload> open(String fileName);

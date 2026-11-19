@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorAlreadyErased;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.LastSignInMethod;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.Passkey;
@@ -137,7 +138,7 @@ class DonorRowLockConcurrencyTest {
     @Test
     @DisplayName("Given a donor without a password and with two passkeys, when both are removed at the same moment, then one goes, the other is refused as the last sign-in method and one passkey stays")
     void should_keep_one_passkey_when_both_removed_at_once_given_no_password() throws Exception {
-        Donor eva = verified("Eva Malá", "eva@example.cz", "4821937562", null);
+        Donor eva = verified("Eva Malá", "eva@example.cz", "4821937562");
         Passkey phone = passkey(eva, "credential-phone");
         Passkey laptop = passkey(eva, "credential-laptop");
         inTransaction(() -> {
@@ -218,12 +219,16 @@ class DonorRowLockConcurrencyTest {
         return jdbc.sql("select " + name + " from donor where id = ?").param(petr.id().value()).query(String.class).optional().orElse(null);
     }
 
-    private Donor verified(String name, String email, String symbol, PasswordHash hash) {
+    private Donor verified(String name, String email, String symbol) {
         Instant now = clock.instant();
-        Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(name), null, ADDRESS, new EmailAddress(email), hash,
+        Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(name), ADDRESS, new EmailAddress(email),
                 new VariableSymbol(symbol), LocaleCode.CS, now);
         donor.verifyEmail(now);
         return donor;
+    }
+
+    private Donor verified(String name, String email, String symbol, PasswordHash hash) {
+        return Donors.withPassword(verified(name, email, symbol), hash);
     }
 
     private Passkey passkey(Donor owner, String credentialId) {

@@ -1,6 +1,7 @@
 import { logWindow } from '../../testing/admin-fixtures';
 import { LOGS_URL, LogPageHarness, problem } from '../testing/log-page-harness';
 import { AdminLogReader } from './admin-log-reader';
+import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 
 const FIO =
   '2026-11-09T22:09:47.639+01:00  INFO 1 --- [nova-nadeje] [scheduling-1] c.n.a.d.i.fio.FioBankStatementSource     : Fio answered 2 movements';
@@ -183,6 +184,9 @@ describe('Given an administrator reading a log file', () => {
     await openTail();
 
     await page.click('Načíst starší řádky');
+    const loading = page.button('Načítáme…');
+    expect(loading.disabled).toBe(true);
+    expect(labelFaces(loading)).toEqual(['Načíst starší řádky', 'Načítáme…']);
     const older =
       '2026-11-09T21:00:00.000+01:00  INFO 1 --- [nova-nadeje] [main] c.n.a.App : Backend revision abc is ready\n';
     await flushWindow('bytes=20000&from=20000', {
@@ -204,6 +208,9 @@ describe('Given an administrator reading a log file', () => {
     const end = 40000 + bytes(TAIL);
 
     await page.click('Načíst novější řádky');
+    const loading = page.button('Načítáme…');
+    expect(loading.disabled).toBe(true);
+    expect(labelFaces(loading)).toEqual(['Načíst novější řádky', 'Načítáme…']);
     await flushWindow(`bytes=20000&from=${end}`, {
       from: end,
       to: end,

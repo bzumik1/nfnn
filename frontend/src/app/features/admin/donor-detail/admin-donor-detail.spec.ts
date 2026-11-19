@@ -35,6 +35,7 @@ import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-
 import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
 import { FORCED_REFRESH_GAP_MS } from '../device-copy/administration-reads';
 import { PHASE_SHOWN_AFTER_MS } from '../../../shared/ui/pdf-progress/pdf-progress';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const DONOR_ID = '01a18e56-bdb0-775a-bd0a-a60756831369';
 const LINK_ID = '0192f0c4-0000-7000-8000-000000000001';
@@ -131,12 +132,16 @@ describe('Given an administrator on a donor card', () => {
 
   function visibleText(element: Element): string {
     const copy = element.cloneNode(true) as Element;
-    copy.querySelectorAll('.visually-hidden').forEach((hidden) => hidden.remove());
+    copy
+      .querySelectorAll('.visually-hidden, [aria-hidden="true"]')
+      .forEach((hidden) => hidden.remove());
     return (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function accessibleText(element: Element): string {
-    return (element.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const copy = element.cloneNode(true) as Element;
+    copy.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => hidden.remove());
+    return (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function buttonNames(root: HTMLElement): string[] {
@@ -348,6 +353,10 @@ describe('Given an administrator on a donor card', () => {
     button(eraseDialog() as HTMLElement, 'Vymazat osobní údaje').click();
     fixture.detectChanges();
 
+    const erasing = button(eraseDialog() as HTMLElement, 'Mažeme…');
+    expect(erasing.disabled).toBe(true);
+    expect(labelFaces(erasing)).toEqual(['Vymazat osobní údaje', 'Mažeme…']);
+    expect(accessibleText(erasing)).toBe('Mažeme…');
     const request = http.expectOne(ACCOUNT_URL);
     expect(request.request.method).toBe('DELETE');
     request.flush(null, { status: 204, statusText: 'No Content' });
@@ -664,6 +673,8 @@ describe('Given an administrator on a donor card', () => {
 
     const waiting = button(section('Vystavená potvrzení'), 'Vystavujeme potvrzení…');
     expect(waiting.disabled).toBe(true);
+    expect(labelFaces(waiting)).toEqual(['Vystavit potvrzení', 'Vystavujeme potvrzení…']);
+    expect(accessibleText(waiting)).toBe('Vystavujeme potvrzení…');
     expect(issueSelect().disabled).toBe(true);
     const request = http.expectOne(ISSUE_URL);
     expect(request.request.method).toBe('POST');
@@ -856,6 +867,9 @@ describe('Given an administrator on a donor card', () => {
     button(section('Přihlášení'), 'Ano, vypnout').click();
     fixture.detectChanges();
 
+    const resetting = button(section('Přihlášení'), 'Vypínáme…');
+    expect(resetting.disabled).toBe(true);
+    expect(labelFaces(resetting)).toEqual(['Ano, vypnout', 'Vypínáme…']);
     const request = http.expectOne(`/api/admin/donors/${DONOR_ID}/second-factor/reset`);
     expect(request.request.method).toBe('POST');
     request.flush(null, { status: 204, statusText: 'No Content' });
@@ -882,6 +896,9 @@ describe('Given an administrator on a donor card', () => {
     button(section('Přihlášení'), 'Ano, odebrat').click();
     fixture.detectChanges();
 
+    const removingPasskeys = button(section('Přihlášení'), 'Odebíráme…');
+    expect(removingPasskeys.disabled).toBe(true);
+    expect(labelFaces(removingPasskeys)).toEqual(['Ano, odebrat', 'Odebíráme…']);
     const request = http.expectOne(`/api/admin/donors/${DONOR_ID}/passkeys`);
     expect(request.request.method).toBe('DELETE');
     request.flush(null, { status: 204, statusText: 'No Content' });
@@ -905,6 +922,9 @@ describe('Given an administrator on a donor card', () => {
     expect(sectionText('Bankovní účty')).toContain('Dosavadní dary zůstanou');
     button(accounts, 'Ano, vypnout').click();
     fixture.detectChanges();
+    const disconnecting = button(accounts, 'Vypínáme…');
+    expect(disconnecting.disabled).toBe(true);
+    expect(labelFaces(disconnecting)).toEqual(['Ano, vypnout', 'Vypínáme…']);
     const disconnect = http.expectOne(`${LINK_URL}/disconnect`);
     expect(disconnect.request.method).toBe('POST');
     disconnect.flush(null, { status: 204, statusText: 'No Content' });
@@ -934,6 +954,9 @@ describe('Given an administrator on a donor card', () => {
     fixture.detectChanges();
     button(section('Bankovní účty'), 'Ano, zapnout').click();
     fixture.detectChanges();
+    const reconnecting = button(section('Bankovní účty'), 'Zapínáme…');
+    expect(reconnecting.disabled).toBe(true);
+    expect(labelFaces(reconnecting)).toEqual(['Ano, zapnout', 'Zapínáme…']);
     const reconnect = http.expectOne(`${LINK_URL}/reconnect`);
     expect(reconnect.request.method).toBe('POST');
     expect(reconnect.request.headers.get('If-Match')).toBe('"5e8d2a1c7b3f9046"');
@@ -992,6 +1015,9 @@ describe('Given an administrator on a donor card', () => {
     button(section('Bankovní účty'), 'Ano, odebrat').click();
     fixture.detectChanges();
 
+    const removing = button(section('Bankovní účty'), 'Odebíráme…');
+    expect(removing.disabled).toBe(true);
+    expect(labelFaces(removing)).toEqual(['Ano, odebrat', 'Odebíráme…']);
     const request = http.expectOne(LINK_URL);
     expect(request.request.method).toBe('DELETE');
     expect(request.request.headers.get('If-Match')).toBe(`"${adminBankAccount().version}"`);

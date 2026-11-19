@@ -1,6 +1,7 @@
 @use 'breakpoints' as bp;
 
 :host {
+  container: first-download / inline-size;
   display: block;
 }
 
@@ -13,7 +14,12 @@
   margin: var(--space-6) var(--space-6) 0;
 
   @include bp.down(nav) {
-    margin: var(--space-2) var(--space-4) 0;
+    margin: var(--space-2) var(--space-4) var(--space-5);
+  }
+
+  @include bp.container-down(first-download, pair) {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
   }
 }
 

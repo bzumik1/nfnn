@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.report.MonthlyReportSchedulingTest > Given a recipient that is not an e-mail address, when the context starts, then startup fails naming REPORT_RECIPIENT",
+    "replacement": "donations.infrastructure.config.ReportDefaultsBindingTest > Given a recipient that is not an e-mail address, when the context starts, then startup fails naming REPORT_RECIPIENT",
+    "reason": "PR #1097 (architecture audit #621, round 5): the default report recipient is bound as the application record ReportDefaults by DonationsApplicationProperties instead of MonthlyReportProperties, so its startup refusal is tested where it is bound",
+    "contract": "docs/api-contract.md, Monthly report (Configuration)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaReportSettingsRepositoryTest > Given nothing saved, when the settings are read, then the configured recipient gets every section on the 1st and nothing was changed yet",
+    "replacement": "donations.application.report.ReportDefaultsTest > Given a configured recipient, when the default settings are asked for, then that recipient gets every section on the 1st",
+    "reason": "PR #1097 (architecture audit #621, round 5): the repository answers only a saved row and the application applies the defaults, so the defaults are tested on ReportDefaults and the repository's empty answer by JpaReportSettingsRepositoryTest > Given nothing saved, when the settings are read, then there are none and nothing was changed yet",
+    "contract": "docs/system-overview.md, donations (Monthly report)"
+  }
+]

@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
-import cz.novanadeje.app.donations.infrastructure.report.MonthlyReportProperties;
 import cz.novanadeje.app.support.MutableClock;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -21,10 +20,5 @@ public class BankPersistenceTestConfiguration {
     @Bean
     MutableClock mutableClock() {
         return new MutableClock(NOW, ZoneId.of("Europe/Prague"));
-    }
-
-    @Bean
-    MonthlyReportProperties monthlyReportProperties() {
-        return new MonthlyReportProperties("-", "info@nfnn.cz");
     }
 }

@@ -10,6 +10,7 @@ import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.domain.JavaParameter;
 import com.tngtech.archunit.core.domain.JavaType;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -29,6 +30,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -41,7 +43,6 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noCodeUnits;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 
 @AnalyzeClasses(
         packagesOf = AppApplication.class,
@@ -51,10 +52,15 @@ class EventListenerRulesTest {
 
     private static final String SHARED_EVENTS = "cz.novanadeje.app.shared.application.event";
 
-    private static final Map<String, String> PLAIN_LISTENERS = Map.of(
-            "cz.novanadeje.app.operations.infrastructure.events.MailDeliveryListener",
-            "a send happens inside a transaction that may roll back (the monthly report) or outside any (the @Async senders), and the outage must be kept either way",
-            "cz.novanadeje.app.donors.infrastructure.recovery.SecondFactorRecoveryPaymentListener",
+    private static final String MAIL_DELIVERY_LISTENER = "cz.novanadeje.app.operations.infrastructure.events.MailDeliveryListener";
+    private static final String MAIL_DELIVERY_REASON = "a send happens inside a transaction that may roll back (the monthly report) or outside any "
+            + "(the @Async senders), and the outage must be kept either way";
+
+    private static final Map<PlainListener, String> PLAIN_LISTENERS = Map.of(
+            new PlainListener(MAIL_DELIVERY_LISTENER, SHARED_EVENTS + ".MailDeliveryFailed"), MAIL_DELIVERY_REASON,
+            new PlainListener(MAIL_DELIVERY_LISTENER, SHARED_EVENTS + ".MailDeliverySucceeded"), MAIL_DELIVERY_REASON,
+            new PlainListener("cz.novanadeje.app.donors.infrastructure.recovery.SecondFactorRecoveryPaymentListener",
+                    SHARED_EVENTS + ".SecondFactorRecoveryPaid"),
             "it turns the factor off in the import's own transaction, so a failure rolls the import back and the next run retries");
 
     private static final DescribedPredicate<JavaClass> SHARED_EVENT = DescribedPredicate.describe(
@@ -115,8 +121,9 @@ class EventListenerRulesTest {
     @ArchTest
     static final ArchRule shared_events_are_heard_by_their_transaction_phase = methods()
             .that(LISTENING_PLAINLY_TO_A_SHARED_EVENT)
-            .should().beDeclaredInClassesThat(DescribedPredicate.describe("are named as plain listeners with their reason",
-                    type -> PLAIN_LISTENERS.containsKey(type.getName())))
+            .should(ArchCondition.from(DescribedPredicate.describe(
+                    "hear only the shared events their class is named for as a plain listener, with its reason",
+                    EventListenerRulesTest::hearsOnlyItsNamedEventsPlainly)))
             .because("backend.md, Contexts and layers: a cross-context event is consumed with @TransactionalEventListener, so its copy or side "
                     + "effect follows the publisher's commit; a plain listener runs even when the publisher rolls back");
 
@@ -131,9 +138,57 @@ class EventListenerRulesTest {
                     + "lambda added to the context) carries no annotation, so neither its placement nor its transaction phase could be checked");
 
     @Test
-    @DisplayName("Given the plain listeners named with their reason, when they are read, then each exists, so the list names no class that is gone")
+    @DisplayName("Given the plain listeners named with their reason, when the site is read, then each class still hears its event with a plain @EventListener, so the list names no listener or event that is gone")
     void should_find_every_named_plain_listener_when_read_given_the_list() {
-        assertThat(PLAIN_LISTENERS.keySet()).allSatisfy(name -> assertThatCode(() -> Class.forName(name)).doesNotThrowAnyException());
+        JavaClasses site = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests()).importPackagesOf(AppApplication.class);
+
+        assertThat(PLAIN_LISTENERS.keySet()).allSatisfy(listener -> assertThat(site.get(listener.listener()).getMethods())
+                .filteredOn(LISTENING_PLAINLY_TO_A_SHARED_EVENT)
+                .as(listener.toString())
+                .anySatisfy(method -> assertThat(eventsHeardBy(method)).anySatisfy(event -> assertThat(event.getName()).isEqualTo(listener.event()))));
+    }
+
+    @Test
+    @DisplayName("Given a planted listener named for one shared event that also hears another plainly, when the rule checks it, then only the methods hearing another shared event are reported, and its own event beside a framework event is not")
+    void should_report_a_named_listener_hearing_another_event_plainly_when_checked_given_a_planted_listener(@TempDir Path folder) throws IOException {
+        JavaClasses planted = PlantedClasses.compiled(folder, Map.of(MAIL_DELIVERY_LISTENER, """
+                package cz.novanadeje.app.operations.infrastructure.events;
+
+                import cz.novanadeje.app.shared.application.event.DonorRegistered;
+                import cz.novanadeje.app.shared.application.event.MailDeliveryFailed;
+                import org.springframework.context.event.ContextRefreshedEvent;
+                import org.springframework.context.event.EventListener;
+
+                class MailDeliveryListener {
+
+                    @EventListener
+                    void on(MailDeliveryFailed failed) {
+                    }
+
+                    @EventListener
+                    void registered(DonorRegistered registered) {
+                    }
+
+                    @EventListener(classes = {MailDeliveryFailed.class, DonorRegistered.class})
+                    void named() {
+                    }
+
+                    @EventListener
+                    void anything(Object event) {
+                    }
+
+                    @EventListener(classes = {MailDeliveryFailed.class, ContextRefreshedEvent.class})
+                    void withAFrameworkEvent() {
+                    }
+                }
+                """));
+
+        assertThat(shared_events_are_heard_by_their_transaction_phase.evaluate(planted).getFailureReport().getDetails())
+                .hasSize(3)
+                .anySatisfy(detail -> assertThat(detail).contains("MailDeliveryListener.registered("))
+                .anySatisfy(detail -> assertThat(detail).contains("MailDeliveryListener.named("))
+                .anySatisfy(detail -> assertThat(detail).contains("MailDeliveryListener.anything("))
+                .noneSatisfy(detail -> assertThat(detail).containsAnyOf("MailDeliveryListener.on(", "withAFrameworkEvent("));
     }
 
     @Test
@@ -651,8 +706,21 @@ class EventListenerRulesTest {
     }
 
     private static boolean listensToASharedEvent(JavaMethod method) {
+        return eventsHeardBy(method).stream().anyMatch(HEARING_A_SHARED_EVENT);
+    }
+
+    private static List<JavaClass> eventsHeardBy(JavaMethod method) {
         Set<JavaClass> named = eventsNamedByListenerAnnotations(method.getAnnotations(), new HashSet<>()).collect(Collectors.toSet());
-        return (named.isEmpty() ? eventsTakenAsParameters(method) : named.stream()).anyMatch(HEARING_A_SHARED_EVENT);
+        return (named.isEmpty() ? eventsTakenAsParameters(method) : named.stream()).toList();
+    }
+
+    private static boolean hearsOnlyItsNamedEventsPlainly(JavaMethod method) {
+        return eventsHeardBy(method).stream()
+                .filter(HEARING_A_SHARED_EVENT)
+                .allMatch(event -> PLAIN_LISTENERS.containsKey(new PlainListener(method.getOwner().getName(), event.getName())));
+    }
+
+    private record PlainListener(String listener, String event) {
     }
 
     private static Stream<JavaClass> eventsNamedByListenerAnnotations(Set<? extends JavaAnnotation<?>> annotations, Set<String> visited) {

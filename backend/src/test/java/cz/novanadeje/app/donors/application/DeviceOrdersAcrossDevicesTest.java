@@ -9,6 +9,7 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.InvalidRefreshToken;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.SecondFactor;
@@ -440,8 +441,8 @@ class DeviceOrdersAcrossDevicesTest {
 
         private DonorId register(String name, String email, String symbol) {
             Instant now = clock.instant();
-            Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(name), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                    new EmailAddress(email), new PasswordHash("$hash"), new VariableSymbol(symbol), LocaleCode.CS, now);
+            Donor donor = Donors.withPassword(Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(name), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                    new EmailAddress(email), new VariableSymbol(symbol), LocaleCode.CS, now), new PasswordHash("$hash"));
             donor.verifyEmail(now);
             donors.save(donor);
             secondFactors.save(SecondFactor.reconstitute(donor.id(), AUTHENTICATOR_SECRET, now, now, Totp.stepAt(now)));

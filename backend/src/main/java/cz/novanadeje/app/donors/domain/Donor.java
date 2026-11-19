@@ -49,17 +49,23 @@ public final class Donor {
         this.erasedAt = erasedAt;
     }
 
-    public static Donor register(DonorId id, DonorType type, DonorName name, CompanyIdentifier companyIdentifier, PostalAddress address,
-                                 EmailAddress email, PasswordHash passwordHash, VariableSymbol variableSymbol, LocaleCode preferredLocale,
-                                 Instant registeredAt) {
-        if (type == DonorType.COMPANY && companyIdentifier == null) {
+    public static Donor register(DonorId id, DonorType type, DonorName name, PostalAddress address, EmailAddress email, VariableSymbol variableSymbol,
+                                 LocaleCode preferredLocale, Instant registeredAt) {
+        if (type == DonorType.COMPANY) {
             throw new CompanyIdentifierRequired();
         }
-        if (type == DonorType.PERSON && companyIdentifier != null) {
+        return new Donor(id, type, name, null, address, email, null, variableSymbol, preferredLocale, EnumSet.of(Role.DONOR), registeredAt, null, null);
+    }
+
+    public static Donor registerWithCompanyIdentifier(DonorId id, DonorType type, DonorName name, CompanyIdentifier companyIdentifier,
+                                                      PostalAddress address, EmailAddress email, VariableSymbol variableSymbol,
+                                                      LocaleCode preferredLocale, Instant registeredAt) {
+        require(companyIdentifier, "Company identifier");
+        if (type == DonorType.PERSON) {
             throw new CompanyIdentifierNotAllowed();
         }
-        return new Donor(id, type, name, companyIdentifier, address, email, passwordHash, variableSymbol, preferredLocale,
-                EnumSet.of(Role.DONOR), registeredAt, null, null);
+        return new Donor(id, type, name, companyIdentifier, address, email, null, variableSymbol, preferredLocale, EnumSet.of(Role.DONOR),
+                registeredAt, null, null);
     }
 
     public static Donor reconstitute(DonorId id, DonorType type, DonorName name, CompanyIdentifier companyIdentifier, PostalAddress address,

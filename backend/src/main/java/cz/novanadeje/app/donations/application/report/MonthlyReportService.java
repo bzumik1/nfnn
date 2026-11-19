@@ -36,16 +36,18 @@ public class MonthlyReportService {
     private final MonthlyReportLog reportLog;
     private final ReportDeliveries deliveries;
     private final ReportSettingsRepository settings;
+    private final ReportDefaults defaults;
     private final MonthlyReportSender sender;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public MonthlyReportService(MonthlyReportFigures figures, MonthlyReportLog reportLog, ReportDeliveries deliveries,
-                                ReportSettingsRepository settings, MonthlyReportSender sender, ApplicationEventPublisher events, Clock clock) {
+                                ReportSettingsRepository settings, ReportDefaults defaults, MonthlyReportSender sender, ApplicationEventPublisher events, Clock clock) {
         this.figures = figures;
         this.reportLog = reportLog;
         this.deliveries = deliveries;
         this.settings = settings;
+        this.defaults = defaults;
         this.sender = sender;
         this.events = events;
         this.clock = clock;
@@ -55,7 +57,7 @@ public class MonthlyReportService {
     public MonthlyReportOutcome sendDueReport() {
         LocalDateTime now = FoundationCalendar.now(clock);
         ReportMonth month = ReportMonth.previousTo(now.toLocalDate());
-        ReportSettings current = settings.current();
+        ReportSettings current = currentSettings();
         if (!current.dueAt(now)) {
             return MonthlyReportOutcome.notDue(month);
         }
@@ -65,14 +67,14 @@ public class MonthlyReportService {
     @Transactional
     public MonthlyReportOutcome sendReportFor(ReportMonth month) {
         requireEnded(month);
-        return send(month, settings.current());
+        return send(month, currentSettings());
     }
 
     @Transactional
     public ManualReportDelivery resend(UUID adminId, ReportMonth month) {
         requireEnded(month);
         Instant now = clock.instant();
-        ReportSettings current = settings.current();
+        ReportSettings current = currentSettings();
         reportLog.recordSending(month, now);
         deliver(month, current, now, true);
         events.publishEvent(new AdminActionPerformed(adminId, SEND_ACTION, Optional.empty(),
@@ -81,6 +83,10 @@ public class MonthlyReportService {
                         "recipientCount", Integer.toString(current.recipients().count()))), now));
         log.info("Admin {} sent the monthly report for {} by hand to {} recipient(s)", adminId, month, current.recipients().count());
         return new ManualReportDelivery(month, current.recipients(), now);
+    }
+
+    private ReportSettings currentSettings() {
+        return settings.find().orElseGet(defaults::settings);
     }
 
     private MonthlyReportOutcome send(ReportMonth month, ReportSettings current) {

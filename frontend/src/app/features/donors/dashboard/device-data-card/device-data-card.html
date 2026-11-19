@@ -49,11 +49,10 @@
         (click)="reload()"
         appNeedsConnection
       >
-        @if (reloading()) {
-          <span i18n="@@donor.deviceData.reloading">Načítáme data…</span>
-        } @else {
-          <span i18n="@@donor.deviceData.reload">Načíst data znovu</span>
-        }
+        <app-busy-label [busy]="reloading()">
+          <span when-idle i18n="@@donor.deviceData.reload">Načíst data znovu</span>
+          <span when-busy i18n="@@donor.deviceData.reloading">Načítáme data…</span>
+        </app-busy-label>
       </button>
     }
     @if (!memoryOnly()) {

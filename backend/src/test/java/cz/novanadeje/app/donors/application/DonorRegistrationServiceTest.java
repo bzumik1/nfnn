@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.domain.CompanyIdentifierRequired;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.PasswordTooWeak;
@@ -253,8 +254,8 @@ class DonorRegistrationServiceTest {
     }
 
     private static Donor donor(LocaleCode locale) {
-        return Donor.register(DonorId.newId(NOW.minusSeconds(7200)), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL,
-                new PasswordHash("$old"), new VariableSymbol("4821937560"), locale, NOW.minusSeconds(7200));
+        return Donors.withPassword(Donor.register(DonorId.newId(NOW.minusSeconds(7200)), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, new VariableSymbol("4821937560"), locale, NOW.minusSeconds(7200)),
+                new PasswordHash("$old"));
     }
 
     private static RegisterDonorCommand personCommand(String email, String password) {

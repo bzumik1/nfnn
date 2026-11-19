@@ -163,7 +163,7 @@ class DonorEmailClaimConcurrencyTest {
 
     private Donor verified(String name, String email, String symbol) {
         Instant now = clock.instant();
-        Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(name), null, ADDRESS, new EmailAddress(email), null,
+        Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(name), ADDRESS, new EmailAddress(email),
                 new VariableSymbol(symbol), LocaleCode.CS, now);
         donor.verifyEmail(now);
         return donor;

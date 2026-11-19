@@ -40,14 +40,16 @@ public class ReportSettingsService {
     private static final Logger log = LoggerFactory.getLogger(ReportSettingsService.class);
 
     private final ReportSettingsRepository settings;
+    private final ReportDefaults defaults;
     private final MonthlyReportLog reportLog;
     private final ApplicationEventPublisher events;
     private final AdminDonationsRows rows;
     private final Clock clock;
 
-    public ReportSettingsService(ReportSettingsRepository settings, MonthlyReportLog reportLog, ApplicationEventPublisher events, AdminDonationsRows rows,
+    public ReportSettingsService(ReportSettingsRepository settings, ReportDefaults defaults, MonthlyReportLog reportLog, ApplicationEventPublisher events, AdminDonationsRows rows,
                                  Clock clock) {
         this.settings = settings;
+        this.defaults = defaults;
         this.reportLog = reportLog;
         this.events = events;
         this.rows = rows;
@@ -56,7 +58,7 @@ public class ReportSettingsService {
 
     @Transactional(readOnly = true)
     public ReportAdministrationView view() {
-        ReportSettings current = settings.current();
+        ReportSettings current = currentSettings();
         List<SentReport> sent = reportLog.sentReportsNewestFirst();
         LocalDate today = FoundationCalendar.today(clock);
         Optional<Instant> changedAt = settings.lastChangedAt();
@@ -66,13 +68,13 @@ public class ReportSettingsService {
 
     @Transactional(readOnly = true)
     public ReportRecipients recipients() {
-        return settings.current().recipients();
+        return currentSettings().recipients();
     }
 
     @Transactional
     public SavedReportSettings change(UUID adminId, AdministrationChannel channel, ReportSettings changed, ExpectedVersion expected) {
         settings.lockForChange();
-        StoredReportSettings current = new StoredReportSettings(settings.current(), settings.lastChangedAt());
+        StoredReportSettings current = new StoredReportSettings(currentSettings(), settings.lastChangedAt());
         String version = rows.reportSettingsVersion(current);
         if (!expected.admits(version)) {
             List<SentReport> sent = reportLog.sentReportsNewestFirst();
@@ -93,6 +95,10 @@ public class ReportSettingsService {
         log.info("Admin {} changed the monthly report settings: {} recipient(s), day {} at {}:00, sections {}", adminId, changed.recipients().count(),
                 changed.sendDay(), changed.sendHour(), changed.sections().names());
         return new SavedReportSettings(changed, now, rows.reportSettingsVersion(new StoredReportSettings(changed, Optional.of(now))));
+    }
+
+    private ReportSettings currentSettings() {
+        return settings.find().orElseGet(defaults::settings);
     }
 
     private static String sectionCodes(ReportSections sections) {

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.infrastructure.config;
 
 import cz.novanadeje.app.donations.application.importing.BankImportProperties;
+import cz.novanadeje.app.donations.application.report.ReportDefaults;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,5 +13,10 @@ public class DonationsApplicationConfiguration {
     @Bean
     BankImportProperties bankImportProperties(DonationsApplicationProperties properties) {
         return properties.bankImport();
+    }
+
+    @Bean
+    ReportDefaults reportDefaults(DonationsApplicationProperties properties) {
+        return properties.report();
     }
 }

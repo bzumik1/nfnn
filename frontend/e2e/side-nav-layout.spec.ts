@@ -25,6 +25,9 @@ const AREAS: readonly Area[] = [
       await rememberedDonorSession(page);
       await page.goto('/darce/prehled');
       await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 2, name: 'Poslední dar', exact: true }),
+      ).toBeVisible();
     },
   },
   {
@@ -52,12 +55,14 @@ function textLeft(link: Locator): Promise<number> {
 }
 
 async function left(locator: Locator): Promise<number> {
+  await expect(locator).toBeVisible();
   const box = await locator.boundingBox();
   expect(box).not.toBeNull();
   return box!.x;
 }
 
 async function right(locator: Locator): Promise<number> {
+  await expect(locator).toBeVisible();
   const box = await locator.boundingBox();
   expect(box).not.toBeNull();
   return box!.x + box!.width;
@@ -88,6 +93,7 @@ for (const area of AREAS) {
         await page.setViewportSize({ width, height: HEIGHT });
         await area.open(page);
         const logoLeft = await left(logo(page));
+        await expect(navLinks(page, area).first()).toBeVisible();
         for (const link of await navLinks(page, area).all()) {
           expect(await textLeft(link)).toBeCloseTo(logoLeft, 0);
         }

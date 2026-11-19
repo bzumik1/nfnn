@@ -133,17 +133,16 @@
             [disabled]="current === 'turning-on'"
             (click)="turnOn()"
           >
-            @switch (current) {
-              @case ('turning-on') {
-                <ng-container i18n="@@admin.alerts.offer.turningOn">Zapínáme…</ng-container>
-              }
-              @case ('failed') {
-                <ng-container i18n="@@admin.alerts.offer.retry">Zkusit znovu</ng-container>
-              }
-              @default {
-                <ng-container i18n="@@admin.alerts.offer.turnOn">Zapnout</ng-container>
-              }
-            }
+            <app-busy-label [busy]="current === 'turning-on'">
+              <span when-idle>
+                @if (current === 'failed') {
+                  <ng-container i18n="@@admin.alerts.offer.retry">Zkusit znovu</ng-container>
+                } @else {
+                  <ng-container i18n="@@admin.alerts.offer.turnOn">Zapnout</ng-container>
+                }
+              </span>
+              <span when-busy i18n="@@admin.alerts.offer.turningOn">Zapínáme…</span>
+            </app-busy-label>
           </button>
           <button
             type="button"

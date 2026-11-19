@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.domain.donation;
 
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.UuidV7;
 
@@ -40,7 +41,19 @@ public final class Donations {
     }
 
     private static Donation donation(DonorReference donor, LocalDate receivedOn, long amountMinor, DonationStatus status) {
-        return Donation.reconstitute(DonationId.newId(NOW), donor, Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(amountMinor),
+        return stored(DonationId.newId(NOW), donor, Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(amountMinor),
                 DonationSource.BANK_TRANSFER, status, Optional.of(PairingMethod.VARIABLE_SYMBOL), NOW);
+    }
+
+    public static Donation stored(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn, Money amount,
+                                  DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy, Instant recordedAt) {
+        return stored(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, Optional.empty(), recordedAt);
+    }
+
+    public static Donation stored(DonationId id, DonorReference donor, Optional<BankPaymentId> bankPayment, LocalDate receivedOn, Money amount,
+                                  DonationSource source, DonationStatus status, Optional<PairingMethod> pairedBy,
+                                  Optional<SenderAccountLinkId> pairedThrough, Instant recordedAt) {
+        return Donation.reconstitute(id, donor, bankPayment, receivedOn, amount, source, status, pairedBy, pairedThrough, Optional.empty(),
+                DonationPurpose.GENERAL, recordedAt);
     }
 }

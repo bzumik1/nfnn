@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.DddLayeringRulesTest > Given the driving port implementers, when they are read, then each exists, so the list names no class that is gone",
+    "reason": "PR #1476 (#621 round 5, #1475): the driving port implementer is exempt for its port only, so the stale-entry test checks the class still implements that port of its context and still drives a use case",
+    "replacement": "architecture.DddLayeringRulesTest > Given the reviewed driving port implementations, when they are read, then each class still implements its port of its own context and still drives a use case, so the list names no pair that is gone or no longer needed",
+    "contract": "docs/system-overview.md, Configuration classes and the layering rules"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.BeanWiringRulesTest$GivenPlantedWiring > when the driven adapter rule checks an anonymous class a @Bean method returns for a port, then it is reported as the adapter it is",
+    "reason": "PR #1476 (#621 round 5, #1475): the same test also proves the reviewed scheduler of its driving port alone stays unreported, which its name now says",
+    "replacement": "architecture.BeanWiringRulesTest$GivenPlantedWiring > when the driven adapter rule checks an anonymous class a @Bean method returns for a port, then it is reported as the adapter it is, and the reviewed scheduler of its driving port alone is not",
+    "contract": "docs/system-overview.md, Configuration classes and the layering rules"
+  }
+]

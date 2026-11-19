@@ -64,13 +64,16 @@
       appNeedsConnection
       [attr.aria-disabled]="busy() ? 'true' : null"
     >
-      @if (running()) {
-        <span i18n="@@admin.home.history.busy.running">Stahujeme platby…</span>
-      } @else if (busy()) {
-        <span i18n="@@admin.home.history.busy">Žádáme banku…</span>
-      } @else {
-        <span i18n="@@admin.home.history.submit">Načíst starší platby</span>
-      }
+      <app-busy-label [busy]="busy()">
+        <span when-idle i18n="@@admin.home.history.submit">Načíst starší platby</span>
+        <span when-busy>
+          @if (running()) {
+            <span i18n="@@admin.home.history.busy.running">Stahujeme platby…</span>
+          } @else {
+            <span i18n="@@admin.home.history.busy">Žádáme banku…</span>
+          }
+        </span>
+      </app-busy-label>
     </button>
   </form>
   <app-live-notice [notice]="notice()" />

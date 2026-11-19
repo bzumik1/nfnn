@@ -68,12 +68,12 @@ class MonthlyReportServiceTest {
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(FIRST_OF_OCTOBER_AT_SEVEN, ZoneId.of("Europe/Prague"));
     private final MonthlyReportService service = new MonthlyReportService(new MonthlyReportFigures(donors, donations, payments, importStates),
-            reportLog, deliveries, settings, sender, events, clock);
+            reportLog, deliveries, settings, new ReportDefaults("info@nfnn.cz"), sender, events, clock);
 
     @BeforeEach
     void stubFacts() {
         when(reportLog.recordSending(any(), any())).thenReturn(true);
-        when(settings.current()).thenReturn(DEFAULTS);
+        when(settings.find()).thenReturn(Optional.empty());
         when(donors.countRegisteredBefore(SEPTEMBER.start())).thenReturn(3L);
         when(donors.countRegisteredBefore(SEPTEMBER.end())).thenReturn(5L);
         when(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 9, 30)))
@@ -101,7 +101,7 @@ class MonthlyReportServiceTest {
     @Test
     @DisplayName("Given the report set to midnight and 00:30 on the first of October in Prague while UTC is still in September, when the due report is sent, then it is September's")
     void should_report_september_when_due_report_sent_given_prague_already_in_october() {
-        when(settings.current()).thenReturn(new ReportSettings(DEFAULTS.recipients(), 1, 0, DEFAULTS.sections()));
+        when(settings.find()).thenReturn(Optional.of(new ReportSettings(DEFAULTS.recipients(), 1, 0, DEFAULTS.sections())));
         clock.set(Instant.parse("2026-09-30T22:30:00Z"));
 
         service.sendDueReport();
@@ -153,7 +153,7 @@ class MonthlyReportServiceTest {
     @Test
     @DisplayName("Given the report set to leave on the 5th, when the due report is checked on the 1st, then nothing is recorded or sent")
     void should_send_nothing_when_due_report_checked_given_send_day_not_reached() {
-        when(settings.current()).thenReturn(ON_THE_FIFTH);
+        when(settings.find()).thenReturn(Optional.of(ON_THE_FIFTH));
 
         MonthlyReportOutcome outcome = service.sendDueReport();
 
@@ -166,7 +166,7 @@ class MonthlyReportServiceTest {
     @Test
     @DisplayName("Given the report set to leave on the 5th at 9:00, when the due report is checked on the 5th at 8:00, then nothing is recorded or sent")
     void should_send_nothing_when_due_report_checked_given_send_hour_not_reached() {
-        when(settings.current()).thenReturn(ON_THE_FIFTH);
+        when(settings.find()).thenReturn(Optional.of(ON_THE_FIFTH));
         clock.set(Instant.parse("2026-10-05T06:00:00Z"));
 
         assertThat(service.sendDueReport()).isEqualTo(MonthlyReportOutcome.notDue(SEPTEMBER));
@@ -178,7 +178,7 @@ class MonthlyReportServiceTest {
     @Test
     @DisplayName("Given the report set to leave on the 5th at 9:00, when the due report is checked on the 5th at 9:00, then September goes out with those settings")
     void should_send_with_settings_when_due_report_checked_given_send_day_reached() {
-        when(settings.current()).thenReturn(ON_THE_FIFTH);
+        when(settings.find()).thenReturn(Optional.of(ON_THE_FIFTH));
         clock.set(Instant.parse("2026-10-05T07:00:00Z"));
 
         MonthlyReportOutcome outcome = service.sendDueReport();
@@ -191,7 +191,7 @@ class MonthlyReportServiceTest {
     @DisplayName("Given September already sent, when an administrator sends it again, then it is compiled and sent to the current recipients and the action is audited")
     void should_send_again_and_audit_when_resent_given_month_already_sent() {
         when(reportLog.recordSending(any(), any())).thenReturn(false);
-        when(settings.current()).thenReturn(ON_THE_FIFTH);
+        when(settings.find()).thenReturn(Optional.of(ON_THE_FIFTH));
 
         ManualReportDelivery delivery = service.resend(ADMIN, SEPTEMBER);
 
@@ -236,7 +236,7 @@ class MonthlyReportServiceTest {
     @Test
     @DisplayName("Given the report set to leave on the 5th at 9:00 with the donors and the donations, when it goes out, then the sending is kept with those sections, the recipient count and the time")
     void should_keep_scheduled_delivery_with_chosen_sections_when_due_report_sent() {
-        when(settings.current()).thenReturn(ON_THE_FIFTH);
+        when(settings.find()).thenReturn(Optional.of(ON_THE_FIFTH));
         clock.set(Instant.parse("2026-10-05T07:00:00Z"));
 
         service.sendDueReport();

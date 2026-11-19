@@ -6,6 +6,8 @@ import {
 } from '../../testing/admin-fixtures';
 import { DIAGNOSTICS_URL, LogPageHarness } from '../testing/log-page-harness';
 import { AdminServerState } from './admin-server-state';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 
 const RELEASE_URL = '/api/admin/operations/release';
 const GIGABYTE = 1024 ** 3;
@@ -97,9 +99,7 @@ describe('Given an administrator on the server state page', () => {
     page.http.expectOne(RELEASE_URL).flush(releaseView());
     await page.settle();
 
-    expect(page.cardTitled('Porucha').querySelector('button')?.textContent?.trim()).toBe(
-      'Obnovit stav',
-    );
+    expect(accessibleText(page.cardTitled('Porucha').querySelector('button'))).toBe('Obnovit stav');
     for (const heading of ['Aplikace', 'Databáze', 'Složky', 'Dočasné úrovně']) {
       expect(page.cardTitled(heading).querySelector('.ui-list .ui-list__row')).not.toBeNull();
     }
@@ -129,6 +129,9 @@ describe('Given an administrator on the server state page', () => {
     await page.settle();
 
     await page.click('Obnovit stav');
+    const refreshing = page.button('Obnovujeme…');
+    expect(refreshing.disabled).toBe(true);
+    expect(labelFaces(refreshing)).toEqual(['Obnovit stav', 'Obnovujeme…']);
     page.http.expectOne(DIAGNOSTICS_URL).flush(null, { status: 500, statusText: 'Error' });
     await page.settle();
 

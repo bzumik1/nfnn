@@ -3,7 +3,6 @@ package cz.novanadeje.app.donations.infrastructure.report;
 import cz.novanadeje.app.donations.application.report.MonthlyReportService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -24,8 +23,7 @@ import static org.mockito.Mockito.mock;
 class MonthlyReportSchedulingTest {
 
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
-            .withUserConfiguration(MonthlyReportScheduler.class, Support.class, Scheduling.class)
-            .withPropertyValues("app.donations.report.recipient=info@nfnn.cz");
+            .withUserConfiguration(MonthlyReportScheduler.class, Support.class, Scheduling.class);
 
     @Test
     @DisplayName("Given only application.yml, when the context starts, then the check runs at the start of every hour, so any send hour can be chosen")
@@ -61,15 +59,6 @@ class MonthlyReportSchedulingTest {
         });
     }
 
-    @Test
-    @DisplayName("Given a recipient that is not an e-mail address, when the context starts, then startup fails naming REPORT_RECIPIENT")
-    void should_fail_startup_when_started_given_malformed_recipient() {
-        contexts.withPropertyValues("app.donations.report.cron=-", "app.donations.report.recipient=foundation").run(context -> {
-            assertThat(context).hasFailed();
-            assertThat(context.getStartupFailure()).hasStackTraceContaining("REPORT_RECIPIENT");
-        });
-    }
-
     private static Instant nextRunAfter(CronTask task, String instant) {
         return task.getTrigger().nextExecution(new SimpleTriggerContext(Clock.fixed(Instant.parse(instant), ZoneOffset.UTC)));
     }
@@ -80,7 +69,6 @@ class MonthlyReportSchedulingTest {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties(MonthlyReportProperties.class)
     static class Support {
 
         @Bean

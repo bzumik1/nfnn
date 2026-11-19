@@ -44,6 +44,7 @@ import {
 } from './log-lines';
 import { LogTimeline, mergeWindow, startTimeline } from './log-timeline';
 import { SegmentThumb } from '../../../../shared/ui/segment-thumb/segment-thumb';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -71,6 +72,7 @@ const FILTER_PARAMS: Readonly<Record<string, LevelFilter>> = {
 @Component({
   selector: 'app-admin-log-reader',
   imports: [
+    BusyLabel,
     BusyButton,
     FormsModule,
     CopyButton,

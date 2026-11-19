@@ -201,8 +201,8 @@ class DonorPasskeyRecoveryServiceTest {
     }
 
     private static Donor donor() {
-        Donor donor = Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                new EmailAddress("jana@example.cz"), null, new VariableSymbol("4821937560"), LocaleCode.CS, NOW.minusSeconds(3600));
+        Donor donor = Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                new EmailAddress("jana@example.cz"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW.minusSeconds(3600));
         donor.verifyEmail(NOW.minusSeconds(3000));
         return donor;
     }

@@ -4,6 +4,7 @@ import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.Passkey;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
@@ -60,9 +61,9 @@ class DonorAdministrationSearchStatementsTest {
     void twelveDonors() {
         new DatabaseCleaner(jdbc).emptyAllTables();
         for (int index = 0; index < DONORS; index++) {
-            Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Hledaná dárkyně %02d".formatted(index)), null,
-                    new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("hledana-%02d@example.cz".formatted(index)),
-                    new PasswordHash("$hash"), new VariableSymbol(Long.toString(6_100_000_000L + index)), LocaleCode.CS, NOW);
+            Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Hledaná dárkyně %02d".formatted(index)),
+                    new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("hledana-%02d@example.cz".formatted(index)), new VariableSymbol(Long.toString(6_100_000_000L + index)), LocaleCode.CS, NOW),
+                    new PasswordHash("$hash"));
             if (index % 3 == 0) {
                 donor.verifyEmail(NOW);
                 donor.grantAdministration(true);

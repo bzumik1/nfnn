@@ -192,11 +192,10 @@
             class="ui-button ui-button--primary ui-button--block form-submit"
             [disabled]="sending()"
           >
-            @if (sending()) {
-              <ng-container i18n="@@home.contact.form.sending">Odesíláme…</ng-container>
-            } @else {
-              <ng-container i18n="@@home.contact.form.submit">Odeslat zprávu</ng-container>
-            }
+            <app-busy-label [busy]="sending()">
+              <span when-idle i18n="@@home.contact.form.submit">Odeslat zprávu</span>
+              <span when-busy i18n="@@home.contact.form.sending">Odesíláme…</span>
+            </app-busy-label>
           </button>
 
           <p class="form-privacy" i18n="@@home.contact.form.privacy">

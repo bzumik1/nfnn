@@ -114,15 +114,12 @@
                   [disabled]="subscribing()"
                   (click)="turnOn()"
                 >
-                  @if (subscribing()) {
-                    <ng-container i18n="@@admin.alerts.device.turningOn"
-                      >Zapínáme upozornění…</ng-container
+                  <app-busy-label [busy]="subscribing()">
+                    <span when-idle i18n="@@admin.alerts.device.turnOnAgain">Zapnout znovu</span>
+                    <span when-busy i18n="@@admin.alerts.device.turningOn"
+                      >Zapínáme upozornění…</span
                     >
-                  } @else {
-                    <ng-container i18n="@@admin.alerts.device.turnOnAgain"
-                      >Zapnout znovu</ng-container
-                    >
-                  }
+                  </app-busy-label>
                 </button>
               }
             </div>
@@ -156,15 +153,14 @@
                 [disabled]="turningOff()"
                 (click)="turnOff(device)"
               >
-                @if (turningOff()) {
-                  <span class="ui-list__title" i18n="@@admin.alerts.device.turningOff"
-                    >Vypínáme…</span
-                  >
-                } @else {
-                  <span class="ui-list__title" i18n="@@admin.alerts.device.turnOff"
-                    >Vypnout na tomto zařízení</span
-                  >
-                }
+                <span class="ui-list__title">
+                  <app-busy-label [busy]="turningOff()">
+                    <span when-idle i18n="@@admin.alerts.device.turnOff"
+                      >Vypnout na tomto zařízení</span
+                    >
+                    <span when-busy i18n="@@admin.alerts.device.turningOff">Vypínáme…</span>
+                  </app-busy-label>
+                </span>
               </button>
             </li>
           </ul>
@@ -185,15 +181,14 @@
                   [disabled]="subscribing()"
                   (click)="turnOn()"
                 >
-                  @if (subscribing()) {
-                    <ng-container i18n="@@admin.alerts.device.turningOn"
-                      >Zapínáme upozornění…</ng-container
+                  <app-busy-label [busy]="subscribing()">
+                    <span when-idle i18n="@@admin.alerts.device.turnOn"
+                      >Zapnout upozornění na tomto zařízení</span
                     >
-                  } @else {
-                    <ng-container i18n="@@admin.alerts.device.turnOn"
-                      >Zapnout upozornění na tomto zařízení</ng-container
+                    <span when-busy i18n="@@admin.alerts.device.turningOn"
+                      >Zapínáme upozornění…</span
                     >
-                  }
+                  </app-busy-label>
                 </button>
               </div>
               <p
@@ -286,15 +281,16 @@
                 [disabled]="testing()"
                 (click)="sendTest()"
               >
-                @if (testing()) {
-                  <span class="ui-list__title" i18n="@@admin.alerts.test.sending"
-                    >Posíláme zkušební upozornění…</span
-                  >
-                } @else {
-                  <span class="ui-list__title" i18n="@@admin.alerts.test.sendRow"
-                    >Poslat zkušební upozornění</span
-                  >
-                }
+                <span class="ui-list__title">
+                  <app-busy-label [busy]="testing()">
+                    <span when-idle i18n="@@admin.alerts.test.sendRow"
+                      >Poslat zkušební upozornění</span
+                    >
+                    <span when-busy i18n="@@admin.alerts.test.sending"
+                      >Posíláme zkušební upozornění…</span
+                    >
+                  </app-busy-label>
+                </span>
               </button>
             </li>
           </ul>
@@ -413,15 +409,12 @@
                 [attr.aria-label]="removeLabel(device)"
                 (click)="remove(device)"
               >
-                @if (removing() === device.id) {
-                  <span class="ui-list__title" i18n="@@admin.alerts.others.removing"
-                    >Odebíráme…</span
-                  >
-                } @else {
-                  <span class="ui-list__title" i18n="@@admin.alerts.others.removeRow"
-                    >Odebrat zařízení</span
-                  >
-                }
+                <span class="ui-list__title">
+                  <app-busy-label [busy]="removing() === device.id">
+                    <span when-idle i18n="@@admin.alerts.others.removeRow">Odebrat zařízení</span>
+                    <span when-busy i18n="@@admin.alerts.others.removing">Odebíráme…</span>
+                  </app-busy-label>
+                </span>
               </button>
             </li>
           </ul>

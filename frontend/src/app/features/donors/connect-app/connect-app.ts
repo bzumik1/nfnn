@@ -30,6 +30,7 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { knownScopes, SCOPE_ABILITIES, WRITE_SCOPE } from './oauth-scopes';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type Panel = 'incomplete' | 'checking' | 'sign-in' | 'consent' | 'not-admin' | 'leaving' | 'failed';
 
@@ -55,7 +56,14 @@ interface ConnectionRequest {
 
 @Component({
   selector: 'app-connect-app',
-  imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid, NeedsConnection],
+  imports: [
+    BusyLabel,
+    FormsModule,
+    FormField,
+    FormControlDirective,
+    FocusFirstInvalid,
+    NeedsConnection,
+  ],
   templateUrl: './connect-app.html',
   styleUrl: './connect-app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

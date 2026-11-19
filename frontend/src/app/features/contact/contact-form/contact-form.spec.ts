@@ -7,6 +7,8 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { ContactForm } from './contact-form';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
 
 function answerAccountingDetails(http: HttpTestingController): void {
@@ -227,7 +229,10 @@ describe('Given the contact form', () => {
 
     await submit();
 
-    expect(element('.form-submit').textContent?.trim()).toBe('Odesíláme…');
+    const send = element('.form-submit') as HTMLButtonElement;
+    expect(send.disabled).toBe(true);
+    expect(labelFaces(send)).toEqual(['Odeslat zprávu', 'Odesíláme…']);
+    expect(accessibleText(send)).toBe('Odesíláme…');
     http.expectOne('/api/contact/messages').flush(null, { status: 202, statusText: 'Accepted' });
   });
 

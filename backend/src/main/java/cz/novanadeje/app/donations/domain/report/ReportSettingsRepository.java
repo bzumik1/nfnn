@@ -5,7 +5,7 @@ import java.util.Optional;
 
 public interface ReportSettingsRepository {
 
-    ReportSettings current();
+    Optional<ReportSettings> find();
 
     Optional<Instant> lastChangedAt();
 

@@ -25,6 +25,8 @@ import { PageReload } from '../../../core/reload/page-reload';
 import { ReloadPlace } from '../../../core/reload/reload-place';
 import { AdminAlerts } from './admin-alerts';
 import { DeviceAlertMarks } from './device-alert-marks';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const PUSH_URL = '/api/admin/operations/push';
 const DEVICE: DevicePushSubscription = {
@@ -119,7 +121,7 @@ describe('Given an administrator on the alerts page', () => {
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
     ).find(
       (candidate) =>
-        candidate.textContent?.trim() === name || candidate.getAttribute('aria-label') === name,
+        accessibleText(candidate) === name || candidate.getAttribute('aria-label') === name,
     );
     if (found === undefined) {
       throw new Error(`No button named ${name}`);
@@ -300,7 +302,12 @@ describe('Given an administrator on the alerts page', () => {
     await settle();
 
     expect(push.requestSubscription).toHaveBeenCalledWith(PUSH_PUBLIC_KEY);
-    expect(button('Zapínáme upozornění…').disabled).toBe(true);
+    const turningOn = button('Zapínáme upozornění…');
+    expect(turningOn.disabled).toBe(true);
+    expect(labelFaces(turningOn)).toEqual([
+      'Zapnout upozornění na tomto zařízení',
+      'Zapínáme upozornění…',
+    ]);
     const request = http.expectOne({ method: 'POST', url: `${PUSH_URL}/subscriptions` });
     expect(request.request.body).toEqual({
       endpoint: DEVICE.endpoint,
@@ -574,7 +581,12 @@ describe('Given an administrator on the alerts page', () => {
       button('Poslat zkušební upozornění').click();
       await settle();
 
-      expect(button('Posíláme zkušební upozornění…').disabled).toBe(true);
+      const sending = button('Posíláme zkušební upozornění…');
+      expect(sending.disabled).toBe(true);
+      expect(labelFaces(sending)).toEqual([
+        'Poslat zkušební upozornění',
+        'Posíláme zkušební upozornění…',
+      ]);
       http
         .expectOne({ method: 'POST', url: `${PUSH_URL}/test` })
         .flush({ delivered: 1, failed: 0, removed: 0 });
@@ -634,6 +646,9 @@ describe('Given an administrator on the alerts page', () => {
       await TestBed.inject(DeviceAlertMarks).markOwner(sampleDonor().id);
       button('Vypnout na tomto zařízení').click();
       await settle();
+      const turningOff = button('Vypínáme…');
+      expect(turningOff.disabled).toBe(true);
+      expect(labelFaces(turningOff)).toEqual(['Vypnout na tomto zařízení', 'Vypínáme…']);
       http
         .expectOne({ method: 'DELETE', url: `${PUSH_URL}/subscriptions/push-this-device` })
         .flush(null, { status: 204, statusText: 'No Content' });
@@ -654,9 +669,10 @@ describe('Given an administrator on the alerts page', () => {
       button('Odebrat zařízení Apple, zapnuto 30.\u00a010. 2026').click();
       await settle();
 
-      expect(
-        button('Odebíráme zařízení Apple, zapnuto 30.\u00a010. 2026').textContent?.trim(),
-      ).toBe('Odebíráme…');
+      const removing = button('Odebíráme zařízení Apple, zapnuto 30.\u00a010. 2026');
+      expect(removing.disabled).toBe(true);
+      expect(labelFaces(removing)).toEqual(['Odebrat zařízení', 'Odebíráme…']);
+      expect(accessibleText(removing)).toBe('Odebíráme…');
       http
         .expectOne({ method: 'DELETE', url: `${PUSH_URL}/subscriptions/push-phone` })
         .flush(null, { status: 204, statusText: 'No Content' });
@@ -724,6 +740,9 @@ describe('Given an administrator on the alerts page', () => {
     expect(card.querySelector('.ui-card__footer')?.textContent).not.toContain('už nepřijímá');
     again.click();
     await settle();
+    expect(again.disabled).toBe(true);
+    expect(labelFaces(again)).toEqual(['Zapnout znovu', 'Zapínáme upozornění…']);
+    expect(accessibleText(again)).toBe('Zapínáme upozornění…');
     push.browserSubscription.mockResolvedValue('subscribed');
     http
       .expectOne({ method: 'POST', url: `${PUSH_URL}/subscriptions` })

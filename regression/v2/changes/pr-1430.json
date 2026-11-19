@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the first page of news and the projects arrive > then the heading of the older news and each card move in one after another, at most six steps apart",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the older news fill the grid > and the grid narrows to one column, then no card waits for another",
+    "reason": "PR #1430 (#1340, team Mobile + PWA 6/6, 2026-11-17): the older news step by their column in the real auto-fill grid, not by their index, so in one column no card waits for another; the compact layout no longer decides it",
+    "contract": "docs/frontend-overview.md, Aktuality, Motion (P31)"
+  }
+]

@@ -11,6 +11,7 @@ import cz.novanadeje.app.donations.application.report.ReportSettingsService;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -38,7 +39,7 @@ public class DonationRowVersions {
     public String ofPayment(UUID paymentId) {
         BankPaymentId id = new BankPaymentId(paymentId);
         return Stream.concat(paymentList.listUnpaired(PaymentFilter.none()).items().stream(),
-                        paymentList.listPaired(Optional.empty(), PaymentFilter.none()).items().stream())
+                        paymentList.listPaired(Optional.empty(), PaymentFilter.none(), AdministrationChannel.BROWSER).items().stream())
                 .filter(view -> view.payment().id().equals(id))
                 .map(AdminPaymentView::version)
                 .findFirst()

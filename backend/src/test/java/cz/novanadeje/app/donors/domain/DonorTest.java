@@ -30,7 +30,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a person's data, when a donor registers, then it is a DONOR with the given profile and no company identifier")
     void should_create_person_donor_when_registered_given_person_data() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName(" Jana Nováková "), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName(" Jana Nováková "), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         assertThat(donor.type()).isEqualTo(DonorType.PERSON);
         assertThat(donor.name()).isEqualTo(new DonorName("Jana Nováková"));
@@ -47,8 +47,8 @@ class DonorTest {
     @Test
     @DisplayName("Given no password, when a donor registers, then the account has no password and keeps a given one otherwise")
     void should_have_no_password_when_registered_given_no_password() {
-        Donor passwordless = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, null, SYMBOL, LocaleCode.CS, NOW);
-        Donor withPassword = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor passwordless = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW);
+        Donor withPassword = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         assertThat(passwordless.hasPassword()).isFalse();
         assertThat(passwordless.passwordHash()).isEmpty();
@@ -59,7 +59,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a donor with a password, when the password is removed and later set again, then the account follows")
     void should_follow_when_password_removed_and_set_again_given_donor_with_password() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         donor.removePassword(1);
 
@@ -71,7 +71,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a donor with a password and no passkey, when the password is removed, then it is refused as the last way to sign in and the password stays")
     void should_refuse_when_password_removed_given_no_passkey() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         assertThatThrownBy(() -> donor.removePassword(0))
                 .isInstanceOf(LastSignInMethod.class)
@@ -93,7 +93,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a fresh registration, when the e-mail is verified, then the donor remembers when and is verified")
     void should_remember_time_when_email_verified_given_fresh_registration() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         donor.verifyEmail(NOW.plusSeconds(90));
 
@@ -104,7 +104,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a verified donor, when the e-mail is verified again, then it refuses and keeps the first time")
     void should_refuse_when_email_verified_twice_given_verified_donor() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
         donor.verifyEmail(NOW.plusSeconds(90));
 
         assertThatThrownBy(() -> donor.verifyEmail(NOW.plusSeconds(120)))
@@ -127,10 +127,10 @@ class DonorTest {
     @Test
     @DisplayName("Given an unconfirmed, a confirmed and an erased donor, when asked who receives security notices, then only the confirmed one does")
     void should_send_security_notices_only_to_a_confirmed_donor_when_asked_given_unconfirmed_confirmed_and_erased() {
-        Donor unconfirmed = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
-        Donor confirmed = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor unconfirmed = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
+        Donor confirmed = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
         confirmed.verifyEmail(NOW.plusSeconds(5));
-        Donor erased = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor erased = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
         erased.verifyEmail(NOW.plusSeconds(5));
         erased.erase(NOW.plusSeconds(10));
 
@@ -142,7 +142,7 @@ class DonorTest {
     @Test
     @DisplayName("Given company data, when a donor registers, then the company identifier is kept")
     void should_keep_company_identifier_when_registered_given_company_data() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), new CompanyIdentifier("45274649"), ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.registerWithCompanyIdentifier(DonorId.newId(NOW), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), new CompanyIdentifier("45274649"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         assertThat(donor.companyIdentifier()).contains(new CompanyIdentifier("45274649"));
     }
@@ -150,7 +150,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a company without an identifier, when it registers, then it is rejected")
     void should_reject_when_registered_given_company_without_identifier() {
-        assertThatThrownBy(() -> Donor.register(DonorId.newId(NOW), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW))
+        assertThatThrownBy(() -> Donor.register(DonorId.newId(NOW), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW))
                 .isInstanceOf(CompanyIdentifierRequired.class)
                 .hasFieldOrPropertyWithValue("code", "donors/company-identifier-required");
     }
@@ -158,21 +158,38 @@ class DonorTest {
     @Test
     @DisplayName("Given a person with an identifier, when they register, then it is rejected")
     void should_reject_when_registered_given_person_with_identifier() {
-        assertThatThrownBy(() -> Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), new CompanyIdentifier("45274649"), ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW))
+        assertThatThrownBy(() -> Donor.registerWithCompanyIdentifier(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), new CompanyIdentifier("45274649"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW))
                 .isInstanceOf(CompanyIdentifierNotAllowed.class);
+    }
+
+    @Test
+    @DisplayName("Given a company without an identifier, when it registers through the factory that takes one, then the missing identifier is refused")
+    void should_reject_when_registered_with_an_identifier_given_none() {
+        assertThatThrownBy(() -> Donor.registerWithCompanyIdentifier(DonorId.newId(NOW), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), null, ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Company identifier is required");
+    }
+
+    @Test
+    @DisplayName("Given a company with an identifier, when it registers, then it has no password until one is given")
+    void should_have_no_password_when_registered_given_a_company_with_an_identifier() {
+        Donor company = Donor.registerWithCompanyIdentifier(DonorId.newId(NOW), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), new CompanyIdentifier("45274649"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW);
+
+        assertThat(company.hasPassword()).isFalse();
+        assertThat(company.companyIdentifier()).contains(new CompanyIdentifier("45274649"));
     }
 
     @Test
     @DisplayName("Given no name, when a donor registers, then it is rejected")
     void should_reject_when_registered_given_no_name() {
-        assertThatThrownBy(() -> Donor.register(DonorId.newId(NOW), DonorType.PERSON, null, null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW))
+        assertThatThrownBy(() -> Donor.register(DonorId.newId(NOW), DonorType.PERSON, null, ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("Given a donor, when the profile is updated, then the name, address and locale change")
     void should_change_name_address_and_locale_when_profile_updated() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
         PostalAddress moved = new PostalAddress("Krátká 3", "Most", "434 01");
 
         donor.updateProfile(new DonorName("Jana Svobodová"), moved, LocaleCode.EN);
@@ -185,7 +202,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a verified donor, when the e-mail is changed to a new address, then the donor carries it and stays verified")
     void should_carry_new_address_when_email_changed_given_verified_donor() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
         donor.verifyEmail(NOW.plusSeconds(60));
 
         donor.changeEmail(new EmailAddress("jana.nova@example.cz"));
@@ -197,7 +214,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a verified donor, when the e-mail is changed to the address it already has, then it is refused as unchanged")
     void should_refuse_when_email_changed_given_same_address() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
         donor.verifyEmail(NOW.plusSeconds(60));
 
         assertThatThrownBy(() -> donor.changeEmail(new EmailAddress("JANA@example.cz"))).isInstanceOf(EmailUnchanged.class);
@@ -207,7 +224,7 @@ class DonorTest {
     @Test
     @DisplayName("Given an unverified donor, when the e-mail is changed, then it is refused")
     void should_refuse_when_email_changed_given_unverified_donor() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         assertThatThrownBy(() -> donor.changeEmail(new EmailAddress("jana.nova@example.cz")))
                 .isInstanceOf(EmailNotConfirmed.class)
@@ -230,7 +247,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a plain donor, when the session roles are asked either way, then they are DONOR")
     void should_keep_donor_role_when_session_roles_asked_given_plain_donor() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         assertThat(donor.isAdministrator()).isFalse();
         assertThat(donor.sessionRoles(false)).containsExactly(Role.DONOR);
@@ -240,7 +257,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a plain donor, when administration is granted, then the donor is an administrator with both roles")
     void should_become_administrator_when_administration_granted_given_plain_donor() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
         donor.verifyEmail(NOW);
 
         donor.grantAdministration(true);
@@ -252,7 +269,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a confirmed donor who holds no second factor, when administration is granted, then the donor refuses and stays a plain donor")
     void should_refuse_when_administration_granted_given_no_second_factor() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
         donor.verifyEmail(NOW);
 
         assertThatThrownBy(() -> donor.grantAdministration(false))
@@ -266,7 +283,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a donor who has confirmed neither the e-mail nor a second factor, when administration is granted, then the unconfirmed e-mail is named first")
     void should_name_unconfirmed_email_when_administration_granted_given_neither_email_nor_second_factor() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         assertThatThrownBy(() -> donor.grantAdministration(false)).isInstanceOf(AdministratorEmailNotConfirmed.class);
     }
@@ -274,7 +291,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a confirmed donor who holds no second factor, when the first administration is granted, then the donor becomes an administrator")
     void should_become_administrator_when_first_administration_granted_given_no_second_factor() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
         donor.verifyEmail(NOW);
 
         donor.grantFirstAdministration();
@@ -285,7 +302,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a donor who has not confirmed the e-mail, when the first administration is granted, then the donor refuses and stays a plain donor")
     void should_refuse_when_first_administration_granted_given_unconfirmed_email() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         assertThatThrownBy(donor::grantFirstAdministration).isInstanceOf(AdministratorEmailNotConfirmed.class);
 
@@ -295,7 +312,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a donor who has not confirmed the e-mail, when administration is granted, then the donor refuses and stays a plain donor")
     void should_refuse_when_administration_granted_given_unconfirmed_email() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         assertThatThrownBy(() -> donor.grantAdministration(true)).isInstanceOf(AdministratorEmailNotConfirmed.class);
 
@@ -326,7 +343,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a plain donor, when administration is revoked, then the donor refuses")
     void should_refuse_when_administration_revoked_given_plain_donor() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         assertThatThrownBy(donor::revokeAdministration).isInstanceOf(NotAdministrator.class);
     }
@@ -338,7 +355,7 @@ class DonorTest {
         @Test
         @DisplayName("when a confirmed plain donor recovers a passkey by it, then it is allowed")
         void should_allow_passkey_recovery_when_recovered_by_link_given_confirmed_plain_donor() {
-            Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+            Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
             donor.verifyEmail(NOW);
 
             assertThatCode(donor::requirePasskeyRecoverableByLink).doesNotThrowAnyException();
@@ -347,7 +364,7 @@ class DonorTest {
         @Test
         @DisplayName("when a donor who has not confirmed the e-mail recovers a passkey by it, then the link is refused as invalid")
         void should_refuse_link_when_passkey_recovered_by_link_given_unconfirmed_email() {
-            Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+            Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
             assertThatThrownBy(donor::requirePasskeyRecoverableByLink)
                     .isInstanceOf(InvalidPasswordResetToken.class)
@@ -397,7 +414,7 @@ class DonorTest {
         @Test
         @DisplayName("when a plain donor who holds no second factor resets the password by it, then the donor is no administrator without a second factor, whose confirmation and erasure the caller still checks")
         void should_not_count_as_administrator_without_second_factor_when_reset_by_link_given_plain_donor() {
-            Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+            Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
             assertThat(donor.isAdministratorWithoutSecondFactor(false)).isFalse();
         }
@@ -407,8 +424,8 @@ class DonorTest {
     @DisplayName("Given a verified company donor, when erased, then every personal detail is a placeholder, the password no longer matches anything known, the roles are gone and the time is kept")
     void should_replace_personal_data_when_erased_given_verified_company() {
         DonorId id = DonorId.newId(NOW);
-        Donor donor = Donor.register(id, DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), new CompanyIdentifier("45274649"), ADDRESS, EMAIL, HASH, SYMBOL,
-                LocaleCode.EN, NOW);
+        Donor donor = Donors.withPassword(Donor.registerWithCompanyIdentifier(id, DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), new CompanyIdentifier("45274649"), ADDRESS, EMAIL, SYMBOL,
+                LocaleCode.EN, NOW), HASH);
         donor.verifyEmail(NOW.plusSeconds(60));
 
         donor.erase(NOW.plusSeconds(3600));
@@ -432,7 +449,7 @@ class DonorTest {
     @Test
     @DisplayName("Given an erased donor, when erased again, then it is refused as already erased and the first time stays")
     void should_refuse_when_erased_twice_given_erased_donor() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
         donor.erase(NOW.plusSeconds(10));
 
         assertThatThrownBy(() -> donor.erase(NOW.plusSeconds(20)))
@@ -467,12 +484,12 @@ class DonorTest {
     @Test
     @DisplayName("Given a donor erased in full, a donor marked erased with only an address left, and a donor never erased, when asked whether the erasure is incomplete, then only the one with data left says so")
     void should_tell_an_incomplete_erasure_when_asked_given_erased_partly_erased_and_active_donors() {
-        Donor erased = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor erased = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
         erased.erase(NOW.plusSeconds(10));
         DonorId partlyErasedId = DonorId.newId(NOW);
         Donor partlyErased = Donor.reconstitute(partlyErasedId, DonorType.PERSON, ErasedPersonalData.NAME, null, ADDRESS,
                 ErasedPersonalData.emailFor(partlyErasedId.value()), null, SYMBOL, LocaleCode.CS, Set.of(), NOW, null, NOW.plusSeconds(10));
-        Donor active = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor active = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         assertThat(erased.erasureIncomplete()).isFalse();
         assertThat(partlyErased.erasureIncomplete()).isTrue();
@@ -482,7 +499,7 @@ class DonorTest {
     @Test
     @DisplayName("Given a donor never erased, when the erasure is completed, then it is refused and nothing changes")
     void should_refuse_when_erasure_completed_given_donor_never_erased() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
 
         assertThatThrownBy(donor::completeErasure).isInstanceOf(IllegalStateException.class);
         assertThat(donor.name()).isEqualTo(new DonorName("Jana Nováková"));
@@ -492,7 +509,7 @@ class DonorTest {
     @Test
     @DisplayName("Given an administrator, when erased, then it is refused and nothing changes")
     void should_refuse_when_erased_given_administrator() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
         donor.verifyEmail(NOW);
         donor.grantAdministration(true);
 
@@ -525,7 +542,7 @@ class DonorTest {
         private final Donor donor = erased();
 
         private Donor erased() {
-            Donor registered = Donor.register(id, DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+            Donor registered = Donors.withPassword(Donor.register(id, DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH);
             registered.verifyEmail(NOW);
             registered.erase(NOW.plusSeconds(10));
             return registered;

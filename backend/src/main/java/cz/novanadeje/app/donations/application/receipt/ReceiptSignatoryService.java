@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.people.FoundationPeople;
 import cz.novanadeje.app.shared.application.people.FoundationPerson;
+import cz.novanadeje.app.shared.application.transaction.AfterCommitWork;
 import cz.novanadeje.app.shared.domain.PrintableText;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
