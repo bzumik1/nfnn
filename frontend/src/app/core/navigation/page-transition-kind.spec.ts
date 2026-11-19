@@ -3,6 +3,7 @@ import {
   PageFadeFacts,
   pageFadeFor,
   pageTransitionFor,
+  pushWithinSection,
 } from './page-transition-kind';
 
 const ARTICLE_FROM_LIST: NavigationFacts = {
@@ -163,4 +164,38 @@ describe('Given a navigation on a computer', () => {
       expect(pageFadeFor({ ...ABOUT_TO_NEWS, ...facts })).toBe(false);
     });
   }
+});
+
+describe('Given a wide screen whose header and side navigation name the sections', () => {
+  const SECTIONS = ['/', '/aktuality', '/projekty', '/sprava', '/sprava/platby', '/sprava/darci'];
+
+  it('when an article of the news is open, then stepping back to the news is a push within the section', () => {
+    expect(pushWithinSection('/aktuality/clanek', '/aktuality', SECTIONS)).toBe(true);
+  });
+
+  it('when a donor card is open, then stepping back to the donors is a push within the section', () => {
+    expect(pushWithinSection('/sprava/darci/42', '/sprava/darci', SECTIONS)).toBe(true);
+  });
+
+  it('when a page deeper within the donor card is open, then stepping back to the card is a push within the section', () => {
+    expect(pushWithinSection('/sprava/darci/42/potvrzeni', '/sprava/darci/42', SECTIONS)).toBe(
+      true,
+    );
+  });
+
+  it('when a section of the side navigation is open, then going to the overview is no step, as the side navigation switches sections', () => {
+    expect(pushWithinSection('/sprava/platby', '/sprava', SECTIONS)).toBe(false);
+  });
+
+  it('when the page belongs to no section of the navigation, then going to its parent is no push', () => {
+    expect(pushWithinSection('/overit', '/', SECTIONS)).toBe(false);
+  });
+
+  it('when the page has no parent, then there is nothing to step back to', () => {
+    expect(pushWithinSection('/aktuality', null, SECTIONS)).toBe(false);
+  });
+
+  it('when the parent lies in another section, then going there is no push', () => {
+    expect(pushWithinSection('/aktuality/clanek', '/projekty', SECTIONS)).toBe(false);
+  });
 });

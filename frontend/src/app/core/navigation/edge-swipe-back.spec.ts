@@ -5,7 +5,9 @@ import { Router } from '@angular/router';
 import { appConfig } from '../../app.config';
 import { DirtyForms } from '../updates/dirty-forms';
 import { BackTarget } from './back-target';
-import { EdgeSwipeBack, edgeSwipeBackAtStart } from './edge-swipe-back';
+import { EdgeSwipeBack } from './edge-swipe-back';
+import { edgeSwipeBackAtStart } from './edge-swipe-back-start';
+import { SheetSteps, StepsInside } from './sheet-steps';
 import { PageTransitions, SwipePreview } from './page-transitions';
 import { Chrome, RouteChrome } from './route-chrome';
 
@@ -29,7 +31,12 @@ let backTarget: {
   back: ReturnType<typeof vi.fn>;
   destination: ReturnType<typeof vi.fn>;
 };
-let transitions: { startSwipe: ReturnType<typeof vi.fn> };
+let transitions: {
+  startSwipe: ReturnType<typeof vi.fn>;
+  stepsBySwipe: ReturnType<typeof vi.fn>;
+  followsFinger: ReturnType<typeof vi.fn>;
+  loadDrawing: ReturnType<typeof vi.fn>;
+};
 let dirty: boolean;
 let chrome: ReturnType<typeof signal<Chrome>>;
 let pendingNavigation: ReturnType<typeof signal<object | null>>;
@@ -57,7 +64,6 @@ function runOn(device: Device): void {
   });
   TestBed.configureTestingModule({
     providers: [
-      edgeSwipeBackAtStart,
       { provide: Location, useValue: location },
       { provide: BackTarget, useValue: backTarget },
       { provide: PageTransitions, useValue: transitions },
@@ -66,7 +72,7 @@ function runOn(device: Device): void {
       { provide: Router, useValue: { currentNavigation: pendingNavigation.asReadonly() } },
     ],
   });
-  TestBed.inject(EdgeSwipeBack);
+  TestBed.inject(EdgeSwipeBack).start();
 }
 
 function touch(type: string, target: EventTarget, point: Point, fingers = 1): Event {
@@ -87,6 +93,34 @@ function drag(target: EventTarget, points: readonly Point[]): { start: Event; en
   rest.forEach((point) => touch('touchmove', target, point));
   const end = touch('touchend', target, rest.at(-1) ?? first);
   return { start, end };
+}
+
+function sheetSteps(preview: SwipePreview | null = null) {
+  return {
+    startSwipe: vi.fn<StepsInside['startSwipe']>(() => preview),
+    back: vi.fn<StepsInside['back']>(),
+  };
+}
+
+function sheetInSection(): { sheet: HTMLDialogElement; back: ReturnType<typeof vi.fn> } {
+  const sheet = openDialog();
+  const head = document.createElement('app-sheet-head');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'sheet-head-button sheet-head-back';
+  button.setAttribute('aria-label', 'Zpět');
+  const back = vi.fn();
+  button.addEventListener('click', back);
+  head.append(button);
+  sheet.append(head);
+  return { sheet, back };
+}
+
+function leavingDialog(): HTMLDialogElement {
+  const dialog = document.createElement('dialog');
+  dialog.classList.add('dialog--leaving');
+  document.body.append(dialog);
+  return dialog;
 }
 
 function openDialog(): HTMLDialogElement {
@@ -115,7 +149,12 @@ beforeEach(() => {
     back: vi.fn(),
     destination: vi.fn(() => ({ kind: 'step', depth: 0, path: '/aktuality' })),
   };
-  transitions = { startSwipe: vi.fn(() => null) };
+  transitions = {
+    startSwipe: vi.fn(() => null),
+    stepsBySwipe: vi.fn(() => true),
+    followsFinger: vi.fn(() => false),
+    loadDrawing: vi.fn(() => Promise.resolve()),
+  };
   dirty = false;
   chrome = signal(chromeWith('/aktuality'));
   pendingNavigation = signal<object | null>(null);
@@ -372,16 +411,17 @@ describe('Given the app opened from the home screen of an iPhone', () => {
     expect(location.back).not.toHaveBeenCalled();
   });
 
-  it('when a dialog is open, then a swipe steps back in its history, which closes it or its last step', () => {
+  it('when a modal dialog is open, then a swipe from the edge does nothing and the dialog stays open', () => {
     const dialog = openDialog();
 
     drag(dialog, ACROSS);
 
-    expect(location.back).toHaveBeenCalledTimes(1);
+    expect(dialog.open).toBe(true);
+    expect(location.back).not.toHaveBeenCalled();
     expect(backTarget.back).not.toHaveBeenCalled();
   });
 
-  it('when a dialog asks before a navigation leaves the page, then a swipe dismisses it as Esc does', () => {
+  it('when a dialog asks before a navigation leaves the page, then a swipe from the edge does nothing and the question stays', () => {
     pendingNavigation.set({});
     const dialog = openDialog();
     const cancelled = vi.fn();
@@ -389,19 +429,71 @@ describe('Given the app opened from the home screen of an iPhone', () => {
 
     drag(dialog, ACROSS);
 
-    expect(cancelled).toHaveBeenCalledTimes(1);
-    expect(dialog.open).toBe(false);
+    expect(cancelled).not.toHaveBeenCalled();
+    expect(dialog.open).toBe(true);
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when a sheet is still sliding away, then a swipe from the edge does nothing', () => {
+    leavingDialog();
+
+    drag(page, ACROSS);
+
+    expect(backTarget.back).not.toHaveBeenCalled();
     expect(location.back).not.toHaveBeenCalled();
   });
 
-  it('when that dialog refuses to be dismissed, then it stays open', () => {
-    pendingNavigation.set({});
+  it('when a sheet offers the steps of its sections, then a swipe steps back inside it as its ‹ does and the page stays', () => {
     const dialog = openDialog();
-    dialog.addEventListener('cancel', (event) => event.preventDefault());
+    const steps = sheetSteps();
+    TestBed.inject(SheetSteps).offer(dialog, steps);
 
     drag(dialog, ACROSS);
 
-    expect(dialog.open).toBe(true);
+    expect(steps.back).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
+    expect(location.back).not.toHaveBeenCalled();
+  });
+
+  it('when a sheet shows a section of its own under its ‹, then a swipe from the edge does what that ‹ does and the page stays', () => {
+    const { sheet, back } = sheetInSection();
+
+    drag(sheet, ACROSS);
+
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(location.back).not.toHaveBeenCalled();
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when a sheet took back its offer of steps, then a swipe over it does nothing', () => {
+    const dialog = openDialog();
+    const steps = sheetSteps();
+    const withdraw = TestBed.inject(SheetSteps).offer(dialog, steps);
+    withdraw();
+
+    drag(dialog, ACROSS);
+
+    expect(steps.back).not.toHaveBeenCalled();
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when a second dialog opens over the sheet that offers its steps, then a swipe does nothing', () => {
+    const sheet = openDialog();
+    const steps = sheetSteps();
+    TestBed.inject(SheetSteps).offer(sheet, steps);
+    const question = openDialog();
+
+    drag(question, ACROSS);
+
+    expect(steps.back).not.toHaveBeenCalled();
+  });
+
+  it('when the page is no step on a wide screen, as a section of the side navigation, then a swipe does nothing', () => {
+    transitions.stepsBySwipe.mockReturnValue(false);
+
+    drag(page, ACROSS);
+
+    expect(backTarget.back).not.toHaveBeenCalled();
   });
 });
 
@@ -415,10 +507,11 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
   beforeEach(() => {
     preview = {
       follow: vi.fn(),
-      settle: vi.fn(() => Promise.resolve()),
+      settle: vi.fn(() => Promise.resolve(true)),
       slideBack: vi.fn(() => Promise.resolve()),
     };
     transitions.startSwipe.mockImplementation(() => preview as SwipePreview);
+    transitions.followsFinger.mockReturnValue(true);
     runOn(IPHONE_HOME_SCREEN);
   });
 
@@ -434,6 +527,19 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
       path: '/aktuality',
     });
     expect(preview.follow.mock.calls).toEqual([[40], [120]]);
+  });
+
+  it('when the swipe takes the gesture, then the control under the finger loses its pressed look until the finger lets go', () => {
+    const pressedLookOff = () => document.documentElement.classList.contains('edge-swipe-dragging');
+
+    touch('touchstart', page, { x: 20, y: 300, at: 0 });
+    touch('touchmove', page, { x: 25, y: 300, at: 20 });
+    const beforeTaking = pressedLookOff();
+    touch('touchmove', page, { x: 140, y: 304, at: 80 });
+    const whileDragging = pressedLookOff();
+    touch('touchend', page, { x: 140, y: 304, at: 300 });
+
+    expect([beforeTaking, whileDragging, pressedLookOff()]).toEqual([false, true, false]);
   });
 
   it('when the finger has not taken the page yet, then nothing shows under it', () => {
@@ -458,6 +564,22 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
     await Promise.resolve();
     await Promise.resolve();
     expect(backTarget.back).toHaveBeenCalledExactlyOnceWith('/aktuality');
+  });
+
+  it('when the page Zpět leads to could not be drawn under the finger, then letting go past half leaves the page where it is and the app stays', async () => {
+    preview.settle.mockResolvedValue(false);
+
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(preview.settle).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
   });
 
   it('when the finger lets go short of half the width, then the page slides back and the app stays', async () => {
@@ -502,6 +624,91 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
     expect(backTarget.back).not.toHaveBeenCalled();
   });
 
+  describe('when the finger that took the page never reports its end', () => {
+    function takePage(): void {
+      touch('touchstart', page, { x: 20, y: 300, at: 0 });
+      touch('touchmove', page, { x: 200, y: 300, at: 100 });
+    }
+
+    function stillUnderway(): boolean {
+      return document.documentElement.classList.contains('edge-swipe-dragging');
+    }
+
+    it('and a new finger lands, then the page slides back, the swipe ends and no step follows', async () => {
+      takePage();
+
+      touch('touchstart', page, { x: 180, y: 400, at: 400 });
+      touch('touchend', page, { x: 180, y: 400, at: 450 });
+      await Promise.resolve();
+
+      expect(preview.slideBack).toHaveBeenCalledTimes(1);
+      expect(stillUnderway()).toBe(false);
+      expect(backTarget.back).not.toHaveBeenCalled();
+    });
+
+    it('and a second finger joins, then the page slides back and no step follows', async () => {
+      takePage();
+
+      touch('touchstart', page, { x: 180, y: 400, at: 400 }, 2);
+      await Promise.resolve();
+
+      expect(preview.slideBack).toHaveBeenCalledTimes(1);
+      expect(stillUnderway()).toBe(false);
+      expect(backTarget.back).not.toHaveBeenCalled();
+    });
+
+    it('and the browser takes over the pointer for its own pan while touches still come, then the swipe goes on', async () => {
+      takePage();
+
+      document.dispatchEvent(new Event('pointercancel'));
+      touch('touchmove', page, { x: 240, y: 300, at: 200 });
+
+      expect(preview.slideBack).not.toHaveBeenCalled();
+      expect(preview.follow).toHaveBeenLastCalledWith(220);
+    });
+
+    it('and the app goes to the background, then the page slides back and no step follows', async () => {
+      takePage();
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+      try {
+        document.dispatchEvent(new Event('visibilitychange'));
+        await Promise.resolve();
+
+        expect(preview.slideBack).toHaveBeenCalledTimes(1);
+        expect(stillUnderway()).toBe(false);
+      } finally {
+        delete (document as { visibilityState?: unknown }).visibilityState;
+      }
+    });
+
+    it('and the page is hidden, then the page slides back and no step follows', async () => {
+      takePage();
+
+      window.dispatchEvent(new Event('pagehide'));
+      await Promise.resolve();
+
+      expect(preview.slideBack).toHaveBeenCalledTimes(1);
+      expect(stillUnderway()).toBe(false);
+    });
+
+    it('and the finger rests a while before it moves on or lets go, then the swipe still follows it and steps back', async () => {
+      vi.useFakeTimers();
+      try {
+        takePage();
+        await vi.advanceTimersByTimeAsync(2000);
+        touch('touchmove', page, { x: 240, y: 300, at: 2100 });
+        await vi.advanceTimersByTimeAsync(2000);
+        touch('touchend', page, { x: 240, y: 300, at: 4200 });
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(preview.slideBack).not.toHaveBeenCalled();
+        expect(preview.settle).toHaveBeenCalledWith(expect.objectContaining({ completes: true }));
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
   it('when the page went back by itself during the swipe, then the page slides back and the app takes no second step', async () => {
     touch('touchstart', page, { x: 20, y: 300, at: 0 });
     touch('touchmove', page, { x: 300, y: 300, at: 100 });
@@ -514,13 +721,90 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
     expect(backTarget.back).not.toHaveBeenCalled();
   });
 
-  it('when a dialog is open, then no page shows under the finger and the swipe closes the dialog as before', () => {
+  it('when a modal dialog is open, then nothing moves under the finger and the swipe does nothing', () => {
     openDialog();
 
     drag(page, ACROSS);
 
     expect(transitions.startSwipe).not.toHaveBeenCalled();
-    expect(location.back).toHaveBeenCalledTimes(1);
+    expect(location.back).not.toHaveBeenCalled();
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when the page cannot be taken where it is, as while another transition runs, then the swipe is ignored and the app never jumps back', async () => {
+    transitions.startSwipe.mockReturnValue(null);
+
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 330, y: 304, at: 300 },
+    ]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(transitions.startSwipe).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when a sheet offers the steps of its sections, then its content follows the finger, the page stays, and past half it steps back inside the sheet', async () => {
+    const dialog = openDialog();
+    const steps = sheetSteps(preview as SwipePreview);
+    TestBed.inject(SheetSteps).offer(dialog, steps);
+
+    drag(dialog, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(transitions.startSwipe).not.toHaveBeenCalled();
+    expect(steps.startSwipe).toHaveBeenCalledTimes(1);
+    expect(preview.follow).toHaveBeenCalledWith(210);
+    expect(preview.settle).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ completes: true }),
+    );
+    expect(steps.back).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when a sheet shows a section under its ‹ and offers no steps of its own yet, then nothing moves, and past half it does what that ‹ does', () => {
+    const { sheet, back } = sheetInSection();
+
+    drag(sheet, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+
+    expect(transitions.startSwipe).not.toHaveBeenCalled();
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when a sheet shows a section and the finger lets go short of half, then the section stays', () => {
+    const { sheet, back } = sheetInSection();
+
+    drag(sheet, [
+      { x: 20, y: 300, at: 0 },
+      { x: 90, y: 302, at: 200 },
+      { x: 160, y: 304, at: 400 },
+      { x: 160, y: 304, at: 700 },
+    ]);
+
+    expect(back).not.toHaveBeenCalled();
+  });
+
+  it('when the page is no step on a wide screen, then nothing moves under the finger', () => {
+    transitions.stepsBySwipe.mockReturnValue(false);
+
+    drag(page, ACROSS);
+
+    expect(transitions.startSwipe).not.toHaveBeenCalled();
+    expect(backTarget.back).not.toHaveBeenCalled();
   });
 
   it('when the page is a tab root, then no page shows under the finger', () => {
@@ -572,5 +856,58 @@ describe('Given the site added to the Dock of a Mac, which has no touch screen',
 describe('Given the app’s configuration', () => {
   it('when the app starts, then the swipe back is set up', () => {
     expect(appConfig.providers).toContain(edgeSwipeBackAtStart);
+  });
+});
+
+describe('Given the app starting, whose swipe back loads only where it is used', () => {
+  function startOn(device: Device): void {
+    Object.defineProperty(navigator, 'standalone', {
+      configurable: true,
+      get: () => device.standalone,
+    });
+    Object.defineProperty(navigator, 'maxTouchPoints', {
+      configurable: true,
+      get: () => device.maxTouchPoints,
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        edgeSwipeBackAtStart,
+        { provide: Location, useValue: location },
+        { provide: BackTarget, useValue: backTarget },
+        { provide: PageTransitions, useValue: transitions },
+        { provide: DirtyForms, useValue: { any: () => dirty } },
+        { provide: RouteChrome, useValue: { current: chrome.asReadonly() } },
+        { provide: Router, useValue: { currentNavigation: pendingNavigation.asReadonly() } },
+      ],
+    });
+    TestBed.inject(Router);
+  }
+
+  it('when it starts on the home screen of an iPhone, then the swipe back is loaded and a swipe goes back as Zpět does', async () => {
+    startOn(IPHONE_HOME_SCREEN);
+    await vi.dynamicImportSettled();
+
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+
+    expect(backTarget.back).toHaveBeenCalledExactlyOnceWith('/aktuality');
+  });
+
+  it('when it starts in a tab of Safari, then nothing listens to a swipe', async () => {
+    startOn(IPHONE_SAFARI_TAB);
+    await vi.dynamicImportSettled();
+
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+
+    expect(backTarget.back).not.toHaveBeenCalled();
   });
 });
