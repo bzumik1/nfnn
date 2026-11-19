@@ -74,6 +74,7 @@ import {
   DRAFT_RESUMED_TEXT,
   DraftOffer,
 } from '../../../shared/ui/draft-offer/draft-offer';
+import { SegmentThumb } from '../../../shared/ui/segment-thumb/segment-thumb';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -123,6 +124,7 @@ const PUBLISH_DATE_MOVED_TEXT = $localize`:@@admin.newsEditor.draft.dateMoved:Da
     FocalPointPicker,
     NeedsConnection,
     DraftOffer,
+    SegmentThumb,
   ],
   templateUrl: './admin-news-editor.html',
   styleUrl: './admin-news-editor.scss',

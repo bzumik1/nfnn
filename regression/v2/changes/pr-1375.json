@@ -1,0 +1,34 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/edge-swipe-back.spec.ts > Given the app opened from the home screen of an iPhone > when a dialog is open, then a swipe steps back in its history, which closes it or its last step",
+    "reason": "PR #1375 (#1371, the step-back rule, both polish teams 12/12, 2026-11-17): over a modal sheet or dialog the edge swipe does nothing; the sheet closes by its drag down or ×, and only a sheet that offers the steps of its sections takes the swipe",
+    "replacement": "src/app/core/navigation/edge-swipe-back.spec.ts > Given the app opened from the home screen of an iPhone > when a modal dialog is open, then a swipe from the edge does nothing and the dialog stays open",
+    "contract": "docs/frontend-overview.md, Frontend conventions in detail (Own history, Stepping back)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/edge-swipe-back.spec.ts > Given the app opened from the home screen of an iPhone > when a dialog asks before a navigation leaves the page, then a swipe dismisses it as Esc does",
+    "reason": "PR #1375 (#1371, the step-back rule, both polish teams 12/12, 2026-11-17): over a modal sheet or dialog the edge swipe does nothing; the sheet closes by its drag down or ×, and only a sheet that offers the steps of its sections takes the swipe",
+    "replacement": "src/app/core/navigation/edge-swipe-back.spec.ts > Given the app opened from the home screen of an iPhone > when a dialog asks before a navigation leaves the page, then a swipe from the edge does nothing and the question stays",
+    "contract": "docs/frontend-overview.md, Frontend conventions in detail (Own history, Stepping back)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/edge-swipe-back.spec.ts > Given the app opened from the home screen of an iPhone > when that dialog refuses to be dismissed, then it stays open",
+    "reason": "PR #1375 (#1371, the step-back rule, both polish teams 12/12, 2026-11-17): over a modal sheet or dialog the edge swipe does nothing; the sheet closes by its drag down or ×, and only a sheet that offers the steps of its sections takes the swipe",
+    "replacement": "src/app/core/navigation/edge-swipe-back.spec.ts > Given the app opened from the home screen of an iPhone > when a dialog asks before a navigation leaves the page, then a swipe from the edge does nothing and the question stays",
+    "contract": "docs/frontend-overview.md, Frontend conventions in detail (Own history, Stepping back)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/edge-swipe-back.spec.ts > Given the app opened from the home screen of an iPhone, which shows the page behind the finger > when a dialog is open, then no page shows under the finger and the swipe closes the dialog as before",
+    "reason": "PR #1375 (#1371, the step-back rule, both polish teams 12/12, 2026-11-17): over a modal sheet or dialog the edge swipe does nothing; the sheet closes by its drag down or ×, and only a sheet that offers the steps of its sections takes the swipe",
+    "replacement": "src/app/core/navigation/edge-swipe-back.spec.ts > Given the app opened from the home screen of an iPhone, which shows the page behind the finger > when a modal dialog is open, then nothing moves under the finger and the swipe does nothing",
+    "contract": "docs/frontend-overview.md, Frontend conventions in detail (Own history, Stepping back)"
+  }
+]

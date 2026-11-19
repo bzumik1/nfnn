@@ -43,6 +43,7 @@ import {
   logFormat,
 } from './log-lines';
 import { LogTimeline, mergeWindow, startTimeline } from './log-timeline';
+import { SegmentThumb } from '../../../../shared/ui/segment-thumb/segment-thumb';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -78,6 +79,7 @@ const FILTER_PARAMS: Readonly<Record<string, LevelFilter>> = {
     NeedsConnection,
     LevelIcon,
     RadioGroup,
+    SegmentThumb,
   ],
   templateUrl: './admin-log-reader.html',
   styleUrl: './admin-log-reader.scss',

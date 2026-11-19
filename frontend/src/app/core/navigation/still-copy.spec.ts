@@ -4,6 +4,7 @@ function page(): HTMLElement {
   const shell = document.createElement('app-public-shell');
   shell.innerHTML = `
     <main id="obsah"><h1 id="titulek">Článek</h1>
+      <img alt="Zahrada" src="/media/zahrada.webp" loading="lazy" decoding="async">
       <input id="castka" name="castka" autofocus>
       <input type="radio" name="frekvence" value="mesicne" checked>
       <svg><defs><linearGradient id="prechod"></linearGradient></defs></svg>
@@ -22,6 +23,15 @@ describe('Given the page a visitor leaves', () => {
   });
 
   afterEach(() => shell.remove());
+
+  it('when it is copied, then its photos are drawn with the copy at once, never a frame later or only once they come into view', () => {
+    const copy = stillCopyOf(shell);
+
+    const photo = copy.querySelector('img')!;
+    expect(photo.getAttribute('decoding')).toBe('sync');
+    expect(photo.hasAttribute('loading')).toBe(false);
+    expect(shell.querySelector('img')?.getAttribute('loading')).toBe('lazy');
+  });
 
   it('when it is copied, then the copy looks the same but holds no id, name or autofocus a live page needs', () => {
     (shell.querySelector('#castka') as HTMLInputElement).value = '500';

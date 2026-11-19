@@ -304,6 +304,9 @@ describe('Given the reset link opened in a browser with passkeys', () => {
   it('when it opens, then it offers a new password or a new passkey with the password chosen', () => {
     expect(element('#password-reset-title').textContent).toContain('Obnovte si přístup');
     expect(element('.method-switch button:nth-child(1)').getAttribute('aria-checked')).toBe('true');
+    expect(element('.method-switch > .ui-segmented__thumb').getAttribute('aria-hidden')).toBe(
+      'true',
+    );
     expect(element('#reset-password')).not.toBeNull();
   });
 

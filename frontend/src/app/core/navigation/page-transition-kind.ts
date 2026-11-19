@@ -68,3 +68,25 @@ function sameTab(from: string, to: string): boolean {
   const there = tabOf(to);
   return here === null || there === null || here.id === there.id;
 }
+
+export function pushWithinSection(
+  path: string,
+  parent: string | null,
+  sections: readonly string[],
+): boolean {
+  if (parent === null || sections.includes(path)) {
+    return false;
+  }
+  const section = sections
+    .filter((candidate) => candidate !== '/' && within(path, candidate))
+    .reduce<string | null>(
+      (longest, candidate) =>
+        longest === null || candidate.length > longest.length ? candidate : longest,
+      null,
+    );
+  return section !== null && within(pathOf(parent), section);
+}
+
+function within(path: string, section: string): boolean {
+  return path === section || path.startsWith(`${section}/`);
+}
