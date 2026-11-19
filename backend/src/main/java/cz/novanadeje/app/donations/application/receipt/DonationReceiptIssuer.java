@@ -4,7 +4,6 @@ import cz.novanadeje.app.donations.application.signing.CurrentKeyForIssuing;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeys;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
-import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationOnYearlyReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
@@ -14,8 +13,9 @@ import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
 import cz.novanadeje.app.donations.domain.receipt.FrozenReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueLimitReached;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptCalendar;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementCaps;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementInBrowserOnly;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
@@ -32,7 +32,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
@@ -47,9 +46,6 @@ public class DonationReceiptIssuer {
 
     private static final Logger log = LoggerFactory.getLogger(DonationReceiptIssuer.class);
     private static final long SERIAL_WORTH_A_WARNING = (ReceiptNumber.LAST_SERIAL + 1) / 10 * 9;
-    static final int REPLACEMENTS_PER_DONOR_A_DAY = 20;
-    static final int REPLACEMENTS_PER_DONOR_A_YEAR = 60;
-    private static final Duration ISSUE_LIMIT_WINDOW = Duration.ofHours(24);
     static final String ISSUE_ACTION = "ISSUE_RECEIPT";
 
     private final DonationReceiptRepository receipts;
@@ -245,13 +241,8 @@ public class DonationReceiptIssuer {
     }
 
     private void refuseBeyondReplacementCaps(DonorReference donor, Instant issuedAt) {
-        if (receipts.countReplacementsIssuedAfter(donor, issuedAt.minus(ISSUE_LIMIT_WINDOW)) >= REPLACEMENTS_PER_DONOR_A_DAY) {
-            throw ReceiptIssueLimitReached.inADay(donor, REPLACEMENTS_PER_DONOR_A_DAY);
-        }
-        Instant yearStart = Year.from(issuedAt.atZone(FoundationCalendar.ZONE)).atDay(1).atStartOfDay(FoundationCalendar.ZONE).toInstant();
-        if (receipts.countReplacementsIssuedSince(donor, yearStart) >= REPLACEMENTS_PER_DONOR_A_YEAR) {
-            throw ReceiptIssueLimitReached.inAYear(donor, REPLACEMENTS_PER_DONOR_A_YEAR);
-        }
+        ReceiptReplacementCaps.refuseBeyondDay(donor, receipts.countReplacementsIssuedAfter(donor, ReceiptReplacementCaps.dayCountedSince(issuedAt)));
+        ReceiptReplacementCaps.refuseBeyondYear(donor, receipts.countReplacementsIssuedSince(donor, ReceiptCalendar.yearStart(issuedAt)));
     }
 
     private Optional<DonationReceipt> outdatedReceipt(ReceiptRequest request) {
