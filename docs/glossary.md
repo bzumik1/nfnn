@@ -251,7 +251,7 @@ UI „obnova hesla“ · Code: `PasswordResetToken`, `DonorPasswordResetService`
 Setting a new password from an e-mailed link; refused to an administrator who holds no second factor.
 
 **Device**\
-UI „zařízení“ (card „Přihlášená zařízení“) · Code: `donors/domain/DonorDevice` (`donor_device`), `DeviceSignOuts`, `SessionRecordRetention` (an ended device is deleted after 400 days).\
+UI „zařízení“ (card „Přihlášená zařízení“) · Code: `donors/domain/DonorDevice` (`donor_device`), `DeviceSignOuts`, `SessionRecordRetention` (an ended device is deleted after 400 days, spent refresh tokens and one-time secrets after 30).\
 One sign-in of a browser or the installed app, named by platform and browser, or by platform and „aplikace“ for the installed app; signing it out ends its session within 30 seconds.
 
 **Session kind**\

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 class BackupKeyWordChallengeTest {
 
@@ -23,6 +24,16 @@ class BackupKeyWordChallengeTest {
         assertThat(challenge.positions()).isEqualTo(POSITIONS);
         assertThat(challenge.validUntil()).isEqualTo(NOW.plus(Duration.ofMinutes(30)));
         assertThat(challenge.attemptsLeft()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("Given no attempt left, no positions or no expiry, when a challenge is built, then it is refused")
+    void should_refuse_when_built_given_no_attempt_left_or_a_missing_part() {
+        Instant validUntil = NOW.plus(Duration.ofMinutes(30));
+
+        assertThatIllegalArgumentException().isThrownBy(() -> new BackupKeyWordChallenge(POSITIONS, validUntil, 0));
+        assertThatIllegalArgumentException().isThrownBy(() -> new BackupKeyWordChallenge(null, validUntil, 5));
+        assertThatIllegalArgumentException().isThrownBy(() -> new BackupKeyWordChallenge(POSITIONS, null, 5));
     }
 
     @Test
