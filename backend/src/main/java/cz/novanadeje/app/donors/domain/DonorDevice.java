@@ -11,8 +11,8 @@ public final class DonorDevice {
     private final SessionKind kind;
     private final Instant signedInAt;
     private Instant lastUsedAt;
-    private Instant endedAt;
-    private DeviceSignOutReason endReason;
+    private final Instant endedAt;
+    private final DeviceSignOutReason endReason;
     private final String statusSecretHash;
     private final DeviceWipe wipe;
 
@@ -69,18 +69,6 @@ public final class DonorDevice {
         if (isActive() && at.isAfter(lastUsedAt)) {
             lastUsedAt = at;
         }
-    }
-
-    public boolean end(DeviceSignOutReason reason, Instant at) {
-        if (reason == null || at == null) {
-            throw new IllegalArgumentException("A device ends with a reason and a time");
-        }
-        if (!isActive()) {
-            return false;
-        }
-        endedAt = at;
-        endReason = reason;
-        return true;
     }
 
     public DeviceId id() {

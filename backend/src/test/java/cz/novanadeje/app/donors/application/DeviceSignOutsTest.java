@@ -8,6 +8,7 @@ import cz.novanadeje.app.donors.domain.DeviceWipe;
 import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
+import cz.novanadeje.app.donors.domain.EndedDevices;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
 import org.junit.jupiter.api.DisplayName;
@@ -179,8 +180,7 @@ class DeviceSignOutsTest {
     @Test
     @DisplayName("Given a device that already ended, when it is ended again, then nothing is revoked, ended or announced")
     void should_change_nothing_when_ended_given_device_already_ended() {
-        DonorDevice ended = device();
-        ended.end(DeviceSignOutReason.SIGNED_OUT, SIGNED_IN.plusSeconds(60));
+        DonorDevice ended = EndedDevices.ended(device(), DeviceSignOutReason.SIGNED_OUT, SIGNED_IN.plusSeconds(60));
         when(devices.findById(ended.id())).thenReturn(Optional.of(ended));
 
         boolean result = signOuts().end(JANA, ended.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW);

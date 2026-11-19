@@ -95,14 +95,14 @@ export interface ReceiptError {
 }
 
 const RECEIPT_FAILED = $localize`:@@donor.dashboard.receipt.error:Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.`;
-const RECEIPT_DRAWING_FAILED = $localize`:@@donor.dashboard.receipt.drawingFailed:PDF se v prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu; když to nepomůže, zkuste jiný prohlížeč nebo nám napište na info@nfnn.cz.`;
-const RECEIPT_IMAGE_FAILED = $localize`:@@donor.dashboard.receipt.imageFailed:Podpis na potvrzení se nepodařilo ověřit, a tak jsme PDF nevytvořili. Zkuste to prosím znovu; když to nepomůže, napište nám na info@nfnn.cz.`;
-const RECEIPT_TOOLS_MISSING = $localize`:@@donor.dashboard.receipt.toolsMissing:Web se mezitím aktualizoval. Obnovte prosím stránku a stáhněte potvrzení znovu.`;
+const RECEIPT_DRAWING_FAILED = $localize`:@@donor.dashboard.receipt.drawingFailed:PDF se v\u00a0prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu; když to nepomůže, zkuste jiný prohlížeč nebo nám napište na info@nfnn.cz.`;
+const RECEIPT_IMAGE_FAILED = $localize`:@@donor.dashboard.receipt.imageFailed:Podpis na potvrzení se nepodařilo ověřit, a\u00a0tak jsme PDF nevytvořili. Zkuste to prosím znovu; když to nepomůže, napište nám na info@nfnn.cz.`;
+const RECEIPT_TOOLS_MISSING = $localize`:@@donor.dashboard.receipt.toolsMissing:Web se mezitím aktualizoval. Obnovte prosím stránku a\u00a0stáhněte potvrzení znovu.`;
 const RECEIPT_TOOLS_STILL_MISSING = $localize`:@@donor.dashboard.receipt.toolsStillMissing:Nástroje pro PDF se nepodařilo načíst ani po obnovení stránky. Zkontrolujte prosím připojení nebo blokování skriptů, zkuste jiný prohlížeč, nebo nám napište na info@nfnn.cz.`;
-const RECEIPT_UNPRINTABLE = $localize`:@@donor.dashboard.receipt.unprintable:Údaje potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili. Napište nám prosím na info@nfnn.cz.`;
+const RECEIPT_UNPRINTABLE = $localize`:@@donor.dashboard.receipt.unprintable:Údaje potvrzení obsahují znak, který v\u00a0PDF neumíme vytisknout, a\u00a0tak jsme PDF nevytvořili. Napište nám prosím na info@nfnn.cz.`;
 const RECEIPT_STYLE_FAILED = $localize`:@@donor.dashboard.receipt.styleFailed:PDF teď kvůli chybě na webu nejde vytvořit. Napište nám prosím na info@nfnn.cz, opravíme ji.`;
 const RECEIPT_CANCELLED = $localize`:@@donor.dashboard.receipt.cancelled:Přípravu potvrzení jste zrušili.`;
-const RECEIPT_ON_YEARLY = $localize`:@@donor.dashboard.receipt.onYearly:Tento dar uvádí roční potvrzení za jeho rok, a tak k němu samostatné potvrzení nevystavujeme. Stáhněte si roční potvrzení.`;
+const RECEIPT_ON_YEARLY = $localize`:@@donor.dashboard.receipt.onYearly:Tento dar uvádí roční potvrzení za jeho rok, a\u00a0tak k\u00a0němu samostatné potvrzení nevystavujeme. Stáhněte si roční potvrzení.`;
 const DRAWING_FAILURE_TEXTS: Readonly<Record<ReceiptPdfFailureReason, string>> = {
   'tools-missing': RECEIPT_TOOLS_MISSING,
   fonts: RECEIPT_DRAWING_FAILED,

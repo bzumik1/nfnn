@@ -1,13 +1,13 @@
 <section class="ui-card ui-card--padded" aria-labelledby="account-title">
   <h2 id="account-title" class="ui-card__title" i18n="@@donor.account.title">
-    Přihlášení a zabezpečení
+    Přihlášení a&nbsp;zabezpečení
   </h2>
 
   @if (withoutSignInMethod() && panel() !== 'passkeys') {
     <div class="ui-callout ui-callout--warning account-no-method">
       <p i18n="@@donor.account.noSignInMethod">
         Účet zatím nemá heslo ani přístupový klíč. Nejdřív si vytvořte přístupový klíč, pak tu
-        můžete nastavit heslo, změnit e-mail nebo zapnout kód z aplikace.
+        můžete nastavit heslo, změnit e-mail nebo zapnout kód z&nbsp;aplikace.
       </p>
       @if (passkeysSupported) {
         <button
@@ -147,7 +147,8 @@
                 class="ui-card__intro account-form-intro"
                 i18n="@@donor.account.confirmWithPasskey"
               >
-                Po odeslání vás zařízení požádá o potvrzení jedním z vašich přístupových klíčů.
+                Po odeslání vás zařízení požádá o&nbsp;potvrzení jedním z&nbsp;vašich přístupových
+                klíčů.
               </p>
             }
 
@@ -281,7 +282,8 @@
                 class="ui-card__intro account-form-intro"
                 i18n="@@donor.account.confirmWithPasskey"
               >
-                Po odeslání vás zařízení požádá o potvrzení jedním z vašich přístupových klíčů.
+                Po odeslání vás zařízení požádá o&nbsp;potvrzení jedním z&nbsp;vašich přístupových
+                klíčů.
               </p>
             }
             <app-form-field
@@ -370,14 +372,14 @@
               class="ui-card__intro account-form-intro"
               i18n="@@donor.account.removePassword.intro"
             >
-              Přihlásíte se pak jen přístupovým klíčem. Mějte klíč aspoň ve dvou zařízeních; když o
-              všechny přijdete, přístup obnovíte odkazem z e-mailu přes „Zapomenuté heslo“. Ostatní
-              přihlášení ukončíme, tohle zůstane.
+              Přihlásíte se pak jen přístupovým klíčem. Mějte klíč aspoň ve dvou zařízeních; když
+              o&nbsp;všechny přijdete, přístup obnovíte odkazem z&nbsp;e-mailu přes „Zapomenuté
+              heslo“. Ostatní přihlášení ukončíme, tohle zůstane.
             </p>
             @if (isAdmin()) {
               <p class="account-hint" i18n="@@donor.account.removePassword.admin">
-                Jako správce si přístup odkazem z e-mailu neobnovíte. Když o klíče přijdete, pomůže
-                vám jiný správce.
+                Jako správce si přístup odkazem z&nbsp;e-mailu neobnovíte. Když o&nbsp;klíče
+                přijdete, pomůže vám jiný správce.
               </p>
             }
             <app-account-username [email]="accountEmail()" />
@@ -437,19 +439,19 @@
       </dt>
       <dd class="account-value">
         @if (secondFactor().enabled) {
-          <span i18n="@@donor.account.secondFactor.on">Zapnuté, kód z ověřovací aplikace</span>
+          <span i18n="@@donor.account.secondFactor.on">Zapnuté, kód z&nbsp;ověřovací aplikace</span>
         } @else {
           <span i18n="@@donor.account.secondFactor.off">Vypnuté</span>
           @if ((passkeyCount() ?? 0) > 0) {
             <span class="account-row-note" i18n="@@donor.account.secondFactor.passkeyProtects"
-              >Přihlášení přístupovým klíčem je chráněné i bez kódu.</span
+              >Přihlášení přístupovým klíčem je chráněné i&nbsp;bez kódu.</span
             >
           }
         }
         @if (secondFactor().neededForAdministration) {
           <span class="account-hint" i18n="@@donor.account.secondFactor.neededForAdministration">
-            Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete kód z aplikace a
-            přihlásíte se s ním.
+            Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete kód
+            z&nbsp;aplikace a&nbsp;přihlásíte se s&nbsp;ním.
           </span>
         }
       </dd>
@@ -496,35 +498,35 @@
             novalidate
           >
             <h3 class="ui-card__subtitle" i18n="@@donor.account.secondFactor.on.title">
-              Zapnutí kódu z aplikace (dvoufaktorové ověření)
+              Zapnutí kódu z&nbsp;aplikace (dvoufaktorové ověření)
             </h3>
             @if (hasPassword()) {
               <p
                 class="ui-card__intro account-form-intro"
                 i18n="@@donor.account.secondFactor.on.intro"
               >
-                Při každém přihlášení pak k heslu zadáte kód z ověřovací aplikace v telefonu nebo
-                tabletu (například Google Authenticator, Microsoft Authenticator nebo Aegis).
-                Nejdřív potvrďte heslem.
+                Při každém přihlášení pak k&nbsp;heslu zadáte kód z&nbsp;ověřovací aplikace
+                v&nbsp;telefonu nebo tabletu (například Google Authenticator, Microsoft
+                Authenticator nebo Aegis). Nejdřív potvrďte heslem.
               </p>
             } @else {
               <p
                 class="ui-card__intro account-form-intro"
                 i18n="@@donor.account.secondFactor.on.introPasswordless"
               >
-                Kód z ověřovací aplikace v telefonu nebo tabletu (například Google Authenticator,
-                Microsoft Authenticator nebo Aegis) pak budete potřebovat, když budete obnovovat
-                přístup odkazem z e-mailu; samotný e-mail tak k účtu nestačí. Přihlášení klíčem
-                zůstává stejné.
+                Kód z&nbsp;ověřovací aplikace v&nbsp;telefonu nebo tabletu (například Google
+                Authenticator, Microsoft Authenticator nebo Aegis) pak budete potřebovat, když
+                budete obnovovat přístup odkazem z&nbsp;e-mailu; samotný e-mail tak k&nbsp;účtu
+                nestačí. Přihlášení klíčem zůstává stejné.
               </p>
             }
             <p
               class="ui-card__intro account-form-intro account-lost-phone"
               i18n="@@donor.account.secondFactor.on.lostPhone"
             >
-              Když telefon nebo tablet s aplikací ztratíte, přístup obnovíte platbou 1&nbsp;Kč z
-              bankovního účtu na vaše jméno, který u nás máte ověřený aspoň týden. Dřív to nejde; do
-              té doby nám napište a kód z aplikace vám vypneme.
+              Když telefon nebo tablet s&nbsp;aplikací ztratíte, přístup obnovíte platbou 1&nbsp;Kč
+              z&nbsp;bankovního účtu na vaše jméno, který u&nbsp;nás máte ověřený aspoň týden. Dřív
+              to nejde; do té doby nám napište a&nbsp;kód z&nbsp;aplikace vám vypneme.
             </p>
             @if (hasPassword()) {
               <app-account-username [email]="accountEmail()" />
@@ -552,7 +554,8 @@
                 class="ui-card__intro account-form-intro"
                 i18n="@@donor.account.confirmWithPasskey"
               >
-                Po odeslání vás zařízení požádá o potvrzení jedním z vašich přístupových klíčů.
+                Po odeslání vás zařízení požádá o&nbsp;potvrzení jedním z&nbsp;vašich přístupových
+                klíčů.
               </p>
             }
 
@@ -597,7 +600,7 @@
               class="ui-card__intro account-form-intro"
               i18n="@@donor.account.secondFactor.scan.intro"
             >
-              Naskenujte QR kód v aplikaci, nebo do ní opište klíč. Pak sem zadejte kód, který
+              Naskenujte QR kód v&nbsp;aplikaci, nebo do ní opište klíč. Pak sem zadejte kód, který
               aplikace ukáže.
             </p>
             <div class="account-enrolment">
@@ -623,7 +626,7 @@
                   class="account-otpauth"
                   [href]="current.otpauthUri"
                   i18n="@@donor.account.secondFactor.openApp"
-                  >Přidat do ověřovací aplikace v tomto telefonu nebo tabletu</a
+                  >Přidat do ověřovací aplikace v&nbsp;tomto telefonu nebo tabletu</a
                 >
               }
               <div class="account-secret">
@@ -673,7 +676,7 @@
               >
                 <app-busy-label [busy]="saving()">
                   <span when-idle i18n="@@donor.account.secondFactor.turnOn"
-                    >Zapnout kód z aplikace</span
+                    >Zapnout kód z&nbsp;aplikace</span
                   >
                   <span when-busy i18n="@@donor.account.secondFactor.verifying"
                     >Ověřujeme kód…</span
@@ -699,22 +702,22 @@
             novalidate
           >
             <h3 class="ui-card__subtitle" i18n="@@donor.account.secondFactor.off.title">
-              Vypnutí kódu z aplikace
+              Vypnutí kódu z&nbsp;aplikace
             </h3>
             @if (hasPassword()) {
               <p
                 class="ui-card__intro account-form-intro"
                 i18n="@@donor.account.secondFactor.off.intro"
               >
-                K přihlášení pak bude stačit heslo. Ostatní přihlášení ukončíme, tohle zůstane.
+                K&nbsp;přihlášení pak bude stačit heslo. Ostatní přihlášení ukončíme, tohle zůstane.
               </p>
             } @else {
               <p
                 class="ui-card__intro account-form-intro"
                 i18n="@@donor.account.secondFactor.off.introPasswordless"
               >
-                Při obnově přístupu odkazem z e-mailu pak kód z aplikace chtít nebudeme. Ostatní
-                přihlášení ukončíme, tohle zůstane.
+                Při obnově přístupu odkazem z&nbsp;e-mailu pak kód z&nbsp;aplikace chtít nebudeme.
+                Ostatní přihlášení ukončíme, tohle zůstane.
               </p>
             }
             @if (hasPassword()) {
@@ -743,7 +746,8 @@
                 class="ui-card__intro account-form-intro"
                 i18n="@@donor.account.confirmWithPasskey"
               >
-                Po odeslání vás zařízení požádá o potvrzení jedním z vašich přístupových klíčů.
+                Po odeslání vás zařízení požádá o&nbsp;potvrzení jedním z&nbsp;vašich přístupových
+                klíčů.
               </p>
             }
             <app-form-field
@@ -779,7 +783,7 @@
               >
                 <app-busy-label [busy]="saving()">
                   <span when-idle i18n="@@donor.account.secondFactor.turnOff"
-                    >Vypnout kód z aplikace</span
+                    >Vypnout kód z&nbsp;aplikace</span
                   >
                   <span when-busy i18n="@@donor.account.secondFactor.turningOff">Vypínáme…</span>
                 </app-busy-label>
@@ -847,8 +851,8 @@
       <span class="visually-hidden">{{ starting }}</span>
     } @else if (linkSentTo(); as address) {
       <span i18n="@@donor.account.email.sent">
-        Odkaz jsme poslali na {{ address }}. Platí 24 hodin; po jeho otevření se účet přepne na
-        novou adresu a na tu současnou pošleme oznámení.
+        Odkaz jsme poslali na {{ address }}. Platí 24&nbsp;hodin; po jeho otevření se účet přepne na
+        novou adresu a&nbsp;na tu současnou pošleme oznámení.
       </span>
     } @else if (passwordChanged() === 'changed') {
       <span i18n="@@donor.account.password.changed">
@@ -856,8 +860,8 @@
       </span>
     } @else if (passwordChanged() === 'set') {
       <span i18n="@@donor.account.setPassword.done">
-        Heslo je nastavené. Přihlásit se můžete heslem i klíčem; ostatní přihlášení jsme ukončili,
-        tohle zůstává.
+        Heslo je nastavené. Přihlásit se můžete heslem i&nbsp;klíčem; ostatní přihlášení jsme
+        ukončili, tohle zůstává.
       </span>
     } @else if (passwordChanged() === 'removed') {
       <span i18n="@@donor.account.removePassword.done">
@@ -866,12 +870,12 @@
       </span>
     } @else if (secondFactorChanged() === 'on') {
       <span i18n="@@donor.account.secondFactor.turnedOn">
-        Kód z aplikace je zapnutý. Při příštím přihlášení ho zadáte; ostatní přihlášení jsme
+        Kód z&nbsp;aplikace je zapnutý. Při příštím přihlášení ho zadáte; ostatní přihlášení jsme
         ukončili, tohle zůstává.
       </span>
     } @else if (secondFactorChanged() === 'off') {
       <span i18n="@@donor.account.secondFactor.turnedOff">
-        Kód z aplikace jsme vypnuli. Ostatní přihlášení jsme ukončili, tohle zůstává.
+        Kód z&nbsp;aplikace jsme vypnuli. Ostatní přihlášení jsme ukončili, tohle zůstává.
       </span>
     } @else if (emailChange() === 'resent') {
       <span i18n="@@donor.account.email.resent">
@@ -879,7 +883,8 @@
       </span>
     } @else if (emailChange() === 'cancelled') {
       <span i18n="@@donor.account.email.cancelled">
-        Změnu e-mailu jsme zrušili. Účet dál používá současnou adresu a odeslaný odkaz už neplatí.
+        Změnu e-mailu jsme zrušili. Účet dál používá současnou adresu a&nbsp;odeslaný odkaz už
+        neplatí.
       </span>
     }
   </p>

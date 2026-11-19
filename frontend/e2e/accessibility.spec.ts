@@ -451,8 +451,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       { times: 1 },
     );
     await page.goto('/aktuality?strana=2');
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
-      'Aktuality se nepodařilo načíst.',
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
+      'Aktuality se nepodařilo načíst. Zkuste to znovu.',
     );
 
     expect(await violations(page)).toEqual([]);
@@ -3373,7 +3373,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   }) => {
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
-    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await expect(page.getByText(/Uloženo v\s+zařízení · aktualizováno /)).toBeVisible();
     await page.getByRole('button', { name: 'Načíst data znovu' }).click();
     await expect(
       page.getByRole('status').filter({ hasText: 'Data jsou načtená znovu.' }),

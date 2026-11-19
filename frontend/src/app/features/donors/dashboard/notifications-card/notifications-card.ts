@@ -51,8 +51,8 @@ const KIND_LABELS: Record<Kind, string> = {
 };
 
 const KIND_DESCRIPTIONS: Record<Kind, string> = {
-  gifts: $localize`:@@donor.notifications.kind.gifts.description:Když nám z banky dorazí váš nový dar, třeba každý měsíc z trvalého příkazu.`,
-  yearlyReceipts: $localize`:@@donor.notifications.kind.yearlyReceipts.description:Jednou za rok v lednu, když si můžete stáhnout potvrzení za minulý rok.`,
+  gifts: $localize`:@@donor.notifications.kind.gifts.description:Když nám z\u00a0banky dorazí váš nový dar, třeba každý měsíc z\u00a0trvalého příkazu.`,
+  yearlyReceipts: $localize`:@@donor.notifications.kind.yearlyReceipts.description:Jednou za rok v\u00a0lednu, když si můžete stáhnout potvrzení za minulý rok.`,
 };
 
 @Component({
@@ -264,7 +264,7 @@ export class NotificationsCard {
           this.notice.set({
             kind: 'alert',
             text: problemTypeEndsWith(failure, SUBSCRIPTION_LIMIT)
-              ? $localize`:@@donor.notifications.limit:Upozornění můžete mít zapnutá nejvýš na 10 zařízeních. Na zařízení, které už nepoužíváte, je vypněte nebo ho v kartě „Přihlášená zařízení“ odhlaste.`
+              ? $localize`:@@donor.notifications.limit:Upozornění můžete mít zapnutá nejvýš na 10\u00a0zařízeních. Na zařízení, které už nepoužíváte, je vypněte nebo ho v\u00a0kartě „Přihlášená zařízení“ odhlaste.`
               : describeProblem(
                   failure,
                   $localize`:@@donor.notifications.turnOnFailed:Upozornění se nepodařilo zapnout. Zkuste to prosím znovu.`,
@@ -307,7 +307,7 @@ export class NotificationsCard {
     this.availability.set(pushAvailability(this.window, this.push));
     this.notice.set({
       kind: 'alert',
-      text: $localize`:@@donor.notifications.browserRefused:Prohlížeč upozornění nezapnul. Pokud jste povolení odmítli, povolte je v nastavení prohlížeče pro tento web a zkuste to znovu.`,
+      text: $localize`:@@donor.notifications.browserRefused:Prohlížeč upozornění nezapnul. Pokud jste povolení odmítli, povolte je v\u00a0nastavení prohlížeče pro tento web a\u00a0zkuste to znovu.`,
     });
   }
 
@@ -346,6 +346,6 @@ const OFF_TEXT = $localize`:@@donor.notifications.off:vypnuto`;
 
 function testOutcome({ delivered }: DonorPushTestResponse): string {
   return delivered > 0
-    ? $localize`:@@donor.notifications.testDelivered:Zkušební upozornění jsme předali k doručení.`
-    : $localize`:@@donor.notifications.testNotDelivered:Zkušební upozornění se na toto zařízení nepodařilo předat. Vypněte upozornění a zapněte je znovu.`;
+    ? $localize`:@@donor.notifications.testDelivered:Zkušební upozornění jsme předali k\u00a0doručení.`
+    : $localize`:@@donor.notifications.testNotDelivered:Zkušební upozornění se na toto zařízení nepodařilo předat. Vypněte upozornění a\u00a0zapněte je znovu.`;
 }

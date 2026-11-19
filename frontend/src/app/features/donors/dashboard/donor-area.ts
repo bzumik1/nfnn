@@ -33,7 +33,7 @@ export const DONOR_SECTIONS: readonly SideNavGroup[] = [
     items: [
       { path: '/darce/prehled', label: $localize`:@@donor.nav.overview:Můj přehled` },
       { path: '/darce/dary', label: $localize`:@@donor.nav.gifts:Moje dary` },
-      { path: '/darce/potvrzeni', label: $localize`:@@donor.nav.receipts:Potvrzení o daru` },
+      { path: '/darce/potvrzeni', label: $localize`:@@donor.nav.receipts:Potvrzení o\u00a0daru` },
       { path: BANK_ACCOUNTS_PATH, label: $localize`:@@donor.nav.bankAccounts:Bankovní účty` },
       { path: '/darce/udaje', label: $localize`:@@donor.nav.details:Údaje a\u00a0zabezpečení` },
     ],

@@ -3,8 +3,8 @@
     Přihlášená zařízení
   </h2>
   <p class="ui-card__intro devices-inset devices-intro" i18n="@@donor.account.devices.intro">
-    Prohlížeče a aplikace, ve kterých jste přihlášeni. Zařízení, které neznáte, odhlaste a změňte si
-    heslo.
+    Prohlížeče a&nbsp;aplikace, ve kterých jste přihlášeni. Zařízení, které neznáte, odhlaste
+    a&nbsp;změňte si heslo.
   </p>
   @if (loadError()) {
     <div class="devices-inset">
@@ -52,7 +52,7 @@
               >Starší ({{ groups().older.length }})</span
             >
             <span class="ui-list__meta" i18n="@@donor.account.devices.older.hint"
-              >Nepoužitá déle než 30 dní</span
+              >Nepoužitá déle než 30&nbsp;dní</span
             >
             <svg
               class="ui-list__chevron devices-older-chevron"
@@ -113,7 +113,7 @@
               <button
                 #confirmCancel
                 type="button"
-                class="ui-button devices-confirm-no"
+                class="ui-button ui-button--quiet devices-confirm-no"
                 [disabled]="signingOut() !== null"
                 (click)="cancelSignOut()"
                 i18n="@@donor.account.cancel"
@@ -269,7 +269,7 @@
           <button
             #confirmCancel
             type="button"
-            class="ui-button devices-confirm-no"
+            class="ui-button ui-button--quiet devices-confirm-no"
             [disabled]="signingOut() !== null"
             (click)="cancelSignOut()"
             i18n="@@donor.account.cancel"

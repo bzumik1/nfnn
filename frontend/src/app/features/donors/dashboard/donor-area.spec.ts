@@ -2643,8 +2643,8 @@ describe('Given a signed-in donor in the donor area', () => {
 
       const titles = [...document.querySelectorAll<HTMLElement>('.ui-card > h2')];
       expect(titles.map((title) => title.textContent?.trim())).toEqual([
-        'Roční potvrzení o darech',
-        'Potvrzení k jednotlivému daru',
+        'Roční potvrzení o\u00a0darech',
+        'Potvrzení k\u00a0jednotlivému daru',
         'Ověřit potvrzení',
       ]);
       for (const title of titles) {
@@ -2858,7 +2858,7 @@ describe('Given a signed-in donor in the donor area', () => {
         await settleBlobFailure();
 
         expect(element('.yearly-card [role="alert"]')?.textContent).toContain(
-          'PDF se v prohlížeči',
+          'PDF se v\u00a0prohlížeči',
         );
         expect(pdfButton(2025).disabled).toBe(false);
         expect(pdfButton(2025).getAttribute('aria-disabled')).toBeNull();

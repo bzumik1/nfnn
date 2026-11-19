@@ -1,3 +1,4 @@
+import { Locator } from '@playwright/test';
 import { expect, test } from './fixtures';
 import {
   longUnusedDevices,
@@ -7,7 +8,65 @@ import {
   signIn,
 } from './donor-session';
 
+async function groundAndTextContrast(
+  button: Locator,
+): Promise<{ ground: string; surface: string; textContrast: number }> {
+  return button.evaluate((element) => {
+    const luminance = (written: string) => {
+      const [r, g, b] = (written.match(/[\d.]+/g) ?? [])
+        .slice(0, 3)
+        .map((channel) => Number(channel) / 255)
+        .map((value) => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = 'var(--color-surface)';
+    element.parentElement?.append(probe);
+    const surface = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    const style = getComputedStyle(element);
+    const front = luminance(style.color);
+    const behind = luminance(style.backgroundColor);
+    return {
+      ground: style.backgroundColor,
+      surface,
+      textContrast: (Math.max(front, behind) + 0.05) / (Math.min(front, behind) + 0.05),
+    };
+  });
+}
+
 test.describe('Given a donor signed in on a Mac and an iPhone', () => {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    test(`when they ask to sign out the iPhone in the ${colorScheme} appearance, then Zrušit stands on the surface ground, outlined, with readable text`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/devices',
+        (route) => route.fulfill({ json: { items: signedInDevices } }),
+      );
+      await signIn(page);
+      await openDonorSection(page, 'Údaje a zabezpečení');
+
+      const devices = page.locator('.devices');
+      await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+      const cancel = devices
+        .getByRole('group', { name: 'Odhlásit iPhone · Safari?' })
+        .getByRole('button', { name: 'Zrušit' });
+
+      await expect(cancel).toHaveClass(/\bui-button--quiet\b/);
+      await expect
+        .poll(async () => {
+          const { ground, surface } = await groundAndTextContrast(cancel);
+          return ground === surface;
+        })
+        .toBe(true);
+      const { textContrast } = await groundAndTextContrast(cancel);
+      expect(textContrast).toBeGreaterThanOrEqual(4.5);
+    });
+  }
+
   test('when they sign out the iPhone from the account, then the API is told and only this Mac stays', async ({
     page,
   }) => {

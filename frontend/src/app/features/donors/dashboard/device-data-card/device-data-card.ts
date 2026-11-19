@@ -104,17 +104,17 @@ function reloadNotice(outcome: SyncOutcome): Notice {
     case 'failed':
       return {
         kind: 'alert',
-        text: $localize`:@@donor.deviceData.reloadFailed:Data se nepodařilo načíst. Zkontrolujte připojení a zkuste to prosím znovu.`,
+        text: $localize`:@@donor.deviceData.reloadFailed:Data se nepodařilo načíst. Zkontrolujte připojení a\u00a0zkuste to prosím znovu.`,
       };
     case 'mismatch':
       return {
         kind: 'alert',
-        text: $localize`:@@donor.deviceData.reloadUnverified:Data ze serveru se nepodařilo ověřit. Zkuste je prosím za chvíli načíst znovu, a když to nepůjde, napište nám na info@nfnn.cz a přiložte diagnostický soubor z části „Když web nefunguje“.`,
+        text: $localize`:@@donor.deviceData.reloadUnverified:Data ze serveru se nepodařilo ověřit. Zkuste je prosím za chvíli načíst znovu, a\u00a0když to nepůjde, napište nám na info@nfnn.cz a\u00a0přiložte diagnostický soubor z\u00a0části „Když web nefunguje“.`,
       };
     case 'no-copy':
       return {
         kind: 'alert',
-        text: $localize`:@@donor.deviceData.reloadFailedOther:Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz a přiložte diagnostický soubor z části „Když web nefunguje“.`,
+        text: $localize`:@@donor.deviceData.reloadFailedOther:Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a\u00a0když to nepůjde, napište nám na info@nfnn.cz a\u00a0přiložte diagnostický soubor z\u00a0části „Když web nefunguje“.`,
       };
   }
 }

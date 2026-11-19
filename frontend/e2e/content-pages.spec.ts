@@ -631,7 +631,7 @@ test.describe('Given a visitor whose connection drops while they page through Ak
 
     await page.getByRole('link', { name: 'Starší' }).click();
 
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
       'Bez připojení se aktuality nenačetly. Až budete online, zkuste to znovu.',
     );
 

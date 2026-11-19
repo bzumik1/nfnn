@@ -89,6 +89,7 @@
   --color-surface-grouped: #f2f3f7;
   --color-surface-elevated: #ffffff;
   --color-surface-alt: #f8faff;
+  --color-story-tile: var(--color-surface-alt);
   --color-surface-muted: #f1f3f5;
   --color-border-rule: #b8bec6;
   --color-surface-accent: #f1f5fc;
@@ -583,6 +584,7 @@
   --color-surface-grouped: #05070c;
   --color-surface-elevated: #1a2232;
   --color-surface-alt: #080b12;
+  --color-story-tile: var(--color-surface-elevated);
   --color-surface-muted: #1b2130;
   --color-border-rule: #5d677a;
   --color-surface-accent: #122340;

@@ -26,6 +26,62 @@ async function prompted(page: Page): Promise<boolean> {
 
 const card = (page: Page) => page.getByRole('region', { name: 'Nová naděje jako aplikace' });
 
+interface StartFrame {
+  launch: boolean;
+  heading: boolean;
+}
+
+const PARSER_PAUSE_MS = 100;
+
+async function recordStartFrames(page: Page): Promise<() => Promise<StartFrame[]>> {
+  await page.addInitScript(() => {
+    const frames: StartFrame[] = [];
+    Object.assign(window, { nfnnStartFrames: frames });
+    const sample = () => {
+      if (document.body) {
+        frames.push({
+          launch: document.querySelector('.launch-screen') !== null,
+          heading: document.querySelector('h1') !== null,
+        });
+      }
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  return () =>
+    page.evaluate(() => (window as unknown as { nfnnStartFrames: StartFrame[] }).nfnnStartFrames);
+}
+
+async function pauseParserBeforeEveryBodyTag(page: Page, path: string): Promise<() => number> {
+  let pauses = 0;
+  await page.route(
+    (url) => url.pathname === path,
+    async (route) => {
+      if (!route.request().isNavigationRequest()) {
+        return route.fallback();
+      }
+      const response = await route.fetch();
+      const [head, body] = (await response.text()).split('</head>');
+      const paused = body.replace(
+        /<(?=[a-z])/g,
+        () => `<script src="/launch-parser-pause-${pauses++}.js"></script><`,
+      );
+      return route.fulfill({ response, body: `${head}</head>${paused}` });
+    },
+  );
+  const releases: Promise<void>[] = [];
+  const released = (pause: number): Promise<void> =>
+    (releases[pause] ??= (pause === 0 ? Promise.resolve() : released(pause - 1)).then(
+      () => new Promise((release) => setTimeout(release, PARSER_PAUSE_MS)),
+    ));
+  await page.route('**/launch-parser-pause-*.js', async (route) => {
+    const pause = Number(/launch-parser-pause-(\d+)\.js$/.exec(route.request().url())![1]);
+    await released(pause);
+    await route.fulfill({ contentType: 'text/javascript', body: '' });
+  });
+  return () => pauses;
+}
+
 test.describe('Given a signed-in donor on their overview', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
@@ -107,34 +163,34 @@ test.describe('Given the app starting before its code has run', () => {
         );
         await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
       }
-      await page.addInitScript(() => {
-        const frames: { launch: boolean; heading: boolean }[] = [];
-        Object.assign(window, { nfnnStartFrames: frames });
-        const sample = () => {
-          if (document.body) {
-            frames.push({
-              launch: document.querySelector('.launch-screen') !== null,
-              heading: document.querySelector('h1') !== null,
-            });
-          }
-          requestAnimationFrame(sample);
-        };
-        requestAnimationFrame(sample);
-      });
+      const recordedFrames = await recordStartFrames(page);
 
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.locator('.launch-screen')).toHaveCount(0);
 
-      const frames = await page.evaluate(
-        () =>
-          (window as unknown as { nfnnStartFrames: { launch: boolean; heading: boolean }[] })
-            .nfnnStartFrames,
-      );
+      const frames = await recordedFrames();
       expect(frames.some((frame) => frame.launch)).toBe(true);
       expect(frames.filter((frame) => !frame.launch && !frame.heading)).toEqual([]);
     });
   }
+
+  test('when the page arrives so slowly that the browser draws between any two of its tags, then every frame from the first one holds the launch screen or the page', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    const recordedFrames = await recordStartFrames(page);
+    const pauses = await pauseParserBeforeEveryBodyTag(page, '/');
+
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.locator('.launch-screen')).toHaveCount(0);
+
+    const frames = await recordedFrames();
+    expect(pauses()).toBeGreaterThan(0);
+    expect(frames.some((frame) => frame.launch)).toBe(true);
+    expect(frames.filter((frame) => !frame.launch && !frame.heading)).toEqual([]);
+  });
 
   test('when the page first paints, then it shows only the theme icon in the middle of the surface, as the launch image does', async ({
     page,

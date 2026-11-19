@@ -164,7 +164,7 @@ describe('Given the sign-in and security card of the details page', () => {
     beforeEach(() => render());
 
     it('then one row per sign-in item shows its state and its action', () => {
-      expect(card.element('h2').textContent).toContain('Přihlášení a zabezpečení');
+      expect(card.element('h2').textContent).toContain('Přihlášení a\u00a0zabezpečení');
       expect(card.texts('.account-row dt')).toEqual([
         'E-mail',
         'Heslo',
@@ -309,7 +309,7 @@ describe('Given the sign-in and security card of the details page', () => {
         secondFactorEnrolment()['otpauthUri'],
       );
       expect(card.element('.account-otpauth').textContent?.trim()).toBe(
-        'Přidat do ověřovací aplikace v tomto telefonu nebo tabletu',
+        'Přidat do ověřovací aplikace v\u00a0tomto telefonu nebo tabletu',
       );
     });
 
@@ -393,7 +393,9 @@ describe('Given the sign-in and security card of the details page', () => {
         await card.settle();
 
         expect(card.element('.account-form')).toBeNull();
-        expect(card.element('.account-status').textContent).toContain('Kód z aplikace je zapnutý.');
+        expect(card.element('.account-status').textContent).toContain(
+          'Kód z\u00a0aplikace je zapnutý.',
+        );
         expect(card.values()).toEqual([
           'jana@example.cz',
           'Nastavené',
@@ -506,7 +508,7 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(
         card.row('Dvoufaktorové ověření').querySelector('.account-hint')?.textContent,
       ).toContain(
-        'Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete kód z aplikace a',
+        'Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete kód z\u00a0aplikace a',
       );
     });
   });
@@ -527,7 +529,7 @@ describe('Given the sign-in and security card of the details page', () => {
     it('then the password field has the focus and the form says the password will do', () => {
       expect(document.activeElement).toBe(card.element('#account-second-factor-off-password'));
       expect(card.element('.account-form-intro').textContent).toContain(
-        'K přihlášení pak bude stačit heslo.',
+        'K\u00a0přihlášení pak bude stačit heslo.',
       );
     });
 
@@ -545,7 +547,9 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.settle();
 
       expect(card.element('.account-form')).toBeNull();
-      expect(card.element('.account-status').textContent).toContain('Kód z aplikace jsme vypnuli.');
+      expect(card.element('.account-status').textContent).toContain(
+        'Kód z\u00a0aplikace jsme vypnuli.',
+      );
       expect(card.actions()).toEqual([
         'Změnit e-mail',
         'Změnit heslo',
@@ -850,7 +854,9 @@ describe('Given the sign-in and security card of the details page', () => {
 
     it('then the current password field has the focus and the new one carries the hint', () => {
       expect(document.activeElement).toBe(card.element('#account-current-password'));
-      expect(card.element('#account-new-password-hint').textContent).toContain('Alespoň 12 znaků.');
+      expect(card.element('#account-new-password-hint').textContent).toContain(
+        'Alespoň 12\u00a0znaků.',
+      );
     });
 
     it('and the new passwords differ, then nothing is sent and the form says so', async () => {
@@ -1030,7 +1036,7 @@ describe('Given the sign-in and security card of a donor without a password', ()
     await card.clickButton('Vypnout dvoufaktorové ověření');
 
     expect(card.element('.account-form-intro').textContent).toContain(
-      'Při obnově přístupu odkazem z e-mailu pak kód z aplikace chtít nebudeme.',
+      'Při obnově přístupu odkazem z\u00a0e-mailu pak kód z\u00a0aplikace chtít nebudeme.',
     );
     expect(card.element('.account-form').textContent).not.toContain('bude stačit heslo');
   });
@@ -1040,7 +1046,7 @@ describe('Given the sign-in and security card of a donor without a password', ()
     await card.clickButton('Změnit e-mail');
     expect(card.element('#account-email-password')).toBeNull();
     expect(card.element('.account-form').textContent).toContain(
-      'jedním z vašich přístupových klíčů',
+      'jedním z\u00a0vašich přístupových klíčů',
     );
     await card.fillIn('#account-new-email', 'jana.nova@example.cz');
 

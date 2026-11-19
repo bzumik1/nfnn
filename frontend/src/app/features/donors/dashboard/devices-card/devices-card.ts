@@ -161,7 +161,7 @@ export class DevicesCard {
         this.devices.update((list) => (list ?? []).filter((device) => device.current));
         this.signedOut.set(
           this.auth.isAdmin()
-            ? $localize`:@@donor.account.devices.othersSignedOutAdmin:Ostatní zařízení jsou odhlášená. Připojené aplikace zůstávají připojené; odpojíte je v kartě „Připojené aplikace“.`
+            ? $localize`:@@donor.account.devices.othersSignedOutAdmin:Ostatní zařízení jsou odhlášená. Připojené aplikace zůstávají připojené; odpojíte je v\u00a0kartě „Připojené aplikace“.`
             : $localize`:@@donor.account.devices.othersSignedOut:Ostatní zařízení jsou odhlášená.`,
         );
         this.focusAfterRender(() => this.status().nativeElement);
