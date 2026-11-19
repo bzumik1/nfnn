@@ -92,6 +92,38 @@ const REVEALING_STORIES = ['.year-head', '.grid-item', '.year-all', 'app-donate-
 
 const REVEALING_ABOUT = ['.board-title', '.signer', 'app-donate-band'];
 
+const REVEALING_NEWS = ['.older .section-title', '.older .grid-item', '.pages', 'app-donate-band'];
+
+function article(index: number): Record<string, unknown> {
+  return {
+    id: `0199f3e0-0000-7000-8000-0000000d${String(index).padStart(4, '0')}`,
+    slug: `aktualita-${index}`,
+    title: `Aktualita ${index}`,
+    tag: 'Projekt',
+    perex: `Krátce o aktualitě ${index}.`,
+    body: 'Text aktuality.',
+    coverImage: {
+      id: IMAGE_ID,
+      url: `/api/content/media/${IMAGE_ID}`,
+      alt: null,
+      focalPoint: null,
+    },
+    signer: null,
+    publishedOn: `2026-10-${String(28 - index).padStart(2, '0')}`,
+    createdAt: '2026-10-01T09:00:00Z',
+    updatedAt: '2026-10-01T09:00:00Z',
+  };
+}
+
+async function publishedNews(page: Page): Promise<void> {
+  const items = Array.from({ length: 7 }, (_, index) => article(index + 1));
+  await page.route(
+    (url) => url.pathname === '/api/content/news',
+    (route) =>
+      route.fulfill({ json: { items, page: 0, size: 10, total: items.length, hasMore: false } }),
+  );
+}
+
 test.describe('Given a visitor on a computer', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
@@ -202,6 +234,60 @@ test.describe('Given a visitor on a computer', () => {
   });
 });
 
+test.describe('Given a visitor on a computer opening Aktuality', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await publishedStories(page);
+    await publishedNews(page);
+  });
+
+  test('when Aktuality opens, then nothing in the first window waits, the older news and the Přispět band below wait, and each moves in when scrolled to', async ({
+    page,
+  }) => {
+    await page.goto('/aktuality');
+    await expect(page.locator('app-news-card').first()).toBeAttached();
+
+    expect(await revealingInFirstWindow(page)).toEqual([]);
+    await expect(page.locator('app-featured-news')).not.toHaveClass(/motion-reveal/);
+    expect(await waiting(page.locator('.older .grid-item').last())).toBe(true);
+    expect(await waiting(page.locator('app-donate-band'))).toBe(true);
+    const others = await page.evaluate(
+      (selectors) =>
+        [...document.querySelectorAll('.motion-reveal')].filter(
+          (element) => !selectors.some((selector) => element.matches(selector)),
+        ).length,
+      REVEALING_NEWS,
+    );
+    expect(others).toBe(0);
+
+    await scrollToEnd(page);
+
+    await settled(page);
+  });
+
+  test('when the pointer rests on a news card and when the keyboard focuses its link, then the card is lifted the same way', async ({
+    page,
+  }) => {
+    await page.goto('/aktuality');
+    const card = page.locator('app-news-card').first();
+    await card.scrollIntoViewIfNeeded();
+    await expect(page.locator('.older .grid-item').first()).not.toHaveClass(/motion-reveal/);
+    const resting = await liftAfterMotion(card);
+
+    await card.locator('.news-title').hover();
+    const hovered = await liftAfterMotion(card);
+    expect(hovered).not.toBe(resting);
+    await page.mouse.move(0, 0);
+    expect(await liftAfterMotion(card)).toBe(resting);
+
+    await card.getByRole('link', { name: 'Aktualita 2' }).focus();
+
+    expect(await liftAfterMotion(card)).toBe(hovered);
+  });
+});
+
 async function watchContactIntro(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const seen = window as unknown as { contactIntroHidden: boolean };
@@ -262,6 +348,7 @@ test.describe('Given a visitor on a computer who asks for less motion', () => {
   for (const [name, path, ready] of [
     ['Pomáháme', '/projekty', '.grid-item'],
     ['O nás', '/o-nas', '.signer'],
+    ['Aktuality', '/aktuality', '.story'],
   ] as const) {
     test(`when ${name} opens, then nothing waits hidden`, async ({ page }) => {
       await page.goto(path);

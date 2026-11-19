@@ -64,6 +64,8 @@
         <app-pdf-progress
           class="receipt-saved"
           [progress]="donations.yearlyProgress(year)"
+          cancelOf="přípravu potvrzení za rok {{ year }}"
+          i18n-cancelOf="@@donor.dashboard.receipt.cancelOfYear"
           (cancelled)="donations.cancelYearlyReceipt(year)"
         />
       </div>

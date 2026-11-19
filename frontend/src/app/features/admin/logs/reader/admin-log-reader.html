@@ -44,6 +44,7 @@
         <div
           class="ui-segmented"
           appRadioGroup
+          [appSegmentThumb]="['all', 'warnings', 'errors'].indexOf(filter())"
           aria-label="Které záznamy ukázat"
           i18n-aria-label="@@admin.logs.reader.filter.label"
         >
@@ -83,6 +84,7 @@
           >
             Chyby
           </button>
+          <span class="ui-segmented__thumb" aria-hidden="true"></span>
         </div>
       }
       @if (browserErrors) {

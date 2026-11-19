@@ -2,6 +2,14 @@ import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { browserEntries, siteSteps, stepBack } from './app-history';
 import { administrator, mockDonorApi, problem, session, signIn } from './donor-session';
+import {
+  highlightColours,
+  jumpsOfTheEdges,
+  segmentLayouts,
+  themeWeights,
+  thumbEdgesWhile,
+  withoutWeight,
+} from './segmented';
 
 const PAYMENTS = '/api/admin/donations/payments';
 const DONORS = '/api/admin/donations/donors';
@@ -473,6 +481,78 @@ test.describe('Given an administrator on the payments page on a wide screen', ()
 
     await expect(page.locator('table tbody tr')).toHaveCount(1);
   });
+
+  for (const width of [1280, 390]) {
+    test(`when they switch to the paired payments ${width} px wide, then the chosen label turns semibold and the other regular while no segment or label moves`, async ({
+      page,
+    }) => {
+      await page.goto('/sprava/platby');
+      await page.setViewportSize({ width, height: 800 });
+      const segments = page.getByRole('group', { name: 'Zobrazit' }).getByRole('button');
+      await expect(segments.first()).toContainText('(1)');
+      const weights = await themeWeights(segments);
+      const before = await segmentLayouts(segments);
+
+      await segments.nth(1).click();
+
+      await expect(segments.nth(1)).toHaveAttribute('aria-pressed', 'true');
+      await expect(segments.first()).toContainText('(1)');
+      const after = await segmentLayouts(segments);
+      expect(before.map((segment) => segment.weight)).toEqual([weights.semibold, weights.regular]);
+      expect(after.map((segment) => segment.weight)).toEqual([weights.regular, weights.semibold]);
+      expect(withoutWeight(after)).toEqual(withoutWeight(before));
+    });
+  }
+
+  test('when they switch between the two choices of different widths and back, then both edges of the thumb glide there without a jump, from the first frame on', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/platby');
+    const segments = page.getByRole('group', { name: 'Zobrazit' }).getByRole('button');
+    const thumb = page.locator('.admin-tabs > .ui-segmented__thumb');
+    await expect(segments.first()).toContainText('(1)');
+    await expect(thumb).toBeVisible();
+
+    const toPaired = await thumbEdgesWhile(thumb, () => segments.nth(1).click());
+    expect(jumpsOfTheEdges(toPaired.start, toPaired.frames)).toEqual([]);
+
+    const back = await thumbEdgesWhile(thumb, () => segments.first().click());
+    expect(jumpsOfTheEdges(back.start, back.frames)).toEqual([]);
+  });
+
+  test('when the system forces its own colours, then the chosen choice is drawn in Highlight with HighlightText', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await page.goto('/sprava/platby');
+    const chosen = page.getByRole('group', { name: 'Zobrazit' }).getByRole('button').first();
+    await expect(chosen).toHaveAttribute('aria-pressed', 'true');
+
+    const highlight = await highlightColours(chosen);
+    await expect(chosen).toHaveCSS('background-color', highlight.background);
+    await expect(chosen).toHaveCSS('color', highlight.text);
+  });
+
+  for (const width of [1280, 390]) {
+    test(`when they open the payments ${width} px wide, then each choice of what to show keeps its label on one line`, async ({
+      page,
+    }) => {
+      await page.goto('/sprava/platby');
+      await page.setViewportSize({ width, height: 800 });
+      const choices = page.getByRole('group', { name: 'Zobrazit' }).getByRole('button');
+      await expect(choices.first()).toContainText('(1)');
+
+      const lines = await choices.evaluateAll((buttons) =>
+        buttons.map((button) => {
+          const range = document.createRange();
+          range.selectNodeContents(button);
+          return new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)))
+            .size;
+        }),
+      );
+      expect(lines).toEqual([1, 1]);
+    });
+  }
 });
 
 test.describe('Given an administrator with a 1 Kč account verification waiting for a donor', () => {

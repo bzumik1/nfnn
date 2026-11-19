@@ -1,4 +1,4 @@
-const LIVE_ONLY_ATTRIBUTES = ['name', 'autofocus', 'for', 'form'];
+const LIVE_ONLY_ATTRIBUTES = ['name', 'autofocus', 'for', 'form', 'loading'];
 const LEFT_OUT = 'iframe, video, audio, object, embed, dialog';
 
 export function stillCopyOf(page: HTMLElement): HTMLElement {
@@ -10,5 +10,6 @@ export function stillCopyOf(page: HTMLElement): HTMLElement {
     }
     LIVE_ONLY_ATTRIBUTES.forEach((attribute) => element.removeAttribute(attribute));
   });
+  copy.querySelectorAll('img').forEach((image) => image.setAttribute('decoding', 'sync'));
   return copy;
 }

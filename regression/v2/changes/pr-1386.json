@@ -1,0 +1,50 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/login-dialog/segment-thumb.spec.ts > Given a choice of two segments side by side > when the second is selected, then the thumb takes its width at once and moves by its own width",
+    "replacement": "src/app/shared/ui/segment-thumb/segment-thumb.spec.ts > Given a choice of two segments side by side > when the second is selected, then the thumb takes its width at once and moves by its own width",
+    "reason": "#1214: every segmented choice takes the sign-in dialog's look as .ui-segmented, so SegmentThumb moves from the sign-in dialog to shared/ui/segment-thumb and its spec moves with it, unchanged in what it proves",
+    "contract": "docs/frontend-overview.md, Motion (Posuvník výběru) and the _form block .ui-segmented"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/login-dialog/segment-thumb.spec.ts > Given a choice of two segments side by side > when the first is selected, then the thumb rests at the start",
+    "replacement": "src/app/shared/ui/segment-thumb/segment-thumb.spec.ts > Given a choice of two segments side by side > when the first is selected, then the thumb rests at the start",
+    "reason": "#1214: every segmented choice takes the sign-in dialog's look as .ui-segmented, so SegmentThumb moves from the sign-in dialog to shared/ui/segment-thumb and its spec moves with it, unchanged in what it proves",
+    "contract": "docs/frontend-overview.md, Motion (Posuvník výběru) and the _form block .ui-segmented"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/login-dialog/segment-thumb.spec.ts > Given a choice whose segments wrapped onto two rows > when one is selected, then the thumb stays out and the segment shows the choice itself",
+    "replacement": "src/app/shared/ui/segment-thumb/segment-thumb.spec.ts > Given a choice whose segments wrapped onto two rows > when one is selected, then the thumb stays out and the segment shows the choice itself",
+    "reason": "#1214: every segmented choice takes the sign-in dialog's look as .ui-segmented, so SegmentThumb moves from the sign-in dialog to shared/ui/segment-thumb and its spec moves with it, unchanged in what it proves",
+    "contract": "docs/frontend-overview.md, Motion (Posuvník výběru) and the _form block .ui-segmented"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/login-dialog/segment-thumb.spec.ts > Given a choice that is not laid out yet > when one is selected, then the thumb stays out",
+    "replacement": "src/app/shared/ui/segment-thumb/segment-thumb.spec.ts > Given a choice that is not laid out yet > when one is selected, then the thumb stays out",
+    "reason": "#1214: every segmented choice takes the sign-in dialog's look as .ui-segmented, so SegmentThumb moves from the sign-in dialog to shared/ui/segment-thumb and its spec moves with it, unchanged in what it proves",
+    "contract": "docs/frontend-overview.md, Motion (Posuvník výběru) and the _form block .ui-segmented"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/login-dialog/segment-thumb.spec.ts > Given a thumb gliding to the newly selected segment > when the choice widens and the thumb keeps its share of it, then the thumb keeps gliding",
+    "replacement": "src/app/shared/ui/segment-thumb/segment-thumb.spec.ts > Given a thumb gliding to the newly selected segment > when the choice widens and the thumb keeps its share of it, then the thumb keeps gliding",
+    "reason": "#1214: every segmented choice takes the sign-in dialog's look as .ui-segmented, so SegmentThumb moves from the sign-in dialog to shared/ui/segment-thumb and its spec moves with it, unchanged in what it proves",
+    "contract": "docs/frontend-overview.md, Motion (Posuvník výběru) and the _form block .ui-segmented"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/login-dialog/segment-thumb.spec.ts > Given a thumb gliding to the newly selected segment > when the segments wrap onto two rows, then the thumb stops gliding and steps out",
+    "replacement": "src/app/shared/ui/segment-thumb/segment-thumb.spec.ts > Given a thumb gliding to the newly selected segment > when the segments wrap onto two rows, then the thumb stops gliding and steps out",
+    "reason": "#1214: every segmented choice takes the sign-in dialog's look as .ui-segmented, so SegmentThumb moves from the sign-in dialog to shared/ui/segment-thumb and its spec moves with it, unchanged in what it proves",
+    "contract": "docs/frontend-overview.md, Motion (Posuvník výběru) and the _form block .ui-segmented"
+  }
+]

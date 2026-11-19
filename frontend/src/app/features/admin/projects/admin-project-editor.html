@@ -45,6 +45,7 @@
       <div
         class="ui-segmented editor-mode"
         role="group"
+        [appSegmentThumb]="previewing() ? 1 : 0"
         aria-label="Zobrazení editoru"
         i18n-aria-label="@@admin.projectEditor.mode.label"
       >
@@ -66,6 +67,7 @@
         >
           Náhled
         </button>
+        <span class="ui-segmented__thumb" aria-hidden="true"></span>
       </div>
 
       <form

@@ -141,7 +141,7 @@ export class AccountCard {
   protected readonly currentPasswordMessages = {
     required: $localize`:@@donor.account.currentPassword.required:Zadejte prosím své současné heslo.`,
   };
-  protected readonly newPasswordHint = $localize`:@@donor.account.newPassword.hint:Alespoň 12 znaků. Klidně celá věta, která se vám dobře pamatuje.`;
+  protected readonly newPasswordHint = $localize`:@@donor.account.newPassword.hint:Alespoň 12\u00a0znaků. Klidně celá věta, která se vám dobře pamatuje.`;
   protected readonly newPasswordMessages = {
     required: $localize`:@@donor.form.newPassword.required:Zvolte si prosím heslo.`,
     minlength: $localize`:@@donor.form.newPassword.tooShort:Heslo musí mít alespoň 12 znaků.`,
@@ -367,7 +367,7 @@ export class AccountCard {
       error: (failure: unknown) =>
         this.fail(
           failure,
-          $localize`:@@donor.account.secondFactor.error.disable:Kód z aplikace se nepodařilo vypnout. Zkuste to prosím znovu.`,
+          $localize`:@@donor.account.secondFactor.error.disable:Kód z\u00a0aplikace se nepodařilo vypnout. Zkuste to prosím znovu.`,
         ),
     });
   }
@@ -422,7 +422,7 @@ export class AccountCard {
     this.saving.set(false);
     if (failure instanceof PasskeyCeremonyError) {
       this.error.set(
-        $localize`:@@donor.account.passkeyConfirmation.failed:Změnu se nepodařilo potvrdit přístupovým klíčem. Zkuste to prosím znovu a v okně zařízení zvolte klíč k tomuto účtu.`,
+        $localize`:@@donor.account.passkeyConfirmation.failed:Změnu se nepodařilo potvrdit přístupovým klíčem. Zkuste to prosím znovu a\u00a0v\u00a0okně zařízení zvolte klíč k\u00a0tomuto účtu.`,
       );
       return;
     }

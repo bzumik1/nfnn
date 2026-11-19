@@ -4,7 +4,7 @@
       <div
         #bar
         class="ui-notice ui-notice--floating first-sync first-sync--saving"
-        animate.leave="ui-notice--leaving"
+        appLeavingNotice
       >
         <p class="ui-notice__text" i18n="@@donor.dashboard.firstSync.saving">
           Ukládáme přehled vašich darů do tohoto zařízení…
@@ -12,13 +12,9 @@
       </div>
     }
     @case ('stored') {
-      <div
-        #bar
-        class="ui-notice ui-notice--status ui-notice--floating first-sync"
-        animate.leave="ui-notice--leaving"
-      >
+      <div #bar class="ui-notice ui-notice--status ui-notice--floating first-sync" appLeavingNotice>
         <p class="ui-notice__text" i18n="@@donor.dashboard.firstSync.stored">
-          Přehled vašich darů je uložený v tomto zařízení.
+          Přehled vašich darů je uložený v&nbsp;tomto zařízení.
         </p>
       </div>
     }
@@ -26,7 +22,7 @@
       <div
         #bar
         class="ui-notice ui-notice--warning ui-notice--floating first-sync"
-        animate.leave="ui-notice--leaving"
+        appLeavingNotice
       >
         <p class="ui-notice__text" i18n="@@donor.dashboard.firstSync.failed">
           Přehled vašich darů se do tohoto zařízení teď nepodařilo uložit. Online vše funguje dál.

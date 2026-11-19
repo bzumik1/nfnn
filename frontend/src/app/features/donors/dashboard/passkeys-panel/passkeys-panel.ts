@@ -225,7 +225,7 @@ export class PasskeysPanel {
           this.passkeys.update((list) => [...(list ?? []), passkey]);
           this.status.set(
             first && this.hasPassword()
-              ? $localize`:@@donor.passkeys.addedFirst:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla; heslo teď můžete u řádku „Heslo“ i odebrat.`
+              ? $localize`:@@donor.passkeys.addedFirst:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla; heslo teď můžete u\u00a0řádku „Heslo“ i\u00a0odebrat.`
               : $localize`:@@donor.passkeys.added:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla.`,
           );
           this.closeForm();
@@ -323,7 +323,7 @@ export class PasskeysPanel {
         this.confirming.set(null);
         this.passkeys.update((list) => (list ?? []).filter((other) => other.id !== passkey.id));
         this.status.set(
-          $localize`:@@donor.passkeys.removed:Přístupový klíč ${passkey.name}:name: je odebraný. Tímto klíčem se už nepřihlásíte; v zařízení ho můžete smazat.`,
+          $localize`:@@donor.passkeys.removed:Přístupový klíč ${passkey.name}:name: je odebraný. Tímto klíčem se už nepřihlásíte; v\u00a0zařízení ho můžete smazat.`,
         );
         this.changes.changed();
       },
@@ -391,12 +391,12 @@ export class PasskeysPanel {
 function ceremonyMessage(reason: PasskeyFailure): string {
   switch (reason) {
     case 'already-registered':
-      return $localize`:@@donor.passkeys.error.alreadyRegistered:Toto zařízení už přístupový klíč k vašemu účtu má. Druhý není potřeba.`;
+      return $localize`:@@donor.passkeys.error.alreadyRegistered:Toto zařízení už přístupový klíč k\u00a0vašemu účtu má. Druhý není potřeba.`;
     case 'unsupported':
       return $localize`:@@donor.passkeys.error.unsupported:Tento prohlížeč přístupové klíče nepodporuje.`;
     case 'cancelled':
       return $localize`:@@donor.passkeys.error.cancelled:Klíč se nevytvořil, zařízení ho nepotvrdilo. Zkuste to prosím znovu.`;
     default:
-      return $localize`:@@donor.passkeys.error.failed:Klíč se nevytvořil. Zkuste to prosím znovu, případně v jiném prohlížeči.`;
+      return $localize`:@@donor.passkeys.error.failed:Klíč se nevytvořil. Zkuste to prosím znovu, případně v\u00a0jiném prohlížeči.`;
   }
 }

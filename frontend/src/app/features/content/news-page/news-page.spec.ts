@@ -9,7 +9,7 @@ import {
   provideHttpClientTesting,
   TestRequest,
 } from '@angular/common/http/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   ActivatedRoute,
@@ -30,12 +30,15 @@ import { connectivityInterceptor } from '../../../core/connectivity/connectivity
 import { keptAnswerRefreshInterceptor } from '../../../core/connectivity/kept-answer-refresh';
 import { serviceWorkerBypassInterceptor } from '../../../core/updates/service-worker-bypass';
 import { KeptTabPages } from '../../../core/navigation/kept-tab-pages';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 @Component({ template: '' })
 class OtherTab {}
 
 const NEWS = (page: number) => `/api/content/news?page=${page}&size=10`;
 const PROJECTS = (page: number) => `/api/content/projects?page=${page}&size=50`;
+
+const compactLayout = signal(false);
 
 async function setUp(
   query: Record<string, string> | Observable<ParamMap> = {},
@@ -47,6 +50,7 @@ async function setUp(
       provideHttpClient(withInterceptors(interceptors)),
       provideHttpClientTesting(),
       provideRouter([]),
+      { provide: CompactLayout, useValue: { isCompact: compactLayout } },
       {
         provide: ActivatedRoute,
         useValue: {
@@ -145,6 +149,7 @@ describe('Given a visitor opening Aktuality', () => {
   let root: HTMLElement;
 
   beforeEach(() => {
+    compactLayout.set(false);
     Object.defineProperty(navigator, 'share', {
       value: () => Promise.resolve(),
       configurable: true,
@@ -152,6 +157,7 @@ describe('Given a visitor opening Aktuality', () => {
   });
 
   afterEach(() => {
+    compactLayout.set(false);
     answerHome(http);
     http.verify();
     Reflect.deleteProperty(navigator, 'share');
@@ -171,7 +177,7 @@ describe('Given a visitor opening Aktuality', () => {
     it('then the page is named and the newest news leads it, large, with its signer', () => {
       expect(text(root, 'h1')).toBe('Co je u nás nového');
       expect(root.querySelector('.ui-intro__lead')?.textContent?.trim()).toBe(
-        'Zprávy o\u00a0tom, komu jsme pomohli, co chystáme a\u00a0jak naložíme s\u00a0vašimi dary.',
+        'Píšeme o\u00a0tom, komu jsme pomohli, co chystáme a\u00a0jak naložíme s\u00a0vašimi dary.',
       );
       const featured = root.querySelector('.featured') as HTMLElement;
       expect(text(featured, 'h2')).toBe('Ohlédnutí za rokem 2025');
@@ -225,10 +231,20 @@ describe('Given a visitor opening Aktuality', () => {
     });
 
     it('then the heading of the older news and each card move in one after another, at most six steps apart', () => {
+      compactLayout.set(true);
+      fixture.detectChanges();
+
       expect(revealOrder(root.querySelector('.older h2'))).toBe('0');
       expect(
         Array.from(root.querySelectorAll('.older .grid-item')).map((card) => revealOrder(card)),
       ).toEqual(['1', '2']);
+    });
+
+    it('then on a computer the heading of the older news and each row of three cards move in one after another', () => {
+      expect(revealOrder(root.querySelector('.older h2'))).toBe('0');
+      expect(
+        Array.from(root.querySelectorAll('.older .grid-item')).map((card) => revealOrder(card)),
+      ).toEqual(['1', '1']);
     });
 
     it('then the leading news and the stories do not move in with the older news', () => {
@@ -250,6 +266,23 @@ describe('Given a visitor opening Aktuality', () => {
     it('then a single page offers no paging', () => {
       expect(root.querySelector('nav.pages')).toBeNull();
     });
+  });
+
+  it('when the older news stand on a phone, then the heading and each card move in one after another, at most six steps apart', async () => {
+    compactLayout.set(true);
+    ({ fixture, http } = await setUp());
+    root = fixture.nativeElement;
+    const older = [2, 3, 4, 5, 6, 7, 8, 9].map((index) =>
+      newsArticle({ id: `n${index}`, slug: `zprava-${index}`, title: `Zpráva ${index}` }),
+    );
+    http.expectOne(NEWS(0)).flush(page([lookBack2025, ...older], 0, 9));
+    http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
+    await settle(fixture);
+
+    expect(revealOrder(root.querySelector('.older h2'))).toBe('0');
+    expect(
+      Array.from(root.querySelectorAll('.older .grid-item')).map((card) => revealOrder(card)),
+    ).toEqual(['1', '2', '3', '4', '5', '6', '6', '6']);
   });
 
   it('when the projects come on more pages, then the stories count every project of the newest year', async () => {
@@ -484,7 +517,8 @@ describe('Given a visitor opening Aktuality', () => {
         root.querySelector('nav.pages')!.compareDocumentPosition(band) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
-      expect(text(band, 'h2')).toBe('Další ohlédnutí napíšeme i díky vám');
+      expect(text(band, 'h2')).toBe('O další pomoci napíšeme i díky vám');
+      expect(band.querySelector('.band-container--wide')).not.toBeNull();
       expect(text(band, '.band-lead')).toBe(
         'Pravidelný příspěvek nám pomáhá plánovat pomoc na celý rok.',
       );
@@ -506,6 +540,7 @@ describe('Given a visitor opening Aktuality', () => {
     it('then it shows only that page as cards, without a leading article or stories', () => {
       expect(text(root, '.older h2')).toBe('Aktuality na straně 2');
       expect(root.querySelector('.featured')).toBeNull();
+      expect(text(root, '.older h2.visually-hidden')).toBe('Aktuality na straně 2');
       expect(root.querySelector('.stories')).toBeNull();
       expect(texts(root, '.older h3')).toEqual([
         'Ohlédnutí za rokem 2024',
@@ -541,25 +576,27 @@ describe('Given a visitor opening Aktuality', () => {
     expect(fixture.nativeElement.querySelector('nav.pages')).toBeNull();
   });
 
-  it('when nothing is published yet, then the page says so and leads home', async () => {
+  it('when nothing is published yet, then a card in place of the leading news says so and leads home', async () => {
     ({ fixture, http } = await setUp());
     root = fixture.nativeElement;
     http.expectOne(NEWS(0)).flush(page([], 0, 0));
     http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
     await settle(fixture);
 
-    expect(text(root, '.list-state')).toBe('Zatím tu žádná aktualita není.');
-    expect(link(root, 'Zpět na úvodní stránku')?.getAttribute('href')).toBe('/');
+    const notice = root.querySelector('.news-notice.ui-notice') as HTMLElement;
+    expect(text(notice, '.ui-notice__text')).toBe('Zatím tu žádná aktualita není.');
+    expect(link(notice, 'Zpět na úvodní stránku')?.getAttribute('href')).toBe('/');
   });
 
-  it('when a page past the last one is asked for, then the page says it does not exist and leads to the first one', async () => {
+  it('when a page past the last one is asked for, then a card says the page does not exist and leads to the first one', async () => {
     ({ fixture, http } = await setUp({ strana: '99' }));
     root = fixture.nativeElement;
     http.expectOne(NEWS(98)).flush(page([], 98, 12));
     await settle(fixture);
 
-    expect(text(root, '.list-state')).toBe('Tato strana neexistuje.');
-    expect(link(root, 'Na první stranu')?.getAttribute('href')).toBe('/aktuality');
+    const notice = root.querySelector('.news-notice.ui-notice') as HTMLElement;
+    expect(text(notice, '.ui-notice__text')).toBe('Tato strana neexistuje.');
+    expect(link(notice, 'Na první stranu')?.getAttribute('href')).toBe('/aktuality');
   });
 
   describe.each([
@@ -655,7 +692,7 @@ describe('Given a visitor opening Aktuality', () => {
       await wait(0);
 
       expect(root.querySelector('.list-state-loading')).toBeNull();
-      expect(text(root, '.list-state')).toBe('Zatím tu žádná aktualita není.');
+      expect(text(root, '.news-notice .ui-notice__text')).toBe('Zatím tu žádná aktualita není.');
     });
 
     it('and they fail, then the alert is not held back like the loading text', async () => {
@@ -664,7 +701,9 @@ describe('Given a visitor opening Aktuality', () => {
       http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
       await wait(0);
 
-      expect(text(root, '[role="alert"]')).toBe('Aktuality se nepodařilo načíst.');
+      expect(text(root, '[role="alert"] .ui-notice__text')).toBe(
+        'Aktuality se nepodařilo načíst. Zkuste to znovu.',
+      );
       await wait(1000);
       expect(root.querySelector('.list-state-loading')).toBeNull();
     });
@@ -682,7 +721,7 @@ describe('Given a visitor opening Aktuality', () => {
     });
   });
 
-  it('when the news fail, then an alert offers to try again and the retry loads them', async () => {
+  it('when the news fail, then an alert card offers to try again and the retry loads them and says so', async () => {
     ({ fixture, http } = await setUp());
     root = fixture.nativeElement;
     document.body.appendChild(root);
@@ -691,8 +730,12 @@ describe('Given a visitor opening Aktuality', () => {
     http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
     await settle(fixture);
 
-    expect(text(root, '[role="alert"]')).toBe('Aktuality se nepodařilo načíst.');
-    const retry = root.querySelector('.retry') as HTMLButtonElement;
+    const alert = root.querySelector('.news-notice.ui-notice--alert[role="alert"]') as HTMLElement;
+    expect(text(alert, '.ui-notice__text')).toBe(
+      'Aktuality se nepodařilo načíst. Zkuste to znovu.',
+    );
+    const retry = alert.querySelector('button.retry') as HTMLButtonElement;
+    expect(text(alert, 'button')).toBe('Zkusit znovu');
     retry.focus();
     expect(document.activeElement).toBe(retry);
     retry.click();
@@ -706,6 +749,7 @@ describe('Given a visitor opening Aktuality', () => {
     http.expectNone(PROJECTS(0));
     expect(root.querySelector('[role="alert"]')).toBeNull();
     expect(text(root, '.featured h2')).toBe('Ohlédnutí za rokem 2025');
+    expect(text(root, '.list-state[role="status"]')).toBe('Aktuality jsou načtené.');
     expect(document.activeElement).toBe(link(root, 'Číst celé Ohlédnutí za rokem 2025'));
     root.remove();
   });
@@ -741,6 +785,8 @@ describe('Given a visitor opening Aktuality', () => {
 
     expect(document.activeElement).toBe(root.querySelector('.list-state'));
     expect(text(root, '.list-state')).toBe('Zatím tu žádná aktualita není.');
+    expect(root.querySelector('.list-state span')?.classList).toContain('visually-hidden');
+    expect(text(root, '.news-notice .ui-notice__text')).toBe('Zatím tu žádná aktualita není.');
     root.remove();
   });
 
@@ -769,9 +815,11 @@ describe('Given a visitor opening Aktuality', () => {
     http.expectOne(PROJECTS(0)).flush(null, { status: 0, statusText: 'Unknown Error' });
     await settle(fixture);
 
-    expect(text(root, '[role="alert"]')).toBe(
+    const alert = root.querySelector('.news-notice.ui-notice--alert[role="alert"]') as HTMLElement;
+    expect(text(alert, '.ui-notice__text')).toBe(
       'Bez připojení se aktuality nenačetly. Až budete online, zkuste to znovu.',
     );
+    expect(text(alert, 'button')).toBe('Zkusit znovu');
   });
 });
 

@@ -2650,8 +2650,8 @@ describe('Given a signed-in donor in the donor area', () => {
 
       const titles = [...document.querySelectorAll<HTMLElement>('.ui-card > h2')];
       expect(titles.map((title) => title.textContent?.trim())).toEqual([
-        'Roční potvrzení o darech',
-        'Potvrzení k jednotlivému daru',
+        'Roční potvrzení o\u00a0darech',
+        'Potvrzení k\u00a0jednotlivému daru',
         'Ověřit potvrzení',
       ]);
       for (const title of titles) {
@@ -2821,6 +2821,9 @@ describe('Given a signed-in donor in the donor area', () => {
 
         await vi.advanceTimersByTimeAsync(8000);
         await settle();
+        expect(
+          normalized(yearRow(2025).querySelector('.pdf-progress__cancel')?.textContent ?? ''),
+        ).toBe('Zrušit přípravu potvrzení za rok 2025');
         (yearRow(2025).querySelector('.pdf-progress__cancel') as HTMLButtonElement).click();
         await settle();
 
@@ -2862,7 +2865,7 @@ describe('Given a signed-in donor in the donor area', () => {
         await settleBlobFailure();
 
         expect(element('.yearly-card [role="alert"]')?.textContent).toContain(
-          'PDF se v prohlížeči',
+          'PDF se v\u00a0prohlížeči',
         );
         expect(pdfButton(2025).disabled).toBe(false);
         expect(pdfButton(2025).getAttribute('aria-disabled')).toBeNull();
@@ -3498,6 +3501,25 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
       expect(normalized(row.querySelector('.receipt-saved')?.textContent ?? '')).toBe(
         'Potvrzení potvrzeni-o-daru-2026-000017.pdf je stažené. Najdete ho ve stažených souborech.',
+      );
+    });
+
+    it('then a gift receipt that takes longer than eight seconds offers a cancel named by its gift', async () => {
+      vi.useFakeTimers();
+      receiptEnvironment.autoDraw = false;
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const row = root().querySelectorAll<HTMLElement>('.single-card tbody tr')[1];
+      (row.querySelector('.download-btn') as HTMLButtonElement).click();
+      await settle();
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
+      await settle();
+      await vi.advanceTimersByTimeAsync(8000);
+      await settle();
+
+      expect(normalized(row.querySelector('.pdf-progress__cancel')?.textContent ?? '')).toBe(
+        'Zrušit přípravu potvrzení, dar z 10. 1. 2026, 1 000 Kč',
       );
     });
 

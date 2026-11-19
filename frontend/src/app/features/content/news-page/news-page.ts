@@ -10,6 +10,7 @@ import {
   ElementRef,
   inject,
   Injector,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -25,6 +26,7 @@ import { NewsCard } from '../news-card/news-card';
 import { ProjectResponse, ProjectsApi } from '../projects-api';
 import { StoriesOfYear, storiesOfNewestYear, YearStories } from '../year-stories/year-stories';
 import { whenShownAgain } from '../../../core/navigation/kept-tab-pages';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { Reveal } from '../../../shared/ui/reveal/reveal';
 import { NEWS_PAGE_SIZE, PROJECTS_PAGE_SIZE } from '../content-page-sizes';
@@ -33,6 +35,7 @@ export const PAGE_SIZE = NEWS_PAGE_SIZE;
 export { PROJECTS_PAGE_SIZE };
 export const MAX_PROJECT_PAGES = 20;
 export const STORIES_WAIT_MS = 4000;
+const OLDER_NEWS_IN_ROW = 3;
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -56,6 +59,7 @@ export class NewsPage {
   private readonly projectsApi = inject(ProjectsApi);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly compact = inject(CompactLayout).isCompact;
   private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('heading');
   private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
   private readonly listState = viewChild.required<ElementRef<HTMLElement>>('listState');
@@ -71,6 +75,7 @@ export class NewsPage {
   private readonly storiesState = signal<StoriesState>({ kind: 'loading' });
   protected readonly offline = signal(false);
   protected readonly loadingShown = signal(false);
+  protected readonly reloaded = signal(false);
   protected readonly pageNumber = signal(1);
   protected readonly list = signal<NewsList>({ items: [], total: 0 });
   protected readonly bandPhoto = signal<DonateBandPhotoResponse | null>(null);
@@ -81,6 +86,10 @@ export class NewsPage {
       return news;
     }
     return this.pageNumber() === 1 && this.storiesState().kind === 'loading' ? 'loading' : 'ready';
+  });
+  protected readonly settledOnce = linkedSignal<LoadState, boolean>({
+    source: this.state,
+    computation: (state, before) => (before?.value ?? false) || state !== 'loading',
   });
   protected readonly stories = computed(() => {
     const stories = this.storiesState();
@@ -160,8 +169,14 @@ export class NewsPage {
     (firstCard ?? this.listState().nativeElement).focus();
   }
 
+  protected olderRow(index: number): number {
+    return this.compact() ? index : Math.floor(index / OLDER_NEWS_IN_ROW);
+  }
+
   private load(quietly = false): void {
     this.newsLoad.unsubscribe();
+    const retried = this.focusAfterRetry;
+    this.reloaded.set(false);
     if (!quietly) {
       this.newsState.set('loading');
       this.showLoadingAfterDelay();
@@ -170,6 +185,7 @@ export class NewsPage {
       next: (page) => {
         this.list.set({ items: page.items, total: page.total });
         this.newsState.set('ready');
+        this.reloaded.set(retried);
       },
       error: (failure: unknown) => {
         if (quietly && this.newsState() === 'ready') {

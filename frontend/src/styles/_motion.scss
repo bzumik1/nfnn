@@ -40,17 +40,21 @@ $_never: (
 );
 
 $_at-once: 0s;
+$_pressed: (--pressed-tint, filter);
 
 @function _transition($properties, $duration, $ease) {
   $parts: ();
   @each $property in $properties {
     $parts: list.append($parts, $property $duration $ease, $separator: comma);
   }
-  @return list.append(
-    $parts,
-    --pressed-tint var(--duration-base) var(--ease-standard),
-    $separator: comma
-  );
+  @each $pressed in $_pressed {
+    $parts: list.append(
+      $parts,
+      $pressed var(--duration-base) var(--ease-standard),
+      $separator: comma
+    );
+  }
+  @return $parts;
 }
 
 @mixin _tint-at-once($properties, $duration) {
@@ -60,7 +64,10 @@ $_at-once: 0s;
       @each $property in $properties {
         $durations: list.append($durations, $duration, $separator: comma);
       }
-      transition-duration: list.append($durations, $_at-once, $separator: comma);
+      @each $pressed in $_pressed {
+        $durations: list.append($durations, $_at-once, $separator: comma);
+      }
+      transition-duration: $durations;
     }
   }
 }

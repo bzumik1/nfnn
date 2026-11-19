@@ -53,7 +53,7 @@ export const ACCOUNT_ITEMS: readonly AccountItem[] = [
   { path: '/darce/dary', label: $localize`:@@layout.account.gifts:Moje dary`, icon: 'gifts' },
   {
     path: '/darce/potvrzeni',
-    label: $localize`:@@layout.account.receipts:Potvrzení o daru`,
+    label: $localize`:@@layout.account.receipts:Potvrzení o\u00a0daru`,
     icon: 'receipts',
   },
   {
