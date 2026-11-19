@@ -13,15 +13,16 @@ public class AdministratorWriteAuditHooks {
 
     static final Map<String, String> WRITES_WITHOUT_AN_AUDIT_ENTRY = Map.of(
             "POST /api/admin/operations/push/test",
-            "sends a test alert to the administrator's own devices and changes no setting; what its delivery writes (a subscription the push "
-                    + "service calls gone deleted, a failure counted on a device) is the push service's answer, kept the same way for every alert "
-                    + "(security.md lists the test alert beside turning alerts on or off, which are audited, among the browser-only actions; it is "
-                    + "no administrator's change, \"Every administrator's change publishes AdminActionPerformed\")",
+            "sends a test alert to the administrator's own subscribed devices and changes no setting, so it is no administrator's change "
+                    + "(security.md: \"Every administrator's change publishes AdminActionPerformed\"); what its delivery writes (a device the push "
+                    + "service answers 404 or 410 for removed, failuresInARow, lastDeliveredAt) is the push service's answer, written the same way "
+                    + "for every alert (docs/api-contract.md, push/test). Unlike the audited test e-mail (SEND_TEST_EMAIL, #915), whose request "
+                    + "names any host and port, it reaches only the stored subscriptions on the push services' hosts (PushEndpoint)",
             "POST /api/admin/donors/devices/current/unlock",
-            "checks the password and a code, or a passkey, to unlock the administration's copy on this device, as a sign-in checks them; what it "
-                    + "writes is the spent code step and the wrong-code count of SecondFactorCodes, and the copy itself is recorded when the device "
-                    + "stores it (POST /api/admin/donors/devices/current/administration-copy, STORE_ADMINISTRATION_COPY; security.md, Administration: "
-                    + "\"unlocking it on a device and recording a stored copy\")");
+            "checks the password and a code, or a passkey, to unlock the administration's copy on this device, as a sign-in checks them, "
+                    + "and \"changes nothing and ends no session … Nothing is logged or audited\" (docs/api-contract.md, unlock); what it writes is "
+                    + "the spent code step and the wrong-code count of SecondFactorCodes, or the used passkey challenge, and the copy itself is "
+                    + "audited when the device stores it (POST /api/admin/donors/devices/current/administration-copy, STORE_ADMINISTRATION_COPY)");
 
     static final Map<String, StateProbe> WRITES_THAT_MAY_CHANGE_NOTHING = Map.of(
             "POST /api/admin/donations/donors/{id}/receipts",
@@ -36,7 +37,7 @@ public class AdministratorWriteAuditHooks {
             new StateProbe("removing a photo the band no longer shows changes nothing", List.of("content_donate_band", "content_media")),
             "PUT /api/admin/content/media/{id}",
             new StateProbe("placing the focal point a photo already has, or removing one it has not, changes nothing",
-                    List.of("content_media", "content_media_variant")),
+                    List.of("content_media")),
             "PUT /api/admin/content/project-order",
             new StateProbe("choosing the order already chosen changes nothing", List.of("content_project_order")),
             "PUT /api/admin/content/news/{id}/look-back-year",

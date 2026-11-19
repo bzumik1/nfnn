@@ -19,7 +19,7 @@ final class AdministratorWriteAudits {
     private static final Set<String> READS = Set.of("GET", "HEAD", "OPTIONS");
     private static final Pattern UUID_SEGMENT = Pattern.compile("/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?=/|$)");
     private static final Pattern DIGEST_SEGMENT = Pattern.compile("/[0-9a-f]{64}(?=/|$)");
-    private static final Pattern KEY_ID_SEGMENT = Pattern.compile("/[0-9a-f]{8}(?=/|$)");
+    private static final Pattern KEY_ID_SEGMENT = Pattern.compile("/(?=[0-9]*[a-f])[0-9a-f]{8}(?=/|$)");
     private static final Pattern NUMBER_SEGMENT = Pattern.compile("/[0-9]+(?=/|$)");
 
     private AdministratorWriteAudits() {
@@ -29,7 +29,7 @@ final class AdministratorWriteAudits {
 
         String stateIn(JdbcClient jdbc) {
             return tables.stream()
-                    .map(table -> table + "=" + jdbc.sql("select md5(coalesce((select string_agg(row_text, ',' order by row_text) from (select t::text as row_text from "
+                    .map(table -> table + "=" + jdbc.sql("select md5(coalesce((select string_agg(row_digest, ',' order by row_digest) from (select md5(t::text) as row_digest from "
                             + table + " t) stored), ''))").query(String.class).single())
                     .collect(Collectors.joining(";"));
         }
