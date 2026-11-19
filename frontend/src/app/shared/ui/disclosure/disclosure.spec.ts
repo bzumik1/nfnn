@@ -47,6 +47,17 @@ describe('Given a disclosure', () => {
     expect(byId('panel').hasAttribute('inert')).toBe(true);
   });
 
+  it('when it is closed, then it is out of the accessibility tree too, so a screen reader never meets its controls while it closes', () => {
+    expect(byId('panel').getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('when it opens, then it is back in the accessibility tree at once', async () => {
+    fixture.componentInstance.closed.set(false);
+    await settle();
+
+    expect(byId('panel').hasAttribute('aria-hidden')).toBe(false);
+  });
+
   it('when it opens, then it is shown and stops being inert at once, so its content can take the focus', async () => {
     fixture.componentInstance.closed.set(false);
     await settle();
@@ -87,5 +98,6 @@ describe('Given a disclosure', () => {
     await settle();
 
     expect(question.hasAttribute('inert')).toBe(true);
+    expect(question.getAttribute('aria-hidden')).toBe('true');
   });
 });
