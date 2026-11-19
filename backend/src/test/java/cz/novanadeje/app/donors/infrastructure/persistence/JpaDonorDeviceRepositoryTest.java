@@ -16,6 +16,7 @@ import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.EndedDevices;
 import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.RefreshToken;
@@ -93,9 +94,9 @@ class JpaDonorDeviceRepositoryTest {
     @Test
     @DisplayName("Given a device used and then ended, when it is found by id, then its description, times and end survive")
     void should_keep_description_times_and_end_when_found_given_ended_device() {
-        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
-        phone.recordUse(NOW.plusSeconds(600));
-        phone.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.plusSeconds(900));
+        DonorDevice used = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
+        used.recordUse(NOW.plusSeconds(600));
+        DonorDevice phone = EndedDevices.ended(used, DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.plusSeconds(900));
         devices.save(phone);
         flushAndClear();
 
@@ -329,8 +330,8 @@ class JpaDonorDeviceRepositoryTest {
     @DisplayName("Given devices of two donors, one told to delete everything, when one donor's devices are told to delete the administration's copy, then only theirs change and the full order stays")
     void should_change_only_that_donors_devices_when_told_administration_wipe_given_two_donors() {
         DonorDevice told = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.APP, NOW, DeviceStatusSecret.generate());
-        DonorDevice ended = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.APP, NOW, DeviceStatusSecret.generate());
-        ended.end(DeviceSignOutReason.SIGNED_OUT, NOW);
+        DonorDevice ended = EndedDevices.ended(DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.APP, NOW, DeviceStatusSecret.generate()),
+                DeviceSignOutReason.SIGNED_OUT, NOW);
         DonorDevice petrs = DonorDevice.signIn(petr, IPHONE_SAFARI, SessionKind.APP, NOW, DeviceStatusSecret.generate());
         devices.save(told);
         devices.save(ended);

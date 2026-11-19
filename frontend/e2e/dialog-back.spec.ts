@@ -978,3 +978,59 @@ test.describe('Given the sign-in sheet open on a phone', () => {
       .toBeLessThanOrEqual(CANVAS_ROUNDING);
   });
 });
+
+const PHOTO_ID = '0199f3e0-0000-7000-8000-00000000a001';
+const photoArticle = {
+  id: '0199f3e0-0000-7000-8000-00000000c001',
+  slug: 'zahrada-pro-deti',
+  title: 'Zahrada pro děti',
+  tag: 'Projekt',
+  perex: 'Stavíme zahradu, kde si děti budou hrát.',
+  body: 'První odstavec.',
+  coverImage: { id: PHOTO_ID, url: `/api/content/media/${PHOTO_ID}`, alt: 'Děti sázejí stromek' },
+  publishedOn: '2026-10-20',
+  createdAt: '2026-10-19T09:00:00Z',
+  updatedAt: '2026-10-20T07:30:00Z',
+};
+
+test.describe('Given a news article with a photo on a phone', () => {
+  test('when they open the photo with the keyboard and go back, then the viewer fades out and the focus returns to the photo', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === `/api/content/news/${photoArticle.slug}`,
+      (route) => route.fulfill({ json: photoArticle }),
+    );
+    await page.route(
+      (url) => url.pathname.startsWith('/api/content/media/'),
+      (route) =>
+        route.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900"><rect width="1440" height="900" fill="#7aa"/></svg>',
+        }),
+    );
+    await phoneThatAnimates(page);
+    await page.goto(`/aktuality/${photoArticle.slug}`);
+    const photo = page.getByRole('button', { name: 'Zvětšit fotku: Děti sázejí stromek' });
+    await photo.focus();
+    await page.keyboard.press('Enter');
+    const viewer = page.getByRole('dialog', { name: 'Zvětšená fotka' });
+    await expect(viewer).toBeVisible();
+    await expect
+      .poll(() =>
+        viewer.evaluate(
+          (dialog) =>
+            dialog.getAnimations({ subtree: true }).filter((a) => a.playState === 'running').length,
+        ),
+      )
+      .toBe(0);
+
+    await stepBack(page);
+
+    await expect(page.locator('dialog.dialog--leaving')).toBeAttached();
+    await expect(viewer).toHaveCount(0);
+    await expect(photo).toBeFocused();
+    await expect(page).toHaveURL(`/aktuality/${photoArticle.slug}`);
+  });
+});
