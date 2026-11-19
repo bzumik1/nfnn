@@ -56,12 +56,12 @@ class ReportSettingsServiceTest {
     private final MonthlyReportLog reportLog = mock(MonthlyReportLog.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
-    private final ReportSettingsService service = new ReportSettingsService(settings, reportLog, events,
+    private final ReportSettingsService service = new ReportSettingsService(settings, new ReportDefaults("info@nfnn.cz"), reportLog, events,
             new AdminDonationsRows(RowVersionsFixture.canonical(), mock(DonationRepository.class), mock(DonorRecordRepository.class)), clock);
 
     @BeforeEach
     void stubDefaults() {
-        when(settings.current()).thenReturn(DEFAULTS);
+        when(settings.find()).thenReturn(Optional.empty());
         when(settings.lastChangedAt()).thenReturn(Optional.empty());
         when(reportLog.sentReportsNewestFirst()).thenReturn(List.of());
     }
@@ -69,7 +69,7 @@ class ReportSettingsServiceTest {
     @Test
     @DisplayName("Given saved recipients, when the report's recipients are asked for, then they are the saved ones in their order")
     void should_answer_with_the_saved_recipients_when_asked_given_saved_settings() {
-        when(settings.current()).thenReturn(CHANGED);
+        when(settings.find()).thenReturn(Optional.of(CHANGED));
 
         assertThat(service.recipients()).isEqualTo(ReportRecipients.parse(List.of("pavel@example.cz", "jakub@example.cz")));
     }
@@ -89,7 +89,7 @@ class ReportSettingsServiceTest {
     @Test
     @DisplayName("Given September sent and the 5th as the send day, when the view is asked for, then October is next, due on the 5th of November")
     void should_show_next_month_when_viewed_given_previous_month_sent() {
-        when(settings.current()).thenReturn(CHANGED);
+        when(settings.find()).thenReturn(Optional.of(CHANGED));
         when(settings.lastChangedAt()).thenReturn(Optional.of(NOW.minusSeconds(3600)));
         SentReport september = new SentReport(ReportMonth.of(2026, 9), Instant.parse("2026-10-05T05:00:00Z"));
         when(reportLog.sentReportsNewestFirst()).thenReturn(List.of(september));
@@ -150,7 +150,7 @@ class ReportSettingsServiceTest {
     @DisplayName("Given settings changed, when the change answers, then its version is the one a later view of the saved settings gives")
     void should_answer_the_saved_version_when_changed_given_settings_changed() {
         SavedReportSettings saved = service.change(ADMIN, AdministrationChannel.BROWSER, CHANGED, ExpectedVersion.of(service.view().settingsVersion()));
-        when(settings.current()).thenReturn(CHANGED);
+        when(settings.find()).thenReturn(Optional.of(CHANGED));
         when(settings.lastChangedAt()).thenReturn(Optional.of(NOW));
 
         assertThat(saved.version()).isEqualTo(service.view().settingsVersion());

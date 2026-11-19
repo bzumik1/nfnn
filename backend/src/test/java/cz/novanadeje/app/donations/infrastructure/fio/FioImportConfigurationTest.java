@@ -77,7 +77,8 @@ class FioImportConfigurationTest {
                     "app.donations.import.overlap=P3D",
                     "app.donations.import.history-window=P89D",
                     "app.donations.import.history-from=",
-                    "app.donations.import.on-demand-cooldown=PT30S");
+                    "app.donations.import.on-demand-cooldown=PT30S",
+                    "app.donations.report.recipient=info@nfnn.cz");
 
     @Test
     @DisplayName("Given an empty token, when the context starts, then the Fio client is the disabled one and no import scheduler is created")
