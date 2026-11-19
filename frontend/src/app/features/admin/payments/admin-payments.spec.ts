@@ -335,7 +335,7 @@ describe('Given an administrator on the bank payments page', () => {
       expect(text('[role="status"]:not(:empty)')).toBe(
         'Platba 500 Kč z 10. 10. 2026 už není přiřazena. Web ji sám znovu nepřiřadí; najdete ji mezi platbami čekajícími na přiřazení. Roční potvrzení za 2026, na kterém dar byl, je teď zrušené; ověření ukáže, že platilo ke dni vystavení. Zbyly-li dárci za ten rok další dary, může si stáhnout nové. Dejte mu prosím vědět.',
       );
-      expect(document.activeElement).toBe(element('app-live-notice'));
+      expect(document.activeElement).toBe(element('#payments-title'));
       const donorLink = element<HTMLAnchorElement>('.donor-link a');
       expect(donorLink.textContent?.trim()).toBe('Otevřít kartu dárce Jana Nováková');
       expect(donorLink.getAttribute('href')).toBe(
@@ -671,6 +671,82 @@ describe('Given an administrator on the bank payments page', () => {
     });
   });
 
+  describe('when a payment of several leaves the list', () => {
+    const below = unpairedPayment({
+      id: 'p2',
+      bankTransactionId: 1003,
+      bookedOn: '2026-10-12',
+      amountMinor: 25050,
+      counterpartyName: 'Svobodová Petra',
+    });
+
+    it('when it is paired, then its row leaves at once without reading the list anew and the pairing button of the row below takes the focus', async () => {
+      await open();
+      await listResponds(paymentList([unpairedPayment(), below]));
+      button('Přiřadit dárci').click();
+      await settle();
+      http.expectOne((request) => request.url === DONORS_URL).flush({ items: [foundDonor()] });
+      await settle();
+      http
+        .expectOne((request) => request.url === ACCOUNTS_URL)
+        .flush({ items: [donorAccount()], hasMore: false });
+      await settle();
+      (document.querySelector('dialog input[type="radio"]') as HTMLInputElement).click();
+      await settle();
+      button('Přiřadit dárci Jana Nováková').click();
+      await settle();
+      http
+        .expectOne(`/api/admin/donations/payments/${PAYMENT_ID}/pair`)
+        .flush({ donationId: 'd1', changedYearlyReceipts: [] });
+      await settle();
+
+      expect(text('[role="status"]:not(:empty)')).not.toBe('Načítáme platby…');
+      expect(rows()).toHaveLength(1);
+      expect(rows()[0]).toContain('Svobodová Petra');
+      expect(accessibleName(document.activeElement!)).toBe(
+        'Přiřadit dárci, 12. 10. 2026, 250,50 Kč',
+      );
+      await listResponds(paymentList([below]));
+      expect(rows()).toHaveLength(1);
+    });
+
+    it('when it is unpaired, then its row leaves and the first control of the row below takes the focus', async () => {
+      await open();
+      await listResponds(paymentList([unpairedPayment()]));
+      button('Přiřazené').click();
+      await settle();
+      await listResponds(
+        paymentList(
+          [
+            unpairedPayment({ donation: pairedDonation() }),
+            { ...below, donation: pairedDonation({ id: 'd2' }) },
+          ],
+          { availableYears: [2026] },
+        ),
+        PAIRED_PAGE,
+      );
+
+      button('Zrušit přiřazení').click();
+      await settle();
+      element('.confirm .ui-button--danger').click();
+      await settle();
+      http
+        .expectOne(`/api/admin/donations/payments/${PAYMENT_ID}/unpair`)
+        .flush({ changedYearlyReceipts: [] });
+      await settle();
+
+      expect(rows()).toHaveLength(1);
+      expect(rows()[0]).toContain('Svobodová Petra');
+      expect(document.activeElement).toBe(element('tbody tr .donor-name a'));
+      await listResponds(
+        paymentList([{ ...below, donation: pairedDonation({ id: 'd2' }) }], {
+          availableYears: [2026],
+        }),
+        PAIRED_PAGE,
+      );
+    });
+  });
+
   describe('when the administrator opens the pairing dialog for a payment', () => {
     beforeEach(async () => {
       await open();
@@ -773,7 +849,7 @@ describe('Given an administrator on the bank payments page', () => {
       expect(text('[role="status"]:not(:empty)')).toBe(
         'Platba 500 Kč z 10. 10. 2026 je přiřazena dárci Jana Nováková.',
       );
-      expect(document.activeElement).toBe(element('app-live-notice'));
+      expect(document.activeElement).toBe(element('#payments-title'));
       expect(text('.donor-link')).toBe('Otevřít kartu dárce Jana Nováková');
       expect(text('.admin-tabs')).toBe('Čekají na přiřazení Přiřazené');
     });
