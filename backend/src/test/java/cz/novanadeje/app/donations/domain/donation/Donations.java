@@ -41,7 +41,7 @@ public final class Donations {
     }
 
     private static Donation donation(DonorReference donor, LocalDate receivedOn, long amountMinor, DonationStatus status) {
-        return Donations.stored(DonationId.newId(NOW), donor, Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(amountMinor),
+        return stored(DonationId.newId(NOW), donor, Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(amountMinor),
                 DonationSource.BANK_TRANSFER, status, Optional.of(PairingMethod.VARIABLE_SYMBOL), NOW);
     }
 
