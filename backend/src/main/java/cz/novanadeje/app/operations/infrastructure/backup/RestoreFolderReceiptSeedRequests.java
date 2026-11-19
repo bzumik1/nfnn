@@ -56,6 +56,19 @@ class RestoreFolderReceiptSeedRequests implements ReceiptSeedRequests, ReceiptSe
                     + "the server signs no receipt until secrets/receipt-signing-key is replaced", keyId, failure.getClass().getSimpleName());
             return StartRequest.NOT_WRITTEN;
         }
-        return requestNewSeedFor(keyId) ? StartRequest.REQUESTED : StartRequest.NOT_WRITTEN;
+        if (requestNewSeedFor(keyId)) {
+            return StartRequest.REQUESTED;
+        }
+        forget(triedAtStart);
+        return StartRequest.NOT_WRITTEN;
+    }
+
+    private static void forget(Path triedAtStart) {
+        try {
+            Files.deleteIfExists(triedAtStart);
+        } catch (IOException | RuntimeException ignored) {
+            log.warn("The note that this start asked for a new receipt signing seed could not be removed ({}); the next start does not ask again",
+                    ignored.getClass().getSimpleName());
+        }
     }
 }

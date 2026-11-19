@@ -107,7 +107,7 @@ public class ReceiptSigningKeyRegistration {
         Optional<ReceiptSigningKey> ownRow = stored.stream().filter(key -> key.id().equals(own)).findFirst();
         boolean ownKeyWithdrawn = history.isWithdrawn(own) || ownRow.filter(ReceiptSigningKey::isWithdrawn).isPresent();
         Optional<ReceiptSigningKeyId> registered = ownRow.isPresent() || ownKeyWithdrawn ? Optional.empty() : Optional.of(registerOwn(now));
-        if (ownKeyWithdrawn) {
+        if (history.isWithdrawn(own)) {
             events.publishEvent(new OwnReceiptSigningKeyFoundWithdrawn(own.value()));
         }
         return new Registration(testKeyRows, broken, unconfirmed, adopted, registered, history.mismatches(keys.findAll()), history.unreadable(),

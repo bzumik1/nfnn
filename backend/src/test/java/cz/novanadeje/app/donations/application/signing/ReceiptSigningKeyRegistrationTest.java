@@ -418,6 +418,17 @@ class ReceiptSigningKeyRegistrationTest {
     }
 
     @Test
+    @DisplayName("Given the server's own key row altered to look withdrawn without the audit trail's withdrawal, when the server starts, then it publishes no withdrawn own key, so no seed is renewed for a row whose seal fails")
+    void should_not_publish_own_key_found_withdrawn_when_registering_given_row_withdrawn_without_audit() {
+        keys.stored.add(ReceiptSigningKey.register(OWN_PUBLIC_KEY, EARLIER, content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content))
+                .withdrawn(content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
+
+        registration.registerOwnKey();
+
+        verify(events, never()).publishEvent(any(OwnReceiptSigningKeyFoundWithdrawn.class));
+    }
+
+    @Test
     @DisplayName("Given the server's own key active, when the server starts, then it publishes no withdrawn own key")
     void should_not_publish_own_key_found_withdrawn_when_registering_given_own_key_active() {
         registration.registerOwnKey();

@@ -129,6 +129,16 @@ class RestoreFolderReceiptSeedRequestsTest {
         });
     }
 
+    @Test
+    @DisplayName("Given a request that cannot be written although the note of the start was, when a new seed is requested at a start, then it is not written and the note goes, so the next start asks again")
+    void should_forget_the_start_when_requested_at_start_given_the_request_cannot_be_written() throws IOException {
+        Files.createDirectory(restore.resolve("receipt-signing-key.renew"));
+
+        assertThat(requests.requestNewSeedAtStartFor("21fe31df")).isEqualTo(ReceiptSeedRequestsAtStart.StartRequest.NOT_WRITTEN);
+
+        assertThat(restore.resolve("receipt-signing-key.renew-at-start-21fe31df")).doesNotExist();
+    }
+
     private void deleteRequest() {
         try {
             Files.delete(restore.resolve("receipt-signing-key.renew"));

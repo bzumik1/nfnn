@@ -35,8 +35,8 @@ public class ReceiptSeedRenewalService {
                         + "generates a new seed", keyId);
                 restarter.restartAfterCommitOnceAsyncWorkIsDone();
             }
-            case ALREADY_WAITING -> log.warn("The receipt signing key {} of this server is withdrawn and a request for a new seed waits; "
-                    + "the next start generates it", keyId);
+            case ALREADY_WAITING -> log.warn("The receipt signing key {} of this server is withdrawn and a request for a new seed waits, "
+                    + "but this start did not replace the seed; the entrypoint's log says why", keyId);
             case TRIED_AT_AN_EARLIER_START -> log.error("The receipt signing key {} of this server is still withdrawn although an earlier start asked "
                     + "for a new seed, so the backend does not restart again; the entrypoint's log says why it kept the seed", keyId);
             case NOT_WRITTEN -> {

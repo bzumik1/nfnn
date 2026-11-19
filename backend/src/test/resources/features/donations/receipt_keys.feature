@@ -133,3 +133,9 @@ Feature: Anyone reads the keys that verify the QR codes on donation receipts
     When the following requests come from another client address
     And a visitor asks for the receipt keys
     Then the response status is 200
+
+  Scenario: A key row altered in the database to look revoked asks for no new seed when the server starts
+    Given the backup folder exists
+    And the receipt signing key "21fe31df" was altered in the database to look revoked
+    When the server starts again
+    Then the backend is not restarted for a new receipt signing seed

@@ -96,7 +96,7 @@ class ReceiptSeedRenewalServiceTest {
     }
 
     @Test
-    @DisplayName("Given a request for a new seed that already waits, when the key is renewed at the start, then the backend does not restart and a WARN says the next start generates it")
+    @DisplayName("Given a request for a new seed that already waits, when the key is renewed at the start, then the backend does not restart and a WARN says this start did not replace the seed")
     void should_not_restart_when_renewed_at_start_given_a_waiting_request() {
         when(startRequests.requestNewSeedAtStartFor("21fe31df")).thenReturn(ReceiptSeedRequestsAtStart.StartRequest.ALREADY_WAITING);
 
