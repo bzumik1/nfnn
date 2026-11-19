@@ -17,6 +17,7 @@ import {
 } from '../device-copy/testing/opened-copy';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { readDetailsDisclosures } from '../../../shared/ui/disclosure/testing/details-disclosures';
 
 const LIST_URL = '/api/admin/donors/actions';
 
@@ -136,6 +137,24 @@ describe('Given an administrator on the history page', () => {
     );
     expect(rowText(third)).toContain('SOMETHING_NEW');
     expect(fixture.nativeElement.querySelector('.admin-more')).toBeNull();
+  });
+
+  it('when they open the technical details of a change, then they open as a disclosure under an aria-hidden chevron', async () => {
+    firstPage([paired]);
+
+    expect(
+      await readDetailsDisclosures(rows()[0], async () => {
+        fixture.detectChanges();
+        await fixture.whenStable();
+      }),
+    ).toEqual([
+      {
+        summary: 'Technické podrobnosti',
+        chevron: 'hidden from assistive technology',
+        whileClosed: 'hidden and inert',
+        onceOpen: 'shown',
+      },
+    ]);
   });
 
   it('when the server registered its receipt signing key, then the row names the server instead of an administrator and the action in Czech', () => {
@@ -501,6 +520,27 @@ describe('Given an administrator on the history page where lists show as rows', 
   function textOf(node: Element | null): string {
     return (node === null ? '' : spaced(node)).replace(/\s+/g, ' ').trim();
   }
+
+  it('when they open the technical details of a change row, then they open as a disclosure under an aria-hidden chevron', async () => {
+    http
+      .expectOne((candidate) => candidate.url === LIST_URL)
+      .flush({ items: [adminAction()], hasMore: false });
+    fixture.detectChanges();
+
+    expect(
+      await readDetailsDisclosures(fixture.nativeElement, async () => {
+        fixture.detectChanges();
+        await fixture.whenStable();
+      }),
+    ).toEqual([
+      {
+        summary: 'Technické podrobnosti',
+        chevron: 'hidden from assistive technology',
+        whileClosed: 'hidden and inert',
+        onceOpen: 'shown',
+      },
+    ]);
+  });
 
   it('when the first page arrives, then every change is a row with what, when and who, the sentence of the server, the donor card and the details collapsed', () => {
     http

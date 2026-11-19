@@ -6,6 +6,7 @@ import { backupSchedule } from '../testing/admin-fixtures';
 import { BackupScheduleCard } from './backup-schedule-card';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { readDetailsDisclosures } from '../../../shared/ui/disclosure/testing/details-disclosures';
 
 const SCHEDULE_URL = '/api/admin/operations/backups/schedule';
 
@@ -163,6 +164,19 @@ describe('Given the backup plan card', () => {
     expect(text('.applied')).toBe(
       'Zálohy zatím běží podle plánu „denní záloha 3:00, zkušební obnova v neděli 4:00“; nový převezme do minuty.',
     );
+  });
+
+  it('when the warning carries technical details, then they open as a disclosure under an aria-hidden chevron', async () => {
+    await render(backupSchedule({ applied: null }));
+
+    expect(await readDetailsDisclosures(fixture.nativeElement, settle)).toEqual([
+      {
+        summary: 'Technické podrobnosti',
+        chevron: 'hidden from assistive technology',
+        whileClosed: 'hidden and inert',
+        onceOpen: 'shown',
+      },
+    ]);
   });
 
   it('when the backup container has not confirmed any plan, then a warning says how to update it', async () => {

@@ -23,6 +23,7 @@ import {
 } from '../device-copy/testing/opened-copy';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { readDetailsDisclosures } from '../../../shared/ui/disclosure/testing/details-disclosures';
 
 const SETTINGS_URL = '/api/admin/operations/settings';
 const TEST_EMAIL_URL = '/api/admin/operations/settings/test-email';
@@ -502,6 +503,36 @@ describe('Given an administrator on the settings page', () => {
     expect(text('details#technicke-nastaveni summary')).toBe(
       'Adresa webu, server pro odesílání e-mailů a napojení na banku',
     );
+  });
+
+  it('when they open the technical settings, then the summary turns an aria-hidden chevron instead of the native marker and the parts open as a disclosure', async () => {
+    await respond(
+      settingsView({
+        settings: settingsView().settings.map((setting) => ({ ...setting, unreadable: false })),
+      }),
+    );
+
+    expect(await readDetailsDisclosures(fixture.nativeElement, settle)).toEqual([
+      {
+        summary: 'Adresa webu, server pro odesílání e-mailů a napojení na banku',
+        chevron: 'hidden from assistive technology',
+        whileClosed: 'hidden and inert',
+        onceOpen: 'shown',
+      },
+    ]);
+  });
+
+  it('when the server has no encryption key, then its technical details open as a disclosure under a chevron too', async () => {
+    await respond(settingsView({ secretsCanBeStored: false }));
+
+    expect(await readDetailsDisclosures(element('.ui-notice--alert'), settle)).toEqual([
+      {
+        summary: 'Technické podrobnosti',
+        chevron: 'hidden from assistive technology',
+        whileClosed: 'hidden and inert',
+        onceOpen: 'shown',
+      },
+    ]);
   });
 
   it('when a stored secret cannot be read, as after a restore on a new server, then the page names it at the top', async () => {

@@ -18,6 +18,7 @@ import {
   openWithCopy,
   textOf,
 } from '../device-copy/testing/opened-copy';
+import { readDetailsDisclosures } from '../../../shared/ui/disclosure/testing/details-disclosures';
 
 const BACKUPS_URL = '/api/admin/operations/backups';
 const REQUESTS_URL = '/api/admin/operations/backups/requests';
@@ -235,6 +236,35 @@ describe('Given an administrator on the backups page', () => {
 
     expect(fixture.nativeElement.querySelector('.off-server')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('tlačítkem „Stáhnout“');
+  });
+
+  it('when a problem and a failed run carry technical details, then each opens as a disclosure under an aria-hidden chevron', async () => {
+    await respond(
+      backupsView({
+        lastBackup: backupRun({
+          outcome: 'FAILED',
+          finishedAt: '2026-10-23T01:00:01Z',
+          sizeBytes: null,
+          error: 'pg_dump: error: connection to server failed',
+        }),
+        problems: ['BACKUP_FAILED'],
+      }),
+    );
+
+    expect(await readDetailsDisclosures(fixture.nativeElement, settle)).toEqual([
+      {
+        summary: 'Technické podrobnosti',
+        chevron: 'hidden from assistive technology',
+        whileClosed: 'hidden and inert',
+        onceOpen: 'shown',
+      },
+      {
+        summary: 'Technické podrobnosti',
+        chevron: 'hidden from assistive technology',
+        whileClosed: 'hidden and inert',
+        onceOpen: 'shown',
+      },
+    ]);
   });
 
   it('when a problem needs the server administrator, then a button copies the message for the technician without the backup key', async () => {
