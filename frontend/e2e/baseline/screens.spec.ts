@@ -373,12 +373,6 @@ const SCREENS: Screen[] = [
       await failPaymentDetails(page);
       await page.goto('/prispet');
       await expect(page.locator('#prispet .bank-failure')).toBeVisible();
-      const otherDevice = page
-        .locator('#prispet')
-        .getByRole('button', { name: /Platíte z jiného zařízení\?/ });
-      if (await otherDevice.isVisible()) {
-        await otherDevice.click();
-      }
     },
     ready: (page) => elementsShown(page, [DONATE_BANK]),
   },

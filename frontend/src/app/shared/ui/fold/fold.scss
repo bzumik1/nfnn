@@ -4,6 +4,15 @@
   display: block;
 }
 
+.fold {
+  display: grid;
+  grid-template-rows: 1fr;
+
+  > * {
+    min-height: 0;
+  }
+}
+
 .fold--moves {
   @include motion.expand;
 }
