@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.domain.backup;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -16,7 +17,7 @@ public sealed interface BackupAlert permits BackupAlert.ProblemsDetected, Backup
             if (problems == null || problems.isEmpty() || occurredAt == null) {
                 throw new IllegalArgumentException("A detection names at least one problem and when it was detected");
             }
-            problems = Set.copyOf(EnumSet.copyOf(problems));
+            problems = Collections.unmodifiableSet(EnumSet.copyOf(problems));
         }
     }
 
@@ -26,7 +27,7 @@ public sealed interface BackupAlert permits BackupAlert.ProblemsDetected, Backup
             if (problems == null || problems.isEmpty() || occurredAt == null) {
                 throw new IllegalArgumentException("A recovery names the problems that ended and when they did");
             }
-            problems = Set.copyOf(EnumSet.copyOf(problems));
+            problems = Collections.unmodifiableSet(EnumSet.copyOf(problems));
         }
     }
 }

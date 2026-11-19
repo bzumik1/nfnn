@@ -23,18 +23,18 @@ public class BackupWatchService {
 
     private final BackupAdministrationService backups;
     private final BackupAlertStateRepository states;
-    private final BackupAlertRepository alertMails;
-    private final OperationalAlertService alerts;
+    private final BackupAlertRepository backupAlerts;
+    private final OperationalAlertService operationalAlerts;
     private final BackupAlertDelivery delivery;
     private final TransactionOperations transactions;
     private final Clock clock;
 
-    public BackupWatchService(BackupAdministrationService backups, BackupAlertStateRepository states, BackupAlertRepository alertMails,
-                              OperationalAlertService alerts, BackupAlertDelivery delivery, TransactionOperations transactions, Clock clock) {
+    public BackupWatchService(BackupAdministrationService backups, BackupAlertStateRepository states, BackupAlertRepository backupAlerts,
+                              OperationalAlertService operationalAlerts, BackupAlertDelivery delivery, TransactionOperations transactions, Clock clock) {
         this.backups = backups;
         this.states = states;
-        this.alertMails = alertMails;
-        this.alerts = alerts;
+        this.backupAlerts = backupAlerts;
+        this.operationalAlerts = operationalAlerts;
         this.delivery = delivery;
         this.transactions = transactions;
         this.clock = clock;
@@ -44,8 +44,21 @@ public class BackupWatchService {
         BackupAdministrationView view = backups.view();
         Set<BackupProblem> problems = view.health().problems();
         transactions.executeWithoutResult(status -> record(problems));
-        delivery.deliverWaiting(new LastBackupRuns(view.lastBackup(), view.lastTestRestore()));
+        deliverAlerts(new LastBackupRuns(view.lastBackup(), view.lastTestRestore()));
         return problems;
+    }
+
+    private void queue(BackupAlert alert, Instant now) {
+        backupAlerts.dropWaiting(now);
+        backupAlerts.add(alert, now);
+    }
+
+    private void deliverAlerts(LastBackupRuns lastRuns) {
+        try {
+            delivery.deliverWaiting(lastRuns);
+        } catch (RuntimeException failure) {
+            log.error("Delivering the backup alerts failed: {}; retrying after the next backup check", failure.getClass().getSimpleName());
+        }
     }
 
     private void record(Set<BackupProblem> problems) {
@@ -54,21 +67,20 @@ public class BackupWatchService {
         if (problems.isEmpty()) {
             if (state.reporting()) {
                 states.save(BackupAlertState.nothingReported());
-                alertMails.dropWaitingProblems(now);
-                alertMails.add(new BackupAlert.Recovered(state.reportedProblems(), now), now);
+                queue(new BackupAlert.Recovered(state.reportedProblems(), now), now);
                 log.info("Backups are healthy again after {}", state.reportedProblems());
             }
-            alerts.record(MonitoredArea.BACKUPS, false, now);
+            operationalAlerts.record(MonitoredArea.BACKUPS, false, now);
             return;
         }
         if (problems.equals(state.reportedProblems())) {
-            alerts.record(MonitoredArea.BACKUPS, true, now);
+            operationalAlerts.record(MonitoredArea.BACKUPS, true, now);
             log.warn("Backup problems continue: {}", problems);
             return;
         }
         states.save(BackupAlertState.reported(problems, now));
-        alertMails.add(new BackupAlert.ProblemsDetected(problems, now), now);
-        alerts.record(MonitoredArea.BACKUPS, true, now);
+        queue(new BackupAlert.ProblemsDetected(problems, now), now);
+        operationalAlerts.record(MonitoredArea.BACKUPS, true, now);
         log.warn("Backup problems detected: {}", problems);
     }
 }

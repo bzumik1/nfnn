@@ -11,5 +11,5 @@ public interface BackupAlertRepository {
 
     void markSent(BackupAlertId id, Instant at);
 
-    void dropWaitingProblems(Instant at);
+    void dropWaiting(Instant at);
 }

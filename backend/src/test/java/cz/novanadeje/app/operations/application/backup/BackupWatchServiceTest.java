@@ -22,6 +22,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -35,11 +36,11 @@ class BackupWatchServiceTest {
 
     private final BackupAdministrationService backups = mock(BackupAdministrationService.class);
     private final BackupAlertStateRepository states = mock(BackupAlertStateRepository.class);
-    private final BackupAlertRepository alertMails = mock(BackupAlertRepository.class);
+    private final BackupAlertRepository backupAlerts = mock(BackupAlertRepository.class);
     private final OperationalAlertService alerts = mock(OperationalAlertService.class);
     private final BackupAlertDelivery delivery = mock(BackupAlertDelivery.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
-    private final BackupWatchService service = new BackupWatchService(backups, states, alertMails, alerts, delivery, TransactionOperations.withoutTransaction(),
+    private final BackupWatchService service = new BackupWatchService(backups, states, backupAlerts, alerts, delivery, TransactionOperations.withoutTransaction(),
             clock);
 
     @Test
@@ -52,8 +53,9 @@ class BackupWatchServiceTest {
 
         assertThat(problems).containsExactly(BackupProblem.BACKUP_FAILED);
         verify(states).save(BackupAlertState.reported(Set.of(BackupProblem.BACKUP_FAILED), NOW));
-        InOrder order = inOrder(alertMails, delivery);
-        order.verify(alertMails).add(new BackupAlert.ProblemsDetected(Set.of(BackupProblem.BACKUP_FAILED), NOW), NOW);
+        InOrder order = inOrder(backupAlerts, delivery);
+        order.verify(backupAlerts).dropWaiting(NOW);
+        order.verify(backupAlerts).add(new BackupAlert.ProblemsDetected(Set.of(BackupProblem.BACKUP_FAILED), NOW), NOW);
         order.verify(delivery).deliverWaiting(new LastBackupRuns(Optional.empty(), Optional.empty()));
         verify(alerts).record(MonitoredArea.BACKUPS, true, NOW);
     }
@@ -67,7 +69,7 @@ class BackupWatchServiceTest {
         service.check();
 
         verify(alerts).record(MonitoredArea.BACKUPS, true, NOW);
-        verifyNoInteractions(alertMails);
+        verifyNoInteractions(backupAlerts);
         verify(states, never()).save(any());
         verify(delivery).deliverWaiting(any());
     }
@@ -81,12 +83,14 @@ class BackupWatchServiceTest {
         service.check();
 
         verify(states).save(BackupAlertState.reported(Set.of(BackupProblem.BACKUP_FAILED, BackupProblem.TEST_RESTORE_STALE), NOW));
-        verify(alertMails).add(new BackupAlert.ProblemsDetected(Set.of(BackupProblem.BACKUP_FAILED, BackupProblem.TEST_RESTORE_STALE), NOW), NOW);
+        InOrder order = inOrder(backupAlerts);
+        order.verify(backupAlerts).dropWaiting(NOW);
+        order.verify(backupAlerts).add(new BackupAlert.ProblemsDetected(Set.of(BackupProblem.BACKUP_FAILED, BackupProblem.TEST_RESTORE_STALE), NOW), NOW);
         verify(alerts).record(MonitoredArea.BACKUPS, true, NOW);
     }
 
     @Test
-    @DisplayName("Given a reported problem that has ended, when the check runs, then the recovery is queued once after any waiting problem e-mail is dropped, the state cleared and the backup alert recorded as resolved")
+    @DisplayName("Given a reported problem that has ended, when the check runs, then the recovery is queued once after any waiting alert is dropped, the state cleared and the backup alert recorded as resolved")
     void should_queue_recovery_when_checked_given_problems_ended() {
         when(backups.view()).thenReturn(view(Set.of()));
         when(states.current()).thenReturn(BackupAlertState.reported(Set.of(BackupProblem.BACKUP_STALE), NOW.minusSeconds(86_400)));
@@ -95,9 +99,9 @@ class BackupWatchServiceTest {
 
         assertThat(problems).isEmpty();
         verify(states).save(BackupAlertState.nothingReported());
-        InOrder order = inOrder(alertMails, delivery);
-        order.verify(alertMails).dropWaitingProblems(NOW);
-        order.verify(alertMails).add(new BackupAlert.Recovered(Set.of(BackupProblem.BACKUP_STALE), NOW), NOW);
+        InOrder order = inOrder(backupAlerts, delivery);
+        order.verify(backupAlerts).dropWaiting(NOW);
+        order.verify(backupAlerts).add(new BackupAlert.Recovered(Set.of(BackupProblem.BACKUP_STALE), NOW), NOW);
         order.verify(delivery).deliverWaiting(any());
         verify(alerts).record(MonitoredArea.BACKUPS, false, NOW);
     }
@@ -111,8 +115,18 @@ class BackupWatchServiceTest {
         service.check();
 
         verify(alerts).record(MonitoredArea.BACKUPS, false, NOW);
-        verifyNoInteractions(alertMails);
+        verifyNoInteractions(backupAlerts);
         verify(states, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given the delivery fails, when the check runs, then the check still answers its problems and the failure does not escape")
+    void should_answer_problems_when_checked_given_the_delivery_fails() {
+        when(backups.view()).thenReturn(view(Set.of(BackupProblem.BACKUP_FAILED)));
+        when(states.current()).thenReturn(BackupAlertState.nothingReported());
+        doThrow(new IllegalStateException("broken")).when(delivery).deliverWaiting(any());
+
+        assertThat(service.check()).containsExactly(BackupProblem.BACKUP_FAILED);
     }
 
     private static BackupAdministrationView view(Set<BackupProblem> problems) {

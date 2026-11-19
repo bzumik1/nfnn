@@ -254,3 +254,18 @@ Feature: An administrator sees the database backups, starts one, downloads one a
       | size        | 1590                          |
     When the backup check runs
     Then 1 e-mail is sent to "info@nfnn.cz" with the subject "Zálohování databáze zase funguje – Nová naděje"
+
+  Scenario: A problem alert the mail server refused and replaced by other problems the next check is followed only by the new problem e-mail
+    Given the backup status says:
+      | outcome     | failed                                      |
+      | started_at  | 2026-10-23T01:00:00Z                        |
+      | finished_at | 2026-10-23T01:00:01Z                        |
+      | file        | nfnn-2026-10-23_0300.dump.age               |
+      | error       | pg_dump: error: connection to server failed |
+    And the mail server refuses the next e-mail
+    And the backup check runs
+    And the backup folder does not exist
+    When the backup check runs
+    Then 1 e-mail is sent to "info@nfnn.cz" with the subject "Zálohování databáze má problém – Nová naděje"
+    And both parts of the alert e-mail say:
+      | Backend nevidí složku se zálohami. |

@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,17 +51,17 @@ class JpaBackupAlertRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given a waiting problem alert, a sent one and a waiting recovery, when the waiting problems are dropped, then only the waiting problem alert is marked dropped")
-    void should_drop_only_waiting_problems_when_dropped_given_waiting_and_sent_problems_and_a_recovery() {
+    @DisplayName("Given a sent problem alert, a waiting one and a waiting recovery, when the waiting alerts are dropped, then both waiting ones are marked dropped and the sent one stays sent")
+    void should_drop_every_waiting_alert_when_dropped_given_sent_and_waiting_alerts() {
         alerts.add(PROBLEMS, NOW.minusSeconds(86_400));
         alerts.markSent(alerts.waiting().getFirst().id(), NOW.minusSeconds(86_400));
         alerts.add(PROBLEMS, NOW);
         alerts.add(RECOVERY, NOW.plusSeconds(60));
 
-        alerts.dropWaitingProblems(NOW.plusSeconds(30));
+        alerts.dropWaiting(NOW.plusSeconds(90));
 
-        assertThat(alerts.waiting()).extracting(WaitingBackupAlert::alert).isEqualTo(List.of(RECOVERY));
-        assertThat(jdbc.sql("select outcome from operations_backup_alert where kind = 'PROBLEMS' order by created_at").query(String.class).list())
-                .containsExactly("SENT", "DROPPED");
+        assertThat(alerts.waiting()).isEmpty();
+        assertThat(jdbc.sql("select outcome from operations_backup_alert order by created_at").query(String.class).list())
+                .containsExactly("SENT", "DROPPED", "DROPPED");
     }
 }

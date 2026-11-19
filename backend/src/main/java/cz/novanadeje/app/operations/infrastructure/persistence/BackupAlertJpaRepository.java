@@ -23,6 +23,6 @@ interface BackupAlertJpaRepository extends JpaRepository<BackupAlertJpaEntity, U
 
     @Transactional(propagation = Propagation.MANDATORY)
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("update BackupAlertJpaEntity a set a.outcome = 'DROPPED', a.settledAt = :at where a.kind = :kind and a.outcome is null")
-    int dropWaiting(@Param("kind") BackupAlertJpaEntity.Kind kind, @Param("at") Instant at);
+    @Query("update BackupAlertJpaEntity a set a.outcome = 'DROPPED', a.settledAt = :at where a.outcome is null")
+    int dropWaiting(@Param("at") Instant at);
 }

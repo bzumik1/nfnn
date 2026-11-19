@@ -34,7 +34,7 @@ class JpaBackupAlertRepository implements BackupAlertRepository {
     }
 
     @Override
-    public void dropWaitingProblems(Instant at) {
-        jpa.dropWaiting(BackupAlertJpaEntity.Kind.PROBLEMS, at);
+    public void dropWaiting(Instant at) {
+        jpa.dropWaiting(at);
     }
 }
