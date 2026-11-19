@@ -226,6 +226,14 @@ export function segmentContrasts(group: Locator): Promise<SegmentContrasts> {
 export async function wrapSegments(group: Locator): Promise<void> {
   await group.evaluate((element: HTMLElement) => (element.style.width = 'min-content'));
   await expect
-    .poll(() => group.evaluate((element) => element.classList.contains('ui-segmented--thumb')))
-    .toBe(false);
+    .poll(() =>
+      group.evaluate(
+        (element) =>
+          !element.classList.contains('ui-segmented--thumb') &&
+          element
+            .getAnimations({ subtree: true })
+            .every((animation) => animation.playState !== 'running'),
+      ),
+    )
+    .toBe(true);
 }
