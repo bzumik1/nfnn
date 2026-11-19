@@ -6,6 +6,7 @@ import cz.novanadeje.app.operations.domain.loggers.LoggerName;
 import cz.novanadeje.app.operations.domain.loggers.ProtectedLogger;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.support.AdminActionFactsAgreement;
+import cz.novanadeje.app.support.HeldAfterCommitWork;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,11 +46,14 @@ class LogLevelServiceTest {
     @Mock
     private ApplicationEventPublisher events;
 
+    private final HeldAfterCommitWork afterCommit = new HeldAfterCommitWork();
     private LogLevelService service;
+    private LogLevelService held;
 
     @BeforeEach
     void setUp() {
-        service = new LogLevelService(levels, timer, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new LogLevelService(levels, timer, events, Runnable::run, Clock.fixed(NOW, ZoneOffset.UTC));
+        held = new LogLevelService(levels, timer, events, afterCommit, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -129,5 +133,51 @@ class LogLevelServiceTest {
         assertThatThrownBy(() -> service.override(ADMIN, bind, LogLevel.TRACE, 5)).isInstanceOf(ProtectedLogger.class);
 
         verifyNoInteractions(levels, timer, events);
+    }
+
+    @Test
+    @DisplayName("Given a raise whose audit has not committed yet, when an administrator raises a logger, then the change is handed to the audit and the level, the reset and the override wait for the commit")
+    void should_wait_for_the_commit_when_raised_given_an_uncommitted_audit() {
+        when(levels.configuredLevel(APP)).thenReturn(Optional.of(LogLevel.INFO));
+
+        LogLevelOverride override = held.override(ADMIN, APP, LogLevel.DEBUG, 10);
+
+        verify(events).publishEvent(any(AdminActionPerformed.class));
+        verify(levels, never()).setLevel(any(), any());
+        verifyNoInteractions(timer);
+        assertThat(held.view().loggers()).noneMatch(logger -> logger.override().isPresent());
+
+        afterCommit.commit();
+
+        verify(levels).setLevel(APP, Optional.of(LogLevel.DEBUG));
+        verify(timer).at(eq(override.until()), any(Runnable.class));
+        assertThat(held.view().loggers()).anySatisfy(logger -> assertThat(logger.override()).contains(override));
+    }
+
+    @Test
+    @DisplayName("Given a raise whose audit is refused at the commit, when an administrator raises a logger, then the logger keeps its level, no reset is timed and no override shows")
+    void should_change_nothing_when_raised_given_a_refused_audit() {
+        when(levels.configuredLevel(APP)).thenReturn(Optional.of(LogLevel.INFO));
+
+        held.override(ADMIN, APP, LogLevel.DEBUG, 10);
+        afterCommit.rollBack();
+
+        verify(levels, never()).setLevel(any(), any());
+        verifyNoInteractions(timer);
+        assertThat(held.view().loggers()).noneMatch(logger -> logger.override().isPresent());
+    }
+
+    @Test
+    @DisplayName("Given an override, when its reset is refused at the commit, then the logger stays raised and the override still shows")
+    void should_keep_the_override_when_reset_given_a_refused_audit() {
+        when(levels.configuredLevel(APP)).thenReturn(Optional.of(LogLevel.WARN));
+        LogLevelOverride override = held.override(ADMIN, APP, LogLevel.DEBUG, 5);
+        afterCommit.commit();
+
+        assertThat(held.reset(ADMIN, APP)).isTrue();
+        afterCommit.rollBack();
+
+        verify(levels, never()).setLevel(APP, Optional.of(LogLevel.WARN));
+        assertThat(held.view().loggers()).anySatisfy(logger -> assertThat(logger.override()).contains(override));
     }
 }

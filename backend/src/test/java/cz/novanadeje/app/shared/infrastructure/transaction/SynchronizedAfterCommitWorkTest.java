@@ -1,10 +1,8 @@
 package cz.novanadeje.app.shared.infrastructure.transaction;
 
+import cz.novanadeje.app.support.InMemoryTransactions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.AbstractPlatformTransactionManager;
-import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
@@ -16,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class SynchronizedAfterCommitWorkTest {
 
     private final SynchronizedAfterCommitWork afterCommit = new SynchronizedAfterCommitWork();
-    private final TransactionTemplate transactions = new TransactionTemplate(new InMemoryTransactions());
+    private final TransactionTemplate transactions = InMemoryTransactions.template();
     private final List<String> done = new ArrayList<>();
 
     @Test
@@ -58,25 +56,5 @@ class SynchronizedAfterCommitWorkTest {
         })).isInstanceOf(IllegalStateException.class);
 
         assertThat(done).isEmpty();
-    }
-
-    private static final class InMemoryTransactions extends AbstractPlatformTransactionManager {
-
-        @Override
-        protected Object doGetTransaction() {
-            return new Object();
-        }
-
-        @Override
-        protected void doBegin(Object transaction, TransactionDefinition definition) {
-        }
-
-        @Override
-        protected void doCommit(DefaultTransactionStatus status) {
-        }
-
-        @Override
-        protected void doRollback(DefaultTransactionStatus status) {
-        }
     }
 }

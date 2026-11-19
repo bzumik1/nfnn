@@ -7,9 +7,11 @@ import cz.novanadeje.app.operations.domain.backup.BackupProblem;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestPending;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.BackupsUnavailable;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.support.AdminActionFactsAgreement;
+import cz.novanadeje.app.support.HeldAfterCommitWork;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,10 +42,18 @@ class BackupAdministrationServiceTest {
     private static final String FILE = "nfnn-2026-10-23_0300.dump.age";
 
     private final BackupStore store = mock(BackupStore.class);
+
+    {
+        when(store.acceptsRequests()).thenReturn(true);
+    }
+
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
+    private final HeldAfterCommitWork afterCommit = new HeldAfterCommitWork();
     private final BackupAdministrationService service = new BackupAdministrationService(store,
-            new BackupLimits(Duration.ofHours(26), Duration.ofDays(8)), events, clock);
+            new BackupLimits(Duration.ofHours(26), Duration.ofDays(8)), events, Runnable::run, clock);
+    private final BackupAdministrationService held = new BackupAdministrationService(store,
+            new BackupLimits(Duration.ofHours(26), Duration.ofDays(8)), events, afterCommit, clock);
 
     @Test
     @DisplayName("Given the backup folder is missing, when the view is asked for, then it is unavailable with that one problem")
@@ -156,5 +166,41 @@ class BackupAdministrationServiceTest {
     private static BackupRun run(RunOutcome outcome, Instant finishedAt) {
         return new BackupRun(outcome, finishedAt.minusSeconds(2), finishedAt, Optional.of(FILE), Optional.of(1590L), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+    }
+
+    @Test
+    @DisplayName("Given a request whose audit has not committed yet, when an administrator asks for a backup, then the request is handed to the audit and its file waits for the commit")
+    void should_write_the_request_only_after_the_commit_when_requested_given_an_uncommitted_audit() {
+        BackupRequest request = held.request(ADMIN, BackupRequestKind.BACKUP);
+
+        verify(events).publishEvent(any(AdminActionPerformed.class));
+        verify(store, never()).request(any(), any());
+
+        afterCommit.commit();
+
+        verify(store).request(BackupRequestKind.BACKUP, request.id());
+    }
+
+    @Test
+    @DisplayName("Given a request whose audit is refused at the commit, when an administrator asks for a backup or a test restore, then no request file is written")
+    void should_write_no_request_when_requested_given_a_refused_audit() {
+        for (BackupRequestKind kind : BackupRequestKind.values()) {
+            held.request(ADMIN, kind);
+            afterCommit.rollBack();
+        }
+
+        verify(store, never()).request(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given the backup folder without its requests folder, when an administrator asks for a backup, then it is refused before anything is audited")
+    void should_refuse_before_auditing_when_requested_given_no_requests_folder() {
+        when(store.acceptsRequests()).thenReturn(false);
+
+        assertThatThrownBy(() -> held.request(ADMIN, BackupRequestKind.BACKUP)).isInstanceOf(BackupsUnavailable.class);
+
+        verify(events, never()).publishEvent(any());
+        afterCommit.commit();
+        verify(store, never()).request(any(), any());
     }
 }

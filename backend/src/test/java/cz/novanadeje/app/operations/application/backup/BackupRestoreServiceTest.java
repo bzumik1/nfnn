@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupNotFound;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.BackupsUnavailable;
 import cz.novanadeje.app.operations.domain.backup.RestoreCarryForward;
 import cz.novanadeje.app.operations.domain.backup.RestoreRevocations;
 import cz.novanadeje.app.operations.domain.backup.PublicBackupKey;
@@ -14,6 +15,7 @@ import cz.novanadeje.app.operations.domain.backup.RestoreSource;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.support.AdminActionFactsAgreement;
+import cz.novanadeje.app.support.HeldAfterCommitWork;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,12 +50,19 @@ class BackupRestoreServiceTest {
     private static final String REQUEST = "019a1b2c-0000-7000-8000-000000000001";
 
     private final BackupStore store = mock(BackupStore.class);
+
+    {
+        when(store.acceptsRequests()).thenReturn(true);
+    }
+
     private final RestoreRecordRepository records = mock(RestoreRecordRepository.class);
     private final ApplicationRestarter restarter = mock(ApplicationRestarter.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
     private final PublicBackupKeyPolicy publicKeys = mock(PublicBackupKeyPolicy.class);
-    private final BackupRestoreService service = new BackupRestoreService(store, records, restarter, events, publicKeys, clock);
+    private final HeldAfterCommitWork afterCommit = new HeldAfterCommitWork();
+    private final BackupRestoreService service = new BackupRestoreService(store, records, restarter, events, publicKeys, Runnable::run, clock);
+    private final BackupRestoreService held = new BackupRestoreService(store, records, restarter, events, publicKeys, afterCommit, clock);
 
     @Test
     @DisplayName("Given a backup on the server, when an administrator restores it, then a restore request names it and the administrator, it is audited and the backend restarts")
@@ -272,5 +281,46 @@ class BackupRestoreServiceTest {
     private static BackupRun restore(RunOutcome outcome, Optional<UUID> admin, Optional<String> error) {
         return new BackupRun(outcome, NOW.minusSeconds(60), NOW.minusSeconds(30), Optional.of(FILE), Optional.of(1590L),
                 outcome == RunOutcome.OK ? Optional.of(37) : Optional.empty(), Optional.of(REQUEST), admin, error, Optional.empty(), Optional.empty());
+    }
+
+    @Test
+    @DisplayName("Given a restore whose audit has not committed yet, when an administrator restores a backup, then the request is handed to the audit and its file waits for the commit, which the restart follows")
+    void should_write_the_restore_request_only_after_the_commit_when_restored_given_an_uncommitted_audit() {
+        when(store.open(FILE)).thenReturn(Optional.of(new BackupDownload(new BackupFile(FILE, 1590, NOW), InputStream::nullInputStream)));
+
+        RestoreRequest request = held.restoreBackup(ADMIN, FILE);
+
+        verify(events).publishEvent(any(AdminActionPerformed.class));
+        verify(store, never()).requestRestore(any());
+        verify(restarter).restartAfterCommitForRestore();
+
+        afterCommit.commit();
+
+        verify(store).requestRestore(request);
+    }
+
+    @Test
+    @DisplayName("Given a restore whose audit is refused at the commit, when an administrator restores a backup, then no restore request is written for the backup container")
+    void should_write_no_restore_request_when_restored_given_a_refused_audit() {
+        when(store.open(FILE)).thenReturn(Optional.of(new BackupDownload(new BackupFile(FILE, 1590, NOW), InputStream::nullInputStream)));
+
+        held.restoreBackup(ADMIN, FILE);
+        afterCommit.rollBack();
+
+        verify(store, never()).requestRestore(any());
+    }
+
+    @Test
+    @DisplayName("Given the backup folder without its requests folder, when an administrator restores a backup, then it is refused before anything is audited or a restart is asked for")
+    void should_refuse_before_auditing_when_restored_given_no_requests_folder() {
+        when(store.open(FILE)).thenReturn(Optional.of(new BackupDownload(new BackupFile(FILE, 1590, NOW), InputStream::nullInputStream)));
+        when(store.acceptsRequests()).thenReturn(false);
+
+        assertThatThrownBy(() -> held.restoreBackup(ADMIN, FILE)).isInstanceOf(BackupsUnavailable.class);
+
+        verify(events, never()).publishEvent(any());
+        verify(restarter, never()).restartAfterCommitForRestore();
+        afterCommit.commit();
+        verify(store, never()).requestRestore(any());
     }
 }
