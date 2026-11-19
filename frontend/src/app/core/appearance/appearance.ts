@@ -9,11 +9,15 @@ import {
   signal,
 } from '@angular/core';
 
+import { PAGE_TRANSITION_CLASS } from '../navigation/page-transitions';
+
 export type AppearanceChoice = 'auto' | 'light' | 'dark';
 
 export const APPEARANCE_STORAGE_KEY = 'nfnn.appearance';
+export const APPEARANCE_SWITCHING_CLASS = 'appearance-switching';
 
 const DARK_DEVICE = '(prefers-color-scheme: dark)';
+const RUNNING_MOTION = `.${PAGE_TRANSITION_CLASS}, dialog.dialog--leaving`;
 const COLOR_SCHEMES: Record<AppearanceChoice, string> = {
   auto: 'light dark',
   light: 'light',
@@ -59,6 +63,8 @@ export class Appearance {
   private readonly destroyRef = inject(DestroyRef);
   private readonly chosen = signal<AppearanceChoice>('auto');
   private readonly deviceDark = signal(false);
+  private switches = 0;
+  private waitingForStillness: MutationObserver | null = null;
 
   readonly choice = this.chosen.asReadonly();
   readonly dark = computed(() => {
@@ -73,8 +79,10 @@ export class Appearance {
     const followOtherTabs = (event: StorageEvent): void => {
       const ours = event.key === APPEARANCE_STORAGE_KEY || event.key === null;
       if (ours && event.storageArea === keptStorage(view)) {
-        this.chosen.set(keptChoice(view));
-        this.apply();
+        this.whenNothingMoves(() => {
+          this.chosen.set(keptChoice(view));
+          this.switchInOneFrame();
+        });
       }
     };
     if (query) {
@@ -85,19 +93,65 @@ export class Appearance {
     this.destroyRef.onDestroy(() => {
       query?.removeEventListener('change', followDevice);
       view?.removeEventListener('storage', followOtherTabs);
+      this.stopWaiting();
     });
     this.chosen.set(keptChoice(view));
     this.apply();
   }
 
   choose(choice: AppearanceChoice): void {
+    this.stopWaiting();
     this.chosen.set(choice);
     this.keep(choice);
-    this.apply();
+    this.switchInOneFrame();
   }
 
   private apply(): void {
     applyChoice(this.document, this.chosen());
+  }
+
+  private whenNothingMoves(switchNow: () => void): void {
+    this.stopWaiting();
+    const Observer = this.document.defaultView?.MutationObserver;
+    if (!this.somethingMoves() || Observer === undefined) {
+      switchNow();
+      return;
+    }
+    const waiting = new Observer(() => {
+      if (!this.somethingMoves()) {
+        this.stopWaiting();
+        switchNow();
+      }
+    });
+    waiting.observe(this.document.documentElement, {
+      subtree: true,
+      childList: true,
+      attributeFilter: ['class'],
+    });
+    this.waitingForStillness = waiting;
+  }
+
+  private somethingMoves(): boolean {
+    return this.document.querySelector(RUNNING_MOTION) !== null;
+  }
+
+  private stopWaiting(): void {
+    this.waitingForStillness?.disconnect();
+    this.waitingForStillness = null;
+  }
+
+  private switchInOneFrame(): void {
+    const root = this.document.documentElement;
+    const view = this.document.defaultView;
+    const switchNumber = ++this.switches;
+    root.classList.add(APPEARANCE_SWITCHING_CLASS);
+    this.apply();
+    const settle = (): void => {
+      if (switchNumber === this.switches) {
+        root.classList.remove(APPEARANCE_SWITCHING_CLASS);
+      }
+    };
+    view?.requestAnimationFrame(() => view.requestAnimationFrame(settle));
   }
 
   private keep(choice: AppearanceChoice): void {

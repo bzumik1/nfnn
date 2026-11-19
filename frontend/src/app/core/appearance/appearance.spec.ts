@@ -1,7 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 
 import { appConfig } from '../../app.config';
-import { APPEARANCE_STORAGE_KEY, Appearance, appearanceAtStart } from './appearance';
+import {
+  APPEARANCE_STORAGE_KEY,
+  APPEARANCE_SWITCHING_CLASS,
+  Appearance,
+  appearanceAtStart,
+} from './appearance';
 
 interface FakeQuery {
   matches: boolean;
@@ -51,6 +56,7 @@ describe('Given the appearance the visitor chooses for the site on this device',
   afterEach(() => {
     meta.remove();
     root.removeAttribute('data-appearance');
+    root.classList.remove(APPEARANCE_SWITCHING_CLASS);
     localStorage.clear();
     vi.restoreAllMocks();
     delete (window as { matchMedia?: unknown }).matchMedia;
@@ -217,6 +223,210 @@ describe('Given the appearance the visitor chooses for the site on this device',
     window.dispatchEvent(new StorageEvent('storage', { key: null, storageArea: localStorage }));
 
     expect(appearance.choice()).toBe('auto');
+  });
+
+  describe('Given the browser draws its frames one by one', () => {
+    let waiting: FrameRequestCallback[];
+
+    function drawNextFrame(): void {
+      const due = waiting;
+      waiting = [];
+      due.forEach((callback) => callback(performance.now()));
+    }
+
+    function transitionsOff(): boolean {
+      return root.classList.contains(APPEARANCE_SWITCHING_CLASS);
+    }
+
+    beforeEach(() => {
+      waiting = [];
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+        waiting.push(callback);
+        return waiting.length;
+      });
+    });
+
+    it('when the visitor switches the appearance, then every transition is off for exactly the next frame drawn, so all colours change in it together', () => {
+      const appearance = start();
+
+      appearance.choose('dark');
+
+      expect(root.getAttribute('data-appearance')).toBe('dark');
+      expect(transitionsOff()).toBe(true);
+      drawNextFrame();
+      expect(transitionsOff()).toBe(true);
+      drawNextFrame();
+      expect(transitionsOff()).toBe(false);
+    });
+
+    it('when the visitor switches again before that frame has passed, then transitions stay off until the frame after the last switch has been drawn', () => {
+      const appearance = start();
+      appearance.choose('dark');
+      drawNextFrame();
+
+      appearance.choose('light');
+      drawNextFrame();
+
+      expect(transitionsOff()).toBe(true);
+      drawNextFrame();
+      expect(transitionsOff()).toBe(false);
+    });
+
+    it('when another open tab switches the appearance, then this tab switches with transitions off for one frame too', () => {
+      start();
+
+      localStorage.setItem(APPEARANCE_STORAGE_KEY, 'dark');
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: APPEARANCE_STORAGE_KEY,
+          newValue: 'dark',
+          storageArea: localStorage,
+        }),
+      );
+
+      expect(transitionsOff()).toBe(true);
+      drawNextFrame();
+      drawNextFrame();
+      expect(transitionsOff()).toBe(false);
+    });
+
+    it('when the site starts with a kept choice, then nothing was drawn before, so transitions are left alone', () => {
+      localStorage.setItem(APPEARANCE_STORAGE_KEY, 'dark');
+
+      start();
+
+      expect(root.getAttribute('data-appearance')).toBe('dark');
+      expect(transitionsOff()).toBe(false);
+      expect(waiting).toEqual([]);
+    });
+  });
+
+  describe('Given something on the page is still moving', () => {
+    let moving: HTMLElement[];
+
+    function plant(element: HTMLElement): HTMLElement {
+      document.body.append(element);
+      moving.push(element);
+      return element;
+    }
+
+    function pageTransition(): HTMLElement {
+      const overlay = document.createElement('div');
+      overlay.className = 'page-transition page-transition--push';
+      return plant(overlay);
+    }
+
+    function leavingDialog(): HTMLElement {
+      const dialog = document.createElement('dialog');
+      dialog.className = 'dialog dialog--leaving';
+      return plant(dialog);
+    }
+
+    function anotherTabChooses(choice: 'light' | 'dark'): void {
+      localStorage.setItem(APPEARANCE_STORAGE_KEY, choice);
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: APPEARANCE_STORAGE_KEY,
+          newValue: choice,
+          storageArea: localStorage,
+        }),
+      );
+    }
+
+    async function domSettles(): Promise<void> {
+      await new Promise<void>((resolve) => queueMicrotask(resolve));
+    }
+
+    beforeEach(() => {
+      moving = [];
+    });
+
+    afterEach(() => {
+      moving.forEach((element) => element.remove());
+    });
+
+    it('when another tab chooses dark while nothing moves, then this tab turns dark at once', () => {
+      const appearance = start();
+
+      anotherTabChooses('dark');
+
+      expect(appearance.choice()).toBe('dark');
+      expect(root.getAttribute('data-appearance')).toBe('dark');
+    });
+
+    it('when another tab chooses dark during a page transition, then this tab turns dark only once the transition has ended, so the transition is never cut short', async () => {
+      const appearance = start();
+      const overlay = pageTransition();
+
+      anotherTabChooses('dark');
+      await domSettles();
+
+      expect(appearance.choice()).toBe('auto');
+      expect(root.hasAttribute('data-appearance')).toBe(false);
+      expect(root.classList.contains(APPEARANCE_SWITCHING_CLASS)).toBe(false);
+
+      overlay.remove();
+      await domSettles();
+
+      expect(appearance.choice()).toBe('dark');
+      expect(root.getAttribute('data-appearance')).toBe('dark');
+    });
+
+    it('when another tab chooses dark while a sheet drives away, then this tab turns dark only once the sheet has left', async () => {
+      const appearance = start();
+      const dialog = leavingDialog();
+
+      anotherTabChooses('dark');
+      await domSettles();
+
+      expect(appearance.choice()).toBe('auto');
+
+      dialog.classList.remove('dialog--leaving');
+      await domSettles();
+
+      expect(appearance.choice()).toBe('dark');
+      expect(root.getAttribute('data-appearance')).toBe('dark');
+    });
+
+    it('when another tab chooses dark while a page transition and a leaving sheet both run, then this tab waits for both', async () => {
+      const appearance = start();
+      const overlay = pageTransition();
+      const dialog = leavingDialog();
+
+      anotherTabChooses('dark');
+      overlay.remove();
+      await domSettles();
+
+      expect(appearance.choice()).toBe('auto');
+
+      dialog.classList.remove('dialog--leaving');
+      await domSettles();
+
+      expect(appearance.choice()).toBe('dark');
+    });
+
+    it('when the visitor presses the button of the sheet during a page transition, then the choice applies at once', () => {
+      const appearance = start();
+      pageTransition();
+
+      appearance.choose('dark');
+
+      expect(appearance.choice()).toBe('dark');
+      expect(root.getAttribute('data-appearance')).toBe('dark');
+    });
+
+    it('when the visitor presses the button while the choice of another tab still waits, then the pressed choice holds after the motion ends', async () => {
+      const appearance = start();
+      const overlay = pageTransition();
+      anotherTabChooses('dark');
+
+      appearance.choose('light');
+      overlay.remove();
+      await domSettles();
+
+      expect(appearance.choice()).toBe('light');
+      expect(root.getAttribute('data-appearance')).toBe('light');
+    });
   });
 
   it('when the app is configured, then it applies the kept choice at the start', () => {

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.cucumber;
 
 import cz.novanadeje.app.cucumber.transcript.ApiTranscriptRecorder;
+import cz.novanadeje.app.cucumber.transcript.AuditedExchange;
 import cz.novanadeje.app.cucumber.transcript.RecordedExchange;
 import cz.novanadeje.app.cucumber.transcript.ScenarioTranscript;
 import cz.novanadeje.app.support.AsyncTaskTracker;
@@ -12,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -55,16 +57,22 @@ public class ApiClient {
     private final int port;
     private final ApiTranscriptRecorder transcript;
     private final AsyncTaskTracker asyncTasks;
+    private final JdbcClient jdbc;
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
     private final Map<String, String> defaultHeaders = new LinkedHashMap<>();
     private ResponseEntity<String> lastResponse;
     private byte[] lastResponseBytes;
     private String clientAddress = nextClientAddress();
+    private int auditWindow;
+    private long auditRowsBefore;
+    private Optional<AdministratorWriteAudits.StateProbe> stateProbe = Optional.empty();
+    private Optional<String> stateBefore = Optional.empty();
 
-    public ApiClient(@LocalServerPort int port, ApiTranscriptRecorder transcript, AsyncTaskTracker asyncTasks) {
+    public ApiClient(@LocalServerPort int port, ApiTranscriptRecorder transcript, AsyncTaskTracker asyncTasks, JdbcClient jdbc) {
         this.port = port;
         this.transcript = transcript;
         this.asyncTasks = asyncTasks;
+        this.jdbc = jdbc;
         this.client = RestClient.builder()
                 .baseUrl("http://localhost:" + port)
                 .defaultStatusHandler(status -> true, (request, response) -> {
@@ -105,6 +113,7 @@ public class ApiClient {
     }
 
     public ResponseEntity<String> postFile(String path, String fieldName, String fileName, String contentType, byte[] bytes) {
+        beginAuditWindow("POST", path);
         HttpHeaders partHeaders = new HttpHeaders();
         partHeaders.setContentType(MediaType.parseMediaType(contentType));
         MultiValueMap<String, Object> parts = new LinkedMultiValueMap<>();
@@ -129,6 +138,7 @@ public class ApiClient {
     }
 
     public ResponseEntity<String> putBytes(String path, byte[] bytes, Map<String, String> headers) {
+        beginAuditWindow("PUT", path);
         lastResponse = client.put()
                 .uri(path)
                 .headers(this::addDefaultHeaders)
@@ -143,6 +153,7 @@ public class ApiClient {
     }
 
     public ResponseEntity<String> send(String method, String path, String contentType, String body) {
+        beginAuditWindow(method, path);
         RestClient.RequestBodySpec request = client.method(HttpMethod.valueOf(method))
                 .uri(URI.create("http://localhost:" + port + path))
                 .headers(this::addDefaultHeaders);
@@ -157,6 +168,7 @@ public class ApiClient {
     }
 
     public ResponseEntity<String> postForm(String path, Map<String, String> fields) {
+        beginAuditWindow("POST", path);
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         fields.forEach((name, value) -> {
             if (value != null) {
@@ -186,6 +198,7 @@ public class ApiClient {
     }
 
     public ResponseEntity<byte[]> getBytes(String path) {
+        beginAuditWindow("GET", path);
         ResponseEntity<byte[]> response = client.get()
                 .uri(path)
                 .headers(this::addDefaultHeaders)
@@ -200,6 +213,7 @@ public class ApiClient {
     }
 
     public ResponseEntity<String> postRaw(String path, String json, Map<String, String> headers) {
+        beginAuditWindow("POST", path);
         byte[] body = json.getBytes(StandardCharsets.UTF_8);
         StringBuilder request = new StringBuilder("POST " + path + " HTTP/1.1\r\n");
         Map<String, String> sent = new LinkedHashMap<>(headers);
@@ -235,6 +249,7 @@ public class ApiClient {
     }
 
     public ResponseEntity<String> sendRaw(String method, String target, Map<String, String> headers, String body) {
+        beginAuditWindow(method, target);
         byte[] content = body.getBytes(StandardCharsets.ISO_8859_1);
         Map<String, String> sent = new LinkedHashMap<>(headers);
         sent.putIfAbsent(FORWARDED_FOR, clientAddress);
@@ -330,6 +345,7 @@ public class ApiClient {
     }
 
     private ResponseEntity<String> exchange(HttpMethod method, String path, Map<String, ?> body, Map<String, String> headers) {
+        beginAuditWindow(method.name(), path);
         lastResponse = unrecorded(new PreparedRequest(method, path, body, headers));
         lastResponseBytes = null;
         record(method.name(), path, headers, body == null ? null : jsonMapper.valueToTree(body));
@@ -348,6 +364,7 @@ public class ApiClient {
     }
 
     public List<ResponseEntity<String>> sendOneAfterAnother(List<PreparedRequest> requests, IntConsumer afterStarting, Runnable afterAllStarted) {
+        beginAuditWindow();
         ExecutorService threads = Executors.newFixedThreadPool(requests.size());
         try {
             List<Future<ResponseEntity<String>>> pending = new ArrayList<>();
@@ -390,9 +407,28 @@ public class ApiClient {
                              byte[] responseBody) {
         BundleTexts.requireBundleTexts(method + " " + path, responseHeaders, responseBody);
         asyncTasks.awaitIdleAfter(method + " " + path);
+        boolean stateUnchanged = stateBefore.isPresent() && stateProbe.map(probe -> probe.stateIn(jdbc)).equals(stateBefore);
+        transcript.audited(new AuditedExchange(auditWindow, method, path, status, auditRowsBefore, auditRows(), stateUnchanged));
         Map<String, String> sent = new LinkedHashMap<>(defaultHeaders);
         sent.putAll(extraHeaders);
         transcript.exchange(new RecordedExchange(method, path, sent, requestBody, status, responseHeaders, responseBody));
+    }
+
+    private void beginAuditWindow() {
+        auditWindow++;
+        auditRowsBefore = auditRows();
+        stateProbe = Optional.empty();
+        stateBefore = Optional.empty();
+    }
+
+    private void beginAuditWindow(String method, String path) {
+        beginAuditWindow();
+        stateProbe = AdministratorWriteAudits.stateProbeOf(method, path, AdministratorWriteAuditHooks.WRITES_THAT_MAY_CHANGE_NOTHING);
+        stateBefore = stateProbe.map(probe -> probe.stateIn(jdbc));
+    }
+
+    private long auditRows() {
+        return jdbc.sql("select count(*) from admin_action").query(Long.class).single();
     }
 
     private JsonNode rawBody(String json) {
