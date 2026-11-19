@@ -12,6 +12,7 @@
 .busy-label__face {
   grid-area: 1 / 1;
   min-inline-size: 0;
+  max-inline-size: 100%;
   overflow-wrap: break-word;
   opacity: 0;
   transition-property: none;
