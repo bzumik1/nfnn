@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
@@ -98,7 +99,7 @@ class AdminPaymentsServiceTest {
         when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of());
         versions.reset();
 
-        AdminPaymentList list = service.listPaired(Optional.of(Year.of(2026)), new PaymentFilter(null, null, null, null, 10, 15));
+        AdminPaymentList list = service.listPaired(Optional.of(Year.of(2026)), new PaymentFilter(null, null, null, null, 10, 15), AdministrationChannel.BROWSER);
 
         assertThat(list.total()).isEqualTo(100);
         assertThat(list.items()).extracting(item -> item.payment().transactionId().value())
@@ -160,7 +161,7 @@ class AdminPaymentsServiceTest {
         when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord, petrRecord));
         when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of(octoberGift.id()));
 
-        AdminPaymentList list = service.listPaired(Optional.empty(), PaymentFilter.none());
+        AdminPaymentList list = service.listPaired(Optional.empty(), PaymentFilter.none(), AdministrationChannel.BROWSER);
 
         assertThat(list.year()).isEmpty();
         assertThat(list.availableYears()).containsExactly(Year.of(2026), Year.of(2025));
@@ -185,7 +186,7 @@ class AdminPaymentsServiceTest {
         when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of());
 
         AdminPaymentList list = service.listPaired(Optional.empty(),
-                new PaymentFilter(null, LocalDate.of(2025, 12, 1), LocalDate.of(2026, 10, 31), null, 0, null));
+                new PaymentFilter(null, LocalDate.of(2025, 12, 1), LocalDate.of(2026, 10, 31), null, 0, null), AdministrationChannel.BROWSER);
 
         assertThat(list.year()).isEmpty();
         assertThat(list.items()).extracting(AdminPaymentView::payment).containsExactly(october);
@@ -197,7 +198,7 @@ class AdminPaymentsServiceTest {
         when(donations.findReceivedYearsNewestFirst()).thenReturn(List.of(Year.of(2026)));
 
         AdminPaymentList list = service.listPaired(Optional.empty(),
-                new PaymentFilter(null, LocalDate.of(2026, 10, 31), LocalDate.of(2026, 10, 1), null, 0, null));
+                new PaymentFilter(null, LocalDate.of(2026, 10, 31), LocalDate.of(2026, 10, 1), null, 0, null), AdministrationChannel.BROWSER);
 
         assertThat(list.items()).isEmpty();
         assertThat(list.total()).isZero();
@@ -214,7 +215,7 @@ class AdminPaymentsServiceTest {
         when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord));
         when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of());
 
-        AdminPaymentList list = service.listPaired(Optional.of(Year.of(2025)), PaymentFilter.none());
+        AdminPaymentList list = service.listPaired(Optional.of(Year.of(2025)), PaymentFilter.none(), AdministrationChannel.BROWSER);
 
         assertThat(list.year()).contains(Year.of(2025));
         assertThat(list.items()).singleElement().satisfies(item -> {
@@ -228,7 +229,7 @@ class AdminPaymentsServiceTest {
     void should_answer_empty_list_when_paired_listed_given_no_donations() {
         when(donations.findReceivedYearsNewestFirst()).thenReturn(List.of());
 
-        AdminPaymentList list = service.listPaired(Optional.empty(), PaymentFilter.none());
+        AdminPaymentList list = service.listPaired(Optional.empty(), PaymentFilter.none(), AdministrationChannel.BROWSER);
 
         assertThat(list.year()).isEmpty();
         assertThat(list.availableYears()).isEmpty();
@@ -296,9 +297,9 @@ class AdminPaymentsServiceTest {
         when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord, petrRecord));
         when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of());
 
-        assertThat(service.listPaired(Optional.empty(), new PaymentFilter(null, null, null, janaRecord.id(), 0, null)).items())
+        assertThat(service.listPaired(Optional.empty(), new PaymentFilter(null, null, null, janaRecord.id(), 0, null), AdministrationChannel.BROWSER).items())
                 .extracting(AdminPaymentView::payment).containsExactly(october);
-        assertThat(service.listPaired(Optional.empty(), new PaymentFilter(janaRecord.name().value(), null, null, null, 0, null)).items())
+        assertThat(service.listPaired(Optional.empty(), new PaymentFilter(janaRecord.name().value(), null, null, null, 0, null), AdministrationChannel.BROWSER).items())
                 .extracting(AdminPaymentView::payment).containsExactly(october);
     }
 
