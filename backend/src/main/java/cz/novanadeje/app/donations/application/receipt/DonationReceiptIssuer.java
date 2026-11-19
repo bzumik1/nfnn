@@ -20,6 +20,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptReplacementCaps;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
+import cz.novanadeje.app.donations.domain.receipt.YearlyReplacements;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
@@ -136,7 +137,7 @@ public class DonationReceiptIssuer {
         if (again.isPresent()) {
             return new AdministratorIssue(returnedAgain(again.get(), request), facts.active());
         }
-        NewReceipt newReceipt = newReceiptFor(request, facts, channel.isConnectedApplication());
+        NewReceipt newReceipt = newReceiptFor(facts, request, channel.isConnectedApplication());
         AdministratorIssue issue = new AdministratorIssue(issueNew(request, facts.requested(), newReceipt), facts.active());
         if (issue.tookNewNumber()) {
             events.publishEvent(new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.of(issue.receipt().id().value()), auditDetails(issue.receipt()),
@@ -171,7 +172,7 @@ public class DonationReceiptIssuer {
         if (again.isPresent()) {
             return returnedAgain(again.get(), request);
         }
-        return issueNew(request, facts.requested(), newReceiptFor(request, facts, false));
+        return issueNew(request, facts.requested(), newReceiptFor(facts, request, false));
     }
 
     private ReceiptIssueFacts factsOf(ReceiptRequest request) {
@@ -185,14 +186,17 @@ public class DonationReceiptIssuer {
         };
     }
 
-    private NewReceipt newReceiptFor(ReceiptRequest request, ReceiptIssueFacts facts, boolean byConnectedApplication) {
-        return switch (request) {
-            case ReceiptRequest.ForDonation single -> ReceiptIssuePolicy.newReceipt(facts, List.of(), Optional.empty(), byConnectedApplication);
-            case ReceiptRequest.ForYear yearly -> {
-                List<DonationReceipt> singles = receipts.findActiveSinglesFor(yearly.donations().stream().map(Donation::id).toList());
-                yield ReceiptIssuePolicy.newReceipt(facts, singles, receipts.findLatestOutdatedForYear(yearly.donor(), yearly.year()), byConnectedApplication);
-            }
+    private NewReceipt newReceiptFor(ReceiptIssueFacts facts, ReceiptRequest request, boolean byConnectedApplication) {
+        return switch (facts) {
+            case ReceiptIssueFacts.ForGift single -> ReceiptIssuePolicy.newReceipt(single, byConnectedApplication);
+            case ReceiptIssueFacts.ForYear yearly -> ReceiptIssuePolicy.newReceipt(yearly, yearlyReplacements((ReceiptRequest.ForYear) request),
+                    byConnectedApplication);
         };
+    }
+
+    private YearlyReplacements yearlyReplacements(ReceiptRequest.ForYear request) {
+        List<DonationReceipt> singles = receipts.findActiveSinglesFor(request.donations().stream().map(Donation::id).toList());
+        return new YearlyReplacements(singles, receipts.findLatestOutdatedForYear(request.donor(), request.year()));
     }
 
     private static DonationReceipt returnedAgain(DonationReceipt active, ReceiptRequest request) {
@@ -222,7 +226,7 @@ public class DonationReceiptIssuer {
         FrozenReceipt frozen = freezer.freeze(document, signatory.signatureImage(), signatory.portraitImage());
         DonationReceipt issued = DonationReceipt.issue(DonationReceiptId.newId(issuedAt), request.donor(), issuedAt, fingerprint, frozen,
                 replaced.map(DonationReceipt::id));
-        newReceipt.supersedes().forEach(old -> {
+        newReceipt.toSupersede().forEach(old -> {
             old.markSuperseded(issuedAt);
             receipts.save(old);
         });

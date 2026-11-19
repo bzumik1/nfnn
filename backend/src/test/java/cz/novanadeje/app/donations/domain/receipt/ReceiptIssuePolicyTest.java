@@ -25,6 +25,7 @@ class ReceiptIssuePolicyTest {
 
     private static final ReceiptFingerprint REQUESTED = new ReceiptFingerprint("a".repeat(64));
     private static final ReceiptFingerprint EARLIER = new ReceiptFingerprint("b".repeat(64));
+    private static final YearlyReplacements NO_REPLACEMENTS = new YearlyReplacements(List.of(), Optional.empty());
 
     private final Donation march = receivedFromJana(LocalDate.of(2026, 3, 15), 50000);
     private final Donation june = receivedFromJana(LocalDate.of(2026, 6, 15), 30000);
@@ -39,7 +40,7 @@ class ReceiptIssuePolicyTest {
             ForGift facts = new ForGift(march.id(), Optional.empty(), REQUESTED, Optional.empty());
 
             assertThat(ReceiptIssuePolicy.activeToReturnAgain(facts)).isEmpty();
-            assertThat(ReceiptIssuePolicy.newReceipt(facts, List.of(), Optional.empty(), false)).isEqualTo(new NewReceipt(Optional.empty(), List.of()));
+            assertThat(ReceiptIssuePolicy.newReceipt(facts, false)).isEqualTo(new NewReceipt(Optional.empty(), List.of()));
         }
 
         @Test
@@ -57,7 +58,7 @@ class ReceiptIssuePolicyTest {
             ForGift facts = new ForGift(march.id(), Optional.empty(), REQUESTED, Optional.of(active));
 
             assertThat(ReceiptIssuePolicy.activeToReturnAgain(facts)).isEmpty();
-            assertThat(ReceiptIssuePolicy.newReceipt(facts, List.of(), Optional.empty(), false)).isEqualTo(new NewReceipt(Optional.of(active), List.of(active)));
+            assertThat(ReceiptIssuePolicy.newReceipt(facts, false)).isEqualTo(new NewReceipt(Optional.of(active), List.of(active)));
         }
 
         @Test
@@ -69,12 +70,20 @@ class ReceiptIssuePolicyTest {
         }
 
         @Test
+        @DisplayName("when a new receipt is asked for a gift the active yearly receipt of its year lists, then it is refused too")
+        void should_refuse_new_receipt_when_asked_given_active_yearly_listing_the_gift() {
+            ForGift facts = new ForGift(march.id(), Optional.of(yearly(List.of(march), EARLIER)), REQUESTED, Optional.empty());
+
+            assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, false)).isInstanceOf(DonationOnYearlyReceipt.class);
+        }
+
+        @Test
         @DisplayName("when the active yearly receipt of the gift's year does not list it, then the first receipt is issued")
         void should_issue_when_decided_given_active_yearly_without_the_gift() {
             ForGift facts = new ForGift(march.id(), Optional.of(yearly(List.of(june), EARLIER)), REQUESTED, Optional.empty());
 
             assertThat(ReceiptIssuePolicy.activeToReturnAgain(facts)).isEmpty();
-            assertThat(ReceiptIssuePolicy.newReceipt(facts, List.of(), Optional.empty(), false)).isEqualTo(new NewReceipt(Optional.empty(), List.of()));
+            assertThat(ReceiptIssuePolicy.newReceipt(facts, false)).isEqualTo(new NewReceipt(Optional.empty(), List.of()));
         }
 
         @Test
@@ -82,7 +91,7 @@ class ReceiptIssuePolicyTest {
         void should_refuse_replacement_when_connected_application_decides_given_changed_data() {
             ForGift facts = new ForGift(march.id(), Optional.empty(), REQUESTED, Optional.of(single(march, EARLIER)));
 
-            assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, List.of(), Optional.empty(), true)).isInstanceOf(ReceiptReplacementInBrowserOnly.class);
+            assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, true)).isInstanceOf(ReceiptReplacementInBrowserOnly.class);
         }
 
         @Test
@@ -90,18 +99,7 @@ class ReceiptIssuePolicyTest {
         void should_issue_first_receipt_when_connected_application_decides_given_no_receipt() {
             ForGift facts = new ForGift(march.id(), Optional.empty(), REQUESTED, Optional.empty());
 
-            assertThat(ReceiptIssuePolicy.newReceipt(facts, List.of(), Optional.empty(), true)).isEqualTo(new NewReceipt(Optional.empty(), List.of()));
-        }
-
-        @Test
-        @DisplayName("when single receipts or an outdated yearly receipt are handed in, then it is refused as a broken call")
-        void should_refuse_when_decided_given_singles_or_outdated_for_a_gift() {
-            ForGift facts = new ForGift(march.id(), Optional.empty(), REQUESTED, Optional.empty());
-
-            assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, List.of(single(june, EARLIER)), Optional.empty(), false))
-                    .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, List.of(), Optional.of(yearly(List.of(june), EARLIER)), false))
-                    .isInstanceOf(IllegalArgumentException.class);
+            assertThat(ReceiptIssuePolicy.newReceipt(facts, true)).isEqualTo(new NewReceipt(Optional.empty(), List.of()));
         }
     }
 
@@ -117,7 +115,7 @@ class ReceiptIssuePolicyTest {
             ForYear facts = new ForYear(REQUESTED, Optional.empty());
 
             assertThat(ReceiptIssuePolicy.activeToReturnAgain(facts)).isEmpty();
-            assertThat(ReceiptIssuePolicy.newReceipt(facts, List.of(marchSingle, juneSingle), Optional.empty(), false))
+            assertThat(ReceiptIssuePolicy.newReceipt(facts, new YearlyReplacements(List.of(marchSingle, juneSingle), Optional.empty()), false))
                     .isEqualTo(new NewReceipt(Optional.empty(), List.of(marchSingle, juneSingle)));
         }
 
@@ -137,25 +135,25 @@ class ReceiptIssuePolicyTest {
             ForYear facts = new ForYear(REQUESTED, Optional.of(active));
 
             assertThat(ReceiptIssuePolicy.activeToReturnAgain(facts)).isEmpty();
-            assertThat(ReceiptIssuePolicy.newReceipt(facts, List.of(juneSingle), Optional.of(yearly(List.of(march), EARLIER)), false))
+            assertThat(ReceiptIssuePolicy.newReceipt(facts, new YearlyReplacements(List.of(juneSingle), Optional.of(withdrawnYearly(List.of(march)))), false))
                     .isEqualTo(new NewReceipt(Optional.of(active), List.of(active, juneSingle)));
         }
 
         @Test
         @DisplayName("when only an outdated yearly receipt of the year exists, then the new one names it as replaced and supersedes nothing")
         void should_name_outdated_when_decided_given_withdrawn_yearly() {
-            DonationReceipt outdated = yearly(List.of(march), EARLIER);
+            DonationReceipt outdated = withdrawnYearly(List.of(march));
 
-            assertThat(ReceiptIssuePolicy.newReceipt(new ForYear(REQUESTED, Optional.empty()), List.of(), Optional.of(outdated), false))
+            assertThat(ReceiptIssuePolicy.newReceipt(new ForYear(REQUESTED, Optional.empty()), new YearlyReplacements(List.of(), Optional.of(outdated)), false))
                     .isEqualTo(new NewReceipt(Optional.of(outdated), List.of()));
         }
 
         @Test
         @DisplayName("when a connected application asks after a withdrawal, then the new receipt is issued, since it replaces nothing valid")
         void should_issue_when_connected_application_decides_given_only_outdated_yearly() {
-            DonationReceipt outdated = yearly(List.of(march), EARLIER);
+            DonationReceipt outdated = withdrawnYearly(List.of(march));
 
-            assertThat(ReceiptIssuePolicy.newReceipt(new ForYear(REQUESTED, Optional.empty()), List.of(), Optional.of(outdated), true))
+            assertThat(ReceiptIssuePolicy.newReceipt(new ForYear(REQUESTED, Optional.empty()), new YearlyReplacements(List.of(), Optional.of(outdated)), true))
                     .isEqualTo(new NewReceipt(Optional.of(outdated), List.of()));
         }
 
@@ -164,7 +162,7 @@ class ReceiptIssuePolicyTest {
         void should_refuse_replacement_when_connected_application_decides_given_changed_yearly() {
             ForYear facts = new ForYear(REQUESTED, Optional.of(yearly(List.of(march), EARLIER)));
 
-            assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, List.of(), Optional.empty(), true)).isInstanceOf(ReceiptReplacementInBrowserOnly.class);
+            assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, NO_REPLACEMENTS, true)).isInstanceOf(ReceiptReplacementInBrowserOnly.class);
         }
 
         @Test
@@ -172,14 +170,14 @@ class ReceiptIssuePolicyTest {
         void should_refuse_when_connected_application_decides_given_active_single() {
             ForYear facts = new ForYear(REQUESTED, Optional.empty());
 
-            assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, List.of(single(june, EARLIER)), Optional.empty(), true))
+            assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, new YearlyReplacements(List.of(single(june, EARLIER)), Optional.empty()), true))
                     .isInstanceOf(ReceiptReplacementInBrowserOnly.class);
         }
 
         @Test
         @DisplayName("when a connected application asks for the first yearly receipt of a year without receipts, then it is issued")
         void should_issue_when_connected_application_decides_given_no_receipt() {
-            assertThat(ReceiptIssuePolicy.newReceipt(new ForYear(REQUESTED, Optional.empty()), List.of(), Optional.empty(), true))
+            assertThat(ReceiptIssuePolicy.newReceipt(new ForYear(REQUESTED, Optional.empty()), NO_REPLACEMENTS, true))
                     .isEqualTo(new NewReceipt(Optional.empty(), List.of()));
         }
     }
@@ -189,7 +187,7 @@ class ReceiptIssuePolicyTest {
     void should_refuse_new_receipt_when_asked_given_active_receipt_certifying_the_data() {
         ForYear facts = new ForYear(REQUESTED, Optional.of(yearly(List.of(march), REQUESTED)));
 
-        assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, List.of(), Optional.empty(), false)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, NO_REPLACEMENTS, false)).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -198,10 +196,17 @@ class ReceiptIssuePolicyTest {
         assertThatThrownBy(() -> new ForGift(march.id(), Optional.empty(), null, Optional.empty())).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ForYear(REQUESTED, null)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new NewReceipt(Optional.empty(), null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new YearlyReplacements(List.of(), null)).isInstanceOf(IllegalArgumentException.class);
     }
 
     private DonationReceipt single(Donation donation, ReceiptFingerprint fingerprint) {
         return DonationReceipt.issue(DonationReceiptId.newId(NOW), JANA, NOW, fingerprint, frozen(singleDocument(jana(), donation)), Optional.empty());
+    }
+
+    private DonationReceipt withdrawnYearly(List<Donation> donations) {
+        DonationReceipt receipt = yearly(donations, EARLIER);
+        receipt.withdrawBecauseDonationsChanged(NOW);
+        return receipt;
     }
 
     private DonationReceipt yearly(List<Donation> donations, ReceiptFingerprint fingerprint) {
