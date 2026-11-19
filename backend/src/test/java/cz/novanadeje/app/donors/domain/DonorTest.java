@@ -163,10 +163,11 @@ class DonorTest {
     }
 
     @Test
-    @DisplayName("Given a company registering through the factory for an identifier without one, when it registers, then it is rejected")
+    @DisplayName("Given a company without an identifier, when it registers through the factory that takes one, then the missing identifier is refused")
     void should_reject_when_registered_with_an_identifier_given_none() {
         assertThatThrownBy(() -> Donor.registerWithCompanyIdentifier(DonorId.newId(NOW), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), null, ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Company identifier is required");
     }
 
     @Test
@@ -181,7 +182,7 @@ class DonorTest {
     @Test
     @DisplayName("Given no name, when a donor registers, then it is rejected")
     void should_reject_when_registered_given_no_name() {
-        assertThatThrownBy(() -> Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, null, ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW), HASH))
+        assertThatThrownBy(() -> Donor.register(DonorId.newId(NOW), DonorType.PERSON, null, ADDRESS, EMAIL, SYMBOL, LocaleCode.CS, NOW))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

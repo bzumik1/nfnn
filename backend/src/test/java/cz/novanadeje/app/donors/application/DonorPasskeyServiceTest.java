@@ -103,7 +103,7 @@ class DonorPasskeyServiceTest {
     @Test
     @DisplayName("Given a donor without a password or passkey who got a password meanwhile, when passkey creation options are asked for without a confirmation, then the confirmation is required and no challenge is stored")
     void should_require_confirmation_when_options_asked_given_password_set_since_read() {
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor(null)), Optional.of(donor(HASH)));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()), Optional.of(donor(HASH)));
 
         assertThatThrownBy(() -> service.creationOptions(DONOR, false, Confirmation.none())).isInstanceOf(ConfirmationRequired.class);
 
@@ -113,7 +113,7 @@ class DonorPasskeyServiceTest {
     @Test
     @DisplayName("Given a donor without a password who added a passkey meanwhile, when passkey creation options are asked for without a confirmation, then the confirmation is required and no challenge is stored")
     void should_require_confirmation_when_options_asked_given_passkey_added_since_read() {
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor(null)));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(passkeys.countByDonor(DONOR)).thenReturn(0, 1);
 
         assertThatThrownBy(() -> service.creationOptions(DONOR, false, Confirmation.none())).isInstanceOf(ConfirmationRequired.class);
@@ -121,10 +121,14 @@ class DonorPasskeyServiceTest {
         verify(challenges, never()).save(any());
     }
 
-    private static Donor donor(PasswordHash hash) {
-        Donor donor = Donors.withPassword(Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                new EmailAddress("jana@example.cz"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW.minusSeconds(3600)), hash);
+    private static Donor donor() {
+        Donor donor = Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                new EmailAddress("jana@example.cz"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW.minusSeconds(3600));
         donor.verifyEmail(NOW.minusSeconds(3000));
         return donor;
+    }
+
+    private static Donor donor(PasswordHash hash) {
+        return Donors.withPassword(donor(), hash);
     }
 }
