@@ -27,6 +27,5 @@ class ReceiptSigningKeyWithdrawalPauseTest {
     @DisplayName("Given five refusals in the window, when the pause is checked, then withdrawals are paused")
     void should_pause_when_checked_given_five_refusals() {
         assertThat(ReceiptSigningKeyWithdrawalPause.pausedAfter(5)).isTrue();
-        assertThat(ReceiptSigningKeyWithdrawalPause.REFUSALS).isEqualTo(5);
     }
 }

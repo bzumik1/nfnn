@@ -174,7 +174,7 @@ UI „číslo potvrzení“ · Code: `ReceiptNumber`.\
 The sequential number the server gives each issued receipt under the donor's lock.
 
 **Replaced receipt**\
-UI „nahrazené novějším“, the new one „náhradní potvrzení“ · Code: `ReceiptStatus.REPLACED`, `ReplacedReceipt`, `ReceiptReplacementCaps` (how many replacements a donor is numbered).\
+UI „nahrazené novějším“, the new one „náhradní potvrzení“ · Code: `ReceiptStatus.REPLACED`, `ReplacedReceipt`, `ReceiptReplacementCaps` (at most 20 replacement receipts a donor in 24 hours and 60 in a Prague calendar year).\
 A receipt superseded by a newer one with a new number that names what it replaces (changed data, or a yearly receipt covering the gift).
 
 **Withdrawn receipt**\

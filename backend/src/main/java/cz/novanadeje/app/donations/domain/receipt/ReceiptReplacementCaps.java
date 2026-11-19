@@ -7,8 +7,8 @@ import java.time.Instant;
 
 public final class ReceiptReplacementCaps {
 
-    public static final int PER_DONOR_A_DAY = 20;
-    public static final int PER_DONOR_A_YEAR = 60;
+    private static final int PER_DONOR_A_DAY = 20;
+    private static final int PER_DONOR_A_YEAR = 60;
     private static final Duration DAY = Duration.ofHours(24);
 
     private ReceiptReplacementCaps() {
