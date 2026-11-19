@@ -53,7 +53,7 @@ test.describe('Given a donor who signs in with a password to the site behind its
     await openAccountItem(page, 'Můj přehled');
     await expect(page).toHaveURL(/\/darce\/prehled$/);
     await openDonorSection(page, 'Údaje a zabezpečení');
-    await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
+    await expect(page.getByText(/Uloženo v\s+zařízení · aktualizováno /)).toBeVisible();
     await expect.poll(async () => wrapsOf(await idbDump())).toEqual(['password', 'session']);
     await openDonorSection(page, 'Moje dary');
     await expect(gifts).toHaveCount(2);
