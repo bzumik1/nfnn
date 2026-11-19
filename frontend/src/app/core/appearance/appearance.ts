@@ -60,6 +60,7 @@ export class Appearance {
   private readonly destroyRef = inject(DestroyRef);
   private readonly chosen = signal<AppearanceChoice>('auto');
   private readonly deviceDark = signal(false);
+  private switches = 0;
 
   readonly choice = this.chosen.asReadonly();
   readonly dark = computed(() => {
@@ -75,7 +76,7 @@ export class Appearance {
       const ours = event.key === APPEARANCE_STORAGE_KEY || event.key === null;
       if (ours && event.storageArea === keptStorage(view)) {
         this.chosen.set(keptChoice(view));
-        this.apply();
+        this.switchInOneFrame();
       }
     };
     if (query) {
@@ -94,11 +95,25 @@ export class Appearance {
   choose(choice: AppearanceChoice): void {
     this.chosen.set(choice);
     this.keep(choice);
-    this.apply();
+    this.switchInOneFrame();
   }
 
   private apply(): void {
     applyChoice(this.document, this.chosen());
+  }
+
+  private switchInOneFrame(): void {
+    const root = this.document.documentElement;
+    const view = this.document.defaultView;
+    const switchNumber = ++this.switches;
+    root.classList.add(APPEARANCE_SWITCHING_CLASS);
+    this.apply();
+    const settle = (): void => {
+      if (switchNumber === this.switches) {
+        root.classList.remove(APPEARANCE_SWITCHING_CLASS);
+      }
+    };
+    view?.requestAnimationFrame(() => view.requestAnimationFrame(settle));
   }
 
   private keep(choice: AppearanceChoice): void {
