@@ -23,6 +23,7 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.transaction.AfterCommitWork;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

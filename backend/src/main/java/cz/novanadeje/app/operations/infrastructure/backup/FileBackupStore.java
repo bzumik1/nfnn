@@ -111,6 +111,11 @@ class FileBackupStore implements BackupStore {
     }
 
     @Override
+    public boolean acceptsRequests() {
+        return Files.isDirectory(directory.resolve(REQUESTS_DIRECTORY));
+    }
+
+    @Override
     public boolean restorePending() {
         return Files.exists(directory.resolve(STATUS_DIRECTORY).resolve(RESTORE_RUNNING))
                 || list(directory.resolve(REQUESTS_DIRECTORY), path -> fileName(path).endsWith(RESTORE_REQUEST_EXTENSION)).findAny().isPresent();

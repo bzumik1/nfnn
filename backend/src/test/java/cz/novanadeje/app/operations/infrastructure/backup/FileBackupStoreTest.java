@@ -132,6 +132,16 @@ class FileBackupStoreTest {
     }
 
     @Test
+    @DisplayName("Given the backup folder with and without its requests folder, when asked whether it takes requests, then only the requests folder makes it so")
+    void should_take_requests_only_with_the_requests_folder_when_asked_given_the_backup_folder() throws IOException {
+        assertThat(store.acceptsRequests()).isFalse();
+
+        Files.createDirectories(backups.resolve("requests"));
+
+        assertThat(store.acceptsRequests()).isTrue();
+    }
+
+    @Test
     @DisplayName("Given no requests folder, when a backup is requested, then the backups are unavailable")
     void should_refuse_request_when_requested_given_no_requests_folder() {
         assertThatThrownBy(() -> store.request(BackupRequestKind.BACKUP, "x")).isInstanceOf(BackupsUnavailable.class);

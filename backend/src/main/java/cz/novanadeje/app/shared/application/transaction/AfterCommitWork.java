@@ -1,4 +1,4 @@
-package cz.novanadeje.app.donations.application.receipt;
+package cz.novanadeje.app.shared.application.transaction;
 
 public interface AfterCommitWork {
 

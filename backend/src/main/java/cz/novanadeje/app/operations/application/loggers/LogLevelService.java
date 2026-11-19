@@ -6,6 +6,7 @@ import cz.novanadeje.app.operations.domain.loggers.LoggerName;
 import cz.novanadeje.app.operations.domain.loggers.ProtectedLogger;
 import cz.novanadeje.app.operations.domain.loggers.ProtectedLoggers;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.transaction.AfterCommitWork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,13 +38,15 @@ public class LogLevelService {
     private final LogLevelSwitch levels;
     private final ResetTimer timer;
     private final ApplicationEventPublisher events;
+    private final AfterCommitWork afterCommit;
     private final Clock clock;
     private final Map<String, LogLevelOverride> overrides = new ConcurrentHashMap<>();
 
-    public LogLevelService(LogLevelSwitch levels, ResetTimer timer, ApplicationEventPublisher events, Clock clock) {
+    public LogLevelService(LogLevelSwitch levels, ResetTimer timer, ApplicationEventPublisher events, AfterCommitWork afterCommit, Clock clock) {
         this.levels = levels;
         this.timer = timer;
         this.events = events;
+        this.afterCommit = afterCommit;
         this.clock = clock;
     }
 
@@ -68,32 +71,43 @@ public class LogLevelService {
         LogLevelOverride current = overrides.get(logger.value());
         Optional<LogLevel> configuredBefore = current == null ? levels.configuredLevel(logger) : current.configuredBefore();
         LogLevelOverride override = LogLevelOverride.forMinutes(logger, level, configuredBefore, now, minutes, adminId);
-        overrides.put(logger.value(), override);
-        levels.setLevel(logger, Optional.of(level));
-        timer.at(override.until(), () -> expire(override));
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(),
                 "Logger " + logger.value() + " nastaven na " + level + " do " + override.until() + " (předtím: "
                         + configuredBefore.map(Enum::name).orElse("zděděná úroveň") + ")",
                 AdminActionPerformed.Facts.of(CHANGE_ACTION, Map.of("logger", logger.value(), "level", level.name(), "until", override.until().toString(),
                         "previous", configuredBefore.map(Enum::name).orElse(INHERITED_FACT))), now));
-        log.info("Admin {} set the logger {} to {} until {}", adminId, logger.value(), level, override.until());
+        afterCommit.run(() -> apply(override));
         return override;
     }
 
     @Transactional
     public boolean reset(UUID adminId, LoggerName logger) {
-        LogLevelOverride removed = overrides.remove(logger.value());
+        LogLevelOverride removed = overrides.get(logger.value());
         if (removed == null) {
             return false;
         }
-        levels.setLevel(logger, removed.configuredBefore());
         Instant now = clock.instant();
         events.publishEvent(new AdminActionPerformed(adminId, RESET_ACTION, Optional.empty(),
                 "Logger " + logger.value() + " vrácen na " + removed.configuredBefore().map(Enum::name).orElse("zděděnou úroveň")
                         + " před koncem dočasné změny",
                 AdminActionPerformed.Facts.of(RESET_ACTION, Map.of("logger", logger.value(), "previous", removed.configuredBefore().map(Enum::name).orElse(INHERITED_FACT))), now));
-        log.info("Admin {} reset the logger {} to {}", adminId, logger.value(), removed.configuredBefore().map(Enum::name).orElse("inherited"));
+        afterCommit.run(() -> withdraw(adminId, removed));
         return true;
+    }
+
+    private void apply(LogLevelOverride override) {
+        overrides.put(override.logger().value(), override);
+        levels.setLevel(override.logger(), Optional.of(override.level()));
+        timer.at(override.until(), () -> expire(override));
+        log.info("Admin {} set the logger {} to {} until {}", override.adminId(), override.logger().value(), override.level(), override.until());
+    }
+
+    private void withdraw(UUID adminId, LogLevelOverride removed) {
+        if (!overrides.remove(removed.logger().value(), removed)) {
+            return;
+        }
+        levels.setLevel(removed.logger(), removed.configuredBefore());
+        log.info("Admin {} reset the logger {} to {}", adminId, removed.logger().value(), removed.configuredBefore().map(Enum::name).orElse("inherited"));
     }
 
     public void expire(LogLevelOverride override) {
