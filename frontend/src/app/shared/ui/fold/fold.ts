@@ -7,6 +7,7 @@ import { ChangeDetectionStrategy, Component, input, linkedSignal } from '@angula
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[attr.inert]': "open() ? null : ''",
+    '[attr.aria-hidden]': "open() ? null : 'true'",
   },
 })
 export class Fold {
