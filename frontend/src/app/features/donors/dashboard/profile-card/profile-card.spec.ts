@@ -90,7 +90,7 @@ describe('Given the donor data card in the overview', () => {
     beforeEach(() => render());
 
     it('then it shows the data the receipts carry', () => {
-      expect(element('h2').textContent).toContain('Údaje na potvrzení o daru');
+      expect(element('h2').textContent).toContain('Údaje na potvrzení o\u00a0daru');
       expect(shown()).toEqual(['Jana Nováková', 'Dlouhá 12, 400 01 Ústí nad Labem', 'čeština']);
     });
 
@@ -131,7 +131,7 @@ describe('Given the donor data card in the overview', () => {
         'angličtina (dvojjazyčné)',
       ]);
       expect(element('.profile-status').textContent?.trim()).toBe(
-        'Údaje jsme uložili. Jméno a adresu ponesou všechna potvrzení, která si stáhnete od teď, zvolený jazyk jen ta, která si stáhnete poprvé.',
+        'Údaje jsme uložili. Jméno a\u00a0adresu ponesou všechna potvrzení, která si stáhnete od teď, zvolený jazyk jen ta, která si stáhnete poprvé.',
       );
       expect(store.donor()?.address.street).toBe('Krátká 3');
       expect(document.activeElement).toBe(element('.profile-edit'));
@@ -160,7 +160,7 @@ describe('Given the donor data card in the overview', () => {
         'profile-locale-hint',
       );
       expect(element('#profile-locale-hint').textContent?.trim()).toBe(
-        'Platí pro potvrzení, která si stáhnete poprvé. Ta, která jste si už stáhli, zůstanou v původním jazyce.',
+        'Platí pro potvrzení, která si stáhnete poprvé. Ta, která jste si už stáhli, zůstanou v\u00a0původním jazyce.',
       );
     });
 
@@ -318,7 +318,7 @@ describe('Given the donor data card in the overview', () => {
         expect(element('.profile-cancel')).not.toBeNull();
         expect(element('.profile-changed-keep').textContent?.trim()).toBe('Uložit své úpravy');
         expect(element('.profile-changed-load').textContent?.trim()).toBe(
-          'Zahodit své úpravy a načíst uložené údaje',
+          'Zahodit své úpravy a\u00a0načíst uložené údaje',
         );
       });
 
@@ -377,7 +377,7 @@ describe('Given the donor data card in the overview', () => {
         expect(element('.profile-form')).toBeNull();
         expect(shown()).toEqual(['Jana Nováková', 'Dlouhá 12, 405 02 Děčín', 'čeština']);
         expect(element('.profile-status').textContent?.trim()).toBe(
-          'Vaše úpravy jsme zahodili a načetli uložené údaje.',
+          'Vaše úpravy jsme zahodili a\u00a0načetli uložené údaje.',
         );
         expect(document.activeElement).toBe(element('.profile-edit'));
       });
@@ -397,7 +397,7 @@ describe('Given the donor data card in the overview', () => {
         expect(element('.profile-form')).toBeNull();
         expect(shown()).toEqual(['Jana Nováková', 'Dlouhá 12, 405 02 Děčín', 'čeština']);
         expect(element('.profile-status').textContent?.trim()).toBe(
-          'Úpravy jsme zrušili a načetli uložené údaje.',
+          'Úpravy jsme zrušili a\u00a0načetli uložené údaje.',
         );
       });
 
@@ -417,7 +417,7 @@ describe('Given the donor data card in the overview', () => {
         expect(element('.profile-changed')).toBeNull();
         expect(shown()[0]).toBe('Petr Svoboda');
         expect(element('.profile-status').textContent?.trim()).toBe(
-          'V tomto okně je teď přihlášený jiný účet. Rozepsané úpravy jsme zahodili, nic jsme neuložili.',
+          'V\u00a0tomto okně je teď přihlášený jiný účet. Rozepsané úpravy jsme zahodili, nic jsme neuložili.',
         );
         http.expectNone({ method: 'PATCH', url: '/api/donors/me' });
       });

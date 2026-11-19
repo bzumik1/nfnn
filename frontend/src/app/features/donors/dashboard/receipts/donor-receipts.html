@@ -1,9 +1,9 @@
-<app-page-title i18n="@@donor.receipts.heading">Potvrzení o daru</app-page-title>
+<app-page-title i18n="@@donor.receipts.heading">Potvrzení o&nbsp;daru</app-page-title>
 
 @if (donations.state() === 'ready') {
   <section class="ui-card ui-card--padded yearly-card" aria-labelledby="yearly-title">
     <h2 id="yearly-title" class="ui-card__title" i18n="@@donor.dashboard.yearly.title">
-      Roční potvrzení o darech
+      Roční potvrzení o&nbsp;darech
     </h2>
     <p class="yearly-sub" i18n="@@donor.receipts.yearly.sub">
       Souhrnný doklad pro daňové účely za všechny dary jednoho roku. Stáhnete ho po skončení roku.
@@ -74,10 +74,10 @@
       </ul>
       <div class="ui-card__footer receipts-footer">
         <p class="receipts-tax-note" i18n="@@donor.receipts.intro">
-          Potvrzení k jednotlivým darům stáhnete hned, roční od 1.&nbsp;ledna dalšího roku.
+          Potvrzení k&nbsp;jednotlivým darům stáhnete hned, roční od 1.&nbsp;ledna dalšího roku.
           K&nbsp;daňovému přiznání přiložte buď jednotlivá, nebo roční, ne obojí: roční obsahuje
           všechny dary roku. Když změníte jméno nebo adresu, nově stažené potvrzení dostane nové
-          číslo a nahradí to dřívější.
+          číslo a&nbsp;nahradí to dřívější.
         </p>
         @if (someNotIssued()) {
           <p class="yearly-hint" i18n="@@donor.dashboard.yearly.beforeReceipts">
@@ -94,7 +94,8 @@
       </div>
     } @else {
       <p class="yearly-empty" i18n="@@donor.dashboard.yearly.empty">
-        Zatím tu není žádný dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.
+        Zatím tu není žádný dar. Jakmile dorazí platba s&nbsp;vaším variabilním symbolem, objeví se
+        tady.
       </p>
       <app-missing-gift />
     }
@@ -102,13 +103,13 @@
 
   <section class="ui-card ui-card--padded single-card" aria-labelledby="single-title">
     <h2 id="single-title" class="ui-card__title" i18n="@@donor.receipts.single.title">
-      Potvrzení k jednotlivému daru
+      Potvrzení k&nbsp;jednotlivému daru
     </h2>
     @if (runningYearGifts().length > 0) {
       <p class="yearly-sub">
         <span i18n="@@donor.receipts.single.runningYear"
-          >Potvrzení k letošním darům stáhnete tady hned po jejich připsání, ke starším darům v
-          části</span
+          >Potvrzení k&nbsp;letošním darům stáhnete tady hned po jejich připsání, ke starším darům
+          v&nbsp;části</span
         >&ngsp;<a routerLink="/darce/dary" i18n="@@donor.receipts.single.link">Moje dary</a>.
       </p>
       @if (donations.receiptError(); as error) {
@@ -127,7 +128,8 @@
     } @else {
       <p class="yearly-sub">
         <span i18n="@@donor.receipts.single.text"
-          >Potvrzení ke každému přijatému daru zvlášť stáhnete hned po jeho připsání v části</span
+          >Potvrzení ke každému přijatému daru zvlášť stáhnete hned po jeho připsání
+          v&nbsp;části</span
         >&ngsp;<a routerLink="/darce/dary" i18n="@@donor.receipts.single.link">Moje dary</a>.
       </p>
     }
@@ -142,7 +144,7 @@
   </h2>
   <p class="yearly-sub" i18n="@@donor.receipts.verify.text">
     Ověřte svoje potvrzení nebo potvrzení, které vám někdo ukázal: naskenujete jeho QR kód,
-    nahrajete PDF nebo vložíte odkaz z kódu. Ukážeme, jaké údaje v něm fond podepsal.
+    nahrajete PDF nebo vložíte odkaz z&nbsp;kódu. Ukážeme, jaké údaje v&nbsp;něm fond podepsal.
   </p>
   <a routerLink="/overit" class="ui-button verify-link" i18n="@@donor.receipts.verify.link"
     >Ověřit potvrzení</a

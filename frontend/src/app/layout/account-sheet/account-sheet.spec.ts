@@ -106,7 +106,12 @@ describe('Given the account sheet of a signed-in donor', () => {
       'Údaje a\u00a0zabezpečení',
     );
     expect(sheet.querySelector('.account-initials')?.textContent?.trim()).toBe('JN');
-    expect(rows(sheet)).toEqual(['Můj přehled', 'Moje dary', 'Potvrzení o daru', 'Bankovní účty']);
+    expect(rows(sheet)).toEqual([
+      'Můj přehled',
+      'Moje dary',
+      'Potvrzení o\u00a0daru',
+      'Bankovní účty',
+    ]);
     expect(sheet.querySelector('.account-symbol')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
       'Variabilní symbol pro vaše dary: 1234567890',
     );
@@ -120,7 +125,12 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(sheet.querySelector('#account-sheet-title')?.textContent?.trim()).toBe('Účet');
     expect(sheet.querySelector('.account-logo')).toBeNull();
     expect(sheet.querySelector('nav')?.getAttribute('aria-labelledby')).toBe('account-sheet-title');
-    expect(rows(sheet)).toEqual(['Můj přehled', 'Moje dary', 'Potvrzení o daru', 'Bankovní účty']);
+    expect(rows(sheet)).toEqual([
+      'Můj přehled',
+      'Moje dary',
+      'Potvrzení o\u00a0daru',
+      'Bankovní účty',
+    ]);
   });
 
   describe('when an administrator has open faults', () => {
@@ -199,7 +209,7 @@ describe('Given the account sheet of a signed-in donor', () => {
       expect(navigate).not.toHaveBeenCalled();
       expect(closed).toBe(0);
       expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe(
-        'Potvrzení o daru',
+        'Potvrzení o\u00a0daru',
       );
       expect(sheet.querySelector('.stub-page')?.textContent).toBe('Obsah sekce');
       expect(sheet.querySelector('button[aria-label="Zpět"]')).not.toBeNull();

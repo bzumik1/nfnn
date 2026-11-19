@@ -1,7 +1,7 @@
 <div class="claim" role="group" [attr.aria-labelledby]="questionId()">
   @if (donorName()) {
     <p [id]="questionId()" class="claim-question" i18n="@@donor.bankAccounts.claim.question">
-      Z tohoto účtu k nám chodí i platby s variabilním symbolem
+      Z&nbsp;tohoto účtu k&nbsp;nám chodí i&nbsp;platby s&nbsp;variabilním symbolem
       <strong class="claim-symbol ui-figures">{{ offer().variableSymbol }}</strong>
       ({offer().paymentCount, plural,
         one {1&nbsp;platba}
@@ -16,7 +16,7 @@
       class="claim-question"
       i18n="@@donor.bankAccounts.claim.questionWithoutName"
     >
-      Z tohoto účtu k nám chodí i platby s variabilním symbolem
+      Z&nbsp;tohoto účtu k&nbsp;nám chodí i&nbsp;platby s&nbsp;variabilním symbolem
       <strong class="claim-symbol ui-figures">{{ offer().variableSymbol }}</strong>
       ({offer().paymentCount, plural,
         one {1&nbsp;platba}
@@ -27,8 +27,8 @@
     </p>
   }
   <p [id]="noteId()" class="claim-note" i18n="@@donor.bankAccounts.claim.note">
-    Když odpovíte „Ano, jsou moje“, přiřadíme vám tyto platby i další s tímto symbolem z tohoto
-    účtu. Odpověď už nepůjde změnit; kdybyste se spletli, napište nám na
+    Když odpovíte „Ano, jsou moje“, přiřadíme vám tyto platby i&nbsp;další s&nbsp;tímto symbolem
+    z&nbsp;tohoto účtu. Odpověď už nepůjde změnit; kdybyste se spletli, napište nám na
     <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
   </p>
   <div class="claim-actions">
