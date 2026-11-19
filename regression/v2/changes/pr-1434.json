@@ -1,0 +1,72 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.signature.StaxSignatureVectorParserTest > *",
+    "replacement": "architecture.ApplicationLayerRulesTest > application_interfaces_are_used_by_code_other_than_their_implementations",
+    "reason": "PR #1434 (Khononov review S2, #1431): the signature vector model of the removed receipt signature upload had no caller in the main code since the one signature moved to content (#612); it is deleted with its tests, and the new ArchUnit rule refuses an application port that only its adapters implement and only tests call",
+    "contract": "docs/system-overview.md, donations (Receipt signature); docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.signature.ImageIoSignatureImageProcessorTest > *",
+    "replacement": "architecture.ApplicationLayerRulesTest > application_interfaces_are_used_by_code_other_than_their_implementations",
+    "reason": "PR #1434 (Khononov review S2, #1431): the signature vector model of the removed receipt signature upload had no caller in the main code since the one signature moved to content (#612); it is deleted with its tests, and the new ArchUnit rule refuses an application port that only its adapters implement and only tests call",
+    "contract": "docs/system-overview.md, donations (Receipt signature); docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.SignatureImageTest > *",
+    "replacement": "architecture.ApplicationLayerRulesTest > application_interfaces_are_used_by_code_other_than_their_implementations",
+    "reason": "PR #1434 (Khononov review S2, #1431): the signature vector model of the removed receipt signature upload had no caller in the main code since the one signature moved to content (#612); it is deleted with its tests, and the new ArchUnit rule refuses an application port that only its adapters implement and only tests call",
+    "contract": "docs/system-overview.md, donations (Receipt signature); docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.SignaturePathDataTest > *",
+    "replacement": "architecture.ApplicationLayerRulesTest > application_interfaces_are_used_by_code_other_than_their_implementations",
+    "reason": "PR #1434 (Khononov review S2, #1431): the signature vector model of the removed receipt signature upload had no caller in the main code since the one signature moved to content (#612); it is deleted with its tests, and the new ArchUnit rule refuses an application port that only its adapters implement and only tests call",
+    "contract": "docs/system-overview.md, donations (Receipt signature); docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.receipt.SignatureVectorTest > *",
+    "replacement": "architecture.ApplicationLayerRulesTest > application_interfaces_are_used_by_code_other_than_their_implementations",
+    "reason": "PR #1434 (Khononov review S2, #1431): the signature vector model of the removed receipt signature upload had no caller in the main code since the one signature moved to content (#612); it is deleted with its tests, and the new ArchUnit rule refuses an application port that only its adapters implement and only tests call",
+    "contract": "docs/system-overview.md, donations (Receipt signature); docs/api-contract.md, Receipt signatory and signatures"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.signature.SignatureVectorSharedCasesTest > *",
+    "replacement": "src/testing/shared-cases.spec.ts > Given the vector signature cases > when each canonical JSON is hashed as the browser will hash the served bytes, then it gives the SHA-256 of its case",
+    "reason": "PR #1434 (Khononov review S2, #1431): the backend's runner of shared-cases/signature/vector.json drove the deleted SVG parser; the browser's runner keeps checking each canonical JSON against its SHA-256, the digest stored receipts name",
+    "contract": "docs/system-overview.md, Shared cases (logic on both sides)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.AdapterLibraryRulesTest > *image_libraries_are_used_only_by_the_content_media_receipt_signature_and_bank_logo_adapters*",
+    "replacement": "architecture.AdapterLibraryRulesTest > image_libraries_are_used_only_by_the_content_media_and_bank_logo_adapters",
+    "reason": "PR #1434 (Khononov review S2, #1431): the receipt signature adapter that the rule allowed is deleted, so the confinement no longer names its package; the renamed rule and its planted uses, one in the old package, keep the library out of it",
+    "contract": "docs/api-contract.md, ArchUnit"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.AdapterLibraryRulesTest > *xml_parsers_are_used_only_by_the_receipt_signature_adapter*",
+    "replacement": "architecture.AdapterLibraryRulesTest > no_class_parses_xml",
+    "reason": "PR #1434 (Khononov review S2, #1431): the receipt signature adapter that the rule allowed is deleted, so the confinement no longer names its package; the renamed rule and its planted uses, one in the old package, keep the library out of it",
+    "contract": "docs/api-contract.md, ArchUnit"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/signature/vector.json",
+    "reason": "PR #1434 (Khononov review S2, #1431): only the logic text changes, to say the backend runner went with the SVG parser; every case gives what it gave",
+    "contract": "docs/system-overview.md, Shared cases (logic on both sides)"
+  }
+]
