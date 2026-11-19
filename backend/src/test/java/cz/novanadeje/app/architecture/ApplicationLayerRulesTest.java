@@ -19,6 +19,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -79,8 +80,8 @@ class ApplicationLayerRulesTest {
             .and().areInterfaces()
             .and().areNotAnnotations()
             .should(beUsedByCodeOtherThanTheirImplementations())
-            .because("backend.md, Application: a port exists for the use case that calls it; an interface only its adapters implement and only tests "
-                    + "call is a model left behind by a change (the signature vector parser and image processor of donations, #1431), so it goes with that change");
+            .because("backend.md, Application: a port exists for the use case that calls it; an interface only its adapters implement or a configuration provides, and only "
+                    + "tests call, is a model left behind by a change (the signature vector parser and image processor of donations, #1431), so it goes with that change");
 
     private static ArchCondition<JavaClass> beUsedByCodeOtherThanTheirImplementations() {
         return new ArchCondition<>("be used by main code other than their own implementations") {
@@ -88,7 +89,7 @@ class ApplicationLayerRulesTest {
             public void check(JavaClass port, ConditionEvents events) {
                 boolean used = port.getDirectDependenciesToSelf().stream()
                         .map(Dependency::getOriginClass)
-                        .anyMatch(origin -> !belongsToAnImplementationOf(origin, port));
+                        .anyMatch(origin -> !belongsToAnImplementationOrWiringOf(origin, port));
                 if (!used) {
                     events.add(SimpleConditionEvent.violated(port, port.getName() + " is used by no main code but its own implementations in "
                             + port.getSourceCodeLocation()));
@@ -97,10 +98,11 @@ class ApplicationLayerRulesTest {
         };
     }
 
-    private static boolean belongsToAnImplementationOf(JavaClass origin, JavaClass port) {
+    private static boolean belongsToAnImplementationOrWiringOf(JavaClass origin, JavaClass port) {
         Optional<JavaClass> type = Optional.of(origin);
         while (type.isPresent()) {
-            if (type.get().isAssignableTo(port.getName())) {
+            if (type.get().isAssignableTo(port.getName()) || type.get().isMetaAnnotatedWith(Configuration.class)
+                    || type.get().isAnnotatedWith(Configuration.class)) {
                 return true;
             }
             type = type.get().getEnclosingClass();
@@ -239,7 +241,11 @@ class ApplicationLayerRulesTest {
                         "public interface PlantedPortUsedInsideItself { void run(); "
                                 + "record Pair(PlantedPortUsedInsideItself first, PlantedPortUsedInsideItself second) { void runBoth() { first.run(); second.run(); } } }"),
                 planted(USED_INTERFACES, "content.application.PlantedPortUsedInsideItsAdapter",
-                        "public interface PlantedPortUsedInsideItsAdapter { void publish(); }"));
+                        "public interface PlantedPortUsedInsideItsAdapter { void publish(); }"),
+                planted(USED_INTERFACES, "donations.application.signing.PlantedPortOnlyABeanProvides",
+                        "public interface PlantedPortOnlyABeanProvides { byte[] sign(byte[] message); }"),
+                planted(USED_INTERFACES, "operations.application.PlantedPortOnlyExtended",
+                        "public interface PlantedPortOnlyExtended { void check(); }"));
     }
 
     static Stream<PlantedClass> allowedClasses() {
@@ -286,6 +292,15 @@ class ApplicationLayerRulesTest {
                         "class PlantedAdapterWithHelper implements cz.novanadeje.app.content.application.PlantedPortUsedInsideItsAdapter { "
                                 + "public void publish() { } "
                                 + "static final class Helper { void call(cz.novanadeje.app.content.application.PlantedPortUsedInsideItsAdapter port) { port.publish(); } } }"),
+                planted(USED_INTERFACES, "donations.infrastructure.signing.PlantedSigningConfiguration",
+                        "@org.springframework.context.annotation.Configuration class PlantedSigningConfiguration { "
+                                + "@org.springframework.context.annotation.Bean "
+                                + "cz.novanadeje.app.donations.application.signing.PlantedPortOnlyABeanProvides signer() { return message -> message; } }"),
+                planted(USED_INTERFACES, "operations.application.PlantedExtendingPort",
+                        "public interface PlantedExtendingPort extends PlantedPortOnlyExtended { void report(); }"),
+                planted(USED_INTERFACES, "operations.application.PlantedExtendingPortCaller",
+                        "@org.springframework.stereotype.Service class PlantedExtendingPortCaller { "
+                                + "void run(PlantedExtendingPort port) { port.check(); port.report(); } }"),
                 planted(USED_INTERFACES, "donations.infrastructure.signature.PlantedInjectedAdapter",
                         "class PlantedInjectedAdapter implements cz.novanadeje.app.donations.application.receipt.PlantedInjectedPort { "
                                 + "public String parse(byte[] upload) { return \"\"; } }"),
