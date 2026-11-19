@@ -186,7 +186,10 @@
       @case ('ready') {
         @if (items().length === 0) {
           @if (filtered()) {
-            <div class="ui-card__empty payments-empty">
+            <div
+              class="ui-card__empty payments-empty"
+              [class.payments-empty--after-rows]="rowLeft()"
+            >
               <p i18n="@@admin.payments.empty.filtered">Žádná platba neodpovídá hledání.</p>
               <button
                 type="button"
@@ -198,16 +201,25 @@
               </button>
             </div>
           } @else if (filter() === 'unpaired') {
-            <p class="ui-card__empty" i18n="@@admin.payments.empty.unpaired">
+            <p
+              class="ui-card__empty"
+              [class.payments-empty--after-rows]="rowLeft()"
+              i18n="@@admin.payments.empty.unpaired"
+            >
               Všechny platby z banky jsou přiřazené. Nová platba se tu objeví po dalším stažení z
               banky (každou hodinu).
             </p>
           } @else {
-            <p class="ui-card__empty" i18n="@@admin.payments.empty.paired">
+            <p
+              class="ui-card__empty"
+              [class.payments-empty--after-rows]="rowLeft()"
+              i18n="@@admin.payments.empty.paired"
+            >
               Zatím není přiřazena žádná platba.
             </p>
           }
-        } @else {
+        }
+        @if (items().length > 0 || rowsLeaving() > 0) {
           @if (rows()) {
             @for (month of months(); track month.key) {
               <div class="payments-month">
@@ -220,6 +232,7 @@
                       <button
                         type="button"
                         class="ui-list__row payment-row"
+                        [id]="paymentRowId(item)"
                         data-payment-row
                         aria-haspopup="dialog"
                         (click)="openRow(item)"
@@ -301,7 +314,12 @@
               </thead>
               <tbody>
                 @for (item of items(); track item.id) {
-                  <tr tabindex="-1" data-payment-row>
+                  <tr
+                    [id]="paymentRowId(item)"
+                    tabindex="-1"
+                    data-payment-row
+                    (animate.leave)="leaveRow($event)"
+                  >
                     <td data-label="Datum" i18n-data-label="@@admin.payments.col.date">
                       <span class="ui-date">{{ date(item.bookedOn) }}</span>
                       @if (item.unpairedByAdminAt) {

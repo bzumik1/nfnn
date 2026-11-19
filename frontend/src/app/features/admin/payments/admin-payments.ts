@@ -2,6 +2,7 @@
 
 import {
   afterNextRender,
+  AnimationCallbackEvent,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -39,6 +40,10 @@ import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target'
 import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
+import {
+  markRowsLeaving,
+  neighbourAfterRowLeaves,
+} from '../../../shared/ui/leaving-row/leaving-row';
 import { BankAccount } from '../../donations/bank-account/bank-account';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
@@ -127,6 +132,11 @@ const METHOD_LABELS: Record<PairingMethod, string> = {
   MANUAL: $localize`:@@admin.payments.method.manual:ručně správcem`,
 };
 
+const ROW_LEAVING = 'payment-row--leaving';
+const ROW_LEAVE_GRACE_MS = 300;
+const ROW_CONTROLS =
+  'button[data-payment-row], [data-payment-row] td.action button, [data-payment-row] a[href]';
+
 @Component({
   selector: 'app-admin-payments',
   imports: [
@@ -176,6 +186,8 @@ export class AdminPayments {
   protected readonly state = signal<LoadState>('loading');
   protected readonly items = signal<AdminPaymentResponse[]>([]);
   protected readonly total = signal(0);
+  protected readonly rowsLeaving = signal(0);
+  protected readonly rowLeft = signal(false);
   protected readonly loadingMore = signal(false);
   protected readonly moreFailed = signal(false);
   protected readonly notice = signal<Notice | null>(null);
@@ -400,6 +412,7 @@ export class AdminPayments {
   }
 
   protected load(): void {
+    this.rowLeft.set(false);
     this.incoming.set(null);
     this.state.set('loading');
     this.moreFailed.set(false);
@@ -681,8 +694,7 @@ export class AdminPayments {
           });
           this.changedDonor.set({ id: donor.donorId, name: donor.name });
           this.reads.changed();
-          this.load();
-          this.focusAfterRender(() => this.noticeElement()?.nativeElement ?? null);
+          this.leaveList(payment);
         },
         error: (failure: unknown) => {
           this.busy.set(false);
@@ -762,8 +774,7 @@ export class AdminPayments {
           }
           this.unpairedCount.update((count) => (count === null ? null : count + 1));
           this.reads.changed();
-          this.load();
-          this.focusAfterRender(() => this.noticeElement()?.nativeElement ?? null);
+          this.leaveList(payment);
         },
         error: (failure: unknown) => {
           this.busy.set(false);
@@ -841,6 +852,68 @@ export class AdminPayments {
       ' ' +
       $localize`:@@admin.payments.receiptWithdrawn:Roční potvrzení za ${list}:years:, na kterém dar byl, je teď zrušené; ověření ukáže, že platilo ke dni vystavení. Zbyly-li dárci za ten rok další dary, může si stáhnout nové. Dejte mu prosím vědět.`
     );
+  }
+
+  protected paymentRowId(payment: AdminPaymentResponse): string {
+    return `payment-row-${payment.id.replace(/[^A-Za-z0-9_-]/g, '_')}`;
+  }
+
+  protected leaveRow(event: AnimationCallbackEvent): void {
+    const row = event.target as HTMLElement;
+    if (!row.hasAttribute('inert')) {
+      event.animationComplete();
+      return;
+    }
+    row.classList.add(ROW_LEAVING);
+    const longest = Math.max(
+      0,
+      ...(row.getAnimations?.() ?? []).map((motion) =>
+        Number(motion.effect?.getComputedTiming().endTime ?? 0),
+      ),
+    );
+    const left = (): void => {
+      event.animationComplete();
+      this.rowsLeaving.update((count) => Math.max(0, count - 1));
+    };
+    if (longest === 0) {
+      left();
+      return;
+    }
+    let done = false;
+    const leaves = (): void => {
+      if (!done) {
+        done = true;
+        clearTimeout(fallback);
+        left();
+      }
+    };
+    const fallback = setTimeout(leaves, longest + ROW_LEAVE_GRACE_MS);
+    for (const type of ['animationend', 'animationcancel']) {
+      row.addEventListener(type, (ended) => {
+        if (ended.target === row) {
+          leaves();
+        }
+      });
+    }
+  }
+
+  private leaveList(payment: AdminPaymentResponse): void {
+    const row = this.host.nativeElement.querySelector<HTMLElement>(
+      `#${this.paymentRowId(payment)}`,
+    );
+    const neighbour = neighbourAfterRowLeaves(
+      row,
+      this.host.nativeElement.querySelectorAll<HTMLElement>(ROW_CONTROLS),
+    );
+    if (row?.matches('tr')) {
+      markRowsLeaving([row]);
+      this.rowsLeaving.update((count) => count + 1);
+    }
+    this.rowLeft.set(true);
+    this.items.update((list) => list.filter((item) => item.id !== payment.id));
+    this.total.update((count) => Math.max(0, count - 1));
+    this.focusAfterRender(() => neighbour() ?? this.listTitle()?.nativeElement ?? null);
+    this.refreshQuietly();
   }
 
   private unpairOpener(payment: AdminPaymentResponse): HTMLElement | null {
