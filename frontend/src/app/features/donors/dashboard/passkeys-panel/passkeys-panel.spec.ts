@@ -204,6 +204,24 @@ describe('Given the passkeys panel of the sign-in card', () => {
     expect(texts('.passkey-name')).toEqual(['iPhone']);
   });
 
+  it('when the list already holds the new key before the server answers its creation, then that row is listed once and does not enter again', async () => {
+    const macBook = samplePasskey({ id: 'new', name: 'MacBook', lastUsedAt: null });
+    await render([IPHONE, macBook]);
+    await clickButton('Přidat přístupový klíč');
+    await fillIn('#passkey-name', 'MacBook');
+    await fillIn('#passkey-password', 'correct horse battery');
+    await submit();
+    http.expectOne(OPTIONS_URL).flush(passkeyCreationOptions());
+    await vi.waitFor(() => expect(passkeys.created).toHaveLength(1));
+    await settle();
+
+    http.expectOne({ method: 'POST', url: PASSKEYS_URL }).flush(macBook);
+    await settle();
+
+    expect(texts('.passkey-name')).toEqual(['iPhone', 'MacBook']);
+    expect(element('#passkey-row-new').classList).not.toContain('passkey-slot--entering');
+  });
+
   describe('when the donor adds a passkey', () => {
     beforeEach(async () => {
       await render([IPHONE]);
@@ -390,6 +408,59 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
       expect(element('.passkey-confirm')).toBeNull();
       expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
+    });
+  });
+
+  describe('when the donor removes a passkey from the page', () => {
+    afterEach(() => root().remove());
+
+    async function renderOnPage(items = [IPHONE, WINDOWS]): Promise<void> {
+      await render(items);
+      document.body.append(root());
+    }
+
+    async function removeThe(passkey: typeof IPHONE): Promise<void> {
+      const row = Array.from(root().querySelectorAll<HTMLElement>('.passkey')).find((candidate) =>
+        candidate.querySelector('.passkey-name')?.textContent?.includes(passkey.name),
+      );
+      Array.from(row?.querySelectorAll('button') ?? [])
+        .find((button) => button.textContent?.includes('Odebrat'))
+        ?.click();
+      await settle();
+      await clickButton('Ano, odebrat');
+      http.expectOne(`${PASSKEYS_URL}/${passkey.id}`).flush(null);
+      await settle();
+    }
+
+    it('then the key below takes the focus when the first one leaves', async () => {
+      await renderOnPage();
+
+      await removeThe(IPHONE);
+
+      expect(texts('.passkey-name')).toEqual(['Windows']);
+      expect(document.activeElement).toBe(
+        document.getElementById(`passkey-rename-button-${WINDOWS.id}`),
+      );
+    });
+
+    it('then the key above takes the focus when the last one leaves', async () => {
+      await renderOnPage();
+
+      await removeThe(WINDOWS);
+
+      expect(texts('.passkey-name')).toEqual(['iPhone']);
+      expect(document.activeElement).toBe(
+        document.getElementById(`passkey-rename-button-${IPHONE.id}`),
+      );
+    });
+
+    it('then the panel named by its row takes the focus when the only key leaves', async () => {
+      await renderOnPage([IPHONE]);
+
+      await removeThe(IPHONE);
+
+      expect(root().querySelector('.passkey')).toBeNull();
+      expect(document.activeElement).toBe(element('.passkeys'));
     });
   });
 

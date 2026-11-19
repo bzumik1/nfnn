@@ -38,6 +38,7 @@ import { encodeText } from '../../../../shared/ui/qr-code/qr-encoder';
 import { PasskeysPanel } from '../passkeys-panel/passkeys-panel';
 import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { Disclosure } from '../../../../shared/ui/disclosure/disclosure';
 
 type Panel =
   | 'closed'
@@ -57,6 +58,7 @@ const SECRET_GROUP = 4;
   providers: [BusyAnnouncement],
   imports: [
     BusyLabel,
+    Disclosure,
     FormsModule,
     FormField,
     FormControlDirective,

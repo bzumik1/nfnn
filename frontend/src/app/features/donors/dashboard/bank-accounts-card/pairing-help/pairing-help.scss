@@ -1,8 +1,14 @@
+@use 'motion';
+
 :host {
   display: block;
 }
 
 .accounts-help-panel {
+  @include motion.expand;
+}
+
+.accounts-help-box {
   margin-block: var(--space-4);
   padding: var(--space-3-5) var(--space-4);
   background: var(--color-surface-accent);
