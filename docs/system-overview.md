@@ -104,17 +104,17 @@ Live updates (plan v3 2.16, contract in `api-contract.md`, "Live updates"): `sha
 
 ## Context map
 
-How the contexts meet (#621, Khononov S3). They meet only through `shared`: the events of `shared/application/event/` and the ports of `shared/application/<topic>/` (`backend.md`, Contexts and layers). `architecture/ContextMapRulesTest` derives every edge from the code and compares it with its declared map:
-- an event edge runs from the context whose class builds the event (its constructor or a static factory of it) to each other context with a listener of it;
-- a port edge runs from each context whose main code uses the port, other than its implementation, to the context of the implementation in `infrastructure`.
+How the contexts meet (#621, Khononov S3). They meet only through `shared`: the events of `shared/application/event/` and the ports of `shared/application/<topic>/` (`backend.md`, Contexts and layers). The tables below are the declared map, and `architecture/ContextMapRulesTest` reads them and derives every edge from the code:
+- an event edge runs from the context of a class that builds the event (its constructor or a static factory, called or referenced) to each other context with a listener of it (by its parameter, a `PayloadApplicationEvent` of it, the listener annotation's `classes` or a supertype);
+- a port edge runs from each context whose code outside `shared/application` uses the port to the context of each implementation in `infrastructure`; an implementation's own use of its port is no edge.
 
-The test fails on an edge the map does not declare and on a declared edge that is gone. It also fails on a pair of contexts with edges both ways that has no reason in the map, and on a reason for a pair that is no longer two-way. Finally, it fails on a shared event or port without its row in the tables below. `shared` is a node too (its security, live updates, mail and audit trail), but a pair with `shared` is never two-way: the kernel serves every context. Contact meets no other context.
+The test compares the Edges cell of each row with the derived edges of its event or port (`a, b → c` means a → c and b → c), so it fails on a new or vanished edge, a shared event or port without a row and a row of a name that no longer exists. It fails on a pair of contexts with edges both ways that has no reason in the pairs table, and on a reason for a pair no longer two-way, and on a shared interface that is neither a port nor one of the kernel values it lists. `shared` is a node too (its security, live updates, mail and audit trail), but a pair with `shared` is never two-way: the kernel serves every context. Contact meets no other context. The backend's test task takes this file as an input; a PR that changes only `docs/` runs no backend job, so an edit of these tables alone is checked by the next PR that does.
 
 ### Shared events
 
 | Event | Built in | Heard in | Edges |
 |---|---|---|---|
-| `AdminActionPerformed` | the application services of content, donations, donors and operations that perform an administrator's change (35 classes) | `shared/infrastructure/audit/AdminActionTrailWriter` (`BEFORE_COMMIT`) | content, donations, donors, operations → shared |
+| `AdminActionPerformed` | the application services of content, donations, donors and operations that perform an administrator's change | `shared/infrastructure/audit/AdminActionTrailWriter` (`BEFORE_COMMIT`) | content, donations, donors, operations → shared |
 | `AdministrationRevoked` | `donors/application/AdministratorService` | `operations/infrastructure/events/PushSubscriptionLifecycleListener` (`BEFORE_COMMIT`) | donors → operations |
 | `DeviceSignedOut` | `donors/application/DeviceSignOuts` | `donors/infrastructure/session/DeviceSessionLiveness`, `operations/infrastructure/events/PushSubscriptionLifecycleListener`, `shared/infrastructure/live/LiveHintListener` | donors → operations, donors → shared |
 | `DonationsArrived` | `donations/application/importing/BankStatementRecorder` | `operations/infrastructure/events/DonorPushListener` (`@Async AFTER_COMMIT`) | donations → operations |
@@ -150,16 +150,16 @@ The test fails on an edge the map does not declare and on a declared edge that i
 | `SessionLiveness` (`session`) | `donors/infrastructure/session/DeviceSessionLiveness` | `shared/infrastructure/security/{LiveSessionValidator,JwtConfiguration}` | shared → donors |
 | `SignedInDevices` (`session`) | `donors/infrastructure/session/SignedInDevicesAdapter` | `operations/application/push/{DonorPushDispatcher,DonorPushService,PushSubscriptionService}` | operations → donors |
 
-`StoredRecord`, `WritePrecondition` and `ExpectedVersion` of `shared/application/version` are values every context uses, not ports: no infrastructure implements them.
+`StoredRecord` and `WritePrecondition` of `shared/application/version` are kernel values, not ports: no infrastructure implements them (`ContextMapRulesTest.KERNEL_INTERFACES`). `ExpectedVersion` beside them is a record.
 
 ### Pairs with edges both ways
 
 | Pair | Why both ways |
 |---|---|
-| content ↔ donations | The receipt signatory is one rule split across the two: donations reads the person who signs through `FoundationPeople`, and content asks through `ReceiptSignatoryLookup` whether a person signs before it removes them or changes their portrait or name. Khononov S1 proposes moving the designation into content, which would remove `ReceiptSignatoryLookup`; it waits for Jakub. |
-| donations ↔ donors | Donors owns the account and donations the bank facts. Donations keeps its copy of the donor from the account events and asks donors for a fresh second factor and the administrators' addresses. Donors learns from donations which sender account was learned and that a recovery payment arrived, and where a recovery payment can go (`SecondFactorRecoveryTargets`): the 1 Kč recovery's code is made in donors and found in a bank message in donations. |
-| donations ↔ operations | Operations holds the server's secrets and its alerts and pushes. Donations seals its signing keys through `RecordSeals`, asks `FinishedRestores` after a restore and announces its outages, arrivals, yearly receipts and key withdrawals. Operations' backup alert reads its recipients from donations' report settings (`AlertRecipients`); Khononov S4 proposes moving the alert recipients into operations, which would remove this direction. |
-| donors ↔ operations | Operations keeps the push subscriptions and the server's settings of the accounts donors owns. It deletes subscriptions on donors' lifecycle events (`AdministrationRevoked`, `DonorErased`, `DeviceSignedOut`) and reads donors' accounts for administrator addresses, signed-in devices and a fresh second factor. |
+| content ↔ donations | The receipt signatory is one rule split across the two: donations reads the person who signs through `FoundationPeople`, and content asks through `ReceiptSignatoryLookup` whether a person signs before it removes them or changes their portrait or name. #621 (S1) proposes moving the designation into content, which would remove `ReceiptSignatoryLookup`. |
+| donations ↔ donors | Donors owns the account and donations the bank facts. Donations keeps its copy of the donor from the account events and asks donors for a fresh second factor, the administrators' addresses and the administrators who hold the administration copy (`AdministrationHolders`). Donors learns from donations which sender account was learned and that a recovery payment arrived, and where a recovery payment can go (`SecondFactorRecoveryTargets`): the 1 Kč recovery's code is made in donors and found in a bank message in donations. |
+| donations ↔ operations | Operations holds the server's secrets and its alerts and pushes. Donations seals its signing keys through `RecordSeals`, asks `FinishedRestores` after a restore and announces its outages, arrivals, yearly receipts and key withdrawals. Operations' backup alert reads its recipients from donations' report settings (`AlertRecipients`). #621 (S4) proposes moving the import alert's e-mail into operations, but the recipients stay the report's (a client decision), so this direction stays. |
+| donors ↔ operations | Operations keeps the push subscriptions of the accounts donors owns and runs the server's settings and backups for its administrators. It deletes subscriptions on donors' lifecycle events (`AdministrationRevoked`, `DonorErased`, `DeviceSignedOut`) and reads from donors an administrator's own address for the mail test (`AccountEmails`), the administrators' addresses and copies, the signed-in devices and a fresh second factor. |
 
 ## content
 

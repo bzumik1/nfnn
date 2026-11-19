@@ -100,7 +100,6 @@ tasks.withType<Test> {
 	inputs.file("../deploy/backup/carry-forward.sql").withPropertyName("restoreCarryForward").withPathSensitivity(PathSensitivity.NONE)
 	inputs.files(fileTree("../shared-cases")).withPropertyName("sharedCases").withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.files(fileTree("../regression")).withPropertyName("baselineArtefacts").withPathSensitivity(PathSensitivity.RELATIVE)
-	inputs.file("../docs/system-overview.md").withPropertyName("contextMap").withPathSensitivity(PathSensitivity.NONE)
 }
 
 val acceptanceTest = tasks.register<Test>("acceptanceTest") {
@@ -131,4 +130,5 @@ tasks.test {
 		isFailOnNoMatchingTests = !runsCucumber
 	}
 	finalizedBy(acceptanceTest)
+	inputs.file("../docs/system-overview.md").withPropertyName("contextMap").withPathSensitivity(PathSensitivity.NONE)
 }
