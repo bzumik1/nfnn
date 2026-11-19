@@ -184,7 +184,9 @@
                 (click)="start('TEST_RESTORE')"
               >
                 <app-busy-label [busy]="job()?.kind === 'TEST_RESTORE'">
-                  <span when-idle i18n="@@admin.backups.testRestore.start">Spustit zkušební obnovu</span>
+                  <span when-idle i18n="@@admin.backups.testRestore.start"
+                    >Spustit zkušební obnovu</span
+                  >
                   <span when-busy i18n="@@admin.backups.testRestore.busy">Ověřujeme obnovu…</span>
                 </app-busy-label>
               </button>
