@@ -422,7 +422,6 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private closesWithMotion(): boolean {
     const view = this.document.defaultView;
     return (
-      (this.look() !== 'viewer' || !this.layout.isCompact()) &&
       !this.steppedAside &&
       this.element().nativeElement.open &&
       view?.matchMedia?.(LESS_MOTION).matches === false
@@ -431,7 +430,9 @@ export class Dialog implements AfterViewInit, OnDestroy {
 
   private startLeaving(): void {
     this.exit.set('leaving');
-    this.sheetPull.set(1);
+    if (this.look() === 'sheet') {
+      this.sheetPull.set(1);
+    }
     const dialog = this.element().nativeElement;
     dialog.focus({ preventScroll: true });
     afterNextRender(
