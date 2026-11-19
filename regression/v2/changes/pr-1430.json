@@ -6,21 +6,5 @@
     "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the older news fill the grid > and the grid narrows to one column, then no card waits for another",
     "reason": "PR #1430 (#1340, team Mobile + PWA 6/6, 2026-11-17): the older news step by their column in the real auto-fill grid, not by their index, so in one column no card waits for another; the compact layout no longer decides it",
     "contract": "docs/frontend-overview.md, Aktuality, Motion (P31)"
-  },
-  {
-    "kind": "retired",
-    "suite": "frontend-vitest",
-    "test": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the first page of news and the projects arrive > then on a computer the heading of the older news and each row of three cards move in one after another",
-    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the older news fill the grid > then the heading moves in first and the cards of each row one column after another",
-    "reason": "PR #1430 (#1340, team Mobile + PWA 6/6, 2026-11-17): the older news step by their column in the real auto-fill grid (at most three steps) instead of by rows of three counted from the index, so a row moves in left to right and a grid of two columns no longer steps a row off",
-    "contract": "docs/frontend-overview.md, Aktuality, Motion (P31)"
-  },
-  {
-    "kind": "retired",
-    "suite": "frontend-vitest",
-    "test": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the older news stand on a phone, then the heading and each card move in one after another, at most six steps apart",
-    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the older news fill the grid > and the grid narrows to one column, then no card waits for another",
-    "reason": "PR #1430 (#1340, team Mobile + PWA 6/6, 2026-11-17): the older news step by their column in the real auto-fill grid, not by their index, so in one column no card waits for another; the compact layout no longer decides it",
-    "contract": "docs/frontend-overview.md, Aktuality, Motion (P31)"
   }
 ]
