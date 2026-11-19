@@ -1,0 +1,38 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.backup.BackupWatchServiceTest > Given a reported problem that has ended, when the check runs, then the recovery is published once, the state cleared and the backup alert recorded as resolved",
+    "replacement": "operations.application.backup.BackupWatchServiceTest > Given a reported problem that has ended, when the check runs, then the recovery is queued once after any waiting problem e-mail is dropped, the state cleared and the backup alert recorded as resolved",
+    "reason": "Khononov DDD review #621 (T2, #1444): the recovery is no longer published as an event for an @Async mail listener but queued in the outbox operations_backup_alert, after a problem alert still waiting is dropped",
+    "contract": "docs/api-contract.md, Backups (Alerts); docs/system-overview.md, operations (backups)"
+  },
+  {
+    "kind": "added",
+    "scenario": "operations/backups: A backup alert the mail server refused is sent at the next check, once",
+    "subject": "Zálohování databáze má problém – Nová naděje",
+    "reason": "Khononov DDD review #621 (T2, #1444): a backup alert e-mail the mail server refused waits in the outbox operations_backup_alert and is sent at the next backup check, once; a problem alert still waiting when the problems end is dropped, as for the import outage",
+    "contract": "docs/api-contract.md, Backups (Alerts); docs/system-overview.md, operations (backups)"
+  },
+  {
+    "kind": "added",
+    "scenario": "operations/backups: A recovery e-mail the mail server refused is sent at the next check, once",
+    "subject": "Zálohování databáze má problém – Nová naděje",
+    "reason": "Khononov DDD review #621 (T2, #1444): a backup alert e-mail the mail server refused waits in the outbox operations_backup_alert and is sent at the next backup check, once; a problem alert still waiting when the problems end is dropped, as for the import outage",
+    "contract": "docs/api-contract.md, Backups (Alerts); docs/system-overview.md, operations (backups)"
+  },
+  {
+    "kind": "added",
+    "scenario": "operations/backups: A recovery e-mail the mail server refused is sent at the next check, once",
+    "subject": "Zálohování databáze zase funguje – Nová naděje",
+    "reason": "Khononov DDD review #621 (T2, #1444): a backup alert e-mail the mail server refused waits in the outbox operations_backup_alert and is sent at the next backup check, once; a problem alert still waiting when the problems end is dropped, as for the import outage",
+    "contract": "docs/api-contract.md, Backups (Alerts); docs/system-overview.md, operations (backups)"
+  },
+  {
+    "kind": "added",
+    "scenario": "operations/backups: A problem the mail server refused and that ended before the next check is followed only by the recovery e-mail",
+    "subject": "Zálohování databáze zase funguje – Nová naděje",
+    "reason": "Khononov DDD review #621 (T2, #1444): a backup alert e-mail the mail server refused waits in the outbox operations_backup_alert and is sent at the next backup check, once; a problem alert still waiting when the problems end is dropped, as for the import outage",
+    "contract": "docs/api-contract.md, Backups (Alerts); docs/system-overview.md, operations (backups)"
+  }
+]
