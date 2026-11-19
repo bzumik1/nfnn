@@ -27,14 +27,27 @@ describe('Given a fold around a block', () => {
   it('when it opens with the page, then the block shows as it is, without folding in', () => {
     expect(fold().hidden).toBe(false);
     expect(host().hasAttribute('inert')).toBe(false);
+    expect(host().hasAttribute('aria-hidden')).toBe(false);
     expect(fold().classList.contains('fold--moves')).toBe(false);
   });
 
-  it('when it closes, then the block is inert at once and folds away', () => {
+  it('when it is closed from the first render, then the class that hides it is there too, since the fold itself is a grid over the browser hiding', () => {
+    fixture = TestBed.createComponent(FoldHost);
+    fixture.componentInstance.open.set(false);
+    fixture.detectChanges();
+
+    expect(fold().hidden).toBe(true);
+    expect(fold().classList.contains('fold--moves')).toBe(true);
+    expect(host().hasAttribute('inert')).toBe(true);
+    expect(host().getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('when it closes, then the block is inert and out of the accessibility tree at once and folds away', () => {
     fixture.componentInstance.open.set(false);
     fixture.detectChanges();
 
     expect(host().hasAttribute('inert')).toBe(true);
+    expect(host().getAttribute('aria-hidden')).toBe('true');
     expect(fold().hidden).toBe(true);
     expect(fold().classList.contains('fold--moves')).toBe(true);
   });
@@ -47,6 +60,7 @@ describe('Given a fold around a block', () => {
     fixture.detectChanges();
 
     expect(host().hasAttribute('inert')).toBe(false);
+    expect(host().hasAttribute('aria-hidden')).toBe(false);
     expect(fold().hidden).toBe(false);
     expect(fold().classList.contains('fold--moves')).toBe(true);
   });
