@@ -1,0 +1,38 @@
+[
+  {
+    "kind": "log-field",
+    "line": "operations.application.receiptseed.ReceiptSeedRenewalService: The receipt signing key <key-id> of this server is withdrawn and no new seed was requested, so the backend restarts and its entrypoint generates a new seed",
+    "reason": "Khononov DDD review #621 (T11, #1449): a start that finds the server's own key withdrawn in the audit trail with no seed request waiting asks for a new seed once and restarts; a start that finds a request waiting, or one an earlier start already made, says so and does not restart again",
+    "contract": "docs/system-overview.md, donations (receipt signing keys); docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<key-id>": "the receipt signing key id, a ReceiptSigningKeyId of lowercase hex the site derives from the public key"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.application.receiptseed.ReceiptSeedRenewalService: The receipt signing key <key-id> of this server is withdrawn and a request for a new seed waits, but this start did not replace the seed; the entrypoint's log says why",
+    "reason": "Khononov DDD review #621 (T11, #1449): a start that finds the server's own key withdrawn in the audit trail with no seed request waiting asks for a new seed once and restarts; a start that finds a request waiting, or one an earlier start already made, says so and does not restart again",
+    "contract": "docs/system-overview.md, donations (receipt signing keys); docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<key-id>": "the receipt signing key id, a ReceiptSigningKeyId of lowercase hex the site derives from the public key"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.application.receiptseed.ReceiptSeedRenewalService: The receipt signing key <key-id> of this server is still withdrawn although an earlier start asked for a new seed, so the backend does not restart again; the entrypoint's log says why it kept the seed",
+    "reason": "Khononov DDD review #621 (T11, #1449): a start that finds the server's own key withdrawn in the audit trail with no seed request waiting asks for a new seed once and restarts; a start that finds a request waiting, or one an earlier start already made, says so and does not restart again",
+    "contract": "docs/system-overview.md, donations (receipt signing keys); docs/security-overview.md, Receipt signing key",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<key-id>": "the receipt signing key id, a ReceiptSigningKeyId of lowercase hex the site derives from the public key"
+      }
+    }
+  }
+]
