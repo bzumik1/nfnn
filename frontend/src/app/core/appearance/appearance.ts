@@ -12,6 +12,7 @@ import {
 export type AppearanceChoice = 'auto' | 'light' | 'dark';
 
 export const APPEARANCE_STORAGE_KEY = 'nfnn.appearance';
+export const APPEARANCE_SWITCHING_CLASS = 'appearance-switching';
 
 const DARK_DEVICE = '(prefers-color-scheme: dark)';
 const COLOR_SCHEMES: Record<AppearanceChoice, string> = {

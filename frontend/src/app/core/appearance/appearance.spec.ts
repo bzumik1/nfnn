@@ -1,7 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 
 import { appConfig } from '../../app.config';
-import { APPEARANCE_STORAGE_KEY, Appearance, appearanceAtStart } from './appearance';
+import {
+  APPEARANCE_STORAGE_KEY,
+  APPEARANCE_SWITCHING_CLASS,
+  Appearance,
+  appearanceAtStart,
+} from './appearance';
 
 interface FakeQuery {
   matches: boolean;
@@ -51,6 +56,7 @@ describe('Given the appearance the visitor chooses for the site on this device',
   afterEach(() => {
     meta.remove();
     root.removeAttribute('data-appearance');
+    root.classList.remove(APPEARANCE_SWITCHING_CLASS);
     localStorage.clear();
     vi.restoreAllMocks();
     delete (window as { matchMedia?: unknown }).matchMedia;
@@ -217,6 +223,82 @@ describe('Given the appearance the visitor chooses for the site on this device',
     window.dispatchEvent(new StorageEvent('storage', { key: null, storageArea: localStorage }));
 
     expect(appearance.choice()).toBe('auto');
+  });
+
+  describe('Given the browser draws its frames one by one', () => {
+    let waiting: FrameRequestCallback[];
+
+    function drawNextFrame(): void {
+      const due = waiting;
+      waiting = [];
+      due.forEach((callback) => callback(performance.now()));
+    }
+
+    function transitionsOff(): boolean {
+      return root.classList.contains(APPEARANCE_SWITCHING_CLASS);
+    }
+
+    beforeEach(() => {
+      waiting = [];
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+        waiting.push(callback);
+        return waiting.length;
+      });
+    });
+
+    it('when the visitor switches the appearance, then every transition is off for exactly the next frame drawn, so all colours change in it together', () => {
+      const appearance = start();
+
+      appearance.choose('dark');
+
+      expect(root.getAttribute('data-appearance')).toBe('dark');
+      expect(transitionsOff()).toBe(true);
+      drawNextFrame();
+      expect(transitionsOff()).toBe(true);
+      drawNextFrame();
+      expect(transitionsOff()).toBe(false);
+    });
+
+    it('when the visitor switches again before that frame has passed, then transitions stay off until the frame after the last switch has been drawn', () => {
+      const appearance = start();
+      appearance.choose('dark');
+      drawNextFrame();
+
+      appearance.choose('light');
+      drawNextFrame();
+
+      expect(transitionsOff()).toBe(true);
+      drawNextFrame();
+      expect(transitionsOff()).toBe(false);
+    });
+
+    it('when another open tab switches the appearance, then this tab switches with transitions off for one frame too', () => {
+      start();
+
+      localStorage.setItem(APPEARANCE_STORAGE_KEY, 'dark');
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: APPEARANCE_STORAGE_KEY,
+          newValue: 'dark',
+          storageArea: localStorage,
+        }),
+      );
+
+      expect(transitionsOff()).toBe(true);
+      drawNextFrame();
+      drawNextFrame();
+      expect(transitionsOff()).toBe(false);
+    });
+
+    it('when the site starts with a kept choice, then nothing was drawn before, so transitions are left alone', () => {
+      localStorage.setItem(APPEARANCE_STORAGE_KEY, 'dark');
+
+      start();
+
+      expect(root.getAttribute('data-appearance')).toBe('dark');
+      expect(transitionsOff()).toBe(false);
+      expect(waiting).toEqual([]);
+    });
   });
 
   it('when the app is configured, then it applies the kept choice at the start', () => {
