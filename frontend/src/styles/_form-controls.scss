@@ -40,5 +40,6 @@ app-password-reveal .form-control {
 }
 
 .form-control.form-control--code {
-  max-inline-size: var(--field-code-max-width);
+  width: auto;
+  max-inline-size: 100%;
 }
