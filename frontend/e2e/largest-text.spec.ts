@@ -2155,24 +2155,28 @@ for (const { pose, width, rootSize } of [
         (url) => url.pathname === '/api/operations/setup',
         async () => neverAnswered,
       );
-      const now = await page.evaluate(() => Date.now());
-      await page.clock.pauseAt(now + 1_000);
-      await page.evaluate(() => {
-        Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
-        window.dispatchEvent(new Event('offline'));
-      });
-      await page.clock.runFor(200);
-      const retry = dialog.locator('.offline-entry-try-again');
-      await expect(retry).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
-      const resting = await heightOf(retry);
+      try {
+        const now = await page.evaluate(() => Date.now());
+        await page.clock.pauseAt(now + 1_000);
+        await page.evaluate(() => {
+          Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+          window.dispatchEvent(new Event('offline'));
+        });
+        await page.clock.runFor(200);
+        const retry = dialog.locator('.offline-entry-try-again');
+        await expect(retry).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+        const resting = await heightOf(retry);
 
-      await retry.click();
-      await page.clock.runFor(1_000);
+        await retry.click();
+        await page.clock.runFor(1_000);
 
-      await expect(retry.locator('.busy-label__face--shown')).toHaveText('Zkoušíme se připojit…');
-      const working = await heightOf(retry);
-      expect(Math.abs(working - resting), `${resting} → ${working}`).toBeLessThanOrEqual(1);
+        await expect(retry.locator('.busy-label__face--shown')).toHaveText('Zkoušíme se připojit…');
+        const working = await heightOf(retry);
+        expect(Math.abs(working - resting), `${resting} → ${working}`).toBeLessThanOrEqual(1);
+      } finally {
+        await page.clock.resume();
+      }
     });
 
     test('when they reach the code from the app and type it, then the whole code fits its field, which starts at its label', async ({
