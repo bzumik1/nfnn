@@ -4,7 +4,9 @@ import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaField;
+import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.JavaModifier;
+import com.tngtech.archunit.core.domain.JavaStaticInitializer;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
@@ -21,7 +23,10 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Period;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,7 +47,12 @@ class ApplicationDurationRulesTest {
             RELEASE_CHECK + ".PUBLICATION_TOLERANCE",
             "the clock skew allowed in GitHub's answer about the latest release",
             "cz.novanadeje.app.operations.application.push.PushAlertDispatcher.RETRY_DELAYS",
-            "the retries of an outside call (Web Push) for the devices that failed");
+            "the retries of an outside call (Web Push) for the devices that failed, which DonorPushDispatcher reads too");
+
+    private static final Set<String> BOUND_OWNERS = TECHNICAL_BOUNDS.keySet().stream()
+            .map(bound -> bound.substring(0, bound.lastIndexOf('.')))
+            .collect(Collectors.toUnmodifiableSet());
+    private static final Set<String> FACTORIES_BESIDE_OF = Set.of("parse", "from");
 
     private static final DescribedPredicate<JavaField> HOLDING_A_LENGTH_OF_TIME = DescribedPredicate.describe(
             "hold a Duration or a Period, inside a generic type or an array too",
@@ -55,8 +65,17 @@ class ApplicationDurationRulesTest {
             .and(DescribedPredicate.describe("are not a reviewed technical bound", field -> !TECHNICAL_BOUNDS.containsKey(field.getFullName())))
             .should(ArchCondition.from(HOLDING_A_LENGTH_OF_TIME))
             .because("backend.md, Application: a value of a business rule (a lifetime, a window, a pause) lives in the domain, where its tests"
-                    + " pin its boundaries; an application class keeps a length of time only as a reviewed technical bound of an outside call,"
-                    + " named with its reason (#621, round 5)");
+                    + " pin its boundaries; an application class keeps a length of time only as a reviewed technical bound of an outside call or"
+                    + " of the log's volume, named with its reason (#621, round 5)");
+
+    @ArchTest
+    static final ArchRule a_length_of_time_is_not_written_into_the_application = noClasses()
+            .that().resideInAPackage("..application..")
+            .should().callMethodWhere(DescribedPredicate.describe(
+                    "create a Duration or a Period (of…, parse, from) outside the static initializer of a class holding a reviewed technical bound",
+                    ApplicationDurationRulesTest::writesALengthOfTime))
+            .because("a length of time written inline in a method, an enum constant or an instance field is the same rule value the static"
+                    + " field rule refuses, only out of its sight (#621, round 5)");
 
     @Test
     @DisplayName("Given the reviewed technical bounds, when the site is read, then each is still a static length of time of an application class, so the list names no field that is gone or no longer needs it")
@@ -91,6 +110,7 @@ class ApplicationDurationRulesTest {
                             static final Duration[] PAUSES = {Duration.ofMinutes(15)};
                             static final Optional<Period> GRACE = Optional.empty();
                             static final int ATTEMPTS = 5;
+                            static final Duration WINDOW = Duration.ofHours(1);
 
                             private final Duration configured;
 
@@ -132,14 +152,99 @@ class ApplicationDurationRulesTest {
                         """));
 
         assertThat(a_length_of_time_of_a_rule_lives_in_the_domain.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(6)
+                .hasSize(7)
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedRules.LIFETIME"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedRules.WINDOW"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedRules.NOTICE"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedRules.STEPS"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedRules.PAUSES"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedRules.GRACE"))
                 .anySatisfy(detail -> assertThat(detail).contains("ReleaseCheckService.OFFER_FOR"))
                 .noneSatisfy(detail -> assertThat(detail).containsAnyOf("ATTEMPTS", "configured", "PUBLICATION_TOLERANCE", "PlantedPolicy", "PlantedClient"));
+    }
+
+    @Test
+    @DisplayName("Given planted application code writing a length of time in a method, a lambda, an enum constant and an instance field, and a reviewed bound's own initializer, when the inline rule checks it, then each is reported but the bound's initializer")
+    void should_report_every_inline_length_of_time_when_checked_given_planted_application_code(@TempDir Path folder) throws IOException {
+        JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
+                "cz.novanadeje.app.planteda.application.PlantedInline", """
+                        package cz.novanadeje.app.planteda.application;
+
+                        import java.time.Duration;
+                        import java.time.Instant;
+                        import java.time.Period;
+                        import java.util.function.Supplier;
+
+                        public class PlantedInline {
+
+                            enum Kind {
+                                SHORT(Duration.ofMinutes(5));
+
+                                private final Duration lasts;
+
+                                Kind(Duration lasts) {
+                                    this.lasts = lasts;
+                                }
+                            }
+
+                            private final Duration grace = Duration.parse("PT1H");
+
+                            Instant cutoff(Instant now) {
+                                return now.minus(Duration.ofDays(30));
+                            }
+
+                            Supplier<Period> notice() {
+                                return () -> Period.ofMonths(1);
+                            }
+
+                            Duration between(Instant from, Instant to) {
+                                return Duration.between(from, to).plusSeconds(1);
+                            }
+                        }
+                        """,
+                RELEASE_CHECK, """
+                        package cz.novanadeje.app.operations.application.release;
+
+                        import java.time.Duration;
+                        import java.time.Instant;
+
+                        public class ReleaseCheckService {
+
+                            static final Duration PUBLICATION_TOLERANCE = Duration.ofDays(1);
+
+                            Instant offeredUntil(Instant at) {
+                                return at.plus(Duration.ofDays(7));
+                            }
+                        }
+                        """,
+                "cz.novanadeje.app.planteda.infrastructure.PlantedTimeouts", """
+                        package cz.novanadeje.app.planteda.infrastructure;
+
+                        import java.time.Duration;
+
+                        final class PlantedTimeouts {
+
+                            Duration connect() {
+                                return Duration.ofSeconds(10);
+                            }
+                        }
+                        """));
+
+        assertThat(a_length_of_time_is_not_written_into_the_application.evaluate(planted).getFailureReport().getDetails())
+                .hasSize(5)
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedInline$Kind.<clinit>()").contains("Duration.ofMinutes"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.<init>()").contains("Duration.parse"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.cutoff(").contains("Duration.ofDays"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.notice()").contains("Period.ofMonths"))
+                .anySatisfy(detail -> assertThat(detail).contains("ReleaseCheckService.offeredUntil(").contains("Duration.ofDays"))
+                .noneSatisfy(detail -> assertThat(detail).containsAnyOf("between(", "ReleaseCheckService.<clinit>", "PlantedTimeouts"));
+    }
+
+    private static boolean writesALengthOfTime(JavaMethodCall call) {
+        boolean factory = isALengthOfTime(call.getTargetOwner())
+                && (call.getName().startsWith("of") || FACTORIES_BESIDE_OF.contains(call.getName()));
+        boolean inABoundsInitializer = call.getOrigin() instanceof JavaStaticInitializer && BOUND_OWNERS.contains(call.getOriginOwner().getName());
+        return factory && !inABoundsInitializer;
     }
 
     private static boolean isALengthOfTime(JavaClass type) {
