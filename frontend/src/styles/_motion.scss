@@ -290,6 +290,26 @@ $_pressed: (--pressed-tint, filter);
   }
 }
 
+@mixin expand-on-open {
+  display: grid;
+  animation:
+    motion-expand-rows var(--duration-base) var(--ease-standard),
+    motion-fade-in var(--duration-fast) var(--ease-out) backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: motion-fade-in var(--duration-reduced) var(--ease-standard) backwards !important;
+  }
+
+  > * {
+    min-height: 0;
+    animation: motion-clipped var(--duration-base) linear;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none !important;
+    }
+  }
+}
+
 @mixin expand-content-leave {
   animation: motion-leave var(--duration-base) var(--ease-in) forwards;
   @include _fades-when-reduced(animation);

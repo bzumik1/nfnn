@@ -19,7 +19,6 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { TrackedForm } from '../../../core/updates/tracked-form';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subscription, timer } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { describeProblem, problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -54,8 +53,6 @@ import { formatBankTime } from '../../donations/donation-date';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ActionBar } from '../../../shared/ui/action-bar/action-bar';
-import { DetailsState } from '../../../shared/ui/disclosure/details-state';
-import { Disclosure } from '../../../shared/ui/disclosure/disclosure';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
 
@@ -107,7 +104,6 @@ interface Section {
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
-const RESTART_CALM_AFTER_MS = 5000;
 const NOTHING_CHANGED = $localize`:@@admin.settings.nothingChanged:Nic jste nezměnili.`;
 const MAIL_DELIVERY: readonly SettingName[] = [
   'MAIL_HOST',
@@ -215,8 +211,6 @@ const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše 
 @Component({
   selector: 'app-admin-settings',
   imports: [
-    DetailsState,
-    Disclosure,
     BusyButton,
     BusyLabel,
     LiveNotice,
@@ -273,8 +267,6 @@ export class AdminSettings {
   protected readonly mailNotice = signal<Notice | null>(null);
   private verifiedMail: string | null = null;
   protected readonly changedMeanwhile = signal<SettingsChanged | null>(null);
-  protected readonly restartCalm = signal(false);
-  private restartCalmTimer: Subscription | null = null;
   private readonly edits = signal(0);
   private readonly barWanted = computed(() => {
     this.edits();
@@ -586,7 +578,6 @@ export class AdminSettings {
   }
 
   private watchRestart(): void {
-    this.calmRestartLater();
     this.setupApi
       .watchRestart()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -601,14 +592,6 @@ export class AdminSettings {
         });
         this.load();
       });
-  }
-
-  private calmRestartLater(): void {
-    this.restartCalmTimer?.unsubscribe();
-    this.restartCalm.set(false);
-    this.restartCalmTimer = timer(RESTART_CALM_AFTER_MS)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.restartCalm.set(true));
   }
 
   private testEmailRequest(): AdminTestEmailRequest {

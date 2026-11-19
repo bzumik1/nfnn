@@ -86,7 +86,7 @@
                           >Otevřít kartu dárce</a
                         >
                       }
-                      <details class="details" appDetailsState #cellDetails="appDetailsState">
+                      <details class="details">
                         <summary>
                           <svg
                             class="details-chevron"
@@ -103,7 +103,7 @@
                             <path d="m9 18 6-6-6-6" /></svg
                           ><span i18n="@@admin.actions.details.summary">Technické podrobnosti</span>
                         </summary>
-                        <div class="details-body" appDisclosure [closed]="!cellDetails.open()">
+                        <div class="details-body">
                           <div>
                             @if (item.adminEmail) {
                               <span class="details-text">{{ item.adminEmail }}</span>
@@ -188,7 +188,7 @@
                       @if (item.summary) {
                         <span class="summary">{{ item.summary }}</span>
                       }
-                      <details class="details" appDetailsState #rowDetails="appDetailsState">
+                      <details class="details">
                         <summary>
                           <svg
                             class="details-chevron"
@@ -205,7 +205,7 @@
                             <path d="m9 18 6-6-6-6" /></svg
                           ><span i18n="@@admin.actions.details.summary">Technické podrobnosti</span>
                         </summary>
-                        <div class="details-body" appDisclosure [closed]="!rowDetails.open()">
+                        <div class="details-body">
                           <div>
                             @if (detailsOnServerOnly(item)) {
                               @if (serverAway()) {

@@ -80,7 +80,7 @@
                     <li>{{ problem }}</li>
                   }
                 </ul>
-                <details class="tech-details" appDetailsState #problemTechDetails="appDetailsState">
+                <details class="tech-details">
                   <summary>
                     <svg
                       class="details-chevron"
@@ -97,7 +97,7 @@
                       <path d="m9 18 6-6-6-6" /></svg
                     ><span i18n="@@admin.backups.techDetails">Technické podrobnosti</span>
                   </summary>
-                  <div class="details-body" appDisclosure [closed]="!problemTechDetails.open()">
+                  <div class="details-body">
                     <div>
                       <ul>
                         @for (detail of problemDetails(); track detail) {
@@ -345,7 +345,7 @@
       [ngTemplateOutletContext]="{ $implicit: line.text, fileName: line.fileName }"
   /></span>
   @if (line.error) {
-    <details class="tech-details" appDetailsState #runDetails="appDetailsState">
+    <details class="tech-details">
       <summary>
         <svg
           class="details-chevron"
@@ -362,7 +362,7 @@
           <path d="m9 18 6-6-6-6" /></svg
         ><span i18n="@@admin.backups.techDetails">Technické podrobnosti</span>
       </summary>
-      <div class="details-body" appDisclosure [closed]="!runDetails.open()">
+      <div class="details-body">
         <div>
           <p class="run-error">{{ line.error }}</p>
         </div>

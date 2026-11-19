@@ -28,8 +28,6 @@ import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-conne
 import { loadingView } from '../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
-import { DetailsState } from '../../../shared/ui/disclosure/details-state';
-import { Disclosure } from '../../../shared/ui/disclosure/disclosure';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -109,7 +107,7 @@ const SERVER_ACTOR = '00000000-0000-0000-0000-000000000000';
 
 @Component({
   selector: 'app-admin-actions',
-  imports: [DetailsState, Disclosure, BusyLabel, Skeleton, NeedsConnection, RouterLink],
+  imports: [BusyLabel, Skeleton, NeedsConnection, RouterLink],
   templateUrl: './admin-actions.html',
   styleUrl: './admin-actions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

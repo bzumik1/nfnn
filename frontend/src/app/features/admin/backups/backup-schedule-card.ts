@@ -18,8 +18,6 @@ import { AdminApi, BackupScheduleResponse } from '../admin-api';
 import { BACKUP_DAYS, describePlan, samePlan } from './backup-plan';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
-import { DetailsState } from '../../../shared/ui/disclosure/details-state';
-import { Disclosure } from '../../../shared/ui/disclosure/disclosure';
 
 const TIME_MESSAGES: FieldMessages = {
   required: $localize`:@@admin.backups.schedule.time.required:Zadejte prosím čas, například 3:00.`,
@@ -28,8 +26,6 @@ const TIME_MESSAGES: FieldMessages = {
 @Component({
   selector: 'app-backup-schedule-card',
   imports: [
-    DetailsState,
-    Disclosure,
     BusyLabel,
     FormsModule,
     FormField,

@@ -3,7 +3,7 @@
 @mixin disclosure {
   > summary {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--space-1-5);
     list-style: none;
     cursor: pointer;
@@ -17,6 +17,7 @@
     flex-shrink: 0;
     width: var(--list-chevron-size);
     height: var(--list-chevron-size);
+    margin-block-start: calc((1lh - var(--list-chevron-size)) / 2);
     @include motion.move(transform);
   }
 
@@ -24,11 +25,7 @@
     transform: rotate(90deg);
   }
 
-  .details-body {
-    @include motion.expand;
-
-    &[hidden] {
-      transition: none !important;
-    }
+  &[open] > .details-body {
+    @include motion.expand-on-open;
   }
 }

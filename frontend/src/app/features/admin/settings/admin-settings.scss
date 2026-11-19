@@ -157,7 +157,21 @@
   }
 }
 
+.restart-wait {
+  display: grid;
+  flex-shrink: 0;
+
+  > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.restart-spinner {
+  @include motion.wait-settles;
+}
+
 .spinner {
+  display: block;
   width: 18px;
   height: 18px;
   border-radius: var(--radius-round);
@@ -167,11 +181,10 @@
 }
 
 .restart-calm {
-  flex-shrink: 0;
   width: 18px;
   height: 18px;
   color: var(--color-accent);
-  @include motion.appear($rises: false);
+  @include motion.wait-calm;
 }
 
 .save-row.ui-action-bar.save-row--entering {

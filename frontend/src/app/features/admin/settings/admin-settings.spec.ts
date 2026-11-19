@@ -324,9 +324,9 @@ describe('Given an administrator on the settings page', () => {
       fixture.detectChanges();
 
       const waitIcons = () =>
-        Array.from(
-          fixture.nativeElement.querySelectorAll('.ui-load-state .restart-wait > *'),
-        ).map((icon) => (icon as Element).getAttribute('class'));
+        Array.from(fixture.nativeElement.querySelectorAll('.ui-load-state .restart-wait > *')).map(
+          (icon) => (icon as Element).getAttribute('class'),
+        );
       expect(waitIcons()).toEqual(['restart-spinner', 'restart-calm']);
       expect(element('.restart-wait').getAttribute('aria-hidden')).toBe('true');
 

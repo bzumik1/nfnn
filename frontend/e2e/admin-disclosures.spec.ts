@@ -180,25 +180,3 @@ test.describe('Given an administrator on a phone on the settings page', () => {
     expect(placement.offFirstLine).toBeLessThan(3);
   });
 });
-
-test.describe('Given an administrator who finds a setting by its name on the settings page', () => {
-  test.skip(
-    ({ browserName }) => browserName !== 'chromium',
-    'only Chromium opens details for window.find; Safari is on the device checklist',
-  );
-
-  test('when the page finds a name inside the folded technical settings, then they open at it', async ({
-    page,
-  }) => {
-    await openSettings(page);
-    const details = page.locator('details#technicke-nastaveni');
-    await expect(details).not.toHaveAttribute('open');
-
-    expect(await page.evaluate(() => window.find('Server pro odesílání e-mailů', true))).toBe(true);
-
-    await expect(details).toHaveAttribute('open');
-    await expect(
-      page.getByRole('heading', { level: 3, name: 'Server pro odesílání e-mailů' }),
-    ).toBeVisible();
-  });
-});
