@@ -57,6 +57,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 )
 class EventListenerRulesTest {
 
+    private static final String SITE_PACKAGE = "cz.novanadeje.app.";
     private static final String SHARED_EVENTS = "cz.novanadeje.app.shared.application.event";
 
     private static final String MAIL_DELIVERY_LISTENER = "cz.novanadeje.app.operations.infrastructure.events.MailDeliveryListener";
@@ -71,78 +72,78 @@ class EventListenerRulesTest {
             "it turns the factor off in the import's own transaction, so a failure rolls the import back and the next run retries");
 
     private static final Map<String, String> AT_MOST_ONCE_LISTENERS = Map.ofEntries(
-            Map.entry("BackupAlertEmailSender.sendProblems(BackupProblemsDetected)",
+            Map.entry("operations.infrastructure.backup.BackupAlertEmailSender.sendProblems(BackupProblemsDetected)",
                     "open: #1444; lost until the problem set changes, since the state is marked reported before the send"),
-            Map.entry("BackupAlertEmailSender.sendRecovery(BackupRecovered)",
+            Map.entry("operations.infrastructure.backup.BackupAlertEmailSender.sendRecovery(BackupRecovered)",
                     "open: #1444; lost, since the state is cleared before the send"),
-            Map.entry("BackupKeyRevealedEmailSender.sendRevealedNotice(BackupKeyRevealed)",
-                    "an administrator security notice: lost, and the audit trail is the durable record (Khononov table C, T12)"),
-            Map.entry("ContactMessageEmailForwarder.forward(ContactMessageReceived)",
-                    "open: #1446; the message is lost to the foundation and its row stays unread until the yearly cleanup"),
-            Map.entry("DeviceSessionLiveness.forget(DeviceSignedOut)",
-                    "evicts a cache entry: a lost eviction is bounded by the cache's 30 s lifetime (Khononov table C)"),
-            Map.entry("DonorAccountErasedEmailSender.sendErasureNotice(DonorAccountErased)",
-                    "a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("DonorEmailChangeEmailSender.sendChangeLink(DonorEmailChangeRequested)",
-                    "a link mail: lost, and the donor asks for a new link (Khononov table C)"),
-            Map.entry("DonorEmailChangeEmailSender.sendChangedNotice(DonorEmailChanged)",
-                    "a security notice to the old address: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("DonorEmailChangeEmailSender.sendInUseNotice(DonorEmailAddressInUse)",
-                    "a privacy notice: lost (Khononov table C, accepted)"),
-            Map.entry("DonorPasskeyEmailSender.sendAddedNotice(DonorPasskeyAdded)",
-                    "a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("DonorPasskeyEmailSender.sendRemovedByDonorNotice(DonorPasskeyRemoved)",
-                    "a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("DonorPasskeyEmailSender.sendRemovedNotice(DonorPasskeysRemoved)",
-                    "a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("DonorPasswordChangedEmailSender.sendChangedNotice(DonorPasswordChanged)",
-                    "a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("DonorPushListener.on(DonationsArrived)",
-                    "a push to donors: lost (Khononov table C, accepted)"),
-            Map.entry("DonorPushListener.on(YearlyReceiptsReady)",
-                    "a push to donors: lost, and the yearly announcement is bookmarked before it, so it is not sent twice (Khononov table C)"),
-            Map.entry("DonorRecordSynchronizer.pairAfterRegistration(DonorRegistered)",
-                    "nothing lasting is lost: the hourly import's pairing pass pairs the new donor's payments (Khononov table C)"),
-            Map.entry("DonorRegistrationEmailSender.sendRegistrationRepeated(DonorRegistrationRepeated)",
-                    "a privacy notice: lost (Khononov table C, accepted)"),
-            Map.entry("DonorRegistrationEmailSender.sendReminder(DonorRegistrationReminderDue)",
-                    "a link mail: lost, and the reminder's bookmark keeps it from being sent again; the donor registers again (Khononov table C)"),
-            Map.entry("DonorRegistrationEmailSender.sendVerification(DonorEmailVerificationRequested)",
-                    "a link mail: lost, and the donor asks for a new link (Khononov table C)"),
-            Map.entry("DonorSecondFactorEmailSender.sendCodesPausedNotice(DonorSecondFactorCodesPaused)",
-                    "a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("DonorSecondFactorEmailSender.sendDisabledNotice(DonorSecondFactorDisabled)",
-                    "a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("DonorSecondFactorEmailSender.sendEnabledNotice(DonorSecondFactorEnabled)",
-                    "a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("DonorSecondFactorRecoveredEmailSender.sendRecoveryNotice(DonorSecondFactorRecovered)",
-                    "a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("DonorSecondFactorRecoveredEmailSender.tellTheOtherAdministrators(AdministratorSecondFactorRecovered)",
-                    "an administrator security notice: lost, and the audit trail is the durable record (Khononov table C, T12)"),
-            Map.entry("DonorSecondFactorResetEmailSender.sendResetNotice(DonorSecondFactorReset)",
-                    "a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("DonorSecurityNoticeEmailSender.sendRecoveryStartedNotice(DonorSecondFactorRecoveryStarted)",
-                    "a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("DonorSecurityNoticeEmailSender.sendSenderAccountLearnedNotice(DonorSenderAccountLearned)",
-                    "a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"),
-            Map.entry("LiveHintListener.onDeviceSignedOut(DeviceSignedOut)",
-                    "a live hint or stream close: lost, and the clients recover by their next read and the session check (Khononov table C)"),
-            Map.entry("LiveHintListener.onSessionsEnded(DonorSessionsEnded)",
-                    "a live hint or stream close: lost, and the clients recover by their next read and the session check (Khononov table C)"),
-            Map.entry("LiveHintListener.onStoredDataChanged(StoredDataChanged)",
-                    "a live hint: lost, and the clients recover by their next read (Khononov table C)"),
-            Map.entry("OperationalAlertPushListener.on(OperationalAlertChanged)",
-                    "a push to administrators, retried in memory: lost on a restart, and the alert stays in /sprava (Khononov table C)"),
-            Map.entry("PasswordResetEmailSender.send(DonorPasswordResetRequested)",
-                    "a link mail: lost, and the donor asks for a new link (Khononov table C)"),
-            Map.entry("ReceiptSignatureChangedEmailSender.sendChangedNotice(ReceiptSignatureChanged)",
-                    "an administrator security notice: lost, and the audit trail is the durable record (Khononov table C, T12)"),
-            Map.entry("ReceiptSigningKeyWithdrawnEmailSender.sendWithdrawnNotice(ReceiptSigningKeyWithdrawn)",
-                    "an administrator security notice: lost, and the audit trail is the durable record (Khononov table C, T12)"),
-            Map.entry("ReceiptSigningKeyWithdrawnListener.on(ReceiptSigningKeyWithdrawn)",
-                    "requests the seed renewal and the restart: lost, the renewal is never requested and signing stays paused, failing safe until an administrator acts (Khononov table C, T11)"),
-            Map.entry("SenderAccountLearnedListener.on(SenderAccountLearned)",
-                    "the first hop of a security notice to the donor: lost, and nothing durable shows it to the donor (Khononov table C, accepted)"));
+            Map.entry("operations.infrastructure.backup.BackupKeyRevealedEmailSender.sendRevealedNotice(BackupKeyRevealed)",
+                    "an administrator security notice: lost, and the audit trail is the durable record (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("contact.infrastructure.mail.ContactMessageEmailForwarder.forward(ContactMessageReceived)",
+                    "open: #1446; the message is lost to the foundation, nothing reads its row, and the yearly cleanup deletes it"),
+            Map.entry("donors.infrastructure.session.DeviceSessionLiveness.forget(DeviceSignedOut)",
+                    "evicts a cache entry: a lost eviction is bounded by the cache's 30 s lifetime (#621)"),
+            Map.entry("donors.infrastructure.mail.DonorAccountErasedEmailSender.sendErasureNotice(DonorAccountErased)",
+                    "a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorEmailChangeEmailSender.sendChangeLink(DonorEmailChangeRequested)",
+                    "a link mail: lost, and the donor asks for a new link (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorEmailChangeEmailSender.sendChangedNotice(DonorEmailChanged)",
+                    "a security notice to the old address: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorEmailChangeEmailSender.sendInUseNotice(DonorEmailAddressInUse)",
+                    "a privacy notice: lost (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorPasskeyEmailSender.sendAddedNotice(DonorPasskeyAdded)",
+                    "a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorPasskeyEmailSender.sendRemovedByDonorNotice(DonorPasskeyRemoved)",
+                    "a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorPasskeyEmailSender.sendRemovedNotice(DonorPasskeysRemoved)",
+                    "a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorPasswordChangedEmailSender.sendChangedNotice(DonorPasswordChanged)",
+                    "a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("operations.infrastructure.events.DonorPushListener.on(DonationsArrived)",
+                    "a push to donors: lost, and the gifts show in the portal (#621)"),
+            Map.entry("operations.infrastructure.events.DonorPushListener.on(YearlyReceiptsReady)",
+                    "a push to donors: lost, and the yearly announcement is bookmarked before it, so it is not sent twice (#621)"),
+            Map.entry("donations.infrastructure.events.DonorRecordSynchronizer.pairAfterRegistration(DonorRegistered)",
+                    "nothing lasting is lost: the pairing pass of the next successful import pairs the new donor's payments (#621)"),
+            Map.entry("donors.infrastructure.mail.DonorRegistrationEmailSender.sendRegistrationRepeated(DonorRegistrationRepeated)",
+                    "a privacy notice: lost (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorRegistrationEmailSender.sendReminder(DonorRegistrationReminderDue)",
+                    "a link mail: lost, and the reminder's bookmark keeps it from being sent again; the donor registers again (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorRegistrationEmailSender.sendVerification(DonorEmailVerificationRequested)",
+                    "a link mail: lost, and the donor asks for a new link (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorSecondFactorEmailSender.sendCodesPausedNotice(DonorSecondFactorCodesPaused)",
+                    "a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorSecondFactorEmailSender.sendDisabledNotice(DonorSecondFactorDisabled)",
+                    "a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorSecondFactorEmailSender.sendEnabledNotice(DonorSecondFactorEnabled)",
+                    "a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorSecondFactorRecoveredEmailSender.sendRecoveryNotice(DonorSecondFactorRecovered)",
+                    "a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorSecondFactorRecoveredEmailSender.tellTheOtherAdministrators(AdministratorSecondFactorRecovered)",
+                    "an administrator security notice: lost, and the audit trail is the durable record (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorSecondFactorResetEmailSender.sendResetNotice(DonorSecondFactorReset)",
+                    "a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorSecurityNoticeEmailSender.sendRecoveryStartedNotice(DonorSecondFactorRecoveryStarted)",
+                    "a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donors.infrastructure.mail.DonorSecurityNoticeEmailSender.sendSenderAccountLearnedNotice(DonorSenderAccountLearned)",
+                    "a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("shared.infrastructure.live.LiveHintListener.onDeviceSignedOut(DeviceSignedOut)",
+                    "a live hint or stream close: lost, and the clients recover by their next read and the session check (#621)"),
+            Map.entry("shared.infrastructure.live.LiveHintListener.onSessionsEnded(DonorSessionsEnded)",
+                    "a live hint or stream close: lost, and the clients recover by their next read and the session check (#621)"),
+            Map.entry("shared.infrastructure.live.LiveHintListener.onStoredDataChanged(StoredDataChanged)",
+                    "a live hint: lost, and the clients recover by their next read (#621)"),
+            Map.entry("operations.infrastructure.events.OperationalAlertPushListener.on(OperationalAlertChanged)",
+                    "a push to administrators, retried in memory: lost on a restart, and the alert stays in /sprava (#621)"),
+            Map.entry("donors.infrastructure.mail.PasswordResetEmailSender.send(DonorPasswordResetRequested)",
+                    "a link mail: lost, and the donor asks for a new link (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("content.infrastructure.mail.ReceiptSignatureChangedEmailSender.sendChangedNotice(ReceiptSignatureChanged)",
+                    "an administrator security notice: lost, and the audit trail is the durable record (#621; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("donations.infrastructure.signing.ReceiptSigningKeyWithdrawnEmailSender.sendWithdrawnNotice(ReceiptSigningKeyWithdrawn)",
+                    "an administrator security notice: lost, also when the restart the withdrawal triggers stops the server after waiting at most 3 minutes for the executor, and the audit trail is the durable record (#621, T12; reliability.md: a failed send is logged and not retried)"),
+            Map.entry("operations.infrastructure.events.ReceiptSigningKeyWithdrawnListener.on(ReceiptSigningKeyWithdrawn)",
+                    "requests the seed renewal and the restart: lost, the renewal is never requested and signing stays paused, failing safe until an administrator acts (#621, T11)"),
+            Map.entry("donors.infrastructure.events.SenderAccountLearnedListener.on(SenderAccountLearned)",
+                    "the first hop of a security notice to the donor: lost, and nothing durable shows it to the donor (#621; reliability.md: a failed send is logged and not retried)"));
 
     private static final DescribedPredicate<JavaClass> SHARED_EVENT = DescribedPredicate.describe(
             "a top-level record of " + SHARED_EVENTS,
@@ -981,11 +982,11 @@ class EventListenerRulesTest {
                 .as("the reviewed at-most-once list names only AFTER_COMMIT listener methods of the site, so an entry left behind by a rename, "
                         + "a move or an outbox that replaced the listener is found")
                 .isEmpty();
-        assertThat(AT_MOST_ONCE_LISTENERS).allSatisfy((listener, reason) -> assertThat(reason).as(listener).isNotBlank());
+        assertThat(listingsWithoutAReason(AT_MOST_ONCE_LISTENERS)).as("every listed listener says why its loss is acceptable").isEmpty();
     }
 
     @Test
-    @DisplayName("Given planted AFTER_COMMIT listeners by phase, by default and through a composed annotation, a BEFORE_COMMIT one, and a reviewed list naming one of them, a BEFORE_COMMIT listener and a gone one, when the rule and the listing check read them, then the two unlisted after-commit listeners and the two listings that name no after-commit listener are reported")
+    @DisplayName("Given planted AFTER_COMMIT listeners by phase, by default and through a composed annotation, a BEFORE_COMMIT one, a nested one and one of the same simple name in another package, and a reviewed list naming one of them, the nested one without a reason, a BEFORE_COMMIT listener and a gone one, when the rule and the listing checks read them, then the three unlisted after-commit listeners, the two listings that name no after-commit listener and the one without a reason are reported")
     void should_report_unlisted_listeners_and_stale_listings_when_checked_given_planted_listeners(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
                 "cz.novanadeje.app.planteda.infrastructure.mail.PlantedAfterCommit", """
@@ -1029,19 +1030,43 @@ class EventListenerRulesTest {
                             @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
                             void beforeTheCommit(DonorErased erased) {
                             }
+
+                            static class Nested {
+
+                                @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+                                void reviewedNotice(DonorRegistered registered) {
+                                }
+                            }
+                        }
+                        """,
+                "cz.novanadeje.app.planteda.infrastructure.events.PlantedNoticeSender", """
+                        package cz.novanadeje.app.planteda.infrastructure.events;
+
+                        import cz.novanadeje.app.shared.application.event.DonorRegistered;
+                        import org.springframework.transaction.event.TransactionalEventListener;
+
+                        class PlantedNoticeSender {
+
+                            @TransactionalEventListener
+                            void reviewedNotice(DonorRegistered registered) {
+                            }
                         }
                         """));
+        String sender = "planteda.infrastructure.mail.PlantedNoticeSender";
         Map<String, String> reviewed = Map.of(
-                "PlantedNoticeSender.reviewedNotice(DonorRegistered)", "planted: a notice whose loss is acceptable",
-                "PlantedNoticeSender.beforeTheCommit(DonorErased)", "planted: listed although it commits with its publisher",
-                "PlantedNoticeSender.goneNotice(DonorErased)", "planted: replaced by an outbox long ago");
+                sender + ".reviewedNotice(DonorRegistered)", "planted: a notice whose loss is acceptable",
+                sender + "$Nested.reviewedNotice(DonorRegistered)", " ",
+                sender + ".beforeTheCommit(DonorErased)", "planted: listed although it commits with its publisher",
+                sender + ".goneNotice(DonorErased)", "planted: replaced by an outbox long ago");
 
         assertThat(afterCommitListenersReviewedIn(reviewed).evaluate(planted).getFailureReport().getDetails())
-                .hasSize(2)
-                .anySatisfy(detail -> assertThat(detail).contains("PlantedNoticeSender.unreviewedByDefault(DonorRegistered)"))
-                .anySatisfy(detail -> assertThat(detail).contains("PlantedNoticeSender.unreviewedComposed(DonorErased)"));
+                .hasSize(3)
+                .anySatisfy(detail -> assertThat(detail).contains(sender + ".unreviewedByDefault(DonorRegistered)"))
+                .anySatisfy(detail -> assertThat(detail).contains(sender + ".unreviewedComposed(DonorErased)"))
+                .anySatisfy(detail -> assertThat(detail).contains("planteda.infrastructure.events.PlantedNoticeSender.reviewedNotice(DonorRegistered)"));
         assertThat(listingsThatNameNoAfterCommitListener(planted, reviewed))
-                .containsExactly("PlantedNoticeSender.beforeTheCommit(DonorErased)", "PlantedNoticeSender.goneNotice(DonorErased)");
+                .containsExactly(sender + ".beforeTheCommit(DonorErased)", sender + ".goneNotice(DonorErased)");
+        assertThat(listingsWithoutAReason(reviewed)).containsExactly(sender + "$Nested.reviewedNotice(DonorRegistered)");
     }
 
     private static ArchRule afterCommitListenersReviewedIn(Map<String, String> reviewed) {
@@ -1069,12 +1094,16 @@ class EventListenerRulesTest {
         return reviewed.keySet().stream().filter(listed -> !listeners.contains(listed)).sorted().toList();
     }
 
+    private static List<String> listingsWithoutAReason(Map<String, String> reviewed) {
+        return reviewed.entrySet().stream().filter(listing -> listing.getValue().isBlank()).map(Map.Entry::getKey).sorted().toList();
+    }
+
     private static boolean listensAfterTheCommit(JavaMethod method) {
-        return listenerAnnotationOf(method).map(EventListenerRulesTest::listenerPhase).filter(TransactionPhase.AFTER_COMMIT.name()::equals).isPresent();
+        return !method.getModifiers().contains(JavaModifier.BRIDGE) && listenerAnnotationOf(method).map(EventListenerRulesTest::listenerPhase).filter(TransactionPhase.AFTER_COMMIT.name()::equals).isPresent();
     }
 
     private static String atMostOnceKeyOf(JavaMethod method) {
-        return method.getOwner().getSimpleName() + "." + method.getName() + "("
+        return method.getOwner().getName().substring(SITE_PACKAGE.length()) + "." + method.getName() + "("
                 + method.getRawParameterTypes().stream().map(JavaClass::getSimpleName).collect(Collectors.joining(", ")) + ")";
     }
 
