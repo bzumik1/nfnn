@@ -1764,3 +1764,41 @@ for (const { pose, width, rootSize } of [
     });
   });
 }
+
+test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows the largest accessibility text', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ page }) => {
+    await showLargestSystemText(page);
+  });
+
+  test('when they open Údaje a zabezpečení, then the label E-mail stays on one line and Změnit never covers it', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const label = page.locator('#account-email-label');
+    const change = page.locator('app-account-card').getByRole('button', { name: 'Změnit e-mail' });
+    await expect(label).toHaveText('E-mail');
+    await expect(change).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    expect(await linesOf(label)).toBe(1);
+    const text = await label.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const box = range.getBoundingClientRect();
+      return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
+    });
+    const button = (await change.boundingBox())!;
+    const apart =
+      text.right <= button.x ||
+      button.x + button.width <= text.left ||
+      text.bottom <= button.y ||
+      button.y + button.height <= text.top;
+    expect(apart, `E-mail ${JSON.stringify(text)} and Změnit ${JSON.stringify(button)}`).toBe(true);
+  });
+});
