@@ -267,8 +267,8 @@ const SETTLED_AFTER_SWITCH_MS = 1000;
 const COLOURS_OF_THE_SWITCH: readonly (readonly [string, string])[] = [
   ['header .account-button', 'color'],
   ['header .account-button', 'background-color'],
-  ['.overview-stats', 'background-color'],
-  ['.overview-stats', 'color'],
+  ['app-donor-overview .ui-card', 'background-color'],
+  ['app-donor-overview .ui-card', 'color'],
   ['html', 'background-color'],
   ['body', 'background-color'],
 ];
@@ -285,6 +285,9 @@ interface FrameRecorder {
 }
 
 async function framesAroundSwitch(page: Page, press: () => Promise<void>): Promise<DrawnFrame[]> {
+  for (const selector of new Set(COLOURS_OF_THE_SWITCH.map(([measured]) => measured))) {
+    await expect(page.locator(selector).first()).toBeVisible();
+  }
   await page.evaluate((targets) => {
     const recorder = window as unknown as FrameRecorder;
     recorder.drawnFrames = [];
