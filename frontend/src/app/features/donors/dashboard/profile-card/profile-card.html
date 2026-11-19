@@ -55,7 +55,7 @@
           />
         </app-form-field>
         <app-form-field
-          label="Sídlo – ulice a číslo"
+          label="Sídlo – ulice a&nbsp;číslo"
           i18n-label="@@donor.register.companyStreet"
           [messages]="streetMessages"
         >
@@ -73,7 +73,7 @@
         </app-form-field>
       } @else {
         <app-form-field
-          label="Jméno a příjmení"
+          label="Jméno a&nbsp;příjmení"
           i18n-label="@@donor.login.name"
           [messages]="nameMessages()"
         >
@@ -91,7 +91,7 @@
           />
         </app-form-field>
         <app-form-field
-          label="Ulice a číslo"
+          label="Ulice a&nbsp;číslo"
           i18n-label="@@donor.register.street"
           [messages]="streetMessages"
         >
@@ -262,7 +262,7 @@
         @if (company()) {
           <dt i18n="@@donor.register.companyName">Název firmy</dt>
         } @else {
-          <dt i18n="@@donor.login.name">Jméno a příjmení</dt>
+          <dt i18n="@@donor.login.name">Jméno a&nbsp;příjmení</dt>
         }
         <dd>{{ donor.name }}</dd>
       </div>

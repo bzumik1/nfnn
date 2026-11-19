@@ -104,7 +104,7 @@ export class ConnectApp {
   protected code = '';
   protected readonly codeHint = $localize`:@@donor.connect.consent.codeHint:Počkejte, až aplikace ukáže nový kód (mění se každých 30 sekund), a opište ho.`;
   protected readonly codeMessages = {
-    required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
+    required: $localize`:@@donor.form.code.required:Opište prosím kód z\u00a0aplikace.`,
     pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
   };
 

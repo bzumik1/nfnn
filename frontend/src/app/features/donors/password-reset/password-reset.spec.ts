@@ -125,7 +125,7 @@ describe('Given the page that sets a new password from the e-mail link', () => {
 
       http.expectNone('/api/donors/auth/password-reset/confirm');
       expect(element('#reset-password-error').textContent).toContain(
-        'Heslo musí mít alespoň 12 znaků.',
+        'Heslo musí mít alespoň 12\u00a0znaků.',
       );
     });
 

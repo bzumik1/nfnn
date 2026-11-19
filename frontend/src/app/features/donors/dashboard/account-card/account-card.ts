@@ -146,14 +146,14 @@ export class AccountCard {
   protected readonly newPasswordHint = $localize`:@@donor.account.newPassword.hint:Alespoň 12\u00a0znaků. Klidně celá věta, která se vám dobře pamatuje.`;
   protected readonly newPasswordMessages = {
     required: $localize`:@@donor.form.newPassword.required:Zvolte si prosím heslo.`,
-    minlength: $localize`:@@donor.form.newPassword.tooShort:Heslo musí mít alespoň 12 znaků.`,
+    minlength: $localize`:@@donor.form.newPassword.tooShort:Heslo musí mít alespoň 12\u00a0znaků.`,
   };
   protected readonly confirmationMessages = {
     required: $localize`:@@donor.account.newPasswordConfirm.required:Napište prosím nové heslo ještě jednou.`,
   };
   protected readonly codeHint = $localize`:@@donor.account.secondFactor.codeHint:Šest číslic, které aplikace právě ukazuje.`;
   protected readonly codeMessages = {
-    required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
+    required: $localize`:@@donor.form.code.required:Opište prosím kód z\u00a0aplikace.`,
     pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
   };
 

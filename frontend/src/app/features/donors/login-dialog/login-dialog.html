@@ -3,7 +3,7 @@
   [presentation]="presentation()"
   [tall]="true"
   [grouped]="true"
-  [wide]="step() === 'register'"
+  [wide]="atCrossroads()"
   [pushesHistory]="false"
   (dismissed)="closeDialog()"
 >
@@ -69,11 +69,10 @@
         [attr.aria-disabled]="offlineRetry() === 'trying' ? 'true' : null"
         (click)="tryConnectionAgain()"
       >
-        @if (offlineRetry() === 'trying') {
-          <span i18n="@@donor.login.offline.trying">Zkoušíme se připojit…</span>
-        } @else {
-          <span i18n="@@donor.login.offline.tryAgain">Zkusit znovu</span>
-        }
+        <app-busy-label [busy]="offlineRetry() === 'trying'">
+          <span when-idle i18n="@@donor.login.offline.tryAgain">Zkusit znovu</span>
+          <span when-busy i18n="@@donor.login.offline.trying">Zkoušíme se připojit…</span>
+        </app-busy-label>
       </button>
     </section>
   } @else {
@@ -220,7 +219,7 @@
           >
             <div class="ui-field-group">
               <app-form-field
-                label="Kód z aplikace"
+                label="Kód z&nbsp;aplikace"
                 i18n-label="@@donor.login.secondFactor.code"
                 [hint]="codeHint"
                 [messages]="codeMessages"
@@ -252,11 +251,12 @@
               class="ui-button ui-button--primary ui-button--block ui-button--grouped"
               [disabled]="loading()"
             >
-              @if (loading()) {
-                <span i18n="@@donor.login.secondFactor.submitLoading">Ověřujeme kód…</span>
-              } @else {
-                <span i18n="@@donor.login.secondFactor.submit">Přihlásit se</span>
-              }
+              <app-busy-label [busy]="loading()">
+                <span when-idle i18n="@@donor.login.secondFactor.submit">Přihlásit se</span>
+                <span when-busy i18n="@@donor.login.secondFactor.submitLoading"
+                  >Ověřujeme kód…</span
+                >
+              </app-busy-label>
             </button>
           </form>
 
@@ -421,11 +421,10 @@
               class="ui-button ui-button--primary ui-button--block ui-button--grouped"
               [disabled]="loading()"
             >
-              @if (loading()) {
-                <span i18n="@@donor.login.submit.login.loading">Přihlašujeme…</span>
-              } @else {
-                <span i18n="@@donor.login.submit.login">Přihlásit se</span>
-              }
+              <app-busy-label [busy]="loading()">
+                <span when-idle i18n="@@donor.login.submit.login">Přihlásit se</span>
+                <span when-busy i18n="@@donor.login.submit.login.loading">Přihlašujeme…</span>
+              </app-busy-label>
             </button>
           </form>
 
@@ -496,11 +495,10 @@
               [disabled]="loading()"
               (click)="resendRegistrationLink()"
             >
-              @if (loading()) {
-                <span i18n="@@donor.register.resendLoading">Odesíláme…</span>
-              } @else {
-                <span i18n="@@donor.register.resend">Poslat odkaz znovu</span>
-              }
+              <app-busy-label [busy]="loading()">
+                <span when-idle i18n="@@donor.register.resend">Poslat odkaz znovu</span>
+                <span when-busy i18n="@@donor.register.resendLoading">Odesíláme…</span>
+              </app-busy-label>
             </button>
             <button
               type="button"
@@ -644,7 +642,7 @@
                 </app-form-field>
 
                 <app-form-field
-                  label="Sídlo – ulice a číslo"
+                  label="Sídlo – ulice a&nbsp;číslo"
                   i18n-label="@@donor.register.companyStreet"
                   [messages]="streetMessages"
                 >
@@ -663,7 +661,7 @@
                 </app-form-field>
               } @else {
                 <app-form-field
-                  label="Jméno a příjmení"
+                  label="Jméno a&nbsp;příjmení"
                   i18n-label="@@donor.login.name"
                   [messages]="personNameMessages"
                 >
@@ -683,7 +681,7 @@
                 </app-form-field>
 
                 <app-form-field
-                  label="Ulice a číslo"
+                  label="Ulice a&nbsp;číslo"
                   i18n-label="@@donor.register.street"
                   [messages]="streetMessages"
                 >
@@ -864,11 +862,10 @@
               class="ui-button ui-button--primary ui-button--block ui-button--grouped"
               [disabled]="loading()"
             >
-              @if (loading()) {
-                <span i18n="@@donor.login.submit.register.loading">Vytváříme účet…</span>
-              } @else {
-                <span i18n="@@donor.login.submit.register">Vytvořit účet</span>
-              }
+              <app-busy-label [busy]="loading()">
+                <span when-idle i18n="@@donor.login.submit.register">Vytvořit účet</span>
+                <span when-busy i18n="@@donor.login.submit.register.loading">Vytváříme účet…</span>
+              </app-busy-label>
             </button>
           </form>
         </div>
@@ -908,11 +905,10 @@
             [disabled]="loading()"
             (click)="resendReset()"
           >
-            @if (loading()) {
-              <span i18n="@@donor.login.reset.submitLoading">Odesíláme…</span>
-            } @else {
-              <span i18n="@@donor.login.reset.resend">Poslat znovu</span>
-            }
+            <app-busy-label [busy]="loading()">
+              <span when-idle i18n="@@donor.login.reset.resend">Poslat znovu</span>
+              <span when-busy i18n="@@donor.login.reset.submitLoading">Odesíláme…</span>
+            </app-busy-label>
           </button>
           <div role="status">
             @if (resetResent()) {
@@ -990,11 +986,10 @@
               class="ui-button ui-button--primary ui-button--block ui-button--grouped"
               [disabled]="loading()"
             >
-              @if (loading()) {
-                <span i18n="@@donor.login.reset.submitLoading">Odesíláme…</span>
-              } @else {
-                <span i18n="@@donor.login.reset.submit">Odeslat odkaz</span>
-              }
+              <app-busy-label [busy]="loading()">
+                <span when-idle i18n="@@donor.login.reset.submit">Odeslat odkaz</span>
+                <span when-busy i18n="@@donor.login.reset.submitLoading">Odesíláme…</span>
+              </app-busy-label>
             </button>
           </form>
         </div>

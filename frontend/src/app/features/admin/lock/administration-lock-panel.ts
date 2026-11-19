@@ -32,7 +32,7 @@ const PASSWORD_MESSAGES: FieldMessages = {
 };
 
 const CODE_MESSAGES: FieldMessages = {
-  required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
+  required: $localize`:@@donor.form.code.required:Opište prosím kód z\u00a0aplikace.`,
   pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
 };
 

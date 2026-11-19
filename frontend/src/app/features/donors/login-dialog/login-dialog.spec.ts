@@ -176,7 +176,7 @@ describe('Given the sign-in dialog', () => {
           (tab as HTMLElement).textContent?.trim(),
         ),
       ).toEqual(['Přihlášení', 'Registrace']);
-      expect(element('.login-form button[type="submit"]').textContent?.trim()).toBe('Přihlásit se');
+      expect(accessibleText(element('.login-form button[type="submit"]'))).toBe('Přihlásit se');
     });
 
     it('then the e-mail field is labelled E-mail with an ordinary hyphen, so a screen reader says the word as written', () => {
@@ -1177,7 +1177,7 @@ describe('Given the sign-in dialog', () => {
     it('then the consent stands before the button, which says it creates the account', () => {
       const send = element('.register-form button[type="submit"]');
 
-      expect(send.textContent?.trim()).toBe('Vytvořit účet');
+      expect(accessibleText(send)).toBe('Vytvořit účet');
       expect(element('.consent').compareDocumentPosition(send)).toBe(
         Node.DOCUMENT_POSITION_FOLLOWING,
       );
@@ -1523,7 +1523,7 @@ describe('Given the sign-in dialog', () => {
 
       http.expectNone('/api/donors/auth/register');
       expect(element('#register-password-error').textContent).toContain(
-        'Heslo musí mít alespoň 12 znaků.',
+        'Heslo musí mít alespoň 12\u00a0znaků.',
       );
       expect(element('#register-password').getAttribute('aria-describedby')).toBe(
         'register-password-hint register-password-error',
