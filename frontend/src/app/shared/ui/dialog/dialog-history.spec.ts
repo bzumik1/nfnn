@@ -294,6 +294,43 @@ describe('Given the history entries of an open dialog', () => {
     expect(listener.close).not.toHaveBeenCalled();
   });
 
+  it('when the dialog has moved a step on and hands over to a page, then Back from that page returns to the page under the dialog in one step', async () => {
+    await open();
+    history.showStep(1);
+    await settled();
+
+    history.handOver('/jinam');
+    await router.navigateByUrl('/jinam', { replaceUrl: true });
+    await settled();
+    await back();
+    await settled();
+
+    expect(location.path()).toBe('/stranka');
+    expect(depth()).toBeUndefined();
+    await vi.waitFor(() => expect(router.url).toBe('/stranka'));
+    expect(listener.stepBack).not.toHaveBeenCalled();
+    expect(listener.close).not.toHaveBeenCalled();
+  });
+
+  it('when the dialog has moved a step on, hands over to a page and a dialog opens again on the page under it, then Back closes that dialog and stays on the page', async () => {
+    await open();
+    history.showStep(1);
+    await settled();
+    history.handOver('/jinam');
+    await router.navigateByUrl('/jinam', { replaceUrl: true });
+    await settled();
+    await back();
+    await settled();
+    await vi.waitFor(() => expect(router.url).toBe('/stranka'));
+
+    await open();
+    await back();
+
+    expect(listener.close).toHaveBeenCalledTimes(1);
+    expect(location.path()).toBe('/stranka');
+    expect(depth()).toBeUndefined();
+  });
+
   it('when the dialog hands over before it ever added an entry, then the page under it keeps its entry', () => {
     history.handOver('/jinam');
 

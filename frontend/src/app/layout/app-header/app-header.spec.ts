@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth-store';
 import { Donor } from '../../core/auth/donor';
@@ -13,6 +14,8 @@ import { BackTarget } from '../../core/navigation/back-target';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { OpenAlerts } from '../../core/push/open-alerts';
 import { OpenAlert } from '../../core/push/open-alerts-api';
+import { AccountReturn } from '../account-sheet/account-return';
+import { AccountSheet } from '../account-sheet/account-sheet';
 import { AppHeader } from './app-header';
 
 @Component({ template: '' })
@@ -25,6 +28,12 @@ describe('Given the header of the app', () => {
   const compact = signal(true);
   const loginOpen = vi.fn();
   const back = vi.fn();
+  const sectionToReopen = signal<string | null>(null);
+  const takeSectionToReopen = (): string | null => {
+    const section = sectionToReopen();
+    sectionToReopen.set(null);
+    return section;
+  };
   let fixture: ComponentFixture<AppHeader>;
 
   beforeEach(async () => {
@@ -34,6 +43,7 @@ describe('Given the header of the app', () => {
     compact.set(true);
     loginOpen.mockClear();
     back.mockClear();
+    sectionToReopen.set(null);
     await TestBed.configureTestingModule({
       imports: [AppHeader],
       providers: [
@@ -56,6 +66,10 @@ describe('Given the header of the app', () => {
         { provide: OpenAlerts, useValue: { alerts: openAlerts.asReadonly() } },
         { provide: LoginDialogService, useValue: { open: loginOpen } },
         { provide: BackTarget, useValue: { back } },
+        {
+          provide: AccountReturn,
+          useValue: { sectionToReopen: sectionToReopen.asReadonly(), takeSectionToReopen },
+        },
         {
           provide: AuthStore,
           useValue: {
@@ -176,6 +190,55 @@ describe('Given the header of the app', () => {
     fixture.detectChanges();
 
     expect(header.querySelector('app-account-sheet')).toBeNull();
+  });
+
+  it('when a step back asks for the account sheet while a donor is signed in, then it opens on the section it was left from, once', async () => {
+    donor.set(sampleDonor({ name: 'Jana Nováková' }));
+    await openAt('/aktuality');
+
+    sectionToReopen.set('/darce/dary');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const sheet = fixture.debugElement.query(By.directive(AccountSheet));
+    expect(sheet).not.toBeNull();
+    expect((sheet.componentInstance as AccountSheet).reopenedOn()).toBe('/darce/dary');
+    expect(sectionToReopen()).toBeNull();
+
+    (sheet.componentInstance as AccountSheet).closed.emit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-account-sheet')).toBeNull();
+  });
+
+  it('when a step back asks for the account sheet after the window widened to a computer, then no sheet opens over the side panel, nor later when it narrows again', async () => {
+    donor.set(sampleDonor({ name: 'Jana Nováková' }));
+    await openAt('/aktuality');
+    compact.set(false);
+    fixture.detectChanges();
+
+    sectionToReopen.set('/darce/dary');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-account-sheet')).toBeNull();
+
+    compact.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-account-sheet')).toBeNull();
+  });
+
+  it('when a step back asks for the account sheet while nobody is signed in, then no sheet opens', async () => {
+    await openAt('/aktuality');
+
+    sectionToReopen.set('');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-account-sheet')).toBeNull();
   });
 
   it('when the page has a light head, then the logo is the blue one, and over a photo or a dark head the white one', async () => {

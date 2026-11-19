@@ -11,7 +11,8 @@ import { Donor } from '../../core/auth/donor';
 import { sampleDonor } from '../../core/auth/testing/donor-fixtures';
 import { SignedOutNotice } from '../../core/auth/signed-out-notice';
 import { CompactLayout } from '../../core/layout/compact-layout';
-import { APP_DEPTH_KEY } from '../../core/navigation/back-target';
+import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
+import { APP_ACCOUNT_KEY } from './account-return';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { FakeDialogHistory } from '../../shared/ui/dialog/testing/fake-dialog-history';
 import { AccountBadges } from '../../core/layout/account-badges';
@@ -376,6 +377,37 @@ describe('Given the account sheet of a signed-in donor', () => {
       expect(closed).toBe(1);
       expect(navigate).toHaveBeenCalledWith('/overit', expect.anything());
     });
+
+    it('and a link inside it leads elsewhere, then that page takes the entry of the sheet and names the section a step back returns to', async () => {
+      await choose('a.stub-elsewhere');
+
+      expect(history.handedOver).toEqual(['/overit']);
+      expect(navigate).toHaveBeenCalledWith('/overit', {
+        replaceUrl: true,
+        state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '/darce/potvrzeni' },
+      });
+    });
+
+    it('and a link inside it leads to another section, then the sheet goes one more step deeper', async () => {
+      await choose('a.stub-gifts');
+
+      expect(history.steps.at(-1)).toBe(2);
+    });
+
+    it('and a link inside it leads to another section and the visitor goes back, then the section before returns with the focus on the link they followed', async () => {
+      await choose('a.stub-gifts');
+
+      history.listener?.stepBack();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe(
+        'Potvrzení o\u00a0daru',
+      );
+      expect(history.steps.at(-1)).toBe(1);
+      expect((document.activeElement as HTMLAnchorElement | null)?.className).toBe('stub-gifts');
+      expect(closed).toBe(0);
+    });
   });
 
   it('when the appearance button is pressed again and again, then it goes Automaticky, Světlý, Tmavý and back, says each choice aloud and keeps it on the device', () => {
@@ -433,6 +465,47 @@ describe('Given the account sheet of a signed-in donor', () => {
 
     expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe(
       'Údaje a\u00a0zabezpečení',
+    );
+  });
+
+  it('when Správa is chosen on a phone, then the administration takes the entry of the sheet and names the list of the account as where a step back returns', async () => {
+    admin.set(true);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    const sheet = open();
+
+    sheet
+      .querySelector<HTMLAnchorElement>('a[href="/sprava"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+
+    expect(navigate).toHaveBeenCalledWith('/sprava', {
+      replaceUrl: true,
+      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '' },
+    });
+  });
+
+  it('when a step back opens it again on a section, then it stands on that section with its step at once', async () => {
+    fixture = TestBed.createComponent(AccountSheet);
+    fixture.componentRef.setInput('reopenedOn', '/darce/dary');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const sheet = fixture.nativeElement as HTMLElement;
+
+    expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe('Moje dary');
+    expect(history.steps.at(-1)).toBe(1);
+  });
+
+  it('when a step back from the administration opens it again on its list, then the row of Správa takes the focus', async () => {
+    admin.set(true);
+    vi.spyOn(TestBed.inject(BackTarget), 'leftPath', 'get').mockReturnValue('/sprava');
+    fixture = TestBed.createComponent(AccountSheet);
+    fixture.componentRef.setInput('reopenedOn', '');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect((document.activeElement as HTMLAnchorElement | null)?.getAttribute('href')).toBe(
+      '/sprava',
     );
   });
 
@@ -639,7 +712,7 @@ describe('Given the account sheet of a signed-in donor', () => {
     );
   });
 
-  it('when it opens, then under the sign-out it names how to reach the foundation, its register entry and the privacy policy', async () => {
+  it('when it opens, then under the sign-out it names how to reach the foundation, its register entry and the privacy policy, which a step back leaves for the list of the account', async () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
     const sheet = open();
     const foundation = sheet.querySelector('.account-foundation')!;
@@ -664,7 +737,7 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(closed).toBe(1);
     expect(navigate).toHaveBeenCalledWith('/zasady-ochrany-osobnich-udaju', {
       replaceUrl: true,
-      state: { [APP_DEPTH_KEY]: 1 },
+      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '' },
     });
   });
 
@@ -679,6 +752,20 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(navigate).not.toHaveBeenCalled();
     expect(TestBed.inject(SignedOutNotice).shown()).toBe(true);
     expect(closed).toBe(1);
+  });
+
+  it('when the donor signs out on a phone, then the home page names no account sheet to return to', async () => {
+    await TestBed.inject(Router).navigateByUrl('/o-nas');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    const sheet = open();
+
+    sheet.querySelector<HTMLButtonElement>('.account-sign-out')!.click();
+    await fixture.whenStable();
+
+    expect(navigate).toHaveBeenCalledWith('/', {
+      replaceUrl: true,
+      state: { [APP_DEPTH_KEY]: 1 },
+    });
   });
 
   it('when the donor signs out, then the session ends, the home page opens and says they were signed out', async () => {

@@ -68,10 +68,18 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
+  isolation: isolate;
   scroll-behavior: auto;
 }
 
-.page-transition__scroller * {
+.page-transition__sheet,
+.page-transition__sheet-backdrop {
+  position: absolute;
+  inset: 0;
+}
+
+.page-transition__scroller *,
+.page-transition__sheet * {
   animation-duration: 0s !important;
   animation-delay: 0s !important;
   transition: none !important;

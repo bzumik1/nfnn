@@ -4,6 +4,7 @@ import { Component, inject, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
+import { AccountReturn } from '../../../layout/account-sheet/account-return';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
 import { DIALOG_SUSPENSION } from '../../../shared/ui/dialog/dialog-suspension';
@@ -471,6 +472,15 @@ describe('Given an administrator who opened the administration on a phone over a
     expect(steps).toHaveBeenCalledWith(2);
   });
 
+  it('when Zavřít steps back, then the account sheet is told that the step closes Správa, so it does not open again', () => {
+    vi.spyOn(TestBed.inject(BackTarget), 'backBy').mockImplementation(() => undefined);
+    const closing = vi.spyOn(TestBed.inject(AccountReturn), 'closeAdministration');
+
+    close();
+
+    expect(closing).toHaveBeenCalledOnce();
+  });
+
   it('when the page is reloaded deeper in the administration, then Zavřít still knows where the administration was opened', async () => {
     await router.navigateByUrl('/sprava/darci');
     await fixture.whenStable();
@@ -513,5 +523,54 @@ describe('Given an administrator who opened the administration on a phone over a
       .click();
 
     expect(back).toHaveBeenCalledWith('/');
+  });
+
+  it('when Esc is pressed, then the site steps back the same way as with Zpět', () => {
+    const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+
+    document.body.dispatchEvent(escape);
+
+    expect(back).toHaveBeenCalledWith('/');
+    expect(escape.defaultPrevented).toBe(true);
+  });
+
+  it.each([
+    ['a search field', 'input', ['type', 'search']],
+    ['a text area', 'textarea', null],
+    ['an editable text', 'div', ['contenteditable', 'true']],
+  ] as const)(
+    'when Esc is pressed while typing in %s, then the field keeps it and the site stays',
+    (_, tag, attribute) => {
+      const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
+      const field = document.createElement(tag);
+      if (attribute !== null) {
+        field.setAttribute(attribute[0], attribute[1]);
+      }
+      fixture.nativeElement.querySelector('.admin-sheet').append(field);
+      const escape = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
+      });
+
+      field.dispatchEvent(escape);
+      field.remove();
+
+      expect(back).not.toHaveBeenCalled();
+      expect(escape.defaultPrevented).toBe(false);
+    },
+  );
+
+  it('when Esc is pressed while a dialog of the page is open, then the dialog keeps it and the site stays', () => {
+    const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
+    const dialog = document.createElement('dialog');
+    dialog.setAttribute('open', '');
+    document.body.append(dialog);
+
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    dialog.remove();
+
+    expect(back).not.toHaveBeenCalled();
   });
 });
