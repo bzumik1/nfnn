@@ -241,6 +241,30 @@ class PushSenderTest {
     }
 
     @Test
+    @DisplayName("Given a device the push service refused, when its failure cannot be counted, then it is still retried, counts as failed and one warning names the outcome, the subscription by its id and the failure's class only")
+    void should_retry_and_warn_when_sent_given_failed_outcome_not_counted() {
+        PushSubscription failing = administratorDevice("failing");
+        outcomes.put(failing.endpoint(), PushOutcome.FAILED);
+        InMemoryPushSubscriptions unwritable = new InMemoryPushSubscriptions() {
+            @Override
+            public synchronized Optional<Integer> markFailed(PushSubscriptionId id) {
+                throw new IllegalStateException("The database is busy");
+            }
+        };
+        administrators.all().forEach(unwritable::save);
+
+        PushAttempt attempt = sender(unwritable, donors).toAdministrators(List.of(failing), TEST);
+
+        assertThat(attempt.report()).isEqualTo(new PushDeliveryReport(0, 1, 0));
+        assertThat(attempt.failed()).containsExactly(failing.id());
+        assertThat(log.list).singleElement().satisfies(event -> {
+            assertThat(event.getLevel().toString()).isEqualTo("WARN");
+            assertThat(event.getFormattedMessage())
+                    .isEqualTo("Push outcome FAILED of subscription " + failing.id().value() + " could not be recorded: IllegalStateException");
+        });
+    }
+
+    @Test
     @DisplayName("Given a device whose outcome the delivery could not read because its thread was stopped, when a message is sent, then it counts neither as delivered nor as failed and its row is untouched")
     void should_count_nothing_when_sent_given_outcome_not_read() {
         PushSubscription read = administratorDevice("read");
