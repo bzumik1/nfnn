@@ -26,5 +26,9 @@
 
   .details-body {
     @include motion.expand;
+
+    &[hidden] {
+      transition: none !important;
+    }
   }
 }
