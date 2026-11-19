@@ -1,10 +1,10 @@
 package cz.novanadeje.app.architecture;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaField;
-import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.domain.JavaStaticInitializer;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -260,6 +260,7 @@ class ApplicationDurationRulesTest {
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.months()").contains("Period.ofMonths"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.counted(").contains("ChronoUnit.DAYS"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.waited()").contains("TimeUnit.MINUTES"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.waited()").contains("TimeUnit.toSeconds"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.<init>()").contains("Duration.parse"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.cutoff(").contains("Duration.ofDays"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.notice()").contains("Period.ofMonths"))
