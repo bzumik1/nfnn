@@ -16,8 +16,9 @@ public class AdministratorWriteAuditHooks {
             "sends a test alert to the administrator's own subscribed devices and changes no setting, so it is no administrator's change "
                     + "(security.md: \"Every administrator's change publishes AdminActionPerformed\"); what its delivery writes (a device the push "
                     + "service answers 404 or 410 for removed, failuresInARow, lastDeliveredAt) is the push service's answer, written the same way "
-                    + "for every alert (docs/api-contract.md, push/test). Unlike the audited test e-mail (SEND_TEST_EMAIL, #915), whose request "
-                    + "names any host and port, it reaches only the stored subscriptions on the push services' hosts (PushEndpoint)",
+                    + "for every alert (docs/api-contract.md, push/test). Nothing in the request picks a target: it reaches only the administrator's "
+                    + "stored subscriptions, each audited when it was subscribed (SUBSCRIBE_PUSH, on a push service's host, PushEndpoint), unlike "
+                    + "the audited test e-mail (SEND_TEST_EMAIL, #157), whose request names the mail server, so it is audited as a possible relay",
             "POST /api/admin/donors/devices/current/unlock",
             "checks the password and a code, or a passkey, to unlock the administration's copy on this device, as a sign-in checks them, "
                     + "and \"changes nothing and ends no session … Nothing is logged or audited\" (docs/api-contract.md, unlock); what it writes is "

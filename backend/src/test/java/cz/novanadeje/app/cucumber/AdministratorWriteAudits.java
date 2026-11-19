@@ -29,8 +29,8 @@ final class AdministratorWriteAudits {
 
         String stateIn(JdbcClient jdbc) {
             return tables.stream()
-                    .map(table -> table + "=" + jdbc.sql("select md5(coalesce((select string_agg(row_digest, ',' order by row_digest) from (select md5(t::text) as row_digest from "
-                            + table + " t) stored), ''))").query(String.class).single())
+                    .map(table -> table + "=" + jdbc.sql("select md5(coalesce((select string_agg(row_digest, ',' order by row_digest) from (select md5(probed_row::text) as row_digest from "
+                            + table + " probed_row) stored), ''))").query(String.class).single())
                     .collect(Collectors.joining(";"));
         }
     }
