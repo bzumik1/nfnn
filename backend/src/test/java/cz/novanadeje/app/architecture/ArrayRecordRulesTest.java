@@ -43,9 +43,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ArrayRecordRulesTest {
 
 
-    private static final DescribedPredicate<JavaClass> DOMAIN_OR_APPLICATION_RECORDS_HOLDING_AN_ARRAY = describe(
-            "are records of a domain or application package holding an array",
-            type -> type.isRecord() && type.getPackageName().matches(".*\\.(domain|application)(\\..*)?") && !arrayComponentsOf(type).isEmpty());
+    private static final DescribedPredicate<JavaClass> DOMAIN_OR_APPLICATION_RECORDS = describe(
+            "are records of a domain or application package",
+            type -> type.isRecord() && type.getPackageName().matches(".*\\.(domain|application)(\\..*)?"));
+
+    private static final DescribedPredicate<JavaClass> DOMAIN_OR_APPLICATION_RECORDS_HOLDING_AN_ARRAY = DOMAIN_OR_APPLICATION_RECORDS
+            .and(describe("hold an array", type -> !arrayComponentsOf(type).isEmpty()))
+            .as("are records of a domain or application package holding an array");
 
     @ArchTest
     static final ArchRule records_holding_an_array_compare_by_content_and_copy_it = classes()
@@ -54,20 +58,16 @@ class ArrayRecordRulesTest {
             .because("backend.md, Domain: a record's generated equals and hashCode compare an array by identity and its toString prints a reference, "
                     + "and a generated accessor hands out the array itself (SignatureImage, ReceiptProof, ReceiptSigningKey)");
 
-    private static final DescribedPredicate<JavaClass> DOMAIN_OR_APPLICATION_RECORDS = describe(
-            "are records of a domain or application package",
-            type -> type.isRecord() && type.getPackageName().matches(".*\\.(domain|application)(\\..*)?"));
-
     @ArchTest
     static final ArchRule records_hold_no_array_inside_a_generic_component = classes()
             .that(DOMAIN_OR_APPLICATION_RECORDS)
             .should(holdNoArrayInsideAGenericComponent())
-            .because("backend.md, Domain: Optional, List and Map compare and print an array they hold by identity, and no accessor can copy it"
-                    + " out of them, so an array a record holds through a generic type goes into a value record of its own, which copies it"
-                    + " (SignatureImage)");
+            .because("backend.md, Domain: a record's generated equals, hashCode and toString compare and print an array held through a generic"
+                    + " type (Optional, List, Map, a function) by identity, and no rule can check a copy made through it, so such an array goes"
+                    + " into a value record of its own, which copies it (SignatureImage)");
 
     @Test
-    @DisplayName("Given planted records holding an array inside an Optional, a List, a Map, a nested type argument, both wildcard bounds and a generic array, when the rule checks them, then exactly the domain and application ones are reported and a value record inside an Optional, a plain array, a static field, a class and an infrastructure record are not")
+    @DisplayName("Given planted records holding an array inside an Optional, a List, a Map, a nested type argument, both wildcard bounds, a generic array and an array of lists, when the rule checks them, then exactly the domain and application ones are reported and a value record inside an Optional, generic components without an array, a plain array, a static field, a class and an infrastructure record are not")
     void should_report_every_array_inside_a_generic_component_when_checked_given_planted_records(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
                 "cz.novanadeje.app.planteda.domain.PlantedGenericRecords", """
@@ -108,6 +108,13 @@ class ArrayRecordRulesTest {
                             record PlantedImage(byte[] png) {
                             }
 
+                            record PlantedArrayOfLists(List<byte[]>[] pages) {
+                            }
+
+                            record PlantedNoArrayInside<T>(List<T> values, List<? extends Number> numbers, List<?> any,
+                                                           List<Optional<String>> nested, List<String>[] lists) {
+                            }
+
                             record PlantedValueInside(Optional<PlantedImage> image, List<String> names) {
 
                                 static final List<byte[]> SAMPLES = List.of();
@@ -132,7 +139,8 @@ class ArrayRecordRulesTest {
                         """));
 
         assertThat(records_hold_no_array_inside_a_generic_component.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(8)
+                .hasSize(9)
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedArrayOfLists holds an array inside its component [pages]"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedOptional holds an array inside its component [png]"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedLowerBound holds an array inside its component [sinks]"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedGenericArray holds an array inside its component [values]"))
@@ -140,7 +148,9 @@ class ArrayRecordRulesTest {
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedMap holds an array inside its component [secrets]"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedNested holds an array inside its component [parts]"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedWildcard holds an array inside its component [rows]"))
-                .anySatisfy(detail -> assertThat(detail).contains("PlantedGenericView holds an array inside its component [publicKey]"));
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedGenericView holds an array inside its component [publicKey]"))
+                .noneSatisfy(detail -> assertThat(detail).containsAnyOf("PlantedNoArrayInside", "PlantedValueInside", "PlantedImage", "PlantedHolder",
+                        "PlantedGenericRow"));
     }
 
     @Test
@@ -365,7 +375,8 @@ class ArrayRecordRulesTest {
     }
 
     private static boolean holdsAnArrayInside(JavaType type) {
-        return type instanceof JavaParameterizedType parameterized && parameterized.getActualTypeArguments().stream().anyMatch(ArrayRecordRulesTest::isOrHoldsAnArray);
+        return type instanceof JavaParameterizedType parameterized && parameterized.getActualTypeArguments().stream().anyMatch(ArrayRecordRulesTest::isOrHoldsAnArray)
+                || type instanceof JavaGenericArrayType array && holdsAnArrayInside(array.getComponentType());
     }
 
     private static boolean isOrHoldsAnArray(JavaType type) {
