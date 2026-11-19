@@ -96,7 +96,7 @@ class ContextMapRulesTest {
                 "donors -> operations: PlantedGiftsChanged",
                 "donors -> content: PlantedGiftsChanged",
                 "donors -> contact: PlantedGiftsChanged",
-                "donors -> contact: PlantedUnheard",
+                "donors -> contact: PlantedUnlisted",
                 "operations -> contact: PlantedGiftsChanged",
                 "operations -> donations: PlantedGiftsChanged",
                 "operations -> content: PlantedGiftsChanged",
@@ -129,7 +129,7 @@ class ContextMapRulesTest {
 
                 ## content
 
-                | `PlantedUnheard` | content | none | none |
+                | `PlantedUnlisted` | content | none | none |
                 """;
 
         assertThat(edgeDifferences(planted, overview)).containsExactlyInAnyOrder(
@@ -137,7 +137,7 @@ class ContextMapRulesTest {
                 "PlantedOnlyWrapped: the overview declares contact -> donations, which the code does not have",
                 "PlantedOnlyWrapped: the overview declares contact -> operations, which the code does not have",
                 "PlantedRemoved: the overview has a row, but no shared event or port has this name",
-                "PlantedUnheard: no row in the overview's context map");
+                "PlantedUnlisted: no row in the overview's context map");
         assertThat(edgeDifferences(planted, overview.replace(", donors → contact, operations → contact", "")))
                 .contains("PlantedGiftsChanged: the code has donors -> contact, which the overview does not declare");
         assertThat(edgeDifferences(planted, "# System overview\n\n## content\n"))
@@ -193,9 +193,9 @@ class ContextMapRulesTest {
                             }
                         }
                         """,
-                "cz.novanadeje.app.shared.application.event.PlantedUnheard", """
+                "cz.novanadeje.app.shared.application.event.PlantedUnlisted", """
                         package cz.novanadeje.app.shared.application.event;
-                        public record PlantedUnheard(int count) { }
+                        public record PlantedUnlisted(int count) { }
                         """,
                 "cz.novanadeje.app.shared.application.people.PlantedSignatoryLookup", """
                         package cz.novanadeje.app.shared.application.people;
@@ -225,7 +225,7 @@ class ContextMapRulesTest {
                         package cz.novanadeje.app.donors.application;
                         class PlantedPublisher {
                             Object announce() { return new cz.novanadeje.app.shared.application.event.PlantedGiftsChanged(1); }
-                            Object unheard() { return new cz.novanadeje.app.shared.application.event.PlantedUnheard(1); }
+                            Object unheard() { return new cz.novanadeje.app.shared.application.event.PlantedUnlisted(1); }
                         }
                         """,
                 "cz.novanadeje.app.operations.application.PlantedFactoryPublisher", """
@@ -403,7 +403,7 @@ class ContextMapRulesTest {
 
     private static Map<String, String> declaredPairReasons(String overview) {
         Map<String, String> reasons = new LinkedHashMap<>();
-        rowsOf(overview).stream().filter(cells -> cells.getFirst().contains(BOTH_WAYS.strip()) && cells.size() == 2)
+        rowsOf(overview).stream().filter(cells -> cells.size() == 2 && cells.getFirst().split(BOTH_WAYS.strip()).length == 2)
                 .forEach(cells -> {
                     String[] ends = cells.getFirst().split(BOTH_WAYS.strip());
                     String first = ends[0].strip();
