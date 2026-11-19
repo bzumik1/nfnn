@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.application.event.DonorRegistrationReminderDue;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.RegistrationReminders;
@@ -115,7 +116,7 @@ class DonorRegistrationReminderServiceTest {
     }
 
     private static Donor donor() {
-        return Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), EMAIL,
-                new PasswordHash("$hash"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW.minus(Duration.ofDays(2)));
+        return Donors.withPassword(Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), EMAIL, new VariableSymbol("4821937560"), LocaleCode.CS, NOW.minus(Duration.ofDays(2))),
+                new PasswordHash("$hash"));
     }
 }

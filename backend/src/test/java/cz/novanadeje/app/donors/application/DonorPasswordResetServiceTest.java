@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
@@ -358,7 +359,7 @@ class DonorPasswordResetServiceTest {
     }
 
     private static Donor unverifiedDonor(LocaleCode locale) {
-        return Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                EMAIL, OLD_HASH, new VariableSymbol("1234567890"), locale, NOW);
+        return Donors.withPassword(Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                EMAIL, new VariableSymbol("1234567890"), locale, NOW), OLD_HASH);
     }
 }

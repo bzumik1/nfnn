@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.InvalidSecondFactorCode;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordHash;
@@ -70,9 +71,9 @@ class SecondFactorSignInConcurrencyTest {
     void aDonorWithTheCodeFromTheApp() {
         new DatabaseCleaner(jdbc).emptyAllTables();
         Instant now = clock.instant();
-        jana = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName("Jana Nováková"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"), new PasswordHash("$hash"),
-                new VariableSymbol("4821937560"), LocaleCode.CS, now);
+        jana = Donors.withPassword(Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName("Jana Nováková"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"),
+                new VariableSymbol("4821937560"), LocaleCode.CS, now), new PasswordHash("$hash"));
         jana.verifyEmail(now);
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
             donors.save(jana);

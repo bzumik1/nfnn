@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.EmailVerificationToken;
 import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.InvalidEmailVerificationToken;
@@ -72,9 +73,9 @@ class UnconfirmedRegistrationExpiryConcurrencyTest {
     void unconfirmedRegistrationFortyDaysOldWithALiveLink() {
         new DatabaseCleaner(jdbc).emptyAllTables();
         Instant registeredAt = clock.instant().minus(Duration.ofDays(40));
-        jana = Donor.register(DonorId.newId(registeredAt), DonorType.PERSON, new DonorName("Jana Nováková"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(ADDRESS), new PasswordHash("$hash"),
-                new VariableSymbol("4821937590"), LocaleCode.CS, registeredAt);
+        jana = Donors.withPassword(Donor.register(DonorId.newId(registeredAt), DonorType.PERSON, new DonorName("Jana Nováková"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(ADDRESS),
+                new VariableSymbol("4821937590"), LocaleCode.CS, registeredAt), new PasswordHash("$hash"));
         link = LinkSecret.generate();
         inTransaction(() -> {
             donors.save(jana);

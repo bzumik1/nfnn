@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorAlreadyErased;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.LastSignInMethod;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.Passkey;
@@ -220,8 +221,8 @@ class DonorRowLockConcurrencyTest {
 
     private Donor verified(String name, String email, String symbol, PasswordHash hash) {
         Instant now = clock.instant();
-        Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(name), null, ADDRESS, new EmailAddress(email), hash,
-                new VariableSymbol(symbol), LocaleCode.CS, now);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(name), ADDRESS, new EmailAddress(email),
+                new VariableSymbol(symbol), LocaleCode.CS, now), hash);
         donor.verifyEmail(now);
         return donor;
     }

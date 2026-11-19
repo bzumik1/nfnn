@@ -4,6 +4,7 @@ import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
 import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
@@ -102,16 +103,16 @@ class DonorAuthenticationServiceTest {
     void setUp() {
         service = new DonorAuthenticationService(donors, passwordHasher, CommonPasswords.POLICY, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())), secondFactors, challenges,
                 new DonorSecondFactorProperties(CHALLENGE_TTL, CHALLENGE_ATTEMPTS, "Nová naděje", Duration.ofDays(14)), new SecondFactorCodes(secondFactors, wrongCodes), transactions, Clock.fixed(NOW, ZoneOffset.UTC));
-        donor = Donor.register(DonorId.newId(NOW), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), new CompanyIdentifier("45274649"),
-                new PostalAddress("Průmyslová 5", "Teplice", "415 01"), EMAIL, HASH, new VariableSymbol("1234567890"), LocaleCode.CS, NOW);
+        donor = Donors.withPassword(Donor.registerWithCompanyIdentifier(DonorId.newId(NOW), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), new CompanyIdentifier("45274649"),
+                new PostalAddress("Průmyslová 5", "Teplice", "415 01"), EMAIL, new VariableSymbol("1234567890"), LocaleCode.CS, NOW), HASH);
         donor.verifyEmail(NOW);
     }
 
     @Test
     @DisplayName("Given a donor whose e-mail is not verified, when signing in with the right password, then it is refused as not verified and no session opens")
     void should_refuse_as_not_verified_when_logged_in_given_unverified_donor_and_matching_password() {
-        Donor unverified = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), EMAIL, HASH, new VariableSymbol("1234567891"), LocaleCode.CS, NOW);
+        Donor unverified = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), EMAIL, new VariableSymbol("1234567891"), LocaleCode.CS, NOW), HASH);
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(unverified));
         when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);
 
@@ -124,8 +125,8 @@ class DonorAuthenticationServiceTest {
     @Test
     @DisplayName("Given a donor whose e-mail is not verified, when signing in with a wrong password, then it is refused as wrong credentials, not as unverified")
     void should_refuse_as_wrong_credentials_when_logged_in_given_unverified_donor_and_wrong_password() {
-        Donor unverified = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), EMAIL, HASH, new VariableSymbol("1234567891"), LocaleCode.CS, NOW);
+        Donor unverified = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), EMAIL, new VariableSymbol("1234567891"), LocaleCode.CS, NOW), HASH);
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(unverified));
         when(passwordHasher.matches(any(), any())).thenReturn(false);
 
@@ -135,8 +136,8 @@ class DonorAuthenticationServiceTest {
     @Test
     @DisplayName("Given an erased donor whose placeholder address is used, when signing in, then it is refused as wrong credentials without comparing the password")
     void should_refuse_as_wrong_credentials_when_logged_in_given_erased_donor() {
-        Donor erased = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), EMAIL, HASH, new VariableSymbol("1234567891"), LocaleCode.CS, NOW);
+        Donor erased = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), EMAIL, new VariableSymbol("1234567891"), LocaleCode.CS, NOW), HASH);
         erased.verifyEmail(NOW);
         erased.erase(NOW.plusSeconds(5));
         when(donors.findByEmail(erased.email())).thenReturn(Optional.of(erased));
@@ -186,9 +187,9 @@ class DonorAuthenticationServiceTest {
     @Test
     @DisplayName("Given the password changed after it was read, when the donor signs in with the old one, then it is refused and no session opens")
     void should_refuse_when_logged_in_given_password_changed_after_read() {
-        Donor changed = Donor.register(donor.id(), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), new CompanyIdentifier("45274649"),
-                new PostalAddress("Průmyslová 5", "Teplice", "415 01"), EMAIL, new PasswordHash("$changed"), new VariableSymbol("1234567890"),
-                LocaleCode.CS, NOW);
+        Donor changed = Donors.withPassword(Donor.registerWithCompanyIdentifier(donor.id(), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), new CompanyIdentifier("45274649"),
+                new PostalAddress("Průmyslová 5", "Teplice", "415 01"), EMAIL, new VariableSymbol("1234567890"),
+                LocaleCode.CS, NOW), new PasswordHash("$changed"));
         changed.verifyEmail(NOW);
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor), Optional.of(changed));
         when(passwordHasher.matches(new RawPassword("correct horse battery"), HASH)).thenReturn(true);

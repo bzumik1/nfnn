@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.application;
 import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.SessionEnded;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
@@ -353,8 +354,8 @@ class DonorCredentialsServiceTest {
     }
 
     private static Donor donor() {
-        Donor donor = Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, OLD_HASH, SYMBOL, LocaleCode.CS,
-                NOW.minusSeconds(60));
+        Donor donor = Donors.withPassword(Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, LocaleCode.CS,
+                NOW.minusSeconds(60)), OLD_HASH);
         donor.verifyEmail(NOW.minusSeconds(30));
         return donor;
     }
