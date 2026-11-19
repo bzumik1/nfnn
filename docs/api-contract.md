@@ -1843,6 +1843,8 @@ A signed-in browser keeps one event stream open while a page that shows changing
 
 ## Cross-context events
 
+The complete list of the shared events and ports, with the contexts each connects, is the context map in `docs/system-overview.md` ("Context map"), which `architecture/ContextMapRulesTest` keeps in step with the code; the table below describes the effect of the events whose contract a change has to respect, local events of a context included.
+
 Events consumed by another context live in `shared/application/event/` and carry only shared types and JDK types; events consumed inside their own context stay in `<context>/application/event/`. All are immutable Java `record`s published from application services through `ApplicationEventPublisher`; they never carry JPA entities, only IDs and value objects. Three kinds of listener:
 
 - Side-effect listeners (mail) run `@Async @TransactionalEventListener(phase = AFTER_COMMIT)`, off the request thread.
