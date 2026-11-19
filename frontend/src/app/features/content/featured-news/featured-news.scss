@@ -25,6 +25,14 @@
   }
 }
 
+@include bp.up(tablet) {
+  .featured:has(.featured-more:active) {
+    @include pressed.look {
+      @include pressed.shrinks(var(--pressed-scale-surface));
+    }
+  }
+}
+
 .featured-photo {
   position: absolute;
   inset: 0;

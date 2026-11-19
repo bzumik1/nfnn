@@ -61,6 +61,14 @@
   }
 }
 
+@include bp.container-up(news-card, cards) {
+  .news-card:has(.news-link:active) {
+    @include pressed.look {
+      @include pressed.shrinks(var(--pressed-scale-surface));
+    }
+  }
+}
+
 .news-image {
   aspect-ratio: 360 / 196;
   overflow: hidden;
