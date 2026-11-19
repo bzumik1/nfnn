@@ -46,6 +46,11 @@
 
 .device-icon {
   color: var(--color-text-muted);
+
+  svg {
+    width: var(--icon-beside-text-size);
+    height: var(--icon-beside-text-size);
+  }
 }
 
 .device-meta {
