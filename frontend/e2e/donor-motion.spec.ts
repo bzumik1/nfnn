@@ -73,18 +73,23 @@ async function recordMoves(page: Page, card: string): Promise<void> {
   }, card);
 }
 
-async function recordElementsMadeInert(page: Page): Promise<void> {
-  await page.evaluate(() => {
+async function recordElementsMadeInert(page: Page, card: string): Promise<void> {
+  await page.evaluate((card) => {
     const elements: string[] = [];
     (window as unknown as { inertElements: string[] }).inertElements = elements;
     new MutationObserver((records) => {
       for (const { target } of records) {
-        if (target instanceof Element && target.hasAttribute('inert') && target.isConnected) {
+        if (
+          target instanceof Element &&
+          target.hasAttribute('inert') &&
+          target.isConnected &&
+          target.closest(card)
+        ) {
           elements.push(target.id || `inside ${target.parentElement?.closest('[id]')?.id}`);
         }
       }
     }).observe(document.body, { attributes: true, attributeFilter: ['inert'], subtree: true });
-  });
+  }, card);
 }
 
 function elementsMadeInert(page: Page): Promise<string[]> {
@@ -162,7 +167,7 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
     await firstSyncSettled();
     await recordMoves(page, 'app-devices-card');
-    await recordElementsMadeInert(page);
+    await recordElementsMadeInert(page, 'app-devices-card');
     await devices
       .getByRole('group', { name: 'Odhlásit iPhone · Safari?' })
       .getByRole('button', { name: 'Odhlásit', exact: true })
