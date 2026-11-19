@@ -57,12 +57,12 @@ class BeanWiringRulesTest {
     private static final DescribedPredicate<JavaMethod> RETURN_A_PORT_OF_THEIR_CONTEXT = DescribedPredicate.describe(
             "are methods of infrastructure (a @Bean method among them) that return a port of their own context, or a type that is, extends or "
                     + "implements one, inside an Optional or another generic type too (a port: an interface or abstract class of its application or domain, or a shared port its application or "
-                    + "domain uses, that no concrete class of an application or domain package implements, so a use case's sealed result is none), the "
-                    + "reviewed driving port implementers apart, so the lambda, method reference or object they return is a driven adapter",
+                    + "domain uses, that no concrete class of an application or domain package implements, so a use case's sealed result is none), each "
+                    + "reviewed driving port implementation apart (that class and that port only), so the lambda, method reference or object they return is a driven adapter",
             method -> DddLayeringRulesTest.layerOf(method.getOwner()).filter("infrastructure"::equals).isPresent()
-                    && !DddLayeringRulesTest.DRIVING_PORT_IMPLEMENTERS.containsKey(method.getRawReturnType().getName())
                     && method.getReturnType().getAllInvolvedRawTypes().stream()
-                    .flatMap(returned -> Stream.concat(Stream.of(returned), DddLayeringRulesTest.portsOf(returned)))
+                    .flatMap(returned -> Stream.concat(Stream.of(returned), DddLayeringRulesTest.portsOf(returned)
+                            .filter(port -> !DddLayeringRulesTest.isReviewedDrivingPortImplementation(returned, port))))
                     .anyMatch(type -> isAPortOfTheContextOf(type, method.getOwner())));
 
     @ArchTest
@@ -125,16 +125,18 @@ class BeanWiringRulesTest {
                                 private cz.novanadeje.app.planteda.application.PairingOutcome runPairing() { return service.outcome(); }
                             }
                             """),
-                    planted("donations.application.PlantedImportRequests", "public interface PlantedImportRequests { void request(); }"),
                     planted("donations.application.PlantedImportService", """
                             @org.springframework.stereotype.Service
                             public class PlantedImportService { public void importAll() {} }
                             """),
                     planted("donations.infrastructure.fio.FioImportScheduler", """
-                            public class FioImportScheduler implements cz.novanadeje.app.donations.application.PlantedImportRequests {
+                            public class FioImportScheduler implements cz.novanadeje.app.donations.application.importing.BankImportRequests {
                                 private final cz.novanadeje.app.donations.application.PlantedImportService service;
                                 public FioImportScheduler(cz.novanadeje.app.donations.application.PlantedImportService service) { this.service = service; }
-                                public void request() {}
+                                public void requestImport() { service.importAll(); }
+                                public boolean inProgress() { return false; }
+                                public boolean enabled() { return true; }
+                                public void requestHistoryImport(cz.novanadeje.app.donations.application.importing.HistoryImportRun run) {}
                             }
                             """),
                     configuration("donations.infrastructure.fio.PlantedImportConfiguration", """
@@ -577,6 +579,15 @@ class BeanWiringRulesTest {
                     .noneSatisfy(detail -> assertThat(detail).contains("PairingWiring"))
                     .noneSatisfy(detail -> assertThat(detail).contains("AnonymousTaskConfiguration"))
                     .noneSatisfy(detail -> assertThat(detail).contains("LiteComponent"));
+        }
+
+        @Test
+        @DisplayName("when the port rule checks a @Bean method returning the reviewed driving port implementer that also implements a driven port of its context, then it is reported for that other port")
+        void should_report_the_reviewed_implementer_for_another_port_when_checked_given_a_planted_wiring(@TempDir Path folder) throws IOException {
+            JavaClasses dual = PlantedClasses.compiled(folder, PlantedDrivingPorts.SOURCES);
+
+            assertThat(infrastructure_methods_build_no_port_on_a_use_case.evaluate(dual).getFailureReport().getDetails())
+                    .anySatisfy(detail -> assertThat(detail).contains("PlantedImportWiring.scheduler("));
         }
 
         private static Map.Entry<String, String> configuration(String relativeName, String members) {
