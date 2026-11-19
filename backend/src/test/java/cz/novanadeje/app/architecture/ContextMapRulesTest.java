@@ -150,6 +150,8 @@ class ContextMapRulesTest {
         Set<String> edges = Set.of("donors -> donations: A", "donations -> donors: B", "content -> donations: C", "operations -> donors: D",
                 "donors -> operations: E", "shared -> donors: F", "donors -> shared: G", "content -> contact: H", "contact -> content: I");
         String overview = """
+                # System overview
+
                 ## Context map
 
                 | Pair | Why both ways |
