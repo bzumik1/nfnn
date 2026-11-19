@@ -109,7 +109,7 @@ class DonationTest {
     void should_refuse_when_reconstituted_given_link_without_account_pairing() {
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.of(BankPaymentId.newId(NOW)),
                 RECEIVED_ON, Money.czk(50000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.VARIABLE_SYMBOL),
-                Optional.of(SenderAccountLinkId.newId(NOW)), NOW));
+                Optional.of(SenderAccountLinkId.newId(NOW)), Optional.empty(), DonationPurpose.GENERAL, NOW));
     }
 
     @Test
@@ -228,25 +228,25 @@ class DonationTest {
         BankPaymentId paymentId = BankPaymentId.newId(NOW);
 
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON,
-                Money.czk(50000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.SENDER_ACCOUNT), NOW));
+                Money.czk(50000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.of(PairingMethod.SENDER_ACCOUNT), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW));
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.of(paymentId), RECEIVED_ON,
-                Money.czk(50000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.empty(), NOW));
+                Money.czk(50000), DonationSource.BANK_TRANSFER, DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW));
     }
 
     @Test
     @DisplayName("Given a manual donation with a bank payment or a pairing method, when reconstituted, then it is refused")
     void should_refuse_when_reconstituted_given_manual_donation_with_payment_or_method() {
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.of(BankPaymentId.newId(NOW)),
-                RECEIVED_ON, Money.czk(50000), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), NOW));
+                RECEIVED_ON, Money.czk(50000), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW));
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON,
-                Money.czk(50000), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.of(PairingMethod.VARIABLE_SYMBOL), NOW));
+                Money.czk(50000), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.of(PairingMethod.VARIABLE_SYMBOL), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW));
     }
 
     @Test
     @DisplayName("Given a manual donation without a payment, when reconstituted, then it is accepted")
     void should_accept_when_reconstituted_given_manual_donation_without_payment() {
         Donation donation = Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON, Money.czk(10000), DonationSource.MANUAL,
-                DonationStatus.REFUNDED, Optional.empty(), NOW);
+                DonationStatus.REFUNDED, Optional.empty(), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW);
 
         assertThat(donation.bankPayment()).isEmpty();
         assertThat(donation.pairedBy()).isEmpty();
@@ -257,31 +257,31 @@ class DonationTest {
     @DisplayName("Given a zero or negative amount, when reconstituted, then it is refused")
     void should_refuse_when_reconstituted_given_non_positive_amount() {
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON,
-                Money.czk(0), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), NOW));
+                Money.czk(0), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW));
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON,
-                Money.czk(-100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), NOW));
+                Money.czk(-100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW));
     }
 
     @Test
     @DisplayName("Given missing parts, when reconstituted, then it is refused")
     void should_refuse_when_reconstituted_given_missing_parts() {
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(null, DONOR, Optional.empty(), RECEIVED_ON,
-                Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), NOW));
+                Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW));
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, null, Optional.empty(), RECEIVED_ON,
-                Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), NOW));
+                Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW));
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), null,
-                Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), NOW));
+                Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW));
         assertThatIllegalArgumentException().isThrownBy(() -> Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON,
-                Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), null));
+                Money.czk(100), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, null));
     }
 
     @Test
     @DisplayName("Given a received and a refunded donation, when asked whether they count, then only the received one counts")
     void should_count_only_received_when_asked_given_received_and_refunded() {
         Donation received = Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON, Money.czk(100), DonationSource.MANUAL,
-                DonationStatus.RECEIVED, Optional.empty(), NOW);
+                DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW);
         Donation refunded = Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), RECEIVED_ON, Money.czk(100), DonationSource.MANUAL,
-                DonationStatus.REFUNDED, Optional.empty(), NOW);
+                DonationStatus.REFUNDED, Optional.empty(), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW);
 
         assertThat(received.isReceived()).isTrue();
         assertThat(refunded.isReceived()).isFalse();
@@ -291,7 +291,7 @@ class DonationTest {
     @DisplayName("Given a donation received on the last day of a year, when asked for its year, then it belongs to that year only")
     void should_belong_to_receipt_year_when_asked_given_last_day_of_year() {
         Donation donation = Donation.reconstitute(DONATION_ID, DONOR, Optional.empty(), LocalDate.of(2025, 12, 31), Money.czk(100),
-                DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), NOW);
+                DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(), Optional.empty(), Optional.empty(), DonationPurpose.GENERAL, NOW);
 
         assertThat(donation.receivedIn(Year.of(2025))).isTrue();
         assertThat(donation.receivedIn(Year.of(2026))).isFalse();

@@ -27,6 +27,18 @@ public final class AuthorizationCode {
     private AuthorizationCode(UUID id, String secretHash, DonorId donorId, ClientId clientId, URI redirectUri, CodeChallenge codeChallenge,
                               Set<OAuthScope> scopes, String resource, boolean secondFactorVerified, Instant issuedAt, Instant expiresAt,
                               Instant usedAt) {
+        if (id == null || secretHash == null || secretHash.isBlank() || donorId == null || clientId == null || issuedAt == null || expiresAt == null) {
+            throw new IllegalArgumentException("An authorization code needs its id, secret hash, donor, connected application and its issue and expiry times");
+        }
+        if (redirectUri == null || codeChallenge == null || resource == null) {
+            throw new IllegalArgumentException("An authorization code keeps its redirect, code challenge and resource");
+        }
+        if (!expiresAt.isAfter(issuedAt)) {
+            throw new IllegalArgumentException("An authorization code expires after it is issued");
+        }
+        if (scopes.isEmpty()) {
+            throw new IllegalArgumentException("An authorization code grants at least one scope");
+        }
         this.id = id;
         this.secretHash = secretHash;
         this.donorId = donorId;

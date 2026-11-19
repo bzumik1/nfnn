@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 
 :host {
   display: block;
@@ -21,6 +22,7 @@
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
   color: var(--color-text-soft);
+  @include motion.expand;
 
   strong {
     color: var(--color-text);
@@ -95,8 +97,11 @@
 }
 
 @include bp.container-down(payment-panel, pair) {
-  .standing-box {
+  .standing-panel {
     margin-inline: calc(-1 * var(--space-4));
+  }
+
+  .standing-box {
     padding-inline: var(--space-2);
   }
 

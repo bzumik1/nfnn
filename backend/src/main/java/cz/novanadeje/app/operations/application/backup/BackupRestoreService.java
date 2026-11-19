@@ -5,12 +5,14 @@ import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupNotFound;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.BackupsUnavailable;
 import cz.novanadeje.app.operations.domain.backup.PublicBackupKey;
 import cz.novanadeje.app.operations.domain.backup.RestoreCarryForward;
 import cz.novanadeje.app.operations.domain.backup.RestorePending;
 import cz.novanadeje.app.operations.domain.backup.RestoreRecordRepository;
 import cz.novanadeje.app.operations.domain.backup.RestoreSource;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.transaction.AfterCommitWork;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,15 +42,17 @@ public class BackupRestoreService {
     private final ApplicationRestarter restarter;
     private final ApplicationEventPublisher events;
     private final PublicBackupKeyPolicy publicKeys;
+    private final AfterCommitWork afterCommit;
     private final Clock clock;
 
     public BackupRestoreService(BackupStore store, RestoreRecordRepository records, ApplicationRestarter restarter, ApplicationEventPublisher events,
-                                PublicBackupKeyPolicy publicKeys, Clock clock) {
+                                PublicBackupKeyPolicy publicKeys, AfterCommitWork afterCommit, Clock clock) {
         this.store = store;
         this.records = records;
         this.restarter = restarter;
         this.events = events;
         this.publicKeys = publicKeys;
+        this.afterCommit = afterCommit;
         this.clock = clock;
     }
 
@@ -58,14 +62,19 @@ public class BackupRestoreService {
             throw new BackupNotFound();
         }
         requireNoRestorePending();
+        if (!store.acceptsRequests()) {
+            throw new BackupsUnavailable();
+        }
         Instant now = clock.instant();
         RestoreRequest request = new RestoreRequest(UuidV7.generate(now).toString(), RestoreSource.BACKUP, fileName, Optional.of(adminId), now);
-        store.requestRestore(request);
         events.publishEvent(new AdminActionPerformed(adminId, RESTORE_BACKUP_ACTION, Optional.empty(),
                 "Vyžádána obnova ze zálohy " + fileName + " (požadavek " + request.id() + "); backend se restartuje a počká na kontejner záloh",
                 AdminActionPerformed.Facts.of(RESTORE_BACKUP_ACTION, Map.of("file", fileName)), now));
+        afterCommit.run(() -> {
+            store.requestRestore(request);
+            log.info("Admin {} requested a restore of {} as request {}; the backend restarts", adminId, fileName, request.id());
+        });
         restarter.restartAfterCommitForRestore();
-        log.info("Admin {} requested a restore of {} as request {}; the backend restarts", adminId, fileName, request.id());
         return request;
     }
 

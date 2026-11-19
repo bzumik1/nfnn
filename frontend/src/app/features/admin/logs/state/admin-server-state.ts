@@ -19,6 +19,7 @@ import { formatSize } from '../../backups/backup-format';
 import { HealthIcon } from '../health-icon/health-icon';
 import { LogPageAccess } from '../log-page-access';
 import { formatShare, serverHealth, ServerHealthKind } from '../server-health';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -27,7 +28,7 @@ const RELEASES = 'https://github.com/bzumik1/nfnn/releases/tag/';
 
 @Component({
   selector: 'app-admin-server-state',
-  imports: [Skeleton, NeedsConnection, HealthIcon],
+  imports: [BusyLabel, Skeleton, NeedsConnection, HealthIcon],
   templateUrl: './admin-server-state.html',
   styleUrl: './admin-server-state.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

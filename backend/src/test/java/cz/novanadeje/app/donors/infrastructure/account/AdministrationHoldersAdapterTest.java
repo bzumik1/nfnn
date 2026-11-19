@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.infrastructure.account;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -64,7 +65,7 @@ class AdministrationHoldersAdapterTest {
     }
 
     private static Donor donor() {
-        return Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                new EmailAddress("jana@example.cz"), new PasswordHash("$hash"), new VariableSymbol("1234567890"), LocaleCode.CS, NOW);
+        return Donors.withPassword(Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                new EmailAddress("jana@example.cz"), new VariableSymbol("1234567890"), LocaleCode.CS, NOW), new PasswordHash("$hash"));
     }
 }

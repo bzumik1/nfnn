@@ -87,4 +87,21 @@ class ReceiptSigningKeyTest {
         assertThatThrownBy(() -> withdrawn.withdrawn(content -> "again")).isInstanceOf(ReceiptSigningKeyAlreadyWithdrawn.class)
                 .hasFieldOrPropertyWithValue("code", "donations/receipt-signing-key-already-withdrawn");
     }
+
+    @Test
+    @DisplayName("Given a restore that finished an hour ago, when adopting its keys is checked, then they may still be adopted")
+    void should_adopt_when_checked_given_a_restore_finished_an_hour_ago() {
+        Instant now = Instant.parse("2026-11-15T10:00:00Z");
+
+        assertThat(ReceiptSigningKey.adoptableAfterRestoreFinishedAt(now.minusSeconds(3600), now)).isTrue();
+        assertThat(ReceiptSigningKey.adoptableAfterRestoreFinishedAt(now, now)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a restore that finished more than an hour ago, when adopting its keys is checked, then they are not adopted")
+    void should_not_adopt_when_checked_given_a_restore_finished_over_an_hour_ago() {
+        Instant now = Instant.parse("2026-11-15T10:00:00Z");
+
+        assertThat(ReceiptSigningKey.adoptableAfterRestoreFinishedAt(now.minusSeconds(3600).minusMillis(1), now)).isFalse();
+    }
 }

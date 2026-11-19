@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.ConfirmationRequired;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -88,7 +89,7 @@ class DonorConfirmationsTest {
     @Test
     @DisplayName("Given a donor without a password, when a password confirms a change, then it is refused without hashing")
     void should_refuse_password_when_change_confirmed_given_donor_without_password() {
-        assertThatThrownBy(() -> confirmations.confirm(donor(null), Confirmation.withPassword(PASSWORD))).isInstanceOf(WrongPassword.class);
+        assertThatThrownBy(() -> confirmations.confirm(donor(), Confirmation.withPassword(PASSWORD))).isInstanceOf(WrongPassword.class);
 
         verifyNoInteractions(passwordHasher);
     }
@@ -97,7 +98,7 @@ class DonorConfirmationsTest {
     @DisplayName("Given nothing to confirm with, when a change is confirmed, then the confirmation is required")
     void should_require_confirmation_when_change_confirmed_given_nothing() {
         assertThatThrownBy(() -> confirmations.confirm(donor(HASH), Confirmation.none())).isInstanceOf(ConfirmationRequired.class);
-        assertThatThrownBy(() -> confirmations.confirm(donor(null), Confirmation.withPassword(""))).isInstanceOf(ConfirmationRequired.class);
+        assertThatThrownBy(() -> confirmations.confirm(donor(), Confirmation.withPassword(""))).isInstanceOf(ConfirmationRequired.class);
     }
 
     @Test
@@ -112,7 +113,7 @@ class DonorConfirmationsTest {
         when(ceremonies.verifySignIn(assertion, challenge, passkey)).thenReturn(7L);
         when(challenges.markUsed(issued.id(), NOW)).thenReturn(true);
 
-        confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertion)));
+        confirmations.confirm(donor(), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertion)));
 
         verify(challenges).markUsed(issued.id(), NOW);
         verify(passkeys).save(passkey);
@@ -129,7 +130,7 @@ class DonorConfirmationsTest {
         when(challenges.markUsed(issued.id(), NOW)).thenReturn(true);
         when(passkeys.findByCredentialId(CREDENTIAL_ID)).thenReturn(Optional.of(passkeyOf(OTHER_DONOR)));
 
-        assertThatThrownBy(() -> confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertionBy(OTHER_DONOR)))))
+        assertThatThrownBy(() -> confirmations.confirm(donor(), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertionBy(OTHER_DONOR)))))
                 .isInstanceOf(PasskeyConfirmationRejected.class);
 
         verify(challenges).markUsed(issued.id(), NOW);
@@ -144,7 +145,7 @@ class DonorConfirmationsTest {
         when(challenges.findByChallengeHash(challenge.hash())).thenReturn(Optional.of(issued));
         when(challenges.markUsed(issued.id(), NOW)).thenReturn(false);
 
-        assertThatThrownBy(() -> confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertionBy(DONOR)))))
+        assertThatThrownBy(() -> confirmations.confirm(donor(), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertionBy(DONOR)))))
                 .isInstanceOf(PasskeyConfirmationRejected.class);
 
         verifyNoInteractions(ceremonies);
@@ -166,11 +167,11 @@ class DonorConfirmationsTest {
         when(passkeys.findByCredentialId(CREDENTIAL_ID)).thenReturn(Optional.of(passkey));
         when(ceremonies.verifySignIn(assertion, live, passkey)).thenThrow(new InvalidPasskey());
 
-        assertThatThrownBy(() -> confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(spent.value(), assertion))))
+        assertThatThrownBy(() -> confirmations.confirm(donor(), Confirmation.withPasskey(new PasskeyProof(spent.value(), assertion))))
                 .isInstanceOf(PasskeyConfirmationRejected.class);
-        assertThatThrownBy(() -> confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof("not a challenge", assertion))))
+        assertThatThrownBy(() -> confirmations.confirm(donor(), Confirmation.withPasskey(new PasskeyProof("not a challenge", assertion))))
                 .isInstanceOf(PasskeyConfirmationRejected.class);
-        assertThatThrownBy(() -> confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(live.value(), assertion))))
+        assertThatThrownBy(() -> confirmations.confirm(donor(), Confirmation.withPasskey(new PasskeyProof(live.value(), assertion))))
                 .isInstanceOf(PasskeyConfirmationRejected.class);
         verify(passkeys, never()).save(any());
     }
@@ -195,7 +196,7 @@ class DonorConfirmationsTest {
         when(challenges.markUsed(issued.id(), NOW)).thenReturn(true);
         when(passkeys.findByCredentialId(CREDENTIAL_ID)).thenReturn(Optional.of(passkeyOf(OTHER_DONOR)));
 
-        assertThatThrownBy(() -> confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertionBy(OTHER_DONOR)))))
+        assertThatThrownBy(() -> confirmations.confirm(donor(), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertionBy(OTHER_DONOR)))))
                 .isInstanceOf(PasskeyConfirmationRejected.class);
 
         assertThat(transactions.committed()).isEqualTo(1);
@@ -212,7 +213,7 @@ class DonorConfirmationsTest {
 
         assertThatCode(() -> confirmed.requireUnchangedIn(donor(HASH))).doesNotThrowAnyException();
         assertThatThrownBy(() -> confirmed.requireUnchangedIn(donor(new PasswordHash("$changed")))).isInstanceOf(WrongPassword.class);
-        assertThatThrownBy(() -> confirmed.requireUnchangedIn(donor(null))).isInstanceOf(WrongPassword.class);
+        assertThatThrownBy(() -> confirmed.requireUnchangedIn(donor())).isInstanceOf(WrongPassword.class);
     }
 
     @Test
@@ -227,9 +228,9 @@ class DonorConfirmationsTest {
         when(ceremonies.verifySignIn(assertion, challenge, passkey)).thenReturn(7L);
         when(challenges.markUsed(issued.id(), NOW)).thenReturn(true);
 
-        ConfirmedCredentials confirmed = confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertion)));
+        ConfirmedCredentials confirmed = confirmations.confirm(donor(), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertion)));
 
-        assertThatCode(() -> confirmed.requireUnchangedIn(donor(null))).doesNotThrowAnyException();
+        assertThatCode(() -> confirmed.requireUnchangedIn(donor())).doesNotThrowAnyException();
         assertThatThrownBy(() -> confirmed.requireUnchangedIn(donor(HASH))).isInstanceOf(PasskeyConfirmationRejected.class);
     }
 
@@ -241,10 +242,14 @@ class DonorConfirmationsTest {
         return Passkey.register(donorId, CREDENTIAL_ID, new byte[]{1, 2, 3}, 3, List.of("internal"), "iPhone", "nfnn.cz", NOW.minusSeconds(3600));
     }
 
-    private static Donor donor(PasswordHash hash) {
-        Donor donor = Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                new EmailAddress("jana@example.cz"), hash, new VariableSymbol("4821937560"), LocaleCode.CS, NOW.minusSeconds(120));
+    private static Donor donor() {
+        Donor donor = Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                new EmailAddress("jana@example.cz"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW.minusSeconds(120));
         donor.verifyEmail(NOW.minusSeconds(90));
         return donor;
+    }
+
+    private static Donor donor(PasswordHash hash) {
+        return Donors.withPassword(donor(), hash);
     }
 }

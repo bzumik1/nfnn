@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.InvalidGrant;
 import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.PasswordHash;
@@ -76,9 +77,9 @@ class ConnectedAppRefreshConcurrencyTest {
     @BeforeEach
     void anAdministratorWhoseConnectedApplicationLostTheAnswerToARefresh() {
         new DatabaseCleaner(jdbc).emptyAllTables();
-        jana = Donor.register(DonorId.newId(clock.instant()), DonorType.PERSON, new DonorName("Jana Nováková"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"), new PasswordHash("$hash"),
-                new VariableSymbol("4821937560"), LocaleCode.CS, clock.instant());
+        jana = Donors.withPassword(Donor.register(DonorId.newId(clock.instant()), DonorType.PERSON, new DonorName("Jana Nováková"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"),
+                new VariableSymbol("4821937560"), LocaleCode.CS, clock.instant()), new PasswordHash("$hash"));
         jana.verifyEmail(clock.instant());
         jana.grantAdministration(true);
         connectionSecret = RefreshTokenSecret.generate();

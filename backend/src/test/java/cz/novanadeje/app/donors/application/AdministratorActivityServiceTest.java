@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.application;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
 import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
@@ -196,7 +197,7 @@ class AdministratorActivityServiceTest {
     }
 
     private static Donor donor(DonorId id, String name) {
-        return Donor.register(id, DonorType.PERSON, new DonorName(name), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                new EmailAddress("jana@example.cz"), new PasswordHash("$hash"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
+        return Donors.withPassword(Donor.register(id, DonorType.PERSON, new DonorName(name), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                new EmailAddress("jana@example.cz"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW), new PasswordHash("$hash"));
     }
 }

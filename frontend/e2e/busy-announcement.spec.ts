@@ -49,7 +49,11 @@ async function signOutTheIPhone(page: Page, answers: Promise<void>): Promise<Loc
   await openDonorSection(page, 'Údaje a zabezpečení');
   const devices = page.locator('.devices');
   await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
-  await expect(devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' })).toBeVisible();
+  const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+  await expect(question).toBeVisible();
+  await question.evaluate((element) =>
+    Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished)),
+  );
   return devices;
 }
 

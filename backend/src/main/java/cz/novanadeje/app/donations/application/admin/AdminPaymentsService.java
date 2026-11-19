@@ -61,10 +61,6 @@ public class AdminPaymentsService {
         return new AdminPaymentList(Optional.empty(), List.of(), page, matching.size());
     }
 
-    public AdminPaymentList listPaired(Optional<Year> requested, PaymentFilter filter) {
-        return listPaired(requested, filter, AdministrationChannel.BROWSER);
-    }
-
     public AdminPaymentList listPaired(Optional<Year> requested, PaymentFilter filter, AdministrationChannel channel) {
         List<Year> availableYears = donations.findReceivedYearsNewestFirst();
         if (requested.isEmpty() && availableYears.isEmpty()) {

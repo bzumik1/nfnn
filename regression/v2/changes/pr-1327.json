@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > and the donor signs out the iPhone, then the API is told, the row disappears, the status says so and takes focus",
+    "replacement": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > and the donor signs out the iPhone, then the API is told, the row disappears, the status says so and the device below takes focus",
+    "reason": "Donor motion (#1223, both teams 12/12): after a row leaves, the focus goes to its neighbour or the card's heading instead of the status line, which still says what happened; the same test now names where the focus lands",
+    "contract": "docs/frontend-overview.md, donors (devices-card) and Motion (Řádek přidán a odebrán)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > and the donor signs out every other device, then only this one stays, the status says so and takes focus",
+    "replacement": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > and the donor signs out every other device, then only this one stays, the status says so and the heading takes focus",
+    "reason": "Donor motion (#1223, both teams 12/12): after a row leaves, the focus goes to its neighbour or the card's heading instead of the status line, which still says what happened; the same test now names where the focus lands",
+    "contract": "docs/frontend-overview.md, donors (devices-card) and Motion (Řádek přidán a odebrán)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when two devices were last used more than 30 days ago > and the donor signs out an older one, then the row that opens them counts one less and the status takes focus",
+    "replacement": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when two devices were last used more than 30 days ago > and the donor signs out an older one, then the row that opens them counts one less and the older one below takes focus",
+    "reason": "Donor motion (#1223, both teams 12/12): after a row leaves, the focus goes to its neighbour or the card's heading instead of the status line, which still says what happened; the same test now names where the focus lands",
+    "contract": "docs/frontend-overview.md, donors (devices-card) and Motion (Řádek přidán a odebrán)"
+  }
+]

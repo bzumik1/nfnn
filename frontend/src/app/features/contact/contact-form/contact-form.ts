@@ -30,6 +30,7 @@ import { placeServerErrors } from '../../../shared/ui/form-field/server-errors';
 import { AccountingDetails } from '../accounting-details/accounting-details';
 import { ContactApi, ContactMessageRequest } from '../contact-api';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 const TOO_MANY_REQUESTS = 429;
 const CONTACT_IN_VIEW = 'contact-in-view';
@@ -42,6 +43,7 @@ const MESSAGE_FIELDS: Readonly<Record<string, string>> = {
 @Component({
   selector: 'app-contact-form',
   imports: [
+    BusyLabel,
     NgTemplateOutlet,
     FormsModule,
     RouterLink,

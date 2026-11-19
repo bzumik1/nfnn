@@ -116,8 +116,9 @@ class DddLayeringRulesTest {
             dependency -> !PersistencePorts.PERSISTENCE_PORTS_AND_THE_LIBRARY_INTERFACES_THEY_IMPLEMENT.test(dependency.getTargetClass())
                     || PersistencePorts.PERSISTENCE_ADAPTERS.test(dependency.getOriginClass()) && isInheritanceOfItsOwnPort(dependency));
     private static final Pattern CONTEXT_OF_PACKAGE = Pattern.compile("^cz\\.novanadeje\\.app\\.([^.]+)\\.(domain|application|infrastructure)(\\..*)?$");
-    static final Map<String, String> DRIVING_PORT_IMPLEMENTERS = Map.of(
-            "cz.novanadeje.app.donations.infrastructure.fio.FioImportScheduler",
+    static final Map<DrivingPortImplementation, String> DRIVING_PORT_IMPLEMENTATIONS = Map.of(
+            new DrivingPortImplementation("cz.novanadeje.app.donations.infrastructure.fio.FioImportScheduler",
+                    "cz.novanadeje.app.donations.application.importing.BankImportRequests"),
             "its BankImportRequests methods only queue a run on the scheduler thread, which then drives the import as a scheduler");
     private static final Map<String, String> PERSISTENCE_PORT_READERS = Map.of(
             "cz.novanadeje.app.donors.infrastructure.account.AccountEmailsAdapter",
@@ -134,10 +135,9 @@ class DddLayeringRulesTest {
             "are not one of the persistence port readers #959 empties", type -> !PERSISTENCE_PORT_READERS.containsKey(type.getName()));
     private static final DescribedPredicate<JavaClass> DRIVEN_ADAPTERS = DescribedPredicate.describe(
             "implement a port of their own context (an interface or abstract class of its application or domain, or a shared port its application "
-                    + "or domain uses), the reviewed driving port implementers apart",
+                    + "or domain uses), each reviewed driving port implementation apart (that class and that port only)",
             type -> layerOf(type).filter("infrastructure"::equals).isPresent()
-                    && !DRIVING_PORT_IMPLEMENTERS.containsKey(type.getName())
-                    && portsOf(type).anyMatch(port -> isPortOfTheContextOf(port, type)));
+                    && portsOf(type).anyMatch(port -> isPortOfTheContextOf(port, type) && !isReviewedDrivingPortImplementation(type, port)));
     static final DescribedPredicate<JavaClass> APPLICATION_SERVICES = DescribedPredicate.describe(
             "are application services (Spring beans of an application package)",
             type -> !type.isInterface() && layerOf(type).filter("application"::equals).isPresent() && type.isMetaAnnotatedWith(Component.class));
@@ -258,11 +258,27 @@ class DddLayeringRulesTest {
             .andShould().resideInAnyPackage("..infrastructure.persistence..", "cz.novanadeje.app.shared.infrastructure.audit..");
 
     @Test
-    @DisplayName("Given the driving port implementers, when they are read, then each exists, so the list names no class that is gone")
-    void should_find_every_driving_port_implementer_when_read_given_the_list() throws ClassNotFoundException {
-        for (String implementer : DRIVING_PORT_IMPLEMENTERS.keySet()) {
-            assertThat(Class.forName(implementer)).as(implementer).isNotNull();
-        }
+    @DisplayName("Given the reviewed driving port implementations, when they are read, then each class still implements its port of its own context and still drives a use case, so the list names no pair that is gone or no longer needed")
+    void should_find_every_driving_port_implementation_when_read_given_the_list() {
+        JavaClasses site = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests()).importPackagesOf(AppApplication.class);
+
+        assertThat(DRIVING_PORT_IMPLEMENTATIONS.keySet()).allSatisfy(implementation -> {
+            JavaClass implementer = site.get(implementation.implementer());
+            JavaClass port = site.get(implementation.port());
+            assertThat(portsOf(implementer)).as(implementation.toString()).contains(port);
+            assertThat(isPortOfTheContextOf(port, implementer)).as(implementation.toString()).isTrue();
+            assertThat(applicationServicesReachedFrom(implementer.getDirectDependenciesFromSelf().stream().map(Dependency::getTargetClass).toList(),
+                    implementer)).as(implementation + " still drives a use case").isNotEmpty();
+        });
+    }
+
+    @Test
+    @DisplayName("Given a planted scheduler of a reviewed driving port that also implements a driven port of its context, when the driven adapter rule checks it, then it is reported for the other port")
+    void should_report_the_reviewed_implementer_for_another_port_when_checked_given_a_planted_scheduler(@TempDir Path folder) throws IOException {
+        JavaClasses planted = PlantedClasses.compiled(folder, PlantedDrivingPorts.SOURCES);
+
+        assertThat(driven_adapters_must_not_drive_a_use_case.evaluate(planted).getFailureReport().getDetails())
+                .anySatisfy(detail -> assertThat(detail).contains("FioImportScheduler").contains("PlantedImportService"));
     }
 
     @Test
@@ -919,5 +935,12 @@ class DddLayeringRulesTest {
         Matcher adapterPackage = CONTEXT_OF_PACKAGE.matcher(adapter.getPackageName());
         return typePackage.matches() && adapterPackage.matches() && "infrastructure".equals(typePackage.group(2))
                 && typePackage.group(1).equals(adapterPackage.group(1));
+    }
+
+    static boolean isReviewedDrivingPortImplementation(JavaClass implementer, JavaClass port) {
+        return DRIVING_PORT_IMPLEMENTATIONS.containsKey(new DrivingPortImplementation(implementer.getName(), port.getName()));
+    }
+
+    record DrivingPortImplementation(String implementer, String port) {
     }
 }

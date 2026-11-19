@@ -17,6 +17,8 @@ import {
 import { Passkey } from '../../../core/auth/donor';
 import { BackupKeyStatus } from '../admin-api';
 import { BackupKeyCard } from './backup-key-card';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const REVEAL_URL = '/api/admin/operations/backups/key/reveal';
 const CONFIRM_URL = '/api/admin/operations/backups/key/confirmation';
@@ -77,7 +79,7 @@ describe('Given the backup key card', () => {
 
   async function click(name: string): Promise<void> {
     const button = Array.from(root().querySelectorAll('button')).find(
-      (candidate) => candidate.textContent?.trim() === name,
+      (candidate) => accessibleText(candidate) === name,
     );
     expect(button, `button "${name}"`).toBeDefined();
     button?.click();
@@ -223,6 +225,35 @@ describe('Given the backup key card', () => {
       );
     });
 
+    it('and the code is sent and the answer has not come yet, then the button is locked and keeps both labels under the checking name', async () => {
+      await askToSee();
+      await type('backup-key-code', '123456');
+      await submit();
+
+      const reveal = root().querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      expect(reveal.disabled).toBe(true);
+      expect(labelFaces(reveal)).toEqual(['Zobrazit klíč', 'Ověřujeme…']);
+      expect(accessibleText(reveal)).toBe('Ověřujeme…');
+      http.expectOne(REVEAL_URL).flush({ key: KEY, checkPositions: [2, 13, 24] });
+      await settle();
+    });
+
+    it('and the three words are sent and the answer has not come yet, then the button is locked and keeps both labels under the confirming name', async () => {
+      await revealWithCode();
+      await click('Mám uloženo, ověřit');
+      await type('backup-key-word-2', 'komo');
+      await type('backup-key-word-13', 'motivace');
+      await type('backup-key-word-24', 'studna');
+      await submit();
+
+      const confirm = root().querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      expect(confirm.disabled).toBe(true);
+      expect(labelFaces(confirm)).toEqual(['Potvrdit uložení', 'Potvrzujeme…']);
+      expect(accessibleText(confirm)).toBe('Potvrzujeme…');
+      http.expectOne(CONFIRM_URL).flush(CONFIRMED);
+      await settle();
+    });
+
     it('and the confirmation came too late, then the key hides and the reason says to show it again', async () => {
       await revealWithCode();
       await click('Mám uloženo, ověřit');
@@ -290,7 +321,7 @@ describe('Given the backup key card', () => {
 
       expect(root().querySelector('#backup-key-code')).toBeNull();
       expect(text('.key-note')).toContain('přístupovým klíčem');
-      expect(document.activeElement?.textContent?.trim()).toBe('Zobrazit klíč');
+      expect(accessibleText(document.activeElement)).toBe('Zobrazit klíč');
       await submit();
       http
         .expectOne({ method: 'POST', url: '/api/donors/auth/passkey/options' })

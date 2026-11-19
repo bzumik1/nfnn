@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.application.settings;
 
 import cz.novanadeje.app.operations.application.restart.ApplicationRestarter;
+import cz.novanadeje.app.operations.domain.settings.MailPasswordRouting;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
 import cz.novanadeje.app.operations.domain.settings.SettingError;
@@ -23,10 +24,8 @@ import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -95,8 +94,9 @@ public class SettingsService {
         if (!expected.admits(version)) {
             throw new StaleWriteRefusal(new SettingsChangedMeanwhile(version), stored);
         }
-        requireTheMailServerUnchangedSince(checked, changes);
-        requirePasswordForAnotherMailServer(changes);
+        Map<Setting, String> storedNow = writer.storedValues();
+        MailPasswordRouting.refuseWhenTheMailServerChangedMeanwhile(checked, storedNow, changes);
+        mailPasswordRouting().refuseAnotherServerWithoutItsPassword(changes, storedNow.containsKey(Setting.MAIL_PASSWORD));
         Instant now = clock.instant();
         List<Setting> changed = writer.apply(changes, List.of(), now);
         if (changed.isEmpty()) {
@@ -113,11 +113,12 @@ public class SettingsService {
 
     public TestEmailResult sendTestEmail(UUID adminId, AdministrationChannel channel, MailServer server, String sender) {
         boolean typed = server.password() != null && !server.password().isBlank();
-        if (channel.isConnectedApplication() && (typed || !isRunningServer(server) || !signsInAsRunning(server) || !sendsAsRunning(sender))) {
+        MailPasswordRouting routing = mailPasswordRouting();
+        if (channel.isConnectedApplication() && !routing.mayBeTestedThroughAConnection(server.address(), server.auth(), sender, typed)) {
             throw new SecretSettingsInBrowserOnly();
         }
         String recipient = accountEmails.emailOf(adminId).map(EmailAddress::value).orElseThrow(() -> new IllegalStateException("An administrator without an e-mail"));
-        MailServer probed = !typed && isRunningServer(server)
+        MailServer probed = routing.lendsTheStoredPasswordTo(server.address(), typed)
                 ? server.withPassword(current.effectiveValue(Setting.MAIL_PASSWORD).orElse(""))
                 : server;
         TestEmail email = new TestEmail(sender, recipient);
@@ -130,53 +131,7 @@ public class SettingsService {
         return new TestEmailResult(outcome, recipient);
     }
 
-    private void requireTheMailServerUnchangedSince(Map<Setting, String> checked, List<SettingChange> changes) {
-        boolean namesTheMailServer = changes.stream().anyMatch(change -> decidesWhereMailGoes(change.setting()));
-        Map<Setting, String> stored = writer.storedValues();
-        boolean changedMeanwhile = Arrays.stream(Setting.values())
-                .filter(SettingsService::decidesWhereMailGoes)
-                .anyMatch(setting -> !Objects.equals(checked.get(setting), stored.get(setting)));
-        if (namesTheMailServer && changedMeanwhile) {
-            throw new SettingsRejected(List.of(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.MAIL_SERVER_CHANGED_MEANWHILE)));
-        }
-    }
-
-    private static boolean decidesWhereMailGoes(Setting setting) {
-        return setting == Setting.MAIL_PASSWORD || setting.decidesWhereMailPasswordGoes();
-    }
-
-    private void requirePasswordForAnotherMailServer(List<SettingChange> changes) {
-        boolean passwordChanges = changes.stream().anyMatch(change -> change.setting() == Setting.MAIL_PASSWORD);
-        boolean passwordRuns = running(Setting.MAIL_PASSWORD).isPresent() || writer.storedValues().containsKey(Setting.MAIL_PASSWORD);
-        boolean serverMoves = changes.stream()
-                .filter(change -> change.setting().decidesWhereMailPasswordGoes())
-                .anyMatch(change -> !sameValue(change.value(), running(change.setting()).orElse(null)));
-        if (serverMoves && passwordRuns && !passwordChanges) {
-            throw new SettingsRejected(List.of(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.PASSWORD_FOR_NEW_MAIL_SERVER)));
-        }
-    }
-
-    private boolean isRunningServer(MailServer server) {
-        return sameValue(server.host(), running(Setting.MAIL_HOST).orElse(null))
-                && sameValue(String.valueOf(server.port()), running(Setting.MAIL_PORT).orElse(null))
-                && sameValue(server.username(), running(Setting.MAIL_USERNAME).orElse(null))
-                && sameValue(String.valueOf(server.startTls()), running(Setting.MAIL_STARTTLS).orElse("false"));
-    }
-
-    private boolean signsInAsRunning(MailServer server) {
-        return sameValue(String.valueOf(server.auth()), running(Setting.MAIL_AUTH).orElse("false"));
-    }
-
-    private boolean sendsAsRunning(String sender) {
-        return sameValue(sender, running(Setting.MAIL_FROM).orElse(null));
-    }
-
-    private Optional<String> running(Setting setting) {
-        return current.effectiveValue(setting).map(String::strip).filter(value -> !value.isEmpty());
-    }
-
-    private static boolean sameValue(String given, String running) {
-        String normalized = given == null || given.isBlank() ? null : given.strip();
-        return normalized == null ? running == null : normalized.equalsIgnoreCase(running);
+    private MailPasswordRouting mailPasswordRouting() {
+        return MailPasswordRouting.readFrom(current::effectiveValue);
     }
 }

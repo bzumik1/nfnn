@@ -39,6 +39,7 @@ import {
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { reloadWhenOnlineAgain } from '../device-copy/online-again';
 import { KeptAdministrationAnswers } from '../kept-administration-answers';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type RowAction = 'save' | 'refresh';
@@ -79,6 +80,7 @@ const FAILURE_WORDS: Readonly<Record<BankLogoFailure, string>> = {
 @Component({
   selector: 'app-admin-bank-logos',
   imports: [
+    BusyLabel,
     FormsModule,
     FormField,
     FormControlDirective,

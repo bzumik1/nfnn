@@ -596,6 +596,7 @@ class DonationReceiptIssuerTest {
         InOrder order = inOrder(receipts);
         order.verify(receipts).lockDonor(JANA);
         order.verify(receipts).countReplacementsIssuedAfter(JANA, NOW.minus(Duration.ofHours(24)));
+        verify(receipts, never()).countReplacementsIssuedSince(any(), any());
         verify(receipts, never()).nextSerial();
         verify(receipts, never()).save(any());
         verifyNoInteractions(freezer);

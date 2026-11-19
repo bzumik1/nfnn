@@ -234,6 +234,22 @@ test.describe('Given a visitor on a computer', () => {
   });
 });
 
+function olderNewsColumns(page: Page): Promise<number[]> {
+  return page.locator('.older .grid-item').evaluateAll((items) => {
+    const lefts = items.map((item) => Math.round(item.getBoundingClientRect().left));
+    const columns = [...new Set(lefts)].sort((one, other) => one - other);
+    return lefts.map((left) => columns.indexOf(left));
+  });
+}
+
+function olderNewsSteps(page: Page): Promise<string[]> {
+  return page
+    .locator('.older .grid-item')
+    .evaluateAll((items) =>
+      items.map((item) => (item as HTMLElement).style.getPropertyValue('--reveal-order')),
+    );
+}
+
 test.describe('Given a visitor on a computer opening Aktuality', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
@@ -265,6 +281,28 @@ test.describe('Given a visitor on a computer opening Aktuality', () => {
     await scrollToEnd(page);
 
     await settled(page);
+  });
+
+  test('when the older news stand in columns, then each card of a row moves in one step after the card left of it, at most three steps', async ({
+    page,
+  }) => {
+    await page.goto('/aktuality');
+    await expect(page.locator('.older .grid-item')).toHaveCount(6);
+
+    await expect.poll(() => olderNewsSteps(page)).toEqual(['1', '2', '3', '1', '2', '3']);
+    expect(await olderNewsColumns(page)).toEqual([0, 1, 2, 0, 1, 2]);
+  });
+
+  test('when the window narrows to one column, then no older card waits for another', async ({
+    page,
+  }) => {
+    await page.goto('/aktuality');
+    await expect(page.locator('.older .grid-item')).toHaveCount(6);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await expect.poll(() => olderNewsColumns(page)).toEqual([0, 0, 0, 0, 0, 0]);
+    await expect.poll(() => olderNewsSteps(page)).toEqual(['0', '0', '0', '0', '0', '0']);
   });
 
   test('when the pointer rests on a news card and when the keyboard focuses its link, then the card is lifted the same way', async ({

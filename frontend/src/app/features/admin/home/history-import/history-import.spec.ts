@@ -8,6 +8,8 @@ import { CompactLayout } from '../../../../core/layout/compact-layout';
 import { HistoryImportResponse, ImportStateResponse } from '../../admin-api';
 import { historyImport, importState } from '../../testing/admin-fixtures';
 import { HistoryImport } from './history-import';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 
 const HISTORY_URL = '/api/admin/donations/import/history';
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
@@ -164,7 +166,7 @@ describe('Given the part for older bank payments on the import card', () => {
       expect((hint?.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
         'Vybraný den: 1. 1. 2026. Platby za posledních 89 dní web stáhne i bez odemčení. Načíst je můžete i opakovaně: platby, které web už má, se nezdvojí.',
       );
-      expect(button().textContent?.trim()).toBe('Načíst starší platby');
+      expect(accessibleText(button())).toBe('Načíst starší platby');
       expect(button().disabled).toBe(false);
       expect(busy()).toBe(false);
       expect(checkAgain()).toBeNull();
@@ -202,7 +204,8 @@ describe('Given the part for older bank payments on the import card', () => {
       expect(request.request.body).toEqual({ from: '2025-06-01' });
       expect(button().disabled).toBe(false);
       expect(busy()).toBe(true);
-      expect(button().textContent?.trim()).toBe('Žádáme banku…');
+      expect(labelFaces(button())).toEqual(['Načíst starší platby', 'Žádáme banku…']);
+      expect(accessibleText(button())).toBe('Žádáme banku…');
 
       request.flush(historyImport({ from: '2025-06-01' }), { status: 202, statusText: 'Accepted' });
       await settle();
@@ -211,7 +214,7 @@ describe('Given the part for older bank payments on the import card', () => {
         'Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v 11:00:20. Stránku můžete zavřít, výsledek tu uvidíte i později.',
       );
       expect(busy()).toBe(true);
-      expect(button().textContent?.trim()).toBe('Žádáme banku…');
+      expect(accessibleText(button())).toBe('Žádáme banku…');
     });
 
     it('and they press the button again while it waits, then nothing more is posted', async () => {
@@ -331,7 +334,8 @@ describe('Given the part for older bank payments on the import card', () => {
 
       expect(status()).toBe('Stahujeme platby od 1. 1. 2026…');
       expect(busy()).toBe(true);
-      expect(button().textContent?.trim()).toBe('Stahujeme platby…');
+      expect(labelFaces(button())).toEqual(['Načíst starší platby', 'Stahujeme platby…']);
+      expect(accessibleText(button())).toBe('Stahujeme platby…');
       expect(finished).toEqual([]);
     });
 
@@ -352,7 +356,7 @@ describe('Given the part for older bank payments on the import card', () => {
         'Hotovo (5. 11. 2026 11:01): staženo období 1. 1. 2026 – 5. 11. 2026, 5 nových plateb.',
       );
       expect(busy()).toBe(false);
-      expect(button().textContent?.trim()).toBe('Načíst starší platby');
+      expect(accessibleText(button())).toBe('Načíst starší platby');
       expect(finished.map((state) => state.coveredFrom)).toEqual(['2026-01-01']);
 
       await vi.advanceTimersByTimeAsync(POLL_MS * 3);

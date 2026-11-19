@@ -37,11 +37,12 @@
       [disabled]="deleting()"
       (click)="confirmed.emit()"
     >
-      @if (deleting()) {
-        <span i18n="@@donor.deviceData.deleteDialog.deleting">Mažeme data…</span>
-      } @else {
-        <span i18n="@@donor.deviceData.deleteDialog.confirm">Smazat data a&nbsp;odhlásit</span>
-      }
+      <app-busy-label [busy]="deleting()">
+        <span when-idle i18n="@@donor.deviceData.deleteDialog.confirm"
+          >Smazat data a&nbsp;odhlásit</span
+        >
+        <span when-busy i18n="@@donor.deviceData.deleteDialog.deleting">Mažeme data…</span>
+      </app-busy-label>
     </button>
     <button
       type="button"

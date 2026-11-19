@@ -8,6 +8,7 @@ import cz.novanadeje.app.donors.domain.CodeChallenge;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.PasswordHash;
@@ -47,9 +48,9 @@ class JpaAuthorizationCodeRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"), new PasswordHash("$hash"),
-                new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"),
+                new VariableSymbol("4821937560"), LocaleCode.CS, NOW), new PasswordHash("$hash"));
         donors.save(donor);
         jana = donor.id();
         flushAndClear();
@@ -105,9 +106,9 @@ class JpaAuthorizationCodeRepositoryTest {
     @Test
     @DisplayName("Given codes of two donors, when one donor's are deleted, then only the other donor's stay")
     void should_delete_only_the_donors_codes_when_deleted_given_two_donors() {
-        Donor petr = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Petr Svoboda"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("petr@example.cz"), new PasswordHash("$hash"),
-                new VariableSymbol("4821937561"), LocaleCode.CS, NOW);
+        Donor petr = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Petr Svoboda"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("petr@example.cz"),
+                new VariableSymbol("4821937561"), LocaleCode.CS, NOW), new PasswordHash("$hash"));
         donors.save(petr);
         AuthorizationCode janas = issue(jana, NOW);
         AuthorizationCode petrs = issue(petr.id(), NOW);
@@ -122,9 +123,9 @@ class JpaAuthorizationCodeRepositoryTest {
     @Test
     @DisplayName("Given a used, an unused and an expired code of a donor and an unused code of another, when the donor's unused codes are spent, then only the unused live one is spent, the used one keeps its time, the expired one is left to the cleanup and the other donor's stays usable")
     void should_spend_only_the_donors_unused_live_codes_when_spent_given_two_donors() {
-        Donor petr = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Petr Svoboda"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("petr@example.cz"), new PasswordHash("$hash"),
-                new VariableSymbol("4821937561"), LocaleCode.CS, NOW);
+        Donor petr = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Petr Svoboda"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("petr@example.cz"),
+                new VariableSymbol("4821937561"), LocaleCode.CS, NOW), new PasswordHash("$hash"));
         donors.save(petr);
         AuthorizationCode redeemed = issue(jana, NOW);
         AuthorizationCode pending = issue(jana, NOW);

@@ -34,9 +34,9 @@ class JpaReportSettingsRepositoryTest {
     private EntityManager entityManager;
 
     @Test
-    @DisplayName("Given nothing saved, when the settings are read, then the configured recipient gets every section on the 1st and nothing was changed yet")
-    void should_answer_defaults_when_read_given_nothing_saved() {
-        assertThat(settings.current()).isEqualTo(ReportSettings.defaults(new EmailAddress("info@nfnn.cz")));
+    @DisplayName("Given nothing saved, when the settings are read, then there are none and nothing was changed yet")
+    void should_answer_nothing_when_read_given_nothing_saved() {
+        assertThat(settings.find()).isEmpty();
         assertThat(settings.lastChangedAt()).isEmpty();
     }
 
@@ -46,7 +46,7 @@ class JpaReportSettingsRepositoryTest {
         settings.save(CHANGED, NOW);
         flushAndClear();
 
-        assertThat(settings.current()).isEqualTo(CHANGED);
+        assertThat(settings.find()).contains(CHANGED);
         assertThat(settings.lastChangedAt()).contains(NOW);
         assertThat(jdbc.sql("select recipients from donation_report_settings").query(String.class).single()).isEqualTo("pavel@example.cz,jakub@example.cz");
     }
@@ -61,7 +61,7 @@ class JpaReportSettingsRepositoryTest {
         flushAndClear();
 
         assertThat(jdbc.sql("select count(*) from donation_report_settings").query(Long.class).single()).isEqualTo(1);
-        assertThat(settings.current().sendDay()).isEqualTo(1);
+        assertThat(settings.find()).get().extracting(ReportSettings::sendDay).isEqualTo(1);
         assertThat(settings.lastChangedAt()).contains(NOW.plusSeconds(60));
     }
 

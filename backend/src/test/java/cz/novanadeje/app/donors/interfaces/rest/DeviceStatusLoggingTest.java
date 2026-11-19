@@ -11,6 +11,7 @@ import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.shared.domain.DonorName;
@@ -160,9 +161,9 @@ class DeviceStatusLoggingTest {
 
     private List<String> devicesOfEveryStatus() {
         Instant now = clock.instant();
-        Donor jana = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName("Jana Nováková"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"), new PasswordHash("$hash"),
-                new VariableSymbol("4821937561"), LocaleCode.CS, now);
+        Donor jana = Donors.withPassword(Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName("Jana Nováková"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"),
+                new VariableSymbol("4821937561"), LocaleCode.CS, now), new PasswordHash("$hash"));
         donors.save(jana);
         List<String> secrets = new ArrayList<>();
         secrets.add(device(jana.id(), now, null, null, null));

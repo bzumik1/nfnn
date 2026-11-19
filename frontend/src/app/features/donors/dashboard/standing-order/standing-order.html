@@ -11,104 +11,109 @@
 </button>
 
 <div
-  class="standing-panel standing-box"
+  class="standing-panel"
   role="region"
   [id]="panelId"
   [attr.aria-labelledby]="toggleId"
-  [hidden]="!open()"
+  appDisclosure
+  [closed]="!open()"
   (keydown.escape)="close()"
 >
-  <p class="standing-lead" i18n="@@donor.standingOrder.lead">
-    Trvalý příkaz si nastavíte ve své bance, v&nbsp;aplikaci nebo v&nbsp;internetovém bankovnictví.
-    Vyplňte:
-  </p>
-  @switch (shownAccount().kind) {
-    @case ('loading') {
-      <p class="standing-loading" role="status" i18n="@@donor.standingOrder.loading">
-        Načítáme číslo účtu…
+  <div>
+    <div class="standing-box">
+      <p class="standing-lead" i18n="@@donor.standingOrder.lead">
+        Trvalý příkaz si nastavíte ve své bance, v&nbsp;aplikaci nebo v&nbsp;internetovém
+        bankovnictví. Vyplňte:
       </p>
-    }
-    @case ('failed') {
-      <div class="ui-callout ui-callout--danger standing-error" role="alert">
-        <p i18n="@@donor.standingOrder.errorRetry">
-          Číslo účtu se nepodařilo načíst. Zkuste to prosím znovu.
-        </p>
-        <button
-          type="button"
-          class="ui-link-button standing-retry"
-          (click)="retry()"
-          i18n="@@donor.standingOrder.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
-    }
-  }
-  <dl class="standing-details">
-    @if (shownAccount(); as state) {
-      @if (state.kind === 'ready') {
-        <div class="standing-row standing-line">
-          <dt class="standing-term" i18n="@@home.donate.bank.account">Číslo účtu</dt>
-          <dd class="standing-description">
-            <span class="standing-value standing-figure ui-figures"
-              >{{ accountParts(state.account.number).head }}<wbr />{{
-                accountParts(state.account.number).bankCode
-              }}</span
+      @switch (shownAccount().kind) {
+        @case ('loading') {
+          <p class="standing-loading" role="status" i18n="@@donor.standingOrder.loading">
+            Načítáme číslo účtu…
+          </p>
+        }
+        @case ('failed') {
+          <div class="ui-callout ui-callout--danger standing-error" role="alert">
+            <p i18n="@@donor.standingOrder.errorRetry">
+              Číslo účtu se nepodařilo načíst. Zkuste to prosím znovu.
+            </p>
+            <button
+              type="button"
+              class="ui-link-button standing-retry"
+              (click)="retry()"
+              i18n="@@donor.standingOrder.retry"
             >
+              Zkusit znovu
+            </button>
+          </div>
+        }
+      }
+      <dl class="standing-details">
+        @if (shownAccount(); as state) {
+          @if (state.kind === 'ready') {
+            <div class="standing-row standing-line">
+              <dt class="standing-term" i18n="@@home.donate.bank.account">Číslo účtu</dt>
+              <dd class="standing-description">
+                <span class="standing-value standing-figure ui-figures"
+                  >{{ accountParts(state.account.number).head }}<wbr />{{
+                    accountParts(state.account.number).bankCode
+                  }}</span
+                >
+                <app-copy-button
+                  [value]="state.account.number"
+                  what="číslo účtu"
+                  i18n-what="@@home.donate.bank.copyAccount"
+                />
+              </dd>
+            </div>
+          }
+        }
+        <div class="standing-row standing-line">
+          <dt class="standing-term" i18n="@@home.donate.bank.vs">Variabilní symbol</dt>
+          <dd class="standing-description">
+            <span class="standing-value standing-figure ui-figures">{{ variableSymbol() }}</span>
             <app-copy-button
-              [value]="state.account.number"
-              what="číslo účtu"
-              i18n-what="@@home.donate.bank.copyAccount"
+              [value]="variableSymbol()"
+              what="variabilní symbol"
+              i18n-what="@@home.donate.bank.copyVs"
             />
           </dd>
         </div>
-      }
-    }
-    <div class="standing-row standing-line">
-      <dt class="standing-term" i18n="@@home.donate.bank.vs">Variabilní symbol</dt>
-      <dd class="standing-description">
-        <span class="standing-value standing-figure ui-figures">{{ variableSymbol() }}</span>
-        <app-copy-button
-          [value]="variableSymbol()"
-          what="variabilní symbol"
-          i18n-what="@@home.donate.bank.copyVs"
-        />
-      </dd>
+        <div class="standing-row standing-line">
+          <dt class="standing-term" i18n="@@home.donate.bank.amount">Částka</dt>
+          <dd class="standing-description">
+            @if (chosenAmount(); as chosen) {
+              <span class="standing-value standing-figure" i18n="@@donor.standingOrder.chosenAmount"
+                >{{ chosen }}&nbsp;Kč, nebo jiná, kterou chcete posílat</span
+              >
+            } @else {
+              <span class="standing-value standing-figure" i18n="@@donor.standingOrder.amount"
+                >Jakákoli, kterou chcete posílat</span
+              >
+            }
+          </dd>
+        </div>
+        <div class="standing-row standing-line">
+          <dt class="standing-term" i18n="@@donor.standingOrder.frequency">Opakování</dt>
+          <dd class="standing-description">
+            <span class="standing-value standing-figure" i18n="@@donor.standingOrder.monthly"
+              >Každý měsíc, nebo jak často chcete</span
+            >
+          </dd>
+        </div>
+      </dl>
+      <p class="standing-after" i18n="@@donor.standingOrder.after">
+        Každá platba se vám tu pak objeví sama a&nbsp;do ročního potvrzení se započítají všechny.
+      </p>
+      <p class="standing-bank-only" i18n="@@donor.standingOrder.bankOnly">
+        Částku i&nbsp;den platby pak měníte jen ve své bance. Na tomto webu nic nastavovat nemusíte.
+      </p>
+      <p class="standing-older">
+        <span i18n="@@donor.standingOrder.older"
+          >Posíláte už trvalým příkazem s&nbsp;jiným nebo starším symbolem? Změňte v&nbsp;něm symbol
+          na <strong class="ui-figures">{{ variableSymbol() }}</strong
+          >, nebo ověřte účet v&nbsp;části</span
+        >&ngsp;<a routerLink="/darce/ucty" i18n="@@donor.standingOrder.olderLink">Bankovní účty</a>.
+      </p>
     </div>
-    <div class="standing-row standing-line">
-      <dt class="standing-term" i18n="@@home.donate.bank.amount">Částka</dt>
-      <dd class="standing-description">
-        @if (chosenAmount(); as chosen) {
-          <span class="standing-value standing-figure" i18n="@@donor.standingOrder.chosenAmount"
-            >{{ chosen }}&nbsp;Kč, nebo jiná, kterou chcete posílat</span
-          >
-        } @else {
-          <span class="standing-value standing-figure" i18n="@@donor.standingOrder.amount"
-            >Jakákoli, kterou chcete posílat</span
-          >
-        }
-      </dd>
-    </div>
-    <div class="standing-row standing-line">
-      <dt class="standing-term" i18n="@@donor.standingOrder.frequency">Opakování</dt>
-      <dd class="standing-description">
-        <span class="standing-value standing-figure" i18n="@@donor.standingOrder.monthly"
-          >Každý měsíc, nebo jak často chcete</span
-        >
-      </dd>
-    </div>
-  </dl>
-  <p class="standing-after" i18n="@@donor.standingOrder.after">
-    Každá platba se vám tu pak objeví sama a&nbsp;do ročního potvrzení se započítají všechny.
-  </p>
-  <p class="standing-bank-only" i18n="@@donor.standingOrder.bankOnly">
-    Částku i&nbsp;den platby pak měníte jen ve své bance. Na tomto webu nic nastavovat nemusíte.
-  </p>
-  <p class="standing-older">
-    <span i18n="@@donor.standingOrder.older"
-      >Posíláte už trvalým příkazem s&nbsp;jiným nebo starším symbolem? Změňte v&nbsp;něm symbol na
-      <strong class="ui-figures">{{ variableSymbol() }}</strong
-      >, nebo ověřte účet v&nbsp;části</span
-    >&ngsp;<a routerLink="/darce/ucty" i18n="@@donor.standingOrder.olderLink">Bankovní účty</a>.
-  </p>
+  </div>
 </div>

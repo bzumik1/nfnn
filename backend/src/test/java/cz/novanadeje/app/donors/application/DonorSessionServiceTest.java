@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.ClientId;
 import cz.novanadeje.app.donors.domain.SessionKind;
@@ -16,6 +17,7 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EndedDevices;
 import cz.novanadeje.app.donors.domain.InvalidRefreshToken;
+import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.RefreshToken;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
@@ -86,8 +88,8 @@ class DonorSessionServiceTest {
     }
 
     private static Donor donor() {
-        return Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                new EmailAddress("jana@example.cz"), new PasswordHash("$hash"), new VariableSymbol("1234567890"), LocaleCode.CS, NOW);
+        return Donors.withPassword(Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                new EmailAddress("jana@example.cz"), new VariableSymbol("1234567890"), LocaleCode.CS, NOW), new PasswordHash("$hash"));
     }
 
     @Test
@@ -458,7 +460,8 @@ class DonorSessionServiceTest {
         UUID successor = UUID.randomUUID();
         Instant issued = NOW.minus(Duration.ofDays(1));
         RefreshToken client = RefreshToken.reconstitute(UUID.randomUUID(), DONOR, secret.hash(), issued, issued.plus(REFRESH_TTL), true,
-                new ClientId("https://claude.ai/oauth/claude-code-client-metadata"), Set.of(), issued, NOW.minusSeconds(30), null, successor, null, null);
+                new ClientId("https://claude.ai/oauth/claude-code-client-metadata"), Set.of(OAuthScope.ADMIN_READ), issued, NOW.minusSeconds(30), null,
+                successor, null, null);
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(client));
         lenient().when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
         lenient().when(refreshTokens.supersedeIfUnused(successor, NOW)).thenReturn(true);

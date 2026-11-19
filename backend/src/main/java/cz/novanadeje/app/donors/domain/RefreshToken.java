@@ -30,6 +30,18 @@ public final class RefreshToken {
     private RefreshToken(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, boolean secondFactorVerified,
                          ClientId clientId, Set<OAuthScope> scopes, Instant grantedAt, Instant usedAt, Instant revokedAt, UUID successorId,
                          Instant supersededAt, DeviceId deviceId) {
+        if (id == null || donorId == null || secretHash == null || secretHash.isBlank() || issuedAt == null || expiresAt == null || grantedAt == null) {
+            throw new IllegalArgumentException("A refresh token needs its id, donor, secret hash and its issue, expiry and grant times");
+        }
+        if (!expiresAt.isAfter(issuedAt)) {
+            throw new IllegalArgumentException("A refresh token expires after it is issued");
+        }
+        if (clientId != null && deviceId != null) {
+            throw new IllegalArgumentException("A refresh token belongs to a device or to a connected application, never to both");
+        }
+        if (clientId != null && scopes.isEmpty()) {
+            throw new IllegalArgumentException("A connected application's refresh token grants at least one scope");
+        }
         this.id = id;
         this.donorId = donorId;
         this.secretHash = secretHash;
@@ -57,6 +69,9 @@ public final class RefreshToken {
 
     public static RefreshToken issueForClient(RefreshTokenSecret secret, DonorId donorId, ClientId clientId, Set<OAuthScope> scopes,
                                               Instant grantedAt, Instant issuedAt, Duration lifetime) {
+        if (clientId == null) {
+            throw new IllegalArgumentException("A connected application's refresh token belongs to the application");
+        }
         return new RefreshToken(UuidV7.generate(issuedAt), donorId, secret.hash(), issuedAt, issuedAt.plus(lifetime), true, clientId, scopes,
                 grantedAt, null, null, null, null, null);
     }

@@ -532,6 +532,9 @@ test.describe('Given a donor signed in on a phone, whose sections open in the ac
     });
     await page.goto('/');
     const sheet = page.getByRole('dialog');
+    const loadingLines = sheet
+      .getByText(/Načítáme/)
+      .and(page.locator(':not([aria-hidden="true"], [aria-hidden="true"] *)'));
 
     await openAccountItem(page, 'Moje dary');
     await expect(sheet.getByRole('heading', { name: 'Všechny dary' })).toBeVisible();
@@ -555,10 +558,10 @@ test.describe('Given a donor signed in on a phone, whose sections open in the ac
 
     await openAccountItem(page, 'Moje dary');
     await expect(sheet.getByRole('heading', { name: 'Všechny dary' })).toBeVisible();
-    await expect(sheet.getByText(/Načítáme/)).toHaveCount(0);
+    await expect(loadingLines).toHaveCount(0);
     await openAccountItem(page, 'Údaje a zabezpečení');
     await expect(sheet.getByText('Mac · Safari')).toBeVisible();
-    await expect(sheet.getByText(/Načítáme/)).toHaveCount(0);
+    await expect(loadingLines).toHaveCount(0);
     expect(bankChecks).toHaveLength(1);
 
     const refreshed = page.waitForResponse(

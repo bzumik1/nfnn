@@ -67,18 +67,14 @@ public class DonorRegistrationService {
 
     private void register(RegisterDonorCommand command, EmailAddress email, Optional<CompanyIdentifier> companyIdentifier, PostalAddress address,
                           Optional<PasswordHash> passwordHash, Instant now) {
-        Donor donor = Donor.register(
-                DonorId.newId(now),
-                command.type(),
-                new DonorName(command.name()),
-                companyIdentifier.orElse(null),
-                address,
-                email,
-                passwordHash.orElse(null),
-                unusedVariableSymbol(),
-                LocaleCode.fromTag(command.preferredLocale()),
-                now
-        );
+        DonorId id = DonorId.newId(now);
+        DonorName name = new DonorName(command.name());
+        VariableSymbol variableSymbol = unusedVariableSymbol();
+        LocaleCode locale = LocaleCode.fromTag(command.preferredLocale());
+        Donor donor = companyIdentifier
+                .map(identifier -> Donor.registerWithCompanyIdentifier(id, command.type(), name, identifier, address, email, variableSymbol, locale, now))
+                .orElseGet(() -> Donor.register(id, command.type(), name, address, email, variableSymbol, locale, now));
+        passwordHash.ifPresent(donor::changePassword);
         donors.lockEmail(email);
         Donor existing = donors.findByEmailForUpdate(email).orElse(null);
         if (existing != null && existing.isEmailVerified()) {

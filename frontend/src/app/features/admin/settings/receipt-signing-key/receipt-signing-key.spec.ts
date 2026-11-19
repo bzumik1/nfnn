@@ -18,6 +18,8 @@ import { RESTART_POLL_MS } from '../../../operations/setup/setup-api';
 import { receiptSigningKey, receiptSigningKeys } from '../../testing/admin-fixtures';
 import { ReceiptSigningKeysResponse } from '../../admin-api';
 import { ReceiptSigningKey } from './receipt-signing-key';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 
 const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const WITHDRAW_OWN_URL = '/api/admin/donations/receipt-signing-keys/21fe31df/withdrawal';
@@ -81,9 +83,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
   }
 
   function buttons(): string[] {
-    return Array.from(root().querySelectorAll('button')).map((button) =>
-      (button.textContent ?? '').replace(/\s+/g, ' ').trim(),
-    );
+    return Array.from(root().querySelectorAll('button')).map((button) => accessibleText(button));
   }
 
   async function settle(): Promise<void> {
@@ -102,7 +102,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
   async function click(name: string): Promise<void> {
     const button = Array.from(root().querySelectorAll('button')).find(
-      (candidate) => (candidate.textContent ?? '').replace(/\s+/g, ' ').trim() === name,
+      (candidate) => accessibleText(candidate) === name,
     );
     expect(button, `button "${name}"`).toBeDefined();
     button?.click();
@@ -365,6 +365,10 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     it('and the code is refused, then the reason stands in the dialog and nothing changes', async () => {
       await type('withdrawal-code', '000000');
       await submit();
+      const withdraw = root().querySelector<HTMLButtonElement>('dialog button[type="submit"]')!;
+      expect(withdraw.disabled).toBe(true);
+      expect(labelFaces(withdraw)).toEqual(['Zneplatnit klíč', 'Zneplatňujeme klíč…']);
+      expect(accessibleText(withdraw)).toBe('Zneplatňujeme klíč…');
       http.expectOne(WITHDRAW_OWN_URL).flush(
         {
           type: 'https://nfnn.cz/problems/donors/second-factor-code-rejected',
