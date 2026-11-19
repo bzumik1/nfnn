@@ -211,3 +211,142 @@ $_pressed: (--pressed-tint, filter);
 @mixin pulse {
   animation: motion-pulse var(--duration-pulse) var(--ease-standard) 3;
 }
+
+@mixin _shut {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+}
+
+@mixin _clipped {
+  > * {
+    overflow: hidden;
+    transition: none;
+  }
+}
+
+@mixin _collapsed {
+  @include _shut;
+  @include _clipped;
+}
+
+@mixin _closed {
+  @include _shut;
+  pointer-events: none;
+  transition:
+    grid-template-rows var(--duration-base) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-out),
+    visibility var(--duration-base) step-end,
+    display var(--duration-base) allow-discrete;
+  @include _clipped;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition:
+      opacity var(--duration-reduced) var(--ease-standard),
+      visibility var(--duration-reduced) step-end,
+      display var(--duration-reduced) allow-discrete !important;
+  }
+}
+
+@mixin expand($closes-by: hidden) {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows var(--duration-base) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-out),
+    display var(--duration-base) allow-discrete;
+
+  > * {
+    min-height: 0;
+    overflow: visible;
+    transition: overflow var(--duration-base) step-end allow-discrete;
+  }
+
+  @if $closes-by == hidden {
+    &[hidden] {
+      display: none;
+      @include _closed;
+    }
+  } @else if $closes-by == class {
+    &--closing {
+      @include _closed;
+    }
+  } @else {
+    @error 'motion.expand closes by hidden or by its --closing class, not #{$closes-by}';
+  }
+
+  @starting-style {
+    @include _collapsed;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition:
+      opacity var(--duration-reduced) var(--ease-standard),
+      display var(--duration-reduced) allow-discrete !important;
+
+    > * {
+      transition: none !important;
+    }
+  }
+}
+
+@mixin expand-content-leave {
+  animation: motion-leave var(--duration-base) var(--ease-in) forwards;
+  @include _fades-when-reduced(animation);
+
+  &:not(:only-child) {
+    display: none;
+  }
+}
+
+@mixin row-enter {
+  animation:
+    motion-fade-in var(--duration-base) var(--ease-out) backwards,
+    motion-row-tint var(--duration-slow) var(--ease-out) backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: motion-fade-in var(--duration-reduced) var(--ease-standard) backwards !important;
+  }
+}
+
+@mixin row-leave {
+  display: grid;
+  grid-template-rows: 1fr;
+  pointer-events: none;
+  animation: motion-row-leave var(--duration-fast) var(--ease-in) forwards;
+
+  > * {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: motion-leave var(--duration-reduced) var(--ease-standard) forwards !important;
+  }
+}
+
+@mixin after-rows-left {
+  animation: motion-after-rows var(--duration-base) var(--ease-out) var(--duration-fast) backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation-duration: var(--duration-reduced) !important;
+    animation-delay: var(--duration-reduced) !important;
+  }
+}
+
+@mixin wait-settles {
+  animation: motion-leave var(--duration-base) var(--ease-in) var(--duration-calm) forwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    opacity: 0;
+    animation: none !important;
+  }
+}
+
+@mixin wait-calm {
+  animation: motion-fade-in var(--duration-base) var(--ease-out) var(--duration-calm) backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none !important;
+  }
+}

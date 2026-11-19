@@ -218,6 +218,43 @@ class HostWithoutStatusLine {
   readonly saving = signal(false);
 }
 
+@Component({
+  imports: [BusyLabel],
+  providers: [BusyAnnouncement],
+  template: `
+    @if (shown()) {
+      <button type="button" class="ui-button">
+        <app-busy-label [busy]="saving()">
+          <span when-idle>Změnit heslo</span>
+          <span when-busy>Ukládáme…</span>
+        </app-busy-label>
+      </button>
+    }
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class LeavingHost {
+  readonly shown = signal(true);
+  readonly saving = signal(false);
+}
+
+describe('Given a busy button in a form that leaves when its work ends', () => {
+  it('when the form goes in the same update in which the work ends, then the button is no longer busy while it leaves', async () => {
+    const fixture = TestBed.createComponent(LeavingHost);
+    await fixture.whenStable();
+    fixture.componentInstance.saving.set(true);
+    await fixture.whenStable();
+    const button = (fixture.nativeElement as HTMLElement).querySelector('button') as HTMLElement;
+    expect(button.getAttribute('aria-busy')).toBe('true');
+
+    fixture.componentInstance.saving.set(false);
+    fixture.componentInstance.shown.set(false);
+    await fixture.whenStable();
+
+    expect(button.hasAttribute('aria-busy')).toBe(false);
+  });
+});
+
 describe('Given a button whose label says when it sends, where no status line announces the start', () => {
   let fixture: ComponentFixture<HostWithoutStatusLine>;
 

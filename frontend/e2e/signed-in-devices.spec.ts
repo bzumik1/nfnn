@@ -180,7 +180,10 @@ test.describe('Given a donor signed in on a Mac and an iPhone', () => {
 
     await expect(devices.locator('#devices-older .device-name')).toHaveText(['Windows · Edge']);
     await expect(devices.getByRole('button', { name: /Starší \(1\)/ })).toBeVisible();
-    await expect(devices.locator('.devices-status')).toBeFocused();
+    await expect(devices.getByRole('button', { name: 'Odhlásit Windows · Edge' })).toBeFocused();
+    await expect(devices.locator('.devices-status')).toHaveText(
+      'Zařízení jsme odhlásili: iPhone · aplikace. Pokud jste se na něm nepřihlásili vy, změňte si heslo.',
+    );
     expect(deleted).toEqual([`DELETE /api/donors/me/devices/${longUnusedDevices[0].id}`]);
   });
 });

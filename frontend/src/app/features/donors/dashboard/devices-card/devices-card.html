@@ -1,5 +1,11 @@
 <section class="ui-card devices" aria-labelledby="devices-title">
-  <h2 id="devices-title" class="ui-card__title" tabindex="-1" i18n="@@donor.account.devices.title">
+  <h2
+    #title
+    id="devices-title"
+    class="ui-card__title"
+    tabindex="-1"
+    i18n="@@donor.account.devices.title"
+  >
     Přihlášená zařízení
   </h2>
   <p class="ui-card__intro devices-inset devices-intro" i18n="@@donor.account.devices.intro">
@@ -20,7 +26,7 @@
       </button>
     </div>
   } @else if (devices()) {
-    <ul class="ui-list device-list">
+    <ul #deviceList class="ui-list device-list">
       @for (device of shown(); track device.id) {
         <ng-container *ngTemplateOutlet="row; context: { $implicit: device }" />
       }
@@ -72,12 +78,14 @@
           </button>
         </li>
         @if (olderShown()) {
-          <li>
-            <ul id="devices-older" class="ui-list device-list device-list--older">
-              @for (device of groups().older; track device.id) {
-                <ng-container *ngTemplateOutlet="row; context: { $implicit: device }" />
-              }
-            </ul>
+          <li class="devices-older" appDisclosure animate.leave="devices-older--closing">
+            <div>
+              <ul id="devices-older" class="ui-list device-list device-list--older">
+                @for (device of groups().older; track device.id) {
+                  <ng-container *ngTemplateOutlet="row; context: { $implicit: device }" />
+                }
+              </ul>
+            </div>
           </li>
         }
       }
@@ -86,40 +94,46 @@
       @if (hasOthers()) {
         @if (confirmingOthers()) {
           <div
-            class="ui-confirm devices-confirm"
+            class="devices-confirm"
             role="group"
             aria-labelledby="devices-confirm-others"
+            appDisclosure
+            animate.leave="devices-confirm--closing"
           >
-            <p
-              id="devices-confirm-others"
-              class="ui-confirm__text devices-confirm-text"
-              i18n="@@donor.account.devices.confirmOthers"
-            >
-              Odhlásit všechna ostatní zařízení?
-            </p>
-            <div class="ui-confirm__actions devices-confirm-actions">
-              <button
-                appNeedsConnection
-                type="button"
-                class="ui-button ui-button--danger devices-confirm-yes"
-                [disabled]="signingOut() !== null"
-                (click)="signOutOthers()"
-              >
-                <app-busy-label [busy]="signingOutOthers()">
-                  <span when-idle i18n="@@donor.account.devices.signOut">Odhlásit</span>
-                  <span when-busy i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
-                </app-busy-label>
-              </button>
-              <button
-                #confirmCancel
-                type="button"
-                class="ui-button ui-button--quiet devices-confirm-no"
-                [disabled]="signingOut() !== null"
-                (click)="cancelSignOut()"
-                i18n="@@donor.account.cancel"
-              >
-                Zrušit
-              </button>
+            <div>
+              <div class="ui-confirm devices-confirm-box">
+                <p
+                  id="devices-confirm-others"
+                  class="ui-confirm__text devices-confirm-text"
+                  i18n="@@donor.account.devices.confirmOthers"
+                >
+                  Odhlásit všechna ostatní zařízení?
+                </p>
+                <div class="ui-confirm__actions devices-confirm-actions">
+                  <button
+                    appNeedsConnection
+                    type="button"
+                    class="ui-button ui-button--danger devices-confirm-yes"
+                    [disabled]="signingOut() !== null"
+                    (click)="signOutOthers()"
+                  >
+                    <app-busy-label [busy]="signingOutOthers()">
+                      <span when-idle i18n="@@donor.account.devices.signOut">Odhlásit</span>
+                      <span when-busy i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+                    </app-busy-label>
+                  </button>
+                  <button
+                    #confirmCancel
+                    type="button"
+                    class="ui-button ui-button--quiet devices-confirm-no"
+                    [disabled]="signingOut() !== null"
+                    (click)="cancelSignOut()"
+                    i18n="@@donor.account.cancel"
+                  >
+                    Zrušit
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         } @else {
@@ -137,7 +151,13 @@
           </button>
         }
       } @else {
-        <p class="devices-empty" i18n="@@donor.account.devices.empty">Jinde přihlášení nejste.</p>
+        <p
+          class="devices-empty"
+          [class.devices-empty--after-rows]="rowLeft()"
+          i18n="@@donor.account.devices.empty"
+        >
+          Jinde přihlášení nejste.
+        </p>
       }
     </div>
   } @else {
@@ -150,7 +170,7 @@
     @if (actionError()) {
       <p class="ui-field-error" role="alert">{{ actionError() }}</p>
     }
-    <p #status class="ui-form-status devices-status" role="status" tabindex="-1">
+    <p class="ui-form-status devices-status" role="status">
       @if (busyAnnouncement.text(); as starting) {
         <span class="visually-hidden">{{ starting }}</span>
       } @else if (signedOut(); as message) {
@@ -161,125 +181,135 @@
 </section>
 
 <ng-template #row let-device>
-  <li class="device">
-    <div class="ui-list__row device-row">
-      <span class="ui-list__lead device-icon" aria-hidden="true">
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          @switch (shape(device)) {
-            @case ('phone') {
-              <rect x="6" y="2" width="12" height="20" rx="2.5" />
-              <path d="M11 18h2" />
-            }
-            @case ('tablet') {
-              <rect x="4" y="2" width="16" height="20" rx="2.5" />
-              <path d="M11 18h2" />
-            }
-            @case ('computer') {
-              <rect x="4" y="4" width="16" height="11" rx="1.5" />
-              <path d="M2 19h20" />
-            }
-            @default {
-              <rect x="3" y="4" width="18" height="12" rx="1.5" />
-              <path d="M8 20h8M12 16v4" />
-            }
-          }
-        </svg>
-      </span>
-      <span class="ui-list__title device-name">{{ name(device) }}</span>
-      <span class="ui-list__meta device-meta">
-        <span class="device-last-use"
-          ><span i18n="@@donor.account.devices.lastUsed">naposledy použito</span>&ngsp;<span
-            class="device-date-value"
-            >{{ lastUsed(device) }}</span
-          ></span
-        >
-        <span class="device-sign-in"
-          ><span i18n="@@donor.account.devices.since">přihlášeno</span>&ngsp;<span
-            class="device-date-value"
-            >{{ signedInOn(device) }}</span
-          >
-          @if (kind(device); as sessionKind) {
-            <span
-              >&nbsp;·&ngsp;<span class="device-kind">{{ sessionKind }}</span></span
+  <li class="device-slot" [id]="rowId(device)" animate.leave="device-slot--leaving">
+    <div>
+      <div class="device">
+        <div class="ui-list__row device-row">
+          <span class="ui-list__lead device-icon" aria-hidden="true">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
             >
-          }
-        </span>
-        @if (notified(device)) {
-          <span class="device-notified" i18n="@@donor.account.devices.notified"
-            >dostává upozornění</span
-          >
-        }
-      </span>
-      <span class="ui-list__value device-action">
-        @if (device.current) {
-          <span
-            class="ui-badge ui-badge--accent device-current"
-            i18n="@@donor.account.devices.current"
-          >
-            Toto zařízení
+              @switch (shape(device)) {
+                @case ('phone') {
+                  <rect x="6" y="2" width="12" height="20" rx="2.5" />
+                  <path d="M11 18h2" />
+                }
+                @case ('tablet') {
+                  <rect x="4" y="2" width="16" height="20" rx="2.5" />
+                  <path d="M11 18h2" />
+                }
+                @case ('computer') {
+                  <rect x="4" y="4" width="16" height="11" rx="1.5" />
+                  <path d="M2 19h20" />
+                }
+                @default {
+                  <rect x="3" y="4" width="18" height="12" rx="1.5" />
+                  <path d="M8 20h8M12 16v4" />
+                }
+              }
+            </svg>
           </span>
-        } @else if (confirming() !== device.id) {
-          <button
-            appNeedsConnection
-            type="button"
-            class="ui-button ui-button--danger-soft device-sign-out"
-            [disabled]="signingOut() !== null"
-            [id]="signOutButtonId(device)"
-            [attr.aria-label]="signOutLabel(device)"
-            (click)="askToSignOut(device)"
-          >
-            <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
-          </button>
-        }
-      </span>
-    </div>
-    @if (confirming() === device.id) {
-      <div
-        class="ui-confirm devices-confirm device-confirm"
-        role="group"
-        [attr.aria-labelledby]="confirmQuestionId(device)"
-      >
-        <p
-          [id]="confirmQuestionId(device)"
-          class="ui-confirm__text devices-confirm-text"
-          i18n="@@donor.account.devices.confirm"
-        >
-          Odhlásit {{ nameInSentence(device) }}?
-        </p>
-        <div class="ui-confirm__actions devices-confirm-actions">
-          <button
-            appNeedsConnection
-            type="button"
-            class="ui-button ui-button--danger devices-confirm-yes"
-            [disabled]="signingOut() !== null"
-            (click)="signOut(device)"
-          >
-            <app-busy-label [busy]="signingOut() === device.id">
-              <span when-idle i18n="@@donor.account.devices.signOut">Odhlásit</span>
-              <span when-busy i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
-            </app-busy-label>
-          </button>
-          <button
-            #confirmCancel
-            type="button"
-            class="ui-button ui-button--quiet devices-confirm-no"
-            [disabled]="signingOut() !== null"
-            (click)="cancelSignOut()"
-            i18n="@@donor.account.cancel"
-          >
-            Zrušit
-          </button>
+          <span class="ui-list__title device-name">{{ name(device) }}</span>
+          <span class="ui-list__meta device-meta">
+            <span class="device-last-use"
+              ><span i18n="@@donor.account.devices.lastUsed">naposledy použito</span>&ngsp;<span
+                class="device-date-value"
+                >{{ lastUsed(device) }}</span
+              ></span
+            >
+            <span class="device-sign-in"
+              ><span i18n="@@donor.account.devices.since">přihlášeno</span>&ngsp;<span
+                class="device-date-value"
+                >{{ signedInOn(device) }}</span
+              >
+              @if (kind(device); as sessionKind) {
+                <span
+                  >&nbsp;·&ngsp;<span class="device-kind">{{ sessionKind }}</span></span
+                >
+              }
+            </span>
+            @if (notified(device)) {
+              <span class="device-notified" i18n="@@donor.account.devices.notified"
+                >dostává upozornění</span
+              >
+            }
+          </span>
+          <span class="ui-list__value device-action">
+            @if (device.current) {
+              <span
+                class="ui-badge ui-badge--accent device-current"
+                i18n="@@donor.account.devices.current"
+              >
+                Toto zařízení
+              </span>
+            } @else if (confirming() !== device.id) {
+              <button
+                appNeedsConnection
+                type="button"
+                class="ui-button ui-button--danger-soft device-sign-out"
+                [disabled]="signingOut() !== null"
+                [id]="signOutButtonId(device)"
+                [attr.aria-label]="signOutLabel(device)"
+                (click)="askToSignOut(device)"
+              >
+                <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
+              </button>
+            }
+          </span>
         </div>
+        @if (confirming() === device.id) {
+          <div
+            class="devices-confirm device-confirm"
+            role="group"
+            [attr.aria-labelledby]="confirmQuestionId(device)"
+            appDisclosure
+            animate.leave="devices-confirm--closing"
+          >
+            <div>
+              <div class="ui-confirm devices-confirm-box">
+                <p
+                  [id]="confirmQuestionId(device)"
+                  class="ui-confirm__text devices-confirm-text"
+                  i18n="@@donor.account.devices.confirm"
+                >
+                  Odhlásit {{ nameInSentence(device) }}?
+                </p>
+                <div class="ui-confirm__actions devices-confirm-actions">
+                  <button
+                    appNeedsConnection
+                    type="button"
+                    class="ui-button ui-button--danger devices-confirm-yes"
+                    [disabled]="signingOut() !== null"
+                    (click)="signOut(device)"
+                  >
+                    <app-busy-label [busy]="signingOut() === device.id">
+                      <span when-idle i18n="@@donor.account.devices.signOut">Odhlásit</span>
+                      <span when-busy i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+                    </app-busy-label>
+                  </button>
+                  <button
+                    #confirmCancel
+                    type="button"
+                    class="ui-button ui-button--quiet devices-confirm-no"
+                    [disabled]="signingOut() !== null"
+                    (click)="cancelSignOut()"
+                    i18n="@@donor.account.cancel"
+                  >
+                    Zrušit
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
       </div>
-    }
+    </div>
   </li>
 </ng-template>
