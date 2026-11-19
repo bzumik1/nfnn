@@ -623,6 +623,9 @@ test.describe('Given an administrator in the app on the home screen of a phone w
     });
   }
 
+  const WITHOUT_FOCUS_RINGS =
+    '*, *::before, *::after { outline-color: transparent !important; transition: none !important; }';
+
   function shareOfPixelsThatDiffer(page: Page, one: Buffer, other: Buffer): Promise<number> {
     return page.evaluate(
       async ([first, second]) => {
@@ -689,7 +692,7 @@ test.describe('Given an administrator in the app on the home screen of a phone w
 
     await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
     await expect(page.locator('html.nfnn-held')).toBeAttached();
-    const underTheLeavingPage = await page.screenshot();
+    const underTheLeavingPage = await page.screenshot({ style: WITHOUT_FOCUS_RINGS });
     await page.evaluate(() =>
       document
         .querySelector('.page-transition')
@@ -697,8 +700,7 @@ test.describe('Given an administrator in the app on the home screen of a phone w
         .forEach((motion) => motion.play()),
     );
     await backInTheAccountSheet(page);
-    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-    const standing = await page.screenshot();
+    const standing = await page.screenshot({ style: WITHOUT_FOCUS_RINGS });
 
     expect(await shareOfPixelsThatDiffer(page, underTheLeavingPage, standing)).toBeLessThan(0.005);
   });
