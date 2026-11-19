@@ -218,7 +218,7 @@ class MailPasswordRoutingTest {
 
         @Test
         @DisplayName("when a save names STARTTLS off without a password, then it counts as a move and is refused, unlike the test e-mail, which counts unset STARTTLS as off")
-        void should_refuse_when_saved_given_startTls_off_named_against_an_unset_one() {
+        void should_refuse_when_saved_given_starttls_off_named_against_an_unset_one() {
             Map<Setting, String> running = runningSettings();
             running.remove(Setting.MAIL_STARTTLS);
 
