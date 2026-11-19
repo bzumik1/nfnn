@@ -180,4 +180,37 @@ class LogLevelServiceTest {
         verify(levels, never()).setLevel(APP, Optional.of(LogLevel.WARN));
         assertThat(held.view().loggers()).anySatisfy(logger -> assertThat(logger.override()).contains(override));
     }
+
+    @Test
+    @DisplayName("Given a reset waiting for its commit, when a newer raise of the same logger commits first, then the reset leaves the newer override and its level in force")
+    void should_leave_a_newer_override_when_reset_given_a_raise_committed_meanwhile() {
+        when(levels.configuredLevel(APP)).thenReturn(Optional.of(LogLevel.WARN));
+        held.override(ADMIN, APP, LogLevel.DEBUG, 5);
+        afterCommit.commit();
+
+        held.reset(ADMIN, APP);
+        LogLevelOverride newer = held.override(ADMIN, APP, LogLevel.TRACE, 20);
+        afterCommit.commitNewest();
+        afterCommit.commit();
+
+        verify(levels, never()).setLevel(APP, Optional.of(LogLevel.WARN));
+        assertThat(held.view().loggers()).anySatisfy(logger -> assertThat(logger.override()).contains(newer));
+    }
+
+    @Test
+    @DisplayName("Given a reset waiting for its commit, when the override expires first, then the reset changes nothing more")
+    void should_change_nothing_more_when_reset_given_the_override_expired_meanwhile() {
+        when(levels.configuredLevel(APP)).thenReturn(Optional.of(LogLevel.WARN));
+        held.override(ADMIN, APP, LogLevel.DEBUG, 5);
+        afterCommit.commit();
+        ArgumentCaptor<Runnable> expiry = ArgumentCaptor.forClass(Runnable.class);
+        verify(timer).at(any(), expiry.capture());
+
+        held.reset(ADMIN, APP);
+        expiry.getValue().run();
+        afterCommit.commit();
+
+        verify(levels, org.mockito.Mockito.times(1)).setLevel(APP, Optional.of(LogLevel.WARN));
+        assertThat(held.view().loggers()).noneMatch(logger -> logger.override().isPresent());
+    }
 }

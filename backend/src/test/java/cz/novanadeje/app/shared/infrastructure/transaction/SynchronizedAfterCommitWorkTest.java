@@ -3,6 +3,8 @@ package cz.novanadeje.app.shared.infrastructure.transaction;
 import cz.novanadeje.app.support.InMemoryTransactions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
@@ -56,5 +58,27 @@ class SynchronizedAfterCommitWorkTest {
         })).isInstanceOf(IllegalStateException.class);
 
         assertThat(done).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given two pieces of work in a transaction, when the first one fails after the commit, then the commit stands, the failure reaches the caller and the second never runs")
+    void should_keep_the_commit_and_skip_the_rest_when_the_first_work_fails_given_two_pieces_of_work() {
+        List<Integer> completions = new ArrayList<>();
+
+        assertThatThrownBy(() -> transactions.executeWithoutResult(status -> {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int completion) {
+                    completions.add(completion);
+                }
+            });
+            afterCommit.run(() -> {
+                throw new IllegalStateException("not written");
+            });
+            afterCommit.run(() -> done.add("restarted"));
+        })).isInstanceOf(IllegalStateException.class).hasMessage("not written");
+
+        assertThat(done).isEmpty();
+        assertThat(completions).containsExactly(TransactionSynchronization.STATUS_COMMITTED);
     }
 }

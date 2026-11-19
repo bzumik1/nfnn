@@ -13,6 +13,7 @@ import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.support.HeldAfterCommitWork;
 import cz.novanadeje.app.support.MutableClock;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -42,11 +43,6 @@ class BackupAdministrationServiceTest {
     private static final String FILE = "nfnn-2026-10-23_0300.dump.age";
 
     private final BackupStore store = mock(BackupStore.class);
-
-    {
-        when(store.acceptsRequests()).thenReturn(true);
-    }
-
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
     private final HeldAfterCommitWork afterCommit = new HeldAfterCommitWork();
@@ -54,6 +50,11 @@ class BackupAdministrationServiceTest {
             new BackupLimits(Duration.ofHours(26), Duration.ofDays(8)), events, Runnable::run, clock);
     private final BackupAdministrationService held = new BackupAdministrationService(store,
             new BackupLimits(Duration.ofHours(26), Duration.ofDays(8)), events, afterCommit, clock);
+
+    @BeforeEach
+    void takeRequests() {
+        when(store.acceptsRequests()).thenReturn(true);
+    }
 
     @Test
     @DisplayName("Given the backup folder is missing, when the view is asked for, then it is unavailable with that one problem")

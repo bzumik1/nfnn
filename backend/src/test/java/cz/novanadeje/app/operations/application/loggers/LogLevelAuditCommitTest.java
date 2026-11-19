@@ -5,7 +5,7 @@ import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.operations.domain.loggers.LogLevel;
 import cz.novanadeje.app.operations.domain.loggers.LoggerName;
 import cz.novanadeje.app.support.DatabaseCleaner;
-import cz.novanadeje.app.support.InMemoryTransactions;
+import cz.novanadeje.app.support.RefusedCommits;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,16 +47,17 @@ class LogLevelAuditCommitTest {
     }
 
     @Test
-    @DisplayName("Given a raise whose audit insert is refused at the commit, when an administrator raises a logger, then the logger keeps its level, no override shows and nothing is audited")
+    @DisplayName("Given a raise whose commit is refused after its audit row was inserted, when an administrator raises a logger, then the logger keeps its level, no override shows or can be reset and nothing is audited")
     void should_leave_the_logger_as_it_was_when_raised_given_the_audit_refused_at_the_commit() {
         assertThatIllegalStateException().isThrownBy(() -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            InMemoryTransactions.refuseTheCommit();
             logLevels.override(adminId, CANARY, LogLevel.DEBUG, 5);
+            RefusedCommits.refuseTheCommitAfterEverythingRegisteredSoFar();
         }));
 
         assertThat(canary().getLevel()).isNull();
         assertThat(logLevels.view().loggers()).noneMatch(logger -> logger.logger().equals(CANARY.value()));
         assertThat(auditedChanges()).isZero();
+        assertThat(logLevels.reset(adminId, CANARY)).isFalse();
     }
 
     @Test

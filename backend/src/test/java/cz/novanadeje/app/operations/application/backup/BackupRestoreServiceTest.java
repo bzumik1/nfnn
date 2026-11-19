@@ -17,6 +17,7 @@ import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.support.HeldAfterCommitWork;
 import cz.novanadeje.app.support.MutableClock;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -50,11 +51,6 @@ class BackupRestoreServiceTest {
     private static final String REQUEST = "019a1b2c-0000-7000-8000-000000000001";
 
     private final BackupStore store = mock(BackupStore.class);
-
-    {
-        when(store.acceptsRequests()).thenReturn(true);
-    }
-
     private final RestoreRecordRepository records = mock(RestoreRecordRepository.class);
     private final ApplicationRestarter restarter = mock(ApplicationRestarter.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
@@ -63,6 +59,11 @@ class BackupRestoreServiceTest {
     private final HeldAfterCommitWork afterCommit = new HeldAfterCommitWork();
     private final BackupRestoreService service = new BackupRestoreService(store, records, restarter, events, publicKeys, Runnable::run, clock);
     private final BackupRestoreService held = new BackupRestoreService(store, records, restarter, events, publicKeys, afterCommit, clock);
+
+    @BeforeEach
+    void takeRequests() {
+        when(store.acceptsRequests()).thenReturn(true);
+    }
 
     @Test
     @DisplayName("Given a backup on the server, when an administrator restores it, then a restore request names it and the administrator, it is audited and the backend restarts")
@@ -284,7 +285,7 @@ class BackupRestoreServiceTest {
     }
 
     @Test
-    @DisplayName("Given a restore whose audit has not committed yet, when an administrator restores a backup, then the request is handed to the audit and its file waits for the commit, which the restart follows")
+    @DisplayName("Given a restore whose audit has not committed yet, when an administrator restores a backup, then the request is handed to the audit, its file waits for the commit and a restart after the commit is asked for")
     void should_write_the_restore_request_only_after_the_commit_when_restored_given_an_uncommitted_audit() {
         when(store.open(FILE)).thenReturn(Optional.of(new BackupDownload(new BackupFile(FILE, 1590, NOW), InputStream::nullInputStream)));
 

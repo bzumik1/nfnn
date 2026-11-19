@@ -20,6 +20,10 @@ public final class HeldAfterCommitWork implements AfterCommitWork {
         due.forEach(Runnable::run);
     }
 
+    public synchronized void commitNewest() {
+        held.removeLast().run();
+    }
+
     public synchronized void rollBack() {
         held.clear();
     }
