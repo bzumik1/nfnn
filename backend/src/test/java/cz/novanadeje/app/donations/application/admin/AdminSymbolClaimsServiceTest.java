@@ -24,7 +24,11 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaimNotConfirmed;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimNotFound;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimStillConfirmed;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
@@ -39,16 +43,17 @@ import org.springframework.context.ApplicationEventPublisher;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.Year;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.frozen;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.jana;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.singleDocument;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.yearlyDocument;
 import static cz.novanadeje.app.shared.domain.Money.czk;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -57,6 +62,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 class AdminSymbolClaimsServiceTest {
@@ -86,7 +92,7 @@ class AdminSymbolClaimsServiceTest {
     private final DonationReceiptRepository receipts = mock(DonationReceiptRepository.class);
     private final PairingLock lock = mock(PairingLock.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
-    private final AdminSymbolClaimsService service = new AdminSymbolClaimsService(claims, donations, donorRecords, receipts, new ReceiptCoverage(receipts), lock, events,
+    private final AdminSymbolClaimsService service = new AdminSymbolClaimsService(claims, donations, donorRecords, receipts, lock, events,
             new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
@@ -94,7 +100,6 @@ class AdminSymbolClaimsServiceTest {
         when(claims.findById(confirmed.id())).thenReturn(Optional.of(confirmed));
         when(claims.findById(declined.id())).thenReturn(Optional.of(declined));
         when(donations.findBySymbolClaim(confirmed.id())).thenReturn(List.of(marchDonation, septemberDonation));
-        when(receipts.findDonationsWithReceipt(any())).thenReturn(Set.of());
     }
 
     @Test
@@ -120,7 +125,7 @@ class AdminSymbolClaimsServiceTest {
     @Test
     @DisplayName("Given a confirmed claim whose donations no receipt covers, when reversed, then the lock and the donor row are taken first, the donations are deleted, the answer becomes DECLINED now and the action is audited")
     void should_delete_donations_and_decline_when_reversed_given_uncovered_confirmed_claim() {
-        when(receipts.existsYearlyIssuedSince(any(), any(), any())).thenReturn(false);
+        when(receipts.findByDonorNewestFirst(janaId)).thenReturn(List.of());
 
         service.reverse(ADMIN, confirmed.id(), ExpectedVersion.none());
 
@@ -143,14 +148,15 @@ class AdminSymbolClaimsServiceTest {
         assertThat(audited.getValue().details()).contains(confirmed.id().toString(), janaId.toString(), OLD_SYMBOL.value(), "smazané dary spárované přes ni: 2")
                 .doesNotContain("Jana", "1234567/0800");
         assertThat(audited.getValue().performedAt()).isEqualTo(NOW);
-        verify(receipts).existsYearlyIssuedSince(janaId, Year.of(2025), ANSWERED);
-        verify(receipts).existsYearlyIssuedSince(janaId, Year.of(2026), ANSWERED);
+        verify(receipts).findByDonorNewestFirst(janaId);
+        verify(receipts).lockDonor(janaId);
+        verifyNoMoreInteractions(receipts);
     }
 
     @Test
     @DisplayName("Given a confirmed claim with a single receipt issued for one of its donations, when reversed, then it is refused and nothing is deleted or saved")
     void should_refuse_when_reversed_given_single_receipt_of_claimed_donation() {
-        when(receipts.findDonationsWithReceipt(List.of(marchDonation.id(), septemberDonation.id()))).thenReturn(Set.of(septemberDonation.id()));
+        when(receipts.findByDonorNewestFirst(janaId)).thenReturn(List.of(receiptIssuedAt(NOW, singleDocument(janaRecord, septemberDonation))));
 
         assertThatThrownBy(() -> service.reverse(ADMIN, confirmed.id(), ExpectedVersion.none())).isInstanceOf(SymbolClaimHasReceipt.class);
 
@@ -162,8 +168,7 @@ class AdminSymbolClaimsServiceTest {
     @Test
     @DisplayName("Given a confirmed claim and a yearly receipt of a donation's year issued after the donation was paired, when reversed, then it is refused")
     void should_refuse_when_reversed_given_yearly_receipt_issued_after_claimed_donation() {
-        when(receipts.existsYearlyIssuedSince(janaId, Year.of(2025), ANSWERED)).thenReturn(false);
-        when(receipts.existsYearlyIssuedSince(janaId, Year.of(2026), ANSWERED)).thenReturn(true);
+        when(receipts.findByDonorNewestFirst(janaId)).thenReturn(List.of(receiptIssuedAt(NOW, yearlyDocument(janaRecord, List.of(septemberDonation)))));
 
         assertThatThrownBy(() -> service.reverse(ADMIN, confirmed.id(), ExpectedVersion.none())).isInstanceOf(SymbolClaimHasReceipt.class);
 
@@ -246,5 +251,10 @@ class AdminSymbolClaimsServiceTest {
             assertThat(row.answer()).isEqualTo(claim.answer());
             assertThat(row.version()).isEqualTo(current);
         });
+    }
+
+    private DonationReceipt receiptIssuedAt(Instant issuedAt, ReceiptDocument document) {
+        return DonationReceipt.issue(DonationReceiptId.newId(issuedAt), janaId, issuedAt, new ReceiptFingerprint("6".repeat(64)), frozen(document),
+                Optional.empty());
     }
 }

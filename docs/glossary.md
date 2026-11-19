@@ -116,8 +116,8 @@ UI setting „Účty, podle kterých se nepáruje“; „sběrný účet“ in t
 A collecting account (payment gateway, the foundation's own, Česká pošta) the administrator excluded, so no payment from it pairs by account.
 
 **Pairing**\
-UI „párování“, „spárovat“; in the administration „přiřadit“ / „Zrušit přiřazení“ · Code: `pair` / `unpair`, `PaymentPairingService`, `PairingMethod` `VARIABLE_SYMBOL`, `SENDER_ACCOUNT`, `CONFIRMED_SYMBOL`, `MANUAL`.\
-Turning a bank payment into a donation of one donor, automatically by symbol or sender account, or by hand by an administrator; unpairing deletes that donation again.
+UI „párování“, „spárovat“; in the administration „přiřadit“ / „Zrušit přiřazení“ · Code: `pair` / `unpair`, `PaymentPairingService`, `PairingMethod` `VARIABLE_SYMBOL`, `SENDER_ACCOUNT`, `CONFIRMED_SYMBOL`, `MANUAL`; whether a receipt lets a gift lose its pairing: `donations/domain/pairing/UnpairingPolicy`.\
+Turning a bank payment into a donation of one donor, automatically by symbol or sender account, or by hand by an administrator; unpairing deletes that donation again, and so do reversing a symbol claim and removing a sender account link.
 
 **Unpaired payment**\
 UI „nespárovaná platba“, „čeká na přiřazení“, „platby bez dárce“ (report and administration home) · Code: a `BankPayment` without a donation, `UnpairedReason`.\

@@ -18,11 +18,11 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountAlreadyConnected;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
-import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkHasReceipt;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkNotFound;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
+import cz.novanadeje.app.donations.domain.pairing.UnpairingPolicy;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
@@ -54,7 +54,6 @@ public class AdminDonorAccountsService {
     private final DonorRecordRepository donorRecords;
     private final DonationRepository donations;
     private final DonationReceiptRepository receipts;
-    private final ReceiptCoverage coverage;
     private final SymbolClaimRepository claims;
     private final DonorBankAccountsService bankAccounts;
     private final DonorDonationsService donorDonations;
@@ -64,12 +63,11 @@ public class AdminDonorAccountsService {
     private final Clock clock;
 
     public AdminDonorAccountsService(DonorRecordRepository donorRecords, DonationRepository donations, DonationReceiptRepository receipts,
-                                     ReceiptCoverage coverage, SymbolClaimRepository claims, DonorBankAccountsService bankAccounts, DonorDonationsService donorDonations,
+                                     SymbolClaimRepository claims, DonorBankAccountsService bankAccounts, DonorDonationsService donorDonations,
                                      PairingLock lock, ApplicationEventPublisher events, AdminDonationsRows rows, Clock clock) {
         this.donorRecords = donorRecords;
         this.donations = donations;
         this.receipts = receipts;
-        this.coverage = coverage;
         this.claims = claims;
         this.bankAccounts = bankAccounts;
         this.donorDonations = donorDonations;
@@ -127,9 +125,7 @@ public class AdminDonorAccountsService {
         SenderAccountLink link = requireUnchanged(record, linkId, expected);
         receipts.lockDonor(donor);
         List<Donation> paired = donations.findBySenderAccountLink(linkId);
-        if (coverage.anyReceiptCovers(donor, paired)) {
-            throw new SenderAccountLinkHasReceipt(linkId);
-        }
+        new UnpairingPolicy(receipts.findByDonorNewestFirst(donor)).requireRemovable(linkId, paired);
         paired.forEach(donation -> donations.delete(donation.id()));
         List<SymbolClaim> answers = claims.findByDonor(donor).stream().filter(claim -> claim.account().equals(link.account())).toList();
         answers.forEach(claim -> claims.delete(claim.id()));

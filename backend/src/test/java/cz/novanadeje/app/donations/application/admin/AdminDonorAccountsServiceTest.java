@@ -28,7 +28,10 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -51,14 +54,14 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.frozen;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.singleDocument;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -96,7 +99,7 @@ class AdminDonorAccountsServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AdminDonorAccountsService(donorRecords, donations, receipts, new ReceiptCoverage(receipts), claims, bankAccounts, donorDonations, lock, events,
+        service = new AdminDonorAccountsService(donorRecords, donations, receipts, claims, bankAccounts, donorDonations, lock, events,
                 new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -111,8 +114,7 @@ class AdminDonorAccountsServiceTest {
         SymbolClaim other = SymbolClaim.answer(SymbolClaimId.newId(NOW), PETR, OTHER_ACCOUNT, new VariableSymbol("6123456780"), SymbolClaimAnswer.DECLINED, NOW);
         when(donorRecords.findById(PETR)).thenReturn(Optional.of(petr));
         when(donations.findBySenderAccountLink(link.id())).thenReturn(List.of(first, second));
-        when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of());
-        when(receipts.existsYearlyIssuedSince(any(), any(), any())).thenReturn(false);
+        when(receipts.findByDonorNewestFirst(PETR)).thenReturn(List.of());
         when(claims.findByDonor(PETR)).thenReturn(List.of(about, other));
 
         service.remove(ADMIN, PETR, link.id(), ExpectedVersion.none());
@@ -178,7 +180,8 @@ class AdminDonorAccountsServiceTest {
         Donation receipted = Donation.pairedBySenderAccount(DonationId.newId(NOW), PETR, payment(1002, Optional.of(ACCOUNT), null), link.id(), NOW);
         when(donorRecords.findById(PETR)).thenReturn(Optional.of(petr));
         when(donations.findBySenderAccountLink(link.id())).thenReturn(List.of(receipted));
-        when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of(receipted.id()));
+        when(receipts.findByDonorNewestFirst(PETR)).thenReturn(List.of(DonationReceipt.issue(DonationReceiptId.newId(NOW), PETR, NOW,
+                new ReceiptFingerprint("6".repeat(64)), frozen(singleDocument(petr, receipted)), Optional.empty())));
 
         assertThatThrownBy(() -> service.remove(ADMIN, PETR, link.id(), ExpectedVersion.none())).isInstanceOf(SenderAccountLinkHasReceipt.class);
 

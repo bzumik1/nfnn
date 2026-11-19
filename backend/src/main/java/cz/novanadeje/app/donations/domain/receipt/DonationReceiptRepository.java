@@ -25,10 +25,6 @@ public interface DonationReceiptRepository {
 
     void save(DonationReceipt receipt);
 
-    boolean existsForDonation(DonationId donation);
-
-    boolean existsYearlyIssuedSince(DonorReference donor, Year year, Instant since);
-
     long countReplacementsIssuedAfter(DonorReference donor, Instant after);
 
     long countReplacementsIssuedSince(DonorReference donor, Instant since);

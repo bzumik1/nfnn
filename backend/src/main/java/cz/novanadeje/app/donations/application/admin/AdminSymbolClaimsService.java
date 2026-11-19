@@ -12,10 +12,10 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
-import cz.novanadeje.app.donations.domain.donor.SymbolClaimHasReceipt;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimNotFound;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
+import cz.novanadeje.app.donations.domain.pairing.UnpairingPolicy;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
@@ -47,19 +47,17 @@ public class AdminSymbolClaimsService {
     private final DonationRepository donations;
     private final DonorRecordRepository donorRecords;
     private final DonationReceiptRepository receipts;
-    private final ReceiptCoverage coverage;
     private final PairingLock lock;
     private final ApplicationEventPublisher events;
     private final AdminDonationsRows rows;
     private final Clock clock;
 
     public AdminSymbolClaimsService(SymbolClaimRepository claims, DonationRepository donations, DonorRecordRepository donorRecords,
-                                    DonationReceiptRepository receipts, ReceiptCoverage coverage, PairingLock lock, ApplicationEventPublisher events, AdminDonationsRows rows, Clock clock) {
+                                    DonationReceiptRepository receipts, PairingLock lock, ApplicationEventPublisher events, AdminDonationsRows rows, Clock clock) {
         this.claims = claims;
         this.donations = donations;
         this.donorRecords = donorRecords;
         this.receipts = receipts;
-        this.coverage = coverage;
         this.lock = lock;
         this.events = events;
         this.rows = rows;
@@ -86,9 +84,7 @@ public class AdminSymbolClaimsService {
         SymbolClaim reversed = claim.reverse(now);
         receipts.lockDonor(claim.donor());
         List<Donation> paired = donations.findBySymbolClaim(claimId);
-        if (coverage.anyReceiptCovers(claim.donor(), paired)) {
-            throw new SymbolClaimHasReceipt(claimId);
-        }
+        new UnpairingPolicy(receipts.findByDonorNewestFirst(claim.donor())).requireReversible(claimId, paired);
         paired.forEach(donation -> donations.delete(donation.id()));
         claims.save(reversed);
         events.publishEvent(new AdminActionPerformed(adminId, REVERSE_ACTION, Optional.of(claimId.value()),

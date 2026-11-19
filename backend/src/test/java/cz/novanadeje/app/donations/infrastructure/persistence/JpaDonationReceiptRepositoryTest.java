@@ -707,31 +707,9 @@ class JpaDonationReceiptRepositoryTest {
         receipts.save(old);
         flushAndClear();
 
-        assertThat(receipts.existsForDonation(receipted.id())).isTrue();
-        assertThat(receipts.existsForDonation(replaced.id())).isTrue();
-        assertThat(receipts.existsForDonation(bare.id())).isFalse();
         assertThat(receipts.findDonationsWithReceipt(List.of(receipted.id(), replaced.id(), bare.id())))
                 .containsExactlyInAnyOrder(receipted.id(), replaced.id());
         assertThat(receipts.findDonationsWithReceipt(List.of())).isEmpty();
-    }
-
-    @Test
-    @DisplayName("Given a replaced and an active yearly receipt of a year, when asked whether a yearly receipt of that donor and year was issued since a time, then the replaced one counts too, and another year, donor or a later time does not")
-    void should_find_yearly_receipt_issued_since_when_asked_given_replaced_and_active_receipts() {
-        DonorReference jana = storedDonor("4821937560");
-        DonorReference petr = storedDonor("7310945528");
-        DonationReceipt first = yearly(jana, YEAR_2025, "2026-000001", Optional.empty());
-        receipts.save(first);
-        first.markSuperseded(NOW.plusSeconds(1));
-        receipts.save(first);
-        receipts.save(yearly(jana, YEAR_2025, "2026-000002", Optional.of(first.id())));
-        flushAndClear();
-
-        assertThat(receipts.existsYearlyIssuedSince(jana, YEAR_2025, NOW)).isTrue();
-        assertThat(receipts.existsYearlyIssuedSince(jana, YEAR_2025, NOW.minusSeconds(60))).isTrue();
-        assertThat(receipts.existsYearlyIssuedSince(jana, YEAR_2025, NOW.plusSeconds(1))).isFalse();
-        assertThat(receipts.existsYearlyIssuedSince(jana, YEAR_2026, NOW)).isFalse();
-        assertThat(receipts.existsYearlyIssuedSince(petr, YEAR_2025, NOW)).isFalse();
     }
 
     @Test
