@@ -68,6 +68,7 @@
 }
 
 .dialog-panel {
+  container: dialog-panel / inline-size;
   position: relative;
   background: var(--color-surface-elevated);
   border-radius: var(--radius-dialog);
