@@ -94,8 +94,9 @@ public class SettingsService {
         if (!expected.admits(version)) {
             throw new StaleWriteRefusal(new SettingsChangedMeanwhile(version), stored);
         }
-        MailPasswordRouting.refuseWhenTheMailServerChangedMeanwhile(checked, writer.storedValues(), changes);
-        runningMailServer().refuseAnotherServerWithoutItsPassword(changes, writer.storedValues().containsKey(Setting.MAIL_PASSWORD));
+        Map<Setting, String> storedNow = writer.storedValues();
+        MailPasswordRouting.refuseWhenTheMailServerChangedMeanwhile(checked, storedNow, changes);
+        mailPasswordRouting().refuseAnotherServerWithoutItsPassword(changes, storedNow.containsKey(Setting.MAIL_PASSWORD));
         Instant now = clock.instant();
         List<Setting> changed = writer.apply(changes, List.of(), now);
         if (changed.isEmpty()) {
@@ -112,7 +113,7 @@ public class SettingsService {
 
     public TestEmailResult sendTestEmail(UUID adminId, AdministrationChannel channel, MailServer server, String sender) {
         boolean typed = server.password() != null && !server.password().isBlank();
-        MailPasswordRouting routing = runningMailServer();
+        MailPasswordRouting routing = mailPasswordRouting();
         if (channel.isConnectedApplication() && !routing.mayBeTestedThroughAConnection(server.address(), server.auth(), sender, typed)) {
             throw new SecretSettingsInBrowserOnly();
         }
@@ -130,7 +131,7 @@ public class SettingsService {
         return new TestEmailResult(outcome, recipient);
     }
 
-    private MailPasswordRouting runningMailServer() {
+    private MailPasswordRouting mailPasswordRouting() {
         return MailPasswordRouting.readFrom(current::effectiveValue);
     }
 }

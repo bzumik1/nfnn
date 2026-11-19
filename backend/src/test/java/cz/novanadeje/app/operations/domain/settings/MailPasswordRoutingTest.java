@@ -62,7 +62,19 @@ class MailPasswordRoutingTest {
 
             assertThatThrownBy(() -> MailPasswordRouting.refuseWhenTheMailServerChangedMeanwhile(checked, stored,
                     List.of(new SettingChange(Setting.MAIL_PORT, "465"))))
-                    .isInstanceOf(SettingsRejected.class);
+                    .isInstanceOfSatisfying(SettingsRejected.class, refused -> assertThat(refused.errors())
+                            .containsExactly(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.MAIL_SERVER_CHANGED_MEANWHILE)));
+        }
+
+        @Test
+        @DisplayName("when a change names the mail server and a password was stored only after the read, then it is refused as changed meanwhile")
+        void should_refuse_when_checked_given_a_password_stored_after_the_read() {
+            Map<Setting, String> before = Map.of(Setting.MAIL_HOST, "smtp.example.cz");
+
+            assertThatThrownBy(() -> MailPasswordRouting.refuseWhenTheMailServerChangedMeanwhile(before, checked,
+                    List.of(new SettingChange(Setting.MAIL_HOST, "smtp.example.cz"))))
+                    .isInstanceOfSatisfying(SettingsRejected.class, refused -> assertThat(refused.errors())
+                            .containsExactly(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.MAIL_SERVER_CHANGED_MEANWHILE)));
         }
 
         @Test
@@ -111,7 +123,8 @@ class MailPasswordRoutingTest {
         @DisplayName("when a change resets the host to its default, then the server moves and it is refused without a password")
         void should_refuse_when_reset_given_no_password_in_the_change() {
             assertThatThrownBy(() -> runningWithItsPassword().refuseAnotherServerWithoutItsPassword(List.of(new SettingChange(Setting.MAIL_HOST, null)), false))
-                    .isInstanceOf(SettingsRejected.class);
+                    .isInstanceOfSatisfying(SettingsRejected.class, refused -> assertThat(refused.errors())
+                            .containsExactly(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.PASSWORD_FOR_NEW_MAIL_SERVER)));
         }
 
         @Test
@@ -166,7 +179,9 @@ class MailPasswordRoutingTest {
             List<SettingChange> move = List.of(new SettingChange(Setting.MAIL_HOST, "smtp.jinde.cz"));
 
             assertThatNoException().isThrownBy(() -> routing(running).refuseAnotherServerWithoutItsPassword(move, false));
-            assertThatThrownBy(() -> routing(running).refuseAnotherServerWithoutItsPassword(move, true)).isInstanceOf(SettingsRejected.class);
+            assertThatThrownBy(() -> routing(running).refuseAnotherServerWithoutItsPassword(move, true))
+                    .isInstanceOfSatisfying(SettingsRejected.class, refused -> assertThat(refused.errors())
+                            .containsExactly(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.PASSWORD_FOR_NEW_MAIL_SERVER)));
         }
 
         @Test
@@ -193,6 +208,31 @@ class MailPasswordRoutingTest {
             MailServerAddress withoutStartTls = new MailServerAddress("smtp.example.cz", 587, "nadace@example.cz", false);
 
             assertThat(routing(running).mayBeTestedThroughAConnection(withoutStartTls, false, RUNNING_SENDER, false)).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("Given a running server with a password and no STARTTLS or user set")
+    class GivenNoStartTlsOrUserSetWithAPassword {
+
+        @Test
+        @DisplayName("when a save names STARTTLS off without a password, then it counts as a move and is refused, unlike the test e-mail, which counts unset STARTTLS as off")
+        void should_refuse_when_saved_given_startTls_off_named_against_an_unset_one() {
+            Map<Setting, String> running = runningSettings();
+            running.remove(Setting.MAIL_STARTTLS);
+
+            assertThatThrownBy(() -> routing(running).refuseAnotherServerWithoutItsPassword(List.of(new SettingChange(Setting.MAIL_STARTTLS, "false")), false))
+                    .isInstanceOfSatisfying(SettingsRejected.class, refused -> assertThat(refused.errors())
+                            .containsExactly(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.PASSWORD_FOR_NEW_MAIL_SERVER)));
+        }
+
+        @Test
+        @DisplayName("when a test e-mail names an empty user, then it counts as the running server without one")
+        void should_count_the_running_server_when_tested_given_an_empty_user_and_none_running() {
+            Map<Setting, String> running = runningSettings();
+            running.remove(Setting.MAIL_USERNAME);
+
+            assertThat(routing(running).lendsTheStoredPasswordTo(new MailServerAddress("smtp.example.cz", 587, "", true), false)).isTrue();
         }
     }
 }

@@ -24,8 +24,8 @@ public final class MailPasswordRouting {
 
     public static MailPasswordRouting readFrom(Function<Setting, Optional<String>> effectiveValue) {
         Map<Setting, String> running = new EnumMap<>(Setting.class);
-        RUNNING_SETTINGS.forEach(setting -> present(effectiveValue.apply(setting)).ifPresent(value -> running.put(setting, value)));
-        return new MailPasswordRouting(Map.copyOf(running), present(effectiveValue.apply(Setting.MAIL_PASSWORD)).isPresent());
+        RUNNING_SETTINGS.forEach(setting -> present(effectiveValue, setting).ifPresent(value -> running.put(setting, value)));
+        return new MailPasswordRouting(Map.copyOf(running), present(effectiveValue, Setting.MAIL_PASSWORD).isPresent());
     }
 
     public static void refuseWhenTheMailServerChangedMeanwhile(Map<Setting, String> checked, Map<Setting, String> stored, List<SettingChange> changes) {
@@ -68,8 +68,8 @@ public final class MailPasswordRouting {
         return setting == Setting.MAIL_PASSWORD || setting.decidesWhereMailPasswordGoes();
     }
 
-    private static Optional<String> present(Optional<String> value) {
-        return value.map(String::strip).filter(stripped -> !stripped.isEmpty());
+    private static Optional<String> present(Function<Setting, Optional<String>> effectiveValue, Setting setting) {
+        return effectiveValue.apply(setting).map(String::strip).filter(stripped -> !stripped.isEmpty());
     }
 
     private static boolean sameValue(String given, String running) {
