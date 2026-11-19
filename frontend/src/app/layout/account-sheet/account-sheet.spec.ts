@@ -400,6 +400,27 @@ describe('Given the account sheet of a signed-in donor', () => {
     document.documentElement.removeAttribute('data-appearance');
   });
 
+  it('when the appearance button is pressed, then the icon of the new choice fades in over the icon of the old one, which stays in its place to fade out', () => {
+    localStorage.removeItem(APPEARANCE_STORAGE_KEY);
+    const sheet = open();
+    const button = sheet.querySelector<HTMLButtonElement>('button.account-appearance')!;
+    const icons = () => Array.from(button.querySelectorAll('svg.appearance-icon'));
+    const shown = () => icons().filter((icon) => icon.classList.contains('appearance-icon--shown'));
+    const before = icons();
+    const automatic = shown();
+
+    button.click();
+    fixture.detectChanges();
+
+    expect(before).toHaveLength(3);
+    expect(automatic).toHaveLength(1);
+    expect(icons()).toEqual(before);
+    expect(shown()).toHaveLength(1);
+    expect(shown()[0]).not.toBe(automatic[0]);
+    expect(icons().every((icon) => icon.getAttribute('aria-hidden') === 'true')).toBe(true);
+    document.documentElement.removeAttribute('data-appearance');
+  });
+
   it('when the card of the donor is chosen on a phone, then Údaje a zabezpečení opens inside the sheet', async () => {
     const sheet = open();
 
