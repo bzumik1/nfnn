@@ -5,6 +5,7 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
 import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.event.OwnReceiptSigningKeyFoundWithdrawn;
 import cz.novanadeje.app.shared.application.restore.FinishedRestore;
 import cz.novanadeje.app.shared.application.restore.FinishedRestores;
 import cz.novanadeje.app.shared.application.seal.RecordSeals;
@@ -106,6 +107,9 @@ public class ReceiptSigningKeyRegistration {
         Optional<ReceiptSigningKey> ownRow = stored.stream().filter(key -> key.id().equals(own)).findFirst();
         boolean ownKeyWithdrawn = history.isWithdrawn(own) || ownRow.filter(ReceiptSigningKey::isWithdrawn).isPresent();
         Optional<ReceiptSigningKeyId> registered = ownRow.isPresent() || ownKeyWithdrawn ? Optional.empty() : Optional.of(registerOwn(now));
+        if (ownKeyWithdrawn) {
+            events.publishEvent(new OwnReceiptSigningKeyFoundWithdrawn(own.value()));
+        }
         return new Registration(testKeyRows, broken, unconfirmed, adopted, registered, history.mismatches(keys.findAll()), history.unreadable(),
                 ownKeyWithdrawn);
     }

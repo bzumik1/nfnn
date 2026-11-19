@@ -2,6 +2,8 @@ package cz.novanadeje.app.operations.infrastructure.events;
 
 import cz.novanadeje.app.operations.application.receiptseed.ReceiptSeedRenewalService;
 import cz.novanadeje.app.operations.application.restart.ApplicationRestarter;
+import cz.novanadeje.app.operations.application.receiptseed.ReceiptSeedRequestsAtStart;
+import cz.novanadeje.app.shared.application.event.OwnReceiptSigningKeyFoundWithdrawn;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,6 +52,17 @@ class ReceiptSigningKeyWithdrawnListenerTest {
     }
 
     @Test
+    @DisplayName("Given the server's own key found withdrawn at a start, when it is heard, then the start renewal gets the key id after the commit, on the committing thread")
+    void should_hand_the_key_id_to_the_start_renewal_after_commit_when_heard_given_own_key_found_withdrawn() throws NoSuchMethodException {
+        listener.on(new OwnReceiptSigningKeyFoundWithdrawn("21fe31df"));
+
+        verify(renewal).renewAtStart("21fe31df");
+        Method on = ReceiptSigningKeyWithdrawnListener.class.getDeclaredMethod("on", OwnReceiptSigningKeyFoundWithdrawn.class);
+        assertThat(on.getAnnotation(TransactionalEventListener.class).phase()).isEqualTo(TransactionPhase.AFTER_COMMIT);
+        assertThat(on.getAnnotation(Async.class)).isNull();
+    }
+
+    @Test
     @DisplayName("Given the renewal's listener, when its listener method is read, then it hears a withdrawal after the commit, ordered last and on the committing thread")
     void should_listen_after_commit_ordered_last_on_the_committing_thread_when_read_given_the_renewal_listener() throws NoSuchMethodException {
         Method on = ReceiptSigningKeyWithdrawnListener.class.getDeclaredMethod("on", ReceiptSigningKeyWithdrawn.class);
@@ -77,7 +90,7 @@ class ReceiptSigningKeyWithdrawnListenerTest {
 
         new ApplicationContextRunner()
                 .withUserConfiguration(InMemoryTransactionManagement.class)
-                .withBean(ReceiptSeedRenewalService.class, () -> new ReceiptSeedRenewalService(keyId -> steps.add("seed requested for " + keyId), restarter))
+                .withBean(ReceiptSeedRenewalService.class, () -> new ReceiptSeedRenewalService(keyId -> steps.add("seed requested for " + keyId), keyId -> ReceiptSeedRequestsAtStart.StartRequest.NOT_WRITTEN, restarter))
                 .withBean(ReceiptSigningKeyWithdrawnListener.class)
                 .run(context -> {
                     assertThat(context).hasNotFailed();

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.events;
 
 import cz.novanadeje.app.operations.application.receiptseed.ReceiptSeedRenewalService;
+import cz.novanadeje.app.shared.application.event.OwnReceiptSigningKeyFoundWithdrawn;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -21,5 +22,10 @@ class ReceiptSigningKeyWithdrawnListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     void on(ReceiptSigningKeyWithdrawn withdrawn) {
         renewal.renewAfterWithdrawal(withdrawn.keyId(), withdrawn.current());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    void on(OwnReceiptSigningKeyFoundWithdrawn withdrawn) {
+        renewal.renewAtStart(withdrawn.keyId());
     }
 }

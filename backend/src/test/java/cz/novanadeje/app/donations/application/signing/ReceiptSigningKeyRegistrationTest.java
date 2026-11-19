@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyStatus;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.event.OwnReceiptSigningKeyFoundWithdrawn;
 import cz.novanadeje.app.shared.application.restore.FinishedRestore;
 import cz.novanadeje.app.shared.application.seal.RecordSeals;
 import cz.novanadeje.app.shared.application.seal.SealVerdict;
@@ -403,6 +404,25 @@ class ReceiptSigningKeyRegistrationTest {
                 tuple(Level.ERROR, "Receipt signing key 21fe31df is in the audit trail but its row is missing"),
                 tuple(Level.ERROR,
                         "Receipt signing key 21fe31df of this server is withdrawn, so the server signs no receipt until it starts with a new seed"));
+    }
+
+    @Test
+    @DisplayName("Given the server's own key withdrawn, when the server starts with the same seed, then it publishes that its own key was found withdrawn, naming the key, so the renewal is asked for")
+    void should_publish_own_key_found_withdrawn_when_registering_given_own_key_withdrawn() {
+        trail.entries.add(ReceiptSigningKeyHistoryTest.registered("21fe31df"));
+        trail.entries.add(ReceiptSigningKeyHistoryTest.withdrawn("21fe31df"));
+
+        registration.registerOwnKey();
+
+        verify(events).publishEvent(new OwnReceiptSigningKeyFoundWithdrawn("21fe31df"));
+    }
+
+    @Test
+    @DisplayName("Given the server's own key active, when the server starts, then it publishes no withdrawn own key")
+    void should_not_publish_own_key_found_withdrawn_when_registering_given_own_key_active() {
+        registration.registerOwnKey();
+
+        verify(events, never()).publishEvent(any(OwnReceiptSigningKeyFoundWithdrawn.class));
     }
 
     @Test
