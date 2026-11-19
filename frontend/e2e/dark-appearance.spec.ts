@@ -263,6 +263,74 @@ async function chooseAppearance(page: Page, choice: 'Automaticky' | 'Světlý' |
   await expect(control).toHaveAccessibleName(`Vzhled: ${choice}`);
 }
 
+const SETTLED_AFTER_SWITCH_MS = 1000;
+const COLOURS_OF_THE_SWITCH: readonly (readonly [string, string])[] = [
+  ['header .account-button', 'color'],
+  ['header .account-button', 'background-color'],
+  ['app-donor-overview .ui-card', 'background-color'],
+  ['app-donor-overview .ui-card', 'color'],
+  ['html', 'background-color'],
+  ['body', 'background-color'],
+];
+
+interface DrawnFrame {
+  at: number;
+  dark: boolean;
+  colours: string[];
+  icons: number[];
+}
+
+interface FrameRecorder {
+  drawnFrames: DrawnFrame[];
+}
+
+async function framesAroundSwitch(page: Page, press: () => Promise<void>): Promise<DrawnFrame[]> {
+  for (const selector of new Set(COLOURS_OF_THE_SWITCH.map(([measured]) => measured))) {
+    await expect(page.locator(selector).first()).toBeVisible();
+  }
+  await page.evaluate((targets) => {
+    const recorder = window as unknown as FrameRecorder;
+    recorder.drawnFrames = [];
+    const draw = (at: number): void => {
+      recorder.drawnFrames.push({
+        at,
+        dark: document.documentElement.getAttribute('data-appearance') === 'dark',
+        colours: targets.map(([selector, property]) => {
+          const element = document.querySelector(selector);
+          return element ? getComputedStyle(element).getPropertyValue(property) : 'missing';
+        }),
+        icons: Array.from(document.querySelectorAll('.account-appearance .appearance-icon')).map(
+          (icon) => Number(getComputedStyle(icon).opacity),
+        ),
+      });
+      requestAnimationFrame(draw);
+    };
+    requestAnimationFrame(draw);
+  }, COLOURS_OF_THE_SWITCH);
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as FrameRecorder).drawnFrames.length))
+    .toBeGreaterThan(1);
+  await press();
+  await page.waitForFunction((settle) => {
+    const frames = (window as unknown as FrameRecorder).drawnFrames;
+    const switched = frames.find((frame) => frame.dark);
+    return switched !== undefined && frames[frames.length - 1].at - switched.at >= settle;
+  }, SETTLED_AFTER_SWITCH_MS);
+  return page.evaluate(() => (window as unknown as FrameRecorder).drawnFrames);
+}
+
+function framesBetween(frames: DrawnFrame[]): string[][] {
+  const before = frames[0].colours.join('|');
+  const after = frames[frames.length - 1].colours.join('|');
+  return frames
+    .map((frame) => frame.colours)
+    .filter((colours) => ![before, after].includes(colours.join('|')));
+}
+
+function fadingIcons(frames: DrawnFrame[]): number[] {
+  return frames.flatMap((frame) => frame.icons).filter((opacity) => opacity > 0 && opacity < 1);
+}
+
 async function closeAccountSheet(page: Page): Promise<void> {
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -302,6 +370,22 @@ test.describe('Given a signed-in donor whose device shows the light appearance',
     );
   });
 
+  test('when the donor switches from Světlý to Tmavý, then the header, a card and the page take their dark colours in the same frame, never some light and some dark, while the icon of the button cross-fades', async ({
+    page,
+  }) => {
+    await chooseAppearance(page, 'Světlý');
+    const control = page.getByRole('dialog').getByRole('button', { name: 'Vzhled: Světlý' });
+
+    const frames = await framesAroundSwitch(page, () => control.click());
+
+    expect(frames[0].dark).toBe(false);
+    expect(frames[0].colours).not.toContain('missing');
+    expect(frames[frames.length - 1].colours).not.toEqual(frames[0].colours);
+    expect(framesBetween(frames)).toEqual([]);
+    expect(frames[0].icons).toHaveLength(3);
+    expect(fadingIcons(frames)).not.toEqual([]);
+  });
+
   test('when the donor chooses Tmavý and then signs out, then the site follows the light device again for whoever comes next', async ({
     page,
   }) => {
@@ -333,6 +417,28 @@ test.describe('Given a signed-in donor whose device shows the light appearance',
       .poll(() => luminanceOf(other.locator('body'), 'background-color'))
       .toBeLessThan(DARK_LUMINANCE);
     await other.close();
+  });
+});
+
+test.describe('Given a signed-in donor on a light device who asked the system for less motion', () => {
+  test.use({ colorScheme: 'light', reducedMotion: 'reduce' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await signIn(page);
+  });
+
+  test('when the donor switches from Světlý to Tmavý, then the colours change together in one frame and the icon of the button changes at once, without a fade', async ({
+    page,
+  }) => {
+    await chooseAppearance(page, 'Světlý');
+    const control = page.getByRole('dialog').getByRole('button', { name: 'Vzhled: Světlý' });
+
+    const frames = await framesAroundSwitch(page, () => control.click());
+
+    expect(framesBetween(frames)).toEqual([]);
+    expect(frames[0].icons).toHaveLength(3);
+    expect(fadingIcons(frames)).toEqual([]);
   });
 });
 

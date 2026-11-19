@@ -1,9 +1,17 @@
+@use 'breakpoints' as bp;
+
 .ui-offer-sheet {
   text-align: center;
 
   .ui-dialog__title {
     margin-inline: var(--space-8);
     outline: none;
+  }
+}
+
+@include bp.container-down(dialog-panel, tabs) {
+  .ui-offer-sheet .ui-dialog__title {
+    margin-inline: 0;
   }
 }
 

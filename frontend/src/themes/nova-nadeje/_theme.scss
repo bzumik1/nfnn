@@ -421,6 +421,10 @@
   --sheet-chevron-size: 1.25rem;
   --text-sheet-body: 1rem;
   --text-sheet-head: min(var(--text-sheet-body), 5.2vw);
+  --text-dialog-title-large: max(
+    var(--text-sheet-body),
+    min(var(--text-xl), (100cqi - var(--space-8)) / 7.25)
+  );
   --text-sheet-subtitle: 0.882rem;
   --text-sheet-footnote: 0.765rem;
   --text-bank-monogram: 36cqi;

@@ -194,6 +194,13 @@ img.is-unavailable {
   }
 }
 
+html.appearance-switching,
+html.appearance-switching :not(.appearance-icon),
+html.appearance-switching ::before,
+html.appearance-switching ::after {
+  transition-property: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
