@@ -84,14 +84,14 @@ class ApplicationLayerRulesTest {
                     + "tests call, is a model left behind by a change (the signature vector parser and image processor of donations, #1431), so it goes with that change");
 
     private static ArchCondition<JavaClass> beUsedByCodeOtherThanTheirImplementations() {
-        return new ArchCondition<>("be used by main code other than their own implementations") {
+        return new ArchCondition<>("be used by main code other than their own implementations, classes nested in them and configuration classes") {
             @Override
             public void check(JavaClass port, ConditionEvents events) {
                 boolean used = port.getDirectDependenciesToSelf().stream()
                         .map(Dependency::getOriginClass)
                         .anyMatch(origin -> !belongsToAnImplementationOrWiringOf(origin, port));
                 if (!used) {
-                    events.add(SimpleConditionEvent.violated(port, port.getName() + " is used by no main code but its own implementations in "
+                    events.add(SimpleConditionEvent.violated(port, port.getName() + " is used by no main code but its own implementations, classes nested in them and configuration classes in "
                             + port.getSourceCodeLocation()));
                 }
             }
