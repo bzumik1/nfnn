@@ -4,6 +4,7 @@ import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.Passkey;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
@@ -104,9 +105,9 @@ class JpaPasskeyRepositoryTest {
     }
 
     private DonorId donor(String email, String variableSymbol) {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null,
-                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),
-                new VariableSymbol(variableSymbol), LocaleCode.CS, NOW);
+        Donor donor = Donors.withPassword(Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"),
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email),
+                new VariableSymbol(variableSymbol), LocaleCode.CS, NOW), new PasswordHash("$hash"));
         donors.save(donor);
         return donor.id();
     }

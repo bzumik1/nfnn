@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
@@ -479,13 +480,13 @@ class DonorEmailVerificationServiceTest {
     }
 
     private static Donor unverifiedDonor(LocaleCode locale) {
-        return Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, new PasswordHash("$hash"), SYMBOL, locale,
-                NOW.minusSeconds(60));
+        return Donors.withPassword(Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), ADDRESS, EMAIL, SYMBOL, locale,
+                NOW.minusSeconds(60)), new PasswordHash("$hash"));
     }
 
     private static Donor owner() {
-        return Donor.register(OWNER, DonorType.PERSON, new DonorName("Petr Novák"), null, ADDRESS, NEW_EMAIL, new PasswordHash("$other"),
-                new VariableSymbol("1234567890"), LocaleCode.EN, NOW.minusSeconds(120));
+        return Donors.withPassword(Donor.register(OWNER, DonorType.PERSON, new DonorName("Petr Novák"), ADDRESS, NEW_EMAIL,
+                new VariableSymbol("1234567890"), LocaleCode.EN, NOW.minusSeconds(120)), new PasswordHash("$other"));
     }
 
     private static Donor verifiedDonor() {

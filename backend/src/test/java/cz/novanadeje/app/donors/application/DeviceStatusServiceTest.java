@@ -14,6 +14,7 @@ import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.shared.domain.DonorName;
@@ -60,8 +61,8 @@ class DeviceStatusServiceTest {
     }
 
     private void accountIs(boolean administrator) {
-        Donor jana = Donor.register(JANA, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                new EmailAddress("jana@example.cz"), new PasswordHash("$hash"), new VariableSymbol("1234567890"), LocaleCode.CS, NOW);
+        Donor jana = Donors.withPassword(Donor.register(JANA, DonorType.PERSON, new DonorName("Jana Nováková"), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                new EmailAddress("jana@example.cz"), new VariableSymbol("1234567890"), LocaleCode.CS, NOW), new PasswordHash("$hash"));
         if (administrator) {
             jana.verifyEmail(NOW);
             jana.grantAdministration(true);

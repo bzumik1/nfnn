@@ -7,6 +7,7 @@ import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
@@ -121,8 +122,8 @@ class RaisedLibraryLoggersTest {
         Instant now = clock.instant();
         DonorId donorId = DonorId.newId(now);
         inTransaction(() -> {
-            donors.save(Donor.register(donorId, DonorType.PERSON, new DonorName(CANARY_NAME), null, new PostalAddress(CANARY_STREET, "Most", "434 01"),
-                    new EmailAddress(CANARY_EMAIL), new PasswordHash(CANARY_PASSWORD_HASH), new VariableSymbol("4821937560"), LocaleCode.CS, now));
+            donors.save(Donors.withPassword(Donor.register(donorId, DonorType.PERSON, new DonorName(CANARY_NAME), new PostalAddress(CANARY_STREET, "Most", "434 01"),
+                    new EmailAddress(CANARY_EMAIL), new VariableSymbol("4821937560"), LocaleCode.CS, now), new PasswordHash(CANARY_PASSWORD_HASH)));
             secondFactors.save(SecondFactor.enrol(donorId, new TotpSecret(CANARY_TOTP_SECRET), now));
         });
         return donorId;

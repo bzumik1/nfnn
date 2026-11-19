@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.application;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.Donors;
 import cz.novanadeje.app.donors.domain.FreshSecondFactorRequired;
 import cz.novanadeje.app.donors.domain.PasskeyConfirmationRejected;
 import cz.novanadeje.app.donors.domain.PasswordHash;
@@ -149,8 +150,8 @@ class FreshSecondFactorCheckTest {
     }
 
     private static Donor donor() {
-        Donor donor = Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
-                new EmailAddress("jana@example.cz"), new PasswordHash("$hash"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW.minusSeconds(60));
+        Donor donor = Donors.withPassword(Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+                new EmailAddress("jana@example.cz"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW.minusSeconds(60)), new PasswordHash("$hash"));
         donor.verifyEmail(NOW.minusSeconds(30));
         return donor;
     }
