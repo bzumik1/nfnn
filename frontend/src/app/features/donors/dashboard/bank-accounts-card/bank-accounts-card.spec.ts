@@ -590,6 +590,7 @@ describe('Given the bank accounts card in the overview', () => {
     expect(element('.account-confirm')?.classList).toContain('ui-confirm');
     expect(element('.account-confirm-text')?.classList).toContain('ui-confirm__text');
     expect(element('.account-confirm-actions')?.classList).toContain('ui-confirm__actions');
+    expect(element('.account-confirm-no')?.classList).toContain('ui-button--quiet');
   });
 
   it('when the donor switches off pairing at an account with two confirmed symbols, then the confirmation names both', async () => {

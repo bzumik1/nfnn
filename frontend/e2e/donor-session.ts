@@ -622,7 +622,9 @@ export async function openUnlockedAdministrationPage(
   await Promise.all([
     page
       .goto(path)
-      .then(() => expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible()),
+      .then(() =>
+        expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible(),
+      ),
     page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/api/admin/donations/sync',
       { timeout: 10_000 },
