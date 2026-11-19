@@ -64,4 +64,16 @@ class JpaBackupAlertRepositoryTest {
         assertThat(jdbc.sql("select outcome from operations_backup_alert order by created_at").query(String.class).list())
                 .containsExactly("SENT", "DROPPED", "DROPPED");
     }
+
+    @Test
+    @DisplayName("Given a dropped alert, when it is marked sent, then it stays dropped")
+    void should_keep_dropped_when_marked_sent_given_dropped_alert() {
+        alerts.add(PROBLEMS, NOW);
+        WaitingBackupAlert waiting = alerts.waiting().getFirst();
+        alerts.dropWaiting(NOW.plusSeconds(30));
+
+        alerts.markSent(waiting.id(), NOW.plusSeconds(60));
+
+        assertThat(jdbc.sql("select outcome from operations_backup_alert").query(String.class).single()).isEqualTo("DROPPED");
+    }
 }

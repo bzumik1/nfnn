@@ -29,7 +29,6 @@
         <sql>alter table operations_backup_alert add constraint ck_operations_backup_alert_problems check (problems &lt;&gt; '')</sql>
         <sql>alter table operations_backup_alert add constraint ck_operations_backup_alert_settled
             check ((outcome is null and settled_at is null) or (outcome in ('SENT', 'DROPPED') and settled_at is not null))</sql>
-        <sql>create index ix_operations_backup_alert_waiting on operations_backup_alert (created_at) where outcome is null</sql>
     </changeSet>
 
 </databaseChangeLog>
