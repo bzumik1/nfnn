@@ -180,17 +180,19 @@ public class DonationReceiptIssuer {
             case ReceiptRequest.ForDonation single -> {
                 Donation donation = single.donation();
                 Optional<DonationReceipt> yearlyOfItsYear = receipts.findActiveForYear(single.donor(), donation.receivedYear());
-                yield new ReceiptIssueFacts.ForGift(donation.id(), yearlyOfItsYear, single.fingerprint(), receipts.findActiveForDonation(donation.id()));
+                yield new ReceiptIssueFacts.ForDonation(donation.id(), yearlyOfItsYear, single.fingerprint(), receipts.findActiveForDonation(donation.id()));
             }
             case ReceiptRequest.ForYear yearly -> new ReceiptIssueFacts.ForYear(yearly.fingerprint(), receipts.findActiveForYear(yearly.donor(), yearly.year()));
         };
     }
 
     private NewReceipt newReceiptFor(ReceiptIssueFacts facts, ReceiptRequest request, boolean byConnectedApplication) {
-        return switch (facts) {
-            case ReceiptIssueFacts.ForGift single -> ReceiptIssuePolicy.newReceipt(single, byConnectedApplication);
-            case ReceiptIssueFacts.ForYear yearly -> ReceiptIssuePolicy.newReceipt(yearly, yearlyReplacements((ReceiptRequest.ForYear) request),
-                    byConnectedApplication);
+        return switch (request) {
+            case ReceiptRequest.ForDonation single when facts instanceof ReceiptIssueFacts.ForDonation donationFacts ->
+                    ReceiptIssuePolicy.newReceipt(donationFacts, byConnectedApplication);
+            case ReceiptRequest.ForYear yearly when facts instanceof ReceiptIssueFacts.ForYear yearFacts ->
+                    ReceiptIssuePolicy.newReceipt(yearFacts, yearlyReplacements(yearly), byConnectedApplication);
+            default -> throw new IllegalStateException("The receipt facts do not match the request they were read for");
         };
     }
 

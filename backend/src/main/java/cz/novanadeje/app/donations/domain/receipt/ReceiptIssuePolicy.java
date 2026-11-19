@@ -10,22 +10,22 @@ public final class ReceiptIssuePolicy {
     }
 
     public static Optional<DonationReceipt> activeToReturnAgain(ReceiptIssueFacts facts) {
-        if (facts instanceof ReceiptIssueFacts.ForGift single) {
+        if (facts instanceof ReceiptIssueFacts.ForDonation single) {
             refuseWhenAnActiveYearlyReceiptLists(single);
         }
         return facts.active().filter(active -> active.certifies(facts.requested()));
     }
 
-    public static NewReceipt newReceipt(ReceiptIssueFacts.ForGift facts, boolean byConnectedApplication) {
-        return decideNew(facts, List.of(), Optional.empty(), byConnectedApplication);
+    public static NewReceipt newReceipt(ReceiptIssueFacts.ForDonation facts, boolean byConnectedApplication) {
+        return decideNew(facts, new YearlyReplacements(List.of(), Optional.empty()), byConnectedApplication);
     }
 
     public static NewReceipt newReceipt(ReceiptIssueFacts.ForYear facts, YearlyReplacements replacements, boolean byConnectedApplication) {
-        return decideNew(facts, replacements.activeSingles(), replacements.latestOutdated(), byConnectedApplication);
+        return decideNew(facts, replacements, byConnectedApplication);
     }
 
-    private static NewReceipt decideNew(ReceiptIssueFacts facts, List<DonationReceipt> activeSingles, Optional<DonationReceipt> latestOutdated,
-                                        boolean byConnectedApplication) {
+    private static NewReceipt decideNew(ReceiptIssueFacts facts, YearlyReplacements replacements, boolean byConnectedApplication) {
+        List<DonationReceipt> activeSingles = replacements.activeSingles();
         if (activeToReturnAgain(facts).isPresent()) {
             throw new IllegalStateException("The active receipt certifies the requested data and is returned again, not replaced");
         }
@@ -36,12 +36,12 @@ public final class ReceiptIssuePolicy {
         List<DonationReceipt> toSupersede = new ArrayList<>();
         active.ifPresent(toSupersede::add);
         toSupersede.addAll(activeSingles);
-        return new NewReceipt(active.or(() -> latestOutdated), toSupersede);
+        return new NewReceipt(active.or(replacements::latestOutdated), toSupersede);
     }
 
-    private static void refuseWhenAnActiveYearlyReceiptLists(ReceiptIssueFacts.ForGift single) {
-        if (single.activeYearlyOfItsYear().filter(yearly -> yearly.lists(single.gift())).isPresent()) {
-            throw new DonationOnYearlyReceipt(single.gift());
+    private static void refuseWhenAnActiveYearlyReceiptLists(ReceiptIssueFacts.ForDonation single) {
+        if (single.activeYearlyOfItsYear().filter(yearly -> yearly.lists(single.donation())).isPresent()) {
+            throw new DonationOnYearlyReceipt(single.donation());
         }
     }
 }

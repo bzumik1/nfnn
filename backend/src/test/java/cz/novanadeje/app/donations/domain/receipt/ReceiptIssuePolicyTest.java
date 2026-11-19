@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donations.domain.receipt;
 
 import cz.novanadeje.app.donations.domain.donation.Donation;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueFacts.ForGift;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueFacts.ForDonation;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptIssueFacts.ForYear;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -32,12 +32,12 @@ class ReceiptIssuePolicyTest {
 
     @Nested
     @DisplayName("Given a single receipt is requested for a gift")
-    class ForAGift {
+    class ForADonation {
 
         @Test
         @DisplayName("when the gift has no receipt yet, then nothing is returned again and a first receipt replaces and supersedes nothing")
         void should_issue_first_receipt_when_decided_given_no_receipt() {
-            ForGift facts = new ForGift(march.id(), Optional.empty(), REQUESTED, Optional.empty());
+            ForDonation facts = new ForDonation(march.id(), Optional.empty(), REQUESTED, Optional.empty());
 
             assertThat(ReceiptIssuePolicy.activeToReturnAgain(facts)).isEmpty();
             assertThat(ReceiptIssuePolicy.newReceipt(facts, false)).isEqualTo(new NewReceipt(Optional.empty(), List.of()));
@@ -48,14 +48,14 @@ class ReceiptIssuePolicyTest {
         void should_return_active_again_when_decided_given_same_data() {
             DonationReceipt active = single(march, REQUESTED);
 
-            assertThat(ReceiptIssuePolicy.activeToReturnAgain(new ForGift(march.id(), Optional.empty(), REQUESTED, Optional.of(active)))).contains(active);
+            assertThat(ReceiptIssuePolicy.activeToReturnAgain(new ForDonation(march.id(), Optional.empty(), REQUESTED, Optional.of(active)))).contains(active);
         }
 
         @Test
         @DisplayName("when the active single receipt certifies other data, then a new one replaces and supersedes it")
         void should_replace_active_when_decided_given_changed_data() {
             DonationReceipt active = single(march, EARLIER);
-            ForGift facts = new ForGift(march.id(), Optional.empty(), REQUESTED, Optional.of(active));
+            ForDonation facts = new ForDonation(march.id(), Optional.empty(), REQUESTED, Optional.of(active));
 
             assertThat(ReceiptIssuePolicy.activeToReturnAgain(facts)).isEmpty();
             assertThat(ReceiptIssuePolicy.newReceipt(facts, false)).isEqualTo(new NewReceipt(Optional.of(active), List.of(active)));
@@ -64,7 +64,7 @@ class ReceiptIssuePolicyTest {
         @Test
         @DisplayName("when the active yearly receipt of the gift's year lists it, then it is refused even though the single receipt certifies the same data")
         void should_refuse_when_decided_given_active_yearly_listing_the_gift() {
-            ForGift facts = new ForGift(march.id(), Optional.of(yearly(List.of(march, june), EARLIER)), REQUESTED, Optional.of(single(march, REQUESTED)));
+            ForDonation facts = new ForDonation(march.id(), Optional.of(yearly(List.of(march, june), EARLIER)), REQUESTED, Optional.of(single(march, REQUESTED)));
 
             assertThatThrownBy(() -> ReceiptIssuePolicy.activeToReturnAgain(facts)).isInstanceOf(DonationOnYearlyReceipt.class);
         }
@@ -72,7 +72,7 @@ class ReceiptIssuePolicyTest {
         @Test
         @DisplayName("when a new receipt is asked for a gift the active yearly receipt of its year lists, then it is refused too")
         void should_refuse_new_receipt_when_asked_given_active_yearly_listing_the_gift() {
-            ForGift facts = new ForGift(march.id(), Optional.of(yearly(List.of(march), EARLIER)), REQUESTED, Optional.empty());
+            ForDonation facts = new ForDonation(march.id(), Optional.of(yearly(List.of(march), EARLIER)), REQUESTED, Optional.empty());
 
             assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, false)).isInstanceOf(DonationOnYearlyReceipt.class);
         }
@@ -80,7 +80,7 @@ class ReceiptIssuePolicyTest {
         @Test
         @DisplayName("when the active yearly receipt of the gift's year does not list it, then the first receipt is issued")
         void should_issue_when_decided_given_active_yearly_without_the_gift() {
-            ForGift facts = new ForGift(march.id(), Optional.of(yearly(List.of(june), EARLIER)), REQUESTED, Optional.empty());
+            ForDonation facts = new ForDonation(march.id(), Optional.of(yearly(List.of(june), EARLIER)), REQUESTED, Optional.empty());
 
             assertThat(ReceiptIssuePolicy.activeToReturnAgain(facts)).isEmpty();
             assertThat(ReceiptIssuePolicy.newReceipt(facts, false)).isEqualTo(new NewReceipt(Optional.empty(), List.of()));
@@ -89,7 +89,7 @@ class ReceiptIssuePolicyTest {
         @Test
         @DisplayName("when a connected application asks for changed data, then the replacement is refused as browser-only")
         void should_refuse_replacement_when_connected_application_decides_given_changed_data() {
-            ForGift facts = new ForGift(march.id(), Optional.empty(), REQUESTED, Optional.of(single(march, EARLIER)));
+            ForDonation facts = new ForDonation(march.id(), Optional.empty(), REQUESTED, Optional.of(single(march, EARLIER)));
 
             assertThatThrownBy(() -> ReceiptIssuePolicy.newReceipt(facts, true)).isInstanceOf(ReceiptReplacementInBrowserOnly.class);
         }
@@ -97,7 +97,7 @@ class ReceiptIssuePolicyTest {
         @Test
         @DisplayName("when a connected application asks for the gift's first receipt, then it is issued")
         void should_issue_first_receipt_when_connected_application_decides_given_no_receipt() {
-            ForGift facts = new ForGift(march.id(), Optional.empty(), REQUESTED, Optional.empty());
+            ForDonation facts = new ForDonation(march.id(), Optional.empty(), REQUESTED, Optional.empty());
 
             assertThat(ReceiptIssuePolicy.newReceipt(facts, true)).isEqualTo(new NewReceipt(Optional.empty(), List.of()));
         }
@@ -193,7 +193,7 @@ class ReceiptIssuePolicyTest {
     @Test
     @DisplayName("Given facts with a missing value, when they are made, then they are refused")
     void should_refuse_when_made_given_missing_values() {
-        assertThatThrownBy(() -> new ForGift(march.id(), Optional.empty(), null, Optional.empty())).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new ForDonation(march.id(), Optional.empty(), null, Optional.empty())).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ForYear(REQUESTED, null)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new NewReceipt(Optional.empty(), null)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new YearlyReplacements(List.of(), null)).isInstanceOf(IllegalArgumentException.class);

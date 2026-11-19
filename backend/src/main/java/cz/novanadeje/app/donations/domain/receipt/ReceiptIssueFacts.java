@@ -4,18 +4,18 @@ import cz.novanadeje.app.donations.domain.donation.DonationId;
 
 import java.util.Optional;
 
-public sealed interface ReceiptIssueFacts permits ReceiptIssueFacts.ForGift, ReceiptIssueFacts.ForYear {
+public sealed interface ReceiptIssueFacts permits ReceiptIssueFacts.ForDonation, ReceiptIssueFacts.ForYear {
 
     ReceiptFingerprint requested();
 
     Optional<DonationReceipt> active();
 
-    record ForGift(DonationId gift, Optional<DonationReceipt> activeYearlyOfItsYear, ReceiptFingerprint requested, Optional<DonationReceipt> active)
+    record ForDonation(DonationId donation, Optional<DonationReceipt> activeYearlyOfItsYear, ReceiptFingerprint requested, Optional<DonationReceipt> active)
             implements ReceiptIssueFacts {
 
-        public ForGift {
-            if (gift == null || activeYearlyOfItsYear == null || requested == null || active == null) {
-                throw new IllegalArgumentException("The gift, its year's active yearly receipt, the requested data and the active receipt are required");
+        public ForDonation {
+            if (donation == null || activeYearlyOfItsYear == null || requested == null || active == null) {
+                throw new IllegalArgumentException("The donation, its year's active yearly receipt, the requested data and the active receipt are required");
             }
         }
     }
