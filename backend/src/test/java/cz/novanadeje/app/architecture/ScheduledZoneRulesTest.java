@@ -32,8 +32,6 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TimeZone;
 import java.util.stream.Stream;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
@@ -141,6 +139,34 @@ class ScheduledZoneRulesTest {
                                 registrar.addCronTask(work, "0 0 3 * * *");
                             }
 
+                            void registeredMap(org.springframework.scheduling.config.ScheduledTaskRegistrar registrar, Runnable work) {
+                                registrar.setCronTasks(java.util.Map.of(work, "0 0 3 * * *"));
+                            }
+
+                            void registeredList(org.springframework.scheduling.config.ScheduledTaskRegistrar registrar,
+                                                org.springframework.scheduling.config.CronTask task) {
+                                registrar.setCronTasksList(java.util.List.of(task));
+                            }
+
+                            CronTrigger inUtc() {
+                                return new CronTrigger("0 0 3 * * *", java.util.TimeZone.getTimeZone("UTC"));
+                            }
+
+                            static final class FoundationTrigger extends CronTrigger {
+
+                                FoundationTrigger(String expression) {
+                                    super(expression, FoundationZone.ZONE);
+                                }
+                            }
+
+                            CronTrigger throughASubclass() {
+                                return FoundationTrigger.forFixedExecution("0 0 3 * * *");
+                            }
+
+                            CronTrigger zonedSubclass() {
+                                return new FoundationTrigger("0 0 3 * * *");
+                            }
+
                             void registeredTask(org.springframework.scheduling.config.ScheduledTaskRegistrar registrar,
                                                 org.springframework.scheduling.config.CronTask task) {
                                 registrar.addCronTask(task);
@@ -177,14 +203,18 @@ class ScheduledZoneRulesTest {
                 .anySatisfy(detail -> assertThat(detail).contains("twice()"))
                 .anySatisfy(detail -> assertThat(detail).contains("composed()"));
         assertThat(no_cron_is_built_without_its_zone.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(6)
+                .hasSize(9)
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedSchedules.registeredMap("))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedSchedules.inUtc()"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedSchedules.throughASubclass()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedSchedules.trigger()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedSchedules.resumed("))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedSchedules.lenient()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedSchedules.task("))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedSchedules.registered("))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedSchedules.next("))
-                .noneSatisfy(detail -> assertThat(detail).containsAnyOf("zonedTrigger()", "zonedTask(", "registeredTask("));
+                .noneSatisfy(detail -> assertThat(detail).containsAnyOf("zonedTrigger()", "zonedTask(", "registeredTask(", "registeredList(", "zonedSubclass()",
+                        "FoundationTrigger.<init>"));
     }
 
     private static ArchCondition<JavaMethod> runEveryCronInTheFoundationZone() {
@@ -213,12 +243,14 @@ class ScheduledZoneRulesTest {
         }
         List<JavaClass> parameters = target.getRawParameterTypes();
         boolean expression = parameters.stream().anyMatch(type -> type.isEquivalentTo(String.class));
-        boolean zone = parameters.stream().anyMatch(type -> type.isEquivalentTo(ZoneId.class) || type.isEquivalentTo(TimeZone.class));
+        boolean zone = parameters.stream().anyMatch(type -> type.isEquivalentTo(ZoneId.class));
+        boolean construction = target.getName().equals("<init>");
         JavaClass owner = access.getTargetOwner();
-        return owner.isEquivalentTo(CronTrigger.class) && expression && !zone
-                || owner.isEquivalentTo(CronTask.class) && target.getName().equals("<init>") && expression
-                || owner.isAssignableTo(ScheduledTaskRegistrar.class) && Set.of("addCronTask", "setCronTasks").contains(target.getName())
-                && !parameters.getFirst().isAssignableTo(CronTask.class) && !parameters.getFirst().isAssignableTo(List.class)
+        boolean trigger = construction ? owner.isEquivalentTo(CronTrigger.class) : owner.isAssignableTo(CronTrigger.class);
+        return trigger && expression && !zone
+                || owner.isEquivalentTo(CronTask.class) && construction && expression
+                || owner.isAssignableTo(ScheduledTaskRegistrar.class) && (target.getName().equals("addCronTask") && expression
+                || target.getName().equals("setCronTasks") && parameters.stream().anyMatch(type -> type.isAssignableTo(Map.class)))
                 || owner.isEquivalentTo(CronExpression.class) && target.getName().equals("next");
     }
 
