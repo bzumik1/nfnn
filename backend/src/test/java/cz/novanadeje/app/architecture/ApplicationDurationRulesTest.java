@@ -4,7 +4,7 @@ import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaField;
-import com.tngtech.archunit.core.domain.JavaMethodCall;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.domain.JavaStaticInitializer;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Period;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -71,11 +73,12 @@ class ApplicationDurationRulesTest {
     @ArchTest
     static final ArchRule a_length_of_time_is_not_written_into_the_application = noClasses()
             .that().resideInAPackage("..application..")
-            .should().callMethodWhere(DescribedPredicate.describe(
-                    "create a Duration or a Period (of…, parse, from) outside the static initializer of a class holding a reviewed technical bound",
+            .should().accessTargetWhere(DescribedPredicate.describe(
+                    "create a Duration or a Period (of…, parse, from), by a call or a method reference, outside the static initializer of a class"
+                            + " holding a reviewed technical bound, or use a ChronoUnit or TimeUnit",
                     ApplicationDurationRulesTest::writesALengthOfTime))
-            .because("a length of time written inline in a method, an enum constant or an instance field is the same rule value the static"
-                    + " field rule refuses, only out of its sight (#621, round 5)");
+            .because("a length of time written inline in a method, an enum constant or an instance field, or counted in a unit, is the same"
+                    + " rule value the static field rule refuses, only out of its sight (#621, round 5)");
 
     @Test
     @DisplayName("Given the reviewed technical bounds, when the site is read, then each is still a static length of time of an application class, so the list names no field that is gone or no longer needs it")
@@ -164,7 +167,7 @@ class ApplicationDurationRulesTest {
     }
 
     @Test
-    @DisplayName("Given planted application code writing a length of time in a method, a lambda, an enum constant and an instance field, and a reviewed bound's own initializer, when the inline rule checks it, then each is reported but the bound's initializer")
+    @DisplayName("Given planted application code writing a length of time in a method, a lambda, a method reference, an enum constant, an instance field and in units, and a reviewed bound's own initializer, when the inline rule checks it, then each is reported but the bound's initializer and a zero")
     void should_report_every_inline_length_of_time_when_checked_given_planted_application_code(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
                 "cz.novanadeje.app.planteda.application.PlantedInline", """
@@ -200,6 +203,26 @@ class ApplicationDurationRulesTest {
                             Duration between(Instant from, Instant to) {
                                 return Duration.between(from, to).plusSeconds(1);
                             }
+
+                            java.util.List<Duration> steps() {
+                                return java.util.stream.Stream.of(1L, 5L).map(Duration::ofMinutes).toList();
+                            }
+
+                            Supplier<java.util.function.IntFunction<Period>> months() {
+                                return () -> Period::ofMonths;
+                            }
+
+                            Instant counted(Instant now) {
+                                return now.minus(30, java.time.temporal.ChronoUnit.DAYS);
+                            }
+
+                            long waited() {
+                                return java.util.concurrent.TimeUnit.MINUTES.toSeconds(5);
+                            }
+
+                            Duration zero() {
+                                return Duration.ZERO;
+                            }
                         }
                         """,
                 RELEASE_CHECK, """
@@ -231,20 +254,25 @@ class ApplicationDurationRulesTest {
                         """));
 
         assertThat(a_length_of_time_is_not_written_into_the_application.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(5)
+                .hasSize(10)
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedInline$Kind.<clinit>()").contains("Duration.ofMinutes"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.steps()").contains("Duration.ofMinutes"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.months()").contains("Period.ofMonths"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.counted(").contains("ChronoUnit.DAYS"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.waited()").contains("TimeUnit.MINUTES"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.<init>()").contains("Duration.parse"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.cutoff(").contains("Duration.ofDays"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedInline.notice()").contains("Period.ofMonths"))
                 .anySatisfy(detail -> assertThat(detail).contains("ReleaseCheckService.offeredUntil(").contains("Duration.ofDays"))
-                .noneSatisfy(detail -> assertThat(detail).containsAnyOf("between(", "ReleaseCheckService.<clinit>", "PlantedTimeouts"));
+                .noneSatisfy(detail -> assertThat(detail).containsAnyOf("between(", "zero()", "ReleaseCheckService.<clinit>", "PlantedTimeouts"));
     }
 
-    private static boolean writesALengthOfTime(JavaMethodCall call) {
-        boolean factory = isALengthOfTime(call.getTargetOwner())
-                && (call.getName().startsWith("of") || FACTORIES_BESIDE_OF.contains(call.getName()));
-        boolean inABoundsInitializer = call.getOrigin() instanceof JavaStaticInitializer && BOUND_OWNERS.contains(call.getOriginOwner().getName());
-        return factory && !inABoundsInitializer;
+    private static boolean writesALengthOfTime(JavaAccess<?> access) {
+        boolean unit = access.getTargetOwner().isEquivalentTo(ChronoUnit.class) || access.getTargetOwner().isEquivalentTo(TimeUnit.class);
+        boolean factory = isALengthOfTime(access.getTargetOwner())
+                && (access.getName().startsWith("of") || FACTORIES_BESIDE_OF.contains(access.getName()));
+        boolean inABoundsInitializer = access.getOrigin() instanceof JavaStaticInitializer && BOUND_OWNERS.contains(access.getOriginOwner().getName());
+        return unit || factory && !inABoundsInitializer;
     }
 
     private static boolean isALengthOfTime(JavaClass type) {
