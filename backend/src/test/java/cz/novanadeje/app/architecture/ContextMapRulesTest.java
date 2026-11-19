@@ -16,6 +16,7 @@ import cz.novanadeje.app.AppApplication;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.context.ApplicationEvent;
 import org.springframework.context.PayloadApplicationEvent;
 import org.springframework.context.event.EventListener;
 
@@ -26,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EventObject;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,6 +61,8 @@ class ContextMapRulesTest {
     private static final String ARROW = " → ";
     private static final String BOTH_WAYS = " ↔ ";
 
+    private static final List<Class<?>> HEARING_EVERY_EVENT = List.of(EventObject.class, ApplicationEvent.class, PayloadApplicationEvent.class);
+
     private static final Map<String, String> KERNEL_INTERFACES = Map.of(
             "StoredRecord", "a marker of the application records a stale write answers with, implemented by records of every context, never by an adapter",
             "WritePrecondition", "a sealed value of the If-Match a write names, implemented only by its own records in shared/application/version");
@@ -85,12 +89,15 @@ class ContextMapRulesTest {
     }
 
     @Test
-    @DisplayName("Given planted contexts that meet through a shared event built by a constructor, a factory, a constructor reference and an optional factory, heard by its parameter, by a payload and by the listener annotation's classes, and through ports implemented in one context, in two, and used only by their adapters, when the edges are derived, then each publisher-to-listener and user-to-implementer edge between two contexts is found and nothing else")
+    @DisplayName("Given planted contexts that meet through a shared event built by a constructor, a factory, a constructor reference and an optional factory, heard by its parameter, by a payload, by the listener annotation's classes and by a listener of every application event, and through ports implemented in one context, in two, and used only by their adapters, when the edges are derived, then each publisher-to-listener and user-to-implementer edge between two contexts is found and nothing else")
     void should_derive_each_edge_between_contexts_when_read_given_planted_events_and_ports(@TempDir Path folder) throws IOException {
         assertThat(edgesOf(plantedContexts(folder))).containsExactlyInAnyOrder(
                 "donors -> donations: PlantedGiftsChanged",
                 "donors -> operations: PlantedGiftsChanged",
                 "donors -> content: PlantedGiftsChanged",
+                "donors -> contact: PlantedGiftsChanged",
+                "donors -> contact: PlantedUnheard",
+                "operations -> contact: PlantedGiftsChanged",
                 "operations -> donations: PlantedGiftsChanged",
                 "operations -> content: PlantedGiftsChanged",
                 "contact -> donations: PlantedGiftsChanged",
@@ -112,7 +119,7 @@ class ContextMapRulesTest {
 
                 | Event | Built in | Heard in | Edges |
                 |---|---|---|---|
-                | `PlantedGiftsChanged` | donors, operations, contact | donations, operations, content | contact, donors → content, donors → donations, donors → operations, operations → donations, operations → content, contact → donations, contact → operations, contact → donors |
+                | `PlantedGiftsChanged` | donors, operations, contact | donations, operations, content | contact, donors → content, donors → contact, operations → contact, donors → donations, donors → operations, operations → donations, operations → content, contact → donations, contact → operations, contact → donors |
                 | `PlantedRemoved` | content | none | none |
 
                 | Port | Implemented in | Used by | Edges |
@@ -131,6 +138,8 @@ class ContextMapRulesTest {
                 "PlantedOnlyWrapped: the overview declares contact -> operations, which the code does not have",
                 "PlantedRemoved: the overview has a row, but no shared event or port has this name",
                 "PlantedUnheard: no row in the overview's context map");
+        assertThat(edgeDifferences(planted, overview.replace(", donors → contact, operations → contact", "")))
+                .contains("PlantedGiftsChanged: the code has donors -> contact, which the overview does not declare");
         assertThat(edgeDifferences(planted, "# System overview\n\n## content\n"))
                 .contains("PlantedGiftsChanged: no row in the overview's context map", "PlantedSignatoryLookup: no row in the overview's context map");
     }
@@ -145,7 +154,7 @@ class ContextMapRulesTest {
 
                 | Pair | Why both ways |
                 |---|---|
-                | donations ↔ donors | planted: a partnership |
+                | donors ↔ donations | planted: a partnership, its ends in either order |
                 | content ↔ donations | planted: split long ago |
                 | contact ↔ content |  |
 
@@ -223,6 +232,7 @@ class ContextMapRulesTest {
                         package cz.novanadeje.app.operations.application;
                         class PlantedFactoryPublisher {
                             Object announce() { return cz.novanadeje.app.shared.application.event.PlantedGiftsChanged.ofAny(2); }
+                            Object announceOne() { return cz.novanadeje.app.shared.application.event.PlantedGiftsChanged.of(1); }
                         }
                         """,
                 "cz.novanadeje.app.contact.application.PlantedReferencePublisher", """
@@ -255,6 +265,13 @@ class ContextMapRulesTest {
                         class PlantedNamedListener {
                             @org.springframework.transaction.event.TransactionalEventListener(classes = cz.novanadeje.app.shared.application.event.PlantedGiftsChanged.class)
                             void refresh() { }
+                        }
+                        """,
+                "cz.novanadeje.app.contact.infrastructure.events.PlantedEveryEventListener", """
+                        package cz.novanadeje.app.contact.infrastructure.events;
+                        class PlantedEveryEventListener {
+                            @org.springframework.context.event.EventListener
+                            void any(org.springframework.context.ApplicationEvent event) { }
                         }
                         """,
                 "cz.novanadeje.app.donations.infrastructure.persistence.PlantedSignatoryAdapter", """
@@ -389,7 +406,9 @@ class ContextMapRulesTest {
         rowsOf(overview).stream().filter(cells -> cells.getFirst().contains(BOTH_WAYS.strip()) && cells.size() == 2)
                 .forEach(cells -> {
                     String[] ends = cells.getFirst().split(BOTH_WAYS.strip());
-                    reasons.put(ends[0].strip() + BOTH_WAYS + ends[1].strip(), cells.getLast());
+                    String first = ends[0].strip();
+                    String second = ends[1].strip();
+                    reasons.put(first.compareTo(second) < 0 ? first + BOTH_WAYS + second : second + BOTH_WAYS + first, cells.getLast());
                 });
         return reasons;
     }
@@ -420,7 +439,7 @@ class ContextMapRulesTest {
         }
         int end = overview.indexOf("\n## ", start + MAP_SECTION.length() + 1);
         return overview.substring(start, end < 0 ? overview.length() : end).lines()
-                .filter(line -> line.startsWith("| ") && !line.startsWith("|---"))
+                .filter(line -> line.startsWith("| ") && !line.startsWith("|---") && line.lastIndexOf('|') > 0)
                 .map(line -> Arrays.stream(line.substring(1, line.lastIndexOf('|')).split("\\|", -1)).map(String::strip).toList())
                 .toList();
     }
@@ -459,7 +478,7 @@ class ContextMapRulesTest {
     private static boolean hears(JavaMethod listener, JavaClass event) {
         Set<JavaClass> named = eventsNamedByListenerAnnotations(listener.getAnnotations(), new HashSet<>()).collect(Collectors.toSet());
         Stream<JavaClass> heard = named.isEmpty() ? eventsTakenAsParameters(listener) : named.stream();
-        return heard.anyMatch(type -> event.isAssignableTo(type.getName()));
+        return heard.anyMatch(type -> event.isAssignableTo(type.getName()) || HEARING_EVERY_EVENT.stream().anyMatch(type::isEquivalentTo));
     }
 
     private static Stream<JavaClass> eventsNamedByListenerAnnotations(Set<? extends JavaAnnotation<?>> annotations, Set<String> visited) {
@@ -497,7 +516,7 @@ class ContextMapRulesTest {
     }
 
     private static boolean isSharedPortCandidate(JavaClass type) {
-        return type.isInterface() && !type.isAnnotation() && type.isTopLevelClass() && type.getPackageName().startsWith(SHARED_APPLICATION + ".")
+        return type.isInterface() && !type.isAnnotation() && !type.getSimpleName().equals("package-info") && type.isTopLevelClass() && type.getPackageName().startsWith(SHARED_APPLICATION + ".")
                 && !type.getPackageName().equals(SHARED_EVENTS);
     }
 
