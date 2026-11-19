@@ -25,6 +25,53 @@ test.describe('Given a visitor at the choice between Přihlášení and Registra
     });
   }
 
+  for (const { pose, width, height } of [
+    { pose: 'a computer', width: 1280, height: 800 },
+    { pose: 'an iPad on its side', width: 1194, height: 834 },
+  ]) {
+    test(`when they switch to Registrace and back on ${pose}, then neither the dialog's frame nor the switch moves or changes its width`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await openSignInDialog(page);
+      await page.setViewportSize({ width, height });
+      const dialog = page.getByRole('dialog');
+      const segments = dialog.locator('.tab-switch > button');
+      const frames = async () => {
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () =>
+                document.getAnimations().filter((motion) => motion.playState === 'running').length,
+            ),
+          )
+          .toBe(0);
+        return Promise.all(
+          [dialog.locator('.dialog-panel'), dialog.locator('.tab-switch')].map((part) =>
+            part.evaluate((element) => {
+              const box = element.getBoundingClientRect();
+              return {
+                left: Math.round(box.left),
+                top: Math.round(box.top),
+                width: Math.round(box.width),
+              };
+            }),
+          ),
+        );
+      };
+      const signIn = await frames();
+
+      await segments.nth(1).click();
+      await expect(dialog.locator('#register-email')).toBeVisible();
+      const registration = await frames();
+      await segments.nth(0).click();
+      await expect(dialog.locator('#login-email')).toBeVisible();
+
+      expect(registration).toEqual(signIn);
+      expect(await frames()).toEqual(signIn);
+    });
+  }
+
   test('when the system forces its own colours, then the chosen tab is drawn in Highlight with HighlightText', async ({
     page,
   }) => {

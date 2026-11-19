@@ -6,17 +6,8 @@ import { describe, it } from 'node:test';
 const APP = new URL('../src/app/', import.meta.url).pathname;
 const PORTAL = ['features/donors/dashboard', 'layout/account-sheet'];
 
-const SHARED_BEYOND_THE_PORTAL =
-  'its id also names the same text in the sign-in dialog, password reset or connecting an app, which #1292 leaves as they are';
-
 const NOT_CHECKED = {
   'donor.bankAccounts.hint.warningPrefix': 'visually hidden prefix of a hint',
-  'donor.form.code.required': SHARED_BEYOND_THE_PORTAL,
-  'donor.form.newPassword.tooShort': SHARED_BEYOND_THE_PORTAL,
-  'donor.login.name': SHARED_BEYOND_THE_PORTAL,
-  'donor.login.secondFactor.code': SHARED_BEYOND_THE_PORTAL,
-  'donor.register.companyStreet': SHARED_BEYOND_THE_PORTAL,
-  'donor.register.street': SHARED_BEYOND_THE_PORTAL,
 };
 
 const BREAKS = [
