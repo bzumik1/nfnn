@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorDeviceTest$GivenActiveDevice > when it is ended, then it is no longer active and keeps the time and the reason",
+    "reason": "PR #1093 (#621 round 5, #1092): DonorDevice.end is removed, because the adapter maps the end columns updatable = false and production ends a device only through the conditional updates of DeviceSignOuts; an ended device is now built as stored (reconstitute, fixture EndedDevices), and ending one is proved where it happens",
+    "replacement": "donors.domain.DonorDeviceTest$GivenEndedDevice > when it is read, then it is no longer active and keeps the time and the reason",
+    "contract": "docs/system-overview.md, donors (Devices)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorDeviceTest$GivenActiveDevice > when it is ended a second time, then the first end stays and the second reports nothing ended",
+    "reason": "PR #1093 (#621 round 5, #1092): DonorDevice.end is removed, because the adapter maps the end columns updatable = false and production ends a device only through the conditional updates of DeviceSignOuts; an ended device is now built as stored (reconstitute, fixture EndedDevices), and ending one is proved where it happens",
+    "replacement": "donors.infrastructure.persistence.JpaDonorDeviceRepositoryTest > Given an active device already read into the session and then ended by another sign-out, when it is ended again, then the first end and its reason stay and the answer is false",
+    "contract": "docs/system-overview.md, donors (Devices)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorDeviceTest$GivenActiveDevice > when it is used after it ended, then the last use stays",
+    "reason": "PR #1093 (#621 round 5, #1092): DonorDevice.end is removed, because the adapter maps the end columns updatable = false and production ends a device only through the conditional updates of DeviceSignOuts; an ended device is now built as stored (reconstitute, fixture EndedDevices), and ending one is proved where it happens",
+    "replacement": "donors.domain.DonorDeviceTest$GivenEndedDevice > when it is used after it ended, then the last use stays",
+    "contract": "docs/system-overview.md, donors (Devices)"
+  }
+]
