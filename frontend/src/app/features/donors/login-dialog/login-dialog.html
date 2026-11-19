@@ -3,7 +3,7 @@
   [presentation]="presentation()"
   [tall]="true"
   [grouped]="true"
-  [wide]="atCrossroads()"
+  [wide]="true"
   [pushesHistory]="false"
   (dismissed)="closeDialog()"
 >
@@ -227,6 +227,7 @@
                 <input
                   appFormControl
                   id="login-code"
+                  class="form-control--code"
                   enterkeyhint="go"
                   autofocus
                   name="code"
@@ -642,7 +643,7 @@
                 </app-form-field>
 
                 <app-form-field
-                  label="Sídlo – ulice a&nbsp;číslo"
+                  label="Sídlo&nbsp;– ulice a&nbsp;číslo"
                   i18n-label="@@donor.register.companyStreet"
                   [messages]="streetMessages"
                 >

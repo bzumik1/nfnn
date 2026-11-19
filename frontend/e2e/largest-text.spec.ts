@@ -23,7 +23,9 @@ import {
   mockDonorApi,
   noDonations,
   openDonorSection,
+  openSignInDialog,
   rememberedDonorSession,
+  secondFactorRequired,
   showAccountList,
   signIn,
 } from './donor-session';
@@ -2092,3 +2094,115 @@ test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows 
     expect(apart, `E-mail ${JSON.stringify(text)} and Změnit ${JSON.stringify(button)}`).toBe(true);
   });
 });
+for (const { pose, width, rootSize } of [
+  { pose: 'an iPhone SE 320 pt wide with the text at 200 %', width: 320, rootSize: '200%' },
+  {
+    pose: 'an iPhone Pro Max 430 pt wide with the largest accessibility text',
+    width: 430,
+    rootSize: `${LARGEST_SYSTEM_TEXT_PX}px`,
+  },
+]) {
+  test.describe(`Given a visitor in the sign-in dialog on ${pose}`, () => {
+    const heightOf = (button: Locator) =>
+      button.evaluate((control) => Math.round(control.getBoundingClientRect().height));
+
+    test('when they ask for the registration link again and the loading delay passes, then Poslat odkaz znovu keeps its height while Odesíláme… shows', async ({
+      page,
+    }) => {
+      await page.clock.install();
+      await mockDonorApi(page);
+      await page.route('**/api/donors/auth/register', (route) =>
+        route.fulfill({ status: 202, body: '' }),
+      );
+      const neverAnswered = new Promise<void>(() => undefined);
+      await page.route('**/api/donors/auth/email-verification/request', async () => neverAnswered);
+      await openSignInDialog(page);
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
+      const dialog = page.getByRole('dialog');
+      await dialog.getByRole('button', { name: 'Registrace' }).click();
+      await dialog.locator('#register-name').fill('Jana Nováková');
+      await dialog.locator('#register-street').fill('Dlouhá 12');
+      await dialog.locator('#register-postal-code').fill('400 01');
+      await dialog.locator('#register-city').fill('Ústí nad Labem');
+      await dialog.locator('#register-email').fill('jana@example.cz');
+      await dialog.locator('#register-password').fill('correct horse battery');
+      await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
+      const resend = dialog.locator('.registration-resend');
+      await expect(resend).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const resting = await heightOf(resend);
+
+      await resend.click();
+      await page.clock.fastForward(1_000);
+
+      await expect(resend.locator('.busy-label__face--shown')).toHaveText('Odesíláme…');
+      const working = await heightOf(resend);
+      expect(Math.abs(working - resting), `${resting} → ${working}`).toBeLessThanOrEqual(1);
+    });
+
+    test('when they try the connection again while offline and the loading delay passes, then Zkusit znovu keeps its height while Zkoušíme se připojit… shows', async ({
+      page,
+    }) => {
+      await page.clock.install();
+      await page.goto('/darce/prehled');
+      const dialog = page.getByRole('dialog');
+      await expect(dialog.locator('#login-email')).toBeVisible();
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
+      const neverAnswered = new Promise<void>(() => undefined);
+      await page.route(
+        (url) => url.pathname === '/api/operations/setup',
+        async () => neverAnswered,
+      );
+      const now = await page.evaluate(() => Date.now());
+      await page.clock.pauseAt(now + 1_000);
+      await page.evaluate(() => {
+        Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+        window.dispatchEvent(new Event('offline'));
+      });
+      await page.clock.runFor(200);
+      const retry = dialog.locator('.offline-entry-try-again');
+      await expect(retry).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const resting = await heightOf(retry);
+
+      await retry.click();
+      await page.clock.runFor(1_000);
+
+      await expect(retry.locator('.busy-label__face--shown')).toHaveText('Zkoušíme se připojit…');
+      const working = await heightOf(retry);
+      expect(Math.abs(working - resting), `${resting} → ${working}`).toBeLessThanOrEqual(1);
+    });
+
+    test('when they reach the code from the app and type it, then the whole code fits its field, which starts at its label', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route('**/api/donors/auth/login', (route) =>
+        route.fulfill(secondFactorRequired()),
+      );
+      await openSignInDialog(page);
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
+      const dialog = page.getByRole('dialog');
+      await dialog.locator('#login-email').fill('jana@example.cz');
+      await dialog.locator('#login-password').fill('correct horse battery');
+      await dialog.getByRole('button', { name: 'Přihlásit se', exact: true }).click();
+      const code = dialog.locator('#login-code');
+
+      await code.fill('287082');
+
+      const placed = await code.evaluate((input) => {
+        const label = document.querySelector(`label[for="${input.id}"]`)!;
+        return {
+          fits: input.scrollWidth <= input.clientWidth,
+          startsAtLabel:
+            Math.round(input.getBoundingClientRect().left) ===
+            Math.round(label.getBoundingClientRect().left),
+        };
+      });
+      expect(placed).toEqual({ fits: true, startsAtLabel: true });
+    });
+  });
+}

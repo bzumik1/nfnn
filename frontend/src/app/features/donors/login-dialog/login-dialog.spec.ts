@@ -1769,6 +1769,7 @@ describe('Given the sign-in dialog', () => {
       const button = element<HTMLButtonElement>(selector);
       expect(labelFaces(button)).toEqual([idle, busy]);
       expect(accessibleText(button)).toBe(busy);
+      expect(button.hasAttribute('aria-busy')).toBe(false);
     }
 
     it('then signing in is locked and says Přihlašujeme…, keeping Přihlásit se for its width', async () => {
