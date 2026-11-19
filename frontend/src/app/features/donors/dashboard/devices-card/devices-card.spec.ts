@@ -170,6 +170,12 @@ describe("Given a donor's signed-in devices card", () => {
       ]);
     });
 
+    it('then the dot before the kind of sign-in is bound to the date before it, so a wrapped line never starts with it', () => {
+      expect(rows()[0].querySelector('.device-sign-in')?.textContent).toMatch(
+        /2026\u00a0· zapamatované přihlášení/,
+      );
+    });
+
     it('then the devices that get push notifications say so in words, and the others say nothing of it', async () => {
       TestBed.inject(DonorNotifiedDevices).accept([IPHONE.id]);
       await settle();

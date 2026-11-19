@@ -218,6 +218,43 @@ describe('Given the place the app keeps for its own reload', () => {
     expect([...place.keptTabs()]).toEqual([['about', '/o-nas']]);
   });
 
+  describe('after a reload kept with the heading to focus on the same page', () => {
+    beforeEach(() => {
+      const { place } = startApp();
+      place.keep('/darce/udaje', 'notifications-title');
+      TestBed.resetTestingModule();
+      history.replaceState(null, '', '/darce/udaje');
+    });
+
+    it('when the page asks for that heading, then it may focus it once', () => {
+      const { place } = startApp();
+
+      expect(place.takeFocus('notifications-title')).toBe(true);
+      expect(place.takeFocus('notifications-title')).toBe(false);
+    });
+
+    it('when the page asks for another heading, then it may not focus it', () => {
+      const { place } = startApp();
+
+      expect(place.takeFocus('alerts-device-title')).toBe(false);
+    });
+
+    it('when the app starts at another address, then no heading is focused', () => {
+      history.replaceState(null, '', '/darce/prehled');
+      const { place } = startApp();
+
+      expect(place.takeFocus('notifications-title')).toBe(false);
+    });
+  });
+
+  it('when the app reloads without naming a heading, then no heading is focused after it', () => {
+    keepBeforeReload('/aktuality/novy-clanek?strana=2', 0);
+
+    const { place } = startApp();
+
+    expect(place.takeFocus('notifications-title')).toBe(false);
+  });
+
   it('when the kept place is not one the app wrote, then the app starts without it', () => {
     sessionStorage.setItem(RELOAD_PLACE_KEY, '{"address":7}');
 

@@ -1,3 +1,5 @@
+@use 'touch-target';
+
 :host {
   display: block;
 }
@@ -28,6 +30,11 @@
 
 .other-remove {
   margin-top: var(--space-5);
+}
+
+.device-retry > .ui-button {
+  margin-top: var(--space-3);
+  @include touch-target.reaches-finger-size;
 }
 
 .ui-list__row--action app-busy-label {

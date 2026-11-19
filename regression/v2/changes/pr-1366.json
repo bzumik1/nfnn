@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/notifications-card/notifications-card.spec.ts > Given a donor on Údaje a zabezpečení with the notifications card > when the part of the site that delivers them is not running yet, then the card asks to try again without telling to reload the page, and trying again offers them once it runs",
+    "reason": "PR #1366 (#1334, team Mobile + PWA 6/6, 2026-11-17): Zkusit znovu in the state without a service worker now loads the page again through ReloadGuard and focuses the card heading after it; checking again in place remains only when a reload already ran within the last minute, so the one test splits into its state, its reload and its fallback",
+    "replacement": "src/app/features/donors/dashboard/notifications-card/notifications-card.spec.ts > Given a donor on Údaje a zabezpečení with the notifications card > when the part of the site that delivers them is not running yet > then trying again within a minute of the last reload checks again in the page and offers them once it runs",
+    "contract": "docs/frontend-overview.md, donor area (Upozornění) and core/reload"
+  }
+]

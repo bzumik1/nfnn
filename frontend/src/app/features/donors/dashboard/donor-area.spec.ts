@@ -1577,6 +1577,13 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
     });
 
+    it('then the dot between the count and the sum of a year is bound to the count, so a wrapped line never starts with it', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('.gift-year-sum')?.textContent).toMatch(/dary\u00a0· 1/);
+    });
+
     it('then the donations are grouped by year, newest first, each under a heading with the count and the sum from the summary', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());

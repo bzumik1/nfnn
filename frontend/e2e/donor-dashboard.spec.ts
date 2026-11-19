@@ -529,7 +529,7 @@ test.describe('Given a signed-in donor', () => {
 
     await row.getByRole('button', { name: 'Zrušit změnu e-mailu' }).click();
     await expect(
-      page.getByRole('status').filter({ hasText: 'Změnu e-mailu jsme zrušili.' }),
+      page.getByRole('status').filter({ hasText: 'Změnu e\u2011mailu jsme zrušili.' }),
     ).toBeVisible();
     await expect(page.locator('.account-pending')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Změnit e-mail' })).toBeFocused();

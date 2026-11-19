@@ -786,7 +786,9 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.settle();
 
       expect(card.element('.account-pending')).toBeNull();
-      expect(card.element('.account-status').textContent).toContain('Změnu e-mailu jsme zrušili.');
+      expect(card.element('.account-status').textContent).toContain(
+        'Změnu e\u2011mailu jsme zrušili.',
+      );
       expect(normalized(document.activeElement?.textContent)).toBe('Změnit e-mail');
     });
 
@@ -1036,7 +1038,7 @@ describe('Given the sign-in and security card of a donor without a password', ()
     await card.clickButton('Vypnout dvoufaktorové ověření');
 
     expect(card.element('.account-form-intro').textContent).toContain(
-      'Při obnově přístupu odkazem z\u00a0e-mailu pak kód z\u00a0aplikace chtít nebudeme.',
+      'Při obnově přístupu odkazem z\u00a0e\u2011mailu pak kód z\u00a0aplikace chtít nebudeme.',
     );
     expect(card.element('.account-form').textContent).not.toContain('bude stačit heslo');
   });

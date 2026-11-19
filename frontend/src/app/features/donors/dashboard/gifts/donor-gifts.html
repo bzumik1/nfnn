@@ -26,9 +26,10 @@
               {{ group.year }}
             </h3>
             <p class="gift-year-sum">
-              <app-gift-count [gifts]="group.gifts" [verifications]="group.verifications" />
-              ·
-              <span class="gift-year-total ui-figures"
+              <app-gift-count
+                [gifts]="group.gifts"
+                [verifications]="group.verifications"
+              />&nbsp;·&ngsp;<span class="gift-year-total ui-figures"
                 >{{ crowns(group.totalAmountMinor) }}&nbsp;Kč</span
               >
             </p>

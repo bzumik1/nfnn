@@ -19,7 +19,7 @@ export class ExternalNavigation {
     if (target.pathname !== current.pathname || target.search !== current.search) {
       view.history.pushState(null, '', url);
     } else {
-      view.history.replaceState(null, '', url);
+      view.history.replaceState(view.history.state, '', url);
     }
     view.location.reload();
   }

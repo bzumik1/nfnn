@@ -24,6 +24,8 @@ import { ListChanges } from '../../../core/kept/list-changes';
 import { BrowserPushHolders } from '../../operations/browser-push-holders';
 import { OpenAlerts } from '../../../core/push/open-alerts';
 import { PushAvailability, pushAvailability } from '../../../core/push/push-availability';
+import { PageReload } from '../../../core/reload/page-reload';
+import { ReloadPlace } from '../../../core/reload/reload-place';
 import {
   BrowserPushSubscriptionState,
   SERVICE_WORKER_PUSH,
@@ -110,6 +112,8 @@ export class AdminAlerts {
   private readonly window = inject(DOCUMENT).defaultView;
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly pageReload = inject(PageReload);
+  private focusDeviceAfterLoad = inject(ReloadPlace).takeFocus('alerts-device-title');
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
@@ -167,6 +171,7 @@ export class AdminAlerts {
   );
 
   constructor() {
+    const focusesDevice = this.focusDeviceAfterLoad;
     const shown = this.kept.kept('push');
     if (shown !== null) {
       this.showView(shown);
@@ -178,7 +183,15 @@ export class AdminAlerts {
       this.availability.set(this.availabilityNow()),
     );
     this.destroyRef.onDestroy(() => changes.unsubscribe());
-    afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+    if (!focusesDevice) {
+      afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+    }
+  }
+
+  protected retryWithReload(): void {
+    if (!this.pageReload.reloadFocusing('alerts-device-title')) {
+      this.load();
+    }
   }
 
   protected load(): void {
@@ -430,6 +443,10 @@ export class AdminAlerts {
     this.availability.set(this.availabilityNow());
     this.state.set('ready');
     this.checkBrowserSubscription();
+    if (this.focusDeviceAfterLoad) {
+      this.focusDeviceAfterLoad = false;
+      this.focusAfterRender('alerts-device-title');
+    }
   }
 
   private changedHere(): void {

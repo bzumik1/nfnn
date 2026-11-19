@@ -295,6 +295,7 @@
             <div class="ui-field-group">
               <app-form-field
                 label="E-mail"
+                [wholeLabel]="true"
                 i18n-label="@@donor.login.email"
                 [messages]="emailMessages"
               >
@@ -401,14 +402,14 @@
                   (click)="resendVerification()"
                   i18n="@@donor.login.resendVerification"
                 >
-                  Poslat ověřovací e-mail znovu
+                  Poslat ověřovací <span class="ui-word">e-mail</span> znovu
                 </button>
               </p>
             }
             <div role="status">
               @if (verificationResent()) {
                 <p class="form-status" i18n="@@donor.login.verificationResent">
-                  Ověřovací e-mail jsme poslali znovu. Otevřete odkaz v&nbsp;něm a&nbsp;pak se
+                  Ověřovací e&#8209;mail jsme poslali znovu. Otevřete odkaz v&nbsp;něm a&nbsp;pak se
                   přihlaste.
                 </p>
               }
@@ -477,13 +478,15 @@
               <path d="m3 7 9 6 9-6" />
             </svg>
           </div>
-          <h3 tabindex="-1" autofocus i18n="@@donor.register.sentTitle">Zkontrolujte si e-mail</h3>
+          <h3 tabindex="-1" autofocus i18n="@@donor.register.sentTitle">
+            Zkontrolujte si <span class="ui-word">e-mail</span>
+          </h3>
           <p role="status" i18n="@@donor.register.sentText">
             Na adresu {{ registration.email.trim() }} jsme poslali odkaz pro potvrzení. Platí
             24&nbsp;hodin; po jeho otevření se účet otevře a&nbsp;budete přihlášeni.
           </p>
           <p class="reset-hint" i18n="@@donor.register.sentHint">
-            E-mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.
+            E&#8209;mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.
           </p>
           <div class="sent-actions">
             <button
@@ -505,7 +508,7 @@
               (click)="editRegistration()"
               i18n="@@donor.register.editEmail"
             >
-              Opravit e-mail
+              Opravit <span class="ui-word">e-mail</span>
             </button>
           </div>
           <div role="status">
@@ -742,6 +745,7 @@
             <div class="ui-field-group">
               <app-form-field
                 label="E-mail"
+                [wholeLabel]="true"
                 i18n-label="@@donor.login.email"
                 [messages]="emailMessages"
               >
@@ -836,7 +840,7 @@
             } @else {
               <p class="register-hint passkey-later" i18n="@@donor.register.passkeyHint">
                 Klíč (otisk prstu, obličej nebo zámek obrazovky) vytvoříte hned po potvrzení
-                e-mailu. Účet pak heslo mít nebude; nastavit ho můžete kdykoli později.
+                e&#8209;mailu. Účet pak heslo mít nebude; nastavit ho můžete kdykoli později.
               </p>
             }
 
@@ -888,14 +892,14 @@
             </svg>
           </div>
           <h3 tabindex="-1" autofocus i18n="@@donor.login.reset.successTitle">
-            Zkontrolujte si e-mail
+            Zkontrolujte si <span class="ui-word">e-mail</span>
           </h3>
           <p i18n="@@donor.login.reset.successText">
             Pokud k&nbsp;adrese {{ resetEmail.trim() }} existuje účet, poslali jsme na ni odkaz pro
             nastavení nového hesla. Platí hodinu.
           </p>
           <p class="reset-hint" i18n="@@donor.login.reset.successHint">
-            E-mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.
+            E&#8209;mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.
           </p>
           <button
             appNeedsConnection
@@ -942,7 +946,7 @@
           </button>
           <h3 class="step-title reset-title" i18n="@@donor.login.reset.title">Obnovení hesla</h3>
           <p class="step-lead" i18n="@@donor.login.reset.lead">
-            Zadejte svůj e-mail a&nbsp;pošleme vám odkaz pro obnovení hesla.
+            Zadejte svůj e&#8209;mail a&nbsp;pošleme vám odkaz pro obnovení hesla.
           </p>
           <form
             #reset="ngForm"
@@ -954,6 +958,7 @@
             <div class="ui-field-group">
               <app-form-field
                 label="E-mail"
+                [wholeLabel]="true"
                 i18n-label="@@donor.login.email"
                 [messages]="emailMessages"
               >

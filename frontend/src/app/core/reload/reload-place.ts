@@ -16,6 +16,7 @@ interface KeptPlace {
   readonly top: number | null;
   readonly tabs: Readonly<Partial<Record<AppTabId, string>>>;
   readonly at: number;
+  readonly focus?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -25,6 +26,7 @@ export class ReloadPlace {
   private readonly window = this.document.defaultView;
   private readonly kept = this.takeKept();
   private tabsNow: () => ReadonlyMap<AppTabId, string> = () => new Map();
+  private focusTaken = false;
 
   constructor() {
     const top = this.kept?.top ?? null;
@@ -57,13 +59,23 @@ export class ReloadPlace {
     this.tabsNow = tabs;
   }
 
-  keep(url: string): void {
+  takeFocus(target: string): boolean {
+    const kept = this.kept;
+    if (this.focusTaken || kept?.focus !== target || kept.address !== this.here()) {
+      return false;
+    }
+    this.focusTaken = true;
+    return true;
+  }
+
+  keep(url: string, focus?: string): void {
     const address = this.addressOf(url);
     const place: KeptPlace = {
       address,
       top: address === this.addressOf(this.here()) ? (this.window?.scrollY ?? 0) : null,
       tabs: Object.fromEntries(this.tabsNow()),
       at: Date.now(),
+      ...(focus === undefined ? {} : { focus }),
     };
     try {
       this.storage().setItem(RELOAD_PLACE_KEY, JSON.stringify(place));
@@ -153,6 +165,7 @@ function isKeptPlace(value: unknown): value is KeptPlace {
     typeof place['tabs'] === 'object' &&
     place['tabs'] !== null &&
     Object.values(place['tabs']).every((url) => typeof url === 'string') &&
-    typeof place['at'] === 'number'
+    typeof place['at'] === 'number' &&
+    (place['focus'] === undefined || typeof place['focus'] === 'string')
   );
 }

@@ -262,7 +262,7 @@ test.describe('Given a visitor who wants a donor account', () => {
 
     await expect(
       page.getByRole('dialog').getByRole('status').filter({ hasText: /\S/ }),
-    ).toContainText('Ověřovací e-mail jsme poslali znovu.');
+    ).toContainText('Ověřovací e\u2011mail jsme poslali znovu.');
     expect(requested).toEqual([{ email: 'jana@example.cz' }]);
   });
 

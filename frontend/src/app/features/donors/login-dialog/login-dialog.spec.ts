@@ -177,6 +177,10 @@ describe('Given the sign-in dialog', () => {
       expect(element('.login-form button[type="submit"]').textContent?.trim()).toBe('Přihlásit se');
     });
 
+    it('then the e-mail field is labelled E-mail with an ordinary hyphen, so a screen reader says the word as written', () => {
+      expect(element('label[for="login-email"]').textContent?.trim()).toBe('E-mail');
+    });
+
     it('then the forgotten password link stands right under the password field', () => {
       const field = element('#login-password').closest('app-form-field') as HTMLElement;
       const card = field.parentElement as HTMLElement;
@@ -717,7 +721,9 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(element('.form-status').closest('[role="status"]')).not.toBeNull();
-      expect(element('.form-status').textContent).toContain('Ověřovací e-mail jsme poslali znovu.');
+      expect(element('.form-status').textContent).toContain(
+        'Ověřovací e\u2011mail jsme poslali znovu.',
+      );
       expect(element('.form-note')).toBeNull();
       expect(element('.ui-field-error')).toBeNull();
       expect(navigate).not.toHaveBeenCalled();
@@ -1271,7 +1277,7 @@ describe('Given the sign-in dialog', () => {
       await fillInPerson();
       await click('.type-switch[aria-labelledby="register-method-label"] button:nth-child(2)');
       expect(element('#register-password')).toBeNull();
-      expect(element('.passkey-later').textContent).toContain('hned po potvrzení e-mailu');
+      expect(element('.passkey-later').textContent).toContain('hned po potvrzení e\u2011mailu');
 
       await submit('.register-form');
       const request = http.expectOne('/api/donors/auth/register');
@@ -1736,7 +1742,7 @@ describe('Given the sign-in dialog', () => {
       await render('reset');
 
       expect(words('.step-lead')).toBe(
-        `Zadejte svůj e-mail a${NBSP}pošleme vám odkaz pro obnovení hesla.`,
+        `Zadejte svůj e\u2011mail a${NBSP}pošleme vám odkaz pro obnovení hesla.`,
       );
     });
 
@@ -1751,7 +1757,7 @@ describe('Given the sign-in dialog', () => {
 
       expect(words('.reset-success p:not(.reset-hint)')).toContain(`Pokud k${NBSP}adrese`);
       expect(words('.reset-hint')).toBe(
-        'E-mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.',
+        'E\u2011mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.',
       );
     });
   });

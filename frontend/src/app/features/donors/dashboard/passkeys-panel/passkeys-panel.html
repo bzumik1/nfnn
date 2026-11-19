@@ -1,7 +1,7 @@
 <section #region class="passkeys" tabindex="-1" [attr.aria-labelledby]="labelledBy()">
   <p class="passkeys-intro" i18n="@@donor.passkeys.intro">
     Přihlaste se otiskem prstu, obličejem nebo zámkem obrazovky místo hesla. Klíč uloží Hesla od
-    Applu, Správce hesel Google nebo Windows Hello a&nbsp;na podvodné stránce nefunguje. Přihlášení
+    Applu, Správce hesel Google nebo Windows Hello. Na podvodné stránce klíč nefunguje. Přihlášení
     klíčem je chráněné i&nbsp;bez kódu z&nbsp;aplikace.
   </p>
 
@@ -38,8 +38,7 @@
                     <span class="passkey-date"
                       ><span i18n="@@donor.passkeys.createdAt">přidáno</span>
                       {{ formatDate(passkey.createdAt) }}</span
-                    >
-                    ·
+                    >&nbsp;·&ngsp;
                     @if (passkey.lastUsedAt; as lastUsedAt) {
                       <span class="passkey-date"
                         ><span i18n="@@donor.passkeys.lastUsedAt">naposledy použito</span>
@@ -179,7 +178,7 @@
         <p class="passkeys-hint" i18n="@@donor.passkeys.addSecond">
           Účet nemá heslo, proto doporučujeme mít klíč aspoň ve dvou zařízeních, třeba
           v&nbsp;telefonu a&nbsp;v&nbsp;počítači. Když o&nbsp;všechny klíče přijdete, přístup
-          obnovíte odkazem z&nbsp;e-mailu přes „Zapomenuté heslo“.
+          obnovíte odkazem z&nbsp;e&#8209;mailu přes „Zapomenuté heslo“.
         </p>
       }
     } @else if (hasPassword()) {
@@ -188,7 +187,7 @@
         [class.passkeys-empty--after-rows]="rowLeft()"
         i18n="@@donor.passkeys.empty"
       >
-        Zatím nemáte žádný přístupový klíč. Přihlašujete se e-mailem a&nbsp;heslem.
+        Zatím nemáte žádný přístupový klíč. Přihlašujete se e&#8209;mailem a&nbsp;heslem.
       </p>
     } @else {
       <p
@@ -197,7 +196,7 @@
         i18n="@@donor.passkeys.emptyPasswordless"
       >
         Účet nemá heslo ani přístupový klíč. Vytvořte si klíč hned; jinak se příště přihlásíte jen
-        přes odkaz z&nbsp;e-mailu („Zapomenuté heslo“).
+        přes odkaz z&nbsp;e&#8209;mailu („Zapomenuté heslo“).
       </p>
     }
   } @else if (!loadError()) {

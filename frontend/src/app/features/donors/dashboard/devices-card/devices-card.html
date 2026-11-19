@@ -230,7 +230,9 @@
                 >{{ signedInOn(device) }}</span
               >
               @if (kind(device); as sessionKind) {
-                &ngsp;·&nbsp;<span class="device-kind">{{ sessionKind }}</span>
+                <span
+                  >&nbsp;·&ngsp;<span class="device-kind">{{ sessionKind }}</span></span
+                >
               }
             </span>
             @if (notified(device)) {

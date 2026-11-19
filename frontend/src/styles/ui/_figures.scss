@@ -17,6 +17,10 @@
   }
 }
 
+.ui-word {
+  white-space: nowrap;
+}
+
 .ui-date {
   @include bp.up(nav) {
     display: inline-block;

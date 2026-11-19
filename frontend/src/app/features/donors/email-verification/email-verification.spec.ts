@@ -147,7 +147,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
       expect(element('[role="status"]').textContent).toContain('poslali jsme na ni nový odkaz');
       expect(element('form')).toBeNull();
       expect(element('.ui-status').textContent).toContain(
-        'E-mail nedorazil? Podívejte se do nevyžádané pošty.',
+        'E\u2011mail nedorazil? Podívejte se do nevyžádané pošty.',
       );
       expect(element<HTMLAnchorElement>('a.ui-button--primary').getAttribute('href')).toBe('/');
     });
@@ -160,7 +160,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
       );
 
       expect(element('.already-confirmed').textContent).toContain(
-        'Už jste e-mail potvrdili? Pak se stačí přihlásit.',
+        'Už jste e\u2011mail potvrdili? Pak se stačí přihlásit.',
       );
       await click('.already-confirmed + .ui-button');
 
