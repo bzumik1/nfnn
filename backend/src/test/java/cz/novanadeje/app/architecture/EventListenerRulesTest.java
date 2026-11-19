@@ -8,6 +8,7 @@ import com.tngtech.archunit.core.domain.JavaCodeUnit;
 import com.tngtech.archunit.core.domain.JavaEnumConstant;
 import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.domain.JavaParameter;
 import com.tngtech.archunit.core.domain.JavaType;
@@ -153,19 +154,21 @@ class EventListenerRulesTest {
                     + "anyway and fails through PublishingTransaction.require, which refuses a missing or read-only transaction (#621, Khononov T4)");
 
     private static ArchCondition<JavaMethod> runWithoutATransactionAndRequireTheirPublishers() {
-        return new ArchCondition<>("declare fallbackExecution = true and call PublishingTransaction.require") {
+        return new ArchCondition<>("declare fallbackExecution = true and call PublishingTransaction.require before anything else") {
             @Override
             public void check(JavaMethod method, ConditionEvents events) {
                 boolean fallback = transactionalListenerOf(method).flatMap(listener -> listener.get("fallbackExecution"))
                         .filter(Boolean.TRUE::equals).isPresent();
+                Optional<Integer> firstLine = method.getMethodCallsFromSelf().stream().map(JavaMethodCall::getLineNumber).min(Integer::compare);
                 boolean requires = method.getMethodCallsFromSelf().stream()
-                        .anyMatch(call -> call.getTargetOwner().isEquivalentTo(PublishingTransaction.class) && call.getName().equals("require"));
+                        .anyMatch(call -> call.getTargetOwner().isEquivalentTo(PublishingTransaction.class) && call.getName().equals("require")
+                                && firstLine.filter(line -> call.getLineNumber() <= line).isPresent());
                 if (!fallback) {
                     events.add(SimpleConditionEvent.violated(method, method.getFullName() + " does not declare fallbackExecution = true in "
                             + method.getSourceCodeLocation()));
                 }
                 if (!requires) {
-                    events.add(SimpleConditionEvent.violated(method, method.getFullName() + " does not call PublishingTransaction.require in "
+                    events.add(SimpleConditionEvent.violated(method, method.getFullName() + " does not call PublishingTransaction.require before anything else in "
                             + method.getSourceCodeLocation()));
                 }
             }
@@ -173,7 +176,7 @@ class EventListenerRulesTest {
     }
 
     @Test
-    @DisplayName("Given planted BEFORE_COMMIT listeners without fallbackExecution, without the transaction check, on a composed annotation without fallbackExecution, and ones that declare and call both or listen after the commit, when the rule checks them, then each missing part is reported and nothing else")
+    @DisplayName("Given planted BEFORE_COMMIT listeners without fallbackExecution or with it false, without the transaction check or with it after another call, on a composed annotation without fallbackExecution, and ones that declare and call both first or listen after the commit, by default too, when the rule checks them, then each missing part is reported and nothing else")
     void should_report_each_missing_part_when_checked_given_planted_before_commit_listeners(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
                 "cz.novanadeje.app.planteda.infrastructure.events.PlantedBeforeCommit", """
@@ -222,15 +225,32 @@ class EventListenerRulesTest {
                                 PublishingTransaction.require(erased);
                             }
 
+                            @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = false)
+                            void fallbackTurnedOff(DonorErased erased) {
+                                PublishingTransaction.require(erased);
+                            }
+
+                            @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+                            void checksAfterWriting(DonorErased erased) {
+                                erased.donorId();
+                                PublishingTransaction.require(erased);
+                            }
+
                             @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
                             void afterTheCommit(DonorErased erased) {
+                            }
+
+                            @TransactionalEventListener
+                            void afterTheCommitByDefault(DonorErased erased) {
                             }
                         }
                         """));
 
         assertThat(before_commit_listeners_fail_without_the_publishers_read_write_transaction.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(3)
+                .hasSize(5)
                 .anySatisfy(detail -> assertThat(detail).contains("droppedOutsideATransaction").contains("fallbackExecution"))
+                .anySatisfy(detail -> assertThat(detail).contains("fallbackTurnedOff").contains("fallbackExecution"))
+                .anySatisfy(detail -> assertThat(detail).contains("checksAfterWriting").contains("before anything else"))
                 .anySatisfy(detail -> assertThat(detail).contains("runsWithoutAnyTransaction").contains("PublishingTransaction.require"))
                 .anySatisfy(detail -> assertThat(detail).contains("composedWithoutFallback").contains("fallbackExecution"))
                 .noneSatisfy(detail -> assertThat(detail).containsAnyOf("failsWithoutItsPublishersTransaction", "afterTheCommit"));

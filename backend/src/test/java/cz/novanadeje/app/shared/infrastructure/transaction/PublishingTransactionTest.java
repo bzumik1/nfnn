@@ -1,9 +1,8 @@
 package cz.novanadeje.app.shared.infrastructure.transaction;
 
-import org.junit.jupiter.api.AfterEach;
+import cz.novanadeje.app.support.ThreadTransaction;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -11,12 +10,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class PublishingTransactionTest {
 
     private record PlantedEvent(String detail) {
-    }
-
-    @AfterEach
-    void leaveNoTransaction() {
-        TransactionSynchronizationManager.setActualTransactionActive(false);
-        TransactionSynchronizationManager.setCurrentTransactionReadOnly(false);
     }
 
     @Test
@@ -31,19 +24,28 @@ class PublishingTransactionTest {
     @Test
     @DisplayName("Given a read-only transaction on the thread, when a before-commit listener requires the publisher's transaction, then it fails")
     void should_fail_when_required_given_a_read_only_transaction() {
-        TransactionSynchronizationManager.setActualTransactionActive(true);
-        TransactionSynchronizationManager.setCurrentTransactionReadOnly(true);
+        try (ThreadTransaction ignored = ThreadTransaction.readOnly()) {
+            assertThatThrownBy(() -> PublishingTransaction.require(new PlantedEvent("detail")))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("PlantedEvent");
+        }
+    }
 
-        assertThatThrownBy(() -> PublishingTransaction.require(new PlantedEvent("detail")))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("PlantedEvent");
+    @Test
+    @DisplayName("Given a transaction whose synchronizations are gone, as while an after-commit listener runs, when a before-commit listener requires the publisher's transaction, then it fails")
+    void should_fail_when_required_given_a_transaction_without_synchronization() {
+        try (ThreadTransaction ignored = ThreadTransaction.withoutSynchronization()) {
+            assertThatThrownBy(() -> PublishingTransaction.require(new PlantedEvent("detail")))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("PlantedEvent");
+        }
     }
 
     @Test
     @DisplayName("Given a read-write transaction on the thread, when a before-commit listener requires the publisher's transaction, then it goes on")
     void should_go_on_when_required_given_a_read_write_transaction() {
-        TransactionSynchronizationManager.setActualTransactionActive(true);
-
-        assertThatCode(() -> PublishingTransaction.require(new PlantedEvent("detail"))).doesNotThrowAnyException();
+        try (ThreadTransaction ignored = ThreadTransaction.readWrite()) {
+            assertThatCode(() -> PublishingTransaction.require(new PlantedEvent("detail"))).doesNotThrowAnyException();
+        }
     }
 }

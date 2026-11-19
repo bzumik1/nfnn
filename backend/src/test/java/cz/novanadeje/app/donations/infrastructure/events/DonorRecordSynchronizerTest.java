@@ -20,6 +20,7 @@ import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.support.ThreadTransaction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -46,6 +47,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -87,10 +89,20 @@ class DonorRecordSynchronizerTest {
     @Test
     @DisplayName("Given a donor registered event, when it arrives before the commit, then donations registers its record with every announced field")
     void should_register_record_when_registered_event_arrives_given_company() {
-        synchronizer.onRegistered(registered());
+        try (ThreadTransaction ignored = ThreadTransaction.readWrite()) {
+            synchronizer.onRegistered(registered());
+        }
 
         verify(donorRecordService).register(new RegisterDonorRecordCommand(DONOR_ID, DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."),
                 Optional.of(new CompanyIdentifier("45274649")), ADDRESS, SYMBOL, LocaleCode.EN, REGISTERED_AT));
+    }
+
+    @Test
+    @DisplayName("Given no transaction of the publisher, when a donor registered event arrives, then the copy fails and donations writes no record")
+    void should_fail_and_write_no_record_when_registered_event_arrives_given_no_transaction() {
+        assertThatThrownBy(() -> synchronizer.onRegistered(registered())).isInstanceOf(IllegalStateException.class);
+
+        verifyNoInteractions(donorRecordService);
     }
 
     @Test
@@ -179,13 +191,15 @@ class DonorRecordSynchronizerTest {
     void should_change_profile_when_profile_changed_event_arrives_given_donor() {
         PostalAddress newAddress = new PostalAddress("Krátká 3", "Praha", "110 00");
 
-        synchronizer.onProfileChanged(new DonorProfileChanged(DONOR_ID, new DonorName("Jana Malá"), newAddress, LocaleCode.CS));
+        try (ThreadTransaction ignored = ThreadTransaction.readWrite()) {
+            synchronizer.onProfileChanged(new DonorProfileChanged(DONOR_ID, new DonorName("Jana Malá"), newAddress, LocaleCode.CS));
+        }
 
         verify(donorRecordService).changeProfile(new ChangeDonorRecordProfileCommand(DONOR_ID, new DonorName("Jana Malá"), newAddress, LocaleCode.CS));
     }
 
     @Test
-    @DisplayName("Given the three listeners, when their annotations are read, then the copy is written before the commit and pairing runs after it, all without a surrounding transaction too")
+    @DisplayName("Given the three listeners, when their annotations are read, then the copy is written before the commit and pairing runs after it, each also run when no transaction would call it")
     void should_listen_in_the_designed_phases_when_annotations_read_given_synchronizer() throws NoSuchMethodException {
         assertThat(listener("onRegistered", DonorRegistered.class).phase()).isEqualTo(TransactionPhase.BEFORE_COMMIT);
         assertThat(listener("pairAfterRegistration", DonorRegistered.class).phase()).isEqualTo(TransactionPhase.AFTER_COMMIT);

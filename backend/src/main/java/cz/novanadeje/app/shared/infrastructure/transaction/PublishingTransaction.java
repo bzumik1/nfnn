@@ -8,7 +8,8 @@ public final class PublishingTransaction {
     }
 
     public static void require(Object event) {
-        if (!TransactionSynchronizationManager.isActualTransactionActive() || TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive() || !TransactionSynchronizationManager.isActualTransactionActive()
+                || TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
             throw new IllegalStateException(event.getClass().getSimpleName()
                     + " was published outside a read-write transaction, so the before-commit listener that must join it cannot");
         }
