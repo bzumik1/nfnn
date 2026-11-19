@@ -35,6 +35,14 @@
       grid-row: 2;
     }
   }
+
+  @include bp.container-down(account-card, pair) {
+    grid-template-columns: minmax(0, 1fr);
+
+    .account-actions {
+      justify-content: flex-start;
+    }
+  }
 }
 
 .account-row dt {
