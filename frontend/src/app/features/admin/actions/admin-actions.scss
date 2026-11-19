@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'details';
 
 :host {
   display: block;
@@ -60,9 +61,9 @@ td.admin-col {
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   word-break: break-word;
+  @include details.disclosure;
 
   summary {
-    cursor: pointer;
     color: var(--color-accent);
     font-weight: var(--weight-semibold);
   }

@@ -49,6 +49,8 @@ import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { fileNameParts } from './file-name-parts';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
+import { DetailsState } from '../../../shared/ui/disclosure/details-state';
+import { Disclosure } from '../../../shared/ui/disclosure/disclosure';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -83,6 +85,8 @@ function failedAt(at: string): string {
 @Component({
   selector: 'app-admin-backups',
   imports: [
+    DetailsState,
+    Disclosure,
     BusyLabel,
     Skeleton,
     NeedsConnection,

@@ -80,13 +80,32 @@
                     <li>{{ problem }}</li>
                   }
                 </ul>
-                <details class="tech-details">
-                  <summary i18n="@@admin.backups.techDetails">Technické podrobnosti</summary>
-                  <ul>
-                    @for (detail of problemDetails(); track detail) {
-                      <li>{{ detail }}</li>
-                    }
-                  </ul>
+                <details class="tech-details" appDetailsState #problemTechDetails="appDetailsState">
+                  <summary>
+                    <svg
+                      class="details-chevron"
+                      aria-hidden="true"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m9 18 6-6-6-6" /></svg
+                    ><span i18n="@@admin.backups.techDetails">Technické podrobnosti</span>
+                  </summary>
+                  <div class="details-body" appDisclosure [closed]="!problemTechDetails.open()">
+                    <div>
+                      <ul>
+                        @for (detail of problemDetails(); track detail) {
+                          <li>{{ detail }}</li>
+                        }
+                      </ul>
+                    </div>
+                  </div>
                 </details>
               </div>
               @if (technicianMessage(); as message) {
@@ -326,9 +345,28 @@
       [ngTemplateOutletContext]="{ $implicit: line.text, fileName: line.fileName }"
   /></span>
   @if (line.error) {
-    <details class="tech-details">
-      <summary i18n="@@admin.backups.techDetails">Technické podrobnosti</summary>
-      <p class="run-error">{{ line.error }}</p>
+    <details class="tech-details" appDetailsState #runDetails="appDetailsState">
+      <summary>
+        <svg
+          class="details-chevron"
+          aria-hidden="true"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m9 18 6-6-6-6" /></svg
+        ><span i18n="@@admin.backups.techDetails">Technické podrobnosti</span>
+      </summary>
+      <div class="details-body" appDisclosure [closed]="!runDetails.open()">
+        <div>
+          <p class="run-error">{{ line.error }}</p>
+        </div>
+      </div>
     </details>
   } @else if (line.errorOnServerOnly) {
     @if (serverAway()) {

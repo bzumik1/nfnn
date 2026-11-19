@@ -54,6 +54,8 @@ import { formatBankTime } from '../../donations/donation-date';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ActionBar } from '../../../shared/ui/action-bar/action-bar';
+import { DetailsState } from '../../../shared/ui/disclosure/details-state';
+import { Disclosure } from '../../../shared/ui/disclosure/disclosure';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
 
@@ -213,6 +215,8 @@ const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše 
 @Component({
   selector: 'app-admin-settings',
   imports: [
+    DetailsState,
+    Disclosure,
     BusyButton,
     BusyLabel,
     LiveNotice,
