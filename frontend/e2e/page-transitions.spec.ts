@@ -602,6 +602,85 @@ test.describe('Given an administrator in the app on the home screen of a phone w
     await expect(overlays(page)).toHaveCount(0);
   }
 
+  async function holdTheStepBackAtItsEnd(page: Page): Promise<void> {
+    await page.evaluate(() => {
+      const watch = new MutationObserver(() => {
+        const overlay = document.querySelector('.page-transition--moving');
+        const motions = overlay?.getAnimations({ subtree: true }) ?? [];
+        if (motions.length === 0) {
+          return;
+        }
+        watch.disconnect();
+        motions.forEach((motion) => {
+          motion.pause();
+          motion.currentTime = Number(motion.effect?.getComputedTiming().endTime ?? 0) - 1;
+        });
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => document.documentElement.classList.add('nfnn-held')),
+        );
+      });
+      watch.observe(document.body, { childList: true, subtree: true, attributes: true });
+    });
+  }
+
+  function shareOfPixelsThatDiffer(page: Page, one: Buffer, other: Buffer): Promise<number> {
+    return page.evaluate(
+      async ([first, second]) => {
+        const pixels = async (base64: string): Promise<ImageData> => {
+          const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+          const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+          const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+          const context = canvas.getContext('2d')!;
+          context.drawImage(bitmap, 0, 0);
+          return context.getImageData(0, 0, bitmap.width, bitmap.height);
+        };
+        const [one, other] = await Promise.all([pixels(first), pixels(second)]);
+        const [a, b] = [one.data, other.data];
+        const width = one.width;
+        const awayFromTheLeavingEdge = Math.floor(width * 0.95);
+        let differing = 0;
+        let compared = 0;
+        for (let index = 0; index < a.length; index += 4) {
+          if ((index / 4) % width >= awayFromTheLeavingEdge) {
+            continue;
+          }
+          compared++;
+          const distance =
+            Math.abs(a[index] - b[index]) +
+            Math.abs(a[index + 1] - b[index + 1]) +
+            Math.abs(a[index + 2] - b[index + 2]);
+          if (distance > 48) {
+            differing++;
+          }
+        }
+        return differing / compared;
+      },
+      [one.toString('base64'), other.toString('base64')],
+    );
+  }
+
+  test('when they press Zpět in Správa, then what lies under the leaving page at the end of its way is the account sheet over the news as it then stands, nothing of the news drawn over it', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+    await holdTheStepBackAtItsEnd(page);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+    await expect(page.locator('html.nfnn-held')).toBeAttached();
+    const underTheLeavingPage = await page.screenshot();
+    await page.evaluate(() =>
+      document
+        .querySelector('.page-transition')
+        ?.getAnimations({ subtree: true })
+        .forEach((motion) => motion.play()),
+    );
+    await backInTheAccountSheet(page);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    const standing = await page.screenshot();
+
+    expect(await shareOfPixelsThatDiffer(page, underTheLeavingPage, standing)).toBeLessThan(0.005);
+  });
+
   test('when they open Správa and press Zpět, then the account sheet is open over the news again with Správa focused', async ({
     page,
   }) => {
