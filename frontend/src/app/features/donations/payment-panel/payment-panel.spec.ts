@@ -696,11 +696,12 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
     expect(element('.qr-error')).toBeNull();
     const actions = element('.pay-actions');
-    expect(actions.hidden).toBe(true);
+    const folded = actions.querySelector('.fold') as HTMLElement;
     expect(actions.hasAttribute('inert')).toBe(true);
-    expect(actions.contains(element('.bank-app-open'))).toBe(true);
-    expect(actions.contains(element('.other-device'))).toBe(true);
-    expect(actions.contains(qrRegion())).toBe(true);
+    expect(folded.hidden).toBe(true);
+    expect(folded.contains(element('.bank-app-open'))).toBe(true);
+    expect(folded.contains(element('.other-device'))).toBe(true);
+    expect(folded.contains(qrRegion())).toBe(true);
 
     const retry = element<HTMLButtonElement>('.bank-failure-retry');
     retry.focus();
