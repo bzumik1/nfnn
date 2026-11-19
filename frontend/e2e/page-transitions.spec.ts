@@ -613,7 +613,7 @@ test.describe('Given an administrator in the app on the home screen of a phone w
         watch.disconnect();
         motions.forEach((motion) => {
           motion.pause();
-          motion.currentTime = Number(motion.effect?.getComputedTiming().endTime ?? 0) - 1;
+          motion.currentTime = Number(motion.effect?.getComputedTiming().endTime ?? 0);
         });
         requestAnimationFrame(() =>
           requestAnimationFrame(() => document.documentElement.classList.add('nfnn-held')),
@@ -626,31 +626,53 @@ test.describe('Given an administrator in the app on the home screen of a phone w
   function shareOfPixelsThatDiffer(page: Page, one: Buffer, other: Buffer): Promise<number> {
     return page.evaluate(
       async ([first, second]) => {
-        const pixels = async (base64: string): Promise<ImageData> => {
+        const width = innerWidth;
+        const height = innerHeight;
+        const softened = async (base64: string): Promise<Float32Array> => {
           const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
           const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
-          const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+          const canvas = new OffscreenCanvas(width, height);
           const context = canvas.getContext('2d')!;
-          context.drawImage(bitmap, 0, 0);
-          return context.getImageData(0, 0, bitmap.width, bitmap.height);
+          context.imageSmoothingQuality = 'high';
+          context.drawImage(bitmap, 0, 0, width, height);
+          const data = context.getImageData(0, 0, width, height).data;
+          const soft = new Float32Array(width * height * 3);
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+              for (let channel = 0; channel < 3; channel++) {
+                let sum = 0;
+                let count = 0;
+                for (let dy = -1; dy <= 1; dy++) {
+                  for (let dx = -1; dx <= 1; dx++) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                      sum += data[(ny * width + nx) * 4 + channel];
+                      count++;
+                    }
+                  }
+                }
+                soft[(y * width + x) * 3 + channel] = sum / count;
+              }
+            }
+          }
+          return soft;
         };
-        const [one, other] = await Promise.all([pixels(first), pixels(second)]);
-        const [a, b] = [one.data, other.data];
-        const width = one.width;
+        const [a, b] = await Promise.all([softened(first), softened(second)]);
         const awayFromTheLeavingEdge = Math.floor(width * 0.95);
         let differing = 0;
         let compared = 0;
-        for (let index = 0; index < a.length; index += 4) {
-          if ((index / 4) % width >= awayFromTheLeavingEdge) {
-            continue;
-          }
-          compared++;
-          const distance =
-            Math.abs(a[index] - b[index]) +
-            Math.abs(a[index + 1] - b[index + 1]) +
-            Math.abs(a[index + 2] - b[index + 2]);
-          if (distance > 48) {
-            differing++;
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < awayFromTheLeavingEdge; x++) {
+            const index = (y * width + x) * 3;
+            const distance =
+              Math.abs(a[index] - b[index]) +
+              Math.abs(a[index + 1] - b[index + 1]) +
+              Math.abs(a[index + 2] - b[index + 2]);
+            compared++;
+            if (distance > 48) {
+              differing++;
+            }
           }
         }
         return differing / compared;
