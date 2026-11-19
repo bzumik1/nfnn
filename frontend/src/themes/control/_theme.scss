@@ -112,7 +112,9 @@
   --color-sheet-chevron: var(--color-text-subtle);
   --shadow-sheet-close: none;
   --color-segment-thumb: var(--color-surface);
-  --shadow-segment-thumb: 0 1px 0 var(--color-border);
+  --color-segment-thumb-edge: transparent;
+  --shadow-segment-thumb:
+    inset 0 0 0 1px var(--color-segment-thumb-edge), 0 1px 0 var(--color-border);
 
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-sans: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
