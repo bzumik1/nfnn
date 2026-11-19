@@ -104,8 +104,9 @@ public class ManualPairingService {
         requireUnchanged(payment, expected);
         Donation donation = donations.findByBankPayment(paymentId).orElseThrow(() -> new BankPaymentNotPaired(paymentId));
         receipts.lockDonor(donation.donor());
-        Optional<DonationReceipt> withdrawn = new UnpairingPolicy(receipts.findByDonorNewestFirst(donation.donor()))
-                .decideUnpairing(donation, givenByErasedDonor(donation), channel.isConnectedApplication());
+        boolean erasedDonor = givenByErasedDonor(donation);
+        Optional<DonationReceipt> withdrawn = new UnpairingPolicy(donation.donor(), receipts.findByDonorNewestFirst(donation.donor()))
+                .decideUnpairing(donation, erasedDonor, channel.isConnectedApplication());
         withdrawn.ifPresent(yearly -> {
             yearly.withdrawBecauseDonationsChanged(now);
             receipts.save(yearly);

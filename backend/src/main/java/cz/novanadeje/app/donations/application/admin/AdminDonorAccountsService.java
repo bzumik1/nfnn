@@ -125,7 +125,7 @@ public class AdminDonorAccountsService {
         SenderAccountLink link = requireUnchanged(record, linkId, expected);
         receipts.lockDonor(donor);
         List<Donation> paired = donations.findBySenderAccountLink(linkId);
-        new UnpairingPolicy(receipts.findByDonorNewestFirst(donor)).requireRemovable(linkId, paired);
+        new UnpairingPolicy(donor, receipts.findByDonorNewestFirst(donor)).requireRemovable(linkId, paired);
         paired.forEach(donation -> donations.delete(donation.id()));
         List<SymbolClaim> answers = claims.findByDonor(donor).stream().filter(claim -> claim.account().equals(link.account())).toList();
         answers.forEach(claim -> claims.delete(claim.id()));

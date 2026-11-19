@@ -84,7 +84,7 @@ public class AdminSymbolClaimsService {
         SymbolClaim reversed = claim.reverse(now);
         receipts.lockDonor(claim.donor());
         List<Donation> paired = donations.findBySymbolClaim(claimId);
-        new UnpairingPolicy(receipts.findByDonorNewestFirst(claim.donor())).requireReversible(claimId, paired);
+        new UnpairingPolicy(claim.donor(), receipts.findByDonorNewestFirst(claim.donor())).requireReversible(claimId, paired);
         paired.forEach(donation -> donations.delete(donation.id()));
         claims.save(reversed);
         events.publishEvent(new AdminActionPerformed(adminId, REVERSE_ACTION, Optional.of(claimId.value()),

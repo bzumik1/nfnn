@@ -796,6 +796,23 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a yearly receipt withdrawn because the donations changed, when the donor's receipts are listed, then it comes too with its status")
+    void should_list_withdrawn_yearly_receipt_when_listed_given_withdrawn_receipt() {
+        DonorReference jana = storedDonor("4821937560");
+        DonationReceipt withdrawn = yearly(jana, YEAR_2025, "2026-000001", Optional.empty());
+        receipts.save(withdrawn);
+        withdrawn.withdrawBecauseDonationsChanged(NOW.plusSeconds(60));
+        receipts.save(withdrawn);
+        flushAndClear();
+
+        assertThat(receipts.findByDonorNewestFirst(jana)).singleElement().satisfies(receipt -> {
+            assertThat(receipt.id()).isEqualTo(withdrawn.id());
+            assertThat(receipt.status()).isEqualTo(ReceiptStatus.WITHDRAWN);
+            assertThat(receipt.year()).contains(YEAR_2025);
+        });
+    }
+
+    @Test
     @DisplayName("Given a donor's receipts issued at the same instant, when the donor's receipts are listed, then the higher number comes first")
     void should_list_higher_number_first_when_listed_given_receipts_issued_at_same_instant() {
         DonorReference jana = storedDonor("4821937560");
