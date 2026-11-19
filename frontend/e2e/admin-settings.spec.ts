@@ -380,3 +380,76 @@ test.describe('Given an administrator whose receipt signing key may have leaked'
     expect(sent).toBe(false);
   });
 });
+
+async function saveAndKeepRestarting(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/operations/setup',
+    (route) => route.fulfill({ status: 502, body: '' }),
+  );
+  await page.route(
+    (url) => url.pathname === SETTINGS,
+    (route) =>
+      route.request().method() === 'PUT'
+        ? route.fulfill({
+            status: 202,
+            json: {
+              changed: ['RECEIPT_FIRST_YEAR'],
+              restarting: true,
+              version: '00000000000000c2',
+            },
+          })
+        : route.fulfill({ json: adminSettings }),
+  );
+  await openUnlockedAdministrationPage(page, '/sprava/nastaveni', 'Nastavení');
+  await page.locator('#setting-RECEIPT_FIRST_YEAR').fill('2025');
+  await page.getByRole('button', { name: 'Uložit nastavení' }).click();
+  await page.getByRole('button', { name: 'Uložit a restartovat' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'web se restartuje' })).toBeVisible();
+}
+
+function shown(page: Page, selector: string): Promise<boolean> {
+  return page
+    .locator(selector)
+    .evaluate((element) => element.checkVisibility({ opacityProperty: true }));
+}
+
+test.describe('Given an administrator whose saved settings restart the web', () => {
+  test.use({ reducedMotion: 'no-preference' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await rememberedSession(page);
+  });
+
+  test('when the restart takes longer than the calm wait, then the turning ring fades out and the still clock fades in', async ({
+    page,
+  }) => {
+    await saveAndKeepRestarting(page);
+
+    expect(await shown(page, '.restart-spinner')).toBe(true);
+    await expect
+      .poll(
+        async () => [await shown(page, '.restart-spinner'), await shown(page, '.restart-calm')],
+        { timeout: 15_000 },
+      )
+      .toEqual([false, true]);
+  });
+});
+
+test.describe('Given an administrator who asks for less motion and whose saved settings restart the web', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await rememberedSession(page);
+  });
+
+  test('when the restart starts, then only the still clock shows at once', async ({ page }) => {
+    await saveAndKeepRestarting(page);
+
+    expect([await shown(page, '.restart-spinner'), await shown(page, '.restart-calm')]).toEqual([
+      false,
+      true,
+    ]);
+  });
+});

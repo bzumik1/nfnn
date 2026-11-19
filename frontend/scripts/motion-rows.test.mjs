@@ -291,3 +291,26 @@ describe('Given a long wait through motion.wait-settles and motion.wait-calm', (
     assert.match(valueOf(reducedOf(css, '.still'), 'animation'), /none/);
   });
 });
+
+describe('Given the body of native details that opens through motion.expand-on-open', () => {
+  const css = compiled(`.body { @include motion.expand-on-open; }`);
+
+  it('when the details open, then the body opens its single row from nothing and fades in, its child clipped while it opens', () => {
+    const plain = plainOf(css, '.body');
+
+    assert.equal(valueOf(plain, 'display'), 'grid');
+    assert.match(framesOf(animationNameOf(plain)), /grid-template-rows:\s*0fr/);
+    assert.match(valueOf(plain, 'animation'), /motion-fade-in/);
+    const child = plainOf(css, '.body > *');
+    assert.match(child, /min-height:\s*0/);
+    assert.match(framesOf(animationNameOf(child)), /overflow:\s*hidden/);
+  });
+
+  it('when the visitor asks for less motion, then the body only fades in and its child is never clipped', () => {
+    const reduced = reducedOf(css, '.body');
+
+    assert.equal(animationNameOf(reduced), 'motion-fade-in');
+    assert.doesNotMatch(valueOf(reduced, 'animation'), HEIGHT);
+    assert.match(valueOf(reducedOf(css, '.body > *'), 'animation'), /none/);
+  });
+});

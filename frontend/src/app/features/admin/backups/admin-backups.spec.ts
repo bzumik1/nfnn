@@ -255,13 +255,13 @@ describe('Given an administrator on the backups page', () => {
       {
         summary: 'Technické podrobnosti',
         chevron: 'hidden from assistive technology',
-        whileClosed: 'hidden and inert',
+        whileClosed: 'left to the native details',
         onceOpen: 'shown',
       },
       {
         summary: 'Technické podrobnosti',
         chevron: 'hidden from assistive technology',
-        whileClosed: 'hidden and inert',
+        whileClosed: 'left to the native details',
         onceOpen: 'shown',
       },
     ]);

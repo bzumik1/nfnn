@@ -1,7 +1,7 @@
 export interface DetailsDisclosure {
   readonly summary: string;
   readonly chevron: 'hidden from assistive technology' | 'exposed' | 'missing';
-  readonly whileClosed: 'hidden and inert' | 'reachable';
+  readonly whileClosed: 'left to the native details' | 'hidden by the page';
   readonly onceOpen: 'shown' | 'hidden';
 }
 
@@ -31,16 +31,16 @@ async function readDetailsDisclosure(
       await settle();
     }
   };
-  const hiddenAndInert = () =>
-    body().length === 1 && body()[0].hidden && body()[0].hasAttribute('inert');
+  const leftToTheDetails = () =>
+    body().length === 1 &&
+    !body()[0].hidden &&
+    !body()[0].hasAttribute('inert') &&
+    !body()[0].hasAttribute('aria-hidden');
 
   await toggle(false);
-  const whileClosed = hiddenAndInert() ? 'hidden and inert' : 'reachable';
+  const whileClosed = leftToTheDetails() ? 'left to the native details' : 'hidden by the page';
   await toggle(true);
-  const onceOpen =
-    body().length === 1 && !body()[0].hidden && !body()[0].hasAttribute('inert')
-      ? 'shown'
-      : 'hidden';
+  const onceOpen = details.open && leftToTheDetails() ? 'shown' : 'hidden';
   return {
     summary: (summary.textContent ?? '').replace(/\s+/g, ' ').trim(),
     chevron:

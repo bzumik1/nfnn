@@ -151,7 +151,7 @@ describe('Given an administrator on the history page', () => {
       {
         summary: 'Technické podrobnosti',
         chevron: 'hidden from assistive technology',
-        whileClosed: 'hidden and inert',
+        whileClosed: 'left to the native details',
         onceOpen: 'shown',
       },
     ]);
@@ -536,7 +536,7 @@ describe('Given an administrator on the history page where lists show as rows', 
       {
         summary: 'Technické podrobnosti',
         chevron: 'hidden from assistive technology',
-        whileClosed: 'hidden and inert',
+        whileClosed: 'left to the native details',
         onceOpen: 'shown',
       },
     ]);

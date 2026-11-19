@@ -311,7 +311,7 @@ describe('Given an administrator on the settings page', () => {
       expect(text('.ui-notice--status')).toBe('Nastavení je uložené a web po restartu běží s ním.');
     });
 
-    it('then a restart that takes longer than five seconds trades the turning ring for a calm icon beside the same words', async () => {
+    it('then the restart shows the turning ring and the calm clock together from the start, hidden from screen readers, and no timer swaps them', async () => {
       await type('#setting-RECEIPT_FIRST_YEAR', '2025');
       await submit();
       button('Uložit a restartovat').click();
@@ -323,16 +323,19 @@ describe('Given an administrator on the settings page', () => {
       await vi.advanceTimersByTimeAsync(1);
       fixture.detectChanges();
 
-      expect(fixture.nativeElement.querySelector('.ui-load-state .spinner')).not.toBeNull();
-      expect(fixture.nativeElement.querySelector('.ui-load-state .restart-calm')).toBeNull();
+      const waitIcons = () =>
+        Array.from(
+          fixture.nativeElement.querySelectorAll('.ui-load-state .restart-wait > *'),
+        ).map((icon) => (icon as Element).getAttribute('class'));
+      expect(waitIcons()).toEqual(['restart-spinner', 'restart-calm']);
+      expect(element('.restart-wait').getAttribute('aria-hidden')).toBe('true');
 
       await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
       http.expectOne(STATUS_URL).flush('', { status: 502, statusText: 'Bad Gateway' });
       await vi.advanceTimersByTimeAsync(FIVE_SECONDS - RESTART_POLL_MS);
       fixture.detectChanges();
 
-      expect(fixture.nativeElement.querySelector('.ui-load-state .spinner')).toBeNull();
-      expect(fixture.nativeElement.querySelector('.ui-load-state .restart-calm')).not.toBeNull();
+      expect(waitIcons()).toEqual(['restart-spinner', 'restart-calm']);
       expect(text('[role="status"]:not(:empty)')).toBe(
         'Nastavení je uložené a web se restartuje. Obvykle to trvá do minuty.',
       );
@@ -516,7 +519,7 @@ describe('Given an administrator on the settings page', () => {
       {
         summary: 'Adresa webu, server pro odesílání e-mailů a napojení na banku',
         chevron: 'hidden from assistive technology',
-        whileClosed: 'hidden and inert',
+        whileClosed: 'left to the native details',
         onceOpen: 'shown',
       },
     ]);
@@ -529,7 +532,7 @@ describe('Given an administrator on the settings page', () => {
       {
         summary: 'Technické podrobnosti',
         chevron: 'hidden from assistive technology',
-        whileClosed: 'hidden and inert',
+        whileClosed: 'left to the native details',
         onceOpen: 'shown',
       },
     ]);

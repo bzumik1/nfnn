@@ -173,7 +173,7 @@ describe('Given the backup plan card', () => {
       {
         summary: 'Technické podrobnosti',
         chevron: 'hidden from assistive technology',
-        whileClosed: 'hidden and inert',
+        whileClosed: 'left to the native details',
         onceOpen: 'shown',
       },
     ]);
