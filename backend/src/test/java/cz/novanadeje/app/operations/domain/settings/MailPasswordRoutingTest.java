@@ -69,9 +69,10 @@ class MailPasswordRoutingTest {
         @Test
         @DisplayName("when a change names the mail server and a password was stored only after the read, then it is refused as changed meanwhile")
         void should_refuse_when_checked_given_a_password_stored_after_the_read() {
-            Map<Setting, String> before = Map.of(Setting.MAIL_HOST, "smtp.example.cz");
+            Map<Setting, String> checkedWithoutPassword = Map.of(Setting.MAIL_HOST, "smtp.example.cz");
+            Map<Setting, String> storedWithPassword = Map.of(Setting.MAIL_HOST, "smtp.example.cz", Setting.MAIL_PASSWORD, "sealed");
 
-            assertThatThrownBy(() -> MailPasswordRouting.refuseWhenTheMailServerChangedMeanwhile(before, checked,
+            assertThatThrownBy(() -> MailPasswordRouting.refuseWhenTheMailServerChangedMeanwhile(checkedWithoutPassword, storedWithPassword,
                     List.of(new SettingChange(Setting.MAIL_HOST, "smtp.example.cz"))))
                     .isInstanceOfSatisfying(SettingsRejected.class, refused -> assertThat(refused.errors())
                             .containsExactly(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.MAIL_SERVER_CHANGED_MEANWHILE)));
