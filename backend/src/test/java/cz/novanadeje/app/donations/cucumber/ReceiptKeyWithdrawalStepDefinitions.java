@@ -76,15 +76,8 @@ public class ReceiptKeyWithdrawalStepDefinitions {
     }
 
     @Before
-    public void forgetEarlierRestarts() throws IOException {
+    public void forgetEarlierRestarts() {
         restarter.reset();
-        if (Files.isDirectory(seedRequest.getParent())) {
-            try (var notes = Files.newDirectoryStream(seedRequest.getParent(), SEED_REQUEST + "-at-start-*")) {
-                for (Path note : notes) {
-                    Files.delete(note);
-                }
-            }
-        }
     }
 
     @Given("the request for a new receipt signing seed was lost")
