@@ -2775,3 +2775,210 @@ for (const width of [390, 1280]) {
     }
   });
 }
+
+async function textPastTheSides(frame: Locator): Promise<string[]> {
+  await frame.evaluate(() => document.fonts.ready);
+  return frame.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const left = box.left + element.clientLeft;
+    const right = left + element.clientWidth;
+    const past: string[] = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.textContent?.trim() || node.parentElement?.closest('.visually-hidden')) {
+        continue;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      for (const rect of Array.from(range.getClientRects())) {
+        if (rect.width > 0 && (rect.left < left - 1 || rect.right > right + 1)) {
+          past.push(
+            `"${node.textContent.trim().slice(0, 30)}" ${Math.round(rect.left)}..${Math.round(rect.right)} in ${Math.round(left)}..${Math.round(right)}`,
+          );
+          break;
+        }
+      }
+    }
+    return past;
+  });
+}
+
+async function controlsOverTheirLabels(rows: Locator): Promise<string[]> {
+  await rows.first().evaluate(() => document.fonts.ready);
+  return rows.evaluateAll((elements) =>
+    elements.flatMap((row) => {
+      const label = row.querySelector('dt');
+      if (!label) {
+        return [];
+      }
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      const text = range.getBoundingClientRect();
+      return Array.from(row.querySelectorAll<HTMLElement>(':scope > dd > button'))
+        .filter((button) => button.getClientRects().length > 0)
+        .filter((button) => {
+          const control = button.getBoundingClientRect();
+          return (
+            control.left < text.right - 1 &&
+            text.left < control.right - 1 &&
+            control.top < text.bottom - 1 &&
+            text.top < control.bottom - 1
+          );
+        })
+        .map(
+          (button) => `${(label.textContent ?? '').trim()}: ${(button.textContent ?? '').trim()}`,
+        );
+    }),
+  );
+}
+
+async function pageWiderThanTheScreen(page: Page): Promise<number> {
+  return page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+}
+
+for (const { width, height } of [
+  { width: 320, height: 568 },
+  { width: 390, height: 844 },
+]) {
+  test.describe(`Given a donor on an iPhone ${width} pt wide whose installed app shows the largest accessibility text, on their account`, () => {
+    test.use({ viewport: { width, height } });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+    });
+
+    test('when they open Údaje a zabezpečení with its passkeys open, then no text reaches past its card, no button covers its label, every heading breaks only between words and no date breaks inside a number', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/passkeys',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                {
+                  id: '019a1b2c-3d4e-7f00-8000-000000000001',
+                  name: 'iPhone',
+                  createdAt: '2026-10-17T10:00:00Z',
+                  lastUsedAt: '2026-10-22T09:00:00Z',
+                },
+              ],
+            },
+          }),
+      );
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      await page.setViewportSize({ width, height });
+      await page.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
+      const passkeys = page.getByRole('region', { name: 'Přístupové klíče' });
+      await expect(passkeys.getByText('naposledy použito')).toBeVisible();
+      await expect(page.locator('.device-last-use').first()).toBeVisible();
+      const cards = page.locator('main .ui-card');
+
+      await expect.poll(() => pageWiderThanTheScreen(page)).toBeLessThanOrEqual(0);
+      for (const card of await cards.all()) {
+        expect(await textPastTheSides(card)).toEqual([]);
+        expect(await contentPastTheSides(card)).toEqual([]);
+        expect(await numbersSplitAcrossLines(card)).toEqual([]);
+      }
+      for (const heading of await page.locator('main h2').all()) {
+        expect(await wordsBrokenInside(heading)).toEqual([]);
+      }
+      expect(await controlsOverTheirLabels(page.locator('main .account-row'))).toEqual([]);
+    });
+
+    test('when they open Bankovní účty and press Přidat bankovní účet, then the sheet stands on the bottom edge below the gap every sheet keeps above it and no account number or other text reaches past it', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donations/me/bank-check',
+        (route) =>
+          route.fulfill({
+            status: 202,
+            json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false },
+          }),
+      );
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await openDonorSection(page, 'Bankovní účty');
+      await page.setViewportSize({ width, height });
+      await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
+      await expect(dialog.locator('.add-account-verified')).toContainText('2900233333/2010');
+      await expect(dialog.locator('.add-account-bank')).toContainText('5544332217/2010');
+      const panel = dialog.locator('.dialog-panel');
+
+      await expect
+        .poll(async () => {
+          const box = (await panel.boundingBox())!;
+          return { top: box.y >= 48 - 1, bottom: Math.round(box.y + box.height) };
+        })
+        .toEqual({ top: true, bottom: height });
+      expect(await textPastTheSides(panel)).toEqual([]);
+      expect(await contentPastTheSides(panel)).toEqual([]);
+      for (const value of [
+        dialog.locator('.add-account-verified'),
+        dialog.locator('.add-account-bank .bank-value').first(),
+      ]) {
+        expect(await numbersSplitAcrossLines(value)).toEqual([]);
+      }
+    });
+  });
+
+  test.describe(`Given an administrator on an iPhone ${width} pt wide whose installed app shows the largest accessibility text`, () => {
+    test.use({ viewport: { width, height } });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+    });
+
+    test('when they open a paired payment, then the sender account number and every other text of Přiřazená platba stay within the sheet', async ({
+      page,
+    }) => {
+      const { column } = await openPairedPayment(page);
+      const panel = column.locator('.dialog-panel');
+      await expect(panel.locator('app-bank-account').first()).toBeVisible();
+
+      expect(await textPastTheSides(panel)).toEqual([]);
+      expect(await contentPastTheSides(panel)).toEqual([]);
+      expect(await numbersSplitAcrossLines(panel.locator('app-bank-account').first())).toEqual([]);
+    });
+  });
+
+  test.describe(`Given an administrator on an iPhone ${width} pt wide whose installed app shows the largest accessibility text and whose administration is locked`, () => {
+    test.use({ viewport: { width, height }, unlocksAdministration: false });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+    });
+
+    test('when they open the administration and choose Použít heslo, then the title, the fields and the buttons of the lock card stay within the card and the screen', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await rememberedSession(page);
+      await page.goto('/sprava');
+      const card = page.locator('.lock-panel');
+      await expect(
+        card.getByRole('heading', { level: 1, name: 'Správa je zamčená' }),
+      ).toBeVisible();
+
+      for (const step of ['locked', 'password']) {
+        if (step === 'password') {
+          await card.getByRole('button', { name: 'Použít heslo' }).click();
+          await expect(
+            card.getByRole('heading', { level: 1, name: 'Odemknout heslem' }),
+          ).toBeVisible();
+        }
+        await expect.poll(() => pageWiderThanTheScreen(page), step).toBeLessThanOrEqual(0);
+        expect(await textPastTheSides(card), step).toEqual([]);
+        expect(await contentPastTheSides(card), step).toEqual([]);
+      }
+    });
+  });
+}
