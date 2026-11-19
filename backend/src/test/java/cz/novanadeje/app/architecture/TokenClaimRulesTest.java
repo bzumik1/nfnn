@@ -100,15 +100,17 @@ class TokenClaimRulesTest {
     @DisplayName("Given the methods allowed to read a claim, when they are read, then each exists and still reads one, so the list names no method that is gone or no longer needs it")
     void should_find_every_allowed_reader_reading_a_claim_when_read_given_the_list() {
         for (String reader : CLAIM_READERS.keySet()) {
+            assertThat(reader).as("a claim reader is named by its full signature").contains("(");
             String owner = reader.substring(0, reader.lastIndexOf('.', reader.indexOf('(')));
             JavaClasses imported = new ClassFileImporter().importClasses(classNamed(owner));
             assertThat(imported.get(owner).getCodeUnits()).filteredOn(codeUnit -> codeUnit.getFullName().equals(reader)).as(reader)
-                    .singleElement().satisfies(codeUnit -> assertThat(codeUnit.getAccessesFromSelf().stream().anyMatch(A_CLAIM_READ)).isTrue());
+                    .singleElement().satisfies(codeUnit -> assertThat(codeUnit.getAccessesFromSelf().stream().anyMatch(A_CLAIM_READ))
+                            .as("%s still reads a claim", reader).isTrue());
         }
     }
 
     @Test
-    @DisplayName("Given a planted class named as reading a claim in one method, when the claim rule checks it, then a claim read in another of its methods is reported and the named one is not")
+    @DisplayName("Given a planted class named as reading a claim in one method, when the claim rule checks it, then a claim read in another of its methods, an overload or its static initialiser is reported, and one in the named method or a lambda inside it is not")
     void should_report_a_claim_read_outside_the_named_method_when_checked_given_a_planted_reader(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of(SESSION_ROLES, """
                 package cz.novanadeje.app.donors.interfaces.rest;
@@ -117,8 +119,11 @@ class TokenClaimRulesTest {
 
                 final class SessionRoles {
 
+                    static final boolean SCOPED = new Jwt("t", null, null, java.util.Map.of("a", "b"), java.util.Map.of("scope", "x")).hasClaim("scope");
+
                     static java.util.List<String> of(Jwt jwt) {
-                        return jwt.getClaimAsStringList("roles");
+                        java.util.function.Supplier<String> scope = () -> jwt.getClaimAsString("roles");
+                        return scope.get() == null ? java.util.List.of() : jwt.getClaimAsStringList("roles");
                     }
 
                     static String scope(Jwt jwt) {
@@ -132,7 +137,8 @@ class TokenClaimRulesTest {
                 """));
 
         assertThat(controllers_take_the_channel_and_never_read_a_claim.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(2)
+                .hasSize(3)
+                .anySatisfy(detail -> assertThat(detail).contains("SessionRoles.<clinit>()"))
                 .anySatisfy(detail -> assertThat(detail).contains("SessionRoles.scope("))
                 .anySatisfy(detail -> assertThat(detail).contains("SessionRoles.of(java.lang.String, org.springframework.security.oauth2.jwt.Jwt)"));
     }
