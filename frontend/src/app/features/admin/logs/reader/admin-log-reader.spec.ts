@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { CompactLayout } from '../../../../core/layout/compact-layout';
 import { AdminLogReader } from './admin-log-reader';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 
 const FIO =
   '2026-11-09T22:09:47.639+01:00  INFO 1 --- [nova-nadeje] [scheduling-1] c.n.a.d.i.fio.FioBankStatementSource     : Fio answered 2 movements';
@@ -196,9 +197,7 @@ describe('Given an administrator reading a log file', () => {
 
     const top = page.element('.load-more-row');
     expect(
-      Array.from(top.querySelectorAll('button')).map((button) =>
-        (button.textContent ?? '').replace(/\s+/g, ' ').trim(),
-      ),
+      Array.from(top.querySelectorAll('button')).map((button) => accessibleText(button)),
     ).toEqual(['Načíst novější řádky', 'Načíst starší řádky']);
     expect(
       top.compareDocumentPosition(page.element('.entry')) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -220,7 +219,7 @@ describe('Given an administrator reading a log file', () => {
     await openTail();
 
     const loadButtons = Array.from(page.element('.ui-page').querySelectorAll('button'))
-      .map((button) => (button.textContent ?? '').replace(/\s+/g, ' ').trim())
+      .map((button) => accessibleText(button))
       .filter((name) => name.startsWith('Načíst'));
     expect(loadButtons).toEqual(['Načíst novější řádky', 'Načíst starší řádky']);
     expect(page.element('.list-end').textContent).toContain('Načíst starší řádky');
