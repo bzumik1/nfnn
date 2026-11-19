@@ -1,0 +1,9 @@
+@use 'motion';
+
+:host {
+  display: block;
+}
+
+.fold--moves {
+  @include motion.expand;
+}

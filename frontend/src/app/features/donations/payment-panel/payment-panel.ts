@@ -26,6 +26,7 @@ import { ShortViewport } from '../../../core/layout/short-viewport';
 import { BusyButton } from '../../../shared/ui/busy-button/busy-button';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
+import { Fold } from '../../../shared/ui/fold/fold';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
@@ -109,6 +110,7 @@ export type PaymentAccountState =
     BusyButton,
     BusyLabel,
     CopyButton,
+    Fold,
     NeedsConnection,
     NgTemplateOutlet,
     QrCode,
@@ -691,7 +693,8 @@ export class PaymentPanel {
           focused === null ||
           focused === document.body ||
           !focused.isConnected ||
-          focused === this.pendingCard()?.nativeElement
+          focused === this.pendingCard()?.nativeElement ||
+          focused.closest('[inert]') !== null
         ) {
           target()?.focus();
         }
