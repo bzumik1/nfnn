@@ -100,9 +100,9 @@
             >
               Starší aktuality
             </h2>
-            <div class="grid">
+            <div #olderGrid class="grid">
               @for (item of older(); track item.id) {
-                <div class="grid-item" [appReveal]="olderRow($index) + 1">
+                <div class="grid-item" [appReveal]="olderStep($index)">
                   <app-news-card [item]="item" />
                 </div>
               }
