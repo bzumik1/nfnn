@@ -402,7 +402,7 @@ describe('Given the account sheet of a signed-in donor', () => {
       await fixture.whenStable();
 
       expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe(
-        'Potvrzení o daru',
+        'Potvrzení o\u00a0daru',
       );
       expect(history.steps.at(-1)).toBe(1);
       expect((document.activeElement as HTMLAnchorElement | null)?.className).toBe('stub-gifts');
