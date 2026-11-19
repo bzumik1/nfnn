@@ -11,6 +11,7 @@ import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donation.DonationSource;
 import cz.novanadeje.app.donations.domain.donation.DonationStatus;
+import cz.novanadeje.app.donations.domain.donation.Donations;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
@@ -388,7 +389,7 @@ class DonorBankAccountsServiceTest {
     }
 
     private static Donation through(SenderAccountLink link, LocalDate receivedOn, long amountMinor, DonationStatus status) {
-        return Donation.reconstitute(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(amountMinor),
+        return Donations.stored(DonationId.newId(NOW), JANA, Optional.of(BankPaymentId.newId(NOW)), receivedOn, Money.czk(amountMinor),
                 DonationSource.BANK_TRANSFER, status, Optional.of(PairingMethod.SENDER_ACCOUNT), Optional.of(link.id()), NOW);
     }
 }
