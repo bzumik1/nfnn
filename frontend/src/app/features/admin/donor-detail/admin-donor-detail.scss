@@ -145,6 +145,12 @@
   margin-bottom: var(--space-3);
 }
 
+@include bp.container-down(dialog-panel, tabs) {
+  .erase-title {
+    font-size: var(--text-dialog-title-large);
+  }
+}
+
 .erase-lead {
   margin: 0 0 var(--space-3);
   font-size: var(--text-md);
