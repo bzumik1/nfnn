@@ -546,3 +546,146 @@ test.describe('Given a signed-in donor on a touch phone', () => {
     }
   });
 });
+
+type Rgb = [number, number, number];
+
+const FINGER_SIZE = 44;
+const RIM_CONTRAST = 3;
+const APART_FROM_PAGE = 1.3;
+
+async function paintedFrom(page: Page, layers: string[]): Promise<Rgb> {
+  return page.evaluate((colours) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext('2d')!;
+    for (const colour of colours) {
+      context.fillStyle = colour;
+      context.fillRect(0, 0, 1, 1);
+    }
+    const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+    return [r, g, b] as [number, number, number];
+  }, layers);
+}
+
+async function groundsUnder(target: Locator): Promise<string[]> {
+  return target.evaluate((element) => {
+    const grounds: string[] = [];
+    for (let each = element.parentElement; each; each = each.parentElement) {
+      grounds.unshift(getComputedStyle(each).backgroundColor);
+    }
+    return grounds;
+  });
+}
+
+async function rimOf(target: Locator): Promise<string | null> {
+  return target.evaluate((element) => {
+    const style = getComputedStyle(element);
+    if (style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) >= 1) {
+      return style.outlineColor;
+    }
+    if (style.borderTopStyle !== 'none' && parseFloat(style.borderTopWidth) >= 1) {
+      return style.borderTopColor;
+    }
+    return null;
+  });
+}
+
+async function fillOf(target: Locator): Promise<string> {
+  return target.evaluate((element) => getComputedStyle(element).backgroundColor);
+}
+
+function contrastBetween(first: Rgb, second: Rgb): number {
+  const luminance = (colour: Rgb) => {
+    const [r, g, b] = colour.map((channel) => {
+      const value = channel / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const [lighter, darker] = [luminance(first), luminance(second)].sort((a, b) => b - a);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+async function pretendBrowserThatShares(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
+    Object.defineProperty(navigator, 'share', {
+      value: () => Promise.resolve(),
+      configurable: true,
+    });
+  });
+}
+
+test.describe('Given a visitor whose device shows the dark appearance on Aktuality', () => {
+  test.use({ colorScheme: 'dark' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await mockPublicContent(page);
+    await pretendBrowserThatShares(page);
+  });
+
+  for (const width of [390, 1280]) {
+    test(`when the featured news card shows at ${width} px, then Číst celé has a rim of at least 3:1 against the card and Sdílet stands as tall as it, at least 44 px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/aktuality');
+      const card = page.locator('.featured');
+      const more = card.locator('.featured-more');
+      const share = card.getByRole('button', { name: `Sdílet ${article.title}`, exact: true });
+      await expect(more).toBeVisible();
+      await expect(share).toBeVisible();
+
+      const underCard = [...(await groundsUnder(card)), await fillOf(card)];
+      const cardGround = await paintedFrom(page, underCard);
+      const rim = await rimOf(more);
+      const rimPainted = await paintedFrom(page, [
+        ...underCard,
+        await fillOf(more),
+        ...(rim === null ? [] : [rim]),
+      ]);
+      expect(contrastBetween(rimPainted, cardGround)).toBeGreaterThanOrEqual(RIM_CONTRAST);
+
+      const moreBox = (await more.boundingBox())!;
+      const shareBox = (await share.boundingBox())!;
+      expect(moreBox.height).toBeGreaterThanOrEqual(FINGER_SIZE);
+      expect(shareBox.height).toBeGreaterThanOrEqual(FINGER_SIZE);
+      expect(Math.abs(shareBox.height - moreBox.height)).toBeLessThanOrEqual(1);
+    });
+  }
+
+  test('when the featured news item has no photo, then its card has a rim or a surface that sets it apart from the page', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/content/news',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [{ ...article, coverImage: null }],
+            page: 0,
+            size: 10,
+            total: 1,
+            hasMore: false,
+          },
+        }),
+    );
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto('/aktuality');
+    const card = page.locator('.featured');
+    await expect(card).toBeVisible();
+    await expect(card.locator('img')).toHaveCount(0);
+
+    const grounds = await groundsUnder(card);
+    const pageGround = await paintedFrom(page, grounds);
+    const rim = await rimOf(card);
+    const edge = await paintedFrom(page, [
+      ...grounds,
+      await fillOf(card),
+      ...(rim === null ? [] : [rim]),
+    ]);
+    expect(contrastBetween(edge, pageGround)).toBeGreaterThanOrEqual(APART_FROM_PAGE);
+  });
+});

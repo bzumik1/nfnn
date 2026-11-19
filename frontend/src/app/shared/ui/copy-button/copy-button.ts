@@ -22,6 +22,7 @@ type CopyState = 'idle' | 'copied' | 'failed';
     '[class.has-failed]': "state() === 'failed'",
     '[class.is-start]': "align() === 'start'",
     '[class.is-on-dark]': "tone() === 'dark'",
+    '[class.is-finger-size]': "size() === 'finger'",
   },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -34,6 +35,7 @@ export class CopyButton {
   readonly failedStatus = input<string | null>(null);
   readonly align = input<'start' | 'end'>('end');
   readonly tone = input<'light' | 'dark'>('light');
+  readonly size = input<'compact' | 'finger'>('compact');
   readonly copied = output<void>();
 
   protected readonly state = signal<CopyState>('idle');
