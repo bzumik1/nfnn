@@ -20,6 +20,7 @@ import {
   waitsForConnection,
 } from '../device-copy/testing/opened-copy';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const SETTINGS_URL = '/api/admin/operations/settings';
 const TEST_EMAIL_URL = '/api/admin/operations/settings/test-email';
@@ -432,6 +433,10 @@ describe('Given an administrator on the settings page', () => {
         sender: 'info@nfnn.cz',
       });
       expect(button('Posíláme zkušební e-mail…').disabled).toBe(true);
+      expect(labelFaces(button('Posíláme zkušební e-mail…'))).toEqual([
+        'Poslat zkušební e-mail na moji adresu',
+        'Posíláme zkušební e-mail…',
+      ]);
       request.flush({ outcome: 'SENT', sent: true, recipient: 'jana@example.cz' });
       await settle();
 

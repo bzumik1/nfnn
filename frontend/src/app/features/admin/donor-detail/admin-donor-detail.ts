@@ -56,6 +56,7 @@ import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-d
 import { AdminReceiptDownloads } from './admin-receipt-downloads';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { AdministrationReads, type BankAccountsSource } from '../device-copy/administration-reads';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -116,6 +117,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
 @Component({
   selector: 'app-admin-donor-detail',
   imports: [
+    BusyLabel,
     BankAccount,
     CopyButton,
     Dialog,

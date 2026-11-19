@@ -44,6 +44,7 @@ import { reloadWhenOnlineAgain } from '../device-copy/online-again';
 import { KeptAdministrationAnswers } from '../kept-administration-answers';
 import { DeviceAlertMarks } from './device-alert-marks';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'unavailable';
 
@@ -90,7 +91,7 @@ const SERVICE_NAMES: Record<PushService, string> = {
 
 @Component({
   selector: 'app-admin-alerts',
-  imports: [Dialog, LiveNotice, NeedsConnection, RouterLink],
+  imports: [BusyLabel, Dialog, LiveNotice, NeedsConnection, RouterLink],
   templateUrl: './admin-alerts.html',
   styleUrl: './admin-alerts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

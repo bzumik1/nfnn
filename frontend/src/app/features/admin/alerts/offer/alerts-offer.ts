@@ -33,6 +33,7 @@ import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-co
 import { AdminApi, AdminPushResponse } from '../../admin-api';
 import { ADMINISTRATION_LOCK } from '../../shell/administration-lock';
 import { DeviceAlertMarks } from '../device-alert-marks';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 
 type OfferStep = 'offer' | 'turning-on' | 'on' | 'refused' | 'failed';
 
@@ -41,7 +42,7 @@ const ALERTS_PAGE = '/sprava/upozorneni';
 
 @Component({
   selector: 'app-alerts-offer',
-  imports: [Dialog, NeedsConnection, RouterLink],
+  imports: [BusyLabel, Dialog, NeedsConnection, RouterLink],
   templateUrl: './alerts-offer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

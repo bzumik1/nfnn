@@ -32,6 +32,7 @@ import {
   ReceiptSigningKeyWithdrawalResponse,
 } from '../../admin-api';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 
 const CODE_MESSAGES: FieldMessages = {
   required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
@@ -43,6 +44,7 @@ const WITHDRAWAL_FAILED = $localize`:@@admin.signingKey.withdraw.failed:Klíč s
 @Component({
   selector: 'app-key-withdrawal-dialog',
   imports: [
+    BusyLabel,
     Dialog,
     FormsModule,
     FormField,

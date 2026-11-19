@@ -8,10 +8,11 @@ import {
   viewChild,
 } from '@angular/core';
 import { Dialog } from '../../../../shared/ui/dialog/dialog';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 
 @Component({
   selector: 'app-delete-device-data-dialog',
-  imports: [Dialog],
+  imports: [BusyLabel, Dialog],
   templateUrl: './delete-device-data-dialog.html',
   styleUrl: './delete-device-data-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

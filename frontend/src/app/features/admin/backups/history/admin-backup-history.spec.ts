@@ -7,6 +7,7 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
 import { backupFile, backupsView } from '../../testing/admin-fixtures';
 import { AdminBackupHistory } from './admin-backup-history';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import {
   copyOf,
   openOfflineFromCopy,
@@ -63,13 +64,13 @@ describe('Given an administrator on the history of backups', () => {
   function texts(selector: string): string[] {
     return Array.from(
       fixture.nativeElement.querySelectorAll(selector) as NodeListOf<HTMLElement>,
-    ).map((element) => (element.textContent ?? '').replace(/\s+/g, ' ').trim());
+    ).map((element) => accessibleText(element));
   }
 
   function button(name: string): HTMLButtonElement {
     const found = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.trim() === name);
+    ).find((candidate) => accessibleText(candidate) === name);
     if (found === undefined) {
       throw new Error(`No button ${name}`);
     }

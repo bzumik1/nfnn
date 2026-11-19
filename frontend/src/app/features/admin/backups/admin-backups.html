@@ -171,11 +171,10 @@
                 [disabled]="actionsDisabled()"
                 (click)="start('BACKUP')"
               >
-                @if (job()?.kind === 'BACKUP') {
-                  <ng-container i18n="@@admin.backups.backup.busy">Zálohujeme…</ng-container>
-                } @else {
-                  <ng-container i18n="@@admin.backups.backup.start">Zálohovat teď</ng-container>
-                }
+                <app-busy-label [busy]="job()?.kind === 'BACKUP'">
+                  <span when-idle i18n="@@admin.backups.backup.start">Zálohovat teď</span>
+                  <span when-busy i18n="@@admin.backups.backup.busy">Zálohujeme…</span>
+                </app-busy-label>
               </button>
               <button
                 appNeedsConnection
@@ -184,15 +183,10 @@
                 [disabled]="actionsDisabled()"
                 (click)="start('TEST_RESTORE')"
               >
-                @if (job()?.kind === 'TEST_RESTORE') {
-                  <ng-container i18n="@@admin.backups.testRestore.busy"
-                    >Ověřujeme obnovu…</ng-container
-                  >
-                } @else {
-                  <ng-container i18n="@@admin.backups.testRestore.start"
-                    >Ověřit obnovu teď</ng-container
-                  >
-                }
+                <app-busy-label [busy]="job()?.kind === 'TEST_RESTORE'">
+                  <span when-idle i18n="@@admin.backups.testRestore.start">Ověřit obnovu teď</span>
+                  <span when-busy i18n="@@admin.backups.testRestore.busy">Ověřujeme obnovu…</span>
+                </app-busy-label>
               </button>
             </div>
             @if (!available()) {

@@ -11,10 +11,11 @@ import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-co
 import { DonorCopySync, type SyncOutcome } from '../../../donations/device-copy/donor-copy-sync';
 import { formatBankTime } from '../../../donations/donation-date';
 import { DeleteDeviceDataDialog } from './delete-device-data-dialog';
+import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 
 @Component({
   selector: 'app-device-data-card',
-  imports: [DeleteDeviceDataDialog, LiveNotice, NeedsConnection],
+  imports: [BusyLabel, DeleteDeviceDataDialog, LiveNotice, NeedsConnection],
   templateUrl: './device-data-card.html',
   styleUrl: './device-data-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
