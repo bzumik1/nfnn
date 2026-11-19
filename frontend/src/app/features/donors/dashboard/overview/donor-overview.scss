@@ -161,7 +161,7 @@
     margin-block-end: 0;
   }
 
-  .receipt-status > .receipt-saved {
+  .receipt-status__inner > .receipt-saved {
     margin-top: 0;
     padding-top: var(--space-3);
   }
@@ -214,7 +214,7 @@
     max-inline-size: 100%;
   }
 
-  .receipt-status > .receipt-saved {
+  .receipt-status__inner > .receipt-saved {
     padding-block: var(--space-1-5);
   }
 

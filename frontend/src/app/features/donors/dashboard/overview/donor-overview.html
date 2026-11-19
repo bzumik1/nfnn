@@ -62,14 +62,16 @@
           />
         </button>
         <div class="receipt-status" [class.receipt-status--closing]="status.idle()">
-          <app-pdf-progress
-            #status
-            class="receipt-saved"
-            [progress]="donations.yearlyProgress(year)"
-            cancelOf="přípravu potvrzení za rok {{ year }}"
-            i18n-cancelOf="@@donor.dashboard.receipt.cancelOfYear"
-            (cancelled)="donations.cancelYearlyReceipt(year)"
-          />
+          <div class="receipt-status__inner">
+            <app-pdf-progress
+              #status
+              class="receipt-saved"
+              [progress]="donations.yearlyProgress(year)"
+              cancelOf="přípravu potvrzení za rok {{ year }}"
+              i18n-cancelOf="@@donor.dashboard.receipt.cancelOfYear"
+              (cancelled)="donations.cancelYearlyReceipt(year)"
+            />
+          </div>
         </div>
       </div>
       @if (donations.receiptError(); as error) {
