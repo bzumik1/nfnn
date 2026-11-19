@@ -129,3 +129,103 @@ export function highlightColours(locator: Locator): Promise<{ background: string
     return colours;
   });
 }
+
+export interface PillBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export interface SegmentContrasts {
+  thumbRests: boolean;
+  thumbOnTrack: number;
+  textOnThumb: number;
+  edgeOnTrack: number;
+  pill: PillBox;
+}
+
+export function segmentContrasts(group: Locator): Promise<SegmentContrasts> {
+  return group.evaluate((element) => {
+    const chosenSelector =
+      ":scope > button:is(.is-active, [aria-checked='true'], [aria-pressed='true'])";
+    const canvas = element.ownerDocument.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (context === null) {
+      throw new Error('no 2D canvas to composite the colours on');
+    }
+    const painted = (layers: string[]): number[] => {
+      context.clearRect(0, 0, 1, 1);
+      for (const layer of layers) {
+        context.fillStyle = layer;
+        context.fillRect(0, 0, 1, 1);
+      }
+      return Array.from(context.getImageData(0, 0, 1, 1).data);
+    };
+    const canvasColour = (): string => {
+      const probe = element.ownerDocument.createElement('span');
+      probe.style.background = 'Canvas';
+      element.ownerDocument.body.append(probe);
+      const colour = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return colour;
+    };
+    const backdrop = (from: Element): string[] => {
+      const layers: string[] = [];
+      for (let at: Element | null = from; at !== null; at = at.parentElement) {
+        const colour = getComputedStyle(at).backgroundColor;
+        layers.unshift(colour);
+        if (painted([colour])[3] === 255) {
+          return layers;
+        }
+      }
+      return [canvasColour(), ...layers];
+    };
+    const luminance = (rgba: number[]): number => {
+      const [r, g, b] = rgba.slice(0, 3).map((channel) => {
+        const value = channel / 255;
+        return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const contrast = (one: number[], other: number[]): number => {
+      const [light, dark] = [luminance(one), luminance(other)].sort((a, b) => b - a);
+      return (light + 0.05) / (dark + 0.05);
+    };
+    const insetEdge = (shadow: string): string => {
+      const layer = shadow.split(/,(?![^(]*\))/).find((each) => /\binset\b/.test(each));
+      return layer?.trim().match(/^(rgba?\([^)]*\)|color\([^)]*\))/)?.[1] ?? 'transparent';
+    };
+
+    const thumbRests = element.classList.contains('ui-segmented--thumb');
+    const chosen = element.querySelector(chosenSelector);
+    const pill = thumbRests ? element.querySelector(':scope > .ui-segmented__thumb') : chosen;
+    if (chosen === null || pill === null) {
+      throw new Error('no chosen segment to measure');
+    }
+    const pillStyle = getComputedStyle(pill);
+    const trackLayers = backdrop(element);
+    const thumbLayers = [...trackLayers, pillStyle.backgroundColor];
+    const track = painted(trackLayers);
+    const thumb = painted(thumbLayers);
+    const edge = painted([...thumbLayers, insetEdge(pillStyle.boxShadow)]);
+    const text = painted([...thumbLayers, getComputedStyle(chosen).color]);
+    const box = pill.getBoundingClientRect();
+    return {
+      thumbRests,
+      thumbOnTrack: contrast(thumb, track),
+      textOnThumb: contrast(text, thumb),
+      edgeOnTrack: contrast(edge, track),
+      pill: { left: box.left, top: box.top, width: box.width, height: box.height },
+    };
+  });
+}
+
+export async function wrapSegments(group: Locator): Promise<void> {
+  await group.evaluate((element: HTMLElement) => (element.style.width = 'min-content'));
+  await expect
+    .poll(() => group.evaluate((element) => element.classList.contains('ui-segmented--thumb')))
+    .toBe(false);
+}
