@@ -80,6 +80,15 @@ class BeanWiringRulesTest {
             .because("backend.md, Application: a lambda or method reference a @Bean or other infrastructure method returns for a port is a driven adapter too, and a driven "
                     + "adapter implements its port on the domain and its technology, never on a use case");
 
+    @Test
+    @DisplayName("Given a @Bean method returning the reviewed driving port implementer that also implements a driven port of its context, when the port rule checks it, then it is reported for that other port")
+    void should_report_the_reviewed_implementer_for_another_port_when_checked_given_a_planted_wiring(@TempDir Path folder) throws IOException {
+        JavaClasses dual = PlantedClasses.compiled(folder, PlantedDrivingPorts.SOURCES);
+
+        assertThat(infrastructure_methods_build_no_port_on_a_use_case.evaluate(dual).getFailureReport().getDetails())
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedImportWiring.scheduler("));
+    }
+
     @Nested
     @DisplayName("Given planted configurations that wire beans with lambdas, method references and anonymous classes")
     class GivenPlantedWiring {
@@ -142,6 +151,18 @@ class BeanWiringRulesTest {
                     configuration("donations.infrastructure.fio.PlantedImportConfiguration", """
                             @org.springframework.context.annotation.Bean
                             FioImportScheduler scheduler(cz.novanadeje.app.donations.application.PlantedImportService service) {
+                                return new FioImportScheduler(service);
+                            }
+                            """),
+                    configuration("donations.infrastructure.fio.PlantedOptionalImportConfiguration", """
+                            @org.springframework.context.annotation.Bean
+                            java.util.Optional<FioImportScheduler> scheduler(cz.novanadeje.app.donations.application.PlantedImportService service) {
+                                return java.util.Optional.of(new FioImportScheduler(service));
+                            }
+                            """),
+                    configuration("donations.infrastructure.fio.PlantedImportPortConfiguration", """
+                            @org.springframework.context.annotation.Bean
+                            cz.novanadeje.app.donations.application.importing.BankImportRequests requests(cz.novanadeje.app.donations.application.PlantedImportService service) {
                                 return new FioImportScheduler(service);
                             }
                             """),
@@ -511,10 +532,11 @@ class BeanWiringRulesTest {
         }
 
         @Test
-        @DisplayName("when the driven adapter rule checks an anonymous class a @Bean method returns for a port, then it is reported as the adapter it is")
+        @DisplayName("when the driven adapter rule checks an anonymous class a @Bean method returns for a port, then it is reported as the adapter it is, and the reviewed scheduler of its driving port alone is not")
         void should_report_the_anonymous_port_when_checked_given_a_bean_method_returning_one() {
             assertThat(reportOf(DddLayeringRulesTest.driven_adapters_must_not_drive_a_use_case))
-                    .anySatisfy(detail -> assertThat(detail).contains("AbstractPairingConfiguration$1").contains("PairingService"));
+                    .anySatisfy(detail -> assertThat(detail).contains("AbstractPairingConfiguration$1").contains("PairingService"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("FioImportScheduler"));
         }
 
         @Test
@@ -574,20 +596,13 @@ class BeanWiringRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("BreakerConfiguration.breaker(").contains("PairingHelper").contains("PairingService"))
                     .noneSatisfy(detail -> assertThat(detail).contains("OutcomeScheduler"))
                     .noneSatisfy(detail -> assertThat(detail).contains("PlantedImportConfiguration"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("PlantedOptionalImportConfiguration"))
+                    .anySatisfy(detail -> assertThat(detail).contains("PlantedImportPortConfiguration.requests("))
                     .noneSatisfy(detail -> assertThat(detail).contains("OwnMethodPairingConfiguration.task("))
                     .noneSatisfy(detail -> assertThat(detail).contains("WiringConfiguration"))
                     .noneSatisfy(detail -> assertThat(detail).contains("PairingWiring"))
                     .noneSatisfy(detail -> assertThat(detail).contains("AnonymousTaskConfiguration"))
                     .noneSatisfy(detail -> assertThat(detail).contains("LiteComponent"));
-        }
-
-        @Test
-        @DisplayName("when the port rule checks a @Bean method returning the reviewed driving port implementer that also implements a driven port of its context, then it is reported for that other port")
-        void should_report_the_reviewed_implementer_for_another_port_when_checked_given_a_planted_wiring(@TempDir Path folder) throws IOException {
-            JavaClasses dual = PlantedClasses.compiled(folder, PlantedDrivingPorts.SOURCES);
-
-            assertThat(infrastructure_methods_build_no_port_on_a_use_case.evaluate(dual).getFailureReport().getDetails())
-                    .anySatisfy(detail -> assertThat(detail).contains("PlantedImportWiring.scheduler("));
         }
 
         private static Map.Entry<String, String> configuration(String relativeName, String members) {
