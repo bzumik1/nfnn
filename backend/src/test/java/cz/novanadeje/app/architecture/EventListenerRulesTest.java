@@ -5,6 +5,7 @@ import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
+import com.tngtech.archunit.core.domain.JavaEnumConstant;
 import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaModifier;
@@ -16,7 +17,10 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import cz.novanadeje.app.AppApplication;
+import cz.novanadeje.app.shared.infrastructure.transaction.PublishingTransaction;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -24,6 +28,7 @@ import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.PayloadApplicationEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.io.IOException;
@@ -32,6 +37,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -136,6 +142,99 @@ class EventListenerRulesTest {
                             .anyMatch(type -> type.isInterface() && type.isAssignableTo(ApplicationListener.class))))
             .because("backend.md, Contexts and layers: a listener registered in code (an ApplicationListener bean, a forPayload listener or a "
                     + "lambda added to the context) carries no annotation, so neither its placement nor its transaction phase could be checked");
+
+    @ArchTest
+    static final ArchRule before_commit_listeners_fail_without_the_publishers_read_write_transaction = methods()
+            .that(DescribedPredicate.describe("are @TransactionalEventListener methods of the BEFORE_COMMIT phase",
+                    method -> transactionalListenerOf(method).map(EventListenerRulesTest::phaseOf).filter(TransactionPhase.BEFORE_COMMIT.name()::equals).isPresent()))
+            .should(runWithoutATransactionAndRequireTheirPublishers())
+            .because("backend.md, Contexts and layers: a BEFORE_COMMIT listener writes what must commit with its publisher (the audit trail, a copy, "
+                    + "an alert); without fallbackExecution Spring drops an event published outside a transaction silently, so the listener runs "
+                    + "anyway and fails through PublishingTransaction.require, which refuses a missing or read-only transaction (#621, Khononov T4)");
+
+    private static ArchCondition<JavaMethod> runWithoutATransactionAndRequireTheirPublishers() {
+        return new ArchCondition<>("declare fallbackExecution = true and call PublishingTransaction.require") {
+            @Override
+            public void check(JavaMethod method, ConditionEvents events) {
+                boolean fallback = transactionalListenerOf(method).flatMap(listener -> listener.get("fallbackExecution"))
+                        .filter(Boolean.TRUE::equals).isPresent();
+                boolean requires = method.getMethodCallsFromSelf().stream()
+                        .anyMatch(call -> call.getTargetOwner().isEquivalentTo(PublishingTransaction.class) && call.getName().equals("require"));
+                if (!fallback) {
+                    events.add(SimpleConditionEvent.violated(method, method.getFullName() + " does not declare fallbackExecution = true in "
+                            + method.getSourceCodeLocation()));
+                }
+                if (!requires) {
+                    events.add(SimpleConditionEvent.violated(method, method.getFullName() + " does not call PublishingTransaction.require in "
+                            + method.getSourceCodeLocation()));
+                }
+            }
+        };
+    }
+
+    @Test
+    @DisplayName("Given planted BEFORE_COMMIT listeners without fallbackExecution, without the transaction check, on a composed annotation without fallbackExecution, and ones that declare and call both or listen after the commit, when the rule checks them, then each missing part is reported and nothing else")
+    void should_report_each_missing_part_when_checked_given_planted_before_commit_listeners(@TempDir Path folder) throws IOException {
+        JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
+                "cz.novanadeje.app.planteda.infrastructure.events.PlantedBeforeCommit", """
+                        package cz.novanadeje.app.planteda.infrastructure.events;
+
+                        import java.lang.annotation.ElementType;
+                        import java.lang.annotation.Retention;
+                        import java.lang.annotation.RetentionPolicy;
+                        import java.lang.annotation.Target;
+                        import org.springframework.transaction.event.TransactionPhase;
+                        import org.springframework.transaction.event.TransactionalEventListener;
+
+                        @Retention(RetentionPolicy.RUNTIME)
+                        @Target(ElementType.METHOD)
+                        @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+                        @interface PlantedBeforeCommit {
+                        }
+                        """,
+                "cz.novanadeje.app.planteda.infrastructure.events.PlantedCopyListener", """
+                        package cz.novanadeje.app.planteda.infrastructure.events;
+
+                        import cz.novanadeje.app.shared.application.event.DonorErased;
+                        import cz.novanadeje.app.shared.application.event.DonorRegistered;
+                        import cz.novanadeje.app.shared.infrastructure.transaction.PublishingTransaction;
+                        import org.springframework.transaction.event.TransactionPhase;
+                        import org.springframework.transaction.event.TransactionalEventListener;
+
+                        class PlantedCopyListener {
+
+                            @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+                            void droppedOutsideATransaction(DonorRegistered registered) {
+                                PublishingTransaction.require(registered);
+                            }
+
+                            @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+                            void runsWithoutAnyTransaction(DonorRegistered registered) {
+                            }
+
+                            @PlantedBeforeCommit
+                            void composedWithoutFallback(DonorErased erased) {
+                                PublishingTransaction.require(erased);
+                            }
+
+                            @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+                            void failsWithoutItsPublishersTransaction(DonorErased erased) {
+                                PublishingTransaction.require(erased);
+                            }
+
+                            @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+                            void afterTheCommit(DonorErased erased) {
+                            }
+                        }
+                        """));
+
+        assertThat(before_commit_listeners_fail_without_the_publishers_read_write_transaction.evaluate(planted).getFailureReport().getDetails())
+                .hasSize(3)
+                .anySatisfy(detail -> assertThat(detail).contains("droppedOutsideATransaction").contains("fallbackExecution"))
+                .anySatisfy(detail -> assertThat(detail).contains("runsWithoutAnyTransaction").contains("PublishingTransaction.require"))
+                .anySatisfy(detail -> assertThat(detail).contains("composedWithoutFallback").contains("fallbackExecution"))
+                .noneSatisfy(detail -> assertThat(detail).containsAnyOf("failsWithoutItsPublishersTransaction", "afterTheCommit"));
+    }
 
     @Test
     @DisplayName("Given the plain listeners named with their reason, when the site is read, then each class still hears its event with a plain @EventListener, so the list names no listener or event that is gone")
@@ -703,6 +802,19 @@ class EventListenerRulesTest {
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedPayloadListeners.erasures"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedTransactionalPayloadListeners"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedContextListeners"));
+    }
+
+    private static Optional<JavaAnnotation<?>> transactionalListenerOf(JavaMethod method) {
+        return method.getAnnotations().stream()
+                .<JavaAnnotation<?>>flatMap(annotation -> annotation.getRawType().isEquivalentTo(TransactionalEventListener.class)
+                        ? Stream.of(annotation)
+                        : annotation.getRawType().getAnnotations().stream().filter(meta -> meta.getRawType().isEquivalentTo(TransactionalEventListener.class)))
+                .findFirst();
+    }
+
+    private static String phaseOf(JavaAnnotation<?> listener) {
+        return listener.get("phase").filter(JavaEnumConstant.class::isInstance).map(JavaEnumConstant.class::cast).map(JavaEnumConstant::name)
+                .orElse(TransactionPhase.AFTER_COMMIT.name());
     }
 
     private static boolean listensToASharedEvent(JavaMethod method) {

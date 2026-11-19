@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.shared.application.event.DonorErased;
 import cz.novanadeje.app.shared.application.event.DonorProfileChanged;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
+import cz.novanadeje.app.shared.infrastructure.transaction.PublishingTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -35,6 +36,7 @@ class DonorRecordSynchronizer {
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     void onRegistered(DonorRegistered event) {
+        PublishingTransaction.require(event);
         donorRecordService.register(new RegisterDonorRecordCommand(event.donorId(), event.type(), event.name(), event.companyIdentifier(),
                 event.address(), event.variableSymbol(), event.preferredLocale(), event.registeredAt()));
     }
@@ -55,11 +57,13 @@ class DonorRecordSynchronizer {
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     void onErased(DonorErased event) {
+        PublishingTransaction.require(event);
         donorRecordService.erase(event.donorId(), event.erasedAt());
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     void onProfileChanged(DonorProfileChanged event) {
+        PublishingTransaction.require(event);
         donorRecordService.changeProfile(new ChangeDonorRecordProfileCommand(event.donorId(), event.name(), event.address(),
                 event.preferredLocale()));
     }
