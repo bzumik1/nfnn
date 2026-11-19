@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.TokenClaimRulesTest > Given the classes allowed to read a claim, when they are read, then each exists and still reads one, so the list names no class that is gone or no longer needs it",
+    "reason": "PR #1479 (#621 round 5, #1475): the claim reader is named by its method, so the stale-entry test checks the method, not the class",
+    "replacement": "architecture.TokenClaimRulesTest > Given the methods allowed to read a claim, when they are read, then each exists and still reads one, so the list names no method that is gone or no longer needs it",
+    "contract": "docs/security-overview.md, Connected applications"
+  }
+]
