@@ -121,15 +121,13 @@ class AdapterLibraryRulesTest {
             .should().dependOnClassesThat().resideInAPackage("org.thymeleaf..");
 
     @ArchTest
-    static final ArchRule image_libraries_are_used_only_by_the_content_media_receipt_signature_and_bank_logo_adapters = noClasses()
-            .that().resideOutsideOfPackages("cz.novanadeje.app.content.infrastructure.media..", "cz.novanadeje.app.donations.infrastructure.signature..",
-                    "cz.novanadeje.app.donations.infrastructure.banklogo..")
+    static final ArchRule image_libraries_are_used_only_by_the_content_media_and_bank_logo_adapters = noClasses()
+            .that().resideOutsideOfPackages("cz.novanadeje.app.content.infrastructure.media..", "cz.novanadeje.app.donations.infrastructure.banklogo..")
             .should().dependOnClassesThat()
             .resideInAnyPackage("com.luciad.imageio.webp..", "javax.imageio..", "java.awt..");
 
     @ArchTest
-    static final ArchRule xml_parsers_are_used_only_by_the_receipt_signature_adapter = noClasses()
-            .that().resideOutsideOfPackage("cz.novanadeje.app.donations.infrastructure.signature..")
+    static final ArchRule no_class_parses_xml = noClasses()
             .should().dependOnClassesThat().resideInAnyPackage("javax.xml..", "org.xml.sax..", "org.w3c.dom..");
 
     @ArchTest
@@ -248,13 +246,16 @@ class AdapterLibraryRulesTest {
                 planted("no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both", "donations.infrastructure.receipt.PlantedNewHtmlToPdf",
                         "io.github.openhtmltopdf.pdfboxout.PdfRendererBuilder"),
                 planted("fio_client_library_is_used_only_by_the_donations_fio_adapter", "donations.application.PlantedFioStatement", "io.github.bzumik1.fio.AccountStatement"),
-                planted("image_libraries_are_used_only_by_the_content_media_receipt_signature_and_bank_logo_adapters", "content.domain.PlantedWebp",
+                planted("image_libraries_are_used_only_by_the_content_media_and_bank_logo_adapters", "content.domain.PlantedWebp",
                         "com.luciad.imageio.webp.WebPReadParam"),
-                planted("image_libraries_are_used_only_by_the_content_media_receipt_signature_and_bank_logo_adapters", "donors.infrastructure.mail.PlantedImageIo",
+                planted("image_libraries_are_used_only_by_the_content_media_and_bank_logo_adapters", "donors.infrastructure.mail.PlantedImageIo",
                         "javax.imageio.ImageReader"),
-                planted("xml_parsers_are_used_only_by_the_receipt_signature_adapter", "content.infrastructure.media.PlantedXmlParser", "javax.xml.parsers.DocumentBuilder"),
-                planted("xml_parsers_are_used_only_by_the_receipt_signature_adapter", "content.infrastructure.media.PlantedSax", "org.xml.sax.XMLReader"),
-                planted("xml_parsers_are_used_only_by_the_receipt_signature_adapter", "content.infrastructure.media.PlantedDom", "org.w3c.dom.Document"),
+                planted("no_class_parses_xml", "content.infrastructure.media.PlantedXmlParser", "javax.xml.parsers.DocumentBuilder"),
+                planted("no_class_parses_xml", "content.infrastructure.media.PlantedSax", "org.xml.sax.XMLReader"),
+                planted("no_class_parses_xml", "content.infrastructure.media.PlantedDom", "org.w3c.dom.Document"),
+                planted("no_class_parses_xml", "donations.infrastructure.signature.PlantedStax", "javax.xml.stream.XMLStreamReader"),
+                planted("image_libraries_are_used_only_by_the_content_media_and_bank_logo_adapters", "donations.infrastructure.signature.PlantedImageIo",
+                        "javax.imageio.ImageReader"),
                 planted("logging_system_pool_and_jvm_management_are_used_only_by_the_operations_adapters", "donations.infrastructure.report.PlantedLoggingSystem",
                         "org.springframework.boot.logging.LoggingSystem"),
                 planted("logging_system_pool_and_jvm_management_are_used_only_by_the_operations_adapters", "shared.infrastructure.persistence.PlantedPool",
@@ -264,7 +265,7 @@ class AdapterLibraryRulesTest {
                 planted("webauthn_library_is_used_only_by_the_donors_webauthn_adapter", "donors.infrastructure.security.PlantedWebAuthn", "com.webauthn4j.WebAuthnManager"),
                 planted("cache_library_is_used_only_by_infrastructure_adapters", "donors.application.PlantedCache", "com.github.benmanes.caffeine.cache.Cache<String, String>"),
                 planted("template_library_is_used_only_by_the_shared_mail_adapter", "donors.infrastructure.mail.PlantedTemplates", "org.thymeleaf.TemplateEngine"),
-                planted("image_libraries_are_used_only_by_the_content_media_receipt_signature_and_bank_logo_adapters", "content.infrastructure.persistence.PlantedDrawing",
+                planted("image_libraries_are_used_only_by_the_content_media_and_bank_logo_adapters", "content.infrastructure.persistence.PlantedDrawing",
                         "java.awt.Graphics2D"),
                 planted("outbound_requests_are_made_only_by_the_reviewed_adapters", "donations.infrastructure.fio.PlantedHttpClient", "java.net.http.HttpClient"),
                 planted("outbound_requests_are_made_only_by_the_reviewed_adapters", "donors.infrastructure.mail.PlantedUrl", "java.net.URL"),

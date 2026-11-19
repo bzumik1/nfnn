@@ -56,7 +56,7 @@ class ArrayRecordRulesTest {
             .that(DOMAIN_OR_APPLICATION_RECORDS_HOLDING_AN_ARRAY)
             .should(compareByContentAndCopyTheirArrays())
             .because("backend.md, Domain: a record's generated equals and hashCode compare an array by identity and its toString prints a reference, "
-                    + "and a generated accessor hands out the array itself (SignatureImage, ReceiptProof, ReceiptSigningKey)");
+                    + "and a generated accessor hands out the array itself (ReceiptProof, ReceiptSigningKey)");
 
     @ArchTest
     static final ArchRule records_hold_no_array_inside_a_generic_component = classes()
