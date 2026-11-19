@@ -965,7 +965,12 @@ test.describe('Given a signed-in donor on a computer', () => {
           buttonEnd: Math.round(button.right),
           wrapped: button.top >= title.bottom,
           gapAbove: Math.round(button.top - titleEnd),
-          rowGap: Math.round(parseFloat(style.rowGap)),
+          rowGap: Math.round(
+            parseFloat(style.rowGap) +
+              parseFloat(
+                getComputedStyle(element.querySelector('.receipt-ready-action')!).marginTop,
+              ),
+          ),
         };
       });
       expect(layout.buttonEnd).toBe(layout.contentEnd);
@@ -1018,7 +1023,7 @@ test.describe('Given a signed-in donor on a computer', () => {
     await expect(card.getByRole('status')).toHaveText('Připravujeme údaje potvrzení…');
     const status = (await card.getByRole('status').boundingBox())!;
     expect(status.height).toBeGreaterThan(0);
-    expect((await spaceUnder()).under).toBeGreaterThan(resting.padding);
+    await expect.poll(async () => (await spaceUnder()).under).toBeGreaterThan(resting.padding);
   });
 
   for (const width of [1280, 1000]) {
@@ -1045,6 +1050,53 @@ test.describe('Given a signed-in donor on a computer', () => {
       expect(lines.every((count) => count === 1)).toBe(true);
       const overflow = await card.evaluate((element) => element.scrollWidth - element.clientWidth);
       expect(overflow).toBeLessThanOrEqual(0);
+    });
+  }
+
+  for (const width of [1280, 390]) {
+    test(`when the status of the ready receipt on Můj přehled appears in a ${width} px window, then its line opens by the shared expand`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, receiptDonations);
+      await page.clock.install();
+      await page.route(
+        (url) => url.pathname === RECEIPT_ISSUING_URL,
+        () => new Promise<void>(() => undefined),
+      );
+      await page.setViewportSize({ width, height: 844 });
+      await openReceiptsAfterSignIn(page);
+      await page.goto('/darce/prehled');
+      const button = page.locator('.receipt-ready-pdf');
+      await expect(button).toBeVisible();
+      await expect(page.locator('.receipt-ready .receipt-status')).toHaveClass(
+        /receipt-status--closing/,
+      );
+
+      await button.click();
+      await expect(button).toHaveAttribute('aria-busy', 'true');
+      const opening = page.evaluate(
+        () =>
+          new Promise<string[]>((resolve) => {
+            const wrapper = document.querySelector('.receipt-ready .receipt-status')!;
+            const line = wrapper.querySelector('[role="status"]')!;
+            new MutationObserver((_, observer) => {
+              if (!line.textContent?.trim()) {
+                return;
+              }
+              observer.disconnect();
+              resolve(
+                wrapper
+                  .getAnimations()
+                  .map((animation) => (animation as CSSTransition).transitionProperty ?? ''),
+              );
+            }).observe(line, { childList: true, subtree: true, characterData: true });
+          }),
+      );
+      await page.clock.runFor(300);
+      expect(await opening).toContain('grid-template-rows');
+      await expect(page.locator('.receipt-ready .receipt-status')).not.toHaveClass(
+        /receipt-status--closing/,
+      );
     });
   }
 });

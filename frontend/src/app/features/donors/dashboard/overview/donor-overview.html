@@ -61,13 +61,16 @@
             i18n-openLabel="@@donor.dashboard.yearly.open"
           />
         </button>
-        <app-pdf-progress
-          class="receipt-saved"
-          [progress]="donations.yearlyProgress(year)"
-          cancelOf="přípravu potvrzení za rok {{ year }}"
-          i18n-cancelOf="@@donor.dashboard.receipt.cancelOfYear"
-          (cancelled)="donations.cancelYearlyReceipt(year)"
-        />
+        <div class="receipt-status" [class.receipt-status--closing]="status.idle()">
+          <app-pdf-progress
+            #status
+            class="receipt-saved"
+            [progress]="donations.yearlyProgress(year)"
+            cancelOf="přípravu potvrzení za rok {{ year }}"
+            i18n-cancelOf="@@donor.dashboard.receipt.cancelOfYear"
+            (cancelled)="donations.cancelYearlyReceipt(year)"
+          />
+        </div>
       </div>
       @if (donations.receiptError(); as error) {
         @if (error.scope === 'yearly') {

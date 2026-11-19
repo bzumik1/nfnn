@@ -41,6 +41,7 @@ describe('Given the line under a PDF button', () => {
 
   it('when nothing is prepared, then its host says it is idle, so a page can keep the empty line out of the layout', () => {
     expect((fixture.nativeElement as HTMLElement).classList).toContain('pdf-progress--idle');
+    expect(fixture.componentInstance.idle()).toBe(true);
   });
 
   describe('when a phase starts', () => {
@@ -54,6 +55,7 @@ describe('Given the line under a PDF button', () => {
       await wait(10);
       expect(status()).toBe('Načítáme nástroje pro PDF…');
       expect(host.classList).not.toContain('pdf-progress--idle');
+      expect(fixture.componentInstance.idle()).toBe(false);
     });
 
     it('then the line names it only once it has lasted 300 ms', async () => {
