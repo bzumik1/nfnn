@@ -234,7 +234,7 @@ describe("Given a donor's signed-in devices card", () => {
       http.expectNone({ method: 'DELETE' });
     });
 
-    it('and the donor signs out the iPhone, then the API is told, the row disappears, the status says so and takes focus', async () => {
+    it('and the donor signs out the iPhone, then the API is told, the row disappears, the status says so and the device below takes focus', async () => {
       await ask(signOutButton(rows()[1]));
       await confirmSignOut();
       expect(accessibleText(element('.devices-confirm-yes'))).toBe('Odhlásit');
@@ -253,7 +253,21 @@ describe("Given a donor's signed-in devices card", () => {
         'Zařízení jsme odhlásili: iPhone · Safari. Pokud jste se na něm nepřihlásili vy, změňte si heslo.',
       );
       expect(element('.devices-confirm')).toBeNull();
-      expect(document.activeElement).toBe(element('.devices-status'));
+      expect(document.activeElement).toBe(signOutButton(rows()[1]));
+      expect(text(rows()[1].querySelector('.device-name'))).toBe('Neznámé zařízení');
+    });
+
+    it('and the donor signs out the last device of the list, then the device above takes focus', async () => {
+      await ask(signOutButton(rows()[2]));
+      await confirmSignOut();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${UNKNOWN.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(rows()).toHaveLength(2);
+      expect(document.activeElement).toBe(signOutButton(rows()[1]));
+      expect(text(rows()[1].querySelector('.device-name'))).toBe('iPhone · Safari');
     });
 
     it('and the donor signs out the unknown device, then the status names it in lower case inside its sentence', async () => {
@@ -284,12 +298,12 @@ describe("Given a donor's signed-in devices card", () => {
       };
 
       await ask(signOutButton(rows()[1]));
-      expectShared(rows()[1].querySelector<HTMLElement>('.devices-confirm'));
+      expectShared(rows()[1].querySelector<HTMLElement>('.devices-confirm-box'));
 
       element<HTMLButtonElement>('.devices-confirm-no').click();
       await settle();
       await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
-      expectShared(element<HTMLElement>('.devices-footer .devices-confirm'));
+      expectShared(element<HTMLElement>('.devices-footer .devices-confirm-box'));
     });
 
     it("and the donor signs out the iPhone, then the card's status line, never the button, says first that it signs out and then only the result", async () => {
@@ -361,7 +375,7 @@ describe("Given a donor's signed-in devices card", () => {
       expect(document.activeElement).toBe(element('.devices-sign-out-others'));
     });
 
-    it('and the donor signs out every other device, then only this one stays, the status says so and takes focus', async () => {
+    it('and the donor signs out every other device, then only this one stays, the status says so and the heading takes focus', async () => {
       await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
       await confirmSignOut();
       expect(accessibleText(element('.devices-confirm-yes'))).toBe('Odhlásit');
@@ -374,7 +388,7 @@ describe("Given a donor's signed-in devices card", () => {
       expect(rows()).toHaveLength(1);
       expect(element('.devices-sign-out-others')).toBeNull();
       expect(text(element('.devices-status'))).toBe('Ostatní zařízení jsou odhlášená.');
-      expect(document.activeElement).toBe(element('.devices-status'));
+      expect(document.activeElement).toBe(element('#devices-title'));
     });
 
     it('and signing out fails, then the reason is shown, the row stays and focus is back on its button', async () => {
@@ -494,7 +508,7 @@ describe("Given a donor's signed-in devices card", () => {
       expect(rows()).toHaveLength(2);
     });
 
-    it('and the donor signs out an older one, then the row that opens them counts one less and the status takes focus', async () => {
+    it('and the donor signs out an older one, then the row that opens them counts one less and the older one below takes focus', async () => {
       toggle().click();
       await settle();
       await ask(signOutButton(rows()[2]));
@@ -505,7 +519,8 @@ describe("Given a donor's signed-in devices card", () => {
       await settle();
 
       expect(text(toggle().querySelector('.ui-list__title'))).toBe('Starší (1)');
-      expect(document.activeElement).toBe(element('.devices-status'));
+      expect(document.activeElement).toBe(signOutButton(rows()[2]));
+      expect(text(rows()[2].querySelector('.device-name'))).toBe('Windows · Edge');
     });
 
     it('and the donor signs out every other device, then the older ones go too', async () => {
@@ -519,6 +534,22 @@ describe("Given a donor's signed-in devices card", () => {
       expect(rows()).toHaveLength(1);
       expect(toggle()).toBeNull();
     });
+  });
+
+  it('when the donor signs out the only other device, then the heading takes focus and the card says no other device is', async () => {
+    await signIn();
+    await listed([THIS_MAC, IPHONE]);
+
+    await ask(signOutButton(rows()[1]));
+    await confirmSignOut();
+    http
+      .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+
+    expect(rows()).toHaveLength(1);
+    expect(text(element('.devices-empty'))).toBe('Jinde přihlášení nejste.');
+    expect(document.activeElement).toBe(element('#devices-title'));
   });
 
   it('when only this device is signed in, then the card says no other device is and offers no sign-out', async () => {

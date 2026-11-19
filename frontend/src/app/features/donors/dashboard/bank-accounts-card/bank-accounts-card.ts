@@ -66,6 +66,7 @@ import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
+import { Disclosure } from '../../../../shared/ui/disclosure/disclosure';
 
 type ListState = 'loading' | 'ready' | 'error';
 
@@ -136,6 +137,7 @@ const PAYMENT_WATCH_CHECKS = 20;
   selector: 'app-bank-accounts-card',
   imports: [
     Dialog,
+    Disclosure,
     CopyButton,
     NgTemplateOutlet,
     PairingHelp,
@@ -340,6 +342,14 @@ export class BankAccountsCard {
 
   protected warns(account: BankAccountItem): boolean {
     return labelOf(account) === 'shared';
+  }
+
+  protected entering(account: BankAccountItem): boolean {
+    const known = this.accountsWhenOpened();
+    return (
+      this.newlyVerifiedId() === account.id &&
+      !(known?.verificationPaymentOn.has(account.id) ?? true)
+    );
   }
 
   protected asksInDialog(account: BankAccountItem): boolean {

@@ -3405,7 +3405,10 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.getByRole('button', { name: 'Zrušit' }).click();
     await page.getByRole('button', { name: 'Změnit heslo' }).click();
-    await expect(page.getByLabel('Současné heslo')).toBeFocused();
+    await expect(
+      page.locator('#account-password-panel').getByLabel('Současné heslo'),
+    ).toBeFocused();
+    await expect(page.locator('#account-email-panel form')).toHaveCount(0);
 
     expect(await violations(page)).toEqual([]);
   });

@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 
 :host {
   display: block;
@@ -246,6 +247,10 @@
   margin-top: var(--space-2-5);
 }
 
+.account-confirm {
+  @include motion.expand($closes-by: class);
+}
+
 .add-account-title {
   font-family: var(--font-title);
   font-size: var(--text-3xl);
@@ -393,12 +398,12 @@
   margin-top: var(--space-4);
   padding: var(--space-3-5) var(--space-4);
   border-radius: var(--radius-card);
-  background: var(--color-accent-soft);
-  transition: background-color var(--duration-slow) ease;
+  background-color: var(--color-accent-soft);
+  @include motion.state(background-color);
 }
 
 .add-account-watch--verified {
-  background: var(--color-success-bg);
+  background-color: var(--color-success-bg);
 }
 
 .watch-icon {
@@ -413,20 +418,35 @@
   stroke-width: 3;
 }
 
-.watch-arc {
+.watch-arc,
+.watch-hands {
   fill: none;
   stroke: var(--color-accent);
   stroke-width: 3;
   stroke-linecap: round;
+}
+
+.watch-arc {
   stroke-dasharray: 20 62;
   transform-origin: center;
-  animation: watchSpin 1.2s linear infinite;
+  @include motion.spin;
+}
+
+.watch-spinner {
+  @include motion.wait-settles;
+}
+
+.watch-hands {
+  stroke-linejoin: round;
+  @include motion.wait-calm;
+}
+
+.watch-icon--verified {
+  @include motion.done;
 }
 
 .watch-disc {
   fill: var(--color-success);
-  transform-origin: center;
-  animation: watchPop 0.35s ease-out both;
 }
 
 .watch-tick {
@@ -435,9 +455,6 @@
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 22;
-  stroke-dashoffset: 22;
-  animation: watchTick 0.35s ease-out 0.25s forwards;
 }
 
 .watch-text {
@@ -481,38 +498,8 @@
   cursor: pointer;
 }
 
-@keyframes watchSpin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes watchPop {
-  from {
-    transform: scale(0.4);
-    opacity: 0;
-  }
-}
-
-@keyframes watchTick {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .watch-arc {
-    animation: none;
-  }
-
-  .watch-disc {
-    animation: none;
-  }
-
-  .watch-tick {
-    animation: none;
-    stroke-dashoffset: 0;
-  }
+.account--entering {
+  @include motion.row-enter;
 }
 
 .add-account-claim {

@@ -25,6 +25,30 @@
   }
 }
 
+@keyframes motion-row-tint {
+  from {
+    background-color: var(--color-accent-soft);
+  }
+}
+
+@keyframes motion-row-leave {
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+@keyframes motion-after-rows {
+  from {
+    position: absolute;
+    opacity: 0;
+  }
+
+  1% {
+    position: static;
+  }
+}
+
 @keyframes motion-done {
   from {
     opacity: 0;

@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 
 :host {
   display: block;
@@ -31,6 +32,18 @@
   background: var(--color-surface-alt);
 }
 
+.devices-older {
+  @include motion.expand($closes-by: class);
+}
+
+.device-slot--leaving {
+  @include motion.row-leave;
+}
+
+.devices-empty--after-rows {
+  @include motion.after-rows-left;
+}
+
 .device-icon {
   color: var(--color-text-muted);
 }
@@ -56,7 +69,11 @@
   padding-top: var(--space-4);
 }
 
-.device-confirm {
+.devices-confirm {
+  @include motion.expand($closes-by: class);
+}
+
+.device-confirm .devices-confirm-box {
   margin: 0 var(--space-6) var(--space-3);
 }
 
