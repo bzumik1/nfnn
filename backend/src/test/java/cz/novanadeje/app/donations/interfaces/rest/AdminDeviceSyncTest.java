@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationSource;
 import cz.novanadeje.app.donations.domain.donation.DonationStatus;
+import cz.novanadeje.app.donations.domain.donation.Donations;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
@@ -250,7 +251,7 @@ class AdminDeviceSyncTest {
     }
 
     private Donation receivedGift(DonorReference donor, DonationId id, LocalDate day, long amount) {
-        return Donation.reconstitute(id, donor, Optional.empty(), day, Money.czk(amount), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(),
+        return Donations.stored(id, donor, Optional.empty(), day, Money.czk(amount), DonationSource.MANUAL, DonationStatus.RECEIVED, Optional.empty(),
                 clock.instant());
     }
 

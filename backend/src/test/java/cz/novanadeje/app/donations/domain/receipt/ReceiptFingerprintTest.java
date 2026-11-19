@@ -134,12 +134,14 @@ class ReceiptFingerprintTest {
 
     private static Donation sameIdOtherDay(Donation donation) {
         return Donation.reconstitute(donation.id(), donation.donor(), donation.bankPayment(), donation.receivedOn().plusDays(1),
-                donation.amount(), donation.source(), donation.status(), donation.pairedBy(), donation.recordedAt());
+                donation.amount(), donation.source(), donation.status(), donation.pairedBy(), donation.pairedThrough(), donation.confirmedClaim(),
+                donation.purpose(), donation.recordedAt());
     }
 
     private static Donation sameIdOtherAmount(Donation donation) {
         return Donation.reconstitute(donation.id(), donation.donor(), donation.bankPayment(), donation.receivedOn(),
-                Money.czk(donation.amount().amountMinor() + 1), donation.source(), donation.status(), donation.pairedBy(), donation.recordedAt());
+                Money.czk(donation.amount().amountMinor() + 1), donation.source(), donation.status(), donation.pairedBy(), donation.pairedThrough(),
+                donation.confirmedClaim(), donation.purpose(), donation.recordedAt());
     }
 
     @Test
