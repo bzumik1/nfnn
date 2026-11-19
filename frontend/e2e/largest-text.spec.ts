@@ -1,4 +1,4 @@
-import { Locator, Page, Route } from '@playwright/test';
+import { devices, Locator, Page, Route } from '@playwright/test';
 import { DIAGNOSTICS, logsApi, routeLogsApi } from './admin-logs-api';
 import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
 import {
@@ -24,6 +24,7 @@ import {
   noDonations,
   openDonorSection,
   rememberedDonorSession,
+  showAccountList,
   signIn,
 } from './donor-session';
 import { expect, test } from './fixtures';
@@ -890,6 +891,68 @@ async function fontSizes(title: Locator, token: string): Promise<{ title: number
     return sizes;
   }, token);
 }
+
+interface IconBesideText {
+  readonly icon: number;
+  readonly text: number;
+  readonly cap: number;
+}
+
+async function iconsBesideTheirText(icons: Locator, row: string): Promise<IconBesideText[]> {
+  await expect(icons.first()).toBeVisible();
+  return icons.evaluateAll((elements, rowSelector) => {
+    const cap = 2 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+    return elements.map((element) => {
+      const box = element.getBoundingClientRect();
+      const owner = element.closest(rowSelector)!;
+      const label = owner.querySelector('.ui-list__title') ?? owner;
+      return {
+        icon: Math.round(Math.min(box.width, box.height)),
+        text: Math.round(parseFloat(getComputedStyle(label).fontSize)),
+        cap: Math.round(cap),
+      };
+    });
+  }, row);
+}
+
+test.describe('Given a donor in Safari on an iPhone 390 pt wide whose text is the largest accessibility size', () => {
+  test.use({ viewport: { width: 390, height: 844 }, userAgent: devices['iPhone 15'].userAgent });
+
+  test.beforeEach(async ({ page }) => {
+    await showLargestSystemText(page);
+  });
+
+  test('when they open Bankovní účty, Údaje a zabezpečení and the account sheet, then the icon of Jak přiřazujeme platby?, of every signed-in device and of Přidat na plochu grows at least as large as its text and stops at twice the root text', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => document.fonts.ready);
+    const measured = await iconsBesideTheirText(
+      page.locator('.accounts-help .accounts-help-icon'),
+      '.accounts-help',
+    );
+
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    measured.push(
+      ...(await iconsBesideTheirText(page.locator('.device-icon svg'), '.ui-list__row')),
+    );
+
+    const sheet = await showAccountList(page);
+    measured.push(
+      ...(await iconsBesideTheirText(
+        sheet.locator('.account-install .ui-list__lead svg'),
+        '.ui-list__row',
+      )),
+    );
+
+    expect(measured.length).toBeGreaterThanOrEqual(3);
+    expect(measured.filter(({ icon, text, cap }) => icon < text || icon > cap)).toEqual([]);
+  });
+});
 
 test.describe('Given every title of a sheet or a dialog in the templates', () => {
   test('when they are listed, then each one is measured at the largest text, has no static text or is for screen readers only', () => {
