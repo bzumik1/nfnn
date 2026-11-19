@@ -1,11 +1,10 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
-import cz.novanadeje.app.operations.application.event.BackupProblemsDetected;
-import cz.novanadeje.app.operations.application.event.BackupRecovered;
+import cz.novanadeje.app.operations.application.backup.LastBackupRuns;
+import cz.novanadeje.app.operations.domain.backup.BackupAlert;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
-import cz.novanadeje.app.shared.application.alert.AlertRecipients;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
@@ -37,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class BackupAlertEmailSenderTest {
 
     private static final Instant CHECKED_AT = Instant.parse("2026-10-23T10:00:00Z");
-    private static final AlertRecipients RECIPIENTS = () -> List.of(new EmailAddress("info@nfnn.cz"));
+    private static final List<EmailAddress> RECIPIENTS = List.of(new EmailAddress("info@nfnn.cz"));
     private static final BackupRun FAILED_BACKUP = run(RunOutcome.FAILED, Instant.parse("2026-10-23T01:00:01Z"), Optional.of("nfnn-2026-10-23_0300.dump.age"),
             Optional.empty(), Optional.empty(), Optional.of("pg_dump: error: connection to server failed"));
     private static final BackupRun FAILED_TEST_RESTORE = run(RunOutcome.FAILED, Instant.parse("2026-10-18T02:10:00Z"),
@@ -56,8 +55,10 @@ class BackupAlertEmailSenderTest {
     void should_describe_each_problem_with_its_run_when_problems_reported_given_failed_backup_and_test_restore() {
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context).sendProblems(new BackupProblemsDetected(Set.of(BackupProblem.TEST_RESTORE_FAILED, BackupProblem.BACKUP_FAILED),
-                    Optional.of(FAILED_BACKUP), Optional.of(FAILED_TEST_RESTORE), CHECKED_AT));
+            boolean sent = sender(context).send(new BackupAlert.ProblemsDetected(Set.of(BackupProblem.TEST_RESTORE_FAILED, BackupProblem.BACKUP_FAILED),
+                    CHECKED_AT), new LastBackupRuns(Optional.of(FAILED_BACKUP), Optional.of(FAILED_TEST_RESTORE)), RECIPIENTS);
+
+            assertThat(sent).isTrue();
 
             MimeMessage email = MailContents.asReceived(recording.sent().getFirst());
             assertThat(email.getRecipients(Message.RecipientType.TO)).extracting(Object::toString).containsExactly("info@nfnn.cz");
@@ -90,8 +91,10 @@ class BackupAlertEmailSenderTest {
     void should_name_ended_problems_and_last_runs_when_recovery_reported_given_backup_and_test_restore() {
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context).sendRecovery(new BackupRecovered(Set.of(BackupProblem.TEST_RESTORE_STALE, BackupProblem.BACKUP_FAILED),
-                    Optional.of(BACKUP), Optional.of(TEST_RESTORE), CHECKED_AT));
+            boolean sent = sender(context).send(new BackupAlert.Recovered(Set.of(BackupProblem.TEST_RESTORE_STALE, BackupProblem.BACKUP_FAILED), CHECKED_AT),
+                    new LastBackupRuns(Optional.of(BACKUP), Optional.of(TEST_RESTORE)), RECIPIENTS);
+
+            assertThat(sent).isTrue();
 
             MimeMessage email = MailContents.asReceived(recording.sent().getFirst());
             assertThat(email.getSubject()).isEqualTo("Zálohování databáze zase funguje – Nová naděje");
@@ -114,6 +117,20 @@ class BackupAlertEmailSenderTest {
         });
     }
 
+    @Test
+    @DisplayName("Given a mail server that refuses the e-mail, when the problems are reported, then the sender answers that it was not sent")
+    void should_answer_not_sent_when_problems_reported_given_refusing_mail_server() {
+        RecordingMailSender recording = new RecordingMailSender();
+        recording.failNextSend();
+        contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
+            boolean sent = sender(context).send(new BackupAlert.ProblemsDetected(Set.of(BackupProblem.BACKUP_MISSING), CHECKED_AT),
+                    new LastBackupRuns(Optional.empty(), Optional.empty()), RECIPIENTS);
+
+            assertThat(sent).isFalse();
+            assertThat(recording.sent()).isEmpty();
+        });
+    }
+
     private static BackupRun run(RunOutcome outcome, Instant finishedAt, Optional<String> fileName, Optional<Long> sizeBytes, Optional<Integer> tables,
                                  Optional<String> error) {
         return new BackupRun(outcome, finishedAt.minusSeconds(60), finishedAt, fileName, sizeBytes, tables, Optional.empty(), Optional.empty(), error,
@@ -126,6 +143,6 @@ class BackupAlertEmailSenderTest {
         MessageSource messages = context.getBean(MessageSource.class);
         BrandedEmails emails = new BrandedEmails(mailSender, context.getBean(ITemplateEngine.class), messages, new MailSenderProperties("info@nfnn.cz"),
                 new PublicUrlProperties("http://localhost:4200/"));
-        return new BackupAlertEmailSender(ObservedMailSenders.of(mailSender), emails, messages, RECIPIENTS);
+        return new BackupAlertEmailSender(ObservedMailSenders.of(mailSender), emails, messages);
     }
 }
