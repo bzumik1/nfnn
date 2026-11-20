@@ -35,6 +35,7 @@
   from,
   to {
     overflow: clip;
+    min-inline-size: 0;
   }
 }
 

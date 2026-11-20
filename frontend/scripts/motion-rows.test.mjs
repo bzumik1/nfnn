@@ -336,4 +336,10 @@ describe('Given every fold that clips its child while its height changes', () =>
       assert.equal(valueOf(declarations, 'overflow'), 'clip');
     }
   });
+
+  it('when it clips, then its child may still grow narrower than its content, as a scroll box could, so a closed fold never widens its row', () => {
+    for (const declarations of clipping) {
+      assert.equal(valueOf(declarations, 'min-inline-size'), '0');
+    }
+  });
 });

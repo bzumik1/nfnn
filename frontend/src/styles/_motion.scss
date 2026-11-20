@@ -221,6 +221,7 @@ $_pressed: (--pressed-tint, filter);
 @mixin _clipped {
   > * {
     overflow: clip;
+    min-inline-size: 0;
     transition: none;
   }
 }
@@ -336,6 +337,7 @@ $_pressed: (--pressed-tint, filter);
   > * {
     min-height: 0;
     overflow: clip;
+    min-inline-size: 0;
   }
 
   @media (prefers-reduced-motion: reduce) {
