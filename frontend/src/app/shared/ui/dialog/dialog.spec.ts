@@ -263,6 +263,17 @@ describe('Given an open dialog whose browser moves the focus onto the dialog its
     expect(document.activeElement).toBe(send);
   });
 
+  it('when a press that started elsewhere in the dialog was cancelled and the focus then falls from the button onto the dialog, then it goes back to that button', () => {
+    const title = byId<HTMLElement>('title');
+    title.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    title.dispatchEvent(new Event('pointercancel', { bubbles: true }));
+    const send = byId<HTMLButtonElement>('send');
+
+    focusFallsOntoDialogFrom(send);
+
+    expect(document.activeElement).toBe(send);
+  });
+
   it('when the visitor presses an empty part of the dialog while a field has the focus, then the focus stays on the dialog', () => {
     byId<HTMLInputElement>('field').focus();
 

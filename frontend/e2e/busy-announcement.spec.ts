@@ -489,45 +489,85 @@ test.describe('Given a visitor signing in from the sign-in dialog', () => {
     expect(await heard()).toEqual(['Přihlašujeme…']);
   });
 
-  test('when a screen reader has the focus on Přihlásit se and the visitor taps it, then the focus stays on that button instead of falling onto the dialog', async ({
+  test('when the visitor presses Přihlásit se and the browser moves the focus onto the dialog itself, then the focus goes back to that button without a focus ring and stays there while the answer is slow', async ({
     page,
+    hasTouch,
   }) => {
     await mockDonorApi(page);
     let answer: () => void = () => undefined;
     const answered = new Promise<void>((resolve) => (answer = resolve));
     await page.route('**/api/donors/auth/login', async (route) => {
       await answered;
-      await route.fulfill(
-        problem(
-          401,
-          'auth/invalid-credentials',
-          'Nesprávný e-mail nebo heslo',
-          'Zkontrolujte prosím e-mail a heslo.',
-        ),
-      );
+      await route.fulfill(WRONG_PASSWORD);
     });
     await openSignInDialog(page);
     const dialog = page.getByRole('dialog');
-    await page.locator('#login-email').fill('jana@example.cz');
-    await page.locator('#login-password').fill('wrong horse battery');
+    await fillInSignIn(page);
     const submit = dialog.locator('.login-form .ui-button--primary');
-    await submit.focus();
+    await pressWithPointer(page.locator('#login-password'), hasTouch);
 
-    await submit.click();
+    await pressWhileFocusFallsOntoDialog(page, submit);
 
     await expect(submit).toHaveAttribute('aria-busy', 'true');
-    await expect
-      .poll(() => submit.evaluate((button) => document.activeElement === button))
-      .toBe(true);
+    await expect.poll(() => holdsFocus(submit)).toBe(true);
+    expect(await showsFocusRing(submit)).toBe(false);
 
     answer();
 
     await expect(dialog.getByRole('alert')).toContainText('Nesprávný e-mail nebo heslo');
-    await expect
-      .poll(() => submit.evaluate((button) => document.activeElement === button))
-      .toBe(true);
+    await expect.poll(() => holdsFocus(submit)).toBe(true);
+    expect(await showsFocusRing(submit)).toBe(false);
+  });
+
+  test('when the visitor tabs from Heslo to Přihlásit se, then that button shows its focus ring', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await openSignInDialog(page);
+    await fillInSignIn(page);
+    const submit = page.getByRole('dialog').locator('.login-form .ui-button--primary');
+    await page.locator('#login-password').focus();
+
+    await tabUntilFocused(page, submit);
+
+    expect(await showsFocusRing(submit)).toBe(true);
   });
 });
+
+function holdsFocus(control: Locator): Promise<boolean> {
+  return control.evaluate((element) => document.activeElement === element);
+}
+
+function showsFocusRing(control: Locator): Promise<boolean> {
+  return control.evaluate((element) => element.matches(':focus-visible'));
+}
+
+async function pressWithPointer(control: Locator, hasTouch: boolean): Promise<void> {
+  if (hasTouch) {
+    await control.tap();
+  } else {
+    await control.click();
+  }
+}
+
+async function pressWhileFocusFallsOntoDialog(page: Page, control: Locator): Promise<void> {
+  const box = await control.boundingBox();
+  if (box === null) {
+    throw new Error('The pressed control is not on the screen');
+  }
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect.poll(() => holdsFocus(control)).toBe(true);
+  await page.locator('dialog[open]').evaluate((dialog: HTMLDialogElement) => dialog.focus());
+  await page.mouse.up();
+}
+
+async function tabUntilFocused(page: Page, control: Locator): Promise<void> {
+  for (let presses = 0; presses < 10 && !(await holdsFocus(control)); presses += 1) {
+    await page.keyboard.press('Tab');
+  }
+  expect(await holdsFocus(control)).toBe(true);
+}
 
 interface BusyStep {
   readonly name: string;
