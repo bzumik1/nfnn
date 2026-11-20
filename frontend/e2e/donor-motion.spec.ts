@@ -120,7 +120,7 @@ function reducedDuration(page: Page): Promise<number> {
   );
 }
 
-async function expectOnlyInstantChangesOrShortFades(page: Page): Promise<Move[]> {
+async function expectOnlyInstantChangesOrShortFades(page: Page): Promise<void> {
   const moves = await recordedMoves(page);
   const reduced = await reducedDuration(page);
   for (const move of moves.filter((candidate) => candidate.duration > INSTANT_MS)) {
@@ -130,7 +130,6 @@ async function expectOnlyInstantChangesOrShortFades(page: Page): Promise<Move[]>
     ).toEqual([]);
     expect(move.duration, move.on).toBeLessThanOrEqual(reduced);
   }
-  return moves;
 }
 
 function fadesOn(moves: readonly Move[], className: RegExp): boolean {
@@ -138,6 +137,11 @@ function fadesOn(moves: readonly Move[], className: RegExp): boolean {
     (move) =>
       className.test(move.on) && move.duration > INSTANT_MS && move.properties.includes('opacity'),
   );
+}
+
+async function expectOnlyAShortFadeOn(page: Page, className: RegExp): Promise<void> {
+  await expect.poll(async () => fadesOn(await recordedMoves(page), className)).toBe(true);
+  await expectOnlyInstantChangesOrShortFades(page);
 }
 
 test.describe('Given a donor on a computer who asks for less motion', () => {
@@ -176,8 +180,7 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     await expect(devices.locator('.device-name')).toHaveText(['Mac · Safari']);
     await expect(devices.getByText('Jinde přihlášení nejste.')).toBeVisible();
     await expect(devices.getByRole('heading', { name: 'Přihlášená zařízení' })).toBeFocused();
-    const moves = await expectOnlyInstantChangesOrShortFades(page);
-    expect(fadesOn(moves, /(^| )device-slot( |$)/)).toBe(true);
+    await expectOnlyAShortFadeOn(page, /(^| )device-slot( |$)/);
     const otherDevice = signedInDevices.find((device) => !device.current);
     const row = `device-row-${otherDevice?.id}`;
     expect(await elementsMadeInert(page)).toEqual([row, `inside ${row}`]);
@@ -205,8 +208,7 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
       'iPhone · aplikace',
       'Windows · Edge',
     ]);
-    const moves = await expectOnlyInstantChangesOrShortFades(page);
-    expect(fadesOn(moves, /(^| )devices-older( |$)/)).toBe(true);
+    await expectOnlyAShortFadeOn(page, /(^| )devices-older( |$)/);
   });
 
   test('when they open Změnit heslo, then the toggle says so, the current password takes the focus at once and the panel only fades in', async ({
@@ -226,8 +228,7 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     await expect(
       page.locator('#account-password-panel').getByLabel('Současné heslo'),
     ).toBeFocused();
-    const moves = await expectOnlyInstantChangesOrShortFades(page);
-    expect(fadesOn(moves, /(^| )account-panel( |$)/)).toBe(true);
+    await expectOnlyAShortFadeOn(page, /(^| )account-panel( |$)/);
   });
 
   test('when they open Jak přiřazujeme platby?, then the toggle says so at once and the help only fades in without opening its height', async ({
@@ -245,8 +246,7 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
 
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     await expect(page.getByRole('region', { name: 'Jak přiřazujeme platby' })).toBeVisible();
-    const moves = await expectOnlyInstantChangesOrShortFades(page);
-    expect(fadesOn(moves, /accounts-help-panel/)).toBe(true);
+    await expectOnlyAShortFadeOn(page, /accounts-help-panel/);
   });
 });
 
@@ -257,11 +257,13 @@ test.describe('Given a donor on a computer', () => {
     page,
   }) => {
     await mockDonorApi(page);
+    const firstSyncSettled = whenFirstSyncSettled(page);
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
 
     const toggle = page.locator('dd.account-actions').getByRole('button', { name: 'Změnit heslo' });
     const panel = page.locator('#account-password-panel');
+    await firstSyncSettled();
     await toggle.click();
     await expect(panel.getByLabel('Současné heslo')).toBeFocused();
 
