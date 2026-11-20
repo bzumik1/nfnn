@@ -87,30 +87,49 @@
                         >
                       }
                       <details class="details">
-                        <summary i18n="@@admin.actions.details.summary">
-                          Technické podrobnosti
-                        </summary>
-                        @if (item.adminEmail) {
-                          <span class="details-text">{{ item.adminEmail }}</span>
-                        }
-                        @if (detailsOnServerOnly(item)) {
-                          @if (serverAway()) {
-                            <span class="details-text" i18n="@@admin.actions.details.serverAway"
-                              >Podrobnosti ukážeme, až server zase odpoví.</span
-                            >
-                          } @else {
-                            <span class="details-text" i18n="@@admin.actions.details.needConnection"
-                              >Podrobnosti ukážeme, až budete online.</span
-                            >
-                          }
-                        } @else {
-                          <span class="details-text">{{ item.details }}</span>
-                        }
-                        @if (!item.adminName && !byServer(item)) {
-                          <span class="details-text" i18n="@@admin.actions.details.adminId"
-                            >Správce: {{ item.adminId }}</span
+                        <summary>
+                          <svg
+                            class="details-chevron"
+                            aria-hidden="true"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
                           >
-                        }
+                            <path d="m9 18 6-6-6-6" /></svg
+                          ><span i18n="@@admin.actions.details.summary">Technické podrobnosti</span>
+                        </summary>
+                        <div class="details-body">
+                          <div>
+                            @if (item.adminEmail) {
+                              <span class="details-text">{{ item.adminEmail }}</span>
+                            }
+                            @if (detailsOnServerOnly(item)) {
+                              @if (serverAway()) {
+                                <span class="details-text" i18n="@@admin.actions.details.serverAway"
+                                  >Podrobnosti ukážeme, až server zase odpoví.</span
+                                >
+                              } @else {
+                                <span
+                                  class="details-text"
+                                  i18n="@@admin.actions.details.needConnection"
+                                  >Podrobnosti ukážeme, až budete online.</span
+                                >
+                              }
+                            } @else {
+                              <span class="details-text">{{ item.details }}</span>
+                            }
+                            @if (!item.adminName && !byServer(item)) {
+                              <span class="details-text" i18n="@@admin.actions.details.adminId"
+                                >Správce: {{ item.adminId }}</span
+                              >
+                            }
+                          </div>
+                        </div>
                       </details>
                     </div>
                   </div>
@@ -170,27 +189,46 @@
                         <span class="summary">{{ item.summary }}</span>
                       }
                       <details class="details">
-                        <summary i18n="@@admin.actions.details.summary">
-                          Technické podrobnosti
-                        </summary>
-                        @if (detailsOnServerOnly(item)) {
-                          @if (serverAway()) {
-                            <span class="details-text" i18n="@@admin.actions.details.serverAway"
-                              >Podrobnosti ukážeme, až server zase odpoví.</span
-                            >
-                          } @else {
-                            <span class="details-text" i18n="@@admin.actions.details.needConnection"
-                              >Podrobnosti ukážeme, až budete online.</span
-                            >
-                          }
-                        } @else {
-                          <span class="details-text">{{ item.details }}</span>
-                        }
-                        @if (!item.adminName && !byServer(item)) {
-                          <span class="details-text" i18n="@@admin.actions.details.adminId"
-                            >Správce: {{ item.adminId }}</span
+                        <summary>
+                          <svg
+                            class="details-chevron"
+                            aria-hidden="true"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
                           >
-                        }
+                            <path d="m9 18 6-6-6-6" /></svg
+                          ><span i18n="@@admin.actions.details.summary">Technické podrobnosti</span>
+                        </summary>
+                        <div class="details-body">
+                          <div>
+                            @if (detailsOnServerOnly(item)) {
+                              @if (serverAway()) {
+                                <span class="details-text" i18n="@@admin.actions.details.serverAway"
+                                  >Podrobnosti ukážeme, až server zase odpoví.</span
+                                >
+                              } @else {
+                                <span
+                                  class="details-text"
+                                  i18n="@@admin.actions.details.needConnection"
+                                  >Podrobnosti ukážeme, až budete online.</span
+                                >
+                              }
+                            } @else {
+                              <span class="details-text">{{ item.details }}</span>
+                            }
+                            @if (!item.adminName && !byServer(item)) {
+                              <span class="details-text" i18n="@@admin.actions.details.adminId"
+                                >Správce: {{ item.adminId }}</span
+                              >
+                            }
+                          </div>
+                        </div>
                       </details>
                     </td>
                   </tr>

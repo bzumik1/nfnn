@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
@@ -13,6 +14,7 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminSettings } from './admin-settings';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import {
   copyOf,
   openOfflineFromCopy,
@@ -21,6 +23,7 @@ import {
 } from '../device-copy/testing/opened-copy';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { readDetailsDisclosures } from '../../../shared/ui/disclosure/testing/details-disclosures';
 
 const SETTINGS_URL = '/api/admin/operations/settings';
 const TEST_EMAIL_URL = '/api/admin/operations/settings/test-email';
@@ -28,6 +31,7 @@ const STATUS_URL = '/api/operations/setup';
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 const REFRESH_URL = '/api/donors/auth/refresh';
 const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
+const FIVE_SECONDS = 5000;
 
 describe('Given an administrator on the settings page', () => {
   let fixture: ComponentFixture<AdminSettings>;
@@ -307,6 +311,51 @@ describe('Given an administrator on the settings page', () => {
       expect(text('.ui-notice--status')).toBe('Nastavení je uložené a web po restartu běží s ním.');
     });
 
+    it('then the restart shows the turning ring and the calm clock together from the start, hidden from screen readers, and no timer swaps them', async () => {
+      await type('#setting-RECEIPT_FIRST_YEAR', '2025');
+      await submit();
+      button('Uložit a restartovat').click();
+      await settle();
+      vi.useFakeTimers();
+      http
+        .expectOne(SETTINGS_URL)
+        .flush({ changed: ['RECEIPT_FIRST_YEAR'], restarting: true, version: '00000000000000c2' });
+      await vi.advanceTimersByTimeAsync(1);
+      fixture.detectChanges();
+
+      const waitIcons = () =>
+        Array.from(fixture.nativeElement.querySelectorAll('.ui-load-state .restart-wait > *')).map(
+          (icon) => (icon as Element).getAttribute('class'),
+        );
+      expect(waitIcons()).toEqual(['restart-spinner', 'restart-calm']);
+      expect(element('.restart-wait').getAttribute('aria-hidden')).toBe('true');
+
+      await vi.advanceTimersByTimeAsync(RESTART_POLL_MS);
+      http.expectOne(STATUS_URL).flush('', { status: 502, statusText: 'Bad Gateway' });
+      await vi.advanceTimersByTimeAsync(FIVE_SECONDS - RESTART_POLL_MS);
+      fixture.detectChanges();
+
+      expect(waitIcons()).toEqual(['restart-spinner', 'restart-calm']);
+      expect(text('[role="status"]:not(:empty)')).toBe(
+        'Nastavení je uložené a web se restartuje. Obvykle to trvá do minuty.',
+      );
+    });
+
+    it('then a change on a computer with the save row in view gives it the bar without an entrance, and undoing the change lets it go at once', async () => {
+      expect(element('.save-row').classList).not.toContain('ui-action-bar');
+
+      await type('#setting-RECEIPT_FIRST_YEAR', '2025');
+
+      expect(element('.save-row').classList).toContain('ui-action-bar');
+      expect(element('.save-row').classList).not.toContain('save-row--entering');
+      expect(element('.save-row').contains(button('Uložit nastavení'))).toBe(true);
+
+      await type('#setting-RECEIPT_FIRST_YEAR', '2026');
+
+      expect(element('.save-row').classList).not.toContain('ui-action-bar');
+      expect(element('.save-row').classList).not.toContain('save-row--leaving');
+    });
+
     it('then a value the backend refuses is listed with its name and nothing restarts', async () => {
       await type('#setting-RECEIPT_FIRST_YEAR', '26');
       await submit();
@@ -459,6 +508,36 @@ describe('Given an administrator on the settings page', () => {
     );
   });
 
+  it('when they open the technical settings, then the summary turns an aria-hidden chevron instead of the native marker and the parts open as a disclosure', async () => {
+    await respond(
+      settingsView({
+        settings: settingsView().settings.map((setting) => ({ ...setting, unreadable: false })),
+      }),
+    );
+
+    expect(await readDetailsDisclosures(fixture.nativeElement, settle)).toEqual([
+      {
+        summary: 'Adresa webu, server pro odesílání e-mailů a napojení na banku',
+        chevron: 'hidden from assistive technology',
+        whileClosed: 'left to the native details',
+        onceOpen: 'shown',
+      },
+    ]);
+  });
+
+  it('when the server has no encryption key, then its technical details open as a disclosure under a chevron too', async () => {
+    await respond(settingsView({ secretsCanBeStored: false }));
+
+    expect(await readDetailsDisclosures(element('.ui-notice--alert'), settle)).toEqual([
+      {
+        summary: 'Technické podrobnosti',
+        chevron: 'hidden from assistive technology',
+        whileClosed: 'left to the native details',
+        onceOpen: 'shown',
+      },
+    ]);
+  });
+
   it('when a stored secret cannot be read, as after a restore on a new server, then the page names it at the top', async () => {
     await respond(settingsView());
 
@@ -472,6 +551,146 @@ describe('Given an administrator on the settings page', () => {
 
     expect(text('.ui-notice--alert')).toContain('Tajné údaje (hesla a tokeny) teď nejde uložit');
     expect(element<HTMLInputElement>('#setting-FIO_TOKEN').disabled).toBe(true);
+  });
+});
+
+class FormEndObserver {
+  static all: FormEndObserver[] = [];
+  observed: Element[] = [];
+  disconnected = false;
+
+  constructor(private readonly report: IntersectionObserverCallback) {
+    FormEndObserver.all.push(this);
+  }
+
+  observe(target: Element): void {
+    this.observed.push(target);
+  }
+
+  unobserve(target: Element): void {
+    this.observed = this.observed.filter((observed) => observed !== target);
+  }
+
+  disconnect(): void {
+    this.disconnected = true;
+  }
+
+  sees(top: number, windowBottom: number): void {
+    const entry = {
+      isIntersecting: top < windowBottom,
+      boundingClientRect: { top },
+      rootBounds: { bottom: windowBottom },
+      target: this.observed[0],
+    } as unknown as IntersectionObserverEntry;
+    this.report([entry], this as unknown as IntersectionObserver);
+  }
+}
+
+describe("Given an administrator on a computer scrolled up the settings page, the form's end below the window", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('when they change a field, then the bar enters at the bottom, and undoing the change lets it leave before the row rests in its place', async () => {
+    FormEndObserver.all = [];
+    vi.stubGlobal('IntersectionObserver', FormEndObserver);
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminSettings],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+      ],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(AdminSettings);
+    fixture.detectChanges();
+    http.expectOne(SETTINGS_URL).flush(settingsView());
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const settle = async () => {
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+    const row = () => fixture.nativeElement.querySelector('.save-row') as HTMLElement;
+    const type = async (value: string) => {
+      const input = fixture.nativeElement.querySelector(
+        '#setting-RECEIPT_FIRST_YEAR',
+      ) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+      await settle();
+    };
+
+    expect(FormEndObserver.all).toHaveLength(1);
+    expect(FormEndObserver.all[0]!.observed).toEqual([
+      fixture.nativeElement.querySelector('.save-row-end'),
+    ]);
+    FormEndObserver.all[0]!.sees(2000, 800);
+
+    await type('2025');
+
+    expect(row().classList).toContain('ui-action-bar');
+    expect(row().classList).toContain('save-row--entering');
+
+    await type('2026');
+
+    expect(row().classList).toContain('ui-action-bar');
+    expect(row().classList).toContain('save-row--leaving');
+    row().dispatchEvent(new Event('animationend'));
+    await settle();
+
+    expect(row().classList).not.toContain('ui-action-bar');
+    expect(row().classList).not.toContain('save-row--leaving');
+
+    fixture.destroy();
+    expect(FormEndObserver.all.every((observer) => observer.disconnected)).toBe(true);
+    http.match(SIGNATORY_URL);
+    http.match(SIGNING_KEYS_URL);
+    http.verify();
+  });
+});
+
+describe('Given an administrator changing the settings on a phone or a tablet', () => {
+  it('when they change a field, then the save button stays at the end of the form without a bar', async () => {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminSettings],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: CompactLayout,
+          useValue: {
+            isCompact: signal(true).asReadonly(),
+            listsAsRows: signal(true).asReadonly(),
+          },
+        },
+      ],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(AdminSettings);
+    fixture.detectChanges();
+    http.expectOne(SETTINGS_URL).flush(settingsView());
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector(
+      '#setting-RECEIPT_FIRST_YEAR',
+    ) as HTMLInputElement;
+    input.value = '2025';
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const row = fixture.nativeElement.querySelector('.save-row') as HTMLElement;
+    expect(row.classList).not.toContain('ui-action-bar');
+    expect(row.textContent).toContain('Uložit nastavení');
+    http.match(SIGNATORY_URL);
+    http.match(SIGNING_KEYS_URL);
+    http.verify();
   });
 });
 

@@ -81,12 +81,31 @@
                   }
                 </ul>
                 <details class="tech-details">
-                  <summary i18n="@@admin.backups.techDetails">Technické podrobnosti</summary>
-                  <ul>
-                    @for (detail of problemDetails(); track detail) {
-                      <li>{{ detail }}</li>
-                    }
-                  </ul>
+                  <summary>
+                    <svg
+                      class="details-chevron"
+                      aria-hidden="true"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m9 18 6-6-6-6" /></svg
+                    ><span i18n="@@admin.backups.techDetails">Technické podrobnosti</span>
+                  </summary>
+                  <div class="details-body">
+                    <div>
+                      <ul>
+                        @for (detail of problemDetails(); track detail) {
+                          <li>{{ detail }}</li>
+                        }
+                      </ul>
+                    </div>
+                  </div>
                 </details>
               </div>
               @if (technicianMessage(); as message) {
@@ -184,14 +203,16 @@
                 (click)="start('TEST_RESTORE')"
               >
                 <app-busy-label [busy]="job()?.kind === 'TEST_RESTORE'">
-                  <span when-idle i18n="@@admin.backups.testRestore.start">Ověřit obnovu teď</span>
+                  <span when-idle i18n="@@admin.backups.testRestore.start"
+                    >Spustit zkušební obnovu</span
+                  >
                   <span when-busy i18n="@@admin.backups.testRestore.busy">Ověřujeme obnovu…</span>
                 </app-busy-label>
               </button>
             </div>
             @if (!available()) {
-              <p class="actions-blocked" i18n="@@admin.backups.actions.blocked">
-                Zálohovat teď ani ověřit obnovu nejde, dokud se nevyřeší problém výše.
+              <p class="actions-blocked" i18n="@@admin.backups.actions.blockedUntilSolved">
+                Zálohu ani zkušební obnovu teď nejde spustit, dokud se nevyřeší problém výše.
               </p>
             }
             <p class="actions-hint" i18n="@@admin.backups.actions.hint">
@@ -200,7 +221,7 @@
             @if (backups().length > 0) {
               <p class="ui-callout ui-callout--warning off-server" i18n="@@admin.backups.offServer">
                 Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte
-                tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu. Jsou
+                tlačítkem „Stáhnout“ a uložte jinam, třeba na flash disk nebo do cloudu. Jsou
                 zašifrované, takže je bez klíče k zálohám nikdo nepřečte.
               </p>
             }
@@ -325,8 +346,27 @@
   /></span>
   @if (line.error) {
     <details class="tech-details">
-      <summary i18n="@@admin.backups.techDetails">Technické podrobnosti</summary>
-      <p class="run-error">{{ line.error }}</p>
+      <summary>
+        <svg
+          class="details-chevron"
+          aria-hidden="true"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m9 18 6-6-6-6" /></svg
+        ><span i18n="@@admin.backups.techDetails">Technické podrobnosti</span>
+      </summary>
+      <div class="details-body">
+        <div>
+          <p class="run-error">{{ line.error }}</p>
+        </div>
+      </div>
     </details>
   } @else if (line.errorOnServerOnly) {
     @if (serverAway()) {

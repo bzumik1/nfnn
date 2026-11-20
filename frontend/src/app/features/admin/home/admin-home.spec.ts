@@ -799,8 +799,8 @@ describe('Given an administrator on the administration home', () => {
           (fixture.nativeElement as HTMLElement).querySelectorAll('.attention-backups'),
         ).map((item) => (item.textContent ?? '').replace(/\s+/g, ' ').trim()),
       ).toEqual([
-        'Naléhavé: Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
-        'Naléhavé: Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
+        'Naléhavé: Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste „Zálohovat teď“; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
+        'Naléhavé: Zatím se nevyzkoušelo, že jde zálohu obnovit. Zkuste „Spustit zkušební obnovu“.',
       ]);
       expect(backupsCard().querySelector('.healthy')).toBeNull();
       expect(dataRows('admin-backups-title')).toEqual({
@@ -949,7 +949,7 @@ describe('Given an administrator on the administration home', () => {
 
       expect(items()).toEqual([
         '3 platby čekají na přiřazení 850 Kč',
-        'Naléhavé: Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
+        'Naléhavé: Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste „Zálohovat teď“; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
         'Zpráva pro technika Kopírovat zprávu pro technika',
         'Správce nemá druhý faktor, správa se mu neotevře Petr Svoboda',
       ]);

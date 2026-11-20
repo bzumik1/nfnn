@@ -358,7 +358,7 @@ test.describe('Given an administrator on the backups page', () => {
       'Web teď nevidí složku se zálohami',
     );
     await expect(page.getByRole('button', { name: 'Zálohovat teď' })).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'Ověřit obnovu teď' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Spustit zkušební obnovu' })).toBeDisabled();
     await expect(page.getByText('Zatím žádná záloha.')).toBeVisible();
   });
 });

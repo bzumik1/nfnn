@@ -279,7 +279,7 @@ test.describe('Given an administrator', () => {
     const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
     await expect(attention.getByRole('listitem')).toHaveText([
       '1 platba čeká na přiřazení 150 Kč',
-      'Naléhavé: Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
+      'Naléhavé: Zatím se nevyzkoušelo, že jde zálohu obnovit. Zkuste „Spustit zkušební obnovu“.',
       'Osoba, která podepisuje potvrzení, nemá nahraný podpis Potvrzení o daru mají zatím jen čáru se jménem.',
     ]);
     await expect(

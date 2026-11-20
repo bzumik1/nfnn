@@ -1,3 +1,6 @@
+@use 'details';
+@use 'motion';
+
 :host {
   display: block;
 }
@@ -46,8 +49,12 @@
   margin: 0 0 var(--space-4);
 }
 
+.technical-details,
+.tech-details {
+  @include details.disclosure;
+}
+
 .technical-details > summary {
-  cursor: pointer;
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
   color: var(--color-text);
@@ -142,7 +149,6 @@
   font-size: var(--text-sm);
 
   summary {
-    cursor: pointer;
     font-weight: var(--weight-semibold);
   }
 
@@ -151,21 +157,40 @@
   }
 }
 
+.restart-wait {
+  display: grid;
+  flex-shrink: 0;
+
+  > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.restart-spinner {
+  @include motion.wait-settles;
+}
+
 .spinner {
+  display: block;
   width: 18px;
   height: 18px;
   border-radius: var(--radius-round);
   border: 3px solid var(--color-accent-soft);
   border-top-color: var(--color-accent);
-  animation: spin 0.9s linear infinite;
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
+  @include motion.spin;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.restart-calm {
+  width: 18px;
+  height: 18px;
+  color: var(--color-accent);
+  @include motion.wait-calm;
+}
+
+.save-row.ui-action-bar.save-row--entering {
+  @include motion.appear;
+}
+
+.save-row.ui-action-bar.save-row--leaving {
+  @include motion.leave;
 }
