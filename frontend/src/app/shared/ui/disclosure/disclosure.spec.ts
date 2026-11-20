@@ -140,6 +140,66 @@ describe('Given a disclosure', () => {
 
       expect(fixture.componentInstance.unfoldings()).toBe(0);
     });
+
+    it('and its height transition is cancelled, then it still says it has unfolded once and stays open', async () => {
+      let cancel: (reason: unknown) => void = () => undefined;
+      const cancelled = new Promise<void>((_, reject) => (cancel = reject));
+      byId('panel').getAnimations = () =>
+        [{ transitionProperty: 'grid-template-rows', finished: cancelled }] as never;
+
+      fixture.componentInstance.closed.set(false);
+      await settle();
+      cancel(new DOMException('', 'AbortError'));
+      await settle();
+
+      expect(fixture.componentInstance.unfoldings()).toBe(1);
+      expect(byId('panel').hidden).toBe(false);
+      expect(byId('panel').hasAttribute('inert')).toBe(false);
+      expect(byId('panel').hasAttribute('aria-hidden')).toBe(false);
+    });
+
+    it('and it is destroyed before its height has unfolded, then it never says it has unfolded, not even to its destroyed output', async () => {
+      const warning = vi.spyOn(console, 'warn');
+      fixture.componentInstance.closed.set(false);
+      await settle();
+      fixture.destroy();
+
+      unfold();
+      await unfolding;
+      await Promise.resolve();
+
+      expect(fixture.componentInstance.unfoldings()).toBe(0);
+      expect(warning).not.toHaveBeenCalled();
+    });
+
+    it('and closes and opens again before its first height has unfolded, then it says it has unfolded only once, for the new opening', async () => {
+      const unfolds: (() => void)[] = [];
+      byId('panel').getAnimations = () =>
+        [
+          {
+            transitionProperty: 'grid-template-rows',
+            finished: new Promise<void>((resolve) => unfolds.push(resolve)),
+          },
+        ] as never;
+
+      fixture.componentInstance.closed.set(false);
+      await settle();
+      fixture.componentInstance.closed.set(true);
+      await settle();
+      fixture.componentInstance.closed.set(false);
+      await settle();
+
+      unfolds[0]();
+      await settle();
+
+      expect(unfolds).toHaveLength(2);
+      expect(fixture.componentInstance.unfoldings()).toBe(0);
+
+      unfolds[1]();
+      await settle();
+
+      expect(fixture.componentInstance.unfoldings()).toBe(1);
+    });
   });
 
   it('when it opens with no height to unfold, then it says it has unfolded at once', async () => {
