@@ -20,7 +20,7 @@ type PageState = 'loading' | 'ready' | 'error';
           <p class="content" [class.appears]="view.appears()">Obsah</p>
         }
         @case ('error') {
-          <p class="failure">Nepovedlo se.</p>
+          <p class="failure" [class.appears]="view.appears()">Nepovedlo se.</p>
         }
       }
     </section>
@@ -29,11 +29,7 @@ type PageState = 'loading' | 'ready' | 'error';
 })
 class Page {
   readonly state = signal<PageState>('loading');
-  readonly view = loadingView(
-    this.state,
-    (state) => state === 'loading',
-    (state) => state === 'error',
-  );
+  readonly view = loadingView(this.state, (state) => state === 'loading');
 }
 
 describe('Given a page that loads its data behind a skeleton', () => {
@@ -142,14 +138,31 @@ describe('Given a page that loads its data behind a skeleton', () => {
     expect(element('.content')?.classList).toContain('appears');
   });
 
-  it('when a failure follows a shown skeleton, then the failure shows at once without the minimum', async () => {
+  it('when a failure follows a shown skeleton, then the skeleton stands its minimum and the failure then appears like content', async () => {
     await open();
     await wait(300);
 
     await answer('error');
 
+    expect(element('.skeleton')).not.toBeNull();
+    expect(element('.failure')).toBeNull();
+
+    await wait(399);
+    expect(element('.failure')).toBeNull();
+
+    await wait(1);
     expect(element('.skeleton')).toBeNull();
-    expect(element('.failure')).not.toBeNull();
+    expect(element('.failure')?.classList).toContain('appears');
+  });
+
+  it('when a failure comes before the delay, then it shows at once without appearing', async () => {
+    await open();
+    await wait(100);
+
+    await answer('error');
+
+    expect(element('.skeleton')).toBeNull();
+    expect(element('.failure')?.classList).not.toContain('appears');
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -157,6 +170,7 @@ describe('Given a page that loads its data behind a skeleton', () => {
     await open();
     await wait(300);
     await answer('error');
+    await wait(700);
 
     await answer('loading');
     await wait(100);
