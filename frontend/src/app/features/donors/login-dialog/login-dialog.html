@@ -59,7 +59,9 @@
         se tu ukáže samo.
       </p>
       <p role="status" class="offline-entry-status">
-        @if (offlineRetry() === 'still-offline') {
+        @if (busyAnnouncement.text(); as starting) {
+          <span class="visually-hidden">{{ starting }}</span>
+        } @else if (offlineRetry() === 'still-offline') {
           <span i18n="@@donor.login.offline.stillOffline">Pořád se nedaří připojit.</span>
         }
       </p>
@@ -246,12 +248,17 @@
             @if (error()) {
               <p class="ui-field-error" role="alert">{{ error() }}</p>
             }
+            <div role="status">
+              @if (busyAnnouncement.text(); as starting) {
+                <span class="visually-hidden">{{ starting }}</span>
+              }
+            </div>
 
             <button
               appNeedsConnection
               type="submit"
               class="ui-button ui-button--primary ui-button--block ui-button--grouped"
-              [disabled]="loading()"
+              [appBusy]="loading()"
             >
               <app-busy-label [busy]="loading()">
                 <span when-idle i18n="@@donor.login.secondFactor.submit">Přihlásit se</span>
@@ -409,7 +416,9 @@
               </p>
             }
             <div role="status">
-              @if (verificationResent()) {
+              @if (busyAnnouncement.text(); as starting) {
+                <span class="visually-hidden">{{ starting }}</span>
+              } @else if (verificationResent()) {
                 <p class="form-status" i18n="@@donor.login.verificationResent">
                   Ověřovací e&#8209;mail jsme poslali znovu. Otevřete odkaz v&nbsp;něm a&nbsp;pak se
                   přihlaste.
@@ -421,7 +430,7 @@
               appNeedsConnection
               type="submit"
               class="ui-button ui-button--primary ui-button--block ui-button--grouped"
-              [disabled]="loading()"
+              [appBusy]="loading()"
             >
               <app-busy-label [busy]="loading()">
                 <span when-idle i18n="@@donor.login.submit.login">Přihlásit se</span>
@@ -494,7 +503,7 @@
               appNeedsConnection
               type="button"
               class="ui-button ui-button--block ui-button--grouped registration-resend"
-              [disabled]="loading()"
+              [appBusy]="loading()"
               (click)="resendRegistrationLink()"
             >
               <app-busy-label [busy]="loading()">
@@ -512,7 +521,9 @@
             </button>
           </div>
           <div role="status">
-            @if (registrationResent()) {
+            @if (busyAnnouncement.text(); as starting) {
+              <span class="visually-hidden">{{ starting }}</span>
+            } @else if (registrationResent()) {
               <p class="form-status" i18n="@@donor.register.resent">
                 Odkaz jsme poslali znovu na {{ registration.email.trim() }}.
               </p>
@@ -857,12 +868,17 @@
             @if (error()) {
               <p class="ui-field-error" role="alert">{{ error() }}</p>
             }
+            <div role="status">
+              @if (busyAnnouncement.text(); as starting) {
+                <span class="visually-hidden">{{ starting }}</span>
+              }
+            </div>
 
             <button
               appNeedsConnection
               type="submit"
               class="ui-button ui-button--primary ui-button--block ui-button--grouped"
-              [disabled]="loading()"
+              [appBusy]="loading()"
             >
               <app-busy-label [busy]="loading()">
                 <span when-idle i18n="@@donor.login.submit.register">Vytvořit účet</span>
@@ -904,7 +920,7 @@
             appNeedsConnection
             type="button"
             class="ui-button ui-button--block ui-button--grouped reset-resend"
-            [disabled]="loading()"
+            [appBusy]="loading()"
             (click)="resendReset()"
           >
             <app-busy-label [busy]="loading()">
@@ -913,7 +929,9 @@
             </app-busy-label>
           </button>
           <div role="status">
-            @if (resetResent()) {
+            @if (busyAnnouncement.text(); as starting) {
+              <span class="visually-hidden">{{ starting }}</span>
+            } @else if (resetResent()) {
               <p class="form-status" i18n="@@donor.login.reset.resent">
                 Pokud účet existuje, poslali jsme odkaz znovu.
               </p>
@@ -981,12 +999,17 @@
             @if (error()) {
               <p class="ui-field-error" role="alert">{{ error() }}</p>
             }
+            <div role="status">
+              @if (busyAnnouncement.text(); as starting) {
+                <span class="visually-hidden">{{ starting }}</span>
+              }
+            </div>
 
             <button
               appNeedsConnection
               type="submit"
               class="ui-button ui-button--primary ui-button--block ui-button--grouped"
-              [disabled]="loading()"
+              [appBusy]="loading()"
             >
               <app-busy-label [busy]="loading()">
                 <span when-idle i18n="@@donor.login.reset.submit">Odeslat odkaz</span>
