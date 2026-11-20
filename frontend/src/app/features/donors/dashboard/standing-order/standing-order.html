@@ -17,6 +17,7 @@
   [attr.aria-labelledby]="toggleId"
   appDisclosure
   [closed]="!open()"
+  (unfolded)="bringIntoView()"
   (keydown.escape)="close()"
 >
   <div>
