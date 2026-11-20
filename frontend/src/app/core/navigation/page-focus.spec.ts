@@ -33,6 +33,11 @@ function routerScrollsAfter(router: Router, arrived: NavigationEnd): void {
   (router.events as Subject<RouterEvent>).next(new Scroll(arrived, [0, 0], null));
 }
 
+async function drawn(): Promise<void> {
+  await new Promise<void>((done) => setTimeout(done));
+  TestBed.tick();
+}
+
 describe('Given a list of the administration that a step back returns to from the card it opened', () => {
   let router: Router;
   let focus: PageFocus;
@@ -155,7 +160,7 @@ describe('Given a list of the administration that a step back returns to from th
     await Promise.resolve();
     expect(document.activeElement).toBe(heading);
     placed();
-    await Promise.resolve();
+    await drawn();
 
     expect(document.activeElement).toBe(link);
   });
@@ -176,8 +181,53 @@ describe('Given a list of the administration that a step back returns to from th
     await Promise.resolve();
     expect(document.activeElement).toBe(heading);
     routerScrollsAfter(router, arrived);
+    await drawn();
+
+    expect(document.activeElement).toBe(link);
+  });
+
+  it('when the page still reads its data as the router puts it back, then the row takes the focus only once those reads have come and the page has drawn them, so the row and its room are those of the whole page', async () => {
+    const drawnLater = row({ href: CARD });
+    const drawnAtOnce = row({ href: CARD });
+    scope.append(drawnAtOnce);
+    const opened = navigated(router);
+    await router.navigateByUrl(CARD);
+    routerScrollsAfter(router, await opened);
+    const returned = navigated(router);
+    TestBed.inject(Location).back();
+    const arrived = await returned;
+    const answered = TestBed.inject(PagePlacement).reading();
+    heading.focus();
+
+    focus.returnAfterStepBack(scope);
+    routerScrollsAfter(router, arrived);
+    await drawn();
+    expect(document.activeElement).toBe(heading);
+    scope.insertBefore(drawnLater, drawnAtOnce);
+    answered();
+    await drawn();
+
+    expect(document.activeElement).toBe(drawnLater);
+  });
+
+  it('when the page has drawn itself but its reads are still on their way, then the focus does not return in between the router putting it back and its drawing', async () => {
+    const link = row({ href: CARD });
+    scope.append(link);
+    const opened = navigated(router);
+    await router.navigateByUrl(CARD);
+    routerScrollsAfter(router, await opened);
+    const returned = navigated(router);
+    TestBed.inject(Location).back();
+    const arrived = await returned;
+    heading.focus();
+
+    focus.returnAfterStepBack(scope);
+    routerScrollsAfter(router, arrived);
     await Promise.resolve();
     await Promise.resolve();
+    await Promise.resolve();
+    expect(document.activeElement).toBe(heading);
+    await drawn();
 
     expect(document.activeElement).toBe(link);
   });
