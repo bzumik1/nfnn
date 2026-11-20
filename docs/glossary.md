@@ -165,7 +165,7 @@ UI „Hromadná potvrzení“ · Code: `YearlyReceiptsService`, `donations/domai
 Issuing the yearly receipts of many donors at once in the administration, drawn by the browser into one PDF for printing.
 
 **Issue a receipt**\
-UI „vystavit“, „vystavené potvrzení“ · Code: `issue`, `DonationReceiptIssuer`.\
+UI „vystavit“, „vystavené potvrzení“ · Code: `issue`, `DonationReceiptIssuer`, the rules in `donations/domain/receipt/ReceiptIssuePolicy`.\
 Giving a receipt its number and freezing its content; repeating the request with unchanged data returns the active receipt instead of a new one.\
 _Avoid_: „vydat“, „vydané potvrzení“ („vydání“ is a release of the site)
 
