@@ -179,12 +179,21 @@ class FanOutPushDeliveryTest {
     void should_run_eight_at_once_when_paced_again_given_round_that_threw_and_was_interrupted() {
         Thread caller = Thread.currentThread();
         AtomicInteger failedSends = new AtomicInteger();
+        CountDownLatch neverAnswered = new CountDownLatch(1);
         CountDownLatch eightRunning = new CountDownLatch(FanOutPushDelivery.PACED_SENDS_AT_ONCE);
         AtomicInteger round = new AtomicInteger(1);
         FanOutPushDelivery delivery = new FanOutPushDelivery((recipient, message, keys) -> {
             if (round.get() == 1) {
-                if (failedSends.incrementAndGet() == 4) {
+                int send = failedSends.incrementAndGet();
+                if (send == 4) {
                     caller.interrupt();
+                }
+                if (send >= 4) {
+                    try {
+                        neverAnswered.await(5, TimeUnit.SECONDS);
+                    } catch (InterruptedException stopped) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
                 throw new IllegalStateException("The push service could not be reached");
             }
@@ -199,7 +208,7 @@ class FanOutPushDeliveryTest {
         List<DonorPushSubscription> firstRound = IntStream.range(0, 20).mapToObj(index -> donorDevice("jana-" + index)).toList();
         delivery.deliver(firstRound, DONOR_TEST, KEYS, PushPace.PACED);
         assertThat(Thread.interrupted()).as("the first round's interruption").isTrue();
-        assertThat(failedSends.get()).as("sends of the first round").isBetween(4, firstRound.size() - 1);
+        assertThat(failedSends.get()).as("sends of the first round").isBetween(4, 3 + FanOutPushDelivery.PACED_SENDS_AT_ONCE);
         round.set(2);
         List<DonorPushSubscription> secondRound = IntStream.range(0, FanOutPushDelivery.PACED_SENDS_AT_ONCE).mapToObj(index -> donorDevice("petr-" + index))
                 .toList();
