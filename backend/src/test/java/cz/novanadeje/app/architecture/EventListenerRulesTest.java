@@ -132,6 +132,8 @@ class EventListenerRulesTest {
                     "a push to donors: lost, and the yearly announcement is bookmarked before it, so it is not sent twice (#621)"),
             Map.entry("operations.infrastructure.events.OperationalAlertPushListener.on(OperationalAlertChanged)",
                     "a push to administrators, retried in memory: lost on a restart, and the alert stays in /sprava (#621)"),
+            Map.entry("operations.infrastructure.events.ReceiptSigningKeyWithdrawnListener.on(OwnReceiptSigningKeyFoundWithdrawn)",
+                    "requests the seed renewal at start: a lost request is made at the next start, which finds the own key withdrawn again (#621, T11, #1450)"),
             Map.entry("operations.infrastructure.events.ReceiptSigningKeyWithdrawnListener.on(ReceiptSigningKeyWithdrawn)",
                     "requests the seed renewal and the restart: a lost request is made at the next start, which finds the own key withdrawn in the audit trail with no request waiting (#621, T11, #1450)"),
             Map.entry("shared.infrastructure.live.LiveHintListener.onDeviceSignedOut(DeviceSignedOut)",
