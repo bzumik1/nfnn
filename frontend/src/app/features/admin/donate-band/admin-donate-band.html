@@ -1,11 +1,11 @@
 <div class="ui-page ui-page--form container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.donateBand.heading">
-    Fotka v pruhu Přispět
+    Fotka v&nbsp;pruhu Přispět
   </h1>
   <p class="ui-page-intro" i18n="@@admin.donateBand.intro">
-    Pruh Přispět končí stránky O nás, Pomáháme a Aktuality. Na počítači je fotka pod textem přes
-    celou šířku pruhu, na telefonu nad ním. Dokud žádnou neuložíte, je tam ilustrační fotka. Fotka
-    je jen v databázi webu, ne ve veřejném kódu, a odebrat ji můžete kdykoli.
+    Pruh Přispět končí stránky O&nbsp;nás, Pomáháme a&nbsp;Aktuality. Na počítači je fotka pod
+    textem přes celou šířku pruhu, na telefonu nad ním. Dokud žádnou neuložíte, je tam ilustrační
+    fotka. Fotka je jen v&nbsp;databázi webu, ne ve veřejném kódu, a&nbsp;odebrat ji můžete kdykoli.
   </p>
 
   @switch (state()) {
@@ -71,8 +71,8 @@
             </app-file-button>
           </div>
           <p id="donate-band-photo-hint" class="field-hint" i18n="@@admin.donateBand.photo.hint">
-            JPEG, PNG nebo WebP do 10 MB, nejlépe na šířku. Web fotku ořízne podle bodu výřezu a
-            vyrobí si z ní zmenšené kopie.
+            JPEG, PNG nebo WebP do 10 MB, nejlépe na šířku. Web fotku ořízne podle bodu výřezu
+            a&nbsp;vyrobí si z&nbsp;ní zmenšené kopie.
           </p>
           <div role="status">
             @if (uploading()) {
@@ -92,7 +92,7 @@
               <app-form-field
                 label="Popis pro čtečky (nepovinné)"
                 i18n-label="@@admin.donateBand.alt"
-                hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a ukáže se, když se fotka nenačte. Bez popisu ji čtečka přeskočí jako ozdobu."
+                hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a&nbsp;ukáže se, když se fotka nenačte. Bez popisu ji čtečka přeskočí jako ozdobu."
                 i18n-hint="@@admin.donateBand.alt.hint"
                 [messages]="altMessages"
               >
@@ -115,7 +115,7 @@
                 [disabled]="busy()"
               >
                 <app-busy-label [busy]="saving()">
-                  <span when-idle i18n="@@admin.donateBand.save">Uložit a ukázat na webu</span>
+                  <span when-idle i18n="@@admin.donateBand.save">Uložit a&nbsp;ukázat na webu</span>
                   <span when-busy i18n="@@admin.donateBand.saving">Ukládáme…</span>
                 </app-busy-label>
               </button>
@@ -139,8 +139,9 @@
           </h2>
           <div class="ui-card__body">
             <p class="ui-card__intro" i18n="@@admin.donateBand.remove.intro">
-              Fotka hned zmizí z webu a smaže se z databáze; ze záloh zmizí do 30 dnů. Obnova ze
-              starší zálohy by ji vrátila. Pruh Přispět pak ukáže zase ilustrační fotku.
+              Fotka hned zmizí z&nbsp;webu a&nbsp;smaže se z&nbsp;databáze; ze záloh zmizí do 30
+              dnů. Obnova ze starší zálohy by ji vrátila. Pruh Přispět pak ukáže zase ilustrační
+              fotku.
             </p>
             @if (confirmingRemoval()) {
               <span
@@ -150,7 +151,7 @@
                 i18n-aria-label="@@admin.donateBand.remove.confirm.label"
               >
                 <span i18n="@@admin.donateBand.remove.confirm.question"
-                  >Opravdu fotku odebrat z webu a smazat?</span
+                  >Opravdu fotku odebrat z&nbsp;webu a&nbsp;smazat?</span
                 >
                 <button
                   appNeedsConnection
@@ -160,7 +161,9 @@
                   (click)="remove()"
                 >
                   <app-busy-label [busy]="removing()">
-                    <span when-idle i18n="@@admin.donateBand.remove.yes">Odebrat a smazat</span>
+                    <span when-idle i18n="@@admin.donateBand.remove.yes"
+                      >Odebrat a&nbsp;smazat</span
+                    >
                     <span when-busy i18n="@@admin.donateBand.removing">Odebíráme…</span>
                   </app-busy-label>
                 </button>
@@ -184,7 +187,7 @@
                 (click)="askRemoval()"
                 i18n="@@admin.donateBand.remove.open"
               >
-                Odebrat fotku z webu
+                Odebrat fotku z&nbsp;webu
               </button>
             }
             <app-live-notice class="card-notice" [notice]="removeNotice()" />

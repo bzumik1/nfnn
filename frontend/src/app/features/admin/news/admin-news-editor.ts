@@ -103,7 +103,7 @@ interface NewsDraftValues {
   readonly lookBackYear?: number | null;
 }
 
-const PUBLISH_DATE_MOVED_TEXT = $localize`:@@admin.newsEditor.draft.dateMoved:Datum zveřejnění z rozepsaných úprav už minulo, proto jsme ho posunuli na dnešek.`;
+const PUBLISH_DATE_MOVED_TEXT = $localize`:@@admin.newsEditor.draft.dateMoved:Datum zveřejnění z\u00a0rozepsaných úprav už minulo, proto jsme ho posunuli na dnešek.`;
 
 @Component({
   selector: 'app-admin-news-editor',
@@ -191,7 +191,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     maxlength: $localize`:@@admin.newsEditor.title.tooLong:Titulek může mít nejvíc ${MAX_TITLE_LENGTH}:max: znaků.`,
   };
   protected readonly slugMessages = {
-    pattern: $localize`:@@admin.newsEditor.slug.pattern:Adresa smí mít jen malá písmena bez diakritiky, číslice a pomlčky mezi slovy.`,
+    pattern: $localize`:@@admin.newsEditor.slug.pattern:Adresa smí mít jen malá písmena bez diakritiky, číslice a\u00a0pomlčky mezi slovy.`,
     maxlength: $localize`:@@admin.newsEditor.slug.tooLong:Adresa může mít nejvíc ${MAX_SLUG_LENGTH}:max: znaků.`,
     taken: $localize`:@@admin.newsEditor.slug.taken:Tuto adresu už má jiná aktualita nebo příběh. Zvolte prosím jinou.`,
   };
@@ -300,9 +300,12 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     },
     {
       shape: 'newsCard',
-      label: $localize`:@@admin.newsEditor.focalPoint.card:Karta v Aktualitách`,
+      label: $localize`:@@admin.newsEditor.focalPoint.card:Karta v\u00a0Aktualitách`,
     },
-    { shape: 'articleTop', label: $localize`:@@admin.newsEditor.focalPoint.top:Nahoře v článku` },
+    {
+      shape: 'articleTop',
+      label: $localize`:@@admin.newsEditor.focalPoint.top:Nahoře v\u00a0článku`,
+    },
   ];
   protected readonly publicUrl = computed(() => {
     const article = this.article();
@@ -315,7 +318,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
       case 'scheduled':
         return $localize`:@@admin.newsEditor.publishDate.hint.scheduled:Na web se aktualita dostane ${this.publishedOn()}:date:, do té doby ji vidíte jen vy. Web řadí aktuality podle data zveřejnění.`;
       default:
-        return $localize`:@@admin.newsEditor.publishDate.hint.draft:Aktualitu zatím vidíte jen vy. Tlačítko Uložit a zveřejnit ji pustí na web s tímto datem, s pozdějším datem až ten den.`;
+        return $localize`:@@admin.newsEditor.publishDate.hint.draft:Aktualitu zatím vidíte jen vy. Tlačítko Uložit a\u00a0zveřejnit ji pustí na web s\u00a0tímto datem, s\u00a0pozdějším datem až ten den.`;
     }
   });
   private readonly slugOrDraft = signal('');
@@ -323,7 +326,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     const slug = this.slugOrDraft().trim();
     const address =
       slug === ''
-        ? $localize`:@@admin.newsEditor.slug.hint.empty:Doplní se z titulku; malá písmena bez diakritiky a pomlčky.`
+        ? $localize`:@@admin.newsEditor.slug.hint.empty:Doplní se z\u00a0titulku; malá písmena bez diakritiky a\u00a0pomlčky.`
         : $localize`:@@admin.newsEditor.slug.hint:Aktualita bude na nfnn.cz/aktuality/${slug}:slug:. Můžete upravit.`;
     const saved = this.article();
     if (saved?.publishedOn == null || slug === saved.slug) {
@@ -647,7 +650,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     }
     if (file.size > MAX_IMAGE_BYTES) {
       this.uploadError.set(
-        $localize`:@@admin.newsEditor.image.tooLarge:Fotka je větší než 10 MB. Zmenšete ji prosím a zkuste to znovu.`,
+        $localize`:@@admin.newsEditor.image.tooLarge:Fotka je větší než 10 MB. Zmenšete ji prosím a\u00a0zkuste to znovu.`,
       );
       return;
     }
@@ -710,7 +713,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     const outcome = !publishing
       ? $localize`:@@admin.newsEditor.lookBackYear.notSaved:Ostatní změny jsme uložili, rok ohlédnutí ale ne.`
       : onTheWeb
-        ? $localize`:@@admin.newsEditor.lookBackYear.dateNotChanged:Ostatní změny jsme uložili, rok ohlédnutí a nové datum zveřejnění ale ne, takže aktualita zůstává na webu s původním datem.`
+        ? $localize`:@@admin.newsEditor.lookBackYear.dateNotChanged:Ostatní změny jsme uložili, rok ohlédnutí a\u00a0nové datum zveřejnění ale ne, takže aktualita zůstává na webu s\u00a0původním datem.`
         : $localize`:@@admin.newsEditor.lookBackYear.notPublished:Aktualitu jsme uložili jako koncept, ale nezveřejnili, protože rok ohlédnutí se uložit nepodařilo.`;
     const reason = describeProblem(
       refusal,
@@ -747,7 +750,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
           this.notice.set({
             kind: 'status',
             text: article.live
-              ? $localize`:@@admin.newsEditor.published:Aktualita je na webu s datem ${on}:date:.`
+              ? $localize`:@@admin.newsEditor.published:Aktualita je na webu s\u00a0datem ${on}:date:.`
               : $localize`:@@admin.newsEditor.scheduled:Aktualita se na webu ukáže ${on}:date:.`,
           });
         },
@@ -791,7 +794,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
           }
           this.notice.set({
             kind: 'status',
-            text: $localize`:@@admin.newsEditor.unpublished:Aktualitu jsme z webu stáhli. Zůstává tu jako koncept.`,
+            text: $localize`:@@admin.newsEditor.unpublished:Aktualitu jsme z\u00a0webu stáhli. Zůstává tu jako koncept.`,
           });
         },
         error: (failure: unknown) => {
@@ -804,7 +807,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
             kind: 'alert',
             text: describeProblem(
               failure,
-              $localize`:@@admin.newsEditor.unpublish.failed:Aktualitu se nepodařilo stáhnout z webu. Zkuste to prosím znovu.`,
+              $localize`:@@admin.newsEditor.unpublish.failed:Aktualitu se nepodařilo stáhnout z\u00a0webu. Zkuste to prosím znovu.`,
             ),
           });
         },
@@ -891,8 +894,8 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
       this.notice.set({
         kind: 'status',
         text: discardedEdits
-          ? $localize`:@@admin.newsEditor.reloaded.discarded:Vaše úpravy jsme zahodili a načetli novější verzi aktuality.`
-          : $localize`:@@admin.newsEditor.reloaded:Načetli jsme aktuální stav aktuality. Zkontrolujte ji a rozhodněte znovu.`,
+          ? $localize`:@@admin.newsEditor.reloaded.discarded:Vaše úpravy jsme zahodili a\u00a0načetli novější verzi aktuality.`
+          : $localize`:@@admin.newsEditor.reloaded:Načetli jsme aktuální stav aktuality. Zkontrolujte ji a\u00a0rozhodněte znovu.`,
       });
       afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
     });
@@ -970,13 +973,13 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
 
   private savedText(article: NewsArticleResponse, created: boolean): string {
     if (created) {
-      return $localize`:@@admin.newsEditor.saved.created:Aktualitu jsme uložili jako koncept. Na web ji dostanete tlačítkem Uložit a zveřejnit.`;
+      return $localize`:@@admin.newsEditor.saved.created:Aktualitu jsme uložili jako koncept. Na web ji dostanete tlačítkem Uložit a\u00a0zveřejnit.`;
     }
     if (article.publishedOn === null) {
       return $localize`:@@admin.newsEditor.saved.updated:Změny jsme uložili.`;
     }
     return article.live
-      ? $localize`:@@admin.newsEditor.saved.live:Změny jsme uložili a na webu už jsou.`
+      ? $localize`:@@admin.newsEditor.saved.live:Změny jsme uložili a\u00a0na webu už jsou.`
       : $localize`:@@admin.newsEditor.saved.scheduled:Změny jsme uložili. Aktualita se na webu ukáže ${formatDonationDate(article.publishedOn)}:date:.`;
   }
 

@@ -23,6 +23,7 @@ import { PaymentHandOffs } from '../../donations/payment-panel/payment-hand-offs
 import { DonorPushApi, DonorPushResponse } from '../../operations/donor-push-api';
 import { FakeDonorPushApi } from '../../operations/testing/donor-push-fixtures';
 import { NOTIFICATIONS_OFFER_HIDDEN_KEY, NotificationsOffer } from './notifications-offer';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({ template: '', changeDetection: ChangeDetectionStrategy.OnPush })
 class AnyPage {}
@@ -99,12 +100,15 @@ describe('Given a donor in the app on the home screen', () => {
   }
 
   function sheetText(): string {
-    return (document.querySelector('dialog')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(document.querySelector('dialog')?.textContent) ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   function button(name: string): HTMLButtonElement | undefined {
     return Array.from(document.querySelectorAll<HTMLButtonElement>('dialog button')).find(
-      (candidate) => (candidate.textContent ?? '').replace(/\s+/g, ' ').trim() === name,
+      (candidate) =>
+        (withOrdinarySpaces(candidate.textContent) ?? '').replace(/\s+/g, ' ').trim() === name,
     );
   }
 

@@ -6,6 +6,7 @@ import { AdministrationCopy } from '../device-copy/administration-copy';
 import type { AdminReceiptRow } from './receipt-register';
 import { RegisterLine } from './register-line';
 import { receiptRow, SIGNED_YEARLY } from './testing/register-fixtures';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given the register line under a verified receipt', () => {
   const rows = signal<readonly AdminReceiptRow[] | null>(null);
@@ -28,7 +29,7 @@ describe('Given the register line under a verified receipt', () => {
 
   function text(element: HTMLElement): string {
     return Array.from(element.querySelectorAll('h2, p, a'), (part) =>
-      (part.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      (withOrdinarySpaces(part.textContent) ?? '').replace(/\s+/g, ' ').trim(),
     )
       .filter((part) => part !== '')
       .join(' ');
@@ -36,7 +37,7 @@ describe('Given the register line under a verified receipt', () => {
 
   function stateText(element: HTMLElement): string {
     return Array.from(element.querySelectorAll('[role="status"] p'), (part) =>
-      (part.textContent ?? '').replace(/[ \t\n\r]+/g, ' ').trim(),
+      (withOrdinarySpaces(part.textContent) ?? '').replace(/[ \t\n\r]+/g, ' ').trim(),
     ).join(' ');
   }
 
@@ -48,7 +49,9 @@ describe('Given the register line under a verified receipt', () => {
   it('when the copy is not loaded, then it says the data are not here yet in a status region and links no donor', async () => {
     const element = await render();
 
-    expect(element.querySelector('h2')?.textContent?.trim()).toBe('V evidenci fondu');
+    expect(withOrdinarySpaces(element.querySelector('h2')?.textContent)?.trim()).toBe(
+      'V evidenci fondu',
+    );
     expect(stateText(element)).toContain(
       'Údaje správy v tomto zařízení zatím nejsou k dispozici: buď se ještě stahují, nebo se stažení nepovedlo.',
     );
@@ -90,7 +93,7 @@ describe('Given the register line under a verified receipt', () => {
       const element = await render();
 
       expect(stateText(element)).toBe(
-        'Nahrazené Fond ho 1.\u00a02. 2027 nahradil potvrzením č.\u00a02026-000020. Platí to novější; najdete ho na kartě dárce.',
+        'Nahrazené Fond ho 1. 2. 2027 nahradil potvrzením č. 2026-000020. Platí to novější; najdete ho na kartě dárce.',
       );
     });
 
@@ -114,7 +117,7 @@ describe('Given the register line under a verified receipt', () => {
       const element = await render();
 
       expect(stateText(element)).toBe(
-        'Zastaralé Od vystavení se dary dárce změnily, proto ho fond 2.\u00a02. 2027 zrušil. Na kartě dárce uvidíte, zda už má nové.',
+        'Zastaralé Od vystavení se dary dárce změnily, proto ho fond 2. 2. 2027 zrušil. Na kartě dárce uvidíte, zda už má nové.',
       );
     });
 
@@ -124,7 +127,7 @@ describe('Given the register line under a verified receipt', () => {
       const element = await render();
 
       expect(stateText(element)).toBe(
-        'Zrušené Fond ho 2.\u00a02. 2027 zrušil. Nepovažujte ho za platné.',
+        'Zrušené Fond ho 2. 2. 2027 zrušil. Nepovažujte ho za platné.',
       );
     });
 
@@ -171,7 +174,7 @@ describe('Given the register line under a verified receipt', () => {
       const element = await render('replaced');
 
       expect(stateText(element)).toBe(
-        'Nahrazené Fond ho 1.\u00a02. 2027 nahradil potvrzením č.\u00a02026-000020.',
+        'Nahrazené Fond ho 1. 2. 2027 nahradil potvrzením č. 2026-000020.',
       );
     });
 
@@ -220,7 +223,7 @@ describe('Given the register line under a verified receipt', () => {
 
       const element = await render('outdated');
 
-      expect(stateText(element)).toBe('Zastaralé Fond ho 2.\u00a02. 2027 zrušil.');
+      expect(stateText(element)).toBe('Zastaralé Fond ho 2. 2. 2027 zrušil.');
     });
 
     it('and the fund does not know the receipt the copy holds with these data, then it says they disagree and never valid', async () => {

@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { DraftOffer } from './draft-offer';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   imports: [DraftOffer],
@@ -35,12 +36,18 @@ describe('Given a draft offered back on a form', () => {
     const heading = root.querySelector('h3')!;
     const region = root.querySelector('section')!;
 
-    expect(heading.textContent?.trim()).toBe('Máte tu rozepsané úpravy');
+    expect(withOrdinarySpaces(heading.textContent)?.trim()).toBe('Máte tu rozepsané úpravy');
     expect(region.getAttribute('aria-labelledby')).toBe(heading.id);
-    expect(region.textContent).toContain('neuložené úpravy z 6. 11. 2026 10:00');
-    expect(region.textContent).not.toContain('Uložená verze se od té doby změnila');
+    expect(withOrdinarySpaces(region.textContent)).toContain(
+      'neuložené úpravy z 6. 11. 2026 10:00',
+    );
+    expect(withOrdinarySpaces(region.textContent)).not.toContain(
+      'Uložená verze se od té doby změnila',
+    );
     expect(
-      [...root.querySelectorAll('button')].map((button) => button.textContent?.trim()),
+      [...root.querySelectorAll('button')].map((button) =>
+        withOrdinarySpaces(button.textContent)?.trim(),
+      ),
     ).toEqual(['Pokračovat v rozepsaném', 'Zahodit']);
   });
 
@@ -48,22 +55,24 @@ describe('Given a draft offered back on a form', () => {
     fixture.componentInstance.stale.set(true);
     await fixture.whenStable();
 
-    expect(root.textContent).toContain('Uložená verze se od té doby změnila');
-    expect(root.textContent).toContain('před uložením se vás zeptáme');
+    expect(withOrdinarySpaces(root.textContent)).toContain('Uložená verze se od té doby změnila');
+    expect(withOrdinarySpaces(root.textContent)).toContain('před uložením se vás zeptáme');
   });
 
   it('when the form has photos, then it says photos are not kept', async () => {
     fixture.componentInstance.photo.set(true);
     await fixture.whenStable();
 
-    expect(root.textContent).toContain('Rozepsané úpravy neuchovávají fotky');
+    expect(withOrdinarySpaces(root.textContent)).toContain('Rozepsané úpravy neuchovávají fotky');
   });
 
   it('when the form has passwords or tokens, then it says they are not kept', async () => {
     fixture.componentInstance.secrets.set(true);
     await fixture.whenStable();
 
-    expect(root.textContent).toContain('Hesla a tokeny se z bezpečnostních důvodů neuchovávají');
+    expect(withOrdinarySpaces(root.textContent)).toContain(
+      'Hesla a tokeny se z bezpečnostních důvodů neuchovávají',
+    );
   });
 
   it('when a choice is pressed, then it is reported', () => {
@@ -105,7 +114,9 @@ describe('Given a form that a draft offer may lock while the visitor is in it', 
     fixture.componentInstance.shown.set(true);
     await fixture.whenStable();
 
-    expect(document.activeElement?.textContent?.trim()).toBe('Máte tu rozepsané úpravy');
+    expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe(
+      'Máte tu rozepsané úpravy',
+    );
   });
 
   it('when the offer shows while the focus is elsewhere on the page, then the focus stays there', async () => {
@@ -114,6 +125,6 @@ describe('Given a form that a draft offer may lock while the visitor is in it', 
     fixture.componentInstance.shown.set(true);
     await fixture.whenStable();
 
-    expect(document.activeElement?.textContent?.trim()).toBe('Jinde');
+    expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe('Jinde');
   });
 });

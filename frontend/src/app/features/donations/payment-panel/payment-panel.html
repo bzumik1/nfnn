@@ -64,7 +64,7 @@
       </div>
       @if (showAmountHint()) {
         <p class="amount-hint" [id]="amountHintId()" i18n="@@home.donate.amount.invalid">
-          Zadejte celou částku od 1 do 1 000 000 Kč.
+          Zadejte celou částku od 1 do 1 000 000&nbsp;Kč.
         </p>
       }
     }
@@ -152,7 +152,7 @@
         @if (detailsAge(); as age) {
           @if (age.day; as day) {
             <p class="bank-note" role="note" i18n="@@home.donate.bank.keptNote">
-              Údaje účtu z {{ day }} · nemusí být aktuální
+              Údaje účtu z&nbsp;{{ day }} · nemusí být aktuální
             </p>
           } @else {
             <p class="bank-note" role="note" i18n="@@home.donate.bank.keptNoteUndated">
@@ -261,7 +261,7 @@
       <div class="gift-arrival-actions">
         @if (!arrivalListedHere) {
           <a routerLink="/darce/prehled" i18n="@@home.donate.arrived.overview"
-            >Zobrazit v přehledu</a
+            >Zobrazit v&nbsp;přehledu</a
           >
         }
         <button
@@ -304,7 +304,7 @@
             <path d="M3 10h18L12 4 3 10Z" />
             <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" />
           </svg>
-          <span i18n="@@home.donate.bankApp.open">Otevřít v aplikaci banky</span>
+          <span i18n="@@home.donate.bankApp.open">Otevřít v&nbsp;aplikaci banky</span>
         </button>
         <div class="bank-app-status" role="status">
           @switch (handoffStep()) {
@@ -315,7 +315,7 @@
             }
             @case ('opening') {
               <p class="bank-app-progress" i18n="@@home.donate.bankApp.opening">
-                Otevíráme platbu v aplikaci banky…
+                Otevíráme platbu v&nbsp;aplikaci banky…
               </p>
             }
             @case ('saving') {
@@ -342,17 +342,18 @@
             @case ('imageNotShared') {
               <p class="ui-callout bank-app-hint">
                 <span i18n="@@home.donate.bankApp.imageNotShared"
-                  ><strong>Nenašli jste v nabídce svou banku?</strong> Klepněte znovu, zvolte Uložit
-                  obrázek a v bankovní aplikaci načtěte QR platbu z Fotek. Nebo zkopírujte údaje
-                  výše do bankovní aplikace.</span
+                  ><strong>Nenašli jste v&nbsp;nabídce svou banku?</strong> Klepněte znovu, zvolte
+                  Uložit obrázek a&nbsp;v&nbsp;bankovní aplikaci načtěte QR platbu z&nbsp;Fotek.
+                  Nebo zkopírujte údaje výše do bankovní aplikace.</span
                 >
               </p>
             }
             @case ('fileNotShared') {
               <p class="ui-callout bank-app-hint">
                 <span i18n="@@home.donate.bankApp.fileNotShared"
-                  ><strong>Neotevřela se vám banka?</strong> Zkuste Otevřít v aplikaci banky, které
-                  pošle QR jako obrázek, nebo zkopírujte údaje výše do bankovní aplikace.</span
+                  ><strong>Neotevřela se vám banka?</strong> Zkuste Otevřít v&nbsp;aplikaci banky,
+                  které pošle QR jako obrázek, nebo zkopírujte údaje výše do bankovní
+                  aplikace.</span
                 >
               </p>
             }
@@ -398,7 +399,7 @@
               class="other-device-title"
               [id]="otherDeviceId()"
               i18n="@@home.donate.otherDevice.title"
-              >Platíte z jiného zařízení?</span
+              >Platíte z&nbsp;jiného zařízení?</span
             >&ngsp;
             <span class="other-device-hint">
               @if (qrShown()) {
@@ -433,12 +434,12 @@
     @if (sendsImages) {
       <span i18n="@@home.donate.bankApp.notOpened"
         ><strong>Neotevřela se vám banka?</strong> Zkopírujte údaje výše do bankovní aplikace, nebo
-        pošlete QR jako obrázek a v bance zvolte platbu z obrázku.</span
+        pošlete QR jako obrázek a&nbsp;v&nbsp;bance zvolte platbu z&nbsp;obrázku.</span
       >
     } @else {
       <span i18n="@@home.donate.bankApp.notOpenedSave">
         <strong>Neotevřela se vám banka?</strong> Zkopírujte údaje výše do bankovní aplikace, nebo
-        si uložte QR kód a v bance zvolte platbu z obrázku.</span
+        si uložte QR kód a&nbsp;v&nbsp;bance zvolte platbu z&nbsp;obrázku.</span
       >
     }
   </ng-template>
@@ -495,10 +496,10 @@
         }
       } @else {
         <div class="qr-text">
-          <p class="qr-title" i18n="@@home.donate.qr.title">Naskenujte a přispějte</p>
+          <p class="qr-title" i18n="@@home.donate.qr.title">Naskenujte a&nbsp;přispějte</p>
           <p class="qr-desc" i18n="@@home.donate.qr.desc">
             Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního
-            fondu. Na telefonu si ho uložte a v bankovní aplikaci otevřete z galerie.
+            fondu. Na telefonu si ho uložte a&nbsp;v&nbsp;bankovní aplikaci otevřete z&nbsp;galerie.
           </p>
           @if (qrMatrix()) {
             <button

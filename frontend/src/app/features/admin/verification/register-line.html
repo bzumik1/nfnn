@@ -1,6 +1,6 @@
 <section class="ui-card ui-card--padded register" aria-labelledby="register-title">
   <h2 id="register-title" class="ui-card__title" i18n="@@admin.verify.register.title">
-    V evidenci fondu
+    V&nbsp;evidenci fondu
   </h2>
   <div class="register__body">
     <div class="register__state" role="status">
@@ -112,9 +112,9 @@
             >
           </p>
           <p class="register__text" i18n="@@admin.verify.register.differs.text">
-            Fond vede potvrzení s tímto číslem, ale s jinými údaji (liší se, zda je roční, den
-            vystavení, počet darů nebo částka). Než ho budete brát jako platné, porovnejte ho s
-            kartou dárce a dejte vědět technikovi.
+            Fond vede potvrzení s&nbsp;tímto číslem, ale s&nbsp;jinými údaji (liší se, zda je roční,
+            den vystavení, počet darů nebo částka). Než ho budete brát jako platné, porovnejte ho
+            s&nbsp;kartou dárce a&nbsp;dejte vědět technikovi.
           </p>
         }
         @case ('conflict') {
@@ -124,8 +124,8 @@
             >
           </p>
           <p class="register__text" i18n="@@admin.verify.register.conflict.text">
-            Údaje správy v tomto zařízení potvrzení s těmito údaji mají, fond ho ale podle odpovědi
-            výše nevede. Nepovažujte ho za platné a dejte vědět technikovi.
+            Údaje správy v&nbsp;tomto zařízení potvrzení s&nbsp;těmito údaji mají, fond ho ale podle
+            odpovědi výše nevede. Nepovažujte ho za platné a&nbsp;dejte vědět technikovi.
           </p>
         }
         @case ('not-held') {
@@ -136,13 +136,13 @@
           </p>
           @if (current.confirmed) {
             <p class="register__text" i18n="@@admin.verify.register.notHeld.confirmed">
-              Ani údaje správy v tomto zařízení potvrzení s tímto číslem nemají.
+              Ani údaje správy v&nbsp;tomto zařízení potvrzení s&nbsp;tímto číslem nemají.
             </p>
           } @else {
             <p class="register__text" i18n="@@admin.verify.register.notHeld.text">
-              Údaje správy v tomto zařízení potvrzení s tímto číslem nemají. Mohlo vzniknout až po
-              jejich posledním stažení, nebo patří vymazanému dárci, jehož potvrzení se do zařízení
-              neukládají. Ověřte ho znovu, až fond odpoví.
+              Údaje správy v&nbsp;tomto zařízení potvrzení s&nbsp;tímto číslem nemají. Mohlo
+              vzniknout až po jejich posledním stažení, nebo patří vymazanému dárci, jehož potvrzení
+              se do zařízení neukládají. Ověřte ho znovu, až fond odpoví.
             </p>
           }
         }
@@ -153,8 +153,8 @@
             >
           </p>
           <p class="register__text" i18n="@@admin.verify.register.mismatch.text">
-            Fond potvrzení vede tak, jak uvádí odpověď výše, údaje správy v tomto zařízení ho ale
-            mají s jinými údaji. Platí odpověď fondu; dejte prosím vědět technikovi.
+            Fond potvrzení vede tak, jak uvádí odpověď výše, údaje správy v&nbsp;tomto zařízení ho
+            ale mají s&nbsp;jinými údaji. Platí odpověď fondu; dejte prosím vědět technikovi.
           </p>
         }
         @case ('missing') {
@@ -164,8 +164,8 @@
             >
           </p>
           <p class="register__text" i18n="@@admin.verify.register.missing.text">
-            Údaje správy v tomto zařízení ho nemají: nejspíš vzniklo až po jejich posledním stažení,
-            nebo patří vymazanému dárci. Platí odpověď fondu.
+            Údaje správy v&nbsp;tomto zařízení ho nemají: nejspíš vzniklo až po jejich posledním
+            stažení, nebo patří vymazanému dárci. Platí odpověď fondu.
           </p>
         }
         @case ('stale') {
@@ -175,21 +175,21 @@
             >
           </p>
           <p class="register__text" i18n="@@admin.verify.register.stale.text">
-            Údaje správy v tomto zařízení říkají o potvrzení něco jiného než odpověď fondu výše,
-            nejspíš jsou starší. Platí odpověď fondu.
+            Údaje správy v&nbsp;tomto zařízení říkají o&nbsp;potvrzení něco jiného než odpověď fondu
+            výše, nejspíš jsou starší. Platí odpověď fondu.
           </p>
         }
         @default {
           <p class="register__text" i18n="@@admin.verify.register.loading.text">
-            Údaje správy v tomto zařízení zatím nejsou k dispozici: buď se ještě stahují, nebo se
-            stažení nepovedlo. Stav v evidenci fondu ukážeme, jakmile budou.
+            Údaje správy v&nbsp;tomto zařízení zatím nejsou k&nbsp;dispozici: buď se ještě stahují,
+            nebo se stažení nepovedlo. Stav v&nbsp;evidenci fondu ukážeme, jakmile budou.
           </p>
         }
       }
     </div>
     @if (storedOn(); as storedOn) {
       <p class="register__as-of" i18n="@@admin.verify.register.asOf">
-        Podle údajů správy stažených do tohoto zařízení {{ storedOn }} v {{ storedTime() }}.
+        Podle údajů správy stažených do tohoto zařízení {{ storedOn }} v&nbsp;{{ storedTime() }}.
       </p>
     }
     @if (view().donorId; as donorId) {

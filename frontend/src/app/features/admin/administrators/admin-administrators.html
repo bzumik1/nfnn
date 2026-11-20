@@ -1,9 +1,9 @@
 <div class="ui-page ui-page--full container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.administrators.heading">Správci</h1>
   <p class="ui-page-intro" i18n="@@admin.administrators.intro">
-    Správce vidí stav webu, přiřazuje platby a spravuje další správce. Správcem může být jen
-    registrovaný dárce; správa se mu otevře, až se přihlásí s kódem z ověřovací aplikace nebo
-    přístupovým klíčem.
+    Správce vidí stav webu, přiřazuje platby a&nbsp;spravuje další správce. Správcem může být jen
+    registrovaný dárce; správa se mu otevře, až se přihlásí s&nbsp;kódem z&nbsp;ověřovací aplikace
+    nebo přístupovým klíčem.
   </p>
 
   <app-live-notice #noticeRegion tabindex="-1" [notice]="notice()" />
@@ -84,7 +84,9 @@
                 }
                 @if (isSelf(item)) {
                   <p class="ui-person-row__note" i18n="@@admin.administrators.self.hint">
-                    Svůj účet spravujete v <a routerLink="/darce/udaje">Údajích a zabezpečení</a>.
+                    Svůj účet spravujete v&nbsp;<a routerLink="/darce/udaje"
+                      >Údajích a&nbsp;zabezpečení</a
+                    >.
                   </p>
                 }
                 @if (isPending('revoke', item)) {
@@ -127,8 +129,8 @@
                     <span
                       class="confirm-question"
                       i18n="@@admin.administrators.reset.confirm.question"
-                      >Ověřili jste, že žádá majitel účtu (například odpověděl z registrovaného
-                      e-mailu)? Správce se pak přihlásí jen heslem a všechna jeho přihlášení
+                      >Ověřili jste, že žádá majitel účtu (například odpověděl z&nbsp;registrovaného
+                      e-mailu)? Správce se pak přihlásí jen heslem a&nbsp;všechna jeho přihlášení
                       skončí.</span
                     >
                     <button
@@ -199,8 +201,9 @@
     >
       <p class="ui-card__intro grant-intro" i18n="@@admin.administrators.grant.intro">
         Zadejte e-mail, kterým je dárce registrovaný. Správcem může být jen dárce, který už má
-        zapnutý kód z ověřovací aplikace nebo přidaný přístupový klíč (nastaví si je v Mém přehledu
-        v sekci Údaje a zabezpečení). Správa se mu otevře, až se s nimi znovu přihlásí.
+        zapnutý kód z&nbsp;ověřovací aplikace nebo přidaný přístupový klíč (nastaví si je v&nbsp;Mém
+        přehledu v&nbsp;sekci Údaje a&nbsp;zabezpečení). Správa se mu otevře, až se s&nbsp;nimi
+        znovu přihlásí.
       </p>
       <app-form-field
         label="E-mail dárce"

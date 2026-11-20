@@ -10,6 +10,7 @@ import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentati
 import { DIALOG_SUSPENSION } from '../../../shared/ui/dialog/dialog-suspension';
 import { AdminShell } from './admin-shell';
 import { ADMINISTRATION_LOCK } from './administration-lock';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   template: `<h1>Stránka</h1>
@@ -105,7 +106,7 @@ describe('Given an administrator anywhere in the administration', () => {
 
   function currentLinks(): string[] {
     return Array.from(nav().querySelectorAll('a[aria-current="page"]')).map((link) =>
-      clean(link.textContent),
+      clean(withOrdinarySpaces(link.textContent)),
     );
   }
 
@@ -113,12 +114,14 @@ describe('Given an administrator anywhere in the administration', () => {
     const groups = Array.from(nav().querySelectorAll('ul')).map((list) => ({
       label: clean(
         list.hasAttribute('aria-labelledby')
-          ? fixture.nativeElement.querySelector(`#${list.getAttribute('aria-labelledby')}`)
-              ?.textContent
+          ? withOrdinarySpaces(
+              fixture.nativeElement.querySelector(`#${list.getAttribute('aria-labelledby')}`)
+                ?.textContent,
+            )
           : '',
       ),
       links: Array.from(list.querySelectorAll('a')).map((link) => [
-        clean(link.textContent),
+        clean(withOrdinarySpaces(link.textContent)),
         link.getAttribute('href'),
       ]),
     }));
@@ -181,11 +184,11 @@ describe('Given an administrator anywhere in the administration', () => {
   });
 
   it('when the page is shown, then it stands in the main landmark of the skip link', () => {
-    expect(element('main#obsah h1')?.textContent).toBe('Stránka');
+    expect(withOrdinarySpaces(element('main#obsah h1')?.textContent)).toBe('Stránka');
   });
 
   it('when a page of the administration opens a dialog, then the dialog comes up as a sheet from the bottom', () => {
-    expect(clean(element('main#obsah .look')?.textContent)).toBe('sheet');
+    expect(clean(withOrdinarySpaces(element('main#obsah .look')?.textContent))).toBe('sheet');
   });
 
   describe('when the window narrows to a phone or a tablet', () => {
@@ -196,7 +199,7 @@ describe('Given an administrator anywhere in the administration', () => {
 
     it('then no side panel is drawn and the same page stays in the main landmark', () => {
       expect(element('#admin-nav')).toBeNull();
-      expect(element('main#obsah h1')?.textContent).toBe('Stránka');
+      expect(withOrdinarySpaces(element('main#obsah h1')?.textContent)).toBe('Stránka');
     });
 
     it('then no menu button stands above the page, since the overview lists the sections', () => {
@@ -210,7 +213,9 @@ describe('Given an administrator anywhere in the administration', () => {
       expect(sheet).not.toBeNull();
       expect(sheet!.querySelector('[role="banner"] button[aria-label="Zpět"]')).not.toBeNull();
       expect(sheet!.querySelector('[role="banner"] button[aria-label="Zavřít"]')).not.toBeNull();
-      expect(sheet!.querySelector('main#obsah h1')?.textContent).toBe('Stránka');
+      expect(withOrdinarySpaces(sheet!.querySelector('main#obsah h1')?.textContent)).toBe(
+        'Stránka',
+      );
       expect(element('header.app-header')).toBeNull();
       expect(element('.admin-sheet-backdrop')?.getAttribute('aria-hidden')).toBe('true');
     });
@@ -218,11 +223,11 @@ describe('Given an administrator anywhere in the administration', () => {
     it('then the head names the page in its middle, as an account section does, while the heading of the page stays for screen readers', () => {
       const title = element('.admin-sheet [role="banner"] p[aria-hidden="true"]');
 
-      expect(clean(title?.textContent)).toBe('Stránka');
+      expect(clean(withOrdinarySpaces(title?.textContent))).toBe('Stránka');
       expect(
         element('.admin-sheet [role="banner"] h1, .admin-sheet [role="banner"] h2'),
       ).toBeNull();
-      expect(element('main#obsah h1')?.textContent).toBe('Stránka');
+      expect(withOrdinarySpaces(element('main#obsah h1')?.textContent)).toBe('Stránka');
     });
 
     it('and the page names itself only once its data arrive, then the head follows its heading', async () => {
@@ -232,7 +237,11 @@ describe('Given an administrator anywhere in the administration', () => {
         (node) => node.componentInstance instanceof NamedPage,
       );
       const title = () =>
-        clean(element('.admin-sheet [role="banner"] p[aria-hidden="true"]')?.textContent);
+        clean(
+          withOrdinarySpaces(
+            element('.admin-sheet [role="banner"] p[aria-hidden="true"]')?.textContent,
+          ),
+        );
       expect(title()).toBe('Načítáme dárce…');
 
       (page.componentInstance as NamedPage).name.set('Jana Nováková');
@@ -248,7 +257,7 @@ describe('Given an administrator anywhere in the administration', () => {
 
       expect(element('.admin-sheet')).toBeNull();
       expect(element('header.app-header')).not.toBeNull();
-      expect(element('main#obsah h1')?.textContent).toBe('Stránka');
+      expect(withOrdinarySpaces(element('main#obsah h1')?.textContent)).toBe('Stránka');
     });
 
     it('and the window widens again, then the page keeps its state, since the frame changes around the same page', async () => {
@@ -283,7 +292,9 @@ describe('Given an administrator anywhere in the administration', () => {
     });
 
     it('then the lock panel stands in the main landmark instead of the page', () => {
-      expect(clean(element('main#obsah .lock-panel')?.textContent)).toBe('Správa je zamčená');
+      expect(clean(withOrdinarySpaces(element('main#obsah .lock-panel')?.textContent))).toBe(
+        'Správa je zamčená',
+      );
       expect(element('main#obsah h1')).toBeNull();
     });
 
@@ -303,7 +314,7 @@ describe('Given an administrator anywhere in the administration', () => {
       locked.set(false);
       await settle();
 
-      expect(element('main#obsah h1')?.textContent).toBe('Stránka');
+      expect(withOrdinarySpaces(element('main#obsah h1')?.textContent)).toBe('Stránka');
       expect(element('.lock-panel')).toBeNull();
     });
 
@@ -321,7 +332,7 @@ describe('Given an administrator anywhere in the administration', () => {
       firstDownload.set({ done: 3, total: 40 });
       await settle();
 
-      expect(clean(element('.admin-first-download')?.textContent)).toBe('');
+      expect(clean(withOrdinarySpaces(element('.admin-first-download')?.textContent))).toBe('');
     });
   });
 
@@ -341,7 +352,7 @@ describe('Given an administrator anywhere in the administration', () => {
     afterEach(() => fixture.nativeElement.remove());
 
     it('then a dialog the page holds open steps aside, so nothing hidden blocks the panel', () => {
-      expect(element('.suspended')?.textContent).toBe('true');
+      expect(withOrdinarySpaces(element('.suspended')?.textContent)).toBe('true');
     });
 
     it('and it is unlocked again, then the dialogs of the page come back and the focus returns to the field it left', async () => {
@@ -350,14 +361,16 @@ describe('Given an administrator anywhere in the administration', () => {
       await settle();
       await settle();
 
-      expect(element('.suspended')?.textContent).toBe('false');
+      expect(withOrdinarySpaces(element('.suspended')?.textContent)).toBe('false');
       expect(document.activeElement).toBe(element('#pole'));
     });
 
     it('then the page stays alive under the panel, hidden and out of reach', () => {
       const kept = element('main#obsah .admin-page')!;
 
-      expect(clean(element('main#obsah .lock-panel')?.textContent)).toBe('Správa je zamčená');
+      expect(clean(withOrdinarySpaces(element('main#obsah .lock-panel')?.textContent))).toBe(
+        'Správa je zamčená',
+      );
       expect(kept.hidden).toBe(true);
       expect(kept.hasAttribute('inert')).toBe(true);
       expect(kept.contains(page)).toBe(true);
@@ -381,7 +394,7 @@ describe('Given an administrator anywhere in the administration', () => {
       firstDownload.set({ done: 18, total: 40 });
       await settle();
 
-      expect(clean(element('main#obsah .first-download')?.textContent)).toBe(
+      expect(clean(withOrdinarySpaces(element('main#obsah .first-download')?.textContent))).toBe(
         'Ukládáme správu do zařízení 18 z 40',
       );
     });
@@ -390,15 +403,15 @@ describe('Given an administrator anywhere in the administration', () => {
       firstDownload.set({ done: 0, total: 40 });
       await settle();
       const live = element('main#obsah .admin-first-download [aria-live="polite"]')!;
-      expect(clean(live.textContent)).toBe('Ukládáme správu do zařízení.');
+      expect(clean(withOrdinarySpaces(live.textContent))).toBe('Ukládáme správu do zařízení.');
 
       firstDownload.set({ done: 18, total: 40 });
       await settle();
 
-      expect(clean(live.textContent)).toBe('Ukládáme správu do zařízení.');
+      expect(clean(withOrdinarySpaces(live.textContent))).toBe('Ukládáme správu do zařízení.');
       expect(element('main#obsah .admin-first-download [aria-live="polite"]')).toBe(live);
       const count = element('main#obsah .first-download__count')!;
-      expect(clean(count.textContent)).toBe('18 z 40');
+      expect(clean(withOrdinarySpaces(count.textContent))).toBe('18 z 40');
       expect(live.contains(count)).toBe(false);
       expect(count.closest('[aria-live]')).toBeNull();
       expect(count.closest('[aria-hidden="true"]')).toBeNull();
@@ -430,7 +443,11 @@ describe('Given an administrator anywhere in the administration', () => {
       firstDownload.set(null);
       await settle();
 
-      expect(clean(element('.admin-first-download app-fold:not([inert])')?.textContent)).toBe('');
+      expect(
+        clean(
+          withOrdinarySpaces(element('.admin-first-download app-fold:not([inert])')?.textContent),
+        ),
+      ).toBe('');
     });
   });
 });

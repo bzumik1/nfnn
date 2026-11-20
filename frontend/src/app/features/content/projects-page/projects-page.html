@@ -149,7 +149,7 @@
 
             @if (group.items.length === 0) {
               <p class="stories-empty" [appReveal]="1" i18n="@@content.projects.year.empty">
-                Z tohoto roku tu zatím žádný příběh není.
+                Z&nbsp;tohoto roku tu zatím žádný příběh není.
               </p>
             } @else if (choice() === 'all') {
               <ul class="strip" [appReveal]="1">
@@ -161,8 +161,8 @@
                     ><span i18n="@@content.projects.strip.all"
                       >{group.items.length, plural,
                         one {Celý rok}
-                        few {Všechny {{ group.items.length }} příběhy z roku}
-                        other {Všech {{ group.items.length }} příběhů z roku}
+                        few {Všechny {{ group.items.length }} příběhy z&nbsp;roku}
+                        other {Všech {{ group.items.length }} příběhů z&nbsp;roku}
                       }
                       {{ group.year }}</span
                     ><span aria-hidden="true"> →</span></a

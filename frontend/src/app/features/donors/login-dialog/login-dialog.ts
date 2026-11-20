@@ -226,12 +226,12 @@ export class LoginDialog {
   protected readonly signInPasswordMessages = {
     required: $localize`:@@donor.form.password.required:Vyplňte prosím heslo.`,
   };
-  protected readonly codeHint = $localize`:@@donor.login.secondFactor.codeHint:Šest číslic z\u00a0ověřovací aplikace; kód se mění každých 30 sekund.`;
+  protected readonly codeHint = $localize`:@@donor.login.secondFactor.codeHint:Šest číslic z\u00a0ověřovací aplikace; kód se mění každých 30\u00a0sekund.`;
   protected readonly codeMessages = {
     required: $localize`:@@donor.form.code.required:Opište prosím kód z\u00a0aplikace.`,
     pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
   };
-  protected readonly newPasswordHint = $localize`:@@donor.register.passwordHint:Alespoň 12 znaků. Klidně celá věta, která se vám dobře pamatuje.`;
+  protected readonly newPasswordHint = $localize`:@@donor.register.passwordHint:Alespoň 12\u00a0znaků. Klidně celá věta, která se vám dobře pamatuje.`;
   protected readonly newPasswordMessages = {
     required: $localize`:@@donor.form.newPassword.required:Zvolte si prosím heslo.`,
     minlength: $localize`:@@donor.form.newPassword.tooShort:Heslo musí mít alespoň 12\u00a0znaků.`,
@@ -248,7 +248,7 @@ export class LoginDialog {
   protected readonly cityMessages = CITY_MESSAGES;
   protected readonly postalCodeMessages = POSTAL_CODE_MESSAGES;
 
-  private readonly tooManyAttempts = $localize`:@@donor.login.error.tooManyAttempts:Příliš mnoho pokusů z této adresy. Zkuste to prosím za chvíli znovu.`;
+  private readonly tooManyAttempts = $localize`:@@donor.login.error.tooManyAttempts:Příliš mnoho pokusů z\u00a0této adresy. Zkuste to prosím za chvíli znovu.`;
   private readonly passkeyNotUsed = $localize`:@@donor.login.passkey.notUsed:Přihlášení přístupovým klíčem neproběhlo. Zkuste to prosím znovu, nebo se přihlaste heslem.`;
   private readonly tooManyResetRequests = $localize`:@@donor.login.reset.error.tooMany:Odeslali jste příliš mnoho žádostí. Zkuste to prosím za hodinu.`;
 

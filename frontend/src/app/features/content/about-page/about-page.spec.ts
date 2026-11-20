@@ -10,6 +10,7 @@ import { publicPeople } from '../testing/people-fixtures';
 import { DONATE_BAND_PHOTO_ID, donateBandPhoto } from '../testing/donate-band-fixtures';
 import { AboutPage } from './about-page';
 import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({ template: '' })
 class OtherTab {}
@@ -43,16 +44,21 @@ describe('Given the About page', () => {
     http.expectOne('/api/content/home').flush({ news: [], projects: [] });
     fixture.detectChanges();
 
-    expect(Array.from(root().querySelectorAll('h1')).map((h) => h.textContent?.trim())).toEqual([
-      'Vznik a poslání',
-    ]);
+    expect(
+      Array.from(root().querySelectorAll('h1')).map((h) =>
+        withOrdinarySpaces(h.textContent)?.trim(),
+      ),
+    ).toEqual(['Vznik a poslání']);
     expect(root().querySelector('#o-nas')).not.toBeNull();
     const band = root().querySelector('app-donate-band')!;
-    expect(band.querySelector('h2')?.textContent).toBe('Pomozte nám napsat další příběh');
-    expect(Array.from(band.querySelectorAll('a')).map((link) => link.textContent?.trim())).toEqual([
-      'Přispět',
-      'Kde pomáháme',
-    ]);
+    expect(withOrdinarySpaces(band.querySelector('h2')?.textContent)).toBe(
+      'Pomozte nám napsat další příběh',
+    );
+    expect(
+      Array.from(band.querySelectorAll('a')).map((link) =>
+        withOrdinarySpaces(link.textContent)?.trim(),
+      ),
+    ).toEqual(['Přispět', 'Kde pomáháme']);
     expect(band.querySelector('img')?.getAttribute('src')).toBe('/images/donate-720.webp');
     expect(root().lastElementChild?.querySelector('#kontakt')).not.toBeNull();
   });
@@ -90,7 +96,9 @@ describe('Given the About page', () => {
     fixture.detectChanges();
 
     const board = root().querySelector('#o-nas .founders')!;
-    expect(board.querySelector('.signer-name')?.textContent?.trim()).toBe('Eva Vzorová');
+    expect(withOrdinarySpaces(board.querySelector('.signer-name')?.textContent)?.trim()).toBe(
+      'Eva Vzorová',
+    );
     expect(board.querySelector('blockquote')).not.toBeNull();
     expect(board.querySelector('img[src^="/images/"]')).toBeNull();
   });

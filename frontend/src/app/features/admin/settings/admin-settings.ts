@@ -120,8 +120,8 @@ const TECHNICAL_HEADING = 'nastaveni-technicke';
 const EVERYDAY: readonly SectionPlan[] = [
   {
     id: 'potvrzeni',
-    title: $localize`:@@admin.settings.section.receipts:Potvrzení o daru`,
-    intro: $localize`:@@admin.settings.section.receipts.intro:Za které roky si dárci potvrzení stáhnou na webu. Kdo je podepisuje, vyberete u lidí fondu.`,
+    title: $localize`:@@admin.settings.section.receipts:Potvrzení o\u00a0daru`,
+    intro: $localize`:@@admin.settings.section.receipts.intro:Za které roky si dárci potvrzení stáhnou na webu. Kdo je podepisuje, vyberete u\u00a0lidí fondu.`,
     names: ['RECEIPT_FIRST_YEAR'],
   },
   {
@@ -133,13 +133,13 @@ const EVERYDAY: readonly SectionPlan[] = [
   {
     id: 'odesilatel',
     title: $localize`:@@admin.settings.section.sender:Odesílatel e-mailů`,
-    intro: $localize`:@@admin.settings.section.sender.intro:Z této adresy odcházejí všechny e-maily webu: potvrzení registrace, obnova hesla i měsíční přehled.`,
+    intro: $localize`:@@admin.settings.section.sender.intro:Z\u00a0této adresy odcházejí všechny e-maily webu: potvrzení registrace, obnova hesla i\u00a0měsíční přehled.`,
     names: ['MAIL_FROM'],
   },
   {
     id: 'prihlaseni',
     title: $localize`:@@admin.settings.section.signIn:Přihlášení`,
-    intro: $localize`:@@admin.settings.section.signIn.intro:Jak dlouho zůstane dárce nebo správce přihlášený v prohlížeči, když při přihlášení zaškrtne „Zapamatovat si mě“. Bez zaškrtnutí skončí zavřením prohlížeče, nejpozději po 12 hodinách bez používání; v nainstalované aplikaci vydrží 400 dní od posledního použití.`,
+    intro: $localize`:@@admin.settings.section.signIn.intro:Jak dlouho zůstane dárce nebo správce přihlášený v\u00a0prohlížeči, když při přihlášení zaškrtne „Zapamatovat si mě“. Bez zaškrtnutí skončí zavřením prohlížeče, nejpozději po 12\u00a0hodinách bez používání; v\u00a0nainstalované aplikaci vydrží 400\u00a0dní od posledního použití.`,
     names: ['SESSION_REMEMBER_DAYS'],
   },
 ];
@@ -187,17 +187,17 @@ const NEW_SECRET_LABELS: Partial<Readonly<Record<SettingName, string>>> = {
 
 const REMOVAL_EFFECTS: Partial<Readonly<Record<SettingName, string>>> = {
   MAIL_PASSWORD: $localize`:@@admin.settings.secret.removeEffect.MAIL_PASSWORD:Bez hesla web nepošle žádný e-mail: ani obnovu hesla, ani potvrzení registrace, ani měsíční přehled.`,
-  FIO_TOKEN: $localize`:@@admin.settings.secret.removeEffect.FIO_TOKEN:Bez tokenu se přestanou stahovat platby z banky.`,
+  FIO_TOKEN: $localize`:@@admin.settings.secret.removeEffect.FIO_TOKEN:Bez tokenu se přestanou stahovat platby z\u00a0banky.`,
 };
 
 const HINTS: Partial<Readonly<Record<SettingName, string>>> = {
-  PUBLIC_URL: $localize`:@@admin.settings.hint.PUBLIC_URL:Adresa, kterou vidí návštěvníci. Podle ní se tvoří odkazy v e-mailech.`,
-  MAIL_FROM: $localize`:@@admin.settings.hint.MAIL_FROM:Doména adresy musí být ověřená u služby, přes kterou se posílá.`,
-  FIO_TOKEN: $localize`:@@admin.settings.hint.FIO_TOKEN:Token z Fio internetového bankovnictví s právem jen pro čtení. Bez něj se platby nestahují.`,
-  FIO_HISTORY_FROM: $localize`:@@admin.settings.hint.FIO_HISTORY_FROM:Prázdné znamená posledních 89 dní. Starší platby Fio vydá jen deset minut po odemčení historie v internetovém bankovnictví.`,
-  PAIRING_EXCLUDED_ACCOUNTS: $localize`:@@admin.settings.hint.PAIRING_EXCLUDED_ACCOUNTS:Čísla účtů oddělená čárkou, třeba 2900233333/2010. Platby z nich se párují jen podle variabilního symbolu.`,
+  PUBLIC_URL: $localize`:@@admin.settings.hint.PUBLIC_URL:Adresa, kterou vidí návštěvníci. Podle ní se tvoří odkazy v\u00a0e-mailech.`,
+  MAIL_FROM: $localize`:@@admin.settings.hint.MAIL_FROM:Doména adresy musí být ověřená u\u00a0služby, přes kterou se posílá.`,
+  FIO_TOKEN: $localize`:@@admin.settings.hint.FIO_TOKEN:Token z\u00a0Fio internetového bankovnictví s\u00a0právem jen pro čtení. Bez něj se platby nestahují.`,
+  FIO_HISTORY_FROM: $localize`:@@admin.settings.hint.FIO_HISTORY_FROM:Prázdné znamená posledních 89\u00a0dní. Starší platby Fio vydá jen deset minut po odemčení historie v\u00a0internetovém bankovnictví.`,
+  PAIRING_EXCLUDED_ACCOUNTS: $localize`:@@admin.settings.hint.PAIRING_EXCLUDED_ACCOUNTS:Čísla účtů oddělená čárkou, třeba 2900233333/2010. Platby z\u00a0nich se párují jen podle variabilního symbolu.`,
   RECEIPT_FIRST_YEAR: $localize`:@@admin.settings.hint.RECEIPT_FIRST_YEAR:Za dřívější roky si dárci potvrzení na webu nestáhnou.`,
-  SESSION_REMEMBER_DAYS: $localize`:@@admin.settings.hint.SESSION_REMEMBER_DAYS:Počet dní od 1 do 30 od posledního použití. Výchozí je 14. Změna platí pro nová přihlášení i pro ta, která se od ní obnoví.`,
+  SESSION_REMEMBER_DAYS: $localize`:@@admin.settings.hint.SESSION_REMEMBER_DAYS:Počet dní od 1 do 30 od posledního použití. Výchozí je 14. Změna platí pro nová přihlášení i\u00a0pro ta, která se od ní obnoví.`,
 };
 
 const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
@@ -206,7 +206,7 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
   FIO_HISTORY_FROM: 'date',
 };
 
-const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše úpravy jsme zahodili a načetli uložené nastavení.`;
+const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše úpravy jsme zahodili a\u00a0načetli uložené nastavení.`;
 
 @Component({
   selector: 'app-admin-settings',
@@ -588,7 +588,7 @@ export class AdminSettings {
         }
         this.notice.set({
           kind: 'status',
-          text: $localize`:@@admin.settings.saved:Nastavení je uložené a web po restartu běží s ním.`,
+          text: $localize`:@@admin.settings.saved:Nastavení je uložené a\u00a0web po restartu běží s\u00a0ním.`,
         });
         this.load();
       });

@@ -12,7 +12,7 @@ export const SETTING_LABELS: Readonly<Record<SettingName, string>> = {
   MAIL_AUTH: $localize`:@@operations.setting.MAIL_AUTH:Server vyžaduje přihlášení`,
   MAIL_STARTTLS: $localize`:@@operations.setting.MAIL_STARTTLS:Šifrované spojení (STARTTLS)`,
   MAIL_FROM: $localize`:@@operations.setting.MAIL_FROM:Odesílatel e-mailů`,
-  CONTACT_RECIPIENT: $localize`:@@operations.setting.CONTACT_RECIPIENT:Kam chodí zprávy z kontaktního formuláře`,
+  CONTACT_RECIPIENT: $localize`:@@operations.setting.CONTACT_RECIPIENT:Kam chodí zprávy z\u00a0kontaktního formuláře`,
   FIO_TOKEN: $localize`:@@operations.setting.FIO_TOKEN:Token Fio API (jen pro čtení)`,
   FIO_HISTORY_FROM: $localize`:@@operations.setting.FIO_HISTORY_FROM:Stáhnout platby od data`,
   PAIRING_EXCLUDED_ACCOUNTS: $localize`:@@operations.setting.PAIRING_EXCLUDED_ACCOUNTS:Účty, podle kterých se nepáruje`,

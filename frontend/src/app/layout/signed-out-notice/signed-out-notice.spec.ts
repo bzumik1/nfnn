@@ -7,6 +7,7 @@ import { AuthStore } from '../../core/auth/auth-store';
 import { SignedOutNotice as SignedOutNoticeState } from '../../core/auth/signed-out-notice';
 import { authResponse } from '../../core/auth/testing/donor-fixtures';
 import { SignedOutNotice } from './signed-out-notice';
+import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
 @Component({ template: '' })
 class Page {}
@@ -54,7 +55,7 @@ describe('Given the notice shown after signing out', () => {
 
   it('when nobody signed out, then its status region is there and stays quiet', () => {
     expect(status()).not.toBeNull();
-    expect(status().textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(status().textContent)?.trim()).toBe('');
     expect(document.documentElement.classList).not.toContain('has-floating-notice');
   });
 
@@ -62,20 +63,20 @@ describe('Given the notice shown after signing out', () => {
     state.show('device-data-deleted');
     await settle();
 
-    expect(status().textContent?.replace(/\s+/g, ' ').trim()).toContain(
+    expect(withOrdinarySpaces(status().textContent)?.replace(/\s+/g, ' ').trim()).toContain(
       'Data z tohoto zařízení jsme smazali a odhlásili jsme vás.',
     );
-    expect(status().textContent).not.toContain('Odhlásili jste se.');
+    expect(withOrdinarySpaces(status().textContent)).not.toContain('Odhlásili jste se.');
   });
 
   it('when an hour without use on a public computer signed the donor out, then the notice says it was the hour and not the donor', async () => {
     state.show('idle');
     await settle();
 
-    expect(status().textContent?.replace(/\s+/g, ' ').trim()).toContain(
+    expect(withOrdinarySpaces(status().textContent)?.replace(/\s+/g, ' ').trim()).toContain(
       'Po hodině bez používání jsme vás z bezpečnosti odhlásili.',
     );
-    expect(status().textContent).not.toContain('Odhlásili jste se.');
+    expect(withOrdinarySpaces(status().textContent)).not.toContain('Odhlásili jste se.');
   });
 
   it('when the server did not hear the sign-out, then the notice says it will be finished once connected and to close the browser on a borrowed computer', async () => {
@@ -86,7 +87,7 @@ describe('Given the notice shown after signing out', () => {
     http.expectOne('/api/donors/auth/logout').flush(null, { status: 503, statusText: 'Busy' });
     await settle();
 
-    const text = status().textContent?.replace(/\s+/g, ' ').trim();
+    const text = withOrdinarySpaces(status().textContent)?.replace(/\s+/g, ' ').trim();
     expect(text).toContain('Odhlásili jste se.');
     expect(text).toContain('Server se o odhlášení zatím nedozvěděl');
     expect(text).toContain('zavřete prohlížeč');
@@ -96,7 +97,7 @@ describe('Given the notice shown after signing out', () => {
     state.show();
     await settle();
 
-    expect(status().textContent).not.toContain('nedozvěděl');
+    expect(withOrdinarySpaces(status().textContent)).not.toContain('nedozvěděl');
   });
 
   it('when a plain sign-out follows a deletion notice, then the notice says only that the donor signed out', async () => {
@@ -105,8 +106,8 @@ describe('Given the notice shown after signing out', () => {
     state.show();
     await settle();
 
-    expect(status().textContent).toContain('Odhlásili jste se.');
-    expect(status().textContent).not.toContain('smazali');
+    expect(withOrdinarySpaces(status().textContent)).toContain('Odhlásili jste se.');
+    expect(withOrdinarySpaces(status().textContent)).not.toContain('smazali');
   });
 
   describe('when the donor has signed out', () => {
@@ -116,7 +117,9 @@ describe('Given the notice shown after signing out', () => {
     });
 
     it('then the status region says so in a bar at the bottom of the screen', () => {
-      expect(status().textContent?.replace(/\s+/g, ' ')).toContain('Odhlásili jste se.');
+      expect(withOrdinarySpaces(status().textContent)?.replace(/\s+/g, ' ')).toContain(
+        'Odhlásili jste se.',
+      );
       expect(status().querySelector('.ui-notice--floating.ui-notice--status')).not.toBeNull();
       expect(document.documentElement.classList).toContain('has-floating-notice');
     });
@@ -125,7 +128,7 @@ describe('Given the notice shown after signing out', () => {
       (status().querySelector('button') as HTMLButtonElement).click();
       await settle();
 
-      expect(status().textContent?.trim()).toBe('');
+      expect(withOrdinarySpaces(status().textContent)?.trim()).toBe('');
       expect(document.documentElement.classList).not.toContain('has-floating-notice');
     });
 
@@ -134,7 +137,7 @@ describe('Given the notice shown after signing out', () => {
       await settle();
 
       expect(state.shown()).toBe(false);
-      expect(status().textContent?.trim()).toBe('');
+      expect(withOrdinarySpaces(status().textContent)?.trim()).toBe('');
     });
 
     it('and they sign in again, then it is gone', async () => {

@@ -85,7 +85,7 @@ export class AdminLogs {
   protected readonly healthSummary = computed(
     () =>
       this.health()?.findings[0] ??
-      $localize`:@@admin.logs.health.allFine:Databáze odpovídá a složky jsou připojené.`,
+      $localize`:@@admin.logs.health.allFine:Databáze odpovídá a\u00a0složky jsou připojené.`,
   );
   protected readonly overrides = computed(() => this.diagnostics()?.logLevelOverrides.length ?? 0);
 

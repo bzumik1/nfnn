@@ -1,9 +1,9 @@
 <div class="ui-page ui-page--form container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.alerts.heading">Upozornění</h1>
   <p class="ui-page-intro" i18n="@@admin.alerts.intro">
-    Když přestane fungovat import plateb z banky, zálohy nebo odesílání e-mailů, web vám to oznámí
-    upozorněním na telefonu nebo počítači, a znovu, až to zase funguje. Upozornění neříká jména ani
-    částky, jen co se stalo.
+    Když přestane fungovat import plateb z&nbsp;banky, zálohy nebo odesílání e-mailů, web vám to
+    oznámí upozorněním na telefonu nebo počítači, a&nbsp;znovu, až to zase funguje. Upozornění
+    neříká jména ani částky, jen co se stalo.
   </p>
 
   @switch (state()) {
@@ -99,8 +99,8 @@
               @if (availability() === 'denied') {
                 <p class="ui-callout ui-callout--warning" i18n="@@admin.alerts.device.lostDenied">
                   Prohlížeč ale upozornění tohoto webu teď blokuje, takže žádné nedorazí. Povolte je
-                  v nastavení prohlížeče u tohoto webu (obvykle ikona vedle adresy, Oprávnění,
-                  Oznámení) a stránku načtěte znovu.
+                  v&nbsp;nastavení prohlížeče u&nbsp;tohoto webu (obvykle ikona vedle adresy,
+                  Oprávnění, Oznámení) a&nbsp;stránku načtěte znovu.
                 </p>
               } @else {
                 <p class="ui-callout ui-callout--warning" i18n="@@admin.alerts.device.lost">
@@ -166,8 +166,8 @@
           </ul>
         } @else if (!deviceSession()) {
           <p class="ui-card__footer" i18n="@@admin.alerts.device.noDeviceSession">
-            Toto přihlášení je starší, než web začal rozlišovat zařízení, a proto na něm upozornění
-            zapnout nejde. Odhlaste se a znovu se přihlaste, potom je tady zapnete.
+            Toto přihlášení je starší, než web začal rozlišovat zařízení, a&nbsp;proto na něm
+            upozornění zapnout nejde. Odhlaste se a&nbsp;znovu se přihlaste, potom je tady zapnete.
           </p>
         } @else {
           @switch (availability()) {
@@ -202,29 +202,29 @@
             }
             @case ('home-screen') {
               <p class="ui-card__footer" i18n="@@admin.alerts.device.homeScreen">
-                Na iPhonu a iPadu chodí upozornění jen webu přidanému na plochu. V Safari klepněte
-                na Sdílet, zvolte Přidat na plochu, otevřete web z ikony na ploše, přihlaste se v
-                něm a na této stránce zapněte upozornění.
+                Na iPhonu a&nbsp;iPadu chodí upozornění jen webu přidanému na plochu. V&nbsp;Safari
+                klepněte na Sdílet, zvolte Přidat na plochu, otevřete web z&nbsp;ikony na ploše,
+                přihlaste se v&nbsp;něm a&nbsp;na této stránce zapněte upozornění.
               </p>
             }
             @case ('denied') {
               <p class="ui-card__footer" i18n="@@admin.alerts.device.denied">
-                Upozornění má tento web v prohlížeči zakázaná. Povolte je v nastavení prohlížeče u
-                tohoto webu (obvykle ikona vedle adresy, Oprávnění, Oznámení) a stránku načtěte
-                znovu.
+                Upozornění má tento web v&nbsp;prohlížeči zakázaná. Povolte je v&nbsp;nastavení
+                prohlížeče u&nbsp;tohoto webu (obvykle ikona vedle adresy, Oprávnění, Oznámení)
+                a&nbsp;stránku načtěte znovu.
               </p>
             }
             @case ('no-push') {
               <p class="ui-card__footer" i18n="@@admin.alerts.device.noPush">
-                Tento prohlížeč upozornění z webu neumí. Zkuste aktuální Chrome, Edge, Firefox nebo
-                Safari.
+                Tento prohlížeč upozornění z&nbsp;webu neumí. Zkuste aktuální Chrome, Edge, Firefox
+                nebo Safari.
               </p>
             }
             @default {
               <div class="ui-card__footer device-retry">
                 <p i18n="@@admin.alerts.device.noServiceWorker">
                   Prohlížeč zatím nespustil část webu, která upozornění doručuje. Pokud zpráva
-                  nezmizí, prohlížeč ji nejspíš nepovoluje, například v anonymním okně.
+                  nezmizí, prohlížeč ji nejspíš nepovoluje, například v&nbsp;anonymním okně.
                 </p>
                 <button
                   appNeedsConnection
@@ -297,8 +297,8 @@
           <app-live-notice look="footer" [notice]="testNotice()" />
           <p id="alerts-test-note" class="ui-card__footer" i18n="@@admin.alerts.test.note">
             Přijde na všechna vaše zařízení, na kterých upozornění máte zapnutá. Pokud do minuty
-            nedorazí, zkontrolujte, že má zařízení pro tento web povolená oznámení a není v režimu
-            Nerušit.
+            nedorazí, zkontrolujte, že má zařízení pro tento web povolená oznámení a&nbsp;není
+            v&nbsp;režimu Nerušit.
           </p>
         </section>
       }

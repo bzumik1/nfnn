@@ -38,7 +38,7 @@ const CODE_MESSAGES: FieldMessages = {
 
 const PASSKEY_FAILED = $localize`:@@admin.lock.passkey.failed:Přístupový klíč správu neodemkl. Zkuste to znovu, nebo použijte heslo.`;
 
-const PASSKEY_FAILED_ONLY = $localize`:@@admin.lock.passkey.failedOnly:Přístupový klíč správu neodemkl. Zkuste to znovu, nebo se odhlaste a přihlaste znovu.`;
+const PASSKEY_FAILED_ONLY = $localize`:@@admin.lock.passkey.failedOnly:Přístupový klíč správu neodemkl. Zkuste to znovu, nebo se odhlaste a\u00a0přihlaste znovu.`;
 
 const UNLOCK_FAILED = $localize`:@@admin.lock.password.failed:Správu se nepodařilo odemknout. Zkuste to prosím znovu.`;
 

@@ -45,7 +45,7 @@ describe('Given the diagnostics of the server', () => {
       kind: 'attention',
       findings: [
         'Paměť je skoro plná (92 %).',
-        'Na spojení s databází čekají vlákna (3).',
+        'Na spojení s\u00a0databází čekají vlákna (3).',
         'Ve složce /logs zbývá málo místa (5 %).',
       ],
     });

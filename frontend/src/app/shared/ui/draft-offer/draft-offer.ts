@@ -13,8 +13,8 @@ import {
 
 let nextId = 0;
 
-export const DRAFT_RESUMED_TEXT = $localize`:@@ui.draftOffer.resumed:Pokračujete v rozepsaných úpravách. Zůstanou jen na tomto zařízení, dokud je neuložíte.`;
-export const DRAFT_DISCARDED_TEXT = $localize`:@@ui.draftOffer.discarded:Rozepsané úpravy jsme z tohoto zařízení zahodili.`;
+export const DRAFT_RESUMED_TEXT = $localize`:@@ui.draftOffer.resumed:Pokračujete v\u00a0rozepsaných úpravách. Zůstanou jen na tomto zařízení, dokud je neuložíte.`;
+export const DRAFT_DISCARDED_TEXT = $localize`:@@ui.draftOffer.discarded:Rozepsané úpravy jsme z\u00a0tohoto zařízení zahodili.`;
 
 @Component({
   selector: 'app-draft-offer',

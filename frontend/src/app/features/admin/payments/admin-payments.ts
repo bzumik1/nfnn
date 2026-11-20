@@ -746,8 +746,8 @@ export class AdminPayments {
     const amount = `${this.crowns(payment.amountMinor)}\u00a0Kč`;
     const donorName = payment.donation?.donorName;
     return donorName
-      ? $localize`:@@admin.payments.unpair.confirm.question:Dar ${amount}:amount: zmizí z přehledu dárce ${donorName}:donor: a platba se vrátí mezi čekající na přiřazení; web ji sám znovu nepřiřadí. Zrušit přiřazení?`
-      : $localize`:@@admin.payments.unpair.confirm.questionNoDonor:Dar ${amount}:amount: zmizí a platba se vrátí mezi čekající na přiřazení; web ji sám znovu nepřiřadí. Zrušit přiřazení?`;
+      ? $localize`:@@admin.payments.unpair.confirm.question:Dar ${amount}:amount: zmizí z\u00a0přehledu dárce ${donorName}:donor: a\u00a0platba se vrátí mezi čekající na přiřazení; web ji sám znovu nepřiřadí. Zrušit přiřazení?`
+      : $localize`:@@admin.payments.unpair.confirm.questionNoDonor:Dar ${amount}:amount: zmizí a\u00a0platba se vrátí mezi čekající na přiřazení; web ji sám znovu nepřiřadí. Zrušit přiřazení?`;
   }
 
   protected unpairLabel(payment: AdminPaymentResponse): string {
@@ -809,7 +809,7 @@ export class AdminPayments {
     this.afterReload = () => {
       this.notice.set({
         kind: 'status',
-        text: $localize`:@@admin.payments.reloaded:Načetli jsme aktuální stav plateb. Zkontrolujte platbu a rozhodněte znovu.`,
+        text: $localize`:@@admin.payments.reloaded:Načetli jsme aktuální stav plateb. Zkontrolujte platbu a\u00a0rozhodněte znovu.`,
       });
       this.focusAfterRender(() => this.noticeElement()?.nativeElement ?? null);
     };

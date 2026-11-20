@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AdminMore } from './admin-more';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given an administrator who opens the less frequent sections of the administration', () => {
   let fixture: ComponentFixture<AdminMore>;
@@ -30,11 +31,13 @@ describe('Given an administrator who opens the less frequent sections of the adm
     const nav: HTMLElement = fixture.nativeElement.querySelector('nav');
     return Array.from(nav.querySelectorAll('section')).map((section) => ({
       title: clean(
-        fixture.nativeElement.querySelector(`#${section.getAttribute('aria-labelledby')}`)
-          ?.textContent,
+        withOrdinarySpaces(
+          fixture.nativeElement.querySelector(`#${section.getAttribute('aria-labelledby')}`)
+            ?.textContent,
+        ),
       ),
       links: Array.from(section.querySelectorAll('a')).map((link) => [
-        clean(link.textContent),
+        clean(withOrdinarySpaces(link.textContent)),
         link.getAttribute('href'),
       ]),
     }));
@@ -42,7 +45,7 @@ describe('Given an administrator who opens the less frequent sections of the adm
 
   it('when the page opens, then its heading names it and takes the focus', () => {
     const heading: HTMLElement = fixture.nativeElement.querySelector('h1');
-    expect(clean(heading.textContent)).toBe('Občas a pro technika');
+    expect(clean(withOrdinarySpaces(heading.textContent))).toBe('Občas a pro technika');
     expect(document.activeElement).toBe(heading);
   });
 

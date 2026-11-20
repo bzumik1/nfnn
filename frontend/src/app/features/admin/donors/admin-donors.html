@@ -1,9 +1,9 @@
 <div class="ui-page ui-page--full container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.donors.heading">Dárci</h1>
   <p class="ui-page-intro" i18n="@@admin.donors.intro">
-    Najděte dárce a otevřete jeho kartu: uvidíte jeho účet, bankovní účty, dary a vystavená
-    potvrzení a můžete mu vypnout dvoufaktorové ověření, odebrat špatně přiřazený bankovní účet nebo
-    na jeho žádost vymazat osobní údaje.
+    Najděte dárce a&nbsp;otevřete jeho kartu: uvidíte jeho účet, bankovní účty, dary
+    a&nbsp;vystavená potvrzení a&nbsp;můžete mu vypnout dvoufaktorové ověření, odebrat špatně
+    přiřazený bankovní účet nebo na jeho žádost vymazat osobní údaje.
   </p>
 
   <section class="ui-card" aria-labelledby="search-title">
@@ -26,7 +26,8 @@
         aria-describedby="donor-search-hint"
       />
       <p id="donor-search-hint" class="search-hint" i18n="@@admin.donors.search.hint">
-        Hledáme část jména nebo e-mailu a začátek variabilního symbolu; nabídneme nejvýše 20 dárců.
+        Hledáme část jména nebo e-mailu a&nbsp;začátek variabilního symbolu; nabídneme nejvýše 20
+        dárců.
       </p>
     </div>
 
@@ -35,7 +36,7 @@
         @case ('idle') {
           @if (!listsRecent()) {
             <p class="ui-card__empty" i18n="@@admin.donors.search.idle">
-              Začněte psát a dárci se objeví tady.
+              Začněte psát a&nbsp;dárci se objeví tady.
             </p>
           }
         }

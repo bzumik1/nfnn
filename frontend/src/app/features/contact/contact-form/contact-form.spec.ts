@@ -10,6 +10,7 @@ import { ContactForm } from './contact-form';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 function answerAccountingDetails(http: HttpTestingController): void {
   http
@@ -65,11 +66,11 @@ describe('Given the contact form', () => {
     const note = element('.form-privacy');
 
     expect(element('.form-submit').nextElementSibling).toBe(note);
-    expect(note.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+    expect(withOrdinarySpaces(note.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
       'Údaje z formuláře použijeme jen k vyřízení vaší zprávy, jak popisují zásady ochrany osobních údajů.',
     );
     const link = note.querySelector('a') as HTMLAnchorElement;
-    expect(link.textContent?.trim()).toBe('zásady ochrany osobních údajů');
+    expect(withOrdinarySpaces(link.textContent)?.trim()).toBe('zásady ochrany osobních údajů');
     expect(link.getAttribute('href')).toBe('/zasady-ochrany-osobnich-udaju');
   });
 
@@ -77,7 +78,7 @@ describe('Given the contact form', () => {
     const note = element('.contact-legal');
 
     expect(element('app-accounting-details').nextElementSibling).toBe(note);
-    expect(note.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+    expect(withOrdinarySpaces(note.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
       'Jak nakládáme s osobními údaji, popisují zásady ochrany osobních údajů.',
     );
     expect(note.querySelector('a')?.getAttribute('href')).toBe('/zasady-ochrany-osobnich-udaju');
@@ -178,7 +179,7 @@ describe('Given the contact form', () => {
     it('then the status region that was there before announces the thanks and where the reply goes', () => {
       const status = element('.contact-form-wrap > [role="status"]');
 
-      expect(status.textContent?.replace(/\s+/g, ' ')).toContain(
+      expect(withOrdinarySpaces(status.textContent)?.replace(/\s+/g, ' ')).toContain(
         'Zpráva je odeslaná Děkujeme za zprávu. Odpovíme vám e\u2011mailem na jana@example.cz.',
       );
     });
@@ -204,7 +205,7 @@ describe('Given the contact form', () => {
 
       expect(element<HTMLInputElement>('#contact-name').value).toBe('');
       expect(document.activeElement).toBe(element('#contact-name'));
-      expect(element('[role="status"]').textContent?.trim()).toBe('');
+      expect(withOrdinarySpaces(element('[role="status"]').textContent)?.trim()).toBe('');
       expect(element('.contact-form-wrap').style.minHeight).toBe('');
     });
   });
@@ -244,7 +245,7 @@ describe('Given the contact form', () => {
 
     http.expectNone('/api/contact/messages');
     expect(element('form')).not.toBeNull();
-    expect(element('#contact-message-error').textContent).toContain(
+    expect(withOrdinarySpaces(element('#contact-message-error').textContent)).toContain(
       'Napište nám prosím, s čím vám můžeme pomoct.',
     );
     expect(element('#contact-message').getAttribute('aria-invalid')).toBe('true');
@@ -259,13 +260,13 @@ describe('Given the contact form', () => {
     await submit();
 
     http.expectNone('/api/contact/messages');
-    expect(element('#contact-email-error').textContent).toContain(
+    expect(withOrdinarySpaces(element('#contact-email-error').textContent)).toContain(
       'Zadejte e-mail ve tvaru jan@example.com.',
     );
   });
 
   it('when it is shown, then the e-mail field says the reply goes to that address', () => {
-    expect(element('#contact-email-hint').textContent?.trim()).toBe(
+    expect(withOrdinarySpaces(element('#contact-email-hint').textContent)?.trim()).toBe(
       'Odpovíme vám na zadaný e-mail.',
     );
     expect(element('#contact-email').getAttribute('aria-describedby')).toContain(
@@ -281,7 +282,7 @@ describe('Given the contact form', () => {
     await submit();
 
     http.expectNone('/api/contact/messages');
-    expect(element('#contact-email-error').textContent).toContain(
+    expect(withOrdinarySpaces(element('#contact-email-error').textContent)).toContain(
       'Zadejte e-mail ve tvaru jan@example.com.',
     );
   });
@@ -305,7 +306,7 @@ describe('Given the contact form', () => {
     });
 
     it('then the e-mail field says what is wrong instead of a general failure', () => {
-      expect(element('#contact-email-error').textContent).toContain(
+      expect(withOrdinarySpaces(element('#contact-email-error').textContent)).toContain(
         'Zadejte e-mail ve tvaru jan@example.com.',
       );
       expect(element('#contact-email').getAttribute('aria-invalid')).toBe('true');
@@ -335,7 +336,7 @@ describe('Given the contact form', () => {
     fixture.detectChanges();
 
     expect(element('form')).not.toBeNull();
-    expect(element('.form-error').textContent).toContain('příliš mnoho zpráv');
+    expect(withOrdinarySpaces(element('.form-error').textContent)).toContain('příliš mnoho zpráv');
     expect(element('.form-error a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
   });
 
@@ -352,7 +353,9 @@ describe('Given the contact form', () => {
     );
     fixture.detectChanges();
 
-    expect(element('.form-error').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+    expect(
+      withOrdinarySpaces(element('.form-error').textContent)?.replace(/\s+/g, ' ').trim(),
+    ).toBe(
       'Web mezitím dostal novou verzi, a tak jsme zprávu neodeslali. Zkopírujte si její text, načtěte stránku znovu a odešlete ji ještě jednou.',
     );
     expect(element<HTMLTextAreaElement>('#contact-message').value).not.toBe('');
@@ -367,7 +370,7 @@ describe('Given the contact form', () => {
       .flush(null, { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 
-    expect(element('.form-error').textContent).toContain('nepodařilo odeslat');
+    expect(withOrdinarySpaces(element('.form-error').textContent)).toContain('nepodařilo odeslat');
     expect(element('.form-error a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
     expect(element<HTMLButtonElement>('.form-submit').disabled).toBe(false);
   });
@@ -379,7 +382,9 @@ describe('Given the contact form', () => {
     http.expectOne('/api/contact/messages').flush(null, { status: 0, statusText: 'Unknown Error' });
     fixture.detectChanges();
 
-    expect(element('.form-error').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+    expect(
+      withOrdinarySpaces(element('.form-error').textContent)?.replace(/\s+/g, ' ').trim(),
+    ).toBe(
       'Bez připojení se zprávu nepodařilo odeslat. Zpráva vám zůstala; až se připojíte, odešlete ji znovu.',
     );
     expect(element<HTMLTextAreaElement>('#contact-message').value).not.toBe('');
@@ -520,7 +525,7 @@ describe('Given the contact section around the form', () => {
   });
 
   function text(element: Element | null): string {
-    return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    return withOrdinarySpaces(element?.textContent)?.replace(/\s+/g, ' ').trim() ?? '';
   }
 
   it('when it is shown, then the e-mail stays beside the heading alone and the seat is never called Adresa', () => {
@@ -575,7 +580,9 @@ describe('Given the contact section', () => {
   it('when it is shown, then it says Kontakt above the heading Napište nám and asks whether the visitor has a question', async () => {
     await show(false);
     const text = (selector: string) =>
-      (fixture.nativeElement.querySelector(selector) as HTMLElement).textContent?.trim();
+      withOrdinarySpaces(
+        (fixture.nativeElement.querySelector(selector) as HTMLElement).textContent,
+      )?.trim();
 
     expect(text('.ui-eyebrow')).toBe('Kontakt');
     expect(text('h2')).toBe('Napište nám');
@@ -590,7 +597,7 @@ describe('Given the contact section', () => {
     ) as HTMLElement;
 
     expect(heading.tagName).toBe('H2');
-    expect(heading.textContent?.trim()).toBe('Napište nám');
+    expect(withOrdinarySpaces(heading.textContent)?.trim()).toBe('Napište nám');
     expect(form.querySelector('h2, h3')).toBeNull();
   });
 

@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { SideNav } from '../../shared/ui/side-nav/side-nav';
 import { DonorShell } from './donor-shell';
+import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
 @Component({
   imports: [SideNav],
@@ -30,9 +31,9 @@ describe('Given the shell of the donor area and the administration', () => {
     const host = await render();
 
     const first = host.querySelector('a, button');
-    expect(first?.textContent?.trim()).toBe('Přeskočit na obsah');
+    expect(withOrdinarySpaces(first?.textContent)?.trim()).toBe('Přeskočit na obsah');
     expect(host.querySelectorAll('main')).toHaveLength(1);
-    expect(host.querySelector('main')?.textContent).toContain('Přehled');
+    expect(withOrdinarySpaces(host.querySelector('main')?.textContent)).toContain('Přehled');
     host.remove();
   });
 
@@ -51,7 +52,7 @@ describe('Given the shell of the donor area and the administration', () => {
     const host = await render();
 
     expect(host.querySelectorAll('.skip-link')).toHaveLength(1);
-    expect(host.textContent).not.toContain('Přeskočit na navigaci');
+    expect(withOrdinarySpaces(host.textContent)).not.toContain('Přeskočit na navigaci');
     host.remove();
   });
 });

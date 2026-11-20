@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DownloadProgress, DownloadProgressState } from './download-progress';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given a download progress line', () => {
   let fixture: ComponentFixture<DownloadProgress>;
@@ -18,7 +19,7 @@ describe('Given a download progress line', () => {
 
   const element = (selector: string) =>
     fixture.nativeElement.querySelector(selector) as HTMLElement | null;
-  const status = () => element('[role="status"]')?.textContent?.trim();
+  const status = () => withOrdinarySpaces(element('[role="status"]')?.textContent)?.trim();
 
   async function show(progress: DownloadProgressState | null): Promise<void> {
     fixture.componentRef.setInput('progress', progress);
@@ -62,7 +63,7 @@ describe('Given a download progress line', () => {
       fixture.detectChanges();
 
       const cancel = element('.download-progress-cancel') as HTMLButtonElement;
-      expect(cancel.textContent?.trim()).toBe('Zrušit');
+      expect(withOrdinarySpaces(cancel.textContent)?.trim()).toBe('Zrušit');
       cancel.click();
       expect(cancelled).toBe(1);
     });
@@ -96,7 +97,7 @@ describe('Given a download progress line', () => {
       expect(bar.getAttribute('aria-label')).toBe('Vytváříme PDF…');
       expect(bar.getAttribute('aria-valuetext')).toBe('Strana 2');
       const detail = element('.download-progress-detail');
-      expect(detail?.textContent?.trim()).toBe('Strana 2');
+      expect(withOrdinarySpaces(detail?.textContent)?.trim()).toBe('Strana 2');
       expect(detail?.getAttribute('aria-hidden')).toBe('true');
     });
   });

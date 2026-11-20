@@ -24,6 +24,7 @@ import {
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { readDetailsDisclosures } from '../../../shared/ui/disclosure/testing/details-disclosures';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const SETTINGS_URL = '/api/admin/operations/settings';
 const TEST_EMAIL_URL = '/api/admin/operations/settings/test-email';
@@ -72,7 +73,7 @@ describe('Given an administrator on the settings page', () => {
   }
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -80,7 +81,7 @@ describe('Given an administrator on the settings page', () => {
   function texts(selector: string): string[] {
     return Array.from(
       fixture.nativeElement.querySelectorAll(selector) as NodeListOf<HTMLElement>,
-    ).map((item) => (item.textContent ?? '').replace(/\s+/g, ' ').trim());
+    ).map((item) => (withOrdinarySpaces(item.textContent) ?? '').replace(/\s+/g, ' ').trim());
   }
 
   function button(name: string): HTMLButtonElement {
@@ -687,7 +688,7 @@ describe('Given an administrator changing the settings on a phone or a tablet', 
 
     const row = fixture.nativeElement.querySelector('.save-row') as HTMLElement;
     expect(row.classList).not.toContain('ui-action-bar');
-    expect(row.textContent).toContain('Uložit nastavení');
+    expect(withOrdinarySpaces(row.textContent)).toContain('Uložit nastavení');
     http.match(SIGNATORY_URL);
     http.match(SIGNING_KEYS_URL);
     http.verify();
@@ -750,7 +751,9 @@ describe('Given an administrator sent to the receipt signing key from the overvi
     await fixture.whenStable();
 
     expect(document.activeElement?.id).toBe('klic-k-overovacim-qr');
-    expect(document.activeElement?.textContent?.trim()).toBe('Klíč k ověřovacím QR kódům');
+    expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe(
+      'Klíč k ověřovacím QR kódům',
+    );
     http.match(SIGNATORY_URL);
     http.match(SIGNING_KEYS_URL);
     http.verify();
@@ -864,7 +867,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
   it('when the device kept a change started from the saved settings and they continue it, then the form takes it and asks to save as usual', async () => {
     keptDraft(SETTINGS_VERSION);
     await open();
-    expect(element('app-draft-offer').textContent).not.toContain(
+    expect(withOrdinarySpaces(element('app-draft-offer').textContent)).not.toContain(
       'Uložená verze se od té doby změnila',
     );
 
@@ -874,22 +877,24 @@ describe('Given an administrator changing the settings on a device that keeps dr
 
     element<HTMLFormElement>('form.settings-form').dispatchEvent(new Event('submit'));
     await settle();
-    expect(fixture.nativeElement.textContent).toContain('Mění se: ');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain('Mění se: ');
     expect(fixture.nativeElement.querySelector('app-changed-meanwhile-dialog')).toBeNull();
   });
 
   it('when the device kept a change started from settings saved differently since, then saving asks first and discarding reads them again', async () => {
     keptDraft('00000000000000c0');
     await open();
-    expect(element('app-draft-offer').textContent).toContain('Uložená verze se od té doby změnila');
+    expect(withOrdinarySpaces(element('app-draft-offer').textContent)).toContain(
+      'Uložená verze se od té doby změnila',
+    );
 
     button('Pokračovat v rozepsaném').click();
     await settle();
     element<HTMLFormElement>('form.settings-form').dispatchEvent(new Event('submit'));
     await settle();
-    expect(element('app-changed-meanwhile-dialog dialog').textContent).toContain(
-      'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
-    );
+    expect(
+      withOrdinarySpaces(element('app-changed-meanwhile-dialog dialog').textContent),
+    ).toContain('Od chvíle, kdy jste na tomto zařízení začali s úpravami');
 
     button('Zahodit své úpravy a načíst novější verzi').click();
     await settle();
@@ -926,7 +931,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
     await settle();
 
     expect(document.activeElement).toBe(element('h1'));
-    expect(element('[role="status"]:not(:empty)').textContent).toContain(
+    expect(withOrdinarySpaces(element('[role="status"]:not(:empty)').textContent)).toContain(
       'Pokračujete v rozepsaných úpravách',
     );
   });
@@ -942,9 +947,9 @@ describe('Given an administrator changing the settings on a device that keeps dr
     await settle();
     button('Uložit svou verzi místo novější').click();
     await settle();
-    expect(element('.confirm-changes').textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'Mění se: Kam chodí zprávy z kontaktního formuláře.',
-    );
+    expect(
+      withOrdinarySpaces(element('.confirm-changes').textContent)?.replace(/\s+/g, ' ').trim(),
+    ).toBe('Mění se: Kam chodí zprávy z kontaktního formuláře.');
     button('Uložit a restartovat').click();
     await settle();
 
@@ -958,7 +963,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
     await open();
 
     expect(element<HTMLFormElement>('form.settings-form').inert).toBe(true);
-    expect(element('app-draft-offer').textContent).toContain('Hesla a tokeny');
+    expect(withOrdinarySpaces(element('app-draft-offer').textContent)).toContain('Hesla a tokeny');
 
     button('Zahodit').click();
     await settle();

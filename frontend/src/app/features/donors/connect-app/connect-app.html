@@ -11,11 +11,11 @@
             tabindex="-1"
             i18n="@@donor.connect.incomplete.title"
           >
-            Žádost o připojení je neúplná
+            Žádost o&nbsp;připojení je neúplná
           </h1>
           <p class="ui-panel__lead" i18n="@@donor.connect.incomplete.text">
-            Tato stránka se otevírá z aplikace, která žádá o přístup ke správě Nové naděje. Začněte
-            prosím připojení v aplikaci znovu.
+            Tato stránka se otevírá z&nbsp;aplikace, která žádá o&nbsp;přístup ke správě Nové
+            naděje. Začněte prosím připojení v&nbsp;aplikaci znovu.
           </p>
         </div>
       }
@@ -45,11 +45,11 @@
             tabindex="-1"
             i18n="@@donor.connect.signIn.title"
           >
-            Aplikace žádá o přístup ke správě
+            Aplikace žádá o&nbsp;přístup ke správě
           </h1>
           <p class="ui-panel__lead" i18n="@@donor.connect.signIn.text">
-            Nejdřív se prosím přihlaste účtem správce, včetně kódu z ověřovací aplikace. Pak
-            uvidíte, která aplikace o přístup žádá, a rozhodnete, zda ho dostane.
+            Nejdřív se prosím přihlaste účtem správce, včetně kódu z&nbsp;ověřovací aplikace. Pak
+            uvidíte, která aplikace o&nbsp;přístup žádá, a&nbsp;rozhodnete, zda ho dostane.
           </p>
           <button
             type="button"
@@ -70,7 +70,7 @@
           </h1>
           <p class="ui-panel__lead">
             <span i18n="@@donor.connect.consent.intro"
-              >Aplikace se představuje jako „{{ client.name }}“ a bude jednat vaším jménem ({{
+              >Aplikace se představuje jako „{{ client.name }}“ a&nbsp;bude jednat vaším jménem ({{
                 donorName()
               }}); každá její akce se zapíše do historie správy.</span
             >
@@ -83,7 +83,7 @@
           <h2 class="scopes-title" i18n="@@donor.connect.consent.scopesTitle">Co bude smět</h2>
           @if (unknownScope) {
             <p class="ui-field-error" role="alert" i18n="@@donor.connect.consent.unknownScope">
-              Aplikace žádá o oprávnění, které web nenabízí. Připojení nelze povolit.
+              Aplikace žádá o&nbsp;oprávnění, které web nenabízí. Připojení nelze povolit.
             </p>
           } @else {
             <ul class="scopes">
@@ -101,7 +101,7 @@
                   (change)="chooseWrite($event)"
                 />
                 <label for="connect-app-write" i18n="@@donor.connect.consent.writeOption"
-                  >Povolit i změny</label
+                  >Povolit i&nbsp;změny</label
                 >
               </div>
               <ul class="scopes write-scopes" id="connect-app-write-scopes">
@@ -114,21 +114,22 @@
                 id="connect-app-write-hint"
                 i18n="@@donor.connect.consent.writeHint"
               >
-                Bez zaškrtnutí dostane aplikace jen čtení. Rozsah později změníte jen odpojením a
-                novým připojením.
+                Bez zaškrtnutí dostane aplikace jen čtení. Rozsah později změníte jen odpojením
+                a&nbsp;novým připojením.
               </p>
             }
             <p class="never" i18n="@@donor.connect.consent.never">
               Nikdy nebude smět mazat aktuality, projekty, dárce, loga bank ani účty dárců, měnit
               správce, hesla, přístupové klíče ani dvoufaktorové ověření, stahovat ani obnovovat
               zálohy, měnit tajné údaje, adresu webu, poštu, příjemce reportu ani to, kdo potvrzení
-              podepisuje, a nahradit nebo zneplatnit vystavené potvrzení. To jde jen ve správě v
-              prohlížeči.
+              podepisuje, a&nbsp;nahradit nebo zneplatnit vystavené potvrzení. To jde jen ve správě
+              v&nbsp;prohlížeči.
             </p>
           }
           <p class="ui-panel__lead" i18n="@@donor.connect.consent.after">
-            Po povolení vás pošleme zpět do aplikace. Přístup kdykoli odeberete v části „Údaje a
-            zabezpečení“ → „Připojené aplikace“; ukončí ho i změna hesla nebo odebrání role správce.
+            Po povolení vás pošleme zpět do aplikace. Přístup kdykoli odeberete v&nbsp;části „Údaje
+            a&nbsp;zabezpečení“ → „Připojené aplikace“; ukončí ho i&nbsp;změna hesla nebo odebrání
+            role správce.
           </p>
           <form
             #consentForm="ngForm"
@@ -139,10 +140,10 @@
           >
             @if (asksCode()) {
               <p class="ui-panel__lead confirm-note" i18n="@@donor.connect.consent.confirmCode">
-                Povolení potvrďte kódem z ověřovací aplikace.
+                Povolení potvrďte kódem z&nbsp;ověřovací aplikace.
               </p>
               <app-form-field
-                label="Kód z aplikace"
+                label="Kód z&nbsp;aplikace"
                 i18n-label="@@donor.connect.consent.code"
                 [hint]="codeHint"
                 [messages]="codeMessages"
@@ -179,7 +180,7 @@
               }
             } @else if (passkeySupported) {
               <p class="ui-panel__lead confirm-note" i18n="@@donor.connect.consent.confirmPasskey">
-                Povolení potvrďte svým přístupovým klíčem, i když jste se jím už přihlásili.
+                Povolení potvrďte svým přístupovým klíčem, i&nbsp;když jste se jím už přihlásili.
               </p>
               @if (usesCode()) {
                 <p class="passkey-alternative">
@@ -191,14 +192,14 @@
                     (click)="chooseCode()"
                     i18n="@@donor.connect.consent.chooseCode"
                   >
-                    Zadat kód z aplikace
+                    Zadat kód z&nbsp;aplikace
                   </button>
                 </p>
               }
             } @else {
               <p class="ui-panel__lead confirm-note" i18n="@@donor.connect.consent.passkeyMissing">
-                Povolení se potvrzuje přístupovým klíčem a tento prohlížeč je nepodporuje. Připojení
-                povolte v prohlížeči, ve kterém se klíčem přihlašujete.
+                Povolení se potvrzuje přístupovým klíčem a&nbsp;tento prohlížeč je nepodporuje.
+                Připojení povolte v&nbsp;prohlížeči, ve kterém se klíčem přihlašujete.
               </p>
             }
             @if (error()) {
@@ -257,8 +258,8 @@
             </h1>
             <p class="ui-panel__lead">
               <span i18n="@@donor.connect.notAdmin.text"
-                >Aplikace {{ client.host }} žádá o přístup ke správě Nové naděje. Ten má jen účet
-                správce přihlášený s kódem z ověřovací aplikace; jste přihlášeni jako
+                >Aplikace {{ client.host }} žádá o&nbsp;přístup ke správě Nové naděje. Ten má jen
+                účet správce přihlášený s&nbsp;kódem z&nbsp;ověřovací aplikace; jste přihlášeni jako
                 {{ donorName() }}.</span
               >
             </p>
@@ -284,7 +285,7 @@
               >
                 <app-busy-label [busy]="deciding() === 'deny'">
                   <span when-idle i18n="@@donor.connect.notAdmin.back"
-                    >Odmítnout a vrátit se do aplikace</span
+                    >Odmítnout a&nbsp;vrátit se do aplikace</span
                   >
                   <span when-busy i18n="@@donor.connect.consent.denying">Odmítám…</span>
                 </app-busy-label>
@@ -306,7 +307,7 @@
             Vracíme vás do aplikace
           </h1>
           <p class="ui-panel__lead" role="status" i18n="@@donor.connect.leaving.text">
-            Pokud se aplikace neotevře sama, vraťte se do ní a zkuste připojení znovu.
+            Pokud se aplikace neotevře sama, vraťte se do ní a&nbsp;zkuste připojení znovu.
           </p>
         </div>
       }

@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Avatar } from './avatar';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 function render(inputs: Record<string, unknown>): ComponentFixture<Avatar> {
   const fixture = TestBed.createComponent(Avatar);
@@ -36,7 +37,7 @@ describe('Given a person with a portrait', () => {
     expect(image.getAttribute('height')).toBe('160');
     expect(image.getAttribute('loading')).toBe('lazy');
     expect(image.getAttribute('alt')).toBe('');
-    expect(host(fixture).textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(host(fixture).textContent)?.trim()).toBe('');
   });
 
   it('when no loading is asked, then the portrait loads at once and names no srcset', () => {
@@ -55,13 +56,19 @@ describe('Given a person without a portrait', () => {
     const fixture = render({ name: 'Zdeňka Znamenáčková', size: 48 });
 
     expect(host(fixture).querySelector('img')).toBeNull();
-    expect(host(fixture).textContent?.trim()).toBe('ZZ');
+    expect(withOrdinarySpaces(host(fixture).textContent)?.trim()).toBe('ZZ');
     expect(host(fixture).getAttribute('aria-hidden')).toBe('true');
   });
 
   it('when the name has extra spaces, a lower-case or accented start or more words, then the initials still read right', () => {
-    expect(host(render({ name: '  šárka   nová ', size: 48 })).textContent?.trim()).toBe('ŠN');
-    expect(host(render({ name: 'Jan Amos Komenský', size: 48 })).textContent?.trim()).toBe('JA');
-    expect(host(render({ name: 'Madonna', size: 48 })).textContent?.trim()).toBe('M');
+    expect(
+      withOrdinarySpaces(host(render({ name: '  šárka   nová ', size: 48 })).textContent)?.trim(),
+    ).toBe('ŠN');
+    expect(
+      withOrdinarySpaces(host(render({ name: 'Jan Amos Komenský', size: 48 })).textContent)?.trim(),
+    ).toBe('JA');
+    expect(
+      withOrdinarySpaces(host(render({ name: 'Madonna', size: 48 })).textContent)?.trim(),
+    ).toBe('M');
   });
 });

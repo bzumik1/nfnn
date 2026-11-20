@@ -1,16 +1,16 @@
 <section class="ui-card today" aria-labelledby="logs-today-title">
   <h2 id="logs-today-title" class="ui-card__title" i18n="@@admin.logs.today.title">
-    Varování a chyby dnes
+    Varování a&nbsp;chyby dnes
   </h2>
   @switch (state()) {
     @case ('loading') {
       <p class="ui-load-state ui-load-state--inset" i18n="@@admin.logs.today.loading">
-        Hledáme dnešní varování a chyby…
+        Hledáme dnešní varování a&nbsp;chyby…
       </p>
     }
     @case ('error') {
       <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-        <p i18n="@@admin.logs.today.failed">Dnešní varování a chyby se nepodařilo načíst.</p>
+        <p i18n="@@admin.logs.today.failed">Dnešní varování a&nbsp;chyby se nepodařilo načíst.</p>
         <button
           appNeedsConnection
           type="button"
@@ -95,7 +95,7 @@
               </svg>
             </span>
             <span class="ui-list__title" i18n="@@admin.logs.today.all"
-              >Všechna varování a chyby</span
+              >Všechna varování a&nbsp;chyby</span
             >
             <svg
               class="ui-list__chevron"
@@ -116,7 +116,7 @@
       </ul>
       @if (truncated()) {
         <p class="ui-card__footer" i18n="@@admin.logs.today.truncated">
-          Prohledáno posledních 50 varování a chyb.
+          Prohledáno posledních 50 varování a&nbsp;chyb.
         </p>
       }
     }

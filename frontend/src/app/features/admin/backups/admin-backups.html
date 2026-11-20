@@ -1,8 +1,8 @@
 <div class="ui-page ui-page--form container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.backups.heading">Zálohy</h1>
   <p class="ui-page-intro" i18n="@@admin.backups.introRestore">
-    Web se každý den sám zálohuje a jednou týdně si vyzkouší, že jde zálohu obnovit. Tady vidíte,
-    jak to dopadlo, zálohu spustíte hned, stáhnete si ji nebo z ní web obnovíte.
+    Web se každý den sám zálohuje a&nbsp;jednou týdně si vyzkouší, že jde zálohu obnovit. Tady
+    vidíte, jak to dopadlo, zálohu spustíte hned, stáhnete si ji nebo z&nbsp;ní web obnovíte.
   </p>
 
   <app-live-notice [notice]="notice()" />
@@ -15,8 +15,8 @@
       <div class="ui-card__body">
         @if (restoreSlow()) {
           <p class="restoring restoring--slow" role="alert" i18n="@@admin.backups.restoring.slow">
-            Web se ještě nevrátil. Velká záloha se může obnovovat i déle; zkuste to prosím za chvíli
-            znovu.
+            Web se ještě nevrátil. Velká záloha se může obnovovat i&nbsp;déle; zkuste to prosím za
+            chvíli znovu.
           </p>
           <button
             appNeedsConnection
@@ -30,8 +30,8 @@
         } @else {
           <p class="restoring" role="status" i18n="@@admin.backups.restoring.text">
             Obnovujeme databázi ze zálohy {{ restore.fileName }}. Web je teď několik minut
-            nedostupný; stránka počká a ukáže výsledek. Obnova ukončí každé přihlášení, takže se pak
-            přihlásíte znovu.
+            nedostupný; stránka počká a&nbsp;ukáže výsledek. Obnova ukončí každé přihlášení, takže
+            se pak přihlásíte znovu.
           </p>
         }
       </div>
@@ -94,7 +94,7 @@
               }
             } @else {
               <p class="ui-notice ui-notice--status healthy" i18n="@@admin.backups.status.healthy">
-                Zálohování je v pořádku.
+                Zálohování je v&nbsp;pořádku.
               </p>
             }
             <dl class="runs">
@@ -129,7 +129,7 @@
             @if (restoreFiles().length > 0) {
               <div class="restore-folder">
                 <p class="restore-files-title" i18n="@@admin.backups.status.restoreFolder">
-                  Soubory k obnově
+                  Soubory k&nbsp;obnově
                 </p>
                 <ul class="restore-files">
                   @for (file of restoreFiles(); track file.fileName) {
@@ -196,8 +196,8 @@
             @if (backups().length > 0) {
               <p class="ui-notice ui-notice--warning off-server" i18n="@@admin.backups.offServer">
                 Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte
-                tlačítkem „Stáhnout“ a uložte jinam, třeba na flash disk nebo do cloudu. Jsou
-                zašifrované, takže je bez klíče k zálohám nikdo nepřečte.
+                tlačítkem „Stáhnout“ a&nbsp;uložte jinam, třeba na flash disk nebo do cloudu. Jsou
+                zašifrované, takže je bez klíče k&nbsp;zálohám nikdo nepřečte.
               </p>
             }
           </div>

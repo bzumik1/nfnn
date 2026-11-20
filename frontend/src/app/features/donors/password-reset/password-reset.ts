@@ -69,7 +69,7 @@ export class PasswordReset {
   private readonly token = tokenOf(inject(ActivatedRoute).snapshot.fragment);
 
   protected readonly passwordMinLength = PASSWORD_MIN_LENGTH;
-  protected readonly passwordHint = $localize`:@@donor.passwordReset.form.hint:Alespoň 12 znaků. Klidně celá věta, která se vám dobře pamatuje.`;
+  protected readonly passwordHint = $localize`:@@donor.passwordReset.form.hint:Alespoň 12\u00a0znaků. Klidně celá věta, která se vám dobře pamatuje.`;
   protected readonly passwordMessages = {
     required: $localize`:@@donor.form.newPassword.required:Zvolte si prosím heslo.`,
     minlength: $localize`:@@donor.form.newPassword.tooShort:Heslo musí mít alespoň 12\u00a0znaků.`,
@@ -79,7 +79,7 @@ export class PasswordReset {
   protected readonly nameMessages = {
     required: $localize`:@@donor.passkeys.name.required:Pojmenujte prosím klíč.`,
   };
-  protected readonly codeHint = $localize`:@@donor.passwordReset.passkey.codeHint:Účet má zapnuté dvoufaktorové ověření, opište proto šest číslic z ověřovací aplikace.`;
+  protected readonly codeHint = $localize`:@@donor.passwordReset.passkey.codeHint:Účet má zapnuté dvoufaktorové ověření, opište proto šest číslic z\u00a0ověřovací aplikace.`;
   protected readonly codeMessages = {
     required: $localize`:@@donor.form.code.required:Opište prosím kód z\u00a0aplikace.`,
     pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,

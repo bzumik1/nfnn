@@ -1,10 +1,10 @@
 <div class="ui-page ui-page--form container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.report.heading">Měsíční e-mail</h1>
   <p class="ui-page-intro" i18n="@@admin.report.intro">
-    Fond dostává každý měsíc e-mailem přehled za minulý měsíc: registrované a nové dárce, přijaté
-    dary, platby bez dárce a stav stahování z banky. Tady nastavíte, komu přehled chodí, kdy a co
-    obsahuje, a přehled za kterýkoli skončený měsíc můžete poslat znovu. Na stejné adresy chodí i
-    upozornění, když stahování plateb z banky selhává.
+    Fond dostává každý měsíc e-mailem přehled za minulý měsíc: registrované a&nbsp;nové dárce,
+    přijaté dary, platby bez dárce a&nbsp;stav stahování z&nbsp;banky. Tady nastavíte, komu přehled
+    chodí, kdy a&nbsp;co obsahuje, a&nbsp;přehled za kterýkoli skončený měsíc můžete poslat znovu.
+    Na stejné adresy chodí i&nbsp;upozornění, když stahování plateb z&nbsp;banky selhává.
   </p>
 
   @switch (state()) {
@@ -38,27 +38,28 @@
               @if (next.heldAt; as heldAt) {
                 @if (serverAway()) {
                   <ng-container i18n="@@admin.report.next.heldServerAway"
-                    >Podle údajů z {{ heldAt }} měl přehled za {{ next.month }} odejít
-                    {{ next.dueOn }} v {{ next.hour }}; jestli odešel, ukážeme, až server zase
+                    >Podle údajů z&nbsp;{{ heldAt }} měl přehled za {{ next.month }} odejít
+                    {{ next.dueOn }} v&nbsp;{{ next.hour }}; jestli odešel, ukážeme, až server zase
                     odpoví.</ng-container
                   >
                 } @else {
                   <ng-container i18n="@@admin.report.next.held"
-                    >Podle údajů z {{ heldAt }} měl přehled za {{ next.month }} odejít
-                    {{ next.dueOn }} v {{ next.hour }}; jestli odešel, ukážeme, až budete
+                    >Podle údajů z&nbsp;{{ heldAt }} měl přehled za {{ next.month }} odejít
+                    {{ next.dueOn }} v&nbsp;{{ next.hour }}; jestli odešel, ukážeme, až budete
                     online.</ng-container
                   >
                 }
               } @else if (next.overdue) {
                 <ng-container i18n="@@admin.report.next.overdue"
-                  >Přehled za {{ next.month }} měl odejít {{ next.dueOn }} v {{ next.hour }}, ale
-                  zatím neodešel. Web ho zkusí poslat znovu v příští celou hodinu; poslat ho můžete
-                  i hned níže.</ng-container
+                  >Přehled za {{ next.month }} měl odejít {{ next.dueOn }} v&nbsp;{{ next.hour }},
+                  ale zatím neodešel. Web ho zkusí poslat znovu v&nbsp;příští celou hodinu; poslat
+                  ho můžete i&nbsp;hned níže.</ng-container
                 >
               } @else {
                 <ng-container i18n="@@admin.report.next"
-                  >Příští přehled za {{ next.month }} odejde {{ next.dueOn }} v
-                  {{ next.hour }}.</ng-container
+                  >Příští přehled za {{ next.month }} odejde {{ next.dueOn }} v&nbsp;{{
+                    next.hour
+                  }}.</ng-container
                 >
               }
             </p>
@@ -115,7 +116,7 @@
             <app-form-field
               label="Den odeslání"
               i18n-label="@@admin.report.sendDay"
-              hint="Přehled za minulý měsíc odejde v tento den v měsíci."
+              hint="Přehled za minulý měsíc odejde v&nbsp;tento den v&nbsp;měsíci."
               i18n-hint="@@admin.report.sendDay.hint"
             >
               <select
@@ -154,12 +155,12 @@
               <legend i18n="@@admin.report.sections">Co přehled obsahuje</legend>
               <label class="section">
                 <input type="checkbox" name="donors" [(ngModel)]="sections.donors" />
-                <span i18n="@@admin.report.sections.donors">Dárci: registrovaní a noví</span>
+                <span i18n="@@admin.report.sections.donors">Dárci: registrovaní a&nbsp;noví</span>
               </label>
               <label class="section">
                 <input type="checkbox" name="donations" [(ngModel)]="sections.donations" />
                 <span i18n="@@admin.report.sections.donations"
-                  >Dary: za měsíc a od začátku roku</span
+                  >Dary: za měsíc a&nbsp;od začátku roku</span
                 >
               </label>
               <label class="section">
@@ -173,7 +174,7 @@
               <label class="section">
                 <input type="checkbox" name="bankImport" [(ngModel)]="sections.bankImport" />
                 <span i18n="@@admin.report.sections.bankImport"
-                  >Stahování z banky: poslední úspěch a poslední chyba</span
+                  >Stahování z&nbsp;banky: poslední úspěch a&nbsp;poslední chyba</span
                 >
               </label>
             </fieldset>
@@ -208,12 +209,13 @@
         </h2>
         <div class="ui-card__body">
           <p class="ui-card__intro send-intro" i18n="@@admin.report.send.intro">
-            Přehled za vybraný měsíc odejde hned, i když už jednou odešel. Poslat jde jen měsíc,
-            který už skončil: přehled za {{ runningMonth() }} půjde poslat od
+            Přehled za vybraný měsíc odejde hned, i&nbsp;když už jednou odešel. Poslat jde jen
+            měsíc, který už skončil: přehled za {{ runningMonth() }} půjde poslat od
             {{ runningMonthEnds() }}.
           </p>
           <p class="ui-card__intro send-recipients" i18n="@@admin.report.send.recipients">
-            Přehled dostanou: {{ currentRecipients() }}. To jsou příjemci uložení v nastavení výše.
+            Přehled dostanou: {{ currentRecipients() }}. To jsou příjemci uložení v&nbsp;nastavení
+            výše.
           </p>
           <div class="send-row">
             <app-form-field label="Měsíc" i18n-label="@@admin.report.send.month">

@@ -36,6 +36,7 @@ import { connectivityInterceptor } from '../../../core/connectivity/connectivity
 import { keptAnswerRefreshInterceptor } from '../../../core/connectivity/kept-answer-refresh';
 import { serviceWorkerBypassInterceptor } from '../../../core/updates/service-worker-bypass';
 import { KeptTabPages } from '../../../core/navigation/kept-tab-pages';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({ template: '' })
 class OtherTab {}
@@ -84,18 +85,20 @@ async function setUp(
 }
 
 function text(root: ParentNode | null | undefined, selector: string): string {
-  return (root?.querySelector(selector)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  return (withOrdinarySpaces(root?.querySelector(selector)?.textContent) ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function texts(root: ParentNode, selector: string): string[] {
   return Array.from(root.querySelectorAll(selector)).map((element) =>
-    (element.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    (withOrdinarySpaces(element.textContent) ?? '').replace(/\s+/g, ' ').trim(),
   );
 }
 
 function link(root: ParentNode, name: string): HTMLAnchorElement | undefined {
   return Array.from(root.querySelectorAll('a')).find(
-    (anchor) => anchor.textContent?.replace(/\s+/g, ' ').trim() === name,
+    (anchor) => withOrdinarySpaces(anchor.textContent)?.replace(/\s+/g, ' ').trim() === name,
   );
 }
 
@@ -105,7 +108,7 @@ function revealOrder(element: Element | null): string {
 
 function buttonNames(root: ParentNode): string[] {
   return Array.from(root.querySelectorAll('button')).map((button) =>
-    (button.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    (withOrdinarySpaces(button.textContent) ?? '').replace(/\s+/g, ' ').trim(),
   );
 }
 
@@ -193,8 +196,8 @@ describe('Given a visitor opening Aktuality', () => {
 
     it('then the page is named and the newest news leads it, large, with its signer', () => {
       expect(text(root, 'h1')).toBe('Co je u nás nového');
-      expect(root.querySelector('.ui-intro__lead')?.textContent?.trim()).toBe(
-        'Píšeme o\u00a0tom, komu jsme pomohli, co chystáme a\u00a0jak naložíme s\u00a0vašimi dary.',
+      expect(withOrdinarySpaces(root.querySelector('.ui-intro__lead')?.textContent)?.trim()).toBe(
+        'Píšeme o tom, komu jsme pomohli, co chystáme a jak naložíme s vašimi dary.',
       );
       const featured = root.querySelector('.featured') as HTMLElement;
       expect(text(featured, 'h2')).toBe('Ohlédnutí za rokem 2025');
@@ -920,7 +923,7 @@ describe('Given Aktuality kept while the visitor is on another tab', () => {
     const shown = await returned();
 
     expect(text(shown, '.featured h2')).toBe('Ohlédnutí za rokem 2025');
-    expect(shown.textContent).not.toContain('Načítáme aktuality');
+    expect(withOrdinarySpaces(shown.textContent)).not.toContain('Načítáme aktuality');
 
     asked.flush(page([lookBack2023, lookBack2025, lookBack2024], 0, 3));
     expect(text(await returned(), '.featured h2')).toBe('Ohlédnutí za rokem 2023');
@@ -935,7 +938,7 @@ describe('Given Aktuality kept while the visitor is on another tab', () => {
     const shown = await returned();
 
     expect(text(shown, '.featured h2')).toBe('Ohlédnutí za rokem 2025');
-    expect(shown.textContent).not.toContain('Načítáme aktuality');
+    expect(withOrdinarySpaces(shown.textContent)).not.toContain('Načítáme aktuality');
 
     stories.flush(page([sofinka], 0, 1, 50));
     expect(text(await returned(), 'app-year-stories h2')).toBe('Příběhy z roku 2025');

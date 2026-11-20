@@ -110,7 +110,7 @@ const FORBIDDEN = 'auth/forbidden';
 const PREVIEW_WIDTH = 480;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const NEW_PERSON = 'new';
-const TEXT_RELOADED = $localize`:@@admin.people.text.reloaded:Vaše úpravy jsme zahodili a načetli uložený text.`;
+const TEXT_RELOADED = $localize`:@@admin.people.text.reloaded:Vaše úpravy jsme zahodili a\u00a0načetli uložený text.`;
 const TEXT_RELOAD_FAILED = $localize`:@@admin.people.text.reloadFailed:Uložený text se nepodařilo načíst. Zkuste to prosím znovu.`;
 
 @Component({
@@ -364,7 +364,7 @@ export class AdminPeople {
           this.receiptDraft = { signs: false, role: chosen.receiptRole };
           this.receiptNotice.set({
             kind: 'status',
-            text: $localize`:@@admin.people.receipt.saved:Potvrzení vystavená od teď podepisuje ${chosen.name}:name: s funkcí ${chosen.receiptRole}:role:.`,
+            text: $localize`:@@admin.people.receipt.saved:Potvrzení vystavená od teď podepisuje ${chosen.name}:name: s\u00a0funkcí ${chosen.receiptRole}:role:.`,
           });
         },
         error: (failure: unknown) => {
@@ -499,7 +499,7 @@ export class AdminPeople {
           text:
             id === NEW_PERSON
               ? $localize`:@@admin.people.added:Přidali jsme mezi lidi fondu: ${saved.name}:name:. Web ukazuje změnu hned.`
-              : $localize`:@@admin.people.saved:Změny u ${saved.name}:name: jsou uložené a na webu.`,
+              : $localize`:@@admin.people.saved:Změny u\u00a0${saved.name}:name: jsou uložené a\u00a0na webu.`,
         });
         this.focusLater(`#person-edit-${saved.id}`);
       },
@@ -533,8 +533,8 @@ export class AdminPeople {
         this.applySignature(
           this.api.setSignature(person.id, uploaded.id),
           this.signs(person)
-            ? $localize`:@@admin.people.signature.savedForReceipts:Podpis je uložený. Ukáže se pod slovem zakladatelů a vytiskne se na potvrzeních o daru vystavených od teď; správci o změně dostanou e-mail.`
-            : $localize`:@@admin.people.signature.saved:Podpis je uložený a ukáže se pod slovem zakladatelů.`,
+            ? $localize`:@@admin.people.signature.savedForReceipts:Podpis je uložený. Ukáže se pod slovem zakladatelů a\u00a0vytiskne se na potvrzeních o\u00a0daru vystavených od teď; správci o\u00a0změně dostanou e-mail.`
+            : $localize`:@@admin.people.signature.saved:Podpis je uložený a\u00a0ukáže se pod slovem zakladatelů.`,
         ),
       error: (failure: unknown) => {
         this.uploadingSignature.set(false);
@@ -559,8 +559,8 @@ export class AdminPeople {
     this.applySignature(
       this.api.removeSignature(person.id),
       this.signs(person)
-        ? $localize`:@@admin.people.signature.removedFromReceipts:Podpis jsme odebrali a smazali. Potvrzení vystavená od teď budou mít místo něj jen čáru; správci o změně dostanou e-mail.`
-        : $localize`:@@admin.people.signature.removed:Podpis jsme odebrali a smazali.`,
+        ? $localize`:@@admin.people.signature.removedFromReceipts:Podpis jsme odebrali a\u00a0smazali. Potvrzení vystavená od teď budou mít místo něj jen čáru; správci o\u00a0změně dostanou e-mail.`
+        : $localize`:@@admin.people.signature.removed:Podpis jsme odebrali a\u00a0smazali.`,
     );
   }
 
@@ -595,7 +595,7 @@ export class AdminPeople {
           this.members.update((members) => members.filter((member) => member.id !== person.id));
           this.listNotice.set({
             kind: 'status',
-            text: $localize`:@@admin.people.removed:${person.name}:name: už mezi lidmi fondu není; portrét a podpis jsme smazali.`,
+            text: $localize`:@@admin.people.removed:${person.name}:name: už mezi lidmi fondu není; portrét a\u00a0podpis jsme smazali.`,
           });
           this.focusLater('#people-add');
         },
@@ -902,7 +902,7 @@ function refusalOf(file: File): string | null {
     return $localize`:@@admin.people.image.wrongType:Vyberte prosím obrázek ve formátu PNG, JPEG nebo WebP.`;
   }
   if (file.size > MAX_IMAGE_BYTES) {
-    return $localize`:@@admin.people.image.tooLarge:Obrázek je větší než 10 MB. Zmenšete ho prosím a zkuste to znovu.`;
+    return $localize`:@@admin.people.image.tooLarge:Obrázek je větší než 10 MB. Zmenšete ho prosím a\u00a0zkuste to znovu.`;
   }
   return null;
 }
@@ -915,12 +915,12 @@ function text(value: string): string | null {
 function savedTextNotice(which: PageText, shown: boolean): string {
   if (which === 'note') {
     return shown
-      ? $localize`:@@admin.people.note.saved:Slovo zakladatelů je uložené a na webu.`
-      : $localize`:@@admin.people.note.removed:Slovo zakladatelů jsme z webu odebrali.`;
+      ? $localize`:@@admin.people.note.saved:Slovo zakladatelů je uložené a\u00a0na webu.`
+      : $localize`:@@admin.people.note.removed:Slovo zakladatelů jsme z\u00a0webu odebrali.`;
   }
   return shown
-    ? $localize`:@@admin.people.footnote.saved:Řádek pod správní radou je uložený a na webu.`
-    : $localize`:@@admin.people.footnote.removed:Řádek pod správní radou jsme z webu odebrali.`;
+    ? $localize`:@@admin.people.footnote.saved:Řádek pod správní radou je uložený a\u00a0na webu.`
+    : $localize`:@@admin.people.footnote.removed:Řádek pod správní radou jsme z\u00a0webu odebrali.`;
 }
 
 function pageTextInRefusal(failure: unknown): StoredPageText | null {

@@ -73,7 +73,7 @@ test.describe('Given an administrator whose browser draws native date fields in 
   }) => {
     await page.goto('/sprava');
     await expect(page.getByLabel('Stáhnout platby od')).toHaveAccessibleDescription(
-      /^Vybraný den: 1\.\s1\. 2026\. Platby za posledních 89 dní/,
+      /^Vybraný den: 1\.\s1\. 2026\. Platby za posledních 89\sdní/,
     );
 
     await page.goto('/sprava/platby?od=2026-10-01&do=2026-10-05');
@@ -98,7 +98,7 @@ test.describe('Given an administrator whose browser draws native date fields in 
 
     await page.goto('/sprava');
     await expect(page.getByLabel('Stáhnout platby od')).toHaveAccessibleDescription(
-      /^Platby za posledních 89 dní/,
+      /^Platby za posledních 89\sdní/,
     );
 
     await page.goto('/sprava/platby?od=2026-10-01&do=2026-10-05');

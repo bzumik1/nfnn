@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BankAccount } from './bank-account';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const BANK_CODES_URL = '/api/donations/bank-codes';
 
@@ -32,11 +33,15 @@ describe('Given a Czech account of a bank the site names itself', () => {
     const element = host(render('2000145399/0800'));
 
     expect(element.querySelectorAll('.ui-figures')).toHaveLength(1);
-    expect(element.querySelector('.ui-figures')?.textContent?.trim()).toBe('2000145399/0800');
-    expect(element.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+    expect(withOrdinarySpaces(element.querySelector('.ui-figures')?.textContent)?.trim()).toBe(
+      '2000145399/0800',
+    );
+    expect(withOrdinarySpaces(element.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
       '2000145399/0800 · Česká spořitelna',
     );
-    expect(element.querySelector('.bank')?.textContent).toBe('·\u00a0Česká spořitelna');
+    expect(withOrdinarySpaces(element.querySelector('.bank')?.textContent)).toBe(
+      '· Česká spořitelna',
+    );
     http.expectNone(BANK_CODES_URL);
   });
 });
@@ -63,7 +68,7 @@ describe('Given an account whose bank code the site does not name itself', () =>
     });
     fixture.detectChanges();
 
-    expect(host(fixture).textContent?.replace(/\s+/g, ' ').trim()).toBe(
+    expect(withOrdinarySpaces(host(fixture).textContent)?.replace(/\s+/g, ' ').trim()).toBe(
       '1234567890/4000 · Max banka',
     );
   });
@@ -74,8 +79,8 @@ describe('Given an account whose bank code the site does not name itself', () =>
     http.expectOne(BANK_CODES_URL).flush({ fetchedAt: null, items: [] });
     fixture.detectChanges();
 
-    expect(host(fixture).textContent?.trim()).toBe('2000145399/9999');
-    expect(host(fixture).textContent).not.toContain('·');
+    expect(withOrdinarySpaces(host(fixture).textContent)?.trim()).toBe('2000145399/9999');
+    expect(withOrdinarySpaces(host(fixture).textContent)).not.toContain('·');
     expect(host(fixture).querySelector('.bank')).toBeNull();
   });
 });

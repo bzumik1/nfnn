@@ -499,7 +499,7 @@ function sectionRows(unpaired: number): readonly SectionRowGroup[] {
     },
     {
       id: 'admin-home-more',
-      label: $localize`:@@admin.home.sections.more.group:Občas a pro technika`,
+      label: $localize`:@@admin.home.sections.more.group:Občas a\u00a0pro technika`,
       rows: [
         {
           path: ADMIN_MORE_PATH,

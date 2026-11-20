@@ -4,7 +4,7 @@
       Server neodpovídá
     </h2>
     <p class="ui-dialog__lead" i18n="@@layout.offline.sheet.serverLead">
-      Připojení k internetu máte, ale server fondu teď neodpovídá. Zkoušíme to znovu sami.
+      Připojení k&nbsp;internetu máte, ale server fondu teď neodpovídá. Zkoušíme to znovu sami.
     </p>
   } @else if (connectivity.offline()) {
     <h2 id="offline-sheet-title" class="ui-dialog__title" i18n="@@layout.offline.sheet.title">
@@ -22,7 +22,7 @@
     <p class="offline-sheet-text">
       @if (dataTime(); as time) {
         <ng-container i18n="@@layout.offline.sheet.dataTime"
-          >Zobrazujeme údaje z {{ time }}, nemusí být aktuální.</ng-container
+          >Zobrazujeme údaje z&nbsp;{{ time }}, nemusí být aktuální.</ng-container
         >&ngsp;
       }
       @if (serverDown()) {

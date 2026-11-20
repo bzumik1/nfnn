@@ -10,6 +10,7 @@ import { administrator } from '../testing/admin-fixtures';
 import { AdminAdministrators } from './admin-administrators';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const LIST_URL = '/api/admin/donors/administrators';
 const PEOPLE_URL = '/api/admin/content/people';
@@ -69,7 +70,7 @@ describe('Given an administrator on the administrators page', () => {
   }
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -79,7 +80,7 @@ describe('Given an administrator on the administrators page', () => {
   }
 
   function rowText(row: HTMLElement): string {
-    return (row.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(row.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function button(row: HTMLElement, name: string): HTMLButtonElement {
@@ -94,7 +95,7 @@ describe('Given an administrator on the administrators page', () => {
 
   function badges(row: HTMLElement): string[] {
     return Array.from(row.querySelectorAll('.ui-person-row__badges li')).map((badge) =>
-      (badge.textContent ?? '').trim(),
+      (withOrdinarySpaces(badge.textContent) ?? '').trim(),
     );
   }
 
@@ -119,10 +120,12 @@ describe('Given an administrator on the administrators page', () => {
     await listed();
 
     const [first, second] = rows();
-    expect(first.querySelector('.ui-person-row__name')?.textContent?.trim()).toBe('Jana Nováková');
+    expect(
+      withOrdinarySpaces(first.querySelector('.ui-person-row__name')?.textContent)?.trim(),
+    ).toBe('Jana Nováková');
     expect(text('.administrator-row:first-child .ui-person-row__meta')).toBe('jana@example.cz');
     expect(badges(first)).toEqual(['To jste vy', 'Dvoufaktorové ověření zapnuté']);
-    expect(first.querySelector('app-avatar')?.textContent?.trim()).toBe('JN');
+    expect(withOrdinarySpaces(first.querySelector('app-avatar')?.textContent)?.trim()).toBe('JN');
     expect(rowText(first)).toContain('Svůj účet spravujete v Údajích a zabezpečení.');
     expect(first.querySelector('.ui-person-row__note a')?.getAttribute('href')).toBe(
       '/darce/udaje',
@@ -133,7 +136,7 @@ describe('Given an administrator on the administrators page', () => {
     );
     expect(badges(second)).toEqual(['Dvoufaktorové ověření vypnuté']);
     expect(rowText(second)).toContain('Správa se mu otevře jen přístupovým klíčem.');
-    expect(second.querySelector('app-avatar')?.textContent?.trim()).toBe('PS');
+    expect(withOrdinarySpaces(second.querySelector('app-avatar')?.textContent)?.trim()).toBe('PS');
     expect(second.querySelector('.ui-person-row__actions')).not.toBeNull();
     expect(button(second, 'Odebrat roli správce')).toBeTruthy();
     expect(second.querySelectorAll('button')).toHaveLength(1);
@@ -161,7 +164,7 @@ describe('Given an administrator on the administrators page', () => {
     );
     expect(first.querySelector('app-avatar img')?.getAttribute('alt')).toBe('');
     expect(second.querySelector('app-avatar img')).toBeNull();
-    expect(second.querySelector('app-avatar')?.textContent?.trim()).toBe('PS');
+    expect(withOrdinarySpaces(second.querySelector('app-avatar')?.textContent)?.trim()).toBe('PS');
   });
 
   it('when the people of the foundation cannot be loaded, then every administrator keeps the initials and no alert shows', async () => {
@@ -170,7 +173,9 @@ describe('Given an administrator on the administrators page', () => {
     await listed();
 
     expect(rows()).toHaveLength(2);
-    expect(rows()[0].querySelector('app-avatar')?.textContent?.trim()).toBe('JN');
+    expect(withOrdinarySpaces(rows()[0].querySelector('app-avatar')?.textContent)?.trim()).toBe(
+      'JN',
+    );
     expect(text('[role="alert"]:not(:empty)')).toBe('');
   });
 
@@ -388,7 +393,7 @@ describe('Given an administrator on the administrators page', () => {
     });
 
     it('then the administrators show at once, without the loading line, and are refreshed behind them', async () => {
-      expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
+      expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain('Načítáme');
       expect(rows()).toHaveLength(2);
 
       peopleArrive();
@@ -429,7 +434,7 @@ describe('Given an administrator on the administrators page', () => {
       fixture.detectChanges();
 
       expect(rows()).toHaveLength(1);
-      expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
+      expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain('Načítáme');
     });
   });
 

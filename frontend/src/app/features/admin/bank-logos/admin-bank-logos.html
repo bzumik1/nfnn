@@ -1,23 +1,23 @@
 <div class="ui-page ui-page--full container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.bankLogos.heading">Loga bank</h1>
   <p class="ui-page-intro intro-lead" i18n="@@admin.bankLogos.intro">
-    Vedle čísel českých účtů web ukazuje kulaté logo banky. Server ho stáhne z adresy, kterou tu
-    zadáte, upraví ho na malý čtverec a posílá ho sám, takže prohlížeč dárce nekontaktuje banku ani
-    Apple. Banka bez loga má u svých účtů zkratku názvu.
+    Vedle čísel českých účtů web ukazuje kulaté logo banky. Server ho stáhne z&nbsp;adresy, kterou
+    tu zadáte, upraví ho na malý čtverec a&nbsp;posílá ho sám, takže prohlížeč dárce nekontaktuje
+    banku ani Apple. Banka bez loga má u&nbsp;svých účtů zkratku názvu.
   </p>
   <p class="ui-page-intro" i18n="@@admin.bankLogos.intro.sources">
-    Server přijme jen adresu ikony aplikace z App Store (is1-ssl.mzstatic.com až
-    is5-ssl.mzstatic.com) nebo obrázku z webu velkých bank (Česká spořitelna, ČSOB, KB, MONETA, Fio,
-    Air Bank, Raiffeisenbank, UniCredit, mBank), vždy přes https a bez části za otazníkem. Obrázek
-    musí být PNG nebo JPEG. Jednou týdně server loga stáhne znovu; když se to nepovede, ukazuje dál
-    dosavadní logo.
+    Server přijme jen adresu ikony aplikace z&nbsp;App Store (is1-ssl.mzstatic.com až
+    is5-ssl.mzstatic.com) nebo obrázku z&nbsp;webu velkých bank (Česká spořitelna, ČSOB, KB, MONETA,
+    Fio, Air Bank, Raiffeisenbank, UniCredit, mBank), vždy přes https a&nbsp;bez části za otazníkem.
+    Obrázek musí být PNG nebo JPEG. Jednou týdně server loga stáhne znovu; když se to nepovede,
+    ukazuje dál dosavadní logo.
   </p>
 
   <app-live-notice #noticeRegion tabindex="-1" [notice]="notice()" />
 
   <section class="ui-card" aria-labelledby="bank-logos-title">
     <h2 id="bank-logos-title" class="ui-card__title" i18n="@@admin.bankLogos.list.title">
-      Banky s logem
+      Banky s&nbsp;logem
     </h2>
     @switch (state()) {
       @case ('loading') {
@@ -46,7 +46,7 @@
       @case ('ready') {
         @if (rows().length === 0) {
           <p class="ui-card__empty" i18n="@@admin.bankLogos.empty">
-            Žádná banka zatím logo nemá. U čísel účtů se ukazují zkratky názvů bank.
+            Žádná banka zatím logo nemá. U&nbsp;čísel účtů se ukazují zkratky názvů bank.
           </p>
         } @else {
           <div class="ui-card__body">
@@ -69,7 +69,7 @@
                       class="ui-person-row__note bank-not-allowed"
                       i18n="@@admin.bankLogos.notAllowed"
                     >
-                      Adresa už není povolená: logo se na webu neukazuje a server ho znovu
+                      Adresa už není povolená: logo se na webu neukazuje a&nbsp;server ho znovu
                       nestahuje. Zadejte novou adresu, nebo logo odeberte.
                     </p>
                   }
@@ -115,7 +115,9 @@
                         [attr.aria-describedby]="titleId(item.code)"
                       >
                         <app-busy-label [busy]="isBusy(item.code, 'save')">
-                          <span when-idle i18n="@@admin.bankLogos.save">Uložit a stáhnout</span>
+                          <span when-idle i18n="@@admin.bankLogos.save"
+                            >Uložit a&nbsp;stáhnout</span
+                          >
                           <span when-busy i18n="@@admin.bankLogos.busy">Stahujeme…</span>
                         </app-busy-label>
                       </button>
@@ -169,8 +171,8 @@
       novalidate
     >
       <p class="ui-card__intro add-intro" i18n="@@admin.bankLogos.add.intro">
-        Kód banky je čtyřmístné číslo za lomítkem v čísle účtu. Logo jde nastavit i pro kód, který
-        seznam ČNB nezná.
+        Kód banky je čtyřmístné číslo za lomítkem v&nbsp;čísle účtu. Logo jde nastavit i&nbsp;pro
+        kód, který seznam ČNB nezná.
       </p>
       <app-form-field
         label="Kód banky"
@@ -223,7 +225,7 @@
         [attr.aria-busy]="busy()?.action === 'add'"
       >
         <app-busy-label [busy]="busy()?.action === 'add'">
-          <span when-idle i18n="@@admin.bankLogos.add.submit">Přidat a stáhnout</span>
+          <span when-idle i18n="@@admin.bankLogos.add.submit">Přidat a&nbsp;stáhnout</span>
           <span when-busy i18n="@@admin.bankLogos.busy">Stahujeme…</span>
         </app-busy-label>
       </button>

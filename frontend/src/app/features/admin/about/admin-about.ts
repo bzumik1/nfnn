@@ -50,7 +50,7 @@ interface ChosenPhoto {
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
-const SAVED = $localize`:@@admin.about.saved:Uloženo. Fotka je na webu v sekci O nás.`;
+const SAVED = $localize`:@@admin.about.saved:Uloženo. Fotka je na webu v\u00a0sekci O\u00a0nás.`;
 const SAVE_FAILED = $localize`:@@admin.about.save.failed:Fotku se nepodařilo uložit. Zkuste to prosím znovu.`;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -124,7 +124,7 @@ export class AdminAbout {
     return photo.focalPoint?.x !== savedPoint?.x || photo.focalPoint?.y !== savedPoint?.y;
   });
   protected readonly previewShapes: readonly PreviewShape[] = [
-    { shape: 'square', label: $localize`:@@admin.about.preview.square:V sekci O nás` },
+    { shape: 'square', label: $localize`:@@admin.about.preview.square:V\u00a0sekci O\u00a0nás` },
   ];
   protected readonly busy = computed(() => this.saving() || this.removing() || this.uploading());
 
@@ -171,7 +171,7 @@ export class AdminAbout {
     }
     if (file.size > MAX_IMAGE_BYTES) {
       this.uploadError.set(
-        $localize`:@@admin.about.photo.tooLarge:Fotka je větší než 10 MB. Zmenšete ji prosím a zkuste to znovu.`,
+        $localize`:@@admin.about.photo.tooLarge:Fotka je větší než 10 MB. Zmenšete ji prosím a\u00a0zkuste to znovu.`,
       );
       return;
     }
@@ -249,7 +249,7 @@ export class AdminAbout {
           this.show(about.photo);
           this.notice.set({
             kind: 'status',
-            text: $localize`:@@admin.about.removed:Fotku jsme z webu odebrali a smazali. Sekce O nás ukazuje zase ilustrační fotku.`,
+            text: $localize`:@@admin.about.removed:Fotku jsme z\u00a0webu odebrali a\u00a0smazali. Sekce O\u00a0nás ukazuje zase ilustrační fotku.`,
           });
           afterNextRender(
             () => this.host.nativeElement.querySelector<HTMLInputElement>('#about-photo')?.focus(),

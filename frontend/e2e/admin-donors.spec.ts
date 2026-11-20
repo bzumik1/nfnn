@@ -347,7 +347,7 @@ test.describe('Given an administrator on the donors page', () => {
     await expect(erasureCard.getByRole('button', { name: 'Vymazat osobní údaje' })).toBeFocused();
     await erasureCard.getByRole('button', { name: 'Vymazat osobní údaje' }).click();
     await expect(eraseDialog.getByRole('button', { name: 'Vymazat osobní údaje' })).toBeDisabled();
-    await eraseDialog.getByRole('checkbox', { name: /Dárce o výmaz požádal/ }).check();
+    await eraseDialog.getByRole('checkbox', { name: /Dárce o\svýmaz požádal/ }).check();
     await eraseDialog.getByRole('button', { name: 'Vymazat osobní údaje' }).click();
     await expect(
       page.getByRole('status').filter({ hasText: /\S/ }).filter({ hasNotText: 'Načítáme' }),
@@ -662,7 +662,7 @@ test.describe('Given an administrator on the donors page', () => {
         range.selectNodeContents(query === null ? element : element.querySelector(query)!);
         return new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top))).size;
       }, selector);
-    expect(await lines(/^Dar z 10\.\s10\.\s2026$/, null)).toBe(1);
+    expect(await lines(/^Dar z\s10\.\s10\.\s2026$/, null)).toBe(1);
     expect(await lines(/^17\.\s10\.\s2026\s11:00/, '.ui-date')).toBe(1);
   });
 

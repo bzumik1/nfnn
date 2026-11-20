@@ -97,7 +97,7 @@ function donorPage(name: string, path: string, donations = donorWithDonations): 
 async function unfoldPaymentQr(page: Page, scope = '#prispet'): Promise<void> {
   const otherDevice = page
     .locator(scope)
-    .getByRole('button', { name: /Platíte z jiného zařízení\?/ });
+    .getByRole('button', { name: /Platíte z\sjiného zařízení\?/ });
   await expect(page.locator(`${scope} .bank`)).toBeVisible();
   if (await otherDevice.isVisible()) {
     await otherDevice.click();

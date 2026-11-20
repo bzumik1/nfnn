@@ -186,7 +186,7 @@ test.describe('Given a visitor whose device shows the dark appearance', () => {
     await expect(page.getByRole('button', { name: 'Otevřít v aplikaci banky' })).toBeEnabled();
     expect(await violations(page)).toEqual([]);
 
-    await page.getByRole('button', { name: /Platíte z jiného zařízení\?/ }).click();
+    await page.getByRole('button', { name: /Platíte z\sjiného zařízení\?/ }).click();
     await expect(page.locator('#prispet .qr-code svg')).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });

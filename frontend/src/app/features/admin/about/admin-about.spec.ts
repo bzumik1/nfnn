@@ -16,6 +16,7 @@ import {
 import { aboutPhoto as heldPhoto } from '../../content/testing/about-fixtures';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const ABOUT_URL = '/api/admin/content/about';
 const MEDIA_URL = '/api/admin/content/media';
@@ -63,7 +64,7 @@ function element<T extends HTMLElement>(fixture: ComponentFixture<unknown>, sele
 }
 
 function text(fixture: ComponentFixture<unknown>, selector: string): string {
-  return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+  return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -256,7 +257,7 @@ describe('Given an administrator and an About section with a saved photo', () =>
   it('when they only tap a spot on the photo and save, then only the photo gets the point and the About section is not saved again', async () => {
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('figure.preview figcaption')).map(
-        (caption) => (caption as HTMLElement).textContent?.trim(),
+        (caption) => withOrdinarySpaces((caption as HTMLElement).textContent)?.trim(),
       ),
     ).toEqual(['V sekci O nás']);
     const frame = element<HTMLButtonElement>(fixture, 'button.frame');

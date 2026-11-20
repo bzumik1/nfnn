@@ -1,5 +1,6 @@
 import { DIAGNOSTICS_URL, LogPageHarness } from '../testing/log-page-harness';
 import { AdminThreadDump } from './admin-thread-dump';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const DUMP = [
   '"main" #1 state=RUNNABLE',
@@ -36,8 +37,12 @@ describe('Given an administrator on the thread dump page', () => {
     expect(page.cardTitled('Podle stavu').querySelector('.ui-list .ui-list__row')).not.toBeNull();
     const dump = page.cardTitled('Celý výpis');
     expect(dump.querySelector('.ui-card__bar app-copy-button')).not.toBeNull();
-    expect(dump.querySelector('pre')?.textContent).toContain('"main" #1 state=RUNNABLE');
-    expect(dump.querySelector('button.reload')?.textContent?.trim()).toBe('Načíst znovu');
+    expect(withOrdinarySpaces(dump.querySelector('pre')?.textContent)).toContain(
+      '"main" #1 state=RUNNABLE',
+    );
+    expect(withOrdinarySpaces(dump.querySelector('button.reload')?.textContent)?.trim()).toBe(
+      'Načíst znovu',
+    );
   });
 
   it('when they load it again, then a fresh dump replaces the old one', async () => {

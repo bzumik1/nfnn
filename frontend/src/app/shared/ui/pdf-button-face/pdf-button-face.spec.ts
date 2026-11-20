@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PdfButtonFace, PdfButtonState } from './pdf-button-face';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   imports: [PdfButtonFace],
@@ -30,7 +31,7 @@ describe('Given the face of a PDF button', () => {
   });
 
   const button = () => fixture.nativeElement.querySelector('button') as HTMLButtonElement;
-  const text = () => (button().textContent ?? '').replace(/\s+/g, ' ').trim();
+  const text = () => (withOrdinarySpaces(button().textContent) ?? '').replace(/\s+/g, ' ').trim();
   const current = () => button().querySelector('.pdf-button__layer--current') as HTMLElement;
   const icon = () => current().querySelector('.pdf-button__icon') as HTMLElement;
   const layers = () => Array.from(button().querySelectorAll<HTMLElement>('.pdf-button__layer'));
@@ -73,7 +74,7 @@ describe('Given the face of a PDF button', () => {
   it('when it waits, then it reserves the room of every other label without saying them', () => {
     expect(reserves()).toEqual(['Připravujeme PDF…', 'Otevřít PDF', 'Zkusit znovu']);
     for (const reserve of button().querySelectorAll('.pdf-button__reserve')) {
-      expect(reserve.textContent).toBe('');
+      expect(withOrdinarySpaces(reserve.textContent)).toBe('');
       expect(reserve.getAttribute('aria-hidden')).toBe('true');
     }
   });
@@ -85,7 +86,7 @@ describe('Given the face of a PDF button', () => {
       expect(text()).toBe('Připravujeme PDF…, dar z 10. 1. 2026');
       expect(icon().querySelector('.pdf-button__ring')).not.toBeNull();
       expect(button().querySelector('progress')).toBeNull();
-      expect(button().textContent).not.toMatch(/%/);
+      expect(withOrdinarySpaces(button().textContent)).not.toMatch(/%/);
     });
 
     it('then it still reserves the room of the labels it does not show', () => {

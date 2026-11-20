@@ -26,7 +26,7 @@ export function savedReceiptProgress(fileName: string): PdfProgressState {
 export function sharedReceiptProgress(fileName: string): PdfProgressState {
   return {
     kind: 'done',
-    text: $localize`:@@donor.dashboard.receipt.shared:Potvrzení ${fileName}:fileName: jste předali z nabídky sdílení.`,
+    text: $localize`:@@donor.dashboard.receipt.shared:Potvrzení ${fileName}:fileName: jste předali z\u00a0nabídky sdílení.`,
     brief: $localize`:@@donor.dashboard.receipt.brief.shared:PDF jste předali`,
   };
 }

@@ -8,6 +8,7 @@ import {
   SCAN_TIME_LIMIT_MS,
 } from './proof-input';
 import { type FrameRegion, PictureTooLarge, SCAN_DEVICE, type ScanDevice } from './scan-device';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const DIGITS = '10031885061882060800046343990168929322040303989858395561963591784434255';
 const LINK = `https://nfnn.cz/overit#${DIGITS}`;
@@ -130,17 +131,17 @@ describe('Given the ways to read a receipt code on the verification page', () =>
 
   function button(name: string): HTMLButtonElement | undefined {
     return Array.from(element().querySelectorAll('button')).find(
-      (each) => each.textContent?.trim() === name,
+      (each) => withOrdinarySpaces(each.textContent)?.trim() === name,
     );
   }
 
   function alertText(): string {
-    return element().querySelector('[role="alert"]')?.textContent?.trim() ?? '';
+    return withOrdinarySpaces(element().querySelector('[role="alert"]')?.textContent)?.trim() ?? '';
   }
 
   function statusText(): string {
     return Array.from(element().querySelectorAll('[role="status"]'), (line) =>
-      line.textContent?.trim(),
+      withOrdinarySpaces(line.textContent)?.trim(),
     )
       .filter(Boolean)
       .join(' ');
@@ -184,18 +185,20 @@ describe('Given the ways to read a receipt code on the verification page', () =>
     await render();
 
     expect(
-      Array.from(element().querySelectorAll('h2'), (heading) => heading.textContent?.trim()),
+      Array.from(element().querySelectorAll('h2'), (heading) =>
+        withOrdinarySpaces(heading.textContent)?.trim(),
+      ),
     ).toEqual(['Načíst fotoaparátem', 'Nahrát soubor', 'Vložit odkaz']);
     expect(button('Naskenovat QR kód')).toBeDefined();
-    expect(element().querySelector('label[for="proof-file"]')?.textContent?.trim()).toBe(
-      'Nahrát PDF nebo fotku',
-    );
+    expect(
+      withOrdinarySpaces(element().querySelector('label[for="proof-file"]')?.textContent)?.trim(),
+    ).toBe('Nahrát PDF nebo fotku');
     expect((element().querySelector('#proof-file') as HTMLInputElement).accept).toBe(
       'application/pdf,image/*',
     );
-    expect(element().querySelector('label[for="proof-link"]')?.textContent?.trim()).toBe(
-      'Odkaz z QR kódu',
-    );
+    expect(
+      withOrdinarySpaces(element().querySelector('label[for="proof-link"]')?.textContent)?.trim(),
+    ).toBe('Odkaz z QR kódu');
   });
 
   it('when it shows, then the link field, the last field of its form, names its return key go', async () => {
@@ -210,7 +213,9 @@ describe('Given the ways to read a receipt code on the verification page', () =>
 
     expect(button('Naskenovat QR kód')).toBeUndefined();
     expect(
-      Array.from(element().querySelectorAll('h2'), (heading) => heading.textContent?.trim()),
+      Array.from(element().querySelectorAll('h2'), (heading) =>
+        withOrdinarySpaces(heading.textContent)?.trim(),
+      ),
     ).toEqual(['Nahrát soubor', 'Vložit odkaz']);
   });
 
@@ -510,7 +515,7 @@ describe('Given the ways to read a receipt code on the verification page', () =>
         button('Naskenovat QR kód')?.click();
         await settle();
 
-        expect(alertText()).toBe(text);
+        expect(alertText()).toBe(withOrdinarySpaces(text));
         expect(button('Naskenovat QR kód')).toBeDefined();
       });
     }
@@ -681,7 +686,9 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       const field = element().querySelector('#proof-link') as HTMLInputElement;
       expect(field.getAttribute('aria-invalid')).toBe('true');
       expect(document.activeElement).toBe(field);
-      expect(element().querySelector('#proof-link-error')?.textContent?.trim()).toBe(
+      expect(
+        withOrdinarySpaces(element().querySelector('#proof-link-error')?.textContent)?.trim(),
+      ).toBe(
         'Tohle není odkaz z QR kódu potvrzení. Musí začínat https://nfnn.cz/overit# a pokračovat číslicemi.',
       );
     });
@@ -692,9 +699,9 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       await paste('');
 
       expect(found).toEqual([]);
-      expect(element().querySelector('#proof-link-error')?.textContent?.trim()).toBe(
-        'Vložte odkaz z QR kódu potvrzení.',
-      );
+      expect(
+        withOrdinarySpaces(element().querySelector('#proof-link-error')?.textContent)?.trim(),
+      ).toBe('Vložte odkaz z QR kódu potvrzení.');
     });
   });
 });

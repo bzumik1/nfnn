@@ -142,7 +142,7 @@ export class AdminReport {
       required: $localize`:@@admin.report.recipients.required:Vyplňte prosím aspoň jednu e-mailovou adresu.`,
       emailList: $localize`:@@admin.report.recipients.invalid:Adresa „${firstInvalidAddress(addresses) ?? ''}:address:“ není platná e-mailová adresa. Pište každou adresu na vlastní řádek.`,
       emailListLength: $localize`:@@admin.report.recipients.tooMany:Přehled může mít nejvíc ${MAX_REPORT_RECIPIENTS}:max: příjemců.`,
-      emailListDuplicate: $localize`:@@admin.report.recipients.duplicate:Adresa „${firstRepeatedAddress(addresses) ?? ''}:address:“ je v seznamu dvakrát.`,
+      emailListDuplicate: $localize`:@@admin.report.recipients.duplicate:Adresa „${firstRepeatedAddress(addresses) ?? ''}:address:“ je v\u00a0seznamu dvakrát.`,
     };
   });
 
@@ -394,7 +394,7 @@ export class AdminReport {
             if (current !== null) {
               if (this.changedMeanwhile() !== null) {
                 this.announcer.announce(
-                  $localize`:@@admin.report.settings.changedAgain:Nastavení mezitím změnil ještě někdo další. Vyberte prosím znovu, co s vašimi úpravami.`,
+                  $localize`:@@admin.report.settings.changedAgain:Nastavení mezitím změnil ještě někdo další. Vyberte prosím znovu, co s\u00a0vašimi úpravami.`,
                 );
               }
               this.changedMeanwhile.set({

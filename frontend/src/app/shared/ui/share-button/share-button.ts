@@ -24,7 +24,7 @@ export class ShareButton {
   protected readonly copyWhat = $localize`:@@ui.share.copyWhat:odkaz na stránku`;
   protected readonly copyLabel = $localize`:@@ui.share.copyLink:Kopírovat odkaz`;
   protected readonly copiedStatus = $localize`:@@ui.share.copied:Odkaz je zkopírovaný, můžete ho vložit do zprávy.`;
-  protected readonly copyFailedStatus = $localize`:@@ui.share.copyFailed:Zkopírovat se nepodařilo. Odkaz najdete v adresním řádku prohlížeče.`;
+  protected readonly copyFailedStatus = $localize`:@@ui.share.copyFailed:Zkopírovat se nepodařilo. Odkaz najdete v\u00a0adresním řádku prohlížeče.`;
 
   protected readonly sharing = signal(false);
   protected readonly refused = signal(false);

@@ -11,6 +11,7 @@ import { PdfProgress } from '../../../../shared/ui/pdf-progress/pdf-progress';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { DonorDonations } from '../donor-donations';
 import { DonorOverview } from './donor-overview';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -94,7 +95,7 @@ describe("Given the donor's overview while the gifts load", () => {
   const all = (selector: string) => [...root().querySelectorAll<HTMLElement>(selector)];
   const statusLines = () =>
     all('[role="status"]')
-      .map((line) => (line.textContent ?? '').replace(/\s+/g, ' ').trim())
+      .map((line) => (withOrdinarySpaces(line.textContent) ?? '').replace(/\s+/g, ' ').trim())
       .filter((line) => line !== '');
 
   it('when the answer takes longer than the delay, then the place of the skeletons is held from the start, they show only after the delay, hidden from screen readers, one status line names the loading and Poslat dar stays', async () => {

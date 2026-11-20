@@ -27,7 +27,7 @@
             @if (progress(); as progress) {
               @if (progress.total > 0) {
                 <p class="first-download__count" i18n="@@admin.lock.firstDownload.count">
-                  {{ progress.done }} z {{ progress.total }}
+                  {{ progress.done }} z&nbsp;{{ progress.total }}
                 </p>
                 <progress
                   class="first-download__bar"
@@ -46,7 +46,7 @@
               aria-hidden="true"
               i18n="@@admin.lock.firstDownload.stored"
             >
-              Správa je uložená v tomto zařízení.
+              Správa je uložená v&nbsp;tomto zařízení.
             </p>
           </div>
         }

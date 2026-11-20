@@ -17,6 +17,7 @@ import { OpenAlert } from '../../core/push/open-alerts-api';
 import { AccountReturn } from '../account-sheet/account-return';
 import { AccountSheet } from '../account-sheet/account-sheet';
 import { AppHeader } from './app-header';
+import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
 @Component({ template: '' })
 class Blank {}
@@ -102,16 +103,20 @@ describe('Given the header of the app', () => {
     const header = await openAt('/darce/prehled');
     const account = header.querySelector('button.account-button')!;
 
-    expect(account.querySelector('.account-badge')?.textContent?.trim()).toBe('1');
+    expect(withOrdinarySpaces(account.querySelector('.account-badge')?.textContent)?.trim()).toBe(
+      '1',
+    );
     expect(account.querySelector('.account-badge')?.getAttribute('aria-hidden')).toBe('true');
-    expect(account.textContent?.replace(/\s+/g, ' ')).toContain('Účet JN 1 otázka čeká na odpověď');
+    expect(withOrdinarySpaces(account.textContent)?.replace(/\s+/g, ' ')).toContain(
+      'Účet JN 1 otázka čeká na odpověď',
+    );
 
     await TestBed.inject(Router).navigateByUrl('/darce/ucty');
     fixture.detectChanges();
     await fixture.whenStable();
 
     expect(account.querySelector('.account-badge')).toBeNull();
-    expect(account.textContent).not.toContain('otázka');
+    expect(withOrdinarySpaces(account.textContent)).not.toContain('otázka');
   });
 
   it('when an administrator has open faults, then the account button counts only them, as a warning, on every page and beside a waiting question', async () => {
@@ -131,21 +136,23 @@ describe('Given the header of the app', () => {
     const account = header.querySelector('button.account-button')!;
     const badge = (): Element | null => account.querySelector('.account-badge');
 
-    expect(badge()?.textContent?.trim()).toBe('1');
+    expect(withOrdinarySpaces(badge()?.textContent)?.trim()).toBe('1');
     expect(badge()?.classList.contains('account-badge--fault')).toBe(true);
-    expect(account.textContent?.replace(/\s+/g, ' ')).toContain('Účet JN 1 porucha');
-    expect(account.textContent).not.toContain('otázka');
+    expect(withOrdinarySpaces(account.textContent)?.replace(/\s+/g, ' ')).toContain(
+      'Účet JN 1 porucha',
+    );
+    expect(withOrdinarySpaces(account.textContent)).not.toContain('otázka');
 
     await TestBed.inject(Router).navigateByUrl('/sprava/upozorneni');
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(badge()?.textContent?.trim()).toBe('1');
+    expect(withOrdinarySpaces(badge()?.textContent)?.trim()).toBe('1');
 
     openAlerts.set([]);
     fixture.detectChanges();
     await fixture.whenStable();
     expect(badge()?.classList.contains('account-badge--fault')).toBe(false);
-    expect(account.textContent).toContain('1 otázka čeká na odpověď');
+    expect(withOrdinarySpaces(account.textContent)).toContain('1 otázka čeká na odpověď');
   });
 
   it('when nobody is signed in, then the logo leads home and Přihlásit se opens the sign-in', async () => {
@@ -153,7 +160,7 @@ describe('Given the header of the app', () => {
 
     expect(header.querySelector('header a.brand')?.getAttribute('href')).toBe('/');
     const signIn = header.querySelector<HTMLButtonElement>('button.sign-in')!;
-    expect(signIn.textContent?.trim()).toBe('Přihlásit se');
+    expect(withOrdinarySpaces(signIn.textContent)?.trim()).toBe('Přihlásit se');
 
     signIn.click();
 
@@ -304,11 +311,13 @@ describe('Given the header of the app', () => {
     const header = await openAt('/o-nas');
     const account = header.querySelector<HTMLButtonElement>('button.account-button')!;
 
-    expect(account.querySelector('.visually-hidden')?.textContent?.trim()).toBe('Účet');
+    expect(withOrdinarySpaces(account.querySelector('.visually-hidden')?.textContent)?.trim()).toBe(
+      'Účet',
+    );
     const initials = account.querySelector('.account-initials')!;
-    expect(initials.textContent?.trim()).toBe('JN');
+    expect(withOrdinarySpaces(initials.textContent)?.trim()).toBe('JN');
     expect(initials.closest('[aria-hidden="true"]')).toBeNull();
-    expect(account.textContent?.replace(/\s+/g, ' ').trim()).toBe('Účet JN');
+    expect(withOrdinarySpaces(account.textContent)?.replace(/\s+/g, ' ').trim()).toBe('Účet JN');
     expect(account.getAttribute('aria-haspopup')).toBe('dialog');
     expect(header.querySelector('button.sign-in')).toBeNull();
 
@@ -431,7 +440,7 @@ describe('Given the header of the app', () => {
 
       await scrolledPast(header);
 
-      expect(title.textContent?.trim()).toBe('Bankovní účty');
+      expect(withOrdinarySpaces(title.textContent)?.trim()).toBe('Bankovní účty');
       expect(title.classList).toContain('edge-title--shown');
     });
 
@@ -495,7 +504,9 @@ describe('Given the header of the app', () => {
       '/api/content/media/0199f3e0-0000-7000-8000-00000000c101?w=480',
     );
     expect(account.querySelector('img')?.getAttribute('alt')).toBe('');
-    expect(account.querySelector('.visually-hidden')?.textContent?.trim()).toBe('Účet');
+    expect(withOrdinarySpaces(account.querySelector('.visually-hidden')?.textContent)?.trim()).toBe(
+      'Účet',
+    );
   });
 
   it('when an administrator without a portrait is signed in, then the account button keeps the initials', async () => {
@@ -510,6 +521,8 @@ describe('Given the header of the app', () => {
 
     const account = header.querySelector<HTMLButtonElement>('button.account-button')!;
     expect(account.querySelector('img')).toBeNull();
-    expect(account.querySelector('.account-initials')?.textContent?.trim()).toBe('JN');
+    expect(
+      withOrdinarySpaces(account.querySelector('.account-initials')?.textContent)?.trim(),
+    ).toBe('JN');
   });
 });

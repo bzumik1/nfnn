@@ -17,6 +17,7 @@ import { DonorCopySync, type SyncOutcome } from '../../../donations/device-copy/
 import { DeviceDataCard } from './device-data-card';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const DONOR = sampleDonor();
 
@@ -63,7 +64,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
   }
 
   function state(): string {
-    return normalized(root().querySelector('.device-data-state')?.textContent);
+    return normalized(withOrdinarySpaces(root().querySelector('.device-data-state')?.textContent));
   }
 
   async function settle(): Promise<void> {
@@ -104,7 +105,9 @@ describe('Given the card "Data v tomto zařízení"', () => {
     await settle();
 
     expect(state()).toBe('Uloženo v zařízení · aktualizováno 5. 11. 2026 10:30');
-    expect(normalized(root().querySelector('.device-data-about')?.textContent)).toBe(
+    expect(
+      normalized(withOrdinarySpaces(root().querySelector('.device-data-about')?.textContent)),
+    ).toBe(
       'Kopie vašich darů, potvrzení a bankovních účtů se v tomto prohlížeči ukládá zašifrovaně a klíč k ní zná jen toto zařízení. Na serveru se tím nic nemění. Když jste se přihlásili heslem, zůstane kopie po odhlášení zamčená tímto heslem. Po přihlášení přístupovým klíčem zůstane jen tehdy, když to váš přístupový klíč umí; jinak se odhlášením smaže.',
     );
   });
@@ -113,8 +116,8 @@ describe('Given the card "Data v tomto zařízení"', () => {
     vault.opened.set(openedWith({ chunks: [], summary: {}, storedAt: '2026-11-05T09:30:00Z' }));
     await settle();
 
-    expect(root().querySelector('.device-data-state')?.textContent).toMatch(
-      /zařízení\u00a0· aktualizováno/,
+    expect(withOrdinarySpaces(root().querySelector('.device-data-state')?.textContent)).toMatch(
+      /zařízení · aktualizováno/,
     );
   });
 
@@ -131,7 +134,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
     await settle();
 
     const parts = Array.from(root().querySelectorAll('.device-data-time')).map((part) =>
-      normalized(part.textContent),
+      normalized(withOrdinarySpaces(part.textContent)),
     );
     expect(parts).toEqual(['5. 11. 2026', '10:30']);
   });
@@ -189,9 +192,11 @@ describe('Given the card "Data v tomto zařízení"', () => {
       reload('stored');
       await settle();
 
-      expect(normalized(root().querySelector('[role="status"]:not(:empty)')?.textContent)).toBe(
-        'Data jsou načtená znovu.',
-      );
+      expect(
+        normalized(
+          withOrdinarySpaces(root().querySelector('[role="status"]:not(:empty)')?.textContent),
+        ),
+      ).toBe('Data jsou načtená znovu.');
       expect(button('Načíst data znovu').disabled).toBe(false);
     });
 
@@ -199,16 +204,22 @@ describe('Given the card "Data v tomto zařízení"', () => {
       reload('failed');
       await settle();
 
-      expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
-        'Data se nepodařilo načíst. Zkontrolujte připojení a zkuste to prosím znovu.',
-      );
+      expect(
+        normalized(
+          withOrdinarySpaces(root().querySelector('[role="alert"]:not(:empty)')?.textContent),
+        ),
+      ).toBe('Data se nepodařilo načíst. Zkontrolujte připojení a zkuste to prosím znovu.');
     });
 
     it('and the copy is closed meanwhile, then the alert does not blame the connection', async () => {
       reload('no-copy');
       await settle();
 
-      expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
+      expect(
+        normalized(
+          withOrdinarySpaces(root().querySelector('[role="alert"]:not(:empty)')?.textContent),
+        ),
+      ).toBe(
         'Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz a přiložte diagnostický soubor z části „Když web nefunguje“.',
       );
     });
@@ -217,7 +228,11 @@ describe('Given the card "Data v tomto zařízení"', () => {
       reload('mismatch');
       await settle();
 
-      expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
+      expect(
+        normalized(
+          withOrdinarySpaces(root().querySelector('[role="alert"]:not(:empty)')?.textContent),
+        ),
+      ).toBe(
         'Data ze serveru se nepodařilo ověřit. Zkuste je prosím za chvíli načíst znovu, a když to nepůjde, napište nám na info@nfnn.cz a přiložte diagnostický soubor z části „Když web nefunguje“.',
       );
     });
@@ -234,7 +249,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
     expect(download.reload).not.toHaveBeenCalled();
     expect(reloadButton.getAttribute('aria-disabled')).toBe('true');
     const hint = document.getElementById(reloadButton.getAttribute('aria-describedby') ?? '');
-    expect(normalized(hint?.textContent)).toBe('Potřebuje připojení');
+    expect(normalized(withOrdinarySpaces(hint?.textContent))).toBe('Potřebuje připojení');
   });
 
   describe('when the donor asks to delete the data on this device', () => {
@@ -246,10 +261,12 @@ describe('Given the card "Data v tomto zařízení"', () => {
     it('then a dialog says the copy goes from this device, the donor is signed out here, the server keeps everything and the copy comes back at the next sign-in', () => {
       const dialog = document.querySelector('dialog')!;
 
-      expect(normalized(dialog.querySelector('h2')?.textContent)).toBe(
+      expect(normalized(withOrdinarySpaces(dialog.querySelector('h2')?.textContent))).toBe(
         'Smazat data z tohoto zařízení?',
       );
-      expect(normalized(dialog.querySelector('.ui-dialog__lead')?.textContent)).toBe(
+      expect(
+        normalized(withOrdinarySpaces(dialog.querySelector('.ui-dialog__lead')?.textContent)),
+      ).toBe(
         'Kopie vašich darů, potvrzení a bankovních účtů se z tohoto zařízení smaže a odhlásíme vás. Na serveru zůstane vše, jak je; po dalším přihlášení se kopie stáhne znovu.',
       );
       expect(vault.forget).not.toHaveBeenCalled();
@@ -260,7 +277,11 @@ describe('Given the card "Data v tomto zařízení"', () => {
 
       expect(dialog.getAttribute('role')).toBe('alertdialog');
       expect(
-        normalized(document.getElementById(dialog.getAttribute('aria-describedby')!)?.textContent),
+        normalized(
+          withOrdinarySpaces(
+            document.getElementById(dialog.getAttribute('aria-describedby')!)?.textContent,
+          ),
+        ),
       ).toBe(
         'Kopie vašich darů, potvrzení a bankovních účtů se z tohoto zařízení smaže a odhlásíme vás. Na serveru zůstane vše, jak je; po dalším přihlášení se kopie stáhne znovu.',
       );
@@ -274,12 +295,12 @@ describe('Given the card "Data v tomto zařízení"', () => {
 
     it('then no one-letter word of its title and lead ends a line, as Czech typography asks', () => {
       const dialog = document.querySelector('dialog')!;
-      const lead = dialog.querySelector('.ui-dialog__lead')?.textContent ?? '';
+      const lead = withOrdinarySpaces(dialog.querySelector('.ui-dialog__lead')?.textContent) ?? '';
 
-      expect(dialog.querySelector('h2')?.textContent).toContain('z\u00a0tohoto');
-      expect(lead).toContain('a\u00a0bankovních');
-      expect(lead).toContain('z\u00a0tohoto');
-      expect(lead).toContain('a\u00a0odhlásíme');
+      expect(withOrdinarySpaces(dialog.querySelector('h2')?.textContent)).toContain('z tohoto');
+      expect(lead).toContain('a bankovních');
+      expect(lead).toContain('z tohoto');
+      expect(lead).toContain('a odhlásíme');
     });
 
     it('and cancels, then nothing is deleted and the dialog closes', async () => {
@@ -332,14 +353,18 @@ describe('Given the card "Data v tomto zařízení"', () => {
 
       await vi.waitFor(() =>
         expect(
-          normalized(document.querySelector('dialog [role="alert"]:not(:empty)')?.textContent),
+          normalized(
+            withOrdinarySpaces(
+              document.querySelector('dialog [role="alert"]:not(:empty)')?.textContent,
+            ),
+          ),
         ).toBe(
           'Data z tohoto zařízení se nepodařilo smazat. Zkuste to prosím znovu. Když to nepůjde, smažte data webu nfnn.cz v nastavení prohlížeče.',
         ),
       );
-      expect(document.querySelector('dialog [role="alert"]')?.textContent).toContain(
-        'Data z\u00a0tohoto zařízení',
-      );
+      expect(
+        withOrdinarySpaces(document.querySelector('dialog [role="alert"]')?.textContent),
+      ).toContain('Data z tohoto zařízení');
       expect(logout).not.toHaveBeenCalled();
       expect(TestBed.inject(SignedOutNotice).shown()).toBe(false);
       expect(button('Smazat data a odhlásit').disabled).toBe(false);

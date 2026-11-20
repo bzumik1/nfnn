@@ -39,6 +39,7 @@ import { everyOfferedYear } from '../device-copy/administration-overview';
 import { OpenAlert } from '../../../core/push/open-alerts-api';
 import { OpenAlerts } from '../../../core/push/open-alerts';
 import { LOADING_TIMINGS } from '../../../shared/ui/skeleton/loading-view';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
 const OVERVIEW_URL = '/api/admin/donations/overview';
@@ -115,7 +116,7 @@ describe('Given an administrator on the administration home', () => {
   });
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -125,8 +126,8 @@ describe('Given an administrator on the administration home', () => {
     fixture.nativeElement
       .querySelectorAll(`.ui-card[aria-labelledby="${card}"] .admin-data div`)
       .forEach((row: HTMLElement) => {
-        rows[row.querySelector('dt')?.textContent?.trim() ?? ''] = (
-          row.querySelector('dd')?.textContent ?? ''
+        rows[withOrdinarySpaces(row.querySelector('dt')?.textContent)?.trim() ?? ''] = (
+          withOrdinarySpaces(row.querySelector('dd')?.textContent) ?? ''
         )
           .replace(/\s+/g, ' ')
           .trim();
@@ -160,7 +161,7 @@ describe('Given an administrator on the administration home', () => {
       fixture.nativeElement.querySelectorAll(
         '.overview-table tbody tr, .overview-table tfoot tr',
       ) as NodeListOf<HTMLTableRowElement>,
-    ).map((row) => (row.textContent ?? '').replace(/\s+/g, ' ').trim());
+    ).map((row) => (withOrdinarySpaces(row.textContent) ?? '').replace(/\s+/g, ' ').trim());
   }
 
   it('when the page opens, then it asks for the import state with the token and says it is loading', () => {
@@ -229,9 +230,9 @@ describe('Given an administrator on the administration home', () => {
     const card = fixture.nativeElement.querySelector(
       '.ui-card[aria-labelledby="admin-import-title"]',
     ) as HTMLElement;
-    expect(card.querySelector('app-history-import h3')?.textContent?.trim()).toBe(
-      'Starší platby z banky',
-    );
+    expect(
+      withOrdinarySpaces(card.querySelector('app-history-import h3')?.textContent)?.trim(),
+    ).toBe('Starší platby z banky');
     expect((card.querySelector('input#history-from') as HTMLInputElement).value).toBe('2025-01-01');
   });
 
@@ -244,7 +245,9 @@ describe('Given an administrator on the administration home', () => {
     expect(importCard.querySelector('app-history-import')).toBeNull();
     const historyCard = fixture.nativeElement.querySelector('.admin-status')
       ?.nextElementSibling as HTMLElement;
-    expect(historyCard.querySelector('h2')?.textContent?.trim()).toBe('Starší platby z banky');
+    expect(withOrdinarySpaces(historyCard.querySelector('h2')?.textContent)?.trim()).toBe(
+      'Starší platby z banky',
+    );
     expect(historyCard.querySelector('h3')).toBeNull();
     expect((historyCard.querySelector('input#history-from') as HTMLInputElement).value).toBe(
       '2025-01-01',
@@ -396,7 +399,9 @@ describe('Given an administrator on the administration home', () => {
         expect(order()).toEqual(['attention', 'since']);
         const summary = fixture.nativeElement.querySelector('app-since-last-visit') as HTMLElement;
         expect(summary.hidden).toBe(false);
-        expect(summary.textContent).toContain('Zjišťujeme, co je od minula nového…');
+        expect(withOrdinarySpaces(summary.textContent)).toContain(
+          'Zjišťujeme, co je od minula nového…',
+        );
         expect(fixture.nativeElement.querySelector('.attention')).toBe(attention);
         expect(document.activeElement).toBe(link);
 
@@ -667,7 +672,7 @@ describe('Given an administrator on the administration home', () => {
           fixture.nativeElement.querySelectorAll(
             '.overview-table thead th',
           ) as NodeListOf<HTMLElement>,
-        ).map((cell) => cell.textContent?.trim()),
+        ).map((cell) => withOrdinarySpaces(cell.textContent)?.trim()),
       ).toEqual(['Měsíc', 'Dary', 'Dárci', 'Noví dárci', 'Celkem', 'Přiřazené', 'Bez dárce']);
       expect(overviewRows()).toEqual([
         'říjen 2026 1 1 1 999 Kč 999 Kč 0 Kč',
@@ -683,7 +688,7 @@ describe('Given an administrator on the administration home', () => {
         `#${table.getAttribute('aria-describedby')}`,
       ) as HTMLElement;
 
-      expect(hint.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      expect(withOrdinarySpaces(hint.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
         'Dárci: kolik různých dárců v měsíci poslalo dar; platby bez dárce se nepočítají. Noví dárci: kolik dárců se v měsíci zaregistrovalo.',
       );
       expect(
@@ -750,7 +755,7 @@ describe('Given an administrator on the administration home', () => {
     const card = fixture.nativeElement.querySelector(
       '.ui-card[aria-labelledby="admin-overview-title"]',
     ) as HTMLElement;
-    expect(card.querySelector('[role="alert"]')?.textContent).toContain(
+    expect(withOrdinarySpaces(card.querySelector('[role="alert"]')?.textContent)).toContain(
       'Dary po měsících se nepodařilo načíst.',
     );
 
@@ -797,7 +802,7 @@ describe('Given an administrator on the administration home', () => {
       expect(
         Array.from(
           (fixture.nativeElement as HTMLElement).querySelectorAll('.attention-backups'),
-        ).map((item) => (item.textContent ?? '').replace(/\s+/g, ' ').trim()),
+        ).map((item) => (withOrdinarySpaces(item.textContent) ?? '').replace(/\s+/g, ' ').trim()),
       ).toEqual([
         'Naléhavé: Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste „Zálohovat teď“; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
         'Naléhavé: Zatím se nevyzkoušelo, že jde zálohu obnovit. Zkuste „Spustit zkušební obnovu“.',
@@ -812,9 +817,9 @@ describe('Given an administrator on the administration home', () => {
     it('then a failed load offers a retry that asks again', async () => {
       await respondOverview(BACKUPS_URL, { title: 'Server error' }, 500);
 
-      expect(backupsCard().querySelector('[role="alert"]')?.textContent).toContain(
-        'Stav záloh se nepodařilo načíst.',
-      );
+      expect(
+        withOrdinarySpaces(backupsCard().querySelector('[role="alert"]')?.textContent),
+      ).toContain('Stav záloh se nepodařilo načíst.');
 
       (backupsCard().querySelector('.ui-load-state--error button') as HTMLButtonElement).click();
       await respondOverview(BACKUPS_URL, backupsView());
@@ -832,7 +837,7 @@ describe('Given an administrator on the administration home', () => {
     function items(): string[] {
       return Array.from(
         attention().querySelectorAll('.attention-list > li') as NodeListOf<HTMLElement>,
-      ).map((item) => (item.textContent ?? '').replace(/\s+/g, ' ').trim());
+      ).map((item) => (withOrdinarySpaces(item.textContent) ?? '').replace(/\s+/g, ' ').trim());
     }
 
     function links(): string[] {
@@ -902,7 +907,7 @@ describe('Given an administrator on the administration home', () => {
 
       const lead = attention().querySelector('.attention-mail-next a > .ui-list__lead');
       expect(lead?.getAttribute('aria-hidden')).toBe('true');
-      expect(lead?.textContent?.trim()).toBe('');
+      expect(withOrdinarySpaces(lead?.textContent)?.trim()).toBe('');
       expect(lead?.children.length).toBe(0);
     });
 
@@ -996,7 +1001,7 @@ describe('Given an administrator on the administration home', () => {
         'Naléhavé: Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
         'Zpráva pro technika Kopírovat zprávu pro technika',
       ]);
-      expect(attention().textContent).not.toContain('compose');
+      expect(withOrdinarySpaces(attention().textContent)).not.toContain('compose');
     });
 
     it('then the message for the technician is copied with the technical details from its row', async () => {
@@ -1296,9 +1301,9 @@ describe('Given an administrator on the administration home', () => {
 
     function rows(): string[][] {
       return Array.from(sections()?.querySelectorAll('section') ?? []).map((section) => [
-        clean(section.querySelector('h2')?.textContent),
+        clean(withOrdinarySpaces(section.querySelector('h2')?.textContent)),
         ...Array.from(section.querySelectorAll('a')).map(
-          (link) => `${clean(link.textContent)} → ${link.getAttribute('href')}`,
+          (link) => `${clean(withOrdinarySpaces(link.textContent))} → ${link.getAttribute('href')}`,
         ),
       ]);
     }
@@ -1359,11 +1364,13 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
 
       const payments = sections()?.querySelector('a[href="/sprava/platby"]');
-      expect(clean(payments?.querySelector('.ui-list__count')?.textContent)).toBe('2');
+      expect(
+        clean(withOrdinarySpaces(payments?.querySelector('.ui-list__count')?.textContent)),
+      ).toBe('2');
       expect(payments?.querySelector('.ui-list__count')?.getAttribute('aria-hidden')).toBe('true');
-      expect(clean(payments?.querySelector('.visually-hidden')?.textContent)).toBe(
-        '2 platby čekají na přiřazení',
-      );
+      expect(
+        clean(withOrdinarySpaces(payments?.querySelector('.visually-hidden')?.textContent)),
+      ).toBe('2 platby čekají na přiřazení');
     });
 
     it('then no count shows while no payment waits', async () => {
@@ -1569,7 +1576,7 @@ describe('Given an administrator on the administration home with the administrat
   });
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -1586,7 +1593,9 @@ describe('Given an administrator on the administration home with the administrat
     expect(text('.overview-table tbody tr')).toContain('říjen 2026');
     expect(text('.ui-card[aria-labelledby="admin-import-title"]')).toContain('Poslední chyba');
     expect(text('.ui-card[aria-labelledby="admin-import-title"]')).not.toContain('Fio refused');
-    expect(fixture.nativeElement.textContent).toContain('1 platba čeká na přiřazení');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
+      '1 platba čeká na přiřazení',
+    );
     expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T08:00:00.000Z'));
   });
 

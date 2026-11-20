@@ -4,7 +4,7 @@ import { ImportFailureKind } from './admin-api';
 
 export const IMPORT_FAILURE_LABELS: Record<ImportFailureKind, string> = {
   RATE_LIMITED: $localize`:@@admin.home.import.failure.rateLimited:Fio odmítlo příliš častý dotaz`,
-  HISTORY_LOCKED: $localize`:@@admin.home.import.failure.historyLocked:Historie starší než 89 dní je ve Fio zamčená`,
+  HISTORY_LOCKED: $localize`:@@admin.home.import.failure.historyLocked:Historie starší než 89\u00a0dní je ve Fio zamčená`,
   UNAUTHORIZED: $localize`:@@admin.home.import.failure.unauthorized:Fio odmítlo token (chybí, ještě neplatí nebo vypršel)`,
   TRANSPORT: $localize`:@@admin.home.import.failure.transport:Fio nebylo dostupné`,
   INVALID_RESPONSE: $localize`:@@admin.home.import.failure.invalidResponse:Fio poslalo odpověď, které web nerozumí`,
@@ -24,23 +24,23 @@ export const IMPORT_NEXT_STEPS: Record<ImportFailureKind, ImportNextStep> = {
     link: null,
   },
   HISTORY_LOCKED: {
-    text: $localize`:@@admin.home.import.next.historyLocked:Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut stiskněte níže „Načíst starší platby“.`,
+    text: $localize`:@@admin.home.import.next.historyLocked:Odemkněte historii v\u00a0internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a\u00a0do 10\u00a0minut stiskněte níže „Načíst starší platby“.`,
     link: 'history',
   },
   UNAUTHORIZED: {
-    text: $localize`:@@admin.home.import.next.unauthorized:V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180 dní) a vložte ho v Nastavení jako Token Fio API.`,
+    text: $localize`:@@admin.home.import.next.unauthorized:V\u00a0internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180\u00a0dní) a\u00a0vložte ho v\u00a0Nastavení jako Token Fio API.`,
     link: 'settings',
   },
   TRANSPORT: {
-    text: $localize`:@@admin.home.import.next.transport:Banka teď neodpovídá. Web to zkouší znovu sám každou hodinu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.`,
+    text: $localize`:@@admin.home.import.next.transport:Banka teď neodpovídá. Web to zkouší znovu sám každou hodinu; pokud to trvá déle, zkontrolujte připojení serveru k\u00a0internetu.`,
     link: null,
   },
   INVALID_RESPONSE: {
-    text: $localize`:@@admin.home.import.next.invalidResponse:Podrobnosti jsou v logu backendu; může jít o změnu Fio API.`,
+    text: $localize`:@@admin.home.import.next.invalidResponse:Podrobnosti jsou v\u00a0logu backendu; může jít o\u00a0změnu Fio API.`,
     link: 'logs',
   },
   UNEXPECTED: {
-    text: $localize`:@@admin.home.import.next.unexpected:Podrobnosti jsou v logu backendu.`,
+    text: $localize`:@@admin.home.import.next.unexpected:Podrobnosti jsou v\u00a0logu backendu.`,
     link: 'logs',
   },
 };
@@ -52,15 +52,15 @@ export const HISTORY_NEXT_STEPS: Record<ImportFailureKind, ImportNextStep> = {
     link: null,
   },
   TRANSPORT: {
-    text: $localize`:@@admin.home.history.next.transport:Banka teď neodpovídá. Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.`,
+    text: $localize`:@@admin.home.history.next.transport:Banka teď neodpovídá. Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu; pokud to trvá déle, zkontrolujte připojení serveru k\u00a0internetu.`,
     link: null,
   },
   INVALID_RESPONSE: {
-    text: $localize`:@@admin.home.history.next.invalidResponse:Za chvíli stiskněte „Načíst starší platby“ znovu; když se to opakuje, může jít o změnu na straně Fio a technik najde podrobnosti v logu.`,
+    text: $localize`:@@admin.home.history.next.invalidResponse:Za chvíli stiskněte „Načíst starší platby“ znovu; když se to opakuje, může jít o\u00a0změnu na straně Fio a\u00a0technik najde podrobnosti v\u00a0logu.`,
     link: 'logs',
   },
   UNEXPECTED: {
-    text: $localize`:@@admin.home.history.next.unexpected:Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu. Když se chyba opakuje, pošlete technikovi čas z této zprávy; podrobnosti najde v logu.`,
+    text: $localize`:@@admin.home.history.next.unexpected:Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu. Když se chyba opakuje, pošlete technikovi čas z\u00a0této zprávy; podrobnosti najde v\u00a0logu.`,
     link: 'logs',
   },
 };

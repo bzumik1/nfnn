@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PairingHelp } from './pairing-help';
+import { withOrdinarySpaces } from '../../../../../../testing/ordinary-spaces';
 
 const HELP_ITEMS = [
   'Jak se k vám dostane můj dar? Platbu s vaším variabilním symbolem 9876543210 přiřadíme vám, ať přijde z jakéhokoli účtu.',
@@ -40,7 +41,7 @@ describe('Given the help on how payments are paired', () => {
   }
 
   function text(selector: string): string {
-    return normalized(element(selector)?.textContent ?? '');
+    return normalized(withOrdinarySpaces(element(selector)?.textContent) ?? '');
   }
 
   function texts(selector: string): string[] {
@@ -48,7 +49,7 @@ describe('Given the help on how payments are paired', () => {
       ...((fixture.nativeElement as HTMLElement).querySelectorAll(
         selector,
       ) as NodeListOf<HTMLElement>),
-    ].map((node) => normalized(node.textContent ?? ''));
+    ].map((node) => normalized(withOrdinarySpaces(node.textContent) ?? ''));
   }
 
   function normalized(value: string): string {
@@ -78,7 +79,9 @@ describe('Given the help on how payments are paired', () => {
     expect(panel().getAttribute('aria-labelledby')).toBe('accounts-help-title');
     expect(element('#accounts-help-title')?.tagName).toBe('H3');
     expect(text('#accounts-help-title')).toBe('Jak přiřazujeme platby');
-    expect(texts('#accounts-help-panel .help-list > li')).toEqual(HELP_ITEMS);
+    expect(texts('#accounts-help-panel .help-list > li')).toEqual(
+      HELP_ITEMS.map((text) => withOrdinarySpaces(text)),
+    );
     expect(texts('#accounts-help-panel .help-symbol')).toEqual([
       '9876543210',
       '9876543210',

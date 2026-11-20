@@ -46,16 +46,16 @@ interface Problem {
 const PDF_TYPE = 'application/pdf';
 const PDF_NAME = /\.pdf$/i;
 
-const FOREIGN_CODE = $localize`:@@donor.verify.input.foreignCode:Tento QR kód nepatří k potvrzení fondu Nová naděje. Načtěte kód z potvrzení o daru.`;
-const CAMERA_REFUSED = $localize`:@@donor.verify.input.cameraRefused:Prohlížeč nedovolil použít fotoaparát. Povolte ho v nastavení prohlížeče, nebo nahrajte PDF či fotku kódu.`;
-const CAMERA_MISSING = $localize`:@@donor.verify.input.cameraMissing:Fotoaparát jsme v zařízení nenašli. Nahrajte PDF potvrzení nebo fotku jeho QR kódu.`;
+const FOREIGN_CODE = $localize`:@@donor.verify.input.foreignCode:Tento QR kód nepatří k\u00a0potvrzení fondu Nová naděje. Načtěte kód z\u00a0potvrzení o\u00a0daru.`;
+const CAMERA_REFUSED = $localize`:@@donor.verify.input.cameraRefused:Prohlížeč nedovolil použít fotoaparát. Povolte ho v\u00a0nastavení prohlížeče, nebo nahrajte PDF či fotku kódu.`;
+const CAMERA_MISSING = $localize`:@@donor.verify.input.cameraMissing:Fotoaparát jsme v\u00a0zařízení nenašli. Nahrajte PDF potvrzení nebo fotku jeho QR kódu.`;
 const CAMERA_FAILED = $localize`:@@donor.verify.input.cameraFailed:Fotoaparát se nepodařilo spustit. Zkuste to znovu, nebo nahrajte PDF či fotku kódu.`;
-const SCAN_GAVE_UP = $localize`:@@donor.verify.input.scanGaveUp:QR kód se nepodařilo přečíst. Zkuste to znovu s kódem zblízka a na světle, nebo nahrajte PDF či fotku kódu.`;
+const SCAN_GAVE_UP = $localize`:@@donor.verify.input.scanGaveUp:QR kód se nepodařilo přečíst. Zkuste to znovu s\u00a0kódem zblízka a\u00a0na světle, nebo nahrajte PDF či fotku kódu.`;
 const FILE_TOO_LARGE = $localize`:@@donor.verify.input.fileTooLarge:Soubor je příliš velký. Nahrajte PDF potvrzení nebo fotku kódu menší než 20 MB.`;
-const PDF_WITHOUT_LINK = $localize`:@@donor.verify.input.pdfWithoutLink:V tomto PDF jsme ověřovací kód nenašli. Nahrajte PDF potvrzení tak, jak jste ho stáhli z webu fondu, nebo načtěte jeho QR kód.`;
-const PICTURE_WITHOUT_CODE = $localize`:@@donor.verify.input.pictureWithoutCode:Na obrázku jsme QR kód nenašli. Vyfoťte kód zblízka a ostře, nebo nahrajte PDF potvrzení.`;
+const PDF_WITHOUT_LINK = $localize`:@@donor.verify.input.pdfWithoutLink:V\u00a0tomto PDF jsme ověřovací kód nenašli. Nahrajte PDF potvrzení tak, jak jste ho stáhli z\u00a0webu fondu, nebo načtěte jeho QR kód.`;
+const PICTURE_WITHOUT_CODE = $localize`:@@donor.verify.input.pictureWithoutCode:Na obrázku jsme QR kód nenašli. Vyfoťte kód zblízka a\u00a0ostře, nebo nahrajte PDF potvrzení.`;
 const PICTURE_TOO_LARGE = $localize`:@@donor.verify.input.pictureTooLarge:Obrázek je příliš velký. Nahrajte fotku nebo snímek obrazovky QR kódu do 50 megapixelů.`;
-const READER_OUTDATED = $localize`:@@donor.verify.input.readerOutdated:Web se mezitím aktualizoval. Obnovte prosím stránku a načtěte kód znovu.`;
+const READER_OUTDATED = $localize`:@@donor.verify.input.readerOutdated:Web se mezitím aktualizoval. Obnovte prosím stránku a\u00a0načtěte kód znovu.`;
 const FILE_UNREADABLE = $localize`:@@donor.verify.input.fileUnreadable:Soubor se nepodařilo otevřít. Nahrajte PDF potvrzení nebo fotku kódu ve formátu JPEG či PNG.`;
 const CAMERA_REFUSALS = ['NotAllowedError', 'SecurityError'];
 const CAMERA_ABSENCES = ['NotFoundError', 'OverconstrainedError'];
@@ -97,8 +97,8 @@ export class ProofInput {
   protected readonly problem = signal<Problem | null>(null);
   protected link = '';
   protected readonly linkMessages: FieldMessages = {
-    required: $localize`:@@donor.verify.input.linkRequired:Vložte odkaz z QR kódu potvrzení.`,
-    proofLink: $localize`:@@donor.verify.input.linkInvalid:Tohle není odkaz z QR kódu potvrzení. Musí začínat https://nfnn.cz/overit# a pokračovat číslicemi.`,
+    required: $localize`:@@donor.verify.input.linkRequired:Vložte odkaz z\u00a0QR kódu potvrzení.`,
+    proofLink: $localize`:@@donor.verify.input.linkInvalid:Tohle není odkaz z\u00a0QR kódu potvrzení. Musí začínat https://nfnn.cz/overit# a\u00a0pokračovat číslicemi.`,
   };
 
   constructor() {

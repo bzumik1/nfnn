@@ -146,7 +146,7 @@ test.describe('Given a signed-in donor whose verified account sent payments with
     await signIn(page);
     await openDonorSection(page, 'Bankovní účty');
     const question = page.getByRole('group', {
-      name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem/,
+      name: /Z\stohoto účtu k\snám chodí i\splatby s\svariabilním symbolem/,
     });
     await expect(question).toContainText(
       `Z tohoto účtu k nám chodí i platby s variabilním symbolem ${SYMBOL} (3 platby, listopad 2026 – leden 2027). Jsou to dary od vás (Jana Nováková)?`,
@@ -196,7 +196,7 @@ test.describe('Given a signed-in donor whose verified account sent payments with
     await expect(sections.locator('.side-nav-badge')).toHaveText('1');
     await openDonorSection(page, 'Bankovní účty');
     const question = page.getByRole('group', {
-      name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem/,
+      name: /Z\stohoto účtu k\snám chodí i\splatby s\svariabilním symbolem/,
     });
     await expect(question).toBeVisible();
     const loadsBeforeAnswer = answers.overviewLoads;

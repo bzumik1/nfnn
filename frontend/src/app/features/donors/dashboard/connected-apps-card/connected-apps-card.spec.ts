@@ -6,6 +6,7 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { ConnectedAppsCard } from './connected-apps-card';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 function expectLockedInPlace(button: HTMLButtonElement): void {
   expect(button.disabled).toBe(false);
@@ -22,7 +23,7 @@ function announcers(element: Element): Element[] {
 
 function labels(button: Element | null): string[] {
   return Array.from(button?.querySelectorAll('.busy-label__face') ?? []).map((face) =>
-    (face.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    (withOrdinarySpaces(face.textContent) ?? '').replace(/\s+/g, ' ').trim(),
   );
 }
 
@@ -87,8 +88,10 @@ describe("Given an administrator's connected applications card", () => {
   }
 
   it('when the list is loading, then the card says so under its own heading', () => {
-    expect(element('h2').textContent).toContain('Připojené aplikace');
-    expect(element('.connections-empty').textContent).toContain('Načítáme připojené aplikace');
+    expect(withOrdinarySpaces(element('h2').textContent)).toContain('Připojené aplikace');
+    expect(withOrdinarySpaces(element('.connections-empty').textContent)).toContain(
+      'Načítáme připojené aplikace',
+    );
     http.expectOne(CONNECTIONS_URL).flush({ items: [] });
   });
 
@@ -96,7 +99,9 @@ describe("Given an administrator's connected applications card", () => {
     http.expectOne(CONNECTIONS_URL).flush({ items: [] });
     await settle();
 
-    expect(element('.connections-empty').textContent).toContain('Žádná aplikace není připojená');
+    expect(withOrdinarySpaces(element('.connections-empty').textContent)).toContain(
+      'Žádná aplikace není připojená',
+    );
     expect(element('.connection')).toBeNull();
   });
 
@@ -104,20 +109,22 @@ describe("Given an administrator's connected applications card", () => {
     http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
     await settle();
 
-    expect(element('.connection-client').textContent).toBe('claude.ai');
-    expect(element('.connection-dates').textContent?.replace(/\s+/g, ' ')).toContain(
-      'připojeno 23. 10. 2026 · naposledy použito 23. 10. 2026',
-    );
+    expect(withOrdinarySpaces(element('.connection-client').textContent)).toBe('claude.ai');
+    expect(
+      withOrdinarySpaces(element('.connection-dates').textContent)?.replace(/\s+/g, ' '),
+    ).toContain('připojeno 23. 10. 2026 · naposledy použito 23. 10. 2026');
     expect(root().querySelectorAll('.connection-scopes li')).toHaveLength(2);
-    expect(element('.connection-scopes').textContent).toContain('Čtení:');
-    expect(element('.connection-scopes').textContent).toContain('Změny:');
+    expect(withOrdinarySpaces(element('.connection-scopes').textContent)).toContain('Čtení:');
+    expect(withOrdinarySpaces(element('.connection-scopes').textContent)).toContain('Změny:');
   });
 
   it('when Claude is connected, then the dot between the dates is bound to the date before it, so a wrapped line never starts with it', async () => {
     http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
     await settle();
 
-    expect(element('.connection-dates').textContent).toMatch(/2026\u00a0· naposledy použito/);
+    expect(withOrdinarySpaces(element('.connection-dates').textContent)).toMatch(
+      /2026 · naposledy použito/,
+    );
   });
 
   it("when the administrator disconnects Claude, then the card's status line, never the button, says first that it disconnects and then only the result", async () => {
@@ -131,15 +138,19 @@ describe("Given an administrator's connected applications card", () => {
 
     expect(announcers(element('.connection-disconnect'))).toEqual([]);
     expect(element('.connections-status')).toBe(status);
-    expect(status.textContent?.trim()).toBe('Odpojujeme…');
-    expect(status.querySelector('.visually-hidden')?.textContent?.trim()).toBe('Odpojujeme…');
+    expect(withOrdinarySpaces(status.textContent)?.trim()).toBe('Odpojujeme…');
+    expect(withOrdinarySpaces(status.querySelector('.visually-hidden')?.textContent)?.trim()).toBe(
+      'Odpojujeme…',
+    );
     http
       .expectOne({ method: 'DELETE', url: `${CONNECTIONS_URL}/${CLAUDE_CONNECTION.id}` })
       .flush(null, { status: 204, statusText: 'No Content' });
     await settle();
 
     expect(element('.connections-status')).toBe(status);
-    expect(status.textContent?.trim()).toMatch(/^Aplikace claude\.ai je odpojená/);
+    expect(withOrdinarySpaces(status.textContent)?.trim()).toMatch(
+      /^Aplikace claude\.ai je odpojená/,
+    );
   });
 
   it('when the administrator presses the focused Odpojit again while Claude is disconnected, then nothing more is sent and the focus stays on it', async () => {
@@ -176,8 +187,12 @@ describe("Given an administrator's connected applications card", () => {
     await settle();
 
     expect(element('.connection')).toBeNull();
-    expect(element('.connections-empty').textContent).toContain('Žádná aplikace není připojená');
-    expect(element('.connections-status').textContent).toContain('Aplikace claude.ai je odpojená');
+    expect(withOrdinarySpaces(element('.connections-empty').textContent)).toContain(
+      'Žádná aplikace není připojená',
+    );
+    expect(withOrdinarySpaces(element('.connections-status').textContent)).toContain(
+      'Aplikace claude.ai je odpojená',
+    );
   });
 
   describe('when two applications are connected and the card is on the page', () => {
@@ -222,7 +237,9 @@ describe("Given an administrator's connected applications card", () => {
       await disconnectThe(LOCAL_CONNECTION, 0);
 
       expect(root().querySelector('.connection')).toBeNull();
-      expect(element('.connections-empty').textContent).toContain('Žádná aplikace není připojená');
+      expect(withOrdinarySpaces(element('.connections-empty').textContent)).toContain(
+        'Žádná aplikace není připojená',
+      );
       expect(document.activeElement).toBe(element('#connections-title'));
     });
   });
@@ -234,8 +251,10 @@ describe("Given an administrator's connected applications card", () => {
     fixture = TestBed.createComponent(ConnectedAppsCard);
     fixture.detectChanges();
 
-    expect(root().textContent).not.toContain('Načítáme');
-    expect(root().textContent).toContain(CLAUDE_CONNECTION.client);
+    expect(withOrdinarySpaces(root().textContent)).not.toContain('Načítáme');
+    expect(withOrdinarySpaces(root().textContent)).toContain(
+      withOrdinarySpaces(CLAUDE_CONNECTION.client),
+    );
     http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
   });
 
@@ -258,7 +277,9 @@ describe("Given an administrator's connected applications card", () => {
     await settle();
     http.expectOne(CONNECTIONS_URL).flush({ items: [] });
     await settle();
-    expect(root().textContent).not.toContain(CLAUDE_CONNECTION.client);
+    expect(withOrdinarySpaces(root().textContent)).not.toContain(
+      withOrdinarySpaces(CLAUDE_CONNECTION.client),
+    );
   });
 
   it('when the list cannot be loaded, then the card shows the reason and offers to load again', async () => {
@@ -268,8 +289,12 @@ describe("Given an administrator's connected applications card", () => {
     });
     await settle();
 
-    expect(element('[role="alert"]').textContent).toContain('Server neodpovídá');
-    expect(element('.connections-retry').textContent?.trim()).toBe('Zkusit znovu');
+    expect(withOrdinarySpaces(element('[role="alert"]').textContent)).toContain(
+      'Server neodpovídá',
+    );
+    expect(withOrdinarySpaces(element('.connections-retry').textContent)?.trim()).toBe(
+      'Zkusit znovu',
+    );
 
     element<HTMLButtonElement>('.connections-retry').click();
     await settle();

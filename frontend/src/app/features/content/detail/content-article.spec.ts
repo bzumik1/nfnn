@@ -8,6 +8,7 @@ import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
 import { FakeDialogHistory } from '../../../shared/ui/dialog/testing/fake-dialog-history';
 import { ContentArticle } from './content-article';
 import { newsPage, projectPage } from './content-page';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 async function setUp(compact = true): Promise<ComponentFixture<ContentArticle>> {
   await TestBed.configureTestingModule({
@@ -22,7 +23,7 @@ async function setUp(compact = true): Promise<ComponentFixture<ContentArticle>> 
 }
 
 function text(fixture: ComponentFixture<unknown>, selector: string): string {
-  return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+  return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -104,7 +105,7 @@ describe('Given the page of a news article on a computer', () => {
     expect(fixture.nativeElement.querySelector('.crumbs')).toBeNull();
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('.actions a') as NodeListOf<Element>).map(
-        (link) => [link.getAttribute('href'), link.textContent?.trim()],
+        (link) => [link.getAttribute('href'), withOrdinarySpaces(link.textContent)?.trim()],
       ),
     ).toEqual([
       ['/prispet', 'Přispět'],
@@ -231,7 +232,7 @@ describe('Given a browser that can share', () => {
   function shareButton(fixture: ComponentFixture<ContentArticle>): HTMLButtonElement | null {
     return (
       ([...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[]).find(
-        (button) => button.textContent?.trim() === 'Sdílet',
+        (button) => withOrdinarySpaces(button.textContent)?.trim() === 'Sdílet',
       ) ?? null
     );
   }

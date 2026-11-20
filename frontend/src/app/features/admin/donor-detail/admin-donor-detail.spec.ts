@@ -36,6 +36,7 @@ import { AdministrationCopyDownload } from '../device-copy/administration-copy-d
 import { FORCED_REFRESH_GAP_MS } from '../device-copy/administration-reads';
 import { PHASE_SHOWN_AFTER_MS } from '../../../shared/ui/pdf-progress/pdf-progress';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const DONOR_ID = '01a18e56-bdb0-775a-bd0a-a60756831369';
 const LINK_ID = '0192f0c4-0000-7000-8000-000000000001';
@@ -95,7 +96,7 @@ describe('Given an administrator on a donor card', () => {
   });
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -103,13 +104,16 @@ describe('Given an administrator on a donor card', () => {
   function texts(selector: string): string[] {
     return Array.from(
       fixture.nativeElement.querySelectorAll(selector) as NodeListOf<HTMLElement>,
-    ).map((element) => (element.textContent ?? '').replace(/\s+/g, ' ').trim());
+    ).map((element) => (withOrdinarySpaces(element.textContent) ?? '').replace(/\s+/g, ' ').trim());
   }
 
   function section(title: string): HTMLElement {
     const found = Array.from(
       fixture.nativeElement.querySelectorAll('section.ui-card') as NodeListOf<HTMLElement>,
-    ).find((candidate) => candidate.querySelector('h2')?.textContent?.trim() === title);
+    ).find(
+      (candidate) =>
+        withOrdinarySpaces(candidate.querySelector('h2')?.textContent)?.trim() === title,
+    );
     if (found === undefined) {
       throw new Error(`No card "${title}"`);
     }
@@ -117,14 +121,14 @@ describe('Given an administrator on a donor card', () => {
   }
 
   function sectionText(title: string): string {
-    return (section(title).textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(section(title).textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function facts(title: string): string {
     return Array.from(section(title).querySelectorAll('dl > div'))
       .map((row) =>
         Array.from(row.children)
-          .map((cell) => (cell.textContent ?? '').replace(/\s+/g, ' ').trim())
+          .map((cell) => (withOrdinarySpaces(cell.textContent) ?? '').replace(/\s+/g, ' ').trim())
           .join(' '),
       )
       .join(' | ');
@@ -135,13 +139,13 @@ describe('Given an administrator on a donor card', () => {
     copy
       .querySelectorAll('.visually-hidden, [aria-hidden="true"]')
       .forEach((hidden) => hidden.remove());
-    return (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(copy.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function accessibleText(element: Element): string {
     const copy = element.cloneNode(true) as Element;
     copy.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => hidden.remove());
-    return (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(copy.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function buttonNames(root: HTMLElement): string[] {
@@ -153,7 +157,9 @@ describe('Given an administrator on a donor card', () => {
       (candidate) => visibleText(candidate) === name,
     );
     if (found === undefined) {
-      throw new Error(`No button "${name}" in "${root.textContent?.replace(/\s+/g, ' ').trim()}"`);
+      throw new Error(
+        `No button "${name}" in "${withOrdinarySpaces(root.textContent)?.replace(/\s+/g, ' ').trim()}"`,
+      );
     }
     return found;
   }
@@ -207,7 +213,7 @@ describe('Given an administrator on a donor card', () => {
     expect(summary.getAttribute('aria-label')).toBe('Shrnutí dárce');
     const rows = Array.from(summary.querySelectorAll('dl > div')).map((row) =>
       Array.from(row.children)
-        .map((cell) => (cell.textContent ?? '').replace(/\s+/g, ' ').trim())
+        .map((cell) => (withOrdinarySpaces(cell.textContent) ?? '').replace(/\s+/g, ' ').trim())
         .join(' '),
     );
     expect(rows).toEqual([
@@ -217,7 +223,7 @@ describe('Given an administrator on a donor card', () => {
       'Dvoufaktorové ověření zapnuté',
     ]);
     expect(texts('.donor-summary .badges .tag')).toEqual(['Správce']);
-    expect(summary.textContent).not.toContain('2FA');
+    expect(withOrdinarySpaces(summary.textContent)).not.toContain('2FA');
     expect(text('.donor-summary app-copy-button button')).toBe('Kopírovat variabilní symbol');
   });
 
@@ -267,7 +273,7 @@ describe('Given an administrator on a donor card', () => {
     const nav = fixture.nativeElement.querySelector('nav.card-nav') as HTMLElement;
     expect(nav.getAttribute('aria-label')).toBe('Části karty dárce');
     const links = Array.from(nav.querySelectorAll('a')) as HTMLAnchorElement[];
-    expect(links.map((link) => link.textContent?.trim())).toEqual([
+    expect(links.map((link) => withOrdinarySpaces(link.textContent)?.trim())).toEqual([
       'Údaje',
       'Přihlášení',
       'Bankovní účty',
@@ -320,7 +326,7 @@ describe('Given an administrator on a donor card', () => {
 
     const dialog = eraseDialog() as HTMLDialogElement;
     expect(text('dialog h2')).toBe('Vymazat osobní údaje: Jana Nováková');
-    const dialogText = (dialog.textContent ?? '').replace(/\s+/g, ' ');
+    const dialogText = (withOrdinarySpaces(dialog.textContent) ?? '').replace(/\s+/g, ' ');
     expect(dialogText).toContain('Smažeme');
     expect(dialogText).toContain('jméno, adresu, e-mail a heslo');
     expect(dialogText).toContain('Zůstane');
@@ -456,7 +462,9 @@ describe('Given an administrator on a donor card', () => {
 
     const accounts = section('Bankovní účty');
     const accountRow = accounts.querySelector('tbody tr') as HTMLElement;
-    const accountText = (accountRow.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const accountText = (withOrdinarySpaces(accountRow.textContent) ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
     expect(accountText).toContain('2900233333/2010 · Fio banka');
     expect(accountText).toContain('Páruje platby');
     expect(accountText).toContain('ověřen 17. 10. 2026');
@@ -487,7 +495,7 @@ describe('Given an administrator on a donor card', () => {
 
     const paragraphWith = (title: string, words: string) =>
       Array.from(section(title).querySelectorAll('p')).find((paragraph) =>
-        (paragraph.textContent ?? '').includes(words),
+        (withOrdinarySpaces(paragraph.textContent) ?? '').includes(words),
       );
     expect(
       paragraphWith('Bankovní účty', 'Sloupec Dary přiřazené podle účtu')?.classList,
@@ -508,13 +516,15 @@ describe('Given an administrator on a donor card', () => {
     const accounts = section('Bankovní účty');
     expect(
       Array.from(accounts.querySelectorAll('thead th') as NodeListOf<HTMLElement>).map((cell) =>
-        cell.textContent?.trim(),
+        withOrdinarySpaces(cell.textContent)?.trim(),
       ),
     ).toEqual(['Bankovní účet', 'Stav', 'Dary přiřazené podle účtu', 'Akce']);
     const cell = accounts.querySelector('tbody tr td:nth-child(3)') as HTMLElement;
     expect(cell.dataset['label']).toBe('Dary přiřazené podle účtu');
-    expect(cell.textContent?.trim()).toBe('0 darů');
-    expect((accounts.querySelector('.card-intro') as HTMLElement).textContent).toContain(
+    expect(withOrdinarySpaces(cell.textContent)?.trim()).toBe('0 darů');
+    expect(
+      withOrdinarySpaces((accounts.querySelector('.card-intro') as HTMLElement).textContent),
+    ).toContain(
       'Sloupec Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu, které se dárci přiřadily podle účtu; dary se symbolem najdete níže v části Dary.',
     );
   });
@@ -523,7 +533,7 @@ describe('Given an administrator on a donor card', () => {
     await loaded();
 
     const link = section('Dary').querySelector('.donor-payments a') as HTMLAnchorElement;
-    expect(link.textContent?.trim()).toBe('Platby tohoto dárce');
+    expect(withOrdinarySpaces(link.textContent)?.trim()).toBe('Platby tohoto dárce');
     expect(link.getAttribute('href')).toBe(`/sprava/platby?stav=prirazene&darce=${DONOR_ID}`);
   });
 
@@ -600,14 +610,15 @@ describe('Given an administrator on a donor card', () => {
 
   function optionLabels(): string[] {
     return Array.from(issueSelect().options).map((option) =>
-      (option.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      (withOrdinarySpaces(option.textContent) ?? '').replace(/\s+/g, ' ').trim(),
     );
   }
 
   async function choose(label: string): Promise<void> {
     const select = issueSelect();
     const option = Array.from(select.options).find(
-      (candidate) => (candidate.textContent ?? '').replace(/\s+/g, ' ').trim() === label,
+      (candidate) =>
+        (withOrdinarySpaces(candidate.textContent) ?? '').replace(/\s+/g, ' ').trim() === label,
     );
     if (option === undefined) {
       throw new Error(`No option "${label}" in ${optionLabels().join(', ')}`);
@@ -619,8 +630,10 @@ describe('Given an administrator on a donor card', () => {
 
   function receiptsNotice(kind: 'status' | 'alert'): string {
     return (
-      section('Vystavená potvrzení').querySelector(`app-live-notice [role="${kind}"]`)
-        ?.textContent ?? ''
+      withOrdinarySpaces(
+        section('Vystavená potvrzení').querySelector(`app-live-notice [role="${kind}"]`)
+          ?.textContent,
+      ) ?? ''
     )
       .replace(/\s+/g, ' ')
       .trim();
@@ -673,7 +686,9 @@ describe('Given an administrator on a donor card', () => {
       'Dar z 12. 10. 2026, 300 Kč',
       'Dar z 10. 10. 2026, 500 Kč',
     ]);
-    expect(issueSelect().labels?.[0]?.textContent?.trim()).toBe('Potvrzení k vystavení');
+    expect(withOrdinarySpaces(issueSelect().labels?.[0]?.textContent)?.trim()).toBe(
+      'Potvrzení k vystavení',
+    );
     expect(button(section('Vystavená potvrzení'), 'Vystavit potvrzení').disabled).toBe(false);
   });
 
@@ -889,7 +904,11 @@ describe('Given an administrator on a donor card', () => {
     fixture.detectChanges();
 
     expect(
-      (section('Přihlášení').querySelector('.ui-notice--status')?.textContent ?? '').trim(),
+      (
+        withOrdinarySpaces(
+          section('Přihlášení').querySelector('.ui-notice--status')?.textContent,
+        ) ?? ''
+      ).trim(),
     ).toBe(
       'Dvoufaktorové ověření u Jana Nováková je vypnuté a všechna přihlášení jsme ukončili. Dárce dostal e-mail; po přihlášení heslem si ho může zapnout znovu.',
     );
@@ -1003,9 +1022,11 @@ describe('Given an administrator on a donor card', () => {
     );
     await settle();
 
-    expect(document.querySelector('app-changed-meanwhile-dialog dialog')?.textContent).toContain(
-      'sám dárce',
-    );
+    expect(
+      withOrdinarySpaces(
+        document.querySelector('app-changed-meanwhile-dialog dialog')?.textContent,
+      ),
+    ).toContain('sám dárce');
     button(document.body, 'Načíst aktuální stav').click();
     fixture.detectChanges();
     http.expectOne(DETAIL_URL).flush(donorDetail());
@@ -1097,7 +1118,7 @@ describe('Given an administrator on a donor card', () => {
     await settle();
 
     const notice = section('Bankovní účty').querySelector('app-live-notice') as HTMLElement;
-    expect((notice.textContent ?? '').trim()).toContain(
+    expect((withOrdinarySpaces(notice.textContent) ?? '').trim()).toContain(
       'Párování z účtu 2900233333/2010 je vypnuté',
     );
     expect(document.activeElement).toBe(notice);
@@ -1121,7 +1142,7 @@ describe('Given an administrator on a donor card', () => {
 
     const row = section('Bankovní účty').querySelector('tbody tr') as HTMLElement;
     expect(buttonNames(row)).toEqual(['Vypnout párování']);
-    expect((row.textContent ?? '').replace(/\s+/g, ' ')).toContain(
+    expect((withOrdinarySpaces(row.textContent) ?? '').replace(/\s+/g, ' ')).toContain(
       'Nejde odebrat: k darům z účtu je vystavené potvrzení.',
     );
   });
@@ -1151,7 +1172,7 @@ describe('Given an administrator on a donor card', () => {
     await loaded(donorAccount({ administrator: true }));
 
     const link = section('Údaje').querySelector('dl a') as HTMLAnchorElement;
-    expect(link.textContent?.trim()).toBe('správce');
+    expect(withOrdinarySpaces(link.textContent)?.trim()).toBe('správce');
     expect(link.getAttribute('href')).toBe('/sprava/spravci');
   });
 
@@ -1175,7 +1196,11 @@ describe('Given an administrator on a donor card', () => {
     await settle();
 
     expect(
-      (section('Bankovní účty').querySelector('.ui-notice--alert')?.textContent ?? '').trim(),
+      (
+        withOrdinarySpaces(
+          section('Bankovní účty').querySelector('.ui-notice--alert')?.textContent,
+        ) ?? ''
+      ).trim(),
     ).toBe('Bankovní účet se nepodařilo odebrat. Zkuste to prosím znovu.');
   });
 
@@ -1196,7 +1221,11 @@ describe('Given an administrator on a donor card', () => {
     await settle();
 
     expect(
-      (section('Bankovní účty').querySelector('.ui-notice--alert')?.textContent ?? '').trim(),
+      (
+        withOrdinarySpaces(
+          section('Bankovní účty').querySelector('.ui-notice--alert')?.textContent,
+        ) ?? ''
+      ).trim(),
     ).toBe(
       'Na dary z tohoto účtu odkazuje vydané potvrzení. Účet nejde odebrat. Dary s potvrzením musí zůstat. Aby se dárci další platby z účtu nepřiřazovaly, vypněte u něj párování.',
     );
@@ -1215,7 +1244,7 @@ describe('Given an administrator on a donor card', () => {
     expect(fixture.nativeElement.querySelectorAll('section.ui-card')).toHaveLength(1);
     expect(texts('[role="alert"]:not(:empty)')).toHaveLength(1);
     const back = section('Účet dárce').querySelector('a') as HTMLAnchorElement;
-    expect(back.textContent?.trim()).toBe('Zpět na hledání dárců');
+    expect(withOrdinarySpaces(back.textContent)?.trim()).toBe('Zpět na hledání dárců');
     expect(back.getAttribute('href')).toBe('/sprava/darci');
   });
 
@@ -1259,11 +1288,11 @@ describe('Given an administrator on a donor card', () => {
         section('Vystavená potvrzení').querySelectorAll(
           'tbody tr',
         ) as NodeListOf<HTMLTableRowElement>,
-      ).find((candidate) => candidate.textContent?.includes(number));
+      ).find((candidate) => withOrdinarySpaces(candidate.textContent)?.includes(number));
       const note = row?.querySelector('.receipt-key-note');
       return note === null || note === undefined
         ? null
-        : (note.textContent ?? '').replace(/\s+/g, ' ').trim();
+        : (withOrdinarySpaces(note.textContent) ?? '').replace(/\s+/g, ' ').trim();
     }
 
     beforeEach(async () => {
@@ -1289,22 +1318,25 @@ describe('Given an administrator on a donor card', () => {
       keys.flush(keyListWith([{ ...TEST_KEY, status: 'revoked' }, OTHER_KEY]));
       await settle();
 
-      expect(rowNote('2026-000001')).toBe(REVOKED_NOTE);
+      expect(rowNote('2026-000001')).toBe(withOrdinarySpaces(REVOKED_NOTE));
       expect(rowNote('2027-000001')).toBeNull();
       const buttons = Array.from(
         section('Vystavená potvrzení').querySelectorAll<HTMLButtonElement>('button.receipt-pdf'),
       );
-      const warned = buttons.find((candidate) => candidate.textContent?.includes('2026-000001'));
+      const warned = buttons.find((candidate) =>
+        withOrdinarySpaces(candidate.textContent)?.includes('2026-000001'),
+      );
       const described = warned?.getAttribute('aria-describedby') ?? '';
       expect(
-        section('Vystavená potvrzení')
-          .querySelector(`[id="${described}"]`)
-          ?.textContent?.replace(/\s+/g, ' ')
+        withOrdinarySpaces(
+          section('Vystavená potvrzení').querySelector(`[id="${described}"]`)?.textContent,
+        )
+          ?.replace(/\s+/g, ' ')
           .trim(),
-      ).toBe(REVOKED_NOTE);
+      ).toBe(withOrdinarySpaces(REVOKED_NOTE));
       expect(
         buttons
-          .find((candidate) => candidate.textContent?.includes('2027-000001'))
+          .find((candidate) => withOrdinarySpaces(candidate.textContent)?.includes('2027-000001'))
           ?.hasAttribute('aria-describedby'),
       ).toBe(false);
     });
@@ -1344,7 +1376,7 @@ describe('Given an administrator on a donor card', () => {
         section('Vystavená potvrzení').querySelectorAll(
           'tbody tr',
         ) as NodeListOf<HTMLTableRowElement>,
-      ).find((candidate) => candidate.textContent?.includes(number));
+      ).find((candidate) => withOrdinarySpaces(candidate.textContent)?.includes(number));
       if (row === undefined) {
         throw new Error(`No receipt row ${number}`);
       }
@@ -1357,19 +1389,25 @@ describe('Given an administrator on a donor card', () => {
     }
 
     function rowLine(number: string): string {
-      return (receiptRow(number).querySelector('[role="status"]')?.textContent ?? '')
+      return (
+        withOrdinarySpaces(receiptRow(number).querySelector('[role="status"]')?.textContent) ?? ''
+      )
         .replace(/\s+/g, ' ')
         .trim();
     }
 
     function rowAlert(number: string): string {
-      return (receiptRow(number).querySelector('[role="alert"]')?.textContent ?? '')
+      return (
+        withOrdinarySpaces(receiptRow(number).querySelector('[role="alert"]')?.textContent) ?? ''
+      )
         .replace(/\s+/g, ' ')
         .trim();
     }
 
     function buttonText(number: string): string {
-      return (downloadButton(number).textContent ?? '').replace(/\s+/g, ' ').trim();
+      return (withOrdinarySpaces(downloadButton(number).textContent) ?? '')
+        .replace(/\s+/g, ' ')
+        .trim();
     }
 
     function downloadButton(number: string): HTMLButtonElement {
@@ -1396,7 +1434,9 @@ describe('Given an administrator on a donor card', () => {
     it('then only the valid receipt offers its PDF, named by its number', () => {
       expect(buttonText('2027-000001')).toBe('Stáhnout PDF potvrzení 2027-000001');
       expect(
-        downloadButton('2027-000001').querySelector('.visually-hidden')?.textContent,
+        withOrdinarySpaces(
+          downloadButton('2027-000001').querySelector('.visually-hidden')?.textContent,
+        ),
       ).toContain('potvrzení 2027-000001');
       expect(receiptRow('2026-000001').querySelector('button.receipt-pdf')).toBeNull();
     });
@@ -1528,7 +1568,7 @@ describe('Given an administrator on a donor card', () => {
       const cancel = receiptRow('2027-000001').querySelector<HTMLButtonElement>(
         'button.pdf-progress__cancel',
       );
-      expect(cancel?.textContent?.trim()).toBe('Zrušit');
+      expect(withOrdinarySpaces(cancel?.textContent)?.trim()).toBe('Zrušit');
       cancel?.focus();
       cancel?.click();
       await settle();
@@ -1683,7 +1723,7 @@ describe('Given an administrator on a donor card opened part by part', () => {
 
   function spaced(node: Node): string {
     if (node.nodeType === Node.TEXT_NODE) {
-      return node.textContent ?? '';
+      return withOrdinarySpaces(node.textContent) ?? '';
     }
     return Array.from(node.childNodes).map(spaced).join(' ');
   }
@@ -2030,7 +2070,9 @@ describe('Given an administrator on a donor card with the administration copy on
 
   function accountsCard(): string {
     return (
-      fixture.nativeElement.querySelector('[aria-labelledby="accounts-title"]')?.textContent ?? ''
+      withOrdinarySpaces(
+        fixture.nativeElement.querySelector('[aria-labelledby="accounts-title"]')?.textContent,
+      ) ?? ''
     )
       .replace(/\s+/g, ' ')
       .trim();
@@ -2043,7 +2085,9 @@ describe('Given an administrator on a donor card with the administration copy on
       expect(accountsCard()).toContain('Načítáme bankovní účty…');
     });
 
-    expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('Jana Nováková');
+    expect(withOrdinarySpaces(fixture.nativeElement.querySelector('h1')?.textContent)).toContain(
+      'Jana Nováková',
+    );
     await vi.waitFor(() =>
       http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [adminBankAccount()] })),
     );
@@ -2055,7 +2099,9 @@ describe('Given an administrator on a donor card with the administration copy on
   it('when the device is offline, then the card comes from the copy and the bank accounts come once it is online again', async () => {
     await open(true);
 
-    expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('Jana Nováková');
+    expect(withOrdinarySpaces(fixture.nativeElement.querySelector('h1')?.textContent)).toContain(
+      'Jana Nováková',
+    );
     expect(accountsCard()).toContain('Bankovní účty dárce ukážeme, až budete online.');
     expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T10:30:00.000Z'));
 
@@ -2076,15 +2122,15 @@ describe('Given an administrator on a donor card with the administration copy on
     );
     await settle();
 
-    expect(fixture.nativeElement.textContent).toContain(
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
       'Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až budete online.',
     );
-    expect(fixture.nativeElement.textContent).not.toContain(
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain(
       'Účty, dary a potvrzení se nepodařilo načíst.',
     );
     const alerts = Array.from(
       fixture.nativeElement.querySelectorAll('[role="alert"]') as NodeListOf<HTMLElement>,
-    ).map((alert) => alert.textContent ?? '');
+    ).map((alert) => withOrdinarySpaces(alert.textContent) ?? '');
     expect(alerts.filter((text) => text.includes('v zařízení nejsou'))).toEqual([]);
     expect(alerts.filter((text) => text.includes('Zkusit znovu'))).toEqual([]);
 
@@ -2103,8 +2149,12 @@ describe('Given an administrator on a donor card with the administration copy on
     );
     await settle();
 
-    expect(fixture.nativeElement.textContent).not.toContain('v zařízení nejsou');
-    expect(fixture.nativeElement.textContent).toContain('Bankovní účty jsme s osobními údaji');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain(
+      'v zařízení nejsou',
+    );
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
+      'Bankovní účty jsme s osobními údaji',
+    );
   });
 
   it("when the erased donor's card fails to load before the device knows it is offline, then the card waits for the connection once it does and loads by itself when it returns", async () => {
@@ -2113,13 +2163,13 @@ describe('Given an administrator on a donor card with the administration copy on
       http.expectOne(DETAIL_URL).flush(null, { status: 0, statusText: 'Unknown Error' }),
     );
     await settle();
-    expect(fixture.nativeElement.textContent).toContain(
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
       'Účty, dary a potvrzení se nepodařilo načíst.',
     );
 
     offline.set(true);
     await settle();
-    expect(fixture.nativeElement.textContent).toContain(
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
       'Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až budete online.',
     );
 
@@ -2137,7 +2187,9 @@ describe('Given an administrator on a donor card with the administration copy on
       ),
     );
     await settle();
-    expect(fixture.nativeElement.textContent).toContain('Bankovní účty jsme s osobními údaji');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
+      'Bankovní účty jsme s osobními údaji',
+    );
   });
 
   it("when the erased donor's card cannot be read because the server does not answer, then the card says it loads once the server answers again", async () => {
@@ -2149,10 +2201,10 @@ describe('Given an administrator on a donor card with the administration copy on
     );
     await settle();
 
-    expect(fixture.nativeElement.textContent).toContain(
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
       'Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až server zase odpoví.',
     );
-    expect(fixture.nativeElement.textContent).not.toContain('až budete online');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain('až budete online');
   });
 
   it('when the card is read again before the first read of a card the copy leaves to the server answered, then the newer answer shows the card instead of loading for ever', async () => {
@@ -2175,8 +2227,12 @@ describe('Given an administrator on a donor card with the administration copy on
       ),
     );
     await settle();
-    expect(fixture.nativeElement.textContent).not.toContain('Načítáme účty, dary a potvrzení');
-    expect(fixture.nativeElement.textContent).toContain('Bankovní účty jsme s osobními údaji');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain(
+      'Načítáme účty, dary a potvrzení',
+    );
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
+      'Bankovní účty jsme s osobními údaji',
+    );
   });
 
   it('when the card is read again while an older read still waits for the server, then the older read is dropped and only the newer one lands on the card', async () => {
@@ -2204,7 +2260,9 @@ describe('Given an administrator on a donor card with the administration copy on
     const alert = fixture.nativeElement.querySelector(
       '[aria-labelledby="accounts-title"] .ui-load-state--error',
     ) as HTMLElement;
-    expect(alert.textContent).toContain('Bankovní účty dárce se nepodařilo načíst.');
+    expect(withOrdinarySpaces(alert.textContent)).toContain(
+      'Bankovní účty dárce se nepodařilo načíst.',
+    );
     (alert.querySelector('button') as HTMLButtonElement).click();
     await settle();
     await vi.waitFor(() =>
@@ -2215,8 +2273,10 @@ describe('Given an administrator on a donor card with the administration copy on
     expect(accountsCard()).toContain('2900233333/2010');
     expect(document.activeElement?.id).toBe('bankovni-ucty');
     expect(
-      fixture.nativeElement.querySelector('[aria-labelledby="accounts-title"] [role="status"]')
-        ?.textContent,
+      withOrdinarySpaces(
+        fixture.nativeElement.querySelector('[aria-labelledby="accounts-title"] [role="status"]')
+          ?.textContent,
+      ),
     ).toContain('Bankovní účty dárce jsme načetli.');
   });
 
@@ -2261,7 +2321,9 @@ describe('Given an administrator on a donor card with the administration copy on
     const alert = fixture.nativeElement.querySelector(
       '[aria-labelledby="accounts-title"] .ui-load-state[role="alert"]',
     ) as HTMLElement;
-    expect(alert.textContent).toContain('Bankovní účty dárce ukážeme, až server zase odpoví.');
+    expect(withOrdinarySpaces(alert.textContent)).toContain(
+      'Bankovní účty dárce ukážeme, až server zase odpoví.',
+    );
     (alert.querySelector('button') as HTMLButtonElement).click();
     await settle();
     await vi.waitFor(() =>

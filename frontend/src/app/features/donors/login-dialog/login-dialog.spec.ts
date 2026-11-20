@@ -33,6 +33,7 @@ import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { LoginDialog } from './login-dialog';
 import { Connectivity, PROBE_PATH } from '../../../core/connectivity/connectivity';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given the sign-in dialog', () => {
   let fixture: ComponentFixture<LoginDialog>;
@@ -124,8 +125,10 @@ describe('Given the sign-in dialog', () => {
     });
 
     it('then it says at once that signing in needs a connection and offers no form that cannot be sent', () => {
-      expect(element('.offline-entry h3')?.textContent?.trim()).toBe('Jste offline');
-      expect(element('.offline-entry')?.textContent).toContain(
+      expect(withOrdinarySpaces(element('.offline-entry h3')?.textContent)?.trim()).toBe(
+        'Jste offline',
+      );
+      expect(withOrdinarySpaces(element('.offline-entry')?.textContent)).toContain(
         'Přihlásit se ani zaregistrovat se bez připojení nejde.',
       );
       expect(element('.tab-switch')).toBeNull();
@@ -137,9 +140,9 @@ describe('Given the sign-in dialog', () => {
       http.expectOne(PROBE_PATH).error(new ProgressEvent('error'), { status: 0 });
       await settle();
 
-      expect(element('.offline-entry [role="status"]')?.textContent?.trim()).toBe(
-        'Pořád se nedaří připojit.',
-      );
+      expect(
+        withOrdinarySpaces(element('.offline-entry [role="status"]')?.textContent)?.trim(),
+      ).toBe('Pořád se nedaří připojit.');
       expect(element('#login-email')).toBeNull();
     });
 
@@ -173,14 +176,16 @@ describe('Given the sign-in dialog', () => {
     it('then the tabs are named as places and differ from the buttons that send', () => {
       expect(
         [...fixture.nativeElement.querySelectorAll('.tab-switch button')].map((tab) =>
-          (tab as HTMLElement).textContent?.trim(),
+          withOrdinarySpaces((tab as HTMLElement).textContent)?.trim(),
         ),
       ).toEqual(['Přihlášení', 'Registrace']);
       expect(accessibleText(element('.login-form button[type="submit"]'))).toBe('Přihlásit se');
     });
 
     it('then the e-mail field is labelled E-mail with an ordinary hyphen, so a screen reader says the word as written', () => {
-      expect(element('label[for="login-email"]').textContent?.trim()).toBe('E-mail');
+      expect(withOrdinarySpaces(element('label[for="login-email"]').textContent)?.trim()).toBe(
+        'E-mail',
+      );
     });
 
     it('then the forgotten password link stands right under the password field', () => {
@@ -188,9 +193,11 @@ describe('Given the sign-in dialog', () => {
       const card = field.parentElement as HTMLElement;
 
       expect(field.nextElementSibling).toBeNull();
-      expect(card.nextElementSibling?.querySelector('.forgot-link')?.textContent?.trim()).toBe(
-        'Zapomněli jste heslo?',
-      );
+      expect(
+        withOrdinarySpaces(
+          card.nextElementSibling?.querySelector('.forgot-link')?.textContent,
+        )?.trim(),
+      ).toBe('Zapomněli jste heslo?');
     });
 
     it('then the device copies start loading at once, so a passkey sign-in finds the device ready for its PRF input', () => {
@@ -224,13 +231,17 @@ describe('Given the sign-in dialog', () => {
   it('when it opens for the administration, then the lead says signing in leads into the administration', async () => {
     await render('login', { returnTo: '/sprava', forAdministration: true });
 
-    expect(element('.sub').textContent?.trim()).toBe('Pro vstup do správy se přihlaste.');
+    expect(withOrdinarySpaces(element('.sub').textContent)?.trim()).toBe(
+      'Pro vstup do správy se přihlaste.',
+    );
   });
 
   it('when it opens for a donor page, then the lead names the donor overview', async () => {
     await render('login', { returnTo: '/darce/prehled' });
 
-    expect(element('.sub').textContent?.trim()).toBe('Přístup do vašeho přehledu příspěvků');
+    expect(withOrdinarySpaces(element('.sub').textContent)?.trim()).toBe(
+      'Přístup do vašeho přehledu příspěvků',
+    );
   });
 
   it('when it opens, then the passkey button stands apart from the sign-in button behind a divider saying "nebo"', async () => {
@@ -238,7 +249,7 @@ describe('Given the sign-in dialog', () => {
 
     const divider = element('.login-form').nextElementSibling as HTMLElement;
     expect(divider.classList).toContain('divider');
-    expect(divider.textContent?.trim()).toBe('nebo');
+    expect(withOrdinarySpaces(divider.textContent)?.trim()).toBe('nebo');
     expect(divider.nextElementSibling?.classList).toContain('passkey-btn');
   });
 
@@ -306,7 +317,9 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(dialog.isOpen()).toBe(true);
-      expect(element('.ui-field-error').textContent).toContain('Nesprávný e-mail nebo heslo');
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
+        'Nesprávný e-mail nebo heslo',
+      );
       expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
       expect(navigate).not.toHaveBeenCalled();
     });
@@ -332,7 +345,7 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(dialog.isOpen()).toBe(true);
-      expect(element('.ui-field-error').textContent).toContain(
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
         'Příliš mnoho pokusů z této adresy. Zkuste to prosím za chvíli znovu.',
       );
       expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
@@ -356,20 +369,24 @@ describe('Given the sign-in dialog', () => {
 
       it('then the dialog asks for the code from the app, focuses its field and shows no error', () => {
         expect(element('.login-form')).toBeNull();
-        expect(element('.step-lead').textContent).toContain(
-          'Přihlášení dokončíte kódem z\u00a0ověřovací aplikace',
+        expect(withOrdinarySpaces(element('.step-lead').textContent)).toContain(
+          'Přihlášení dokončíte kódem z ověřovací aplikace',
         );
         expect(element('#login-code').getAttribute('autocomplete')).toBe('one-time-code');
         expect(element('#login-code').getAttribute('inputmode')).toBe('numeric');
-        expect(element('#login-code-hint').textContent).toContain('Šest číslic');
+        expect(withOrdinarySpaces(element('#login-code-hint').textContent)).toContain(
+          'Šest číslic',
+        );
         expect(document.activeElement).toBe(element('#login-code'));
         expect(element('.ui-field-error')).toBeNull();
         expect(dialog.isOpen()).toBe(true);
       });
 
       it('then the step has a visible title, the way back on top and no tabs', () => {
-        expect(element('.step-title').textContent).toContain('Ověření kódem z aplikace');
-        expect(element('.code-back').textContent).toContain('Zpět na heslo');
+        expect(withOrdinarySpaces(element('.step-title').textContent)).toContain(
+          'Ověření kódem z aplikace',
+        );
+        expect(withOrdinarySpaces(element('.code-back').textContent)).toContain('Zpět na heslo');
         expect(element('.code-back').compareDocumentPosition(element('.step-title'))).toBe(
           Node.DOCUMENT_POSITION_FOLLOWING,
         );
@@ -412,7 +429,9 @@ describe('Given the sign-in dialog', () => {
         await submit('.code-form');
 
         http.expectNone('/api/donors/auth/login/second-factor');
-        expect(element('#login-code-error').textContent).toContain('Kód má přesně šest číslic.');
+        expect(withOrdinarySpaces(element('#login-code-error').textContent)).toContain(
+          'Kód má přesně šest číslic.',
+        );
       });
 
       it('and a wrong code is sent, then the code step stays and shows the reason', async () => {
@@ -432,7 +451,9 @@ describe('Given the sign-in dialog', () => {
         await settle();
 
         expect(element('#login-code')).not.toBeNull();
-        expect(element('.ui-field-error').textContent).toContain('Nesprávný kód.');
+        expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
+          'Nesprávný kód.',
+        );
         expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
       });
 
@@ -454,7 +475,7 @@ describe('Given the sign-in dialog', () => {
 
         expect(element('#login-code')).toBeNull();
         expect(element<HTMLInputElement>('#login-email').value).toBe('jana@example.cz');
-        expect(element('.ui-field-error').textContent).toContain(
+        expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
           'Přihlášení vypršelo. Zadejte prosím znovu e-mail a heslo.',
         );
       });
@@ -512,16 +533,18 @@ describe('Given the sign-in dialog', () => {
 
           const recovery = element('.recovery');
           expect(element('.code-form')).toBeNull();
-          expect(recovery.textContent).toContain('5544332217/2010');
-          expect(recovery.textContent).toContain('1\u00a0Kč');
-          expect(recovery.textContent).toContain('OBNOVA K7MP4RXA');
-          expect(recovery.textContent).toContain('Platbu pošlete nejdříve 27.\u00a010. 2026');
-          expect(recovery.textContent).toContain(
-            'Zpráva pro příjemce platí do 31.\u00a010. 2026 11:00',
+          expect(withOrdinarySpaces(recovery.textContent)).toContain('5544332217/2010');
+          expect(withOrdinarySpaces(recovery.textContent)).toContain('1 Kč');
+          expect(withOrdinarySpaces(recovery.textContent)).toContain('OBNOVA K7MP4RXA');
+          expect(withOrdinarySpaces(recovery.textContent)).toContain(
+            'Platbu pošlete nejdříve 27. 10. 2026',
+          );
+          expect(withOrdinarySpaces(recovery.textContent)).toContain(
+            'Zpráva pro příjemce platí do 31. 10. 2026 11:00',
           );
           expect(
             [...recovery.querySelectorAll('app-copy-button button')].map((button) =>
-              button.textContent?.replace(/\s+/g, ' ').trim(),
+              withOrdinarySpaces(button.textContent)?.replace(/\s+/g, ' ').trim(),
             ),
           ).toEqual(['Kopírovat číslo účtu', 'Kopírovat zprávu pro příjemce']);
           expect(document.activeElement).toBe(element('.recovery-title'));
@@ -531,7 +554,9 @@ describe('Given the sign-in dialog', () => {
           (await askForRecovery()).flush(instructions);
           await settle();
 
-          const lead = element('.recovery .step-lead').textContent?.replace(/\s+/g, ' ').trim();
+          const lead = withOrdinarySpaces(element('.recovery .step-lead').textContent)
+            ?.replace(/\s+/g, ' ')
+            .trim();
           expect(lead).toBe(
             'Pošlete 1 Kč se zprávou níže z bankovního účtu vedeného na vaše jméno (u firmy na firmu), ze kterého jste nám už poslali dar. Platba z účtu někoho jiného, třeba partnera nebo rodičů, obnovu neodemkne; v tom případě nám napište. Jakmile platbu načteme, vypneme dvoufaktorové ověření, ukončíme všechna přihlášení a pošleme vám e‑mail. Pak se přihlásíte jen heslem.',
           );
@@ -543,11 +568,11 @@ describe('Given the sign-in dialog', () => {
           await settle();
 
           const callout = element('.recovery .ui-callout');
-          expect(callout.textContent).toContain('nejdříve');
+          expect(withOrdinarySpaces(callout.textContent)).toContain('nejdříve');
           expect(callout.compareDocumentPosition(element('.recovery-details'))).toBe(
             Node.DOCUMENT_POSITION_FOLLOWING,
           );
-          expect(element('.recovery-keep').textContent).toContain(
+          expect(withOrdinarySpaces(element('.recovery-keep').textContent)).toContain(
             'Když obnovu zahájíte znovu, než zpráva přestane platit, ukážeme vám stejné údaje.',
           );
           expect(element('.recovery-resumed')).toBeNull();
@@ -583,23 +608,29 @@ describe('Given the sign-in dialog', () => {
           await settle();
 
           expect(element('.recovery-qr svg')).toBeNull();
-          expect(element('.recovery-qr-failed').textContent?.replace(/\s+/g, ' ').trim()).toBe(
-            'QR kód se nepodařilo vykreslit. Zaplaťte prosím podle uvedených údajů.',
+          expect(
+            withOrdinarySpaces(element('.recovery-qr-failed').textContent)
+              ?.replace(/\s+/g, ' ')
+              .trim(),
+          ).toBe('QR kód se nepodařilo vykreslit. Zaplaťte prosím podle uvedených údajů.');
+          expect(withOrdinarySpaces(element('.recovery-details').textContent)).toContain(
+            'OBNOVA K7MP4RXA',
           );
-          expect(element('.recovery-details').textContent).toContain('OBNOVA K7MP4RXA');
         });
 
         it('again while the earlier recovery is open, then the dialog says when it started and asks to pay with that message', async () => {
           (await askForRecovery()).flush({ ...instructions, resumed: true });
           await settle();
 
-          expect(element('.recovery-resumed').textContent?.replace(/\s+/g, ' ').trim()).toBe(
-            'Tuto obnovu už jste zahájili 17. 10. 2026 12:00. Pošlete platbu s tímto kódem.',
-          );
+          expect(
+            withOrdinarySpaces(element('.recovery-resumed').textContent)
+              ?.replace(/\s+/g, ' ')
+              .trim(),
+          ).toBe('Tuto obnovu už jste zahájili 17. 10. 2026 12:00. Pošlete platbu s tímto kódem.');
           expect(
             element('.recovery-resumed').compareDocumentPosition(element('.recovery-details')),
           ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-          expect(element('.recovery').textContent).toContain('OBNOVA K7MP4RXA');
+          expect(withOrdinarySpaces(element('.recovery').textContent)).toContain('OBNOVA K7MP4RXA');
         });
 
         it('then whoever cannot wait until that day reads to write to info@nfnn.cz, next to the date', async () => {
@@ -607,7 +638,7 @@ describe('Given the sign-in dialog', () => {
           await settle();
 
           const wait = element('.recovery .ui-callout .recovery-cannot-wait');
-          expect(wait.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+          expect(withOrdinarySpaces(wait.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
             'Nemůžete tak dlouho čekat? Napište nám na info@nfnn.cz a kód z aplikace vám vypneme.',
           );
           expect(wait.querySelector('a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
@@ -617,7 +648,7 @@ describe('Given the sign-in dialog', () => {
           (await askForRecovery()).flush({ ...instructions, usableFrom: null });
           await settle();
 
-          expect(element('.recovery').textContent).not.toContain('nejdříve');
+          expect(withOrdinarySpaces(element('.recovery').textContent)).not.toContain('nejdříve');
           expect(element('.recovery-cannot-wait')).toBeNull();
         });
 
@@ -637,7 +668,9 @@ describe('Given the sign-in dialog', () => {
 
           expect(element('.recovery')).toBeNull();
           expect(element('#login-code')).not.toBeNull();
-          expect(element('[role="alert"]').textContent).toContain('Obnova platbou není možná.');
+          expect(withOrdinarySpaces(element('[role="alert"]').textContent)).toContain(
+            'Obnova platbou není možná.',
+          );
         });
 
         it('after the sign-in expired, then the dialog goes back to the password and says why', async () => {
@@ -653,7 +686,9 @@ describe('Given the sign-in dialog', () => {
 
           expect(element('#login-code')).toBeNull();
           expect(element('#login-password')).not.toBeNull();
-          expect(element('.ui-field-error').textContent).toContain('Přihlášení vypršelo.');
+          expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
+            'Přihlášení vypršelo.',
+          );
         });
 
         it('too many times from one address, then the dialog asks to try again in a while', async () => {
@@ -663,7 +698,7 @@ describe('Given the sign-in dialog', () => {
           });
           await settle();
 
-          expect(element('[role="alert"]').textContent).toContain(
+          expect(withOrdinarySpaces(element('[role="alert"]').textContent)).toContain(
             'Příliš mnoho pokusů z této adresy.',
           );
         });
@@ -711,8 +746,10 @@ describe('Given the sign-in dialog', () => {
         );
       await settle();
 
-      expect(element('.ui-field-error').textContent).toContain('E-mail ještě není potvrzený');
-      expect(element('.form-note .link-btn').textContent).toContain(
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
+        'E-mail ještě není potvrzený',
+      );
+      expect(withOrdinarySpaces(element('.form-note .link-btn').textContent)).toContain(
         'Poslat ověřovací e-mail znovu',
       );
 
@@ -723,7 +760,7 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(element('.form-status').closest('[role="status"]')).not.toBeNull();
-      expect(element('.form-status').textContent).toContain(
+      expect(withOrdinarySpaces(element('.form-status').textContent)).toContain(
         'Ověřovací e\u2011mail jsme poslali znovu.',
       );
       expect(element('.form-note')).toBeNull();
@@ -753,7 +790,9 @@ describe('Given the sign-in dialog', () => {
       await click('#login-password + .password-reveal');
 
       expect(element<HTMLInputElement>('#login-password').type).toBe('text');
-      expect(element('label[for="login-password"]').textContent).toContain('Heslo');
+      expect(withOrdinarySpaces(element('label[for="login-password"]').textContent)).toContain(
+        'Heslo',
+      );
     });
 
     it('with an empty field, then nothing is sent and the empty field says what is missing', async () => {
@@ -762,7 +801,9 @@ describe('Given the sign-in dialog', () => {
       await submit('.login-form');
 
       http.expectNone('/api/donors/auth/login');
-      expect(element('#login-password-error').textContent).toContain('Vyplňte prosím heslo.');
+      expect(withOrdinarySpaces(element('#login-password-error').textContent)).toContain(
+        'Vyplňte prosím heslo.',
+      );
       expect(element('#login-email-error')).toBeNull();
       expect(element('.ui-field-error')).toBeNull();
     });
@@ -786,8 +827,10 @@ describe('Given the sign-in dialog', () => {
       const remember = element<HTMLInputElement>('.session-check input');
       expect(remember.type).toBe('checkbox');
       expect(remember.checked).toBe(false);
-      expect(element('.session-check').textContent).toContain('Zapamatovat si mě');
-      expect(element('.session-switch').textContent).toContain('Cizí počítač?');
+      expect(withOrdinarySpaces(element('.session-check').textContent)).toContain(
+        'Zapamatovat si mě',
+      );
+      expect(withOrdinarySpaces(element('.session-switch').textContent)).toContain('Cizí počítač?');
       expect(fixture.nativeElement.querySelectorAll('.session-check input')).toHaveLength(1);
     });
 
@@ -808,9 +851,11 @@ describe('Given the sign-in dialog', () => {
 
       const box = element<HTMLInputElement>('.session-check input');
       expect(box.checked).toBe(true);
-      expect(element('.session-check').textContent).toContain('Cizí počítač, nic neukládat');
-      expect(element('#session-public-hint').textContent).toContain(
-        'Po hodině bez používání vás odhlásíme a\u00a0po zavření prohlížeče tu nic nezůstane.',
+      expect(withOrdinarySpaces(element('.session-check').textContent)).toContain(
+        'Cizí počítač, nic neukládat',
+      );
+      expect(withOrdinarySpaces(element('#session-public-hint').textContent)).toContain(
+        'Po hodině bez používání vás odhlásíme a po zavření prohlížeče tu nic nezůstane.',
       );
       expect(box.getAttribute('aria-describedby')).toBe('session-public-hint');
       expect((await signIn())['session']).toBe('PUBLIC');
@@ -822,7 +867,9 @@ describe('Given the sign-in dialog', () => {
       await click('.session-switch');
       await click('.session-switch');
 
-      expect(element('.session-check').textContent).toContain('Zapamatovat si mě');
+      expect(withOrdinarySpaces(element('.session-check').textContent)).toContain(
+        'Zapamatovat si mě',
+      );
       expect(element<HTMLInputElement>('.session-check input').checked).toBe(false);
       expect((await signIn())['session']).toBe('BROWSER');
     });
@@ -832,7 +879,9 @@ describe('Given the sign-in dialog', () => {
       element<HTMLInputElement>('.session-check input').click();
       await settle();
 
-      expect(element('.session-check').textContent).toContain('Zapamatovat si mě');
+      expect(withOrdinarySpaces(element('.session-check').textContent)).toContain(
+        'Zapamatovat si mě',
+      );
     });
 
     it('and signs in on a public computer with the second factor on, then the code step keeps the public computer', async () => {
@@ -877,7 +926,9 @@ describe('Given the sign-in dialog', () => {
     }
 
     it('then the device answers the challenge, the dialog closes and the page stays', async () => {
-      expect(element('.passkey-btn').textContent).toContain('Přihlásit se přístupovým klíčem');
+      expect(withOrdinarySpaces(element('.passkey-btn').textContent)).toContain(
+        'Přihlásit se přístupovým klíčem',
+      );
 
       await choosePasskey();
       http.expectOne('/api/donors/auth/passkey').flush(authResponse('token-1'));
@@ -896,7 +947,7 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(element('.passkey-error').getAttribute('role')).toBe('alert');
-      expect(element('.passkey-error').textContent).toContain(
+      expect(withOrdinarySpaces(element('.passkey-error').textContent)).toContain(
         'Přihlášení přístupovým klíčem neproběhlo',
       );
       expect(element('.passkey-btn').nextElementSibling).toBe(element('.passkey-error'));
@@ -920,7 +971,9 @@ describe('Given the sign-in dialog', () => {
         );
       await settle();
 
-      expect(element('.passkey-error').textContent).toContain('Přístupový klíč neznáme.');
+      expect(withOrdinarySpaces(element('.passkey-error').textContent)).toContain(
+        'Přístupový klíč neznáme.',
+      );
       expect(TestBed.inject(AuthStore).signedIn()).toBe(false);
     });
 
@@ -1088,8 +1141,12 @@ describe('Given the sign-in dialog', () => {
       expect(dialog.isOpen()).toBe(true);
       expect(navigate).not.toHaveBeenCalled();
       expect(TestBed.inject(AuthStore).signedIn()).toBe(false);
-      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
-      expect(element('.reset-success [role="status"]').textContent).toContain('jana@example.cz');
+      expect(withOrdinarySpaces(element('.reset-success h3').textContent)).toContain(
+        'Zkontrolujte si e-mail',
+      );
+      expect(withOrdinarySpaces(element('.reset-success [role="status"]').textContent)).toContain(
+        'jana@example.cz',
+      );
       expect(element('.register-form')).toBeNull();
       expect(element('.tab-switch')).toBeNull();
       expect(document.activeElement).toBe(element('.reset-success h3'));
@@ -1118,7 +1175,9 @@ describe('Given the sign-in dialog', () => {
         await settle();
 
         expect(
-          element('.reset-success [role="status"]:not(:empty) .form-status').textContent,
+          withOrdinarySpaces(
+            element('.reset-success [role="status"]:not(:empty) .form-status').textContent,
+          ),
         ).toContain('Odkaz jsme poslali znovu');
       });
 
@@ -1131,17 +1190,19 @@ describe('Given the sign-in dialog', () => {
       });
 
       it('then the advice no longer sends the visitor to sign in first', () => {
-        expect(element('.reset-hint').textContent).toContain(
+        expect(withOrdinarySpaces(element('.reset-hint').textContent)).toContain(
           'Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.',
         );
       });
     });
 
     it('then the form explains why it asks for the address, names its sections and asks for the postal code before the city', () => {
-      expect(element('.register-lead').textContent?.replace(/[ \n]+/g, ' ')).toContain(
-        'Jméno a\u00a0adresu uvedeme na potvrzení o\u00a0daru.',
+      expect(
+        withOrdinarySpaces(element('.register-lead').textContent)?.replace(/[ \n]+/g, ' '),
+      ).toContain('Jméno a adresu uvedeme na potvrzení o daru.');
+      expect(withOrdinarySpaces(element('#register-type-label').textContent)).toContain(
+        'Registruji se jako',
       );
-      expect(element('#register-type-label').textContent).toContain('Registruji se jako');
       expect(element('.type-switch').getAttribute('aria-labelledby')).toBe('register-type-label');
       expect(
         element('#register-postal-code').compareDocumentPosition(element('#register-city')),
@@ -1149,7 +1210,7 @@ describe('Given the sign-in dialog', () => {
     });
 
     it('then a passkey is explained before the visitor picks how to sign in', () => {
-      expect(element('#register-method-hint').textContent).toContain(
+      expect(withOrdinarySpaces(element('#register-method-hint').textContent)).toContain(
         'Když si nejste jistí, zvolte heslo.',
       );
       expect(
@@ -1205,9 +1266,9 @@ describe('Given the sign-in dialog', () => {
       await submit('.register-form');
 
       http.expectNone('/api/donors/auth/register');
-      expect(element('#register-company-identifier-error').textContent).toContain(
-        'Toto IČO neexistuje, zkontrolujte prosím číslice.',
-      );
+      expect(
+        withOrdinarySpaces(element('#register-company-identifier-error').textContent),
+      ).toContain('Toto IČO neexistuje, zkontrolujte prosím číslice.');
     });
 
     it('with a character no receipt can print in the name or the city, then nothing is sent and those fields say so', async () => {
@@ -1220,8 +1281,12 @@ describe('Given the sign-in dialog', () => {
       http.expectNone('/api/donors/auth/register');
       const refusal =
         'Obsahuje znak, který na potvrzení o daru nevytiskneme, například emoji nebo čínské písmo. Napište prosím tento údaj latinkou, cyrilicí nebo řeckým písmem.';
-      expect(element('#register-name-error').textContent?.trim()).toBe(refusal);
-      expect(element('#register-city-error').textContent?.trim()).toBe(refusal);
+      expect(withOrdinarySpaces(element('#register-name-error').textContent)?.trim()).toBe(
+        withOrdinarySpaces(refusal),
+      );
+      expect(withOrdinarySpaces(element('#register-city-error').textContent)?.trim()).toBe(
+        withOrdinarySpaces(refusal),
+      );
       expect(element('#register-street-error')).toBeNull();
       expect(document.activeElement).toBe(element('#register-name'));
     });
@@ -1239,14 +1304,16 @@ describe('Given the sign-in dialog', () => {
       );
       await settle();
 
-      expect(element('#register-postal-code-error').textContent).toContain('PSČ neexistuje.');
-      expect(document.activeElement).toBe(element('#register-postal-code'));
-      expect(element('.register-form > .ui-field-error').textContent).toContain(
-        'Neplatný požadavek. Zkontrolujte prosím zadané údaje.',
-      );
-      expect(element('.register-form > .ui-field-error').textContent).not.toContain(
+      expect(withOrdinarySpaces(element('#register-postal-code-error').textContent)).toContain(
         'PSČ neexistuje.',
       );
+      expect(document.activeElement).toBe(element('#register-postal-code'));
+      expect(withOrdinarySpaces(element('.register-form > .ui-field-error').textContent)).toContain(
+        'Neplatný požadavek. Zkontrolujte prosím zadané údaje.',
+      );
+      expect(
+        withOrdinarySpaces(element('.register-form > .ui-field-error').textContent),
+      ).not.toContain('PSČ neexistuje.');
     });
 
     describe('and closes the dialog half way', () => {
@@ -1262,7 +1329,9 @@ describe('Given the sign-in dialog', () => {
       it('then the next dialog brings back what was filled in, except the password', async () => {
         await render('register');
 
-        expect(element('.type-switch button.is-active').textContent).toContain('Firma');
+        expect(withOrdinarySpaces(element('.type-switch button.is-active').textContent)).toContain(
+          'Firma',
+        );
         expect(element<HTMLInputElement>('#register-name').value).toBe('Stavby Novák s.r.o.');
         expect(element<HTMLInputElement>('#register-email').value).toBe('ucetni@stavby.example.cz');
         expect(element<HTMLInputElement>('#register-password').value).toBe('');
@@ -1279,7 +1348,9 @@ describe('Given the sign-in dialog', () => {
       await fillInPerson();
       await click('.type-switch[aria-labelledby="register-method-label"] button:nth-child(2)');
       expect(element('#register-password')).toBeNull();
-      expect(element('.passkey-later').textContent).toContain('hned po potvrzení e\u2011mailu');
+      expect(withOrdinarySpaces(element('.passkey-later').textContent)).toContain(
+        'hned po potvrzení e\u2011mailu',
+      );
 
       await submit('.register-form');
       const request = http.expectOne('/api/donors/auth/register');
@@ -1287,7 +1358,9 @@ describe('Given the sign-in dialog', () => {
       request.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
+      expect(withOrdinarySpaces(element('.reset-success h3').textContent)).toContain(
+        'Zkontrolujte si e-mail',
+      );
     });
 
     it('in a browser without passkeys, then only the password is offered', async () => {
@@ -1337,7 +1410,9 @@ describe('Given the sign-in dialog', () => {
 
       function status(): string {
         return (
-          fixture.nativeElement.querySelector('.company-lookup-status')?.textContent?.trim() ?? ''
+          withOrdinarySpaces(
+            fixture.nativeElement.querySelector('.company-lookup-status')?.textContent,
+          )?.trim() ?? ''
         );
       }
 
@@ -1360,7 +1435,7 @@ describe('Given the sign-in dialog', () => {
         expect(value('#register-city')).toBe('Ústí nad Labem');
         expect(element('.company-lookup-status').closest('[role="status"]')).not.toBeNull();
         expect(status()).toBe(
-          'Údaje jsme doplnili z\u00a0obchodního rejstříku (ARES). Zkontrolujte je.',
+          'Údaje jsme doplnili z obchodního rejstříku (ARES). Zkontrolujte je.',
         );
       });
 
@@ -1439,7 +1514,7 @@ describe('Given the sign-in dialog', () => {
           expect(value('#register-street')).toBe('');
           expect(fixture.nativeElement.querySelector('[role="alert"]:not(:empty)')).toBeNull();
           expect(element('.register-form > .ui-field-error')).toBeNull();
-          expect(fixture.nativeElement.textContent).not.toContain('ARES');
+          expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain('ARES');
         });
       }
 
@@ -1486,7 +1561,7 @@ describe('Given the sign-in dialog', () => {
         await click('.type-switch button:nth-child(1)');
 
         expect(lookup.cancelled).toBe(true);
-        expect(fixture.nativeElement.textContent).not.toContain('ARES');
+        expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain('ARES');
       });
     });
 
@@ -1497,9 +1572,9 @@ describe('Given the sign-in dialog', () => {
       await submit('.register-form');
 
       http.expectNone('/api/donors/auth/register');
-      expect(element('#register-company-identifier-error').textContent).toContain(
-        'Vyplňte prosím IČO.',
-      );
+      expect(
+        withOrdinarySpaces(element('#register-company-identifier-error').textContent),
+      ).toContain('Vyplňte prosím IČO.');
     });
 
     it('as a company with a seven-digit identification number, then the field says it has eight digits', async () => {
@@ -1510,9 +1585,9 @@ describe('Given the sign-in dialog', () => {
       await submit('.register-form');
 
       http.expectNone('/api/donors/auth/register');
-      expect(element('#register-company-identifier-error').textContent).toContain(
-        'IČO má osm číslic.',
-      );
+      expect(
+        withOrdinarySpaces(element('#register-company-identifier-error').textContent),
+      ).toContain('IČO má osm číslic.');
     });
 
     it('with a password shorter than 12 characters, then nothing is sent and the password field says why', async () => {
@@ -1522,8 +1597,8 @@ describe('Given the sign-in dialog', () => {
       await submit('.register-form');
 
       http.expectNone('/api/donors/auth/register');
-      expect(element('#register-password-error').textContent).toContain(
-        'Heslo musí mít alespoň 12\u00a0znaků.',
+      expect(withOrdinarySpaces(element('#register-password-error').textContent)).toContain(
+        'Heslo musí mít alespoň 12 znaků.',
       );
       expect(element('#register-password').getAttribute('aria-describedby')).toBe(
         'register-password-hint register-password-error',
@@ -1546,8 +1621,12 @@ describe('Given the sign-in dialog', () => {
         );
       await settle();
 
-      expect(element('.ui-field-error').textContent).toContain('Heslo je příliš běžné');
-      expect(element('.ui-field-error').textContent).toContain('Zvolte prosím méně obvyklé heslo.');
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
+        'Heslo je příliš běžné',
+      );
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
+        'Zvolte prosím méně obvyklé heslo.',
+      );
     });
 
     it('too many times from one address, then the dialog asks to try again in a while', async () => {
@@ -1570,7 +1649,7 @@ describe('Given the sign-in dialog', () => {
       await settle();
 
       expect(dialog.isOpen()).toBe(true);
-      expect(element('.ui-field-error').textContent).toContain(
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
         'Příliš mnoho pokusů z této adresy. Zkuste to prosím za chvíli znovu.',
       );
       expect(element<HTMLButtonElement>('.register-form .ui-button--primary').disabled).toBe(false);
@@ -1586,7 +1665,7 @@ describe('Given the sign-in dialog', () => {
         .flush(null, { status: 500, statusText: 'Server Error' });
       await settle();
 
-      expect(element('.ui-field-error').textContent).toContain('nepodařilo');
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain('nepodařilo');
     });
   });
 
@@ -1599,7 +1678,7 @@ describe('Given the sign-in dialog', () => {
     }
 
     it('opened on the reset tab, then the reset form is shown straight away', () => {
-      expect(element('.reset-title').textContent).toContain('Obnovení hesla');
+      expect(withOrdinarySpaces(element('.reset-title').textContent)).toContain('Obnovení hesla');
       expect(element('#reset-email')).not.toBeNull();
     });
 
@@ -1633,11 +1712,13 @@ describe('Given the sign-in dialog', () => {
       request.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(element('.reset-success h3').textContent).toContain('Zkontrolujte si e-mail');
-      expect(element('.reset-success').textContent).toContain(
-        'Pokud k\u00a0adrese jana@example.cz existuje účet',
+      expect(withOrdinarySpaces(element('.reset-success h3').textContent)).toContain(
+        'Zkontrolujte si e-mail',
       );
-      expect(element('.reset-success').textContent).toContain('Platí hodinu.');
+      expect(withOrdinarySpaces(element('.reset-success').textContent)).toContain(
+        'Pokud k adrese jana@example.cz existuje účet',
+      );
+      expect(withOrdinarySpaces(element('.reset-success').textContent)).toContain('Platí hodinu.');
       expect(element('.reset-form')).toBeNull();
       expect(document.activeElement).toBe(element('.reset-success h3'));
     });
@@ -1655,16 +1736,16 @@ describe('Given the sign-in dialog', () => {
       again.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(element('.reset-success [role="status"] .form-status').textContent).toContain(
-        'poslali jsme odkaz znovu',
-      );
+      expect(
+        withOrdinarySpaces(element('.reset-success [role="status"] .form-status').textContent),
+      ).toContain('poslali jsme odkaz znovu');
     });
 
     it('with a malformed address, then nothing is sent', async () => {
       await requestLink('jana-at-example');
 
       http.expectNone('/api/donors/auth/password-reset/request');
-      expect(element('#reset-email-error').textContent).toContain(
+      expect(withOrdinarySpaces(element('#reset-email-error').textContent)).toContain(
         'Zadejte e-mail ve tvaru jana@example.cz.',
       );
     });
@@ -1686,7 +1767,7 @@ describe('Given the sign-in dialog', () => {
         );
       await settle();
 
-      expect(element('.ui-field-error').textContent).toContain(
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
         'Odeslali jste příliš mnoho žádostí. Zkuste to prosím za hodinu.',
       );
       expect(element('.reset-success')).toBeNull();
@@ -1704,7 +1785,7 @@ describe('Given the sign-in dialog', () => {
       );
       await settle();
 
-      expect(element('.ui-field-error').textContent).toContain(
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
         'Neplatný požadavek. Zadejte platný e-mail.',
       );
     });
@@ -1716,27 +1797,29 @@ describe('Given the sign-in dialog', () => {
         .flush(null, { status: 502, statusText: 'Bad Gateway' });
       await settle();
 
-      expect(element('.ui-field-error').textContent).toContain('Spojení se serverem se nepodařilo');
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
+        'Spojení se serverem se nepodařilo',
+      );
     });
   });
   describe('when the visitor reads the dialog', () => {
-    const NBSP = ' ';
-
     function words(selector: string): string {
-      return (element(selector).textContent ?? '').replace(/[ \n\t]+/g, ' ').trim();
+      return (withOrdinarySpaces(element(selector).textContent) ?? '')
+        .replace(/[ \n\t]+/g, ' ')
+        .trim();
     }
 
     it('then the register lead keeps each one-letter word on the line of the word after it', async () => {
       await render('register');
 
       expect(words('.register-lead')).toBe(
-        `Vytvořte si účet pro potvrzení o${NBSP}darech. Jméno a${NBSP}adresu uvedeme na potvrzení o${NBSP}daru.`,
+        `Vytvořte si účet pro potvrzení o darech. Jméno a adresu uvedeme na potvrzení o daru.`,
       );
 
       await click('.type-switch button:nth-child(2)');
 
       expect(words('.register-lead')).toBe(
-        `Vytvořte si účet pro potvrzení o${NBSP}darech. Název firmy, IČO a${NBSP}sídlo uvedeme na potvrzení o${NBSP}daru.`,
+        `Vytvořte si účet pro potvrzení o darech. Název firmy, IČO a sídlo uvedeme na potvrzení o daru.`,
       );
     });
 
@@ -1744,7 +1827,7 @@ describe('Given the sign-in dialog', () => {
       await render('reset');
 
       expect(words('.step-lead')).toBe(
-        `Zadejte svůj e\u2011mail a${NBSP}pošleme vám odkaz pro obnovení hesla.`,
+        `Zadejte svůj e\u2011mail a pošleme vám odkaz pro obnovení hesla.`,
       );
     });
 
@@ -1757,7 +1840,7 @@ describe('Given the sign-in dialog', () => {
         .flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(words('.reset-success p:not(.reset-hint)')).toContain(`Pokud k${NBSP}adrese`);
+      expect(words('.reset-success p:not(.reset-hint)')).toContain(`Pokud k adrese`);
       expect(words('.reset-hint')).toBe(
         'E\u2011mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.',
       );
@@ -1816,7 +1899,9 @@ describe('Given the sign-in dialog', () => {
         .expectOne('/api/donors/auth/register')
         .flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
-      expect(element('.reset-success [role="status"]').textContent).toContain('24\u00a0hodin');
+      expect(withOrdinarySpaces(element('.reset-success [role="status"]').textContent)).toContain(
+        '24 hodin',
+      );
 
       await click('.registration-resend');
 

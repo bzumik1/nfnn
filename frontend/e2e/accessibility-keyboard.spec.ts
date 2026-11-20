@@ -1,6 +1,21 @@
 import { Locator, Page } from '@playwright/test';
-import { expect, test } from './fixtures';
-import { mockDonorApi, openDonorSection, openSignInDialog, signIn } from './donor-session';
+import {
+  donorWithDonations,
+  mockAdministration,
+  rememberedSession,
+  serveEmptyAdministrationCopy,
+} from './baseline/screen-mocks';
+import { ADMINISTRATION_LOCKED, expect, test } from './fixtures';
+import {
+  connectionRequest,
+  mockConnectApi,
+  mockDonorApi,
+  openDonorSection,
+  openSignInDialog,
+  signIn,
+  whenAdministrationCopied,
+} from './donor-session';
+import { keptTogetherOffScreen, keptTogetherTooWide } from './kept-together';
 import {
   chunkLoadNotice,
   LostChunks,
@@ -80,27 +95,6 @@ async function valuesTouchingTheirTitle(page: Page): Promise<string[]> {
       })
       .map(([title, value]) => `${title!.textContent!.trim()}|${value!.textContent!.trim()}`),
   );
-}
-
-async function keptTogetherOffScreen(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const offScreen: string[] = [];
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      const text = node.textContent ?? '';
-      for (const run of text.matchAll(/[^ \t\r\n]*\u00a0[^ \t\r\n]*/g)) {
-        const range = document.createRange();
-        range.setStart(node, run.index);
-        range.setEnd(node, run.index + run[0].length);
-        for (const box of range.getClientRects()) {
-          if (box.width > 0 && (box.left < 0 || box.right > window.innerWidth)) {
-            offScreen.push(`${run[0]} ${Math.round(box.left)}..${Math.round(box.right)}`);
-          }
-        }
-      }
-    }
-    return offScreen;
-  });
 }
 
 async function widerThanScreen(page: Page): Promise<number> {
@@ -820,5 +814,83 @@ test.describe('Given a visitor who zooms to 400 % or sets wider text spacing', (
 
       expect(await keptTogetherOffScreen(page), section).toEqual([]);
     }
+  });
+});
+
+test.describe('Given a visitor whose phone shows text at 200 % on a screen 320 px wide', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await mockConnectApi(page);
+    await page.setViewportSize({ width: 320, height: 640 });
+  });
+
+  for (const path of [
+    '/',
+    '/o-nas',
+    '/prispet',
+    '/zasady-ochrany-osobnich-udaju',
+    connectionRequest,
+  ]) {
+    test(`when they open ${path.split('?')[0]}, then every run of words kept together by no-break spaces stays on the screen`, async ({
+      page,
+    }) => {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
+      await page.evaluate(() => document.fonts.ready);
+      expect.soft(await keptTogetherTooWide(page), path).toEqual([]);
+    });
+  }
+});
+
+test.describe('Given an administrator whose phone shows text at 200 %', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await mockAdministration(page);
+    await serveEmptyAdministrationCopy(page);
+  });
+
+  for (const width of [320, 390]) {
+    for (const path of [
+      '/sprava',
+      '/sprava/platby',
+      '/sprava/darci',
+      '/sprava/zalohy',
+      '/sprava/nastaveni',
+      '/sprava/lide-fondu',
+      '/sprava/logy',
+    ]) {
+      test(`when they open ${path} ${width} px wide, then every run of words kept together by no-break spaces stays on the screen and inside its box`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 640 });
+        await rememberedSession(page);
+        const copied = whenAdministrationCopied(page);
+        await page.goto(path);
+        await expect(page.locator('h1').first()).not.toHaveText(ADMINISTRATION_LOCKED);
+        await copied();
+        await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
+        await page.evaluate(() => document.fonts.ready);
+        expect.soft(await keptTogetherTooWide(page), path).toEqual([]);
+      });
+    }
+  }
+
+  test.describe('and the administration locks on this device', () => {
+    test.use({ unlocksAdministration: false });
+
+    test('when the lock shows 320 px wide, then every run of words kept together by no-break spaces stays on the screen and inside its box', async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 640 });
+      await rememberedSession(page);
+      await page.goto('/sprava/prehledy');
+      await expect(
+        page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
+      ).toBeVisible();
+      await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
+      await page.evaluate(() => document.fonts.ready);
+      expect.soft(await keptTogetherTooWide(page)).toEqual([]);
+    });
   });
 });

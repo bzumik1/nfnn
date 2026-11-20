@@ -5,6 +5,7 @@ import { Connectivity } from '../../../../core/connectivity/connectivity';
 import { AdministrationVisit, type VisitState } from '../../device-copy/administration-visit';
 import type { VisitChanges } from '../../device-copy/visit-changes';
 import { SinceLastVisit } from './since-last-visit';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const NOTHING: VisitChanges = {
   payments: { count: 0, totalMinor: 0 },
@@ -85,7 +86,7 @@ describe('Given the block of what is new since the last visit on the administrat
   }
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -93,8 +94,8 @@ describe('Given the block of what is new since the last visit on the administrat
   function figures(): Record<string, string> {
     const rows: Record<string, string> = {};
     fixture.nativeElement.querySelectorAll('dl > div').forEach((row: HTMLElement) => {
-      rows[row.querySelector('dt')?.textContent?.trim() ?? ''] = (
-        row.querySelector('dd')?.textContent ?? ''
+      rows[withOrdinarySpaces(row.querySelector('dt')?.textContent)?.trim() ?? ''] = (
+        withOrdinarySpaces(row.querySelector('dd')?.textContent) ?? ''
       )
         .replace(/\s+/g, ' ')
         .trim();
@@ -106,7 +107,7 @@ describe('Given the block of what is new since the last visit on the administrat
     return Array.from(
       fixture.nativeElement.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>,
     ).map((link) => ({
-      text: (link.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      text: (withOrdinarySpaces(link.textContent) ?? '').replace(/\s+/g, ' ').trim(),
       href: link.getAttribute('href'),
     }));
   }
@@ -211,9 +212,9 @@ describe('Given the block of what is new since the last visit on the administrat
     for (const [changes, lead, donors, others] of cases) {
       await show(ready(changes));
 
-      expect(text('.since-lead')).toContain(lead);
-      expect(figures()['Noví dárci']).toBe(donors);
-      expect(figures()['Úkony dalších správců']).toBe(others);
+      expect(text('.since-lead')).toContain(withOrdinarySpaces(lead));
+      expect(figures()['Noví dárci']).toBe(withOrdinarySpaces(donors));
+      expect(figures()['Úkony dalších správců']).toBe(withOrdinarySpaces(others));
     }
   });
 
@@ -323,7 +324,9 @@ describe('Given the block of what is new since the last visit on the administrat
     await show({ kind: 'failed' });
 
     const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
-    expect(alert.textContent).toContain('Co je od minula nového, se nepodařilo zjistit.');
+    expect(withOrdinarySpaces(alert.textContent)).toContain(
+      'Co je od minula nového, se nepodařilo zjistit.',
+    );
 
     (alert.querySelector('button') as HTMLButtonElement).click();
 
@@ -335,7 +338,7 @@ describe('Given the block of what is new since the last visit on the administrat
     await show(ready(BUSY));
 
     (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
-      .find((button) => button.textContent?.trim() === 'Zavřít souhrn')
+      .find((button) => withOrdinarySpaces(button.textContent)?.trim() === 'Zavřít souhrn')
       ?.click();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -349,7 +352,7 @@ describe('Given the block of what is new since the last visit on the administrat
 
     expect(
       (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).map(
-        (button) => button.textContent?.trim(),
+        (button) => withOrdinarySpaces(button.textContent)?.trim(),
       ),
     ).toEqual(['Zavřít souhrn']);
   });

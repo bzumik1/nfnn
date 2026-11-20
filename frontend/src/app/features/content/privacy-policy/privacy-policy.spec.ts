@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { PrivacyPolicy } from './privacy-policy';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given the privacy policy page', () => {
   let fixture: ComponentFixture<PrivacyPolicy>;
@@ -17,22 +18,26 @@ describe('Given the privacy policy page', () => {
 
   function texts(selector: string): string[] {
     return Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll(selector)).map(
-      (element) => element.textContent!.replace(/\s+/g, ' ').trim(),
+      (element) => withOrdinarySpaces(element.textContent)!.replace(/\s+/g, ' ').trim(),
     );
   }
 
   function sectionText(heading: string): string {
     const section = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('section')).find(
-      (candidate) => candidate.querySelector('h2')?.textContent?.trim() === heading,
+      (candidate) =>
+        withOrdinarySpaces(candidate.querySelector('h2')?.textContent)?.trim() === heading,
     );
-    return section!.textContent!.replace(/\s+/g, ' ');
+    return withOrdinarySpaces(section!.textContent)!.replace(/\s+/g, ' ');
   }
 
   function purposeText(heading: string): string {
     const purpose = Array.from<HTMLElement>(
       fixture.nativeElement.querySelectorAll('.purpose'),
-    ).find((candidate) => candidate.querySelector('h3')?.textContent?.trim() === heading);
-    return purpose!.textContent!.replace(/\s+/g, ' ');
+    ).find(
+      (candidate) =>
+        withOrdinarySpaces(candidate.querySelector('h3')?.textContent)?.trim() === heading,
+    );
+    return withOrdinarySpaces(purpose!.textContent)!.replace(/\s+/g, ' ');
   }
 
   it('when it renders, then its only main heading names the policy', () => {
@@ -60,7 +65,10 @@ describe('Given the privacy policy page', () => {
     const entries = Array.from(toc.querySelectorAll('a')).map((link) => {
       const fragment = link.getAttribute('href')!.split('#')[1];
       const section = fixture.nativeElement.querySelector(`section#${fragment}`) as HTMLElement;
-      return [link.textContent?.trim(), section?.querySelector('h2')?.textContent?.trim()];
+      return [
+        withOrdinarySpaces(link.textContent)?.trim(),
+        withOrdinarySpaces(section?.querySelector('h2')?.textContent)?.trim(),
+      ];
     });
     expect(entries).toHaveLength(9);
     for (const [entry, heading] of entries) {
@@ -96,7 +104,7 @@ describe('Given the privacy policy page', () => {
   });
 
   it('when it renders, then it says what push notifications keep, who delivers them, what they never carry and when they are deleted', () => {
-    const page = (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ');
+    const page = (withOrdinarySpaces(fixture.nativeElement.textContent) ?? '').replace(/\s+/g, ' ');
 
     expect(page).toContain(
       'adresu, na kterou je služba vašeho prohlížeče doručuje, klíče prohlížeče',
@@ -261,7 +269,9 @@ describe('Given the privacy policy page', () => {
     expect(olderSymbol).toContain(
       'Odpovíte-li ano, přiřadíme vám dřívější i další platby s tímto symbolem z tohoto účtu stejně jako platby bez symbolu.',
     );
-    expect(purposeText('Evidence darů a potvrzení o daru')).toContain(olderSymbol);
+    expect(purposeText('Evidence darů a potvrzení o daru')).toContain(
+      withOrdinarySpaces(olderSymbol),
+    );
   });
 
   it('when it renders, then it says the name of the payer serves only to tell a company from a person before that question', () => {
@@ -466,7 +476,7 @@ describe('Given the privacy policy page', () => {
     const link = fixture.nativeElement.querySelector('a[href^="mailto:"]') as HTMLAnchorElement;
 
     expect(link.getAttribute('href')).toBe('mailto:info@nfnn.cz');
-    expect(link.textContent!.trim()).toBe('info@nfnn.cz');
+    expect(withOrdinarySpaces(link.textContent)!.trim()).toBe('info@nfnn.cz');
   });
 
   it('when it renders, then the contact section links to the contact form on the About page', () => {
@@ -474,7 +484,7 @@ describe('Given the privacy policy page', () => {
       'a[href="/o-nas#kontakt"]',
     ) as HTMLAnchorElement;
 
-    expect(link.textContent!.trim()).toBe('kontaktní formulář');
+    expect(withOrdinarySpaces(link.textContent)!.trim()).toBe('kontaktní formulář');
   });
 });
 
@@ -544,7 +554,7 @@ describe('Given the privacy policy page read in a browser that reports which sec
   function currentEntries(): string[] {
     return Array.from<HTMLElement>(
       fixture.nativeElement.querySelectorAll('nav.toc a[aria-current="location"]'),
-    ).map((link) => link.textContent!.trim());
+    ).map((link) => withOrdinarySpaces(link.textContent)!.trim());
   }
 
   it('when it renders, then it watches every section of the policy', () => {

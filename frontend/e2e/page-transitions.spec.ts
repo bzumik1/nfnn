@@ -275,7 +275,7 @@ async function followPairedPaymentsDonor(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/sprava$/);
   await page
     .getByRole('main')
-    .getByRole('link', { name: /^Platby z banky/ })
+    .getByRole('link', { name: /^Platby z\sbanky/ })
     .first()
     .click();
   await expect(page).toHaveURL(/\/sprava\/platby/);

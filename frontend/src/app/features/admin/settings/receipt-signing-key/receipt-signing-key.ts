@@ -119,7 +119,7 @@ export class ReceiptSigningKey {
           : $localize`:@@admin.signingKey.earlierKey:${key.keyId}:key: (zaregistrovaný ${formatBankTime(key.registeredAt)}:time:)`,
       )
       .join(', ');
-    return $localize`:@@admin.signingKey.earlier:Zveřejněné jsou i dřívější klíče: ${list}:keys:.`;
+    return $localize`:@@admin.signingKey.earlier:Zveřejněné jsou i\u00a0dřívější klíče: ${list}:keys:.`;
   });
 
   constructor() {
@@ -224,7 +224,7 @@ export class ReceiptSigningKey {
     this.unfinishedRenewal.set(null);
     this.notice.set({
       kind: 'status',
-      text: $localize`:@@admin.signingKey.restarting:Klíč ${keyId}:key: je zneplatněný. Web se restartuje a vytvoří si nový klíč, obvykle do minuty.`,
+      text: $localize`:@@admin.signingKey.restarting:Klíč ${keyId}:key: je zneplatněný. Web se restartuje a\u00a0vytvoří si nový klíč, obvykle do minuty.`,
     });
     watchKeyRenewal(() => this.api.receiptSigningKeys(), keyId)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -243,19 +243,19 @@ export class ReceiptSigningKey {
     if (keys.currentKeyId === keyId) {
       return {
         kind: 'alert',
-        text: $localize`:@@admin.signingKey.notRenewed:Klíč ${keyId}:key: je zneplatněný, ale web po restartu nový klíč nemá, takže se potvrzení o daru nestáhnou; obraťte se prosím na technika serveru.`,
+        text: $localize`:@@admin.signingKey.notRenewed:Klíč ${keyId}:key: je zneplatněný, ale web po restartu nový klíč nemá, takže se potvrzení o\u00a0daru nestáhnou; obraťte se prosím na technika serveru.`,
       };
     }
     if (!keys.currentKeyPublished) {
       return {
         kind: 'alert',
-        text: $localize`:@@admin.signingKey.renewedUnpublished:Klíč ${keyId}:key: je zneplatněný a web po restartu má nový klíč ${keys.currentKeyId}:newKey:, který ale zatím není zveřejněný.`,
+        text: $localize`:@@admin.signingKey.renewedUnpublished:Klíč ${keyId}:key: je zneplatněný a\u00a0web po restartu má nový klíč ${keys.currentKeyId}:newKey:, který ale zatím není zveřejněný.`,
       };
     }
     return withdrawnCurrentKeyId(keys) === null
       ? {
           kind: 'status',
-          text: $localize`:@@admin.signingKey.renewed:Klíč ${keyId}:key: je zneplatněný a web po restartu podepisuje novým klíčem.`,
+          text: $localize`:@@admin.signingKey.renewed:Klíč ${keyId}:key: je zneplatněný a\u00a0web po restartu podepisuje novým klíčem.`,
         }
       : null;
   }

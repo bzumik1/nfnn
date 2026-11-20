@@ -161,7 +161,7 @@ function latestPart({ running, latest, updateAvailable }: ReleaseResponse): stri
     return $localize`:@@admin.logs.state.release.unknown:nejnovější vydání zatím neznáme`;
   }
   if (updateAvailable) {
-    return $localize`:@@admin.logs.state.release.newer:novější ${latest.version}:version: z ${formatBankTime(latest.publishedAt)}:publishedAt:`;
+    return $localize`:@@admin.logs.state.release.newer:novější ${latest.version}:version: z\u00a0${formatBankTime(latest.publishedAt)}:publishedAt:`;
   }
   return latest.version === running
     ? $localize`:@@admin.logs.state.release.latest:nejnovější`

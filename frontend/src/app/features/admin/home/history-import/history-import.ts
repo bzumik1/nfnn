@@ -51,7 +51,7 @@ const EARLIEST_DAY = '2000-01-01';
 const TOO_EARLY = 'donations/history-start-too-early';
 const IN_FUTURE = 'donations/history-start-in-future';
 
-const FROM_HINT = $localize`:@@admin.home.history.from.hint:Platby za posledních 89 dní web stáhne i bez odemčení. Načíst je můžete i opakovaně: platby, které web už má, se nezdvojí.`;
+const FROM_HINT = $localize`:@@admin.home.history.from.hint:Platby za posledních 89\u00a0dní web stáhne i\u00a0bez odemčení. Načíst je můžete i\u00a0opakovaně: platby, které web už má, se nezdvojí.`;
 
 const FROM_MESSAGES: FieldMessages = {
   required: $localize`:@@admin.home.history.from.required:Zadejte prosím den, od kterého se mají platby stáhnout.`,
@@ -231,7 +231,7 @@ function describeRun(run: HistoryImportResponse): Notice {
         kind: 'status',
         text:
           Date.parse(run.startsAt) > Date.now()
-            ? $localize`:@@admin.home.history.queued:Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v ${pragueTime(run.startsAt)}:time:. Stránku můžete zavřít, výsledek tu uvidíte i později.`
+            ? $localize`:@@admin.home.history.queued:Fio přijímá jeden dotaz za 30\u00a0sekund. Stahování začne samo nejpozději v\u00a0${pragueTime(run.startsAt)}:time:. Stránku můžete zavřít, výsledek tu uvidíte i\u00a0později.`
             : $localize`:@@admin.home.history.waiting:Stahování začne za chvíli…`,
       };
     case 'RUNNING':
@@ -253,7 +253,7 @@ function describeRun(run: HistoryImportResponse): Notice {
       const at = finishedAt(run);
       return {
         kind: 'alert',
-        text: $localize`:@@admin.home.history.locked:Načtení z ${at}:time: se nepovedlo. Důvod: historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.`,
+        text: $localize`:@@admin.home.history.locked:Načtení z\u00a0${at}:time: se nepovedlo. Důvod: historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a\u00a0zkuste to znovu.`,
       };
     }
     case 'FAILED': {
@@ -278,7 +278,7 @@ function nextStepOf(run: HistoryImportResponse): ImportNextStep {
   }
   return {
     ...step,
-    text: `${step.text} ${$localize`:@@admin.home.history.next.unlockAgain:Pokud od odemčení historie uplynulo víc než 10 minut, odemkněte ji předtím znovu.`}`,
+    text: `${step.text} ${$localize`:@@admin.home.history.next.unlockAgain:Pokud od odemčení historie uplynulo víc než 10\u00a0minut, odemkněte ji předtím znovu.`}`,
   };
 }
 

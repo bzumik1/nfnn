@@ -18,7 +18,7 @@ export const ADMIN_DAILY: SideNavGroup = {
   id: 'admin-nav-daily',
   label: $localize`:@@admin.nav.group.daily:Každý den`,
   items: [
-    { path: ADMIN_PAYMENTS_PATH, label: $localize`:@@admin.nav.payments:Platby z banky` },
+    { path: ADMIN_PAYMENTS_PATH, label: $localize`:@@admin.nav.payments:Platby z\u00a0banky` },
     { path: '/sprava/darci', label: $localize`:@@admin.nav.donors:Dárci` },
     { path: '/sprava/aktuality', label: $localize`:@@admin.nav.news:Aktuality` },
     { path: '/sprava/projekty', label: $localize`:@@admin.nav.projects:Pomáháme` },
@@ -34,10 +34,10 @@ export const ADMIN_OCCASIONAL: SideNavGroup = {
       label: $localize`:@@admin.nav.yearlyReceipts:Hromadná potvrzení`,
     },
     { path: '/sprava/overit', label: $localize`:@@admin.nav.verify:Ověřit potvrzení` },
-    { path: '/sprava/o-nas', label: $localize`:@@admin.nav.about:Fotka v sekci O nás` },
+    { path: '/sprava/o-nas', label: $localize`:@@admin.nav.about:Fotka v\u00a0sekci O\u00a0nás` },
     {
       path: '/sprava/pruh-prispet',
-      label: $localize`:@@admin.nav.donateBand:Fotka v pruhu Přispět`,
+      label: $localize`:@@admin.nav.donateBand:Fotka v\u00a0pruhu Přispět`,
     },
     { path: '/sprava/lide-fondu', label: $localize`:@@admin.nav.people:Lidé fondu` },
     { path: '/sprava/spravci', label: $localize`:@@admin.nav.administrators:Správci` },
@@ -53,10 +53,10 @@ export const ADMIN_TECHNICAL: SideNavGroup = {
   label: $localize`:@@admin.nav.group.technical:Pro technika`,
   items: [
     { path: '/sprava/nastaveni', label: $localize`:@@admin.nav.settings:Nastavení` },
-    { path: ADMIN_LOGS_PATH, label: $localize`:@@admin.nav.logs:Logy a diagnostika` },
+    { path: ADMIN_LOGS_PATH, label: $localize`:@@admin.nav.logs:Logy a\u00a0diagnostika` },
     {
       path: '/sprava/starsi-symboly',
-      label: $localize`:@@admin.nav.symbolClaims:Odpovědi o starších symbolech`,
+      label: $localize`:@@admin.nav.symbolClaims:Odpovědi o\u00a0starších symbolech`,
     },
     { path: '/sprava/loga-bank', label: $localize`:@@admin.nav.bankLogos:Loga bank` },
   ],

@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SheetHead } from './sheet-head';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given the head of a page inside a sheet', () => {
   let fixture: ComponentFixture<SheetHead>;
@@ -26,7 +27,7 @@ describe('Given the head of a page inside a sheet', () => {
       expect(buttons()).toEqual(['Zpět', 'Zavřít']);
       const title = head().querySelector('h2');
       expect(title?.id).toBe('account-section-title');
-      expect(title?.textContent?.trim()).toBe('Můj přehled');
+      expect(withOrdinarySpaces(title?.textContent)?.trim()).toBe('Můj přehled');
       expect(title?.getAttribute('tabindex')).toBe('-1');
       expect(button('Zpět')?.compareDocumentPosition(title!)).toBe(
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -43,7 +44,7 @@ describe('Given the head of a page inside a sheet', () => {
     it('then the head shows the title without reading it out a second time', () => {
       expect(head().querySelector('h1, h2, h3')).toBeNull();
       const title = head().querySelector('p[aria-hidden="true"]');
-      expect(title?.textContent?.trim()).toBe('Můj přehled');
+      expect(withOrdinarySpaces(title?.textContent)?.trim()).toBe('Můj přehled');
       expect(buttons()).toEqual(['Zpět', 'Zavřít']);
     });
   });

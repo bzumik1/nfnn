@@ -97,7 +97,7 @@ export class ProjectOrderCard {
           this.saved.set(response.order);
           this.notice.set({
             kind: 'status',
-            text: $localize`:@@admin.projects.order.saved:Řazení jsme uložili. Web už příběhy ukazuje v tomto pořadí.`,
+            text: $localize`:@@admin.projects.order.saved:Řazení jsme uložili. Web už příběhy ukazuje v\u00a0tomto pořadí.`,
           });
           this.changed.emit(response.order);
         },

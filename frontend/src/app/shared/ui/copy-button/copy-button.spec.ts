@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CopyButton } from './copy-button';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given a copy button for an account number', () => {
   let fixture: ComponentFixture<CopyButton>;
@@ -20,7 +21,9 @@ describe('Given a copy button for an account number', () => {
 
   const button = () => fixture.nativeElement.querySelector('button') as HTMLButtonElement;
   const status = () =>
-    (fixture.nativeElement.querySelector('[role="status"]') as HTMLElement).textContent?.trim();
+    withOrdinarySpaces(
+      (fixture.nativeElement.querySelector('[role="status"]') as HTMLElement).textContent,
+    )?.trim();
 
   async function press(): Promise<void> {
     button().click();
@@ -29,7 +32,9 @@ describe('Given a copy button for an account number', () => {
   }
 
   it('when it renders, then it says what it copies', () => {
-    expect(button().textContent?.replace(/\s+/g, ' ').trim()).toBe('Kopírovat číslo účtu');
+    expect(withOrdinarySpaces(button().textContent)?.replace(/\s+/g, ' ').trim()).toBe(
+      'Kopírovat číslo účtu',
+    );
     expect(status()).toBe('');
   });
 
@@ -43,7 +48,9 @@ describe('Given a copy button for an account number', () => {
   it('when it is pressed, then its accessible name stays and the visible Zkopírováno is hidden from a screen reader', async () => {
     await press();
 
-    expect(button().textContent?.replace(/\s+/g, ' ').trim()).toBe('Kopírovat číslo účtu');
+    expect(withOrdinarySpaces(button().textContent)?.replace(/\s+/g, ' ').trim()).toBe(
+      'Kopírovat číslo účtu',
+    );
     const shown = button().querySelector('[data-label="Zkopírováno"]') as HTMLElement;
     expect(shown.getAttribute('aria-hidden')).toBe('true');
     expect(button().classList).toContain('ui-pill-button--done');
@@ -53,7 +60,7 @@ describe('Given a copy button for an account number', () => {
     const reserve = button().querySelector('[data-label="Zkopírováno"]') as HTMLElement;
 
     expect(reserve.getAttribute('aria-hidden')).toBe('true');
-    expect(reserve.textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(reserve.textContent)?.trim()).toBe('');
   });
 
   it('when it is pressed, then it reports the copy once it is in the clipboard', async () => {
@@ -81,7 +88,7 @@ describe('Given a copy button for an account number', () => {
     await vi.advanceTimersByTimeAsync(2500);
     fixture.detectChanges();
 
-    expect(button().textContent).toContain('Kopírovat');
+    expect(withOrdinarySpaces(button().textContent)).toContain('Kopírovat');
     expect(status()).toBe('');
   });
 
@@ -90,7 +97,7 @@ describe('Given a copy button for an account number', () => {
 
     await press();
 
-    expect(button().textContent).toContain('Kopírovat');
+    expect(withOrdinarySpaces(button().textContent)).toContain('Kopírovat');
     expect(status()).toBe('Zkopírovat se nepodařilo, opište si údaj prosím ručně.');
   });
 });
@@ -114,7 +121,9 @@ describe('Given a copy button with a label of its own', () => {
   it('when it renders, then the button shows the label alone', () => {
     const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
 
-    expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Zkopírovat zprávu pro technika');
+    expect(withOrdinarySpaces(button.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
+      'Zkopírovat zprávu pro technika',
+    );
   });
 
   it('when it renders, then the copied wording shares the cell of the longer label', () => {
@@ -122,7 +131,7 @@ describe('Given a copy button with a label of its own', () => {
     const faces = button.querySelector('.copy-button__faces') as HTMLElement;
 
     expect(faces.querySelector('[data-label="Zkopírováno"]')).not.toBeNull();
-    expect(faces.textContent).toContain('Zkopírovat zprávu pro technika');
+    expect(withOrdinarySpaces(faces.textContent)).toContain('Zkopírovat zprávu pro technika');
   });
 });
 
@@ -143,7 +152,9 @@ describe('Given a copy button with sentences of its own for its status', () => {
   });
 
   const status = () =>
-    (fixture.nativeElement.querySelector('[role="status"]') as HTMLElement).textContent?.trim();
+    withOrdinarySpaces(
+      (fixture.nativeElement.querySelector('[role="status"]') as HTMLElement).textContent,
+    )?.trim();
 
   async function press(): Promise<void> {
     (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();

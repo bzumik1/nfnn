@@ -58,9 +58,9 @@ export class SinceLastVisit {
     const state = this.state();
     switch (state.kind) {
       case 'first':
-        return $localize`:@@admin.home.visit.first:Na tomto zařízení zatím není s čím porovnat. Příště tu uvidíte, co mezitím přibylo: platby, dárci, potvrzení a úkony dalších správců.`;
+        return $localize`:@@admin.home.visit.first:Na tomto zařízení zatím není s\u00a0čím porovnat. Příště tu uvidíte, co mezitím přibylo: platby, dárci, potvrzení a\u00a0úkony dalších správců.`;
       case 'not-kept':
-        return $localize`:@@admin.home.visit.notKept:V tomto prohlížeči se správa neukládá, a tak tu není s čím porovnat, co od minula přibylo. Souhrn uvidíte na zařízení, kde se správa ukládá.`;
+        return $localize`:@@admin.home.visit.notKept:V\u00a0tomto prohlížeči se správa neukládá, a\u00a0tak tu není s\u00a0čím porovnat, co od minula přibylo. Souhrn uvidíte na zařízení, kde se správa ukládá.`;
       case 'ready':
         return leadOf(formatBankTime(state.seenAt), state.changes);
       default:
@@ -73,7 +73,7 @@ export class SinceLastVisit {
       return null;
     }
     const time = formatBankTime(state.copiedAt);
-    return $localize`:@@admin.home.visit.offline:Bez spojení se serverem vidíte údaje z ${time}:time:. Nemusí být aktuální.`;
+    return $localize`:@@admin.home.visit.offline:Bez spojení se serverem vidíte údaje z\u00a0${time}:time:. Nemusí být aktuální.`;
   });
   protected readonly figures = computed((): readonly VisitFigure[] => {
     const state = this.state();
@@ -124,11 +124,11 @@ function leadOf(at: string, changes: VisitChanges): string {
     case 'none':
       return $localize`:@@admin.home.visit.lead.noPayments:Minulá návštěva na tomto zařízení byla ${at}:time:. Od té doby nepřišla žádná platba.`;
     case 'one':
-      return $localize`:@@admin.home.visit.lead.one:Minulá návštěva na tomto zařízení byla ${at}:time:. Od té doby přišla 1 platba za ${total}:total:.`;
+      return $localize`:@@admin.home.visit.lead.one:Minulá návštěva na tomto zařízení byla ${at}:time:. Od té doby přišla 1\u00a0platba za ${total}:total:.`;
     case 'few':
-      return $localize`:@@admin.home.visit.lead.few:Minulá návštěva na tomto zařízení byla ${at}:time:. Od té doby přišly ${count}:count: platby za ${total}:total:.`;
+      return $localize`:@@admin.home.visit.lead.few:Minulá návštěva na tomto zařízení byla ${at}:time:. Od té doby přišly ${count}:count:\u00a0platby za ${total}:total:.`;
     default:
-      return $localize`:@@admin.home.visit.lead.many:Minulá návštěva na tomto zařízení byla ${at}:time:. Od té doby přišlo ${count}:count: plateb za ${total}:total:.`;
+      return $localize`:@@admin.home.visit.lead.many:Minulá návštěva na tomto zařízení byla ${at}:time:. Od té doby přišlo ${count}:count:\u00a0plateb za ${total}:total:.`;
   }
 }
 
@@ -196,11 +196,11 @@ function paymentsText(tally: PaymentsTally): string {
   const total = crowns(tally);
   switch (pluralCategory(count)) {
     case 'one':
-      return $localize`:@@admin.home.since.payments.one:1 platba za ${total}:total:`;
+      return $localize`:@@admin.home.since.payments.one:1\u00a0platba za ${total}:total:`;
     case 'few':
-      return $localize`:@@admin.home.since.payments.few:${count}:count: platby za ${total}:total:`;
+      return $localize`:@@admin.home.since.payments.few:${count}:count:\u00a0platby za ${total}:total:`;
     case 'other':
-      return $localize`:@@admin.home.since.payments.many:${count}:count: plateb za ${total}:total:`;
+      return $localize`:@@admin.home.since.payments.many:${count}:count:\u00a0plateb za ${total}:total:`;
   }
 }
 

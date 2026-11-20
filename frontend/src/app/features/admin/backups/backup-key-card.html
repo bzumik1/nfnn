@@ -1,16 +1,17 @@
 <section id="klic-k-zaloham" class="ui-card" aria-labelledby="backup-key-title">
   <h2 id="backup-key-title" class="ui-card__title" i18n="@@admin.backups.key.title">
-    Klíč k zálohám
+    Klíč k&nbsp;zálohám
   </h2>
   <div class="ui-card__body backup-key-body">
     <p class="ui-card__intro" i18n="@@admin.backups.key.intro">
-      Zálohy jsou vždy zašifrované. Obnovit je jde jen s tímto klíčem, třeba na novém serveru po
-      havárii. Každé zobrazení klíče potvrdíte druhým faktorem a zapíše se do historie správy.
+      Zálohy jsou vždy zašifrované. Obnovit je jde jen s&nbsp;tímto klíčem, třeba na novém serveru
+      po havárii. Každé zobrazení klíče potvrdíte druhým faktorem a&nbsp;zapíše se do historie
+      správy.
     </p>
     @if (!status().available) {
       <p class="ui-callout ui-callout--danger" i18n="@@admin.backups.key.unavailable">
-        Server klíč k zálohám nemá, takže nové zálohy nevznikají. Aktualizujte prosím aplikaci v
-        ZimaOS (Uložit v jejím nastavení); klíč se vytvoří při startu.
+        Server klíč k&nbsp;zálohám nemá, takže nové zálohy nevznikají. Aktualizujte prosím aplikaci
+        v&nbsp;ZimaOS (Uložit v&nbsp;jejím nastavení); klíč se vytvoří při startu.
       </p>
     } @else {
       @if (status().confirmed) {
@@ -20,7 +21,7 @@
       } @else {
         <p class="ui-callout ui-callout--warning" i18n="@@admin.backups.key.unconfirmed">
           Klíč si zatím nikdo neuložil. Uložit ho má někdo ze správní rady, kdo má přístup do
-          správy, ne technik. Zobrazte si ho, uložte mimo server a potvrďte to opsáním tří jeho
+          správy, ne technik. Zobrazte si ho, uložte mimo server a&nbsp;potvrďte to opsáním tří jeho
           slov.
         </p>
       }
@@ -57,8 +58,8 @@
             novalidate
           >
             <p class="ui-card__intro key-words-intro" i18n="@@admin.backups.key.words.intro">
-              Slova jsme skryli. Opište z kopie, kterou jste si uložili, slova s těmito čísly. Tak
-              si ověříte, že se uložila celá.
+              Slova jsme skryli. Opište z&nbsp;kopie, kterou jste si uložili, slova s&nbsp;těmito
+              čísly. Tak si ověříte, že se uložila celá.
             </p>
             @for (entry of words(); track entry.position) {
               <app-form-field [label]="wordLabel(entry.position)" [messages]="wordMessages">
@@ -112,7 +113,7 @@
         >
           @if (asksCode()) {
             <app-form-field
-              label="Kód z aplikace"
+              label="Kód z&nbsp;aplikace"
               i18n-label="@@admin.backups.key.code"
               [hint]="codeHint"
               [messages]="codeMessages"
@@ -150,7 +151,7 @@
             }
           } @else if (passkeySupported) {
             <p class="key-note" i18n="@@admin.backups.key.confirmPasskey">
-              Zobrazení potvrďte svým přístupovým klíčem, i když jste se jím už přihlásili.
+              Zobrazení potvrďte svým přístupovým klíčem, i&nbsp;když jste se jím už přihlásili.
             </p>
             @if (usesCode()) {
               <p class="passkey-alternative">
@@ -163,14 +164,14 @@
                   (click)="chooseCode()"
                   i18n="@@admin.backups.key.chooseCode"
                 >
-                  Zadat kód z aplikace
+                  Zadat kód z&nbsp;aplikace
                 </button>
               </p>
             }
           } @else {
             <p class="key-note" i18n="@@admin.backups.key.passkeyMissing">
-              Zobrazení se potvrzuje přístupovým klíčem a tento prohlížeč je nepodporuje. Klíč si
-              zobrazte v prohlížeči, ve kterém se klíčem přihlašujete.
+              Zobrazení se potvrzuje přístupovým klíčem a&nbsp;tento prohlížeč je nepodporuje. Klíč
+              si zobrazte v&nbsp;prohlížeči, ve kterém se klíčem přihlašujete.
             </p>
           }
           @if (error()) {

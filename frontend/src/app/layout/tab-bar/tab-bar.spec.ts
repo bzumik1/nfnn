@@ -7,6 +7,7 @@ import {
   provideFakeSoftKeyboard,
 } from '../../core/layout/testing/fake-soft-keyboard';
 import { TabBar } from './tab-bar';
+import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
 @Component({ template: '' })
 class Blank {}
@@ -46,7 +47,7 @@ describe('Given the tab bar', () => {
   }
 
   function tab(name: string): HTMLAnchorElement {
-    return tabs().find((link) => link.textContent?.trim() === name)!;
+    return tabs().find((link) => withOrdinarySpaces(link.textContent)?.trim() === name)!;
   }
 
   async function visit(url: string): Promise<void> {
@@ -65,7 +66,12 @@ describe('Given the tab bar', () => {
     const nav = (fixture.nativeElement as HTMLElement).querySelector('nav');
 
     expect(nav?.getAttribute('aria-label')).toBe('Hlavní sekce');
-    expect(tabs().map((link) => [link.textContent?.trim(), link.getAttribute('href')])).toEqual([
+    expect(
+      tabs().map((link) => [
+        withOrdinarySpaces(link.textContent)?.trim(),
+        link.getAttribute('href'),
+      ]),
+    ).toEqual([
       ['O nás', '/o-nas'],
       ['Aktuality', '/aktuality'],
       ['Pomáháme', '/projekty'],

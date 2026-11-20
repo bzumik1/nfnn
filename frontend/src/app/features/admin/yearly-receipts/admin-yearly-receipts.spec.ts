@@ -28,6 +28,7 @@ import { AdminYearlyReceipts } from './admin-yearly-receipts';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { SCREEN_WAKE_LOCKS, WakeLockSentinelLike } from './screen-wake-lock';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const URL = '/api/admin/donations/receipts/yearly';
 const SIGNATURE_BYTES = new TextEncoder().encode(SYNTHETIC_SIGNATURE_JSON);
@@ -135,7 +136,7 @@ describe('Given an administrator on the bulk receipts page', () => {
   }
 
   function text(element: Element | null): string {
-    return (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(element?.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function button(name: RegExp | string): HTMLButtonElement {
@@ -237,7 +238,7 @@ describe('Given an administrator on the bulk receipts page', () => {
         '2025',
         '2024',
       ]);
-      expect(select?.selectedOptions[0]?.textContent?.trim()).toBe('2026');
+      expect(withOrdinarySpaces(select?.selectedOptions[0]?.textContent)?.trim()).toBe('2026');
     });
 
     it('then the summary counts the donors, the receipts already issued, the new ones and the erased donors left out', () => {
@@ -624,7 +625,7 @@ describe('Given an administrator on the bulk receipts page', () => {
       expect(status()).toBe(announced);
       expect(status()).toContain('Kreslíme potvrzení…');
       expect(text(query('.download-progress-detail'))).toBe('2 z 3');
-      expect(query('progress')?.getAttribute('aria-valuetext')).toBe('2 z 3');
+      expect(query('progress')?.getAttribute('aria-valuetext')).toBe('2 z\u00a03');
       expect(button('Připravujeme PDF…').getAttribute('aria-disabled')).toBe('true');
     });
 

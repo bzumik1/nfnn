@@ -19,6 +19,7 @@ import {
   paymentQrCase,
 } from '../../../../donations/testing/payment-details-fixtures';
 import { DonateCta } from './donate-cta';
+import { withOrdinarySpaces } from '../../../../../../testing/ordinary-spaces';
 
 const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
 const REDRAW_MS = 300;
@@ -76,7 +77,7 @@ describe('Given the donate section', () => {
   }
 
   function text(selector: string): string {
-    return element(selector)?.textContent ?? '';
+    return withOrdinarySpaces(element(selector)?.textContent) ?? '';
   }
 
   function button(label: string): HTMLButtonElement {
@@ -127,7 +128,7 @@ describe('Given the donate section', () => {
   function spokenText(node: Element): string {
     const copy = node.cloneNode(true) as Element;
     copy.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => hidden.remove());
-    return copy.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    return withOrdinarySpaces(copy.textContent)?.replace(/\s+/g, ' ').trim() ?? '';
   }
 
   function outsideSkeleton(selector: string): Element[] {
@@ -160,7 +161,11 @@ describe('Given the donate section', () => {
   }
 
   function announcement(): string {
-    return element('.qr-announcement[role="status"]').textContent?.replace(/\s/g, ' ').trim() ?? '';
+    return (
+      withOrdinarySpaces(element('.qr-announcement[role="status"]').textContent)
+        ?.replace(/\s/g, ' ')
+        .trim() ?? ''
+    );
   }
 
   async function type(value: string): Promise<void> {
@@ -225,7 +230,7 @@ describe('Given the donate section', () => {
 
     const headings = Array.from(
       fixture.nativeElement.querySelectorAll('h1, h2, h3') as NodeListOf<Element>,
-    ).map((heading) => `${heading.tagName} ${heading.textContent?.trim()}`);
+    ).map((heading) => `${heading.tagName} ${withOrdinarySpaces(heading.textContent)?.trim()}`);
     expect(headings).toEqual(['H1 Přispějte na pomůcky pro děti', 'H2 Zaplaťte', 'H2 Co bude dál']);
   });
 
@@ -243,7 +248,7 @@ describe('Given the donate section', () => {
     await openWithQr();
 
     const note = fixture.nativeElement.querySelector('.next .donate-privacy') as HTMLElement;
-    expect(note.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+    expect(withOrdinarySpaces(note.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
       'S platbou nám banka předá vaše jméno, číslo účtu a zprávu pro příjemce. Jak s nimi naložíme, popisují zásady ochrany osobních údajů.',
     );
     expect(note.querySelector('a')?.getAttribute('href')).toBe(
@@ -255,7 +260,7 @@ describe('Given the donate section', () => {
     await openWithQr();
 
     const note = fixture.nativeElement.querySelector('.next .donate-privacy') as HTMLElement;
-    expect(note.textContent).toContain('číslo účtu a zprávu');
+    expect(withOrdinarySpaces(note.textContent)).toContain('číslo účtu a zprávu');
   });
 
   it('when nobody is signed in, then before the payment a line offers the receipt for the tax return with the account actions', async () => {
@@ -281,7 +286,7 @@ describe('Given the donate section', () => {
 
     const items = Array.from(
       fixture.nativeElement.querySelectorAll('.next li') as NodeListOf<Element>,
-    ).map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
+    ).map((item) => withOrdinarySpaces(item.textContent)?.replace(/\s+/g, ' ').trim());
     expect(items).toEqual([
       'Platili jste bez přihlášení? Po registraci si v sekci „Bankovní účty“ přidejte svůj účet ověřovací platbou 1 Kč a dřívější dary z něj se vám přiřadí také.',
       'S účtem dárce si po skončení roku stáhnete roční potvrzení o daru. Dar si můžete odečíst od základu daně podle zákona o daních z příjmů.',
@@ -293,7 +298,7 @@ describe('Given the donate section', () => {
 
     const labels = Array.from(
       fixture.nativeElement.querySelectorAll('.amount-option') as NodeListOf<HTMLButtonElement>,
-    ).map((option) => option.textContent?.trim());
+    ).map((option) => withOrdinarySpaces(option.textContent)?.trim());
     expect(labels).toEqual(['1 000 Kč', '500 Kč', '100 Kč', 'Jiná částka']);
   });
 
@@ -403,7 +408,9 @@ describe('Given the donate section', () => {
   it('when the section opens, then its status region is there and stays quiet', async () => {
     await openWithQr();
 
-    expect(element('.qr-announcement[role="status"]').textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(element('.qr-announcement[role="status"]').textContent)?.trim()).toBe(
+      '',
+    );
     expect(element('.qr-text').hasAttribute('aria-live')).toBe(false);
   });
 
@@ -479,16 +486,18 @@ describe('Given the donate section', () => {
     await openWithQr();
 
     const rows = Array.from(fixture.nativeElement.querySelectorAll('.bank-row')) as HTMLElement[];
-    expect(rows.map((row) => row.querySelector('.bank-key')?.textContent?.trim())).toEqual([
-      'Číslo účtu',
-      'Částka',
-      'IBAN',
-    ]);
-    expect(rows[1].querySelector('.bank-value')?.textContent?.replace(/\s/g, ' ').trim()).toBe(
-      '500 Kč',
-    );
+    expect(
+      rows.map((row) => withOrdinarySpaces(row.querySelector('.bank-key')?.textContent)?.trim()),
+    ).toEqual(['Číslo účtu', 'Částka', 'IBAN']);
+    expect(
+      withOrdinarySpaces(rows[1].querySelector('.bank-value')?.textContent)
+        ?.replace(/\s/g, ' ')
+        .trim(),
+    ).toBe('500 Kč');
     const copied = rows.map((row) =>
-      row.querySelector('app-copy-button button')?.textContent?.replace(/\s+/g, ' ').trim(),
+      withOrdinarySpaces(row.querySelector('app-copy-button button')?.textContent)
+        ?.replace(/\s+/g, ' ')
+        .trim(),
     );
     expect(copied).toEqual(['Kopírovat číslo účtu', 'Kopírovat částku', 'Kopírovat IBAN']);
   });
@@ -805,7 +814,9 @@ describe('Given the donate section', () => {
     expect(outsideSkeleton('.qr-code')).toEqual([]);
     expect(outsideSkeleton('.qr-title')).toEqual([]);
     expect(element('.qr-error')).toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain('Naskenujte a přispějte');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain(
+      'Naskenujte a přispějte',
+    );
     expect(button('Zkusit znovu')).not.toBeNull();
   });
 
@@ -1046,7 +1057,7 @@ describe('Given the donate section', () => {
 
     expect(qrCode()).toBeNull();
     expect(text('.bank')).not.toContain('Číslo účtu');
-    expect(fixture.nativeElement.textContent).not.toContain('5544332217/2010');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain('5544332217/2010');
     expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
     expect(button('Zkusit znovu')).not.toBeNull();
   });
@@ -1084,7 +1095,7 @@ describe('Given the donate section', () => {
       expect(text('.bank')).toContain('1234567890');
       const items = Array.from(
         fixture.nativeElement.querySelectorAll('.next li') as NodeListOf<Element>,
-      ).map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
+      ).map((item) => withOrdinarySpaces(item.textContent)?.replace(/\s+/g, ' ').trim());
       expect(items).toEqual([
         'Dar se ve vašem přehledu objeví do hodiny poté, co ho banka připíše. Převod z jiné banky k nám obvykle dorazí do následujícího pracovního dne.',
         'Po skončení roku si ve svém účtu dárce stáhnete roční potvrzení o daru. Dar si můžete odečíst od základu daně podle zákona o daních z příjmů.',
@@ -1093,10 +1104,10 @@ describe('Given the donate section', () => {
         'Platíte jako Jana Nováková, variabilní symbol 1234567890.',
       );
       const keys = Array.from(fixture.nativeElement.querySelectorAll('.bank-key')).map((key) =>
-        (key as HTMLElement).textContent?.trim(),
+        withOrdinarySpaces((key as HTMLElement).textContent)?.trim(),
       );
       expect(keys).toEqual(['Číslo účtu', 'Částka', 'Variabilní symbol', 'IBAN']);
-      expect(fixture.nativeElement.textContent).not.toContain('Založit účet');
+      expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain('Založit účet');
     });
   });
 });

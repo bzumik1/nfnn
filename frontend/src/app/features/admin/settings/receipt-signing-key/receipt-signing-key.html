@@ -6,13 +6,13 @@
     tabindex="-1"
     i18n="@@admin.signingKey.title"
   >
-    Klíč k ověřovacím QR kódům
+    Klíč k&nbsp;ověřovacím QR kódům
   </h2>
   <div class="ui-card__body">
     <p class="ui-card__intro" i18n="@@admin.signingKey.intro">
-      Server podepisuje ověřovací QR kódy na potvrzeních o daru svým klíčem. Veřejnou část klíče web
-      zveřejňuje, aby se podle ní dala potvrzení ověřit. Klíč si server vytvořil sám. Kdyby se mohl
-      dostat do cizích rukou, zneplatněte ho a server si vytvoří nový.
+      Server podepisuje ověřovací QR kódy na potvrzeních o&nbsp;daru svým klíčem. Veřejnou část
+      klíče web zveřejňuje, aby se podle ní dala potvrzení ověřit. Klíč si server vytvořil sám.
+      Kdyby se mohl dostat do cizích rukou, zneplatněte ho a&nbsp;server si vytvoří nový.
     </p>
 
     @switch (state()) {
@@ -96,14 +96,14 @@
           <div class="signing-key-slow" role="alert">
             @if (unfinished === 'notRestarted') {
               <p i18n="@@admin.signingKey.notRestarted">
-                Klíč {{ restartingFor() }} je zneplatněný, ale web se zatím nerestartoval a nový
-                klíč nemá, takže se potvrzení o daru nestáhnou. Počkejte pár minut a zkuste to
-                znovu; když se nic nezmění, obraťte se prosím na technika serveru.
+                Klíč {{ restartingFor() }} je zneplatněný, ale web se zatím nerestartoval
+                a&nbsp;nový klíč nemá, takže se potvrzení o&nbsp;daru nestáhnou. Počkejte pár minut
+                a&nbsp;zkuste to znovu; když se nic nezmění, obraťte se prosím na technika serveru.
               </p>
             } @else {
               <p i18n="@@admin.signingKey.slow">
-                Klíč je zneplatněný, ale web se po restartu zatím nespustil. Počkejte pár minut a
-                zkuste to znovu.
+                Klíč je zneplatněný, ale web se po restartu zatím nespustil. Počkejte pár minut
+                a&nbsp;zkuste to znovu.
               </p>
             }
             <button

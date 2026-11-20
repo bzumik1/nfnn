@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FocalPoint } from '../../../shared/ui/focal-point/focal-point';
 import { FocalPointPicker, PreviewShape } from './focal-point-picker';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const PHOTO_ID = '0199f3e0-0000-7000-8000-00000000c001';
 
@@ -36,12 +37,12 @@ describe('Given a photo whose focal point the administrator sets', () => {
   }
 
   function status(element: HTMLElement): string {
-    return element.querySelector('.picker-status')?.textContent?.trim() ?? '';
+    return withOrdinarySpaces(element.querySelector('.picker-status')?.textContent)?.trim() ?? '';
   }
 
   function previews(element: HTMLElement): { label: string; position: string }[] {
     return [...element.querySelectorAll('figure.preview')].map((figure) => ({
-      label: figure.querySelector('figcaption')?.textContent?.trim() ?? '',
+      label: withOrdinarySpaces(figure.querySelector('figcaption')?.textContent)?.trim() ?? '',
       position: figure.querySelector('img')?.style.objectPosition ?? '',
     }));
   }

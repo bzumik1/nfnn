@@ -28,7 +28,7 @@ function phoneLayout(page: Page): boolean {
 
 async function showQr(page: Page): Promise<void> {
   if (phoneLayout(page)) {
-    await page.getByRole('button', { name: /Platíte z jiného zařízení\?/ }).click();
+    await page.getByRole('button', { name: /Platíte z\sjiného zařízení\?/ }).click();
   }
 }
 
@@ -487,7 +487,7 @@ test.describe('Given a visitor on the Přispět page', () => {
       await page.goto('/prispet');
       const bank = page.locator('#prispet .bank');
       await expect(bank).toContainText('5544332217/2010');
-      const otherDevice = page.getByRole('button', { name: /Platíte z jiného zařízení\?/ });
+      const otherDevice = page.getByRole('button', { name: /Platíte z\sjiného zařízení\?/ });
       await expect(otherDevice).toHaveAttribute('aria-expanded', 'false');
       await expect(page.getByRole('img', { name: QR_NAME })).toBeHidden();
       await expect(page.locator('#prispet .bank-app').getByRole('status')).toHaveCount(2);

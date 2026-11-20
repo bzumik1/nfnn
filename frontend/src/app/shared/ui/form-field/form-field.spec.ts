@@ -9,6 +9,7 @@ import { FocusFirstInvalid } from './focus-first-invalid';
 import { FormControlDirective } from './form-control';
 import { FormField } from './form-field';
 import { placeServerErrors } from './server-errors';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   imports: [FormsModule, FormField, FormControlDirective, FocusFirstInvalid],
@@ -93,9 +94,9 @@ describe('Given a form built from form fields', () => {
   it('when it renders, then each label names its input and the hint describes it', () => {
     const label = host().querySelector<HTMLLabelElement>('label[for="email"]');
 
-    expect(label?.textContent?.trim()).toBe('E-mail');
+    expect(withOrdinarySpaces(label?.textContent)?.trim()).toBe('E-mail');
     expect(input('email').getAttribute('aria-describedby')).toBe('email-hint');
-    expect(host().querySelector('#email-hint')?.textContent?.trim()).toBe(
+    expect(withOrdinarySpaces(host().querySelector('#email-hint')?.textContent)?.trim()).toBe(
       'Pošleme na něj potvrzení.',
     );
   });
@@ -109,7 +110,9 @@ describe('Given a form built from form fields', () => {
     await type('email', 'jan@');
     await leave('email');
 
-    expect(errorOf('email')?.textContent?.trim()).toBe('Zadejte e-mail ve tvaru jan@example.cz.');
+    expect(withOrdinarySpaces(errorOf('email')?.textContent)?.trim()).toBe(
+      'Zadejte e-mail ve tvaru jan@example.cz.',
+    );
     expect(input('email').getAttribute('aria-invalid')).toBe('true');
     expect(input('email').getAttribute('aria-describedby')).toBe('email-hint email-error');
     expect(errorOf('name')).toBeNull();
@@ -130,14 +133,18 @@ describe('Given a form built from form fields', () => {
     it('and sends the form, then the field says what is missing', async () => {
       await submit();
 
-      expect(errorOf('name')?.textContent?.trim()).toBe('Vyplňte prosím jméno.');
+      expect(withOrdinarySpaces(errorOf('name')?.textContent)?.trim()).toBe(
+        'Vyplňte prosím jméno.',
+      );
     });
 
     it('and the app itself marks the field, then its message shows', async () => {
       fixture.componentInstance.form().controls['name'].markAsTouched();
       await fixture.whenStable();
 
-      expect(errorOf('name')?.textContent?.trim()).toBe('Vyplňte prosím jméno.');
+      expect(withOrdinarySpaces(errorOf('name')?.textContent)?.trim()).toBe(
+        'Vyplňte prosím jméno.',
+      );
     });
   });
 
@@ -146,7 +153,7 @@ describe('Given a form built from form fields', () => {
     await type('name', '');
     await leave('name');
 
-    expect(errorOf('name')?.textContent?.trim()).toBe('Vyplňte prosím jméno.');
+    expect(withOrdinarySpaces(errorOf('name')?.textContent)?.trim()).toBe('Vyplňte prosím jméno.');
   });
 
   function pressReturn(id: string): KeyboardEvent {
@@ -236,7 +243,9 @@ describe('Given a form built from form fields', () => {
       document.dispatchEvent(new Event('pointerup'));
       await fixture.whenStable();
 
-      expect(errorOf('email')?.textContent?.trim()).toBe('Zadejte e-mail ve tvaru jan@example.cz.');
+      expect(withOrdinarySpaces(errorOf('email')?.textContent)?.trim()).toBe(
+        'Zadejte e-mail ve tvaru jan@example.cz.',
+      );
       expect(input('email').getAttribute('aria-invalid')).toBe('true');
     });
 
@@ -244,7 +253,9 @@ describe('Given a form built from form fields', () => {
       document.dispatchEvent(new Event('pointercancel'));
       await fixture.whenStable();
 
-      expect(errorOf('email')?.textContent?.trim()).toBe('Zadejte e-mail ve tvaru jan@example.cz.');
+      expect(withOrdinarySpaces(errorOf('email')?.textContent)?.trim()).toBe(
+        'Zadejte e-mail ve tvaru jan@example.cz.',
+      );
     });
   });
 
@@ -255,14 +266,18 @@ describe('Given a form built from form fields', () => {
     document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
     await fixture.whenStable();
 
-    expect(errorOf('email')?.textContent?.trim()).toBe('Zadejte e-mail ve tvaru jan@example.cz.');
+    expect(withOrdinarySpaces(errorOf('email')?.textContent)?.trim()).toBe(
+      'Zadejte e-mail ve tvaru jan@example.cz.',
+    );
   });
 
   it('when the form is sent with empty fields, then every field says what is missing and the first one takes the focus', async () => {
     await submit();
 
-    expect(errorOf('name')?.textContent?.trim()).toBe('Vyplňte prosím jméno.');
-    expect(errorOf('email')?.textContent?.trim()).toBe('Vyplňte prosím e-mail.');
+    expect(withOrdinarySpaces(errorOf('name')?.textContent)?.trim()).toBe('Vyplňte prosím jméno.');
+    expect(withOrdinarySpaces(errorOf('email')?.textContent)?.trim()).toBe(
+      'Vyplňte prosím e-mail.',
+    );
     expect(document.activeElement).toBe(input('name'));
   });
 
@@ -295,7 +310,9 @@ describe('Given a form built from form fields', () => {
 
     it('then the message stands at its field and the one without a field is handed back', () => {
       expect(unplaced).toEqual([{ field: 'unknown', message: 'Nepatří k žádnému poli.' }]);
-      expect(errorOf('email')?.textContent?.trim()).toBe('Tuto adresu nelze použít.');
+      expect(withOrdinarySpaces(errorOf('email')?.textContent)?.trim()).toBe(
+        'Tuto adresu nelze použít.',
+      );
       expect(input('email').getAttribute('aria-invalid')).toBe('true');
       expect(errorOf('name')).toBeNull();
     });

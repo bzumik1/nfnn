@@ -21,6 +21,7 @@ import { OpenAlerts } from '../../core/push/open-alerts';
 import { OpenAlert } from '../../core/push/open-alerts-api';
 import { AccountSheet } from './account-sheet';
 import { ACCOUNT_SECTION_PAGES, AccountSectionPages } from './account-section';
+import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
 @Component({
   imports: [FormsModule],
@@ -89,49 +90,52 @@ describe('Given the account sheet of a signed-in donor', () => {
 
   function rows(sheet: HTMLElement): string[] {
     return Array.from(sheet.querySelectorAll('nav a')).map(
-      (link) => link.querySelector('.ui-list__title')?.textContent?.trim() ?? '',
+      (link) =>
+        withOrdinarySpaces(link.querySelector('.ui-list__title')?.textContent)?.trim() ?? '',
     );
   }
 
   it('when it opens, then it is named Účet under the logo of the foundation, with the card of the donor leading to Údaje a zabezpečení above the sections', () => {
     const sheet = open();
 
-    expect(sheet.querySelector('#account-sheet-title')?.textContent?.trim()).toBe('Účet');
+    expect(
+      withOrdinarySpaces(sheet.querySelector('#account-sheet-title')?.textContent)?.trim(),
+    ).toBe('Účet');
     expect(sheet.querySelector('#account-sheet-title img.account-logo')?.getAttribute('alt')).toBe(
       '',
     );
     const profile = sheet.querySelector('a.account-profile')!;
     expect(profile.getAttribute('href')).toBe('/darce/udaje');
-    expect(profile.querySelector('.account-name')?.textContent?.trim()).toBe('Jana Nováková');
-    expect(profile.querySelector('.account-profile-detail')?.textContent?.trim()).toBe(
-      'Údaje a\u00a0zabezpečení',
+    expect(withOrdinarySpaces(profile.querySelector('.account-name')?.textContent)?.trim()).toBe(
+      'Jana Nováková',
     );
-    expect(sheet.querySelector('.account-initials')?.textContent?.trim()).toBe('JN');
-    expect(rows(sheet)).toEqual([
-      'Můj přehled',
-      'Moje dary',
-      'Potvrzení o\u00a0daru',
-      'Bankovní účty',
-    ]);
-    expect(sheet.querySelector('.account-symbol')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'Variabilní symbol pro vaše dary: 1234567890',
+    expect(
+      withOrdinarySpaces(profile.querySelector('.account-profile-detail')?.textContent)?.trim(),
+    ).toBe('Údaje a zabezpečení');
+    expect(withOrdinarySpaces(sheet.querySelector('.account-initials')?.textContent)?.trim()).toBe(
+      'JN',
     );
-    expect(sheet.querySelector('.account-sign-out')?.textContent?.trim()).toBe('Odhlásit se');
+    expect(rows(sheet)).toEqual(['Můj přehled', 'Moje dary', 'Potvrzení o daru', 'Bankovní účty']);
+    expect(
+      withOrdinarySpaces(sheet.querySelector('.account-symbol')?.textContent)
+        ?.replace(/\s+/g, ' ')
+        .trim(),
+    ).toBe('Variabilní symbol pro vaše dary: 1234567890');
+    expect(withOrdinarySpaces(sheet.querySelector('.account-sign-out')?.textContent)?.trim()).toBe(
+      'Odhlásit se',
+    );
   });
 
   it('when it opens on a computer, then it is still named Účet but shows no logo, because the header of the page above it already does', () => {
     compact.set(false);
     const sheet = open();
 
-    expect(sheet.querySelector('#account-sheet-title')?.textContent?.trim()).toBe('Účet');
+    expect(
+      withOrdinarySpaces(sheet.querySelector('#account-sheet-title')?.textContent)?.trim(),
+    ).toBe('Účet');
     expect(sheet.querySelector('.account-logo')).toBeNull();
     expect(sheet.querySelector('nav')?.getAttribute('aria-labelledby')).toBe('account-sheet-title');
-    expect(rows(sheet)).toEqual([
-      'Můj přehled',
-      'Moje dary',
-      'Potvrzení o\u00a0daru',
-      'Bankovní účty',
-    ]);
+    expect(rows(sheet)).toEqual(['Můj přehled', 'Moje dary', 'Potvrzení o daru', 'Bankovní účty']);
   });
 
   describe('when an administrator has open faults', () => {
@@ -146,9 +150,11 @@ describe('Given the account sheet of a signed-in donor', () => {
       const sheet = open();
 
       const row = faultRow(sheet)!;
-      expect(row.querySelector('.ui-list__title')?.textContent?.trim()).toBe('Nefunguje: Zálohy');
-      expect(row.querySelector('.ui-list__meta')?.textContent?.trim()).toBe(
-        'od 14.\u00a011. 2026 3:00',
+      expect(withOrdinarySpaces(row.querySelector('.ui-list__title')?.textContent)?.trim()).toBe(
+        'Nefunguje: Zálohy',
+      );
+      expect(withOrdinarySpaces(row.querySelector('.ui-list__meta')?.textContent)?.trim()).toBe(
+        'od 14. 11. 2026 3:00',
       );
       expect(row.getAttribute('href')).toBe('/sprava/zalohy');
       expect(
@@ -166,8 +172,10 @@ describe('Given the account sheet of a signed-in donor', () => {
       const sheet = open();
 
       const row = faultRow(sheet)!;
-      expect(row.querySelector('.ui-list__title')?.textContent?.trim()).toBe('Poruchy: 2');
-      expect(row.querySelector('.ui-list__meta')?.textContent?.trim()).toBe(
+      expect(withOrdinarySpaces(row.querySelector('.ui-list__title')?.textContent)?.trim()).toBe(
+        'Poruchy: 2',
+      );
+      expect(withOrdinarySpaces(row.querySelector('.ui-list__meta')?.textContent)?.trim()).toBe(
         'Zálohy, Odesílání e-mailů',
       );
       expect(row.getAttribute('href')).toBe('/sprava/upozorneni');
@@ -209,10 +217,12 @@ describe('Given the account sheet of a signed-in donor', () => {
     it('then it opens inside the sheet under its title between Zpět and Zavřít, and the sheet goes one step deeper', () => {
       expect(navigate).not.toHaveBeenCalled();
       expect(closed).toBe(0);
-      expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe(
-        'Potvrzení o\u00a0daru',
+      expect(
+        withOrdinarySpaces(sheet.querySelector('#account-section-title')?.textContent)?.trim(),
+      ).toBe('Potvrzení o daru');
+      expect(withOrdinarySpaces(sheet.querySelector('.stub-page')?.textContent)).toBe(
+        'Obsah sekce',
       );
-      expect(sheet.querySelector('.stub-page')?.textContent).toBe('Obsah sekce');
       expect(sheet.querySelector('button[aria-label="Zpět"]')).not.toBeNull();
       expect(sheet.querySelectorAll('button[aria-label="Zavřít"]')).toHaveLength(1);
       expect(sheet.querySelector('nav.account-nav')).toBeNull();
@@ -241,7 +251,9 @@ describe('Given the account sheet of a signed-in donor', () => {
         .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
       fixture.detectChanges();
 
-      expect(sheet.querySelector('.stub-page')?.textContent).toBe('Obsah sekce');
+      expect(withOrdinarySpaces(sheet.querySelector('.stub-page')?.textContent)).toBe(
+        'Obsah sekce',
+      );
     });
 
     it('and the visitor goes back, then the list of the account returns with the focus on the row they came from', async () => {
@@ -285,12 +297,12 @@ describe('Given the account sheet of a signed-in donor', () => {
       it('then the sheet stays open and a dialog asks whether to discard what is written, without speaking of going back', () => {
         expect(closed).toBe(0);
         expect(sheet.querySelector('#account-section-title')).not.toBeNull();
-        expect(document.querySelector('#account-discard-title')?.textContent?.trim()).toBe(
-          'Zahodit rozepsané údaje?',
-        );
-        expect(document.querySelector('.account-discard-lead')?.textContent?.trim()).toBe(
-          'Co jste do formuláře napsali, se neuloží.',
-        );
+        expect(
+          withOrdinarySpaces(document.querySelector('#account-discard-title')?.textContent)?.trim(),
+        ).toBe('Zahodit rozepsané údaje?');
+        expect(
+          withOrdinarySpaces(document.querySelector('.account-discard-lead')?.textContent)?.trim(),
+        ).toBe('Co jste do formuláře napsali, se neuloží.');
       });
 
       it('and they choose to keep writing, then the dialog closes and the section stays', async () => {
@@ -332,12 +344,12 @@ describe('Given the account sheet of a signed-in donor', () => {
       it('then the section stays with its step and a dialog asks whether to discard what is written', () => {
         expect(sheet.querySelector('#account-section-title')).not.toBeNull();
         expect(history.steps.at(-1)).toBe(1);
-        expect(document.querySelector('#account-discard-title')?.textContent?.trim()).toBe(
-          'Zahodit rozepsané údaje?',
-        );
-        expect(document.querySelector('.account-discard-lead')?.textContent?.trim()).toBe(
-          'Když se teď vrátíte, co jste vyplnili, se neuloží.',
-        );
+        expect(
+          withOrdinarySpaces(document.querySelector('#account-discard-title')?.textContent)?.trim(),
+        ).toBe('Zahodit rozepsané údaje?');
+        expect(
+          withOrdinarySpaces(document.querySelector('.account-discard-lead')?.textContent)?.trim(),
+        ).toBe('Když se teď vrátíte, co jste vyplnili, se neuloží.');
       });
 
       it('and they choose to keep writing, then the dialog closes and the section stays', async () => {
@@ -368,7 +380,9 @@ describe('Given the account sheet of a signed-in donor', () => {
       await choose('a.stub-gifts');
 
       expect(navigate).not.toHaveBeenCalled();
-      expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe('Moje dary');
+      expect(
+        withOrdinarySpaces(sheet.querySelector('#account-section-title')?.textContent)?.trim(),
+      ).toBe('Moje dary');
     });
 
     it('and a link inside it leads elsewhere, then the sheet closes and that page opens', async () => {
@@ -401,9 +415,9 @@ describe('Given the account sheet of a signed-in donor', () => {
       fixture.detectChanges();
       await fixture.whenStable();
 
-      expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe(
-        'Potvrzení o\u00a0daru',
-      );
+      expect(
+        withOrdinarySpaces(sheet.querySelector('#account-section-title')?.textContent)?.trim(),
+      ).toBe('Potvrzení o daru');
       expect(history.steps.at(-1)).toBe(1);
       expect((document.activeElement as HTMLAnchorElement | null)?.className).toBe('stub-gifts');
       expect(closed).toBe(0);
@@ -463,9 +477,9 @@ describe('Given the account sheet of a signed-in donor', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe(
-      'Údaje a\u00a0zabezpečení',
-    );
+    expect(
+      withOrdinarySpaces(sheet.querySelector('#account-section-title')?.textContent)?.trim(),
+    ).toBe('Údaje a zabezpečení');
   });
 
   it('when Správa is chosen on a phone, then the administration takes the entry of the sheet and names the list of the account as where a step back returns', async () => {
@@ -492,7 +506,9 @@ describe('Given the account sheet of a signed-in donor', () => {
     fixture.detectChanges();
     const sheet = fixture.nativeElement as HTMLElement;
 
-    expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe('Moje dary');
+    expect(
+      withOrdinarySpaces(sheet.querySelector('#account-section-title')?.textContent)?.trim(),
+    ).toBe('Moje dary');
     expect(history.steps.at(-1)).toBe(1);
   });
 
@@ -532,9 +548,9 @@ describe('Given the account sheet of a signed-in donor', () => {
     const sheet = open();
     const row = sheet.querySelector('nav a[href="/darce/ucty"]')!;
 
-    expect(row.querySelector('.account-count')?.textContent?.trim()).toBe('2');
+    expect(withOrdinarySpaces(row.querySelector('.account-count')?.textContent)?.trim()).toBe('2');
     expect(row.querySelector('.account-count')?.getAttribute('aria-hidden')).toBe('true');
-    expect(row.querySelector('.visually-hidden')?.textContent?.trim()).toBe(
+    expect(withOrdinarySpaces(row.querySelector('.visually-hidden')?.textContent)?.trim()).toBe(
       '2 otázky čekají na odpověď',
     );
     expect(sheet.querySelectorAll('nav .account-count')).toHaveLength(1);
@@ -549,7 +565,9 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(sheet.querySelector('.account-initials img')?.getAttribute('src')).toBe(
       '/api/content/media/portrait?w=480',
     );
-    expect(sheet.querySelector('.account-initials')?.textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(sheet.querySelector('.account-initials')?.textContent)?.trim()).toBe(
+      '',
+    );
   });
 
   it('when the donor is an administrator, then the sheet also leads to the administration, named as theirs alone', () => {
@@ -558,9 +576,11 @@ describe('Given the account sheet of a signed-in donor', () => {
     const sheet = open();
 
     expect(rows(sheet).at(-1)).toBe('Správa');
-    expect(sheet.querySelector('a[href="/sprava"] .account-note')?.textContent?.trim()).toBe(
-      'jen správci',
-    );
+    expect(
+      withOrdinarySpaces(
+        sheet.querySelector('a[href="/sprava"] .account-note')?.textContent,
+      )?.trim(),
+    ).toBe('jen správci');
   });
 
   it('when it opens on a phone, then it slides up as a sheet, and on a computer it stays a centred dialog', () => {
@@ -577,11 +597,15 @@ describe('Given the account sheet of a signed-in donor', () => {
 
     const sheet = open();
 
-    expect(sheet.querySelector('#account-sheet-title')?.textContent?.trim()).toBe('Účet');
+    expect(
+      withOrdinarySpaces(sheet.querySelector('#account-sheet-title')?.textContent)?.trim(),
+    ).toBe('Účet');
     expect(sheet.querySelector('.account-initials svg')).not.toBeNull();
-    expect(sheet.querySelector('a.account-profile')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'Údaje a zabezpečení',
-    );
+    expect(
+      withOrdinarySpaces(sheet.querySelector('a.account-profile')?.textContent)
+        ?.replace(/\s+/g, ' ')
+        .trim(),
+    ).toBe('Údaje a zabezpečení');
   });
 
   it('when the site already runs as an app or cannot be added, then the sheet offers no Přidat na plochu', () => {
@@ -595,7 +619,9 @@ describe('Given the account sheet of a signed-in donor', () => {
     const sheet = open();
     const row = sheet.querySelector<HTMLButtonElement>('.account-install button')!;
 
-    expect(row.textContent?.replace(/\s+/g, ' ').trim()).toBe('Přidat na plochu');
+    expect(withOrdinarySpaces(row.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
+      'Přidat na plochu',
+    );
 
     row.click();
     await fixture.whenStable();
@@ -616,11 +642,15 @@ describe('Given the account sheet of a signed-in donor', () => {
 
     expect(row.getAttribute('aria-expanded')).toBe('true');
     const how = sheet.querySelector(`#${row.getAttribute('aria-controls')}`);
-    expect(how?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+    expect(withOrdinarySpaces(how?.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
       'Klepněte na „Sdílet“ (v Safari ho najdete i pod tlačítkem ⋯) a pak na „Přidat na plochu“. V aplikaci se přihlásíte ještě jednou.',
     );
-    expect(how?.textContent?.replace(/[ \n]+/g, ' ').trim()).toBe(
-      'Klepněte na „Sdílet“ (v\u00a0Safari ho najdete i\u00a0pod tlačítkem ⋯) a\u00a0pak na „Přidat na plochu“. V\u00a0aplikaci se přihlásíte ještě jednou.',
+    expect(
+      withOrdinarySpaces(how?.textContent)
+        ?.replace(/[ \n]+/g, ' ')
+        .trim(),
+    ).toBe(
+      'Klepněte na „Sdílet“ (v Safari ho najdete i pod tlačítkem ⋯) a pak na „Přidat na plochu“. V aplikaci se přihlásíte ještě jednou.',
     );
     expect(install).not.toHaveBeenCalled();
     expect(closed).toBe(0);
@@ -635,20 +665,18 @@ describe('Given the account sheet of a signed-in donor', () => {
     fixture.detectChanges();
 
     expect(
-      sheet
-        .querySelector(`#${row.getAttribute('aria-controls')}`)
-        ?.textContent?.replace(/\s+/g, ' ')
+      withOrdinarySpaces(sheet.querySelector(`#${row.getAttribute('aria-controls')}`)?.textContent)
+        ?.replace(/\s+/g, ' ')
         .trim(),
     ).toBe(
       'V Safari zvolte v nabídce „Soubor“ položku „Přidat do Docku“. V aplikaci se přihlásíte ještě jednou.',
     );
     expect(
-      sheet
-        .querySelector(`#${row.getAttribute('aria-controls')}`)
-        ?.textContent?.replace(/[ \n]+/g, ' ')
+      withOrdinarySpaces(sheet.querySelector(`#${row.getAttribute('aria-controls')}`)?.textContent)
+        ?.replace(/[ \n]+/g, ' ')
         .trim(),
     ).toBe(
-      'V\u00a0Safari zvolte v\u00a0nabídce „Soubor“ položku „Přidat do Docku“. V\u00a0aplikaci se přihlásíte ještě jednou.',
+      'V Safari zvolte v nabídce „Soubor“ položku „Přidat do Docku“. V aplikaci se přihlásíte ještě jednou.',
     );
   });
 
@@ -717,19 +745,21 @@ describe('Given the account sheet of a signed-in donor', () => {
     const sheet = open();
     const foundation = sheet.querySelector('.account-foundation')!;
 
-    expect(foundation.querySelector('a[href="mailto:info@nfnn.cz"]')?.textContent?.trim()).toBe(
-      'info@nfnn.cz',
+    expect(
+      withOrdinarySpaces(
+        foundation.querySelector('a[href="mailto:info@nfnn.cz"]')?.textContent,
+      )?.trim(),
+    ).toBe('info@nfnn.cz');
+    expect(withOrdinarySpaces(foundation.textContent)?.replace(/[^\S\u00a0]+/g, ' ')).toContain(
+      'Zapsán u KS Ústí nad Labem, oddíl N, vložka 78 · IČO 27278794',
     );
-    expect(foundation.textContent?.replace(/[^\S\u00a0]+/g, ' ')).toContain(
-      'Zapsán u\u00a0KS Ústí\u00a0nad\u00a0Labem, oddíl\u00a0N, vložka\u00a078 ·\u00a0IČO\u00a027278794',
-    );
-    expect(foundation.querySelector('a[href="/o-nas#kontakt"]')?.textContent?.trim()).toBe(
-      'Kontakt',
-    );
+    expect(
+      withOrdinarySpaces(foundation.querySelector('a[href="/o-nas#kontakt"]')?.textContent)?.trim(),
+    ).toBe('Kontakt');
     const privacy = foundation.querySelector<HTMLAnchorElement>(
       'a[href="/zasady-ochrany-osobnich-udaju"]',
     )!;
-    expect(privacy.textContent?.trim()).toBe('Zásady ochrany osobních údajů');
+    expect(withOrdinarySpaces(privacy.textContent)?.trim()).toBe('Zásady ochrany osobních údajů');
 
     privacy.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     await fixture.whenStable();

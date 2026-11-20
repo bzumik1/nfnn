@@ -17,6 +17,7 @@ import {
   memoryDraftShelfProviders,
 } from '../../../../core/drafts/testing/memory-draft-shelf';
 import { ProfileCard } from './profile-card';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 describe('Given the donor data card in the overview', () => {
   let fixture: ComponentFixture<ProfileCard>;
@@ -82,7 +83,7 @@ describe('Given the donor data card in the overview', () => {
 
   function shown(): string[] {
     return Array.from(root().querySelectorAll('.profile-data dd')).map(
-      (value) => value.textContent?.trim() ?? '',
+      (value) => withOrdinarySpaces(value.textContent)?.trim() ?? '',
     );
   }
 
@@ -90,7 +91,7 @@ describe('Given the donor data card in the overview', () => {
     beforeEach(() => render());
 
     it('then it shows the data the receipts carry', () => {
-      expect(element('h2').textContent).toContain('Údaje na potvrzení o\u00a0daru');
+      expect(withOrdinarySpaces(element('h2').textContent)).toContain('Údaje na potvrzení o daru');
       expect(shown()).toEqual(['Jana Nováková', 'Dlouhá 12, 400 01 Ústí nad Labem', 'čeština']);
     });
 
@@ -130,8 +131,8 @@ describe('Given the donor data card in the overview', () => {
         'Krátká 3, 400 11 Ústí nad Labem',
         'angličtina (dvojjazyčné)',
       ]);
-      expect(element('.profile-status').textContent?.trim()).toBe(
-        'Údaje jsme uložili. Jméno a\u00a0adresu ponesou všechna potvrzení, která si stáhnete od teď, zvolený jazyk jen ta, která si stáhnete poprvé.',
+      expect(withOrdinarySpaces(element('.profile-status').textContent)?.trim()).toBe(
+        'Údaje jsme uložili. Jméno a adresu ponesou všechna potvrzení, která si stáhnete od teď, zvolený jazyk jen ta, která si stáhnete poprvé.',
       );
       expect(store.donor()?.address.street).toBe('Krátká 3');
       expect(document.activeElement).toBe(element('.profile-edit'));
@@ -159,8 +160,8 @@ describe('Given the donor data card in the overview', () => {
       expect(element('#profile-locale').getAttribute('aria-describedby')).toBe(
         'profile-locale-hint',
       );
-      expect(element('#profile-locale-hint').textContent?.trim()).toBe(
-        'Platí pro potvrzení, která si stáhnete poprvé. Ta, která jste si už stáhli, zůstanou v\u00a0původním jazyce.',
+      expect(withOrdinarySpaces(element('#profile-locale-hint').textContent)?.trim()).toBe(
+        'Platí pro potvrzení, která si stáhnete poprvé. Ta, která jste si už stáhli, zůstanou v původním jazyce.',
       );
     });
 
@@ -171,7 +172,9 @@ describe('Given the donor data card in the overview', () => {
       await submit();
 
       http.expectNone('/api/donors/me');
-      expect(element('#profile-city-error').textContent).toContain('Vyplňte prosím město.');
+      expect(withOrdinarySpaces(element('#profile-city-error').textContent)).toContain(
+        'Vyplňte prosím město.',
+      );
       expect(document.activeElement).toBe(element('#profile-city'));
     });
 
@@ -201,13 +204,17 @@ describe('Given the donor data card in the overview', () => {
       await settle();
 
       expect(element('.profile-form')).not.toBeNull();
-      expect(element('#profile-postal-code-error').textContent).toContain('PSČ má pět číslic.');
-      expect(element('#profile-postal-code').getAttribute('aria-invalid')).toBe('true');
-      expect(document.activeElement).toBe(element('#profile-postal-code'));
-      expect(element('.profile-form .ui-field-error').textContent).toContain('Neplatný požadavek');
-      expect(element('.profile-form .ui-field-error').textContent).not.toContain(
+      expect(withOrdinarySpaces(element('#profile-postal-code-error').textContent)).toContain(
         'PSČ má pět číslic.',
       );
+      expect(element('#profile-postal-code').getAttribute('aria-invalid')).toBe('true');
+      expect(document.activeElement).toBe(element('#profile-postal-code'));
+      expect(withOrdinarySpaces(element('.profile-form .ui-field-error').textContent)).toContain(
+        'Neplatný požadavek',
+      );
+      expect(
+        withOrdinarySpaces(element('.profile-form .ui-field-error').textContent),
+      ).not.toContain('PSČ má pět číslic.');
       expect(element<HTMLButtonElement>('.profile-save').disabled).toBe(false);
     });
 
@@ -231,7 +238,9 @@ describe('Given the donor data card in the overview', () => {
       await settle();
 
       for (const id of ['profile-name', 'profile-street', 'profile-city']) {
-        expect(element(`#${id}-error`).textContent).toContain(unprintable);
+        expect(withOrdinarySpaces(element(`#${id}-error`).textContent)).toContain(
+          withOrdinarySpaces(unprintable),
+        );
       }
       expect(document.activeElement).toBe(element('#profile-name'));
     });
@@ -247,8 +256,12 @@ describe('Given the donor data card in the overview', () => {
       http.expectNone('/api/donors/me');
       const refusal =
         'Obsahuje znak, který na potvrzení o daru nevytiskneme, například emoji nebo čínské písmo. Napište prosím tento údaj latinkou, cyrilicí nebo řeckým písmem.';
-      expect(element('#profile-name-error').textContent?.trim()).toBe(refusal);
-      expect(element('#profile-street-error').textContent?.trim()).toBe(refusal);
+      expect(withOrdinarySpaces(element('#profile-name-error').textContent)?.trim()).toBe(
+        withOrdinarySpaces(refusal),
+      );
+      expect(withOrdinarySpaces(element('#profile-street-error').textContent)?.trim()).toBe(
+        withOrdinarySpaces(refusal),
+      );
       expect(element('#profile-city-error')).toBeNull();
       expect(element('#profile-name').getAttribute('aria-invalid')).toBe('true');
       expect(document.activeElement).toBe(element('#profile-name'));
@@ -301,24 +314,26 @@ describe('Given the donor data card in the overview', () => {
       it('then the card says so calmly, keeps what they typed and fills the fields they left as they are stored now', () => {
         const notice = element('.profile-changed');
         expect(notice.getAttribute('role')).toBe('alert');
-        expect(notice.textContent?.replace(/\s+/g, ' ').trim()).toContain(
+        expect(withOrdinarySpaces(notice.textContent)?.replace(/\s+/g, ' ').trim()).toContain(
           'Mezitím se uložené údaje změnily, třeba v jiném okně nebo na jiném zařízení. Vaše úpravy jsme zatím neuložili, zůstávají ve formuláři.',
         );
-        expect(notice.textContent?.replace(/\s+/g, ' ').trim()).toContain(
+        expect(withOrdinarySpaces(notice.textContent)?.replace(/\s+/g, ' ').trim()).toContain(
           'Údaje, které jste neměnili, jsme ve formuláři doplnili tak, jak jsou uložené teď.',
         );
         expect(element<HTMLInputElement>('#profile-street').value).toBe('Krátká 3');
         expect(element<HTMLInputElement>('#profile-city').value).toBe('Děčín');
         expect(element<HTMLInputElement>('#profile-postal-code').value).toBe('405 02');
-        expect(element('.profile-error')?.textContent?.trim() ?? '').toBe('');
+        expect(withOrdinarySpaces(element('.profile-error')?.textContent)?.trim() ?? '').toBe('');
       });
 
       it('then the form offers no second save beside the notice, only cancelling', () => {
         expect(element('.profile-save')).toBeNull();
         expect(element('.profile-cancel')).not.toBeNull();
-        expect(element('.profile-changed-keep').textContent?.trim()).toBe('Uložit své úpravy');
-        expect(element('.profile-changed-load').textContent?.trim()).toBe(
-          'Zahodit své úpravy a\u00a0načíst uložené údaje',
+        expect(withOrdinarySpaces(element('.profile-changed-keep').textContent)?.trim()).toBe(
+          'Uložit své úpravy',
+        );
+        expect(withOrdinarySpaces(element('.profile-changed-load').textContent)?.trim()).toBe(
+          'Zahodit své úpravy a načíst uložené údaje',
         );
       });
 
@@ -359,7 +374,9 @@ describe('Given the donor data card in the overview', () => {
           });
         await settle();
 
-        expect(element('.profile-error').textContent).toContain('Chyba serveru');
+        expect(withOrdinarySpaces(element('.profile-error').textContent)).toContain(
+          'Chyba serveru',
+        );
         expect(document.activeElement).toBe(element('.profile-save'));
       });
 
@@ -376,8 +393,8 @@ describe('Given the donor data card in the overview', () => {
 
         expect(element('.profile-form')).toBeNull();
         expect(shown()).toEqual(['Jana Nováková', 'Dlouhá 12, 405 02 Děčín', 'čeština']);
-        expect(element('.profile-status').textContent?.trim()).toBe(
-          'Vaše úpravy jsme zahodili a\u00a0načetli uložené údaje.',
+        expect(withOrdinarySpaces(element('.profile-status').textContent)?.trim()).toBe(
+          'Vaše úpravy jsme zahodili a načetli uložené údaje.',
         );
         expect(document.activeElement).toBe(element('.profile-edit'));
       });
@@ -396,8 +413,8 @@ describe('Given the donor data card in the overview', () => {
         http.expectNone({ method: 'PATCH', url: '/api/donors/me' });
         expect(element('.profile-form')).toBeNull();
         expect(shown()).toEqual(['Jana Nováková', 'Dlouhá 12, 405 02 Děčín', 'čeština']);
-        expect(element('.profile-status').textContent?.trim()).toBe(
-          'Úpravy jsme zrušili a\u00a0načetli uložené údaje.',
+        expect(withOrdinarySpaces(element('.profile-status').textContent)?.trim()).toBe(
+          'Úpravy jsme zrušili a načetli uložené údaje.',
         );
       });
 
@@ -416,8 +433,8 @@ describe('Given the donor data card in the overview', () => {
         expect(element('.profile-form')).toBeNull();
         expect(element('.profile-changed')).toBeNull();
         expect(shown()[0]).toBe('Petr Svoboda');
-        expect(element('.profile-status').textContent?.trim()).toBe(
-          'V\u00a0tomto okně je teď přihlášený jiný účet. Rozepsané úpravy jsme zahodili, nic jsme neuložili.',
+        expect(withOrdinarySpaces(element('.profile-status').textContent)?.trim()).toBe(
+          'V tomto okně je teď přihlášený jiný účet. Rozepsané úpravy jsme zahodili, nic jsme neuložili.',
         );
         http.expectNone({ method: 'PATCH', url: '/api/donors/me' });
       });
@@ -430,7 +447,9 @@ describe('Given the donor data card in the overview', () => {
       refuseAsChangedMeanwhile(SAVED_ELSEWHERE);
       await settle();
 
-      expect(element('.profile-changed').textContent?.replace(/\s+/g, ' ').trim()).toContain(
+      expect(
+        withOrdinarySpaces(element('.profile-changed').textContent)?.replace(/\s+/g, ' ').trim(),
+      ).toContain(
         'Mezitím se jinak uložilo i to, co jste změnili: město. Ve formuláři zůstávají vaše hodnoty, ostatní údaje jsou doplněné tak, jak jsou uložené teď.',
       );
       expect(element<HTMLInputElement>('#profile-city').value).toBe('Most');
@@ -480,7 +499,9 @@ describe('Given the donor data card in the overview', () => {
       );
       await settle();
 
-      expect(element('.profile-error').textContent).toContain('Načtěte stránku znovu');
+      expect(withOrdinarySpaces(element('.profile-error').textContent)).toContain(
+        'Načtěte stránku znovu',
+      );
       expect(element('.profile-changed')).toBeNull();
     });
 
@@ -539,7 +560,7 @@ describe('Given the donor data card in the overview', () => {
       await settle();
 
       http.expectNone({ method: 'PATCH', url: '/api/donors/me' });
-      expect(element('.profile-error').textContent).toContain('Chyba serveru');
+      expect(withOrdinarySpaces(element('.profile-error').textContent)).toContain('Chyba serveru');
       expect(element('.profile-form')).not.toBeNull();
     });
   });
@@ -565,7 +586,9 @@ describe('Given the donor data card in the overview', () => {
 
       await click('.profile-edit');
 
-      expect(element('label[for="profile-name"]').textContent).toContain('Název firmy');
+      expect(withOrdinarySpaces(element('label[for="profile-name"]').textContent)).toContain(
+        'Název firmy',
+      );
       expect(element('#profile-company-identifier')).toBeNull();
     });
   });
@@ -590,7 +613,8 @@ describe('Given the donor data card on a device that keeps drafts', () => {
 
   function button(name: string): HTMLButtonElement {
     const found = Array.from(root().querySelectorAll('button')).find(
-      (candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name,
+      (candidate) =>
+        withOrdinarySpaces(candidate.textContent)?.replace(/\s+/g, ' ').trim() === name,
     );
     if (found === undefined) {
       throw new Error(`No button ${name}`);
@@ -677,15 +701,19 @@ describe('Given the donor data card on a device that keeps drafts', () => {
     });
 
     it('and they continue it, then the form opens with it and saves it without asking', async () => {
-      expect(root().querySelector('app-draft-offer')?.textContent).not.toContain(
-        'Uložená verze se od té doby změnila',
-      );
+      expect(
+        withOrdinarySpaces(root().querySelector('app-draft-offer')?.textContent),
+      ).not.toContain('Uložená verze se od té doby změnila');
       expect(root().querySelector('.profile-edit')).toBeNull();
 
       button('Pokračovat v rozepsaném').click();
       await settle();
       expect(input('#profile-street').value).toBe('Krátká 3');
-      expect(root().querySelector('[role="status"]:not(:empty)')?.textContent?.trim()).toBe(
+      expect(
+        withOrdinarySpaces(
+          root().querySelector('[role="status"]:not(:empty)')?.textContent,
+        )?.trim(),
+      ).toBe(
         'Pokračujete v rozepsaných úpravách. Zůstanou jen na tomto zařízení, dokud je neuložíte.',
       );
 
@@ -704,7 +732,7 @@ describe('Given the donor data card on a device that keeps drafts', () => {
 
       expect(document.activeElement).toBe(button('Upravit údaje'));
       expect(shelf.draftOf('donor', 'profile')).toBeNull();
-      expect(root().textContent).toContain('Dlouhá 12');
+      expect(withOrdinarySpaces(root().textContent)).toContain('Dlouhá 12');
       expect(root().querySelector('app-draft-offer')).toBeNull();
     });
   });
@@ -727,7 +755,7 @@ describe('Given the donor data card on a device that keeps drafts', () => {
 
     it('then saving asks first instead of overwriting silently, and keeping the edits saves them', async () => {
       http.expectNone('/api/donors/me');
-      expect(root().querySelector('.profile-stale')?.textContent).toContain(
+      expect(withOrdinarySpaces(root().querySelector('.profile-stale')?.textContent)).toContain(
         'se uložené údaje změnily',
       );
 
@@ -748,7 +776,7 @@ describe('Given the donor data card on a device that keeps drafts', () => {
 
       http.expectNone('/api/donors/me');
       expect(shelf.draftOf('donor', 'profile')).toBeNull();
-      expect(root().textContent).toContain('Dlouhá 12');
+      expect(withOrdinarySpaces(root().textContent)).toContain('Dlouhá 12');
     });
   });
 });

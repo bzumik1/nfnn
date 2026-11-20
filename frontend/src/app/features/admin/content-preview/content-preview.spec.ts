@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { draftArticle, IMAGE_ID, newsArticle } from '../../content/testing/news-fixtures';
 import { project } from '../../content/testing/project-fixtures';
 import { ContentPreview, PreviewContent } from './content-preview';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 async function setUp(content: PreviewContent): Promise<ComponentFixture<ContentPreview>> {
   await TestBed.configureTestingModule({
@@ -16,14 +17,14 @@ async function setUp(content: PreviewContent): Promise<ComponentFixture<ContentP
 }
 
 function text(fixture: ComponentFixture<unknown>, selector: string): string {
-  return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+  return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
 function texts(fixture: ComponentFixture<unknown>, selector: string): string[] {
   return Array.from(fixture.nativeElement.querySelectorAll(selector) as NodeListOf<Element>).map(
-    (found) => (found.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    (found) => (withOrdinarySpaces(found.textContent) ?? '').replace(/\s+/g, ' ').trim(),
   );
 }
 

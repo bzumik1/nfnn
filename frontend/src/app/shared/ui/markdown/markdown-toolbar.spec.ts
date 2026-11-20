@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { MarkdownToolbar } from './markdown-toolbar';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   imports: [FormsModule, MarkdownToolbar],
@@ -20,7 +21,7 @@ describe('Given the formatting buttons above a text field', () => {
   const area = () => fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
   const button = (name: string) =>
     [...(fixture.nativeElement as HTMLElement).querySelectorAll('button')].find(
-      (candidate) => candidate.textContent?.trim() === name,
+      (candidate) => withOrdinarySpaces(candidate.textContent)?.trim() === name,
     ) as HTMLButtonElement;
 
   async function write(text: string, start: number, end = start): Promise<void> {
@@ -44,14 +45,11 @@ describe('Given the formatting buttons above a text field', () => {
     const group = fixture.nativeElement.querySelector('[role="group"]') as HTMLElement;
 
     expect(group.getAttribute('aria-label')).toBe('Formátování textu');
-    expect([...group.querySelectorAll('button')].map((each) => each.textContent?.trim())).toEqual([
-      'Tučně',
-      'Kurzíva',
-      'Nadpis',
-      'Odrážky',
-      'Číslování',
-      'Odkaz',
-    ]);
+    expect(
+      [...group.querySelectorAll('button')].map((each) =>
+        withOrdinarySpaces(each.textContent)?.trim(),
+      ),
+    ).toEqual(['Tučně', 'Kurzíva', 'Nadpis', 'Odrážky', 'Číslování', 'Odkaz']);
   });
 
   it('when a word is selected and Tučně is pressed, then the word is wrapped, the model follows and the word stays selected', async () => {

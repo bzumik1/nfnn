@@ -30,6 +30,7 @@ import {
   waitsForConnection,
 } from '../device-copy/testing/opened-copy';
 import { project as heldProject } from '../../content/testing/project-fixtures';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const PROJECTS_URL = '/api/admin/content/projects';
 const MEDIA_URL = '/api/admin/content/media';
@@ -85,7 +86,7 @@ function element<T extends HTMLElement>(fixture: ComponentFixture<unknown>, sele
 }
 
 function text(fixture: ComponentFixture<unknown>, selector: string): string {
-  return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+  return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -124,7 +125,7 @@ async function choose(
 ): Promise<void> {
   const control = element<HTMLSelectElement>(fixture, selector);
   control.selectedIndex = Array.from(control.options).findIndex(
-    (option) => option.textContent?.trim() === label,
+    (option) => withOrdinarySpaces(option.textContent)?.trim() === label,
   );
   control.dispatchEvent(new Event('change'));
   control.dispatchEvent(new Event('blur'));
@@ -133,7 +134,7 @@ async function choose(
 
 function selected(fixture: ComponentFixture<unknown>, selector: string): string {
   const control = element<HTMLSelectElement>(fixture, selector);
-  return control.options[control.selectedIndex]?.textContent?.trim() ?? '';
+  return withOrdinarySpaces(control.options[control.selectedIndex]?.textContent)?.trim() ?? '';
 }
 
 async function submit(fixture: ComponentFixture<unknown>): Promise<void> {
@@ -185,7 +186,7 @@ describe('Given an administrator writing a new project', () => {
     expect(selected(fixture, '#projects-category')).toBe('Děti');
     expect(
       Array.from(element<HTMLSelectElement>(fixture, '#projects-category').options).map((option) =>
-        option.textContent?.trim(),
+        withOrdinarySpaces(option.textContent)?.trim(),
       ),
     ).toEqual(['Děti', 'Dospělí', 'Zvířata', 'Ostatní']);
     expect(text(fixture, '#projects-category-hint')).toBe(
@@ -488,7 +489,9 @@ describe('Given an administrator writing a new project', () => {
 
       expect(answer).toBeInstanceOf(Promise);
       expect(text(fixture, 'dialog h2')).toBe('Máte neuložené změny');
-      expect(document.activeElement?.textContent?.trim()).toBe('Zůstat a uložit');
+      expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe(
+        'Zůstat a uložit',
+      );
     });
 
     it('and the page goes away while it asks, then the question is answered with staying, so no navigation waits for ever', async () => {
@@ -721,8 +724,10 @@ describe('Given an administrator editing a draft project', () => {
 
     it('then the sheet keeps the edits in the form and names when the other version was saved', () => {
       const sheet = element<HTMLDialogElement>(fixture, 'app-changed-meanwhile-dialog dialog');
-      expect(sheet.textContent).toContain('zůstávají ve formuláři');
-      expect(sheet.textContent).toContain('Novější verze je z 5.\u00a011. 2026 16:20.');
+      expect(withOrdinarySpaces(sheet.textContent)).toContain('zůstávají ve formuláři');
+      expect(withOrdinarySpaces(sheet.textContent)).toContain(
+        'Novější verze je z 5. 11. 2026 16:20.',
+      );
       expect(element<HTMLTextAreaElement>(fixture, '#projects-body').value).toBe(
         'Opravený text o koncertu.',
       );
@@ -843,7 +848,7 @@ describe('Given an administrator editing a published project', () => {
     await loaded();
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('figure.preview figcaption')).map(
-        (caption) => (caption as HTMLElement).textContent?.trim(),
+        (caption) => withOrdinarySpaces((caption as HTMLElement).textContent)?.trim(),
       ),
     ).toEqual(['Karta v Pomáháme', 'Příběh roku v Aktualitách', 'Nahoře v článku']);
 
@@ -1053,7 +1058,9 @@ describe('Given an administrator editing a published project', () => {
     const link = element<HTMLAnchorElement>(fixture, '.public-link');
     expect(link.getAttribute('href')).toBe('/projekty/zahrada-pro-deti');
     expect(link.target).toBe('_blank');
-    expect(link.textContent?.replace(/\s+/g, ' ').trim()).toBe('Otevřít na webu (v novém okně)');
+    expect(withOrdinarySpaces(link.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
+      'Otevřít na webu (v novém okně)',
+    );
   });
 
   it('when they edit the text and change the date, then the edit is saved first and the project is published with it', async () => {
@@ -1358,9 +1365,9 @@ describe('Given an administrator editing a published project on a device that ke
     );
     await settle(fixture);
 
-    expect(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent).toContain(
-      'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
-    );
+    expect(
+      withOrdinarySpaces(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent),
+    ).toContain('Od chvíle, kdy jste na tomto zařízení začali s úpravami');
     button(fixture, 'Uložit svou verzi místo novější').click();
     await settle(fixture);
     const overwrite = http.expectOne(`${PROJECTS_URL}/${project().id}`);

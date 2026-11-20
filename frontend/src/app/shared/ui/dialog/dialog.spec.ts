@@ -11,6 +11,7 @@ import { DialogAnnouncer } from './dialog-announcer';
 import { DialogHistory } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { FakeDialogHistory } from './testing/fake-dialog-history';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const realMatchMedia = window.matchMedia;
 
@@ -75,14 +76,14 @@ describe('Given a dialog opened from a button', () => {
     const status = native().querySelector('[role="status"]');
 
     expect(status).not.toBeNull();
-    expect(status?.textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(status?.textContent)?.trim()).toBe('');
   });
 
   it('when a message is announced to the open dialog, then its own status region carries it', () => {
     TestBed.inject(DialogAnnouncer).announce('Stránku se nepodařilo otevřít.');
     fixture.detectChanges();
 
-    expect(native().querySelector('[role="status"]')?.textContent?.trim()).toBe(
+    expect(withOrdinarySpaces(native().querySelector('[role="status"]')?.textContent)?.trim()).toBe(
       'Stránku se nepodařilo otevřít.',
     );
   });
@@ -94,7 +95,9 @@ describe('Given a dialog opened from a button', () => {
     withdraw();
     fixture.detectChanges();
 
-    expect(native().querySelector('[role="status"]')?.textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(native().querySelector('[role="status"]')?.textContent)?.trim()).toBe(
+      '',
+    );
   });
 
   it('when a later announcement replaced the first, then withdrawing the first keeps the later one', () => {
@@ -105,7 +108,9 @@ describe('Given a dialog opened from a button', () => {
     withdrawFirst();
     fixture.detectChanges();
 
-    expect(native().querySelector('[role="status"]')?.textContent?.trim()).toBe('Druhá');
+    expect(withOrdinarySpaces(native().querySelector('[role="status"]')?.textContent)?.trim()).toBe(
+      'Druhá',
+    );
   });
 
   it('when the browser closes it on Esc, then it asks to be dismissed', () => {
@@ -704,9 +709,13 @@ describe('Given a sheet whose content the visitor pulls with a finger', () => {
       expect(panel().style.translate).toBe('');
       expect(question()?.open).toBe(true);
       expect(
-        document.getElementById(question()!.getAttribute('aria-labelledby')!)?.textContent?.trim(),
+        withOrdinarySpaces(
+          document.getElementById(question()!.getAttribute('aria-labelledby')!)?.textContent,
+        )?.trim(),
       ).toBe('Zahodit rozepsané údaje?');
-      expect(document.activeElement?.textContent?.trim()).toBe('Pokračovat v psaní');
+      expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe(
+        'Pokračovat v psaní',
+      );
     });
 
     it('and the visitor keeps writing, then the question closes and the sheet stays open', async () => {
@@ -719,7 +728,7 @@ describe('Given a sheet whose content the visitor pulls with a finger', () => {
 
     it('and the visitor discards it, then the sheet asks to be dismissed', async () => {
       const discard = Array.from(question()!.querySelectorAll('button')).find(
-        (button) => button.textContent?.trim() === 'Zahodit',
+        (button) => withOrdinarySpaces(button.textContent)?.trim() === 'Zahodit',
       )!;
       discard.click();
       await settle();

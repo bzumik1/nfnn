@@ -6,6 +6,7 @@ import { CompactLayout } from '../../../../core/layout/compact-layout';
 import { AdminLogReader } from './admin-log-reader';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const FIO =
   '2026-11-09T22:09:47.639+01:00  INFO 1 --- [nova-nadeje] [scheduling-1] c.n.a.d.i.fio.FioBankStatementSource     : Fio answered 2 movements';
@@ -115,8 +116,12 @@ describe('Given an administrator reading a log file', () => {
       text: TAIL,
     });
 
-    expect(page.element('.entry.is-focused').textContent).toContain('Backup watch failed');
-    expect(document.activeElement?.textContent).toContain('Backup watch failed');
+    expect(withOrdinarySpaces(page.element('.entry.is-focused').textContent)).toContain(
+      'Backup watch failed',
+    );
+    expect(withOrdinarySpaces(document.activeElement?.textContent)).toContain(
+      'Backup watch failed',
+    );
   });
 
   it('when the reader opens with a level, then that filter is chosen and its matches are listed', async () => {
@@ -222,8 +227,12 @@ describe('Given an administrator reading a log file', () => {
       .map((button) => accessibleText(button))
       .filter((name) => name.startsWith('Načíst'));
     expect(loadButtons).toEqual(['Načíst novější řádky', 'Načíst starší řádky']);
-    expect(page.element('.list-end').textContent).toContain('Načíst starší řádky');
-    expect(page.element('.load-more').textContent).toContain('Načíst novější řádky');
+    expect(withOrdinarySpaces(page.element('.list-end').textContent)).toContain(
+      'Načíst starší řádky',
+    );
+    expect(withOrdinarySpaces(page.element('.load-more').textContent)).toContain(
+      'Načíst novější řádky',
+    );
   });
 
   it('when they load older lines, then the older entries join below and the first of them takes the focus', async () => {
@@ -245,7 +254,9 @@ describe('Given an administrator reading a log file', () => {
 
     expect(page.texts('.entry')).toHaveLength(4);
     expect(page.texts('.entry').at(-1)).toContain('Backend revision abc is ready');
-    expect(document.activeElement?.textContent).toContain('Backend revision abc is ready');
+    expect(withOrdinarySpaces(document.activeElement?.textContent)).toContain(
+      'Backend revision abc is ready',
+    );
     expect(page.hasButton('Načíst starší řádky')).toBe(false);
   });
 
@@ -304,7 +315,9 @@ describe('Given an administrator reading a log file', () => {
 
     expect(page.element('.ui-segmented button').getAttribute('aria-checked')).toBe('true');
     expect(page.texts('.entry')).toHaveLength(3);
-    expect(page.element('.entry.is-focused').textContent).toContain('Backup watch failed');
+    expect(withOrdinarySpaces(page.element('.entry.is-focused').textContent)).toContain(
+      'Backup watch failed',
+    );
   });
 
   it('when they search within warnings, then the level and the text are asked together', async () => {

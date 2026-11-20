@@ -33,13 +33,13 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 class ReceiptNoLongerActive extends Error {}
 
 const READ_FAILED = $localize`:@@admin.donorDetail.receiptPdf.readFailed:Potvrzení se nepodařilo načíst. Zkuste to prosím znovu.`;
-const DRAWING_FAILED = $localize`:@@admin.donorDetail.receiptPdf.drawingFailed:PDF se v prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu, případně v jiném prohlížeči.`;
+const DRAWING_FAILED = $localize`:@@admin.donorDetail.receiptPdf.drawingFailed:PDF se v\u00a0prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu, případně v\u00a0jiném prohlížeči.`;
 const FAILURE_TEXTS: Readonly<Record<ReceiptPdfFailureReason, string>> = {
-  'tools-missing': $localize`:@@admin.donorDetail.receiptPdf.toolsMissing:Nástroje pro PDF se nepodařilo načíst. Obnovte prosím stránku a stáhněte potvrzení znovu.`,
+  'tools-missing': $localize`:@@admin.donorDetail.receiptPdf.toolsMissing:Nástroje pro PDF se nepodařilo načíst. Obnovte prosím stránku a\u00a0stáhněte potvrzení znovu.`,
   fonts: DRAWING_FAILED,
   drawing: DRAWING_FAILED,
-  image: $localize`:@@admin.donorDetail.receiptPdf.imageFailed:Podpis nebo portrét na potvrzení se nepodařilo ověřit, a tak jsme PDF nevytvořili. Zkuste to prosím znovu.`,
-  unprintable: $localize`:@@admin.donorDetail.receiptPdf.unprintable:Údaje potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili.`,
+  image: $localize`:@@admin.donorDetail.receiptPdf.imageFailed:Podpis nebo portrét na potvrzení se nepodařilo ověřit, a\u00a0tak jsme PDF nevytvořili. Zkuste to prosím znovu.`,
+  unprintable: $localize`:@@admin.donorDetail.receiptPdf.unprintable:Údaje potvrzení obsahují znak, který v\u00a0PDF neumíme vytisknout, a\u00a0tak jsme PDF nevytvořili.`,
   style: $localize`:@@admin.donorDetail.receiptPdf.styleFailed:PDF teď kvůli chybě na webu nejde vytvořit. Motiv webu dává potvrzení vzhled, který neprojde kontrolou.`,
 };
 const CANCELLED = $localize`:@@admin.donorDetail.receiptPdf.cancelled:Přípravu PDF jste zrušili.`;

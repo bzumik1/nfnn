@@ -7,6 +7,7 @@ import {
 } from '../../../donations/device-copy/donor-copy';
 import type { DonorCopyView } from '../../../donations/device-copy/donor-copy-view';
 import { FIRST_SYNC_NOTICE_DELAY_MS, FirstSyncNotice, STORED_NOTICE_MS } from './first-sync-notice';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const VIEW = { items: [] } as unknown as DonorCopyView;
 
@@ -55,7 +56,7 @@ describe('Given the line about the first saving of the donor’s data on this de
   }
 
   function status(): string {
-    return (region()?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(region()?.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function after(ms: number): void {

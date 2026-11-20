@@ -163,7 +163,7 @@ test.describe('Given an administrator whose device keeps the administration', ()
     await page.reload();
 
     await expect(block(page).locator('.since-lead')).toHaveText(
-      new RegExp(`${LAST_VISIT} Od té doby přišly 2 platby za 1\\s500\\sKč\\.$`),
+      new RegExp(`${LAST_VISIT} Od té doby přišly 2\\splatby za 1\\s500\\sKč\\.$`),
     );
     await expect(block(page).getByRole('link', { name: '1 platba za 1 000 Kč' })).toHaveAttribute(
       'href',

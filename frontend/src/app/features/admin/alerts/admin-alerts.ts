@@ -67,15 +67,15 @@ type FocusTarget = 'alerts-device-title' | 'alerts-others-title' | 'alerts-test-
 export const ALERT_AREAS: readonly PushAlertArea[] = ['bankImport', 'backups', 'mail'];
 
 const AREA_LABELS: Record<PushAlertArea, string> = {
-  bankImport: $localize`:@@admin.alerts.area.bankImport:Import plateb z banky`,
+  bankImport: $localize`:@@admin.alerts.area.bankImport:Import plateb z\u00a0banky`,
   backups: $localize`:@@admin.alerts.area.backups:Zálohy`,
   mail: $localize`:@@admin.alerts.area.mail:Odesílání e-mailů`,
 };
 
 const AREA_DESCRIPTIONS: Record<PushAlertArea, string> = {
-  bankImport: $localize`:@@admin.alerts.area.bankImport.description:Když se platby z banky přestanou stahovat a když se zase stahují.`,
-  backups: $localize`:@@admin.alerts.area.backups.description:Když záloha selže nebo chybí a když je zase v pořádku.`,
-  mail: $localize`:@@admin.alerts.area.mail.description:Když server e-mail neodešle a když zase odesílá.`,
+  bankImport: $localize`:@@admin.alerts.area.bankImport.description:Když se platby z\u00a0banky přestanou stahovat a\u00a0když se zase stahují.`,
+  backups: $localize`:@@admin.alerts.area.backups.description:Když záloha selže nebo chybí a\u00a0když je zase v\u00a0pořádku.`,
+  mail: $localize`:@@admin.alerts.area.mail.description:Když server e-mail neodešle a\u00a0když zase odesílá.`,
 };
 
 const AREA_ROUTES: Record<PushAlertArea, string> = {
@@ -496,7 +496,7 @@ export class AdminAlerts {
           this.deviceNotice.set({
             kind: 'alert',
             text: problemTypeEndsWith(failure, SUBSCRIPTION_LIMIT)
-              ? $localize`:@@admin.alerts.device.limit:Upozornění můžete mít zapnutá nejvýš na 10 zařízeních. Odeberte níže v části Další zařízení to, které už nepoužíváte, a zkuste to znovu.`
+              ? $localize`:@@admin.alerts.device.limit:Upozornění můžete mít zapnutá nejvýš na 10\u00a0zařízeních. Odeberte níže v\u00a0části Další zařízení to, které už nepoužíváte, a\u00a0zkuste to znovu.`
               : describeProblem(
                   failure,
                   $localize`:@@admin.alerts.device.turnOnFailed:Upozornění se nepodařilo zapnout. Zkuste to prosím znovu.`,
@@ -517,7 +517,7 @@ export class AdminAlerts {
     this.availability.set(this.availabilityNow());
     this.deviceNotice.set({
       kind: 'alert',
-      text: $localize`:@@admin.alerts.device.browserRefused:Prohlížeč upozornění nezapnul. Pokud jste se na povolení upozornění nedostali nebo jste ho odmítli, povolte je v nastavení prohlížeče pro tento web a zkuste to znovu.`,
+      text: $localize`:@@admin.alerts.device.browserRefused:Prohlížeč upozornění nezapnul. Pokud jste se na povolení upozornění nedostali nebo jste ho odmítli, povolte je v\u00a0nastavení prohlížeče pro tento web a\u00a0zkuste to znovu.`,
     });
   }
 
@@ -574,12 +574,12 @@ const OFF_TEXT = $localize`:@@admin.alerts.switches.off:vypnuto`;
 function testOutcome({ delivered, failed, removed }: PushTestResponse): string {
   const parts = [
     delivered > 0
-      ? $localize`:@@admin.alerts.test.deliveredShort:Zkušební upozornění jsme předali k doručení na ${delivered}:count: zařízení.`
+      ? $localize`:@@admin.alerts.test.deliveredShort:Zkušební upozornění jsme předali k\u00a0doručení na ${delivered}:count:\u00a0zařízení.`
       : $localize`:@@admin.alerts.test.noneDelivered:Zkušební upozornění se nepodařilo předat na žádné zařízení. Zapněte upozornění znovu na zařízení, kde je chcete dostávat.`,
   ];
   if (failed > 0) {
     parts.push(
-      $localize`:@@admin.alerts.test.failedDevices:Na ${failed}:count: zařízení se ho předat nepodařilo.`,
+      $localize`:@@admin.alerts.test.failedDevices:Na ${failed}:count:\u00a0zařízení se ho předat nepodařilo.`,
     );
   }
   if (removed > 0) {
@@ -591,10 +591,10 @@ function testOutcome({ delivered, failed, removed }: PushTestResponse): string {
 function removedText(removed: number): string {
   switch (pluralCategory(removed)) {
     case 'one':
-      return $localize`:@@admin.alerts.test.removed.one:${removed}:count: zařízení už upozornění nepřijímalo, a tak jsme ho odebrali.`;
+      return $localize`:@@admin.alerts.test.removed.one:${removed}:count:\u00a0zařízení už upozornění nepřijímalo, a\u00a0tak jsme ho odebrali.`;
     case 'few':
-      return $localize`:@@admin.alerts.test.removed.few:${removed}:count: zařízení už upozornění nepřijímala, a tak jsme je odebrali.`;
+      return $localize`:@@admin.alerts.test.removed.few:${removed}:count:\u00a0zařízení už upozornění nepřijímala, a\u00a0tak jsme je odebrali.`;
     default:
-      return $localize`:@@admin.alerts.test.removed.other:${removed}:count: zařízení už upozornění nepřijímalo, a tak jsme je odebrali.`;
+      return $localize`:@@admin.alerts.test.removed.other:${removed}:count:\u00a0zařízení už upozornění nepřijímalo, a\u00a0tak jsme je odebrali.`;
   }
 }

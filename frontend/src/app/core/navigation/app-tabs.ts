@@ -9,7 +9,7 @@ export interface AppTab {
 }
 
 export const APP_TABS: readonly AppTab[] = [
-  { id: 'about', path: '/o-nas', label: $localize`:@@layout.tabs.about:O nás` },
+  { id: 'about', path: '/o-nas', label: $localize`:@@layout.tabs.about:O\u00a0nás` },
   { id: 'news', path: '/aktuality', label: $localize`:@@layout.tabs.news:Aktuality` },
   { id: 'projects', path: '/projekty', label: $localize`:@@layout.tabs.projects:Pomáháme` },
   { id: 'donate', path: '/prispet', label: $localize`:@@layout.tabs.donate:Přispět` },

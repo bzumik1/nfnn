@@ -54,7 +54,7 @@ html.follows-system-text-size {
   font-family: var(--font-sans);
 }
 
-:where(h1, h2, h3) {
+:where(html) {
   overflow-wrap: break-word;
 }
 

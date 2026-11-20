@@ -19,6 +19,7 @@ import {
 } from '../../../../core/auth/testing/donor-fixtures';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { PasskeysPanel } from './passkeys-panel';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 function expectLockedInPlace(button: HTMLButtonElement): void {
   expect(button.disabled).toBe(false);
@@ -35,7 +36,7 @@ function announcers(element: Element): Element[] {
 
 function labels(button: Element | null): string[] {
   return Array.from(button?.querySelectorAll('.busy-label__face') ?? []).map((face) =>
-    (face.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    (withOrdinarySpaces(face.textContent) ?? '').replace(/\s+/g, ' ').trim(),
   );
 }
 
@@ -122,8 +123,8 @@ describe('Given the passkeys panel of the sign-in card', () => {
   it('when it opens, then it explains passkeys and lists the donor passkeys with their dates', async () => {
     await render();
 
-    expect(element('.passkeys-intro').textContent).toContain(
-      'chráněné i\u00a0bez kódu z\u00a0aplikace',
+    expect(withOrdinarySpaces(element('.passkeys-intro').textContent)).toContain(
+      'chráněné i bez kódu z aplikace',
     );
     expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
     expect(texts('.passkey-dates')[0]).toContain('přidáno 17. 10. 2026');
@@ -150,9 +151,11 @@ describe('Given the passkeys panel of the sign-in card', () => {
   it('when it lists the passkeys, then the dot between their dates is bound to the date before it, so a wrapped line never starts with it', async () => {
     await render();
 
-    const dates = [...root().querySelectorAll('.passkey-dates')].map((node) => node.textContent);
-    expect(dates[0]).toMatch(/2026\u00a0· naposledy použito/);
-    expect(dates[1]).toMatch(/2026\u00a0· zatím nepoužito/);
+    const dates = [...root().querySelectorAll('.passkey-dates')].map((node) =>
+      withOrdinarySpaces(node.textContent),
+    );
+    expect(dates[0]).toMatch(/2026 · naposledy použito/);
+    expect(dates[1]).toMatch(/2026 · zatím nepoužito/);
   });
 
   it('when the card is opened again, then the passkeys show at once without the loading line and are refreshed behind them', async () => {
@@ -161,7 +164,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
     fixture = TestBed.createComponent(PasskeysPanel);
     fixture.detectChanges();
 
-    expect(root().textContent).not.toContain('Načítáme');
+    expect(withOrdinarySpaces(root().textContent)).not.toContain('Načítáme');
     expect(texts('.passkey-name')).toHaveLength(2);
     http.expectOne(PASSKEYS_URL).flush({ items: [IPHONE] });
     await settle();
@@ -192,7 +195,9 @@ describe('Given the passkeys panel of the sign-in card', () => {
   it('when the donor has no passkey, then the card says so and offers to add one', async () => {
     await render([]);
 
-    expect(element('.passkeys-empty').textContent).toContain('Zatím nemáte žádný přístupový klíč');
+    expect(withOrdinarySpaces(element('.passkeys-empty').textContent)).toContain(
+      'Zatím nemáte žádný přístupový klíč',
+    );
     expect(texts('button')).toContain('Přidat přístupový klíč');
     expect(element('.passkeys-action').classList).not.toContain('ui-button--primary');
   });
@@ -210,8 +215,8 @@ describe('Given the passkeys panel of the sign-in card', () => {
     http.expectOne(PASSKEYS_URL).flush(samplePasskey({ id: 'new', name: 'MacBook' }));
     await settle();
 
-    expect(element('[role="status"]').textContent).toContain(
-      'heslo teď můžete u\u00a0řádku „Heslo“ i\u00a0odebrat',
+    expect(withOrdinarySpaces(element('[role="status"]').textContent)).toContain(
+      'heslo teď můžete u řádku „Heslo“ i odebrat',
     );
   });
 
@@ -226,7 +231,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
       });
     await settle();
 
-    expect(element('[role="alert"]').textContent).toContain('Chyba serveru');
+    expect(withOrdinarySpaces(element('[role="alert"]').textContent)).toContain('Chyba serveru');
     await clickButton('Zkusit znovu');
     http.expectOne(PASSKEYS_URL).flush({ items: [IPHONE] });
     await settle();
@@ -279,10 +284,10 @@ describe('Given the passkeys panel of the sign-in card', () => {
       await settle();
 
       expect(texts('.passkey-name')).toEqual(['iPhone', 'MacBook']);
-      expect(element('[role="status"]').textContent).toContain(
+      expect(withOrdinarySpaces(element('[role="status"]').textContent)).toContain(
         'Přístupový klíč MacBook je přidaný',
       );
-      expect(element('[role="status"]').textContent).not.toContain('odebrat');
+      expect(withOrdinarySpaces(element('[role="status"]').textContent)).not.toContain('odebrat');
       expect(element('form')).toBeNull();
     });
 
@@ -307,8 +312,12 @@ describe('Given the passkeys panel of the sign-in card', () => {
       await submit();
 
       http.expectNone(OPTIONS_URL);
-      expect(element('#passkey-name-error').textContent).toContain('Pojmenujte prosím klíč');
-      expect(element('#passkey-password-error').textContent).toContain('Zadejte prosím své heslo');
+      expect(withOrdinarySpaces(element('#passkey-name-error').textContent)).toContain(
+        'Pojmenujte prosím klíč',
+      );
+      expect(withOrdinarySpaces(element('#passkey-password-error').textContent)).toContain(
+        'Zadejte prosím své heslo',
+      );
     });
 
     it('and the password is wrong, then the reason from the server is shown at the form', async () => {
@@ -324,7 +333,9 @@ describe('Given the passkeys panel of the sign-in card', () => {
         });
       await settle();
 
-      expect(element('.ui-field-error').textContent).toContain('Nesprávné heslo');
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
+        'Nesprávné heslo',
+      );
       expect(passkeys.created).toHaveLength(0);
     });
 
@@ -365,7 +376,9 @@ describe('Given the passkeys panel of the sign-in card', () => {
       await vi.waitFor(() => expect(element('.ui-field-error')).not.toBeNull());
       await settle();
 
-      expect(element('.ui-field-error').textContent).toContain('Klíč se nevytvořil');
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
+        'Klíč se nevytvořil',
+      );
       expect(element('.passkeys-save').hasAttribute('aria-disabled')).toBe(false);
     });
 
@@ -378,8 +391,8 @@ describe('Given the passkeys panel of the sign-in card', () => {
       await vi.waitFor(() => expect(element('.ui-field-error')).not.toBeNull());
       await settle();
 
-      expect(element('.ui-field-error').textContent).toContain(
-        'už přístupový klíč k\u00a0vašemu účtu má',
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
+        'už přístupový klíč k vašemu účtu má',
       );
     });
 
@@ -402,13 +415,17 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
       const yes = element<HTMLButtonElement>('.passkey-confirm .ui-button--danger-soft');
       expect(announcers(yes)).toEqual([]);
-      expect(status.textContent?.trim()).toBe('Odebíráme…');
-      expect(status.querySelector('.visually-hidden')?.textContent?.trim()).toBe('Odebíráme…');
+      expect(withOrdinarySpaces(status.textContent)?.trim()).toBe('Odebíráme…');
+      expect(
+        withOrdinarySpaces(status.querySelector('.visually-hidden')?.textContent)?.trim(),
+      ).toBe('Odebíráme…');
       http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`).flush(null);
       await settle();
 
       expect(status.isConnected).toBe(true);
-      expect(status.textContent).toContain('Přístupový klíč iPhone je odebraný');
+      expect(withOrdinarySpaces(status.textContent)).toContain(
+        'Přístupový klíč iPhone je odebraný',
+      );
     });
 
     it('then pressing the focused Ano, odebrat again while the key is removed sends nothing more and the focus stays on it', async () => {
@@ -428,7 +445,9 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
     it('then the removal asks first and the confirmed key disappears', async () => {
       await clickButton('Odebrat');
-      expect(element('.passkey-confirm').textContent).toContain('Odebrat klíč iPhone?');
+      expect(withOrdinarySpaces(element('.passkey-confirm').textContent)).toContain(
+        'Odebrat klíč iPhone?',
+      );
 
       await clickButton('Ano, odebrat');
       const yes = element<HTMLButtonElement>('.passkey-confirm .ui-button--danger-soft');
@@ -442,7 +461,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
       await settle();
 
       expect(texts('.passkey-name')).toEqual(['Windows']);
-      expect(element('[role="status"]').textContent).toContain(
+      expect(withOrdinarySpaces(element('[role="status"]').textContent)).toContain(
         'Přístupový klíč iPhone je odebraný',
       );
     });
@@ -466,10 +485,12 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
     async function removeThe(passkey: typeof IPHONE): Promise<void> {
       const row = Array.from(root().querySelectorAll<HTMLElement>('.passkey')).find((candidate) =>
-        candidate.querySelector('.passkey-name')?.textContent?.includes(passkey.name),
+        withOrdinarySpaces(candidate.querySelector('.passkey-name')?.textContent)?.includes(
+          passkey.name,
+        ),
       );
       Array.from(row?.querySelectorAll('button') ?? [])
-        .find((button) => button.textContent?.includes('Odebrat'))
+        .find((button) => withOrdinarySpaces(button.textContent)?.includes('Odebrat'))
         ?.click();
       await settle();
       await clickButton('Ano, odebrat');
@@ -529,7 +550,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
       expect(element('#passkey-rename')).toBeNull();
       expect(texts('.passkey-name')).toEqual(['iPhone 16 Pro Max', 'Windows']);
-      expect(element('[role="status"]').textContent).toContain(
+      expect(withOrdinarySpaces(element('[role="status"]').textContent)).toContain(
         'Přístupový klíč je přejmenovaný na iPhone 16 Pro Max.',
       );
     });
@@ -539,7 +560,9 @@ describe('Given the passkeys panel of the sign-in card', () => {
       await fillIn('#passkey-rename', '');
       await submit();
 
-      expect(element('.passkey-rename').textContent).toContain('Pojmenujte prosím klíč.');
+      expect(withOrdinarySpaces(element('.passkey-rename').textContent)).toContain(
+        'Pojmenujte prosím klíč.',
+      );
       expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
     });
 
@@ -555,7 +578,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
         });
       await settle();
 
-      expect(element('.passkey-rename [role="alert"]').textContent).toContain(
+      expect(withOrdinarySpaces(element('.passkey-rename [role="alert"]').textContent)).toContain(
         'Název je příliš dlouhý.',
       );
       expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
@@ -568,7 +591,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
       expect(element('#passkey-rename')).toBeNull();
       expect(texts('.passkey-name')).toEqual(['iPhone', 'Windows']);
-      expect(document.activeElement?.textContent?.trim()).toBe('Přejmenovat');
+      expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe('Přejmenovat');
     });
   });
 
@@ -617,7 +640,9 @@ describe('Given the passkeys panel of the sign-in card', () => {
     passkeys.available = false;
     await render([IPHONE]);
 
-    expect(element('.passkeys-unsupported').textContent).toContain('Tento prohlížeč');
+    expect(withOrdinarySpaces(element('.passkeys-unsupported').textContent)).toContain(
+      'Tento prohlížeč',
+    );
     expect(texts('button')).not.toContain('Přidat přístupový klíč');
     expect(texts('.passkey-name')).toEqual(['iPhone']);
   });
@@ -700,7 +725,9 @@ describe('Given the passkeys panel of a donor without a password', () => {
 
     expect(texts('button')).not.toContain('Odebrat');
     expect(texts('button')).toContain('Přejmenovat');
-    expect(element('.passkey .passkeys-hint').textContent).toContain('Jediný způsob přihlášení');
+    expect(withOrdinarySpaces(element('.passkey .passkeys-hint').textContent)).toContain(
+      'Jediný způsob přihlášení',
+    );
     expect(texts('.passkeys-hint')[1]).toContain('aspoň ve dvou zařízeních');
     expect(counts).toEqual([1]);
   });
@@ -715,7 +742,7 @@ describe('Given the passkeys panel of a donor without a password', () => {
   it('when no key is left, then a warning asks for one and the first needs no confirmation', async () => {
     await render([]);
 
-    expect(element('.passkeys-warning').textContent).toContain(
+    expect(withOrdinarySpaces(element('.passkeys-warning').textContent)).toContain(
       'Účet nemá heslo ani přístupový klíč',
     );
     expect(element('.passkeys-action').classList).toContain('ui-button--primary');
@@ -740,7 +767,9 @@ describe('Given the passkeys panel of a donor without a password', () => {
     await render([IPHONE]);
     await clickButton('Přidat přístupový klíč');
     expect(element('#passkey-password')).toBeNull();
-    expect(element('.passkeys-form-intro').textContent).toContain('jedním z\u00a0vašich klíčů');
+    expect(withOrdinarySpaces(element('.passkeys-form-intro').textContent)).toContain(
+      'jedním z vašich klíčů',
+    );
     await fillIn('#passkey-name', 'MacBook');
     await submit();
 
@@ -811,7 +840,7 @@ describe('Given the passkeys panel on a device that keeps a copy of the donor da
     http.expectOne(PASSKEYS_URL).flush({ items: [IPHONE] });
     await settle();
     Array.from(root.querySelectorAll('button'))
-      .find((button) => button.textContent?.includes('Přidat přístupový klíč'))
+      .find((button) => withOrdinarySpaces(button.textContent)?.includes('Přidat přístupový klíč'))
       ?.click();
     await settle();
     for (const [selector, value] of [

@@ -3,6 +3,7 @@ import { LOGGERS_URL, LogPageHarness, problem } from '../testing/log-page-harnes
 import { AdminLogLevels } from './admin-log-levels';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const LOGGERS = [
   loggerEntry({ logger: 'ROOT' }),
@@ -40,7 +41,9 @@ describe('Given an administrator on the log levels page', () => {
   function radio(name: string): HTMLButtonElement {
     const found = Array.from(
       document.querySelectorAll<HTMLButtonElement>('dialog [role="radio"]'),
-    ).find((candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim().startsWith(name));
+    ).find((candidate) =>
+      withOrdinarySpaces(candidate.textContent)?.replace(/\s+/g, ' ').trim().startsWith(name),
+    );
     if (found === undefined) {
       throw new Error(`No choice ${name}`);
     }

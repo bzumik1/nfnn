@@ -159,10 +159,10 @@ export class EmailVerification {
           this.loading.set(false);
           this.error.set(
             failure instanceof PasskeyCeremonyError
-              ? $localize`:@@donor.emailVerification.passkey.notCreated:Klíč se nevytvořil, zařízení ho nepotvrdilo. Zkuste to prosím znovu; jde to i později v části „Údaje a zabezpečení“.`
+              ? $localize`:@@donor.emailVerification.passkey.notCreated:Klíč se nevytvořil, zařízení ho nepotvrdilo. Zkuste to prosím znovu; jde to i\u00a0později v\u00a0části „Údaje a\u00a0zabezpečení“.`
               : describeProblem(
                   failure,
-                  $localize`:@@donor.emailVerification.passkey.error:Klíč se nepodařilo uložit. Zkuste to prosím znovu; jde to i později v části „Údaje a zabezpečení“.`,
+                  $localize`:@@donor.emailVerification.passkey.error:Klíč se nepodařilo uložit. Zkuste to prosím znovu; jde to i\u00a0později v\u00a0části „Údaje a\u00a0zabezpečení“.`,
                 ),
           );
         },

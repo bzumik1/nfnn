@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Connectivity } from '../../../../core/connectivity/connectivity';
 import { DonorDonations } from '../donor-donations';
 import { BankCheck } from './bank-check';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 describe('Given the bank check of a signed-in donor', () => {
   let fixture: ComponentFixture<BankCheck>;
@@ -48,7 +49,7 @@ describe('Given the bank check of a signed-in donor', () => {
 
     expect(checkButton().disabled).toBe(false);
     expect(checkButton().getAttribute('aria-disabled')).toBe('true');
-    expect(checkButton().textContent?.trim()).toBe('Zkontrolovat nové platby');
+    expect(withOrdinarySpaces(checkButton().textContent)?.trim()).toBe('Zkontrolovat nové platby');
 
     checkButton().click();
     await fixture.whenStable();
@@ -69,6 +70,6 @@ describe('Given the bank check of a signed-in donor', () => {
     expect(refreshFromBank).not.toHaveBeenCalled();
     expect(checkButton().getAttribute('aria-disabled')).toBe('true');
     const hint = document.getElementById(checkButton().getAttribute('aria-describedby') ?? '');
-    expect(hint?.textContent?.trim()).toBe('Potřebuje připojení');
+    expect(withOrdinarySpaces(hint?.textContent)?.trim()).toBe('Potřebuje připojení');
   });
 });

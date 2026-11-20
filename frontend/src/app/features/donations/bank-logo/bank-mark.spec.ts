@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BankMark } from './bank-mark';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 function render(inputs: Record<string, unknown>): ComponentFixture<BankMark> {
   const fixture = TestBed.createComponent(BankMark);
@@ -34,7 +35,7 @@ describe('Given a bank with a logo', () => {
     expect(image.getAttribute('loading')).toBe('lazy');
     expect(image.getAttribute('alt')).toBe('');
     expect(monogram(fixture)).toBeNull();
-    expect(host(fixture).textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(host(fixture).textContent)?.trim()).toBe('');
   });
 
   it('when the logo cannot be loaded, then the monogram of the bank takes its place until another logo comes', () => {
@@ -65,7 +66,7 @@ describe('Given a bank without a logo', () => {
 
     expect(host(fixture).querySelector('img')).toBeNull();
     expect(monogram(fixture)).toBe('KB');
-    expect(host(fixture).textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(host(fixture).textContent)?.trim()).toBe('');
   });
 
   it('when the mark is small, then it shows the plain bank sign instead of letters too small to read', () => {

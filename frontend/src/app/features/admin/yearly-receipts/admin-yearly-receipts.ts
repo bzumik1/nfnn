@@ -413,7 +413,7 @@ export class AdminYearlyReceipts {
           kind: 'running',
           step: 0,
           steps,
-          text: $localize`:@@admin.yearlyReceipts.progress.images:Načítáme podpisy a portréty…`,
+          text: $localize`:@@admin.yearlyReceipts.progress.images:Načítáme podpisy a\u00a0portréty…`,
         });
         break;
       case 'tools':
@@ -430,7 +430,7 @@ export class AdminYearlyReceipts {
           step: 1 + event.receipt,
           steps,
           text: $localize`:@@admin.yearlyReceipts.progress.drawing:Kreslíme potvrzení…`,
-          detail: $localize`:@@admin.yearlyReceipts.progress.drawingCount:${event.receipt}:receipt: z ${event.receipts}:receipts:`,
+          detail: $localize`:@@admin.yearlyReceipts.progress.drawingCount:${event.receipt}:receipt: z\u00a0${event.receipts}:receipts:`,
         });
         break;
       case 'done':
@@ -449,8 +449,8 @@ export class AdminYearlyReceipts {
       kind: 'status',
       text:
         file === null
-          ? $localize`:@@admin.yearlyReceipts.done.nothing:Žádné potvrzení k tisku: všichni dárci byli přeskočeni.`
-          : $localize`:@@admin.yearlyReceipts.done:PDF k tisku je připravené: obsahuje ${receipts}:receipts: potvrzení.`,
+          ? $localize`:@@admin.yearlyReceipts.done.nothing:Žádné potvrzení k\u00a0tisku: všichni dárci byli přeskočeni.`
+          : $localize`:@@admin.yearlyReceipts.done:PDF k\u00a0tisku je připravené: obsahuje ${receipts}:receipts: potvrzení.`,
     });
     afterNextRender(
       () => (this.noticeRegion()?.nativeElement as HTMLElement | undefined)?.focus(),
@@ -475,7 +475,7 @@ export class AdminYearlyReceipts {
       kind: 'running',
       step: done,
       steps: this.order.length,
-      text: $localize`:@@admin.yearlyReceipts.progress.issuing:Vystavujeme potvrzení ${done}:done: z ${this.order.length}:total:…`,
+      text: $localize`:@@admin.yearlyReceipts.progress.issuing:Vystavujeme potvrzení ${done}:done: z\u00a0${this.order.length}:total:…`,
     });
   }
 

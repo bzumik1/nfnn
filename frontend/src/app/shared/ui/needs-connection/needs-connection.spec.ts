@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import { NeedsConnection } from './needs-connection';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   imports: [FormsModule, NeedsConnection],
@@ -78,7 +79,7 @@ describe('Given a control that needs a connection', () => {
       expect(send().disabled).toBe(false);
       expect(send().getAttribute('aria-disabled')).toBe('true');
       const hint = send().nextElementSibling as HTMLElement;
-      expect(hint.textContent).toBe('Potřebuje připojení');
+      expect(withOrdinarySpaces(hint.textContent)).toBe('Potřebuje připojení');
       expect(send().getAttribute('aria-describedby')).toBe(`send-hint ${hint.id}`);
     });
 

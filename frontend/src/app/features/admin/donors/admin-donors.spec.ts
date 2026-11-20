@@ -12,6 +12,7 @@ import { CompactLayout } from '../../../core/layout/compact-layout';
 import { person, PORTRAIT_ID } from '../../content/testing/people-fixtures';
 import { AdministrationCopy } from '../device-copy/administration-copy';
 import type { CopiedGift } from './recent-donors';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const SEARCH_URL = '/api/admin/donors';
 const PEOPLE_URL = '/api/admin/content/people';
@@ -109,7 +110,7 @@ describe('Given an administrator on the donors page', () => {
   });
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -119,7 +120,7 @@ describe('Given an administrator on the donors page', () => {
   }
 
   function rowText(row: HTMLElement): string {
-    return (row.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(row.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function lastGift(row: HTMLElement): string[] {
@@ -177,7 +178,7 @@ describe('Given an administrator on the donors page', () => {
       expect(
         Array.from(
           fixture.nativeElement.querySelectorAll('thead th') as NodeListOf<HTMLElement>,
-        ).map((cell) => cell.textContent?.trim()),
+        ).map((cell) => withOrdinarySpaces(cell.textContent)?.trim()),
       ).toEqual(['Dárce', 'E-mail', 'Variabilní symbol', 'Poslední dar', 'Stav účtu']);
       const [first, second] = rows();
       expect(rows()).toHaveLength(2);
@@ -195,9 +196,9 @@ describe('Given an administrator on the donors page', () => {
       await searched('stav', [stavby]);
 
       expect(fixture.nativeElement.querySelector('.recent-title')).toBeNull();
-      expect(rows().map((row) => row.querySelector('a')?.textContent?.trim())).toEqual([
-        'Stavby Novák s.r.o.',
-      ]);
+      expect(
+        rows().map((row) => withOrdinarySpaces(row.querySelector('a')?.textContent)?.trim()),
+      ).toEqual(['Stavby Novák s.r.o.']);
       expect(rowText(rows()[0])).toContain('17. 10. 2026');
 
       type('');
@@ -205,10 +206,9 @@ describe('Given an administrator on the donors page', () => {
       fixture.detectChanges();
 
       expect(text('.recent-title')).toBe('Naposledy přispěli');
-      expect(rows().map((row) => row.querySelector('a')?.textContent?.trim())).toEqual([
-        'Petr Svoboda',
-        'Jana Nováková',
-      ]);
+      expect(
+        rows().map((row) => withOrdinarySpaces(row.querySelector('a')?.textContent)?.trim()),
+      ).toEqual(['Petr Svoboda', 'Jana Nováková']);
     });
   });
 
@@ -233,7 +233,7 @@ describe('Given an administrator on the donors page', () => {
     expect(rowText(first)).not.toContain('10:00');
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('thead th') as NodeListOf<HTMLElement>).map(
-        (cell) => cell.textContent?.trim(),
+        (cell) => withOrdinarySpaces(cell.textContent)?.trim(),
       ),
     ).toEqual(['Dárce', 'E-mail', 'Variabilní symbol', 'Registrace', 'Stav účtu']);
     expect(rowText(first)).toContain('Správce');
@@ -252,9 +252,11 @@ describe('Given an administrator on the donors page', () => {
     await searched('nov', [donorAccount({ registeredAt: '2026-03-05T07:00:00Z' })]);
 
     const [row] = rows();
-    expect((row.querySelector('td[data-label="Registrace"]')?.textContent ?? '').trim()).toBe(
-      '5.\u00a03. 2026',
-    );
+    expect(
+      (
+        withOrdinarySpaces(row.querySelector('td[data-label="Registrace"]')?.textContent) ?? ''
+      ).trim(),
+    ).toBe('5. 3. 2026');
   });
 
   it('when a found donor was erased, then the row carries the erased tag and no other account tag', async () => {
@@ -400,7 +402,7 @@ describe('Given an administrator on the donors page where lists show as rows', (
 
   function spaced(node: Node): string {
     if (node.nodeType === Node.TEXT_NODE) {
-      return node.textContent ?? '';
+      return withOrdinarySpaces(node.textContent) ?? '';
     }
     if (node instanceof Element && node.getAttribute('aria-hidden') === 'true') {
       return '';
@@ -526,7 +528,7 @@ describe('Given an administrator on the donors page where some donors are people
       `/api/content/media/${PORTRAIT_ID}?w=480`,
     );
     expect(petr.querySelector('app-avatar img')).toBeNull();
-    expect(petr.querySelector('app-avatar')?.textContent?.trim()).toBe('PS');
+    expect(withOrdinarySpaces(petr.querySelector('app-avatar')?.textContent)?.trim()).toBe('PS');
   });
 
   it('when the people of the foundation cannot be loaded, then every donor keeps the initials and no alert shows', async () => {
@@ -535,7 +537,7 @@ describe('Given an administrator on the donors page where some donors are people
     const [jana] = await found([donorAccount()]);
 
     expect(jana.querySelector('app-avatar img')).toBeNull();
-    expect(jana.querySelector('app-avatar')?.textContent?.trim()).toBe('JN');
+    expect(withOrdinarySpaces(jana.querySelector('app-avatar')?.textContent)?.trim()).toBe('JN');
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
   });
 });

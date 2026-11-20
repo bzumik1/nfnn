@@ -44,7 +44,7 @@
                       {{ verdict(health.kind) }}
                     </h2>
                     <span class="ui-list__meta" i18n="@@admin.logs.state.asOf"
-                      >k <span class="ui-date">{{ time(diagnostics.now) }}</span></span
+                      >k&nbsp;<span class="ui-date">{{ time(diagnostics.now) }}</span></span
                     >
                     @if (health.findings.length > 0) {
                       <ul class="ui-list__extra findings" role="list">
@@ -101,14 +101,14 @@
                       <div class="ui-list__extra">
                         <ol class="release-steps">
                           <li i18n="@@admin.logs.state.release.step.open">
-                            V ZimaOS otevřete aplikaci „Nová naděje“ a její nastavení.
+                            V&nbsp;ZimaOS otevřete aplikaci „Nová naděje“ a&nbsp;její nastavení.
                           </li>
                           <li i18n="@@admin.logs.state.release.step.save">
-                            Zkontrolujte, že všechny služby mají tag „latest“, nic neměňte a
-                            klikněte na Uložit.
+                            Zkontrolujte, že všechny služby mají tag „latest“, nic neměňte
+                            a&nbsp;klikněte na Uložit.
                           </li>
                           <li i18n="@@admin.logs.state.release.step.verify">
-                            Za 2–3 minuty obnovte tuto stránku, Vydání pak ukáže
+                            Za 2–3&nbsp;minuty obnovte tuto stránku, Vydání pak ukáže
                             {{ latest.version }}.
                           </li>
                         </ol>
@@ -118,7 +118,7 @@
                           target="_blank"
                           rel="noopener noreferrer"
                           i18n="@@admin.logs.state.release.notes"
-                          >Co je nového v {{ latest.version }}</a
+                          >Co je nového v&nbsp;{{ latest.version }}</a
                         >
                       </div>
                     }
@@ -168,9 +168,9 @@
                 <div class="ui-list__row">
                   <span class="ui-list__title" i18n="@@admin.logs.diagnostics.memory">Paměť</span>
                   <span class="ui-list__meta" i18n="@@admin.logs.state.heap.meta"
-                    >{{ size(diagnostics.jvm.heapUsedBytes) }} z
-                    {{ size(diagnostics.jvm.heapMaxBytes) }}, mimo heap
-                    {{ size(diagnostics.jvm.nonHeapUsedBytes) }}</span
+                    >{{ size(diagnostics.jvm.heapUsedBytes) }} z&nbsp;{{
+                      size(diagnostics.jvm.heapMaxBytes)
+                    }}, mimo heap {{ size(diagnostics.jvm.nonHeapUsedBytes) }}</span
                   >
                   <span class="ui-list__value">{{ heapShare(diagnostics) }}</span>
                 </div>
@@ -179,7 +179,7 @@
                 <div class="ui-list__row">
                   <span class="ui-list__title" i18n="@@admin.logs.diagnostics.threads">Vlákna</span>
                   <span class="ui-list__meta" i18n="@@admin.logs.state.threads.meta"
-                    >nejvíc {{ diagnostics.jvm.peakThreads }}, z toho
+                    >nejvíc {{ diagnostics.jvm.peakThreads }}, z&nbsp;toho
                     {{ diagnostics.jvm.daemonThreads }} na pozadí</span
                   >
                   <span class="ui-list__value">{{ diagnostics.jvm.liveThreads }}</span>
@@ -263,11 +263,12 @@
                     >Spojení</span
                   >
                   <span class="ui-list__meta" i18n="@@admin.logs.state.database.connections.meta"
-                    >volná {{ diagnostics.database.idleConnections }} z
-                    {{ diagnostics.database.maxConnections }}</span
+                    >volná {{ diagnostics.database.idleConnections }} z&nbsp;{{
+                      diagnostics.database.maxConnections
+                    }}</span
                   >
                   <span class="ui-list__value" i18n="@@admin.logs.state.database.connections.value"
-                    >{{ diagnostics.database.activeConnections }} v práci</span
+                    >{{ diagnostics.database.activeConnections }} v&nbsp;práci</span
                   >
                 </div>
               </li>
@@ -293,7 +294,7 @@
                     <span class="ui-list__title ui-mono">{{ disk.path }}</span>
                     @if (disk.mounted) {
                       <span class="ui-list__meta" i18n="@@admin.logs.state.disk.free"
-                        >{{ size(disk.freeBytes) }} volných z {{ size(disk.totalBytes) }}</span
+                        >{{ size(disk.freeBytes) }} volných z&nbsp;{{ size(disk.totalBytes) }}</span
                       >
                       <span class="ui-list__value" i18n="@@admin.logs.state.disk.share"
                         >{{ freeShare(disk) }} volno</span

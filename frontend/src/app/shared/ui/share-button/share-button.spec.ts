@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ShareButton } from './share-button';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const TITLE = 'Zahrada pro děti';
 const URL = 'https://nfnn.cz/aktuality/zahrada-pro-deti';
@@ -44,14 +45,14 @@ describe('Given a share button for a news article', () => {
   const buttons = () =>
     [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
   const buttonTexts = () =>
-    buttons().map((button) => button.textContent?.replace(/\s+/g, ' ').trim());
+    buttons().map((button) => withOrdinarySpaces(button.textContent)?.replace(/\s+/g, ' ').trim());
   const alert = () =>
-    (
-      fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement | null
-    )?.textContent?.trim() ?? '';
+    withOrdinarySpaces(
+      (fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement | null)?.textContent,
+    )?.trim() ?? '';
   const statuses = () =>
     ([...fixture.nativeElement.querySelectorAll('[role="status"]')] as HTMLElement[])
-      .map((element) => element.textContent?.trim())
+      .map((element) => withOrdinarySpaces(element.textContent)?.trim())
       .filter((text) => text);
 
   async function press(button: HTMLButtonElement): Promise<void> {
@@ -267,7 +268,7 @@ describe('Given a share button in a list of articles', () => {
 
   const buttonTexts = () =>
     ([...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[]).map((button) =>
-      button.textContent?.replace(/\s+/g, ' ').trim(),
+      withOrdinarySpaces(button.textContent)?.replace(/\s+/g, ' ').trim(),
     );
   const shownTexts = () =>
     ([...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[]).map((button) => {
@@ -275,7 +276,7 @@ describe('Given a share button in a list of articles', () => {
       shown
         .querySelectorAll('.visually-hidden, [aria-hidden="true"]')
         .forEach((hidden) => hidden.remove());
-      return shown.textContent?.replace(/\s+/g, ' ').trim();
+      return withOrdinarySpaces(shown.textContent)?.replace(/\s+/g, ' ').trim();
     });
 
   afterEach(() => forgetNavigatorStubs());

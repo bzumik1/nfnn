@@ -24,6 +24,7 @@ import { DeviceAlertMarks } from '../device-alert-marks';
 import { AlertsOffer } from './alerts-offer';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const PUSH_URL = '/api/admin/operations/push';
 
@@ -138,7 +139,7 @@ describe('Given an administrator in the administration', () => {
   }
 
   function sheetText(): string {
-    return (sheet()?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(sheet()?.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function button(name: string): HTMLButtonElement {
@@ -176,7 +177,9 @@ describe('Given an administrator in the administration', () => {
     });
 
     it('then a sheet offers to turn the alerts on and says what they report', () => {
-      expect(sheet()?.querySelector('h2')?.textContent?.trim()).toBe('Zapnout upozornění?');
+      expect(withOrdinarySpaces(sheet()?.querySelector('h2')?.textContent)?.trim()).toBe(
+        'Zapnout upozornění?',
+      );
       expect(sheetText()).toContain(
         'Dostanete zprávu, když selže import plateb, záloha nebo odeslání e-mailu, a znovu, až to zase funguje.',
       );
@@ -206,7 +209,9 @@ describe('Given an administrator in the administration', () => {
         .flush({ delivered: 1, failed: 0, removed: 0 });
       await settle();
 
-      expect(sheet()?.querySelector('h2')?.textContent?.trim()).toBe('Upozornění jsou zapnutá');
+      expect(withOrdinarySpaces(sheet()?.querySelector('h2')?.textContent)?.trim()).toBe(
+        'Upozornění jsou zapnutá',
+      );
       expect(sheetText()).toContain('Poslali jsme zkušební upozornění');
       await vi.waitFor(async () => expect(await marks.ownedBy(JANA)).toBe(true));
       expect(button('Hotovo')).toBeTruthy();
@@ -224,7 +229,9 @@ describe('Given an administrator in the administration', () => {
         .flush(null, { status: 500, statusText: 'Error' });
       await settle();
 
-      expect(sheet()?.querySelector('h2')?.textContent?.trim()).toBe('Upozornění jsou zapnutá');
+      expect(withOrdinarySpaces(sheet()?.querySelector('h2')?.textContent)?.trim()).toBe(
+        'Upozornění jsou zapnutá',
+      );
       expect(sheetText()).toContain('Zkušební upozornění se teď poslat nepodařilo');
     });
 
@@ -244,7 +251,9 @@ describe('Given an administrator in the administration', () => {
       await settle();
 
       expect(push.requestSubscription).not.toHaveBeenCalled();
-      expect(sheet()?.querySelector('h2')?.textContent?.trim()).toBe('Upozornění jsou vypnutá');
+      expect(withOrdinarySpaces(sheet()?.querySelector('h2')?.textContent)?.trim()).toBe(
+        'Upozornění jsou vypnutá',
+      );
       expect(sheetText()).toContain('Nastavení → Oznámení');
       expect(marks.offerHidden()).toBe(true);
       expect(await marks.ownedBy(JANA)).toBe(false);
@@ -260,7 +269,7 @@ describe('Given an administrator in the administration', () => {
       await settle();
 
       expect(push.unsubscribe).toHaveBeenCalled();
-      expect(sheet()?.querySelector('[role="alert"]')?.textContent).toContain(
+      expect(withOrdinarySpaces(sheet()?.querySelector('[role="alert"]')?.textContent)).toContain(
         'Chyba serveru. Zkuste to později.',
       );
       expect(button('Zkusit znovu')).toBeTruthy();
@@ -276,7 +285,7 @@ describe('Given an administrator in the administration', () => {
         .flush(limit.body, limit.options);
       await settle();
 
-      expect(sheet()?.querySelector('[role="alert"]')?.textContent).toContain(
+      expect(withOrdinarySpaces(sheet()?.querySelector('[role="alert"]')?.textContent)).toContain(
         'nejvýš na 10 zařízeních',
       );
     });
@@ -311,7 +320,9 @@ describe('Given an administrator in the administration', () => {
     await settle();
     await answerPush();
 
-    expect(sheet()?.querySelector('h2')?.textContent?.trim()).toBe('Zapnout upozornění?');
+    expect(withOrdinarySpaces(sheet()?.querySelector('h2')?.textContent)?.trim()).toBe(
+      'Zapnout upozornění?',
+    );
   });
 
   it('when the app is offline, then the offer waits until it is online again', async () => {
@@ -393,7 +404,9 @@ describe('Given an administrator in the administration', () => {
 
     await vi.waitFor(async () => {
       await settle();
-      expect(sheet()?.querySelector('h2')?.textContent?.trim()).toBe('Zapnout upozornění?');
+      expect(withOrdinarySpaces(sheet()?.querySelector('h2')?.textContent)?.trim()).toBe(
+        'Zapnout upozornění?',
+      );
     });
     expect(push.requestSubscription).not.toHaveBeenCalled();
   });

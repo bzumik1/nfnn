@@ -9,6 +9,7 @@ import { provideRouter } from '@angular/router';
 import { person, PORTRAIT_ID } from '../../../content/testing/people-fixtures';
 import { noReceiptSignatory, receiptSignatory } from '../../testing/admin-fixtures';
 import { ReceiptSignatory } from './receipt-signatory';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 const PEOPLE_URL = '/api/admin/content/people';
@@ -39,7 +40,7 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
   afterEach(() => http.verify());
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -67,7 +68,7 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('figure')).toBeNull();
     const link = fixture.nativeElement.querySelector('a.signatory-open') as HTMLAnchorElement;
-    expect(link.textContent?.trim()).toBe('Otevřít lidi fondu');
+    expect(withOrdinarySpaces(link.textContent)?.trim()).toBe('Otevřít lidi fondu');
     expect(link.getAttribute('href')).toBe('/sprava/lide-fondu');
   });
 
@@ -197,12 +198,14 @@ describe('Given an administrator who saw the card of who signs the receipts once
     fixture = TestBed.createComponent(ReceiptSignatory);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
-    expect(fixture.nativeElement.querySelector('.signature-block-name')?.textContent?.trim()).toBe(
-      'Eva Vzorová',
-    );
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain('Načítáme');
+    expect(
+      withOrdinarySpaces(
+        fixture.nativeElement.querySelector('.signature-block-name')?.textContent,
+      )?.trim(),
+    ).toBe('Eva Vzorová');
     await signatoryArrives();
-    expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain('Načítáme');
   });
 });
 
@@ -257,7 +260,7 @@ describe('Given an administrator who saw the card of who signs the receipts once
     http.expectOne(SIGNATORY_URL).error(new ProgressEvent('error'), { status: 0 });
     await settle();
 
-    expect(fixture.nativeElement.textContent).toContain(
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
       'Kdo potvrzení podepisuje, ukážeme, až budete online.',
     );
     offline.set(false);
@@ -273,9 +276,11 @@ describe('Given an administrator who saw the card of who signs the receipts once
     http.expectOne(SIGNATORY_URL).error(new ProgressEvent('error'), { status: 0 });
     await settle();
 
-    expect(fixture.nativeElement.querySelector('.signature-block-name')?.textContent?.trim()).toBe(
-      'Eva Vzorová',
-    );
+    expect(
+      withOrdinarySpaces(
+        fixture.nativeElement.querySelector('.signature-block-name')?.textContent,
+      )?.trim(),
+    ).toBe('Eva Vzorová');
 
     offline.set(false);
     await settle();

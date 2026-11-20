@@ -24,7 +24,7 @@ describe('Given the name of a logger', () => {
   it('when it is one the page watches, then it says in Czech what it writes', () => {
     expect(loggerDescription('ROOT')).toBe('Vše ostatní');
     expect(loggerDescription('cz.novanadeje.app')).toBe('Aplikace');
-    expect(loggerDescription('io.github.bzumik1.fio')).toBe('Import z Fio');
+    expect(loggerDescription('io.github.bzumik1.fio')).toBe('Import z\u00a0Fio');
     expect(loggerDescription('org.hibernate.SQL')).toBe('Dotazy do databáze, bez hodnot');
     expect(loggerDescription('com.example.Other')).toBeNull();
   });

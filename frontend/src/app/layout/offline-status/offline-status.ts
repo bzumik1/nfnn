@@ -76,7 +76,7 @@ export class OfflineStatus {
     const time = this.dataTime();
     return time === null
       ? $localize`:@@layout.offline.label:Offline`
-      : $localize`:@@layout.offline.labelWithTime:Offline · údaje z ${time}:time:`;
+      : $localize`:@@layout.offline.labelWithTime:Offline · údaje z\u00a0${time}:time:`;
   });
 
   constructor() {
@@ -259,10 +259,10 @@ export class OfflineStatus {
     if (serverDown) {
       return time === null
         ? $localize`:@@layout.offline.announceServer:Server fondu teď neodpovídá.`
-        : $localize`:@@layout.offline.announceServerWithTime:Server fondu teď neodpovídá. Zobrazujeme údaje z ${time}:time:.`;
+        : $localize`:@@layout.offline.announceServerWithTime:Server fondu teď neodpovídá. Zobrazujeme údaje z\u00a0${time}:time:.`;
     }
     return time === null
       ? $localize`:@@layout.offline.announce:Jste offline.`
-      : $localize`:@@layout.offline.announceWithTime:Jste offline. Zobrazujeme údaje z ${time}:time:.`;
+      : $localize`:@@layout.offline.announceWithTime:Jste offline. Zobrazujeme údaje z\u00a0${time}:time:.`;
   }
 }

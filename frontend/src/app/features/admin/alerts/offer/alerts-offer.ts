@@ -185,7 +185,7 @@ export class AlertsOffer {
           if (asked) {
             this.failure.set(
               problemTypeEndsWith(failure, SUBSCRIPTION_LIMIT)
-                ? $localize`:@@admin.alerts.offer.limit:Upozornění můžete mít zapnutá nejvýš na 10 zařízeních. Na stránce Upozornění odeberte to, které už nepoužíváte, a zkuste to znovu.`
+                ? $localize`:@@admin.alerts.offer.limit:Upozornění můžete mít zapnutá nejvýš na 10\u00a0zařízeních. Na stránce Upozornění odeberte to, které už nepoužíváte, a\u00a0zkuste to znovu.`
                 : describeProblem(
                     failure,
                     $localize`:@@admin.alerts.offer.failed:Upozornění se nepodařilo zapnout. Zkuste to prosím znovu.`,

@@ -65,12 +65,12 @@
             @if (testSent()) {
               <p class="ui-dialog__lead" i18n="@@donor.notifications.offer.onLead">
                 Poslali jsme zkušební upozornění, mělo by se hned objevit. Která upozornění chcete,
-                změníte v Údajích a zabezpečení.
+                změníte v&nbsp;Údajích a&nbsp;zabezpečení.
               </p>
             } @else {
               <p class="ui-dialog__lead" i18n="@@donor.notifications.offer.onLeadNoTest">
-                Zkušební upozornění se teď na toto zařízení nepodařilo předat. Upozornění najdete v
-                Údajích a zabezpečení.
+                Zkušební upozornění se teď na toto zařízení nepodařilo předat. Upozornění najdete
+                v&nbsp;Údajích a&nbsp;zabezpečení.
               </p>
             }
           }
@@ -83,16 +83,17 @@
       </div>
       @if (current === 'offer' || current === 'failed') {
         <p class="ui-dialog__lead" i18n="@@donor.notifications.offer.lead">
-          Pošleme krátké upozornění, jakmile váš dar z banky přiřadíme k vašemu účtu, a jednou za
-          rok, až bude připravené roční potvrzení. Upozornění neříká jména ani částky.
+          Pošleme krátké upozornění, jakmile váš dar z&nbsp;banky přiřadíme k&nbsp;vašemu účtu,
+          a&nbsp;jednou za rok, až bude připravené roční potvrzení. Upozornění neříká jména ani
+          částky.
         </p>
       }
       <div role="alert">
         @if (current === 'refused') {
           <p class="ui-dialog__lead" i18n="@@donor.notifications.offer.refusedLead">
-            Zařízení upozornění pro tuto aplikaci nepovolilo. Povolte jí oznámení v nastavení
+            Zařízení upozornění pro tuto aplikaci nepovolilo. Povolte jí oznámení v&nbsp;nastavení
             zařízení (na iPhonu Nastavení → Oznámení → Nová naděje, nebo jak jste ikonu na ploše
-            pojmenovali) a potom upozornění zapněte v Údajích a zabezpečení.
+            pojmenovali) a&nbsp;potom upozornění zapněte v&nbsp;Údajích a&nbsp;zabezpečení.
           </p>
         }
         @if (current === 'failed') {

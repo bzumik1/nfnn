@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import { NeedsConnection } from '../needs-connection/needs-connection';
 import { BusyButton } from './busy-button';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   imports: [BusyButton],
@@ -180,7 +181,7 @@ describe('Given a busy button that also needs a connection', () => {
     await set({ offline: true });
 
     expect(unavailable()).toBe('true');
-    expect(hint()?.textContent).toBe('Potřebuje připojení');
+    expect(withOrdinarySpaces(hint()?.textContent)).toBe('Potřebuje připojení');
   });
 
   it('when the app opens offline, then the button is unavailable from the first view', async () => {
@@ -217,7 +218,7 @@ describe('Given a busy button that also needs a connection', () => {
 
     await set({ busy: false });
     expect(unavailable()).toBe('true');
-    expect(hint()?.textContent).toBe('Potřebuje připojení');
+    expect(withOrdinarySpaces(hint()?.textContent)).toBe('Potřebuje připojení');
 
     await set({ offline: false });
     expect(button().hasAttribute('aria-disabled')).toBe(false);

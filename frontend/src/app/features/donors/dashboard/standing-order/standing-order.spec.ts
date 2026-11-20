@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { foundationPaymentDetails } from '../../../donations/testing/payment-details-fixtures';
 import { StandingOrder } from './standing-order';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
 
@@ -39,12 +40,12 @@ describe('Given the standing order guide of the donor area', () => {
   }
 
   function text(selector: string): string {
-    return normalized(element(selector)?.textContent ?? '');
+    return normalized(withOrdinarySpaces(element(selector)?.textContent) ?? '');
   }
 
   function texts(selector: string): string[] {
     return [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(selector)].map(
-      (node) => normalized(node.textContent ?? ''),
+      (node) => normalized(withOrdinarySpaces(node.textContent) ?? ''),
     );
   }
 
@@ -59,7 +60,9 @@ describe('Given the standing order guide of the donor area', () => {
 
   it('when it is shown, then a collapsed button names the guide and asks nothing yet', () => {
     const button = element<HTMLButtonElement>('.standing-toggle')!;
-    expect(normalized(button.textContent ?? '')).toBe('Jak nastavit trvalý příkaz');
+    expect(normalized(withOrdinarySpaces(button.textContent) ?? '')).toBe(
+      'Jak nastavit trvalý příkaz',
+    );
     expect(button.getAttribute('aria-expanded')).toBe('false');
     const panel = document.getElementById(button.getAttribute('aria-controls') ?? '');
     expect(panel?.hidden).toBe(true);

@@ -3,10 +3,10 @@
     Hromadná potvrzení
   </h1>
   <p class="ui-page-intro" i18n="@@admin.yearlyReceipts.intro">
-    Roční potvrzení o darech za skončený rok pro všechny dárce najednou. Potvrzení, která platí a
-    jejichž dary se nezměnily, zůstanou, jak jsou; chybějící se vystaví a ta, u kterých se dary od
-    vystavení změnily, se nahradí. Všechna pak dostanete v jednom PDF k tisku. Jednotlivé potvrzení
-    k poslání e-mailem stáhnete na kartě dárce.
+    Roční potvrzení o&nbsp;darech za skončený rok pro všechny dárce najednou. Potvrzení, která platí
+    a&nbsp;jejichž dary se nezměnily, zůstanou, jak jsou; chybějící se vystaví a&nbsp;ta,
+    u&nbsp;kterých se dary od vystavení změnily, se nahradí. Všechna pak dostanete v&nbsp;jednom PDF
+    k&nbsp;tisku. Jednotlivé potvrzení k&nbsp;poslání e-mailem stáhnete na kartě dárce.
   </p>
 
   @switch (state()) {
@@ -42,7 +42,7 @@
           class="ui-card__title"
           i18n="@@admin.yearlyReceipts.issue.title"
         >
-          Vystavit a vytisknout
+          Vystavit a&nbsp;vytisknout
         </h2>
         <form class="issue-form" appFocusFirstInvalid (ngSubmit)="start()" novalidate>
           <div class="year-choice">
@@ -80,7 +80,7 @@
               <dl class="ui-data-list summary">
                 <div>
                   <dt i18n="@@admin.yearlyReceipts.summary.donors">
-                    Dárci s dary za rok {{ chosenYear() }}
+                    Dárci s&nbsp;dary za rok {{ chosenYear() }}
                   </dt>
                   <dd>{{ summary().donors }}</dd>
                 </div>
@@ -126,7 +126,7 @@
               >
                 <app-busy-label [busy]="busy()">
                   <span when-idle i18n="@@admin.yearlyReceipts.issue.start"
-                    >Vystavit a připravit PDF k tisku</span
+                    >Vystavit a&nbsp;připravit PDF k&nbsp;tisku</span
                   >
                   <span when-busy>{{ busyLabel() }}</span>
                 </app-busy-label>
@@ -179,7 +179,7 @@
             </button>
           </div>
           <p class="print-hint" i18n="@@admin.yearlyReceipts.printHint">
-            Tiskněte ve skutečné velikosti (100 %), ať ověřovací QR kód zůstane čitelný.
+            Tiskněte ve skutečné velikosti (100&nbsp;%), ať ověřovací QR kód zůstane čitelný.
           </p>
         }
       </section>
@@ -219,8 +219,8 @@
                 Nahrazená potvrzení
               </h3>
               <p class="replaced-note" i18n="@@admin.yearlyReceipts.replaced.note">
-                V PDF jsou už nová, se všemi dary. Stará potvrzení přestanou platit (jako když je
-                nahradíte na kartě dárce), a tak dárcům pošlete nová.
+                V&nbsp;PDF jsou už nová, se všemi dary. Stará potvrzení přestanou platit (jako když
+                je nahradíte na kartě dárce), a&nbsp;tak dárcům pošlete nová.
               </p>
               <ul class="lines">
                 @for (line of replaced(); track line.number) {
