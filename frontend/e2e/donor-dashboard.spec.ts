@@ -1270,6 +1270,7 @@ test.describe('Given a signed-in donor with gift receipts on a 390 px phone', ()
     expect(change.end).toBeGreaterThan(0);
     await expect(rows.first().getByRole('status')).toHaveText('Připravujeme údaje potvrzení…');
   });
+});
 
 test.describe('Given a donor whose summary counts gifts and an account verification', () => {
   const summaryWithVerification = {
