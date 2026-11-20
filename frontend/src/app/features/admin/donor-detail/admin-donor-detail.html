@@ -651,10 +651,7 @@
               </p>
             } @else {
               @if (drill()) {
-                <p
-                  class="admin-hint admin-hint--card"
-                  i18n="@@admin.donorDetail.accounts.hintParts"
-                >
+                <p class="ui-card__intro card-intro" i18n="@@admin.donorDetail.accounts.hintParts">
                   Údaj Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu, které
                   se dárci přiřadily podle účtu; dary se symbolem najdete v části Dary na kartě
                   dárce. Jen nechcete, aby se dárci přiřazovaly další platby bez symbolu? Vypněte
@@ -662,7 +659,7 @@
                   smažeme i dary, které se přes něj přiřadily, a odpovědi o starších symbolech.
                 </p>
               } @else {
-                <p class="admin-hint admin-hint--card" i18n="@@admin.donorDetail.accounts.hint">
+                <p class="ui-card__intro card-intro" i18n="@@admin.donorDetail.accounts.hint">
                   Sloupec Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu,
                   které se dárci přiřadily podle účtu; dary se symbolem najdete níže v části Dary.
                   Jen nechcete, aby se dárci přiřazovaly další platby bez symbolu? Vypněte párování,
@@ -977,7 +974,7 @@
               Dárce zatím nemá žádný přiřazený dar.
             </p>
           } @else {
-            <p class="admin-hint admin-hint--card">
+            <p class="ui-card__intro card-intro">
               <ng-container i18n="@@admin.donorDetail.donations.summary"
                 >Celkem {{ donationsCount(receivedCount()) }} za
                 {{ total() }}&nbsp;Kč.</ng-container

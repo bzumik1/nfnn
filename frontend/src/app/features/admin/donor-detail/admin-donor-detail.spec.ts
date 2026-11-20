@@ -482,6 +482,19 @@ describe('Given an administrator on a donor card', () => {
     expect(receipts).toContain('platné');
   });
 
+  it('when the donor has accounts and donations, then the explanation of the accounts and the sum of the donations read as card intros', async () => {
+    await loaded();
+
+    const paragraphWith = (title: string, words: string) =>
+      Array.from(section(title).querySelectorAll('p')).find((paragraph) =>
+        (paragraph.textContent ?? '').includes(words),
+      );
+    expect(
+      paragraphWith('Bankovní účty', 'Sloupec Dary přiřazené podle účtu')?.classList,
+    ).toContain('ui-card__intro');
+    expect(paragraphWith('Dary', 'Celkem 2 dary za 800')?.classList).toContain('ui-card__intro');
+  });
+
   it('when the donor gives with the symbol from a verified account, then the account column counts only gifts paired by the account and says where the others are', async () => {
     await loaded(
       donorAccount(),
@@ -501,7 +514,7 @@ describe('Given an administrator on a donor card', () => {
     const cell = accounts.querySelector('tbody tr td:nth-child(3)') as HTMLElement;
     expect(cell.dataset['label']).toBe('Dary přiřazené podle účtu');
     expect(cell.textContent?.trim()).toBe('0 darů');
-    expect((accounts.querySelector('.admin-hint') as HTMLElement).textContent).toContain(
+    expect((accounts.querySelector('.card-intro') as HTMLElement).textContent).toContain(
       'Sloupec Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu, které se dárci přiřadily podle účtu; dary se symbolem najdete níže v části Dary.',
     );
   });

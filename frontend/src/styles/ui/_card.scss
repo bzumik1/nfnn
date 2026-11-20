@@ -42,10 +42,10 @@
 }
 
 .ui-card__intro {
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   max-inline-size: var(--measure-prose);
-  color: var(--color-text-muted);
-  line-height: var(--leading-normal);
+  color: var(--color-text-soft);
+  line-height: var(--leading-relaxed);
 }
 
 .ui-card__empty {

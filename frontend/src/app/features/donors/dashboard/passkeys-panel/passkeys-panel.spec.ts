@@ -126,6 +126,14 @@ describe('Given the passkeys panel of the sign-in card', () => {
     expect(texts('.passkey-dates')[1]).toContain('zatím nepoužito');
   });
 
+  it('when it opens, then its intro and the intro of the form for a new key read as card intros', async () => {
+    await render();
+    await clickButton('Přidat přístupový klíč');
+
+    expect(element('.passkeys-intro').classList).toContain('ui-card__intro');
+    expect(element('.passkeys-form-intro').classList).toContain('ui-card__intro');
+  });
+
   it('when it opens, then the intro says in a sentence of its own that a passkey does not work on a fraudulent page', async () => {
     await render();
 

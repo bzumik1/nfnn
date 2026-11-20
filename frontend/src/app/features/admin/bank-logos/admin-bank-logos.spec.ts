@@ -228,6 +228,12 @@ describe('Given an administrator on the bank logos page', () => {
     expect(element('#bank-logo-new-code')).toBeTruthy();
   });
 
+  it('when the page opens, then the explanation of the form for another bank reads as the card intro', async () => {
+    await listed([]);
+
+    expect(element('.add-intro').classList).toContain('ui-card__intro');
+  });
+
   it('when the list cannot be loaded, then an alert offers a retry that loads again', async () => {
     http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle();
