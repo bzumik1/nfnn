@@ -488,6 +488,45 @@ test.describe('Given a visitor signing in from the sign-in dialog', () => {
     expect(requests).toBe(1);
     expect(await heard()).toEqual(['Přihlašujeme…']);
   });
+
+  test('when a screen reader has the focus on Přihlásit se and the visitor taps it, then the focus stays on that button instead of falling onto the dialog', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    let answer: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => (answer = resolve));
+    await page.route('**/api/donors/auth/login', async (route) => {
+      await answered;
+      await route.fulfill(
+        problem(
+          401,
+          'auth/invalid-credentials',
+          'Nesprávný e-mail nebo heslo',
+          'Zkontrolujte prosím e-mail a heslo.',
+        ),
+      );
+    });
+    await openSignInDialog(page);
+    const dialog = page.getByRole('dialog');
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('wrong horse battery');
+    const submit = dialog.locator('.login-form .ui-button--primary');
+    await submit.focus();
+
+    await submit.click();
+
+    await expect(submit).toHaveAttribute('aria-busy', 'true');
+    await expect
+      .poll(() => submit.evaluate((button) => document.activeElement === button))
+      .toBe(true);
+
+    answer();
+
+    await expect(dialog.getByRole('alert')).toContainText('Nesprávný e-mail nebo heslo');
+    await expect
+      .poll(() => submit.evaluate((button) => document.activeElement === button))
+      .toBe(true);
+  });
 });
 
 interface BusyStep {

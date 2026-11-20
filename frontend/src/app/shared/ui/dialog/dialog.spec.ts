@@ -205,6 +205,106 @@ describe('Given a dialog opened from a button', () => {
 @Component({
   imports: [Dialog],
   template: `
+    <button type="button" id="outside">Na stránce</button>
+    <app-dialog labelledBy="title" (dismissed)="dismissals = dismissals + 1">
+      <h2 id="title">Název</h2>
+      <input id="field" />
+      <button type="button" id="send" [disabled]="sendDisabled()">Přihlásit se</button>
+    </app-dialog>
+  `,
+})
+class FocusFallbackHost {
+  readonly sendDisabled = signal(false);
+  dismissals = 0;
+}
+
+describe('Given an open dialog whose browser moves the focus onto the dialog itself when a control inside it is pressed', () => {
+  let fixture: ComponentFixture<FocusFallbackHost>;
+
+  const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+  const byId = <T extends HTMLElement>(id: string) =>
+    fixture.nativeElement.querySelector(`#${id}`) as T;
+
+  const focusFallsOntoDialogFrom = (control: HTMLElement): void => {
+    control.focus();
+    native().focus();
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [FocusFallbackHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    }).compileComponents();
+    fixture = TestBed.createComponent(FocusFallbackHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    window.matchMedia = realMatchMedia;
+    fixture.nativeElement.remove();
+  });
+
+  it('when the focus falls from the pressed button onto the dialog, then it goes back to that button', () => {
+    const send = byId<HTMLButtonElement>('send');
+
+    focusFallsOntoDialogFrom(send);
+
+    expect(document.activeElement).toBe(send);
+  });
+
+  it('when the press that moved the focus onto the dialog itself started on that button, then the focus goes back to it', () => {
+    const send = byId<HTMLButtonElement>('send');
+    send.focus();
+
+    send.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    native().focus();
+
+    expect(document.activeElement).toBe(send);
+  });
+
+  it('when the visitor presses an empty part of the dialog while a field has the focus, then the focus stays on the dialog', () => {
+    byId<HTMLInputElement>('field').focus();
+
+    byId<HTMLElement>('title').dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    native().focus();
+
+    expect(document.activeElement).toBe(native());
+  });
+
+  it('when the focus comes onto the dialog from outside it, then it stays on the dialog', () => {
+    focusFallsOntoDialogFrom(byId<HTMLButtonElement>('outside'));
+
+    expect(document.activeElement).toBe(native());
+  });
+
+  it('when the button it fell from can no longer take the focus, then the focus stays on the dialog', () => {
+    const send = byId<HTMLButtonElement>('send');
+    send.focus();
+    fixture.componentInstance.sendDisabled.set(true);
+    fixture.detectChanges();
+
+    native().focus();
+
+    expect(document.activeElement).toBe(native());
+  });
+
+  it('when its own close button starts it leaving, then the dialog itself keeps the focus', () => {
+    deviceAsksForLessMotion(false);
+    const close = fixture.nativeElement.querySelector('.dialog-close') as HTMLButtonElement;
+    close.focus();
+
+    close.click();
+    fixture.detectChanges();
+
+    expect(native().classList).toContain('dialog--leaving');
+    expect(document.activeElement).toBe(native());
+  });
+});
+
+@Component({
+  imports: [Dialog],
+  template: `
     <button type="button" id="opener" (click)="open.set(true)">Otevřít</button>
     @if (open()) {
       <app-dialog labelledBy="title" (dismissed)="open.set(false)">
