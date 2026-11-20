@@ -33,6 +33,7 @@ import {
   neighbourAfterRowLeaves,
 } from '../../../../shared/ui/leaving-row/leaving-row';
 import { formatDonationDate } from '../../../donations/donation-date';
+import { BusyButton } from '../../../../shared/ui/busy-button/busy-button';
 import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
@@ -53,6 +54,7 @@ const RENAME_BUTTONS = '[id^="passkey-rename-button-"]';
   selector: 'app-passkeys-panel',
   providers: [BusyAnnouncement],
   imports: [
+    BusyButton,
     BusyLabel,
     Disclosure,
     FormsModule,

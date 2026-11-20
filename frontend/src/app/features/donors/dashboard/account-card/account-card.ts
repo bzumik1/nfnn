@@ -26,6 +26,7 @@ import {
   PasskeyCeremonyError,
 } from '../../../../core/auth/passkey-authenticator';
 import { formatBankTime } from '../../../donations/donation-date';
+import { BusyButton } from '../../../../shared/ui/busy-button/busy-button';
 import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
@@ -57,6 +58,7 @@ const SECRET_GROUP = 4;
   selector: 'app-account-card',
   providers: [BusyAnnouncement],
   imports: [
+    BusyButton,
     BusyLabel,
     Disclosure,
     FormsModule,
