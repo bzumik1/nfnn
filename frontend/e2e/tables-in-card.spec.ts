@@ -267,30 +267,23 @@ test.describe('Given the donors listed with long names and e-mails on a computer
   const donors = PAGES.find(({ path }) => path === '/sprava/darci')!;
 
   for (const width of [1280, 1920]) {
-    test(`when Dárci opens at ${width} px, then every e-mail breaks at most right after its @`, async ({
+    test(`when Dárci opens at ${width} px, then it stays a table inside its card and every e-mail breaks at most right after its @`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: HEIGHT });
       await openPage(page, donors);
 
+      await expect(
+        page.getByRole('main').getByRole('columnheader', { name: 'Variabilní symbol' }),
+      ).toBeVisible();
+      await expect(page.locator('main table thead')).not.toHaveCSS('position', 'absolute');
+      await expect(page.locator('main table tbody tr').first()).toHaveCSS('display', 'table-row');
       await expect(page.locator('main table .email').first()).toBeVisible();
       expect(await textsOnMoreThanOneLine(page, '.email-part')).toEqual([]);
       await expect.poll(() => overflowsOfTheirCards(page)).toEqual([]);
       expect(await pansSideways(page)).toBe(false);
     });
   }
-
-  test('when Dárci opens at 1920 px, then it stays a table whose header Variabilní symbol reads on one line', async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 1920, height: HEIGHT });
-    await openPage(page, donors);
-
-    const header = page.getByRole('main').getByRole('columnheader', { name: 'Variabilní symbol' });
-    await expect(header).toBeVisible();
-    await expect(page.locator('main table thead')).not.toHaveCSS('position', 'absolute');
-    expect(await textsOnMoreThanOneLine(page, 'th')).toEqual([]);
-  });
 });
 
 test.describe('Given a page whose table sits in a card on a computer', () => {

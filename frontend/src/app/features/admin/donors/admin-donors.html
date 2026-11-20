@@ -167,14 +167,12 @@
         </ul>
       } @else {
         <div class="ui-table-frame">
-          <table role="table" class="ui-table ui-table--wide">
+          <table role="table" class="ui-table">
             <thead role="rowgroup">
               <tr role="row">
                 <th role="columnheader" i18n="@@admin.donors.col.donor">Dárce</th>
                 <th role="columnheader" i18n="@@admin.donors.col.email">E-mail</th>
-                <th role="columnheader" class="symbol-heading" i18n="@@admin.donors.col.symbol">
-                  Variabilní symbol
-                </th>
+                <th role="columnheader" i18n="@@admin.donors.col.symbol">Variabilní symbol</th>
                 @if (listsRecent()) {
                   <th role="columnheader" i18n="@@admin.donors.col.lastGift">Poslední dar</th>
                 } @else {

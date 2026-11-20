@@ -77,24 +77,19 @@
 }
 
 .ui-table .email {
-  display: inline-block;
-  min-inline-size: 16ch;
   overflow-wrap: normal;
 }
 
-.email-part,
-.symbol-heading {
+.ui-table .email-part {
   white-space: nowrap;
 }
 
-@include bp.container-down(ui-table, laptop) {
+@include bp.container-down(ui-table, ledger) {
   .ui-table .email {
-    display: inline;
-    min-inline-size: 0;
     overflow-wrap: anywhere;
   }
 
-  .email-part {
+  .ui-table .email-part {
     white-space: normal;
   }
 }
