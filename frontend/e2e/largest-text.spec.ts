@@ -3398,6 +3398,133 @@ for (const rootSize of ['200%', `${LARGEST_SYSTEM_TEXT_PX}px`]) {
   });
 }
 
+async function cardTitlesBelowTheirFullSize(page: Page): Promise<string[]> {
+  const titles = page.locator('main .ui-card__title');
+  await expect(titles.first()).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  const below: string[] = [];
+  for (const title of await titles.all()) {
+    if (!(await title.isVisible())) {
+      continue;
+    }
+    const { title: size, token } = await fontSizes(title, '--text-2xl');
+    if (Math.abs(size - token) > 0.5) {
+      below.push(`${(await title.innerText()).trim()}: ${size} px, --text-2xl ${token} px`);
+    }
+  }
+  return below;
+}
+
+interface CardsBesideEachOther {
+  besideEachOther: number;
+  changed: string[];
+}
+
+async function cardsBesideEachOtherWithoutTheCardContainer(
+  page: Page,
+): Promise<CardsBesideEachOther> {
+  await page.evaluate(() => document.fonts.ready);
+  return page.evaluate(() => {
+    const cards = [...document.querySelectorAll<HTMLElement>('main .ui-card')].filter((card) =>
+      card.checkVisibility(),
+    );
+    const measure = () =>
+      cards.map((card) => {
+        const box = card.getBoundingClientRect();
+        return { left: box.left, top: box.top, width: box.width, height: box.height };
+      });
+    const withContainer = measure();
+    const beside = cards
+      .map((_, index) => index)
+      .filter((index) =>
+        withContainer.some(
+          (other, otherIndex) =>
+            otherIndex !== index &&
+            Math.abs(other.top - withContainer[index].top) <= 1 &&
+            (other.left >= withContainer[index].left + withContainer[index].width - 1 ||
+              other.left + other.width <= withContainer[index].left + 1),
+        ),
+      );
+    const newContainers = cards.filter(
+      (card) => getComputedStyle(card).containerName === 'ui-card',
+    );
+    for (const card of newContainers) {
+      card.style.setProperty('container-type', 'normal', 'important');
+    }
+    const withoutContainer = measure();
+    for (const card of newContainers) {
+      card.style.removeProperty('container-type');
+    }
+    const changed = beside
+      .filter(
+        (index) =>
+          Math.abs(withContainer[index].width - withoutContainer[index].width) > 0.5 ||
+          Math.abs(withContainer[index].height - withoutContainer[index].height) > 0.5,
+      )
+      .map((index) => {
+        const title = cards[index].querySelector('.ui-card__title')?.textContent?.trim() ?? '';
+        const [now, before] = [withContainer[index], withoutContainer[index]];
+        return `${title}: ${now.width.toFixed(1)}×${now.height.toFixed(1)}, without the container ${before.width.toFixed(1)}×${before.height.toFixed(1)}`;
+      });
+    return { besideEachOther: beside.length, changed };
+  });
+}
+
+for (const width of [1280, 1920]) {
+  for (const rootSize of [null, '200%']) {
+    test.describe(`Given a computer window ${width} px wide whose root text is ${rootSize ?? 'the default size'}`, () => {
+      test.use({ viewport: { width: 1280, height: 900 } });
+
+      test.beforeEach(async ({ page }) => {
+        if (rootSize) {
+          await page.addInitScript((size) => {
+            document.addEventListener('DOMContentLoaded', () => {
+              const style = document.createElement('style');
+              style.textContent = `html { font-size: ${size}; }`;
+              document.head.append(style);
+            });
+          }, rootSize);
+        }
+      });
+
+      test('when a donor opens Údaje a zabezpečení, then every card title takes --text-2xl', async ({
+        page,
+      }) => {
+        await mockDonorApi(page);
+        await signIn(page);
+        await page.setViewportSize({ width, height: 900 });
+        await openDonorSection(page, 'Údaje a zabezpečení');
+        await expect(page).toHaveURL(/\/darce\/udaje$/);
+
+        expect(await cardTitlesBelowTheirFullSize(page)).toEqual([]);
+      });
+
+      test('when an administrator opens Správa, then every card title takes --text-2xl and the cards beside each other keep the width and height they have without the card container, as on main', async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await mockDonorApi(page, donorWithDonations);
+        await mockAdministration(page);
+        await rememberedSession(page);
+        await page.goto('/sprava');
+        await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeVisible();
+        await expect(page.locator('main .admin-status > .ui-card')).toHaveCount(2);
+
+        expect(await cardTitlesBelowTheirFullSize(page)).toEqual([]);
+        const cards = await cardsBesideEachOtherWithoutTheCardContainer(page);
+        test.info().annotations.push({
+          type: 'cards beside each other',
+          description: `${cards.besideEachOther}`,
+        });
+        if (!rootSize) {
+          expect(cards.besideEachOther).toBeGreaterThanOrEqual(2);
+        }
+        expect(cards.changed).toEqual([]);
+      });
+    });
+  }
+}
+
 async function wrappedOntoMoreLines(elements: Locator): Promise<string[]> {
   await elements.first().evaluate(() => document.fonts.ready);
   return elements.evaluateAll((list) =>

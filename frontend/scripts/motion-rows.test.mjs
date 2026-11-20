@@ -343,3 +343,28 @@ describe('Given every fold that clips its child while its height changes', () =>
     }
   });
 });
+
+describe('Given a change of how wide a card or its columns are', () => {
+  for (const property of [
+    'inline-size',
+    'min-inline-size',
+    'max-inline-size',
+    'grid-template-columns',
+    'flex-basis',
+  ]) {
+    it(`when ${property} is asked to change by state or hover, then Sass refuses it, as it does width`, () => {
+      assert.throws(
+        () => compiled(`.card { @include motion.state(${property}); }`),
+        /never animated/,
+      );
+      assert.throws(
+        () => compiled(`.card { @include motion.hover(${property}); }`),
+        /never animated/,
+      );
+    });
+  }
+
+  it('when width is asked to change by state, then Sass refuses it too', () => {
+    assert.throws(() => compiled('.card { @include motion.state(width); }'), /never animated/);
+  });
+});
