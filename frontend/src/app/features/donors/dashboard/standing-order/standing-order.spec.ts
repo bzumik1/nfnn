@@ -194,11 +194,21 @@ describe('Given the standing order guide of the donor area', () => {
       Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
     });
 
-    it('then the button and the opened guide are brought into view together', async () => {
+    it('then the button and the opened guide are brought into view together once the guide has unfolded', async () => {
+      let unfold: () => void = () => undefined;
+      const unfolding = new Promise<void>((resolve) => (unfold = resolve));
+      element<HTMLElement>('.standing-panel')!.getAnimations = () =>
+        [{ transitionProperty: 'grid-template-rows', finished: unfolding }] as never;
+
       await toggle();
       http
         .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
         .flush(foundationPaymentDetails());
+      await settle();
+
+      expect(scrolled).toEqual([]);
+
+      unfold();
       await settle();
 
       expect(scrolled).toHaveLength(1);

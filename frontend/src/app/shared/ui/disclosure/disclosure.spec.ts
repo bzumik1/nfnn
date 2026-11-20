@@ -14,7 +14,9 @@ import { Disclosure } from './disclosure';
     >
       Změnit
     </button>
-    <div id="panel" appDisclosure [closed]="closed()"><button type="button">Uložit</button></div>
+    <div id="panel" appDisclosure [closed]="closed()" (unfolded)="unfoldings.set(unfoldings() + 1)">
+      <button type="button">Uložit</button>
+    </div>
     @if (asking()) {
       <div id="question" appDisclosure><button type="button">Ponechat</button></div>
     }
@@ -23,6 +25,7 @@ import { Disclosure } from './disclosure';
 class DisclosureHost {
   readonly closed = signal(true);
   readonly asking = signal(true);
+  readonly unfoldings = signal(0);
 }
 
 describe('Given a disclosure', () => {
@@ -99,5 +102,60 @@ describe('Given a disclosure', () => {
 
     expect(question.hasAttribute('inert')).toBe(true);
     expect(question.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  describe('when it opens while its height unfolds', () => {
+    let unfold: () => void;
+    let unfolding: Promise<void>;
+
+    beforeEach(() => {
+      unfolding = new Promise<void>((resolve) => (unfold = resolve));
+      byId('panel').getAnimations = () =>
+        [
+          { transitionProperty: 'opacity', finished: new Promise(() => undefined) },
+          { transitionProperty: 'grid-template-rows', finished: unfolding },
+        ] as never;
+    });
+
+    it('then it says it has unfolded only once its height has finished unfolding', async () => {
+      fixture.componentInstance.closed.set(false);
+      await settle();
+
+      expect(fixture.componentInstance.unfoldings()).toBe(0);
+
+      unfold();
+      await settle();
+
+      expect(fixture.componentInstance.unfoldings()).toBe(1);
+    });
+
+    it('and closes before its height has unfolded, then it never says it has unfolded', async () => {
+      fixture.componentInstance.closed.set(false);
+      await settle();
+      fixture.componentInstance.closed.set(true);
+      await settle();
+
+      unfold();
+      await settle();
+
+      expect(fixture.componentInstance.unfoldings()).toBe(0);
+    });
+  });
+
+  it('when it opens with no height to unfold, then it says it has unfolded at once', async () => {
+    byId('panel').getAnimations = () => [];
+
+    fixture.componentInstance.closed.set(false);
+    await settle();
+
+    expect(fixture.componentInstance.unfoldings()).toBe(1);
+  });
+
+  it('when it is first shown open, then it says nothing, since nothing has unfolded', async () => {
+    fixture = TestBed.createComponent(DisclosureHost);
+    fixture.componentInstance.closed.set(false);
+    await settle();
+
+    expect(fixture.componentInstance.unfoldings()).toBe(0);
   });
 });
