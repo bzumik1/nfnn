@@ -99,23 +99,26 @@ describe('Given an account shown in the administration', () => {
 });
 
 describe('Given a Czech account with a prefix, as long as an account number gets', () => {
-  it('when it renders, then the number keeps its digits together and may break only before the bank code', () => {
-    const element = host(render('000019-2000145399/0800'));
+  it('when it renders, then the number is one run of text that may break only before the bank code, so a screen reader reads it as one item', () => {
+    const number = host(render('000019-2000145399/0800')).querySelector('.ui-figures')!;
 
-    const groups = element.querySelectorAll('.ui-figures.ui-figures--groups > span');
-    expect([...groups].map((group) => group.textContent)).toEqual(['000019-2000145399/', '0800']);
-    expect(element.querySelector('.ui-figures')?.textContent?.trim()).toBe(
-      '000019-2000145399/0800',
-    );
+    expect(number.children.length).toBe(1);
+    expect(number.firstElementChild?.tagName).toBe('WBR');
+    expect([...number.childNodes].map((node) => node.textContent?.trim())).toEqual([
+      '000019-2000145399/',
+      '',
+      '0800',
+    ]);
   });
 });
 
 describe('Given an account that is not a Czech account number', () => {
-  it('when it renders, then the whole number stays one group', () => {
+  it('when it renders, then the whole number is one run of text without a break', () => {
     const fixture = render('CZ6508000000192000145399');
     http.expectNone(BANK_CODES_URL);
 
-    const groups = host(fixture).querySelectorAll('.ui-figures--groups > span');
-    expect([...groups].map((group) => group.textContent)).toEqual(['CZ6508000000192000145399']);
+    const number = host(fixture).querySelector('.ui-figures')!;
+    expect(number.children.length).toBe(0);
+    expect(number.textContent?.trim()).toBe('CZ6508000000192000145399');
   });
 });

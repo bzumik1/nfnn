@@ -14,10 +14,7 @@ export class BankAccount {
   private readonly bankNames = inject(BankNames);
   readonly account = input.required<string>();
   protected readonly czech = computed(() => bankCodeOf(this.account()) !== null);
-  protected readonly groups = computed(() => {
-    const { head, bankCode } = splitBeforeBankCode(this.account());
-    return bankCode === '' ? [head] : [head, bankCode];
-  });
+  protected readonly split = computed(() => splitBeforeBankCode(this.account()));
   protected readonly bank = computed(() => this.bankNames.nameOf(this.account()));
 
   constructor() {
