@@ -1626,7 +1626,7 @@ describe('Given the sign-in dialog', () => {
     it('with a valid address, then the trimmed address is sent and the sent panel replaces the form', async () => {
       await requestLink('  jana@example.cz ');
 
-      expect(element<HTMLButtonElement>('.reset-form .ui-button--primary').disabled).toBe(true);
+      expect(element('.reset-form .ui-button--primary').getAttribute('aria-disabled')).toBe('true');
       const request = http.expectOne('/api/donors/auth/password-reset/request');
       expect(request.request.method).toBe('POST');
       expect(request.request.body).toEqual({ email: 'jana@example.cz' });
@@ -1768,8 +1768,17 @@ describe('Given the sign-in dialog', () => {
     function expectBusy(selector: string, idle: string, busy: string): void {
       const button = element<HTMLButtonElement>(selector);
       expect(labelFaces(button)).toEqual([idle, busy]);
-      expect(accessibleText(button)).toBe(busy);
-      expect(button.hasAttribute('aria-busy')).toBe(false);
+      expect(accessibleText(button)).toBe(idle);
+      expect(button.getAttribute('aria-busy')).toBe('true');
+      expect(button.disabled).toBe(false);
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+      expect(statusTexts()).toContain(busy);
+    }
+
+    function statusTexts(): string[] {
+      return [...fixture.nativeElement.querySelectorAll('[role="status"]')].map((status) =>
+        (status.textContent ?? '').trim(),
+      );
     }
 
     it('then signing in is locked and says Přihlašujeme…, keeping Přihlásit se for its width', async () => {
@@ -1778,8 +1787,21 @@ describe('Given the sign-in dialog', () => {
       await fillIn('#login-password', 'correct horse battery');
       await submit('.login-form');
 
-      expect(element<HTMLButtonElement>('.login-form .ui-button--primary').disabled).toBe(true);
       expectBusy('.login-form .ui-button--primary', 'Přihlásit se', 'Přihlašujeme…');
+      http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+    });
+
+    it('then pressing the focused Přihlásit se again sends nothing more and the focus stays on it', async () => {
+      await render();
+      await fillIn('#login-email', 'jana@example.cz');
+      await fillIn('#login-password', 'correct horse battery');
+      const button = element<HTMLButtonElement>('.login-form .ui-button--primary');
+      button.focus();
+      await click('.login-form .ui-button--primary');
+
+      await click('.login-form .ui-button--primary');
+
+      expect(document.activeElement).toBe(button);
       http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
     });
 
@@ -1795,7 +1817,6 @@ describe('Given the sign-in dialog', () => {
       await fillIn('#login-code', '287082');
       await submit('.code-form');
 
-      expect(element<HTMLButtonElement>('.code-form .ui-button--primary').disabled).toBe(true);
       expectBusy('.code-form .ui-button--primary', 'Přihlásit se', 'Ověřujeme kód…');
       http.expectOne('/api/donors/auth/login/second-factor').flush(authResponse('token-1'));
     });
@@ -1810,7 +1831,6 @@ describe('Given the sign-in dialog', () => {
       await fillIn('#register-password', 'correct horse battery');
       await submit('.register-form');
 
-      expect(element<HTMLButtonElement>('.register-form .ui-button--primary').disabled).toBe(true);
       expectBusy('.register-form .ui-button--primary', 'Vytvořit účet', 'Vytváříme účet…');
       http
         .expectOne('/api/donors/auth/register')
@@ -1820,7 +1840,6 @@ describe('Given the sign-in dialog', () => {
 
       await click('.registration-resend');
 
-      expect(element<HTMLButtonElement>('.registration-resend').disabled).toBe(true);
       expectBusy('.registration-resend', 'Poslat odkaz znovu', 'Odesíláme…');
       http
         .expectOne('/api/donors/auth/email-verification/request')
@@ -1832,7 +1851,6 @@ describe('Given the sign-in dialog', () => {
       await fillIn('#reset-email', 'jana@example.cz');
       await submit('.reset-form');
 
-      expect(element<HTMLButtonElement>('.reset-form .ui-button--primary').disabled).toBe(true);
       expectBusy('.reset-form .ui-button--primary', 'Odeslat odkaz', 'Odesíláme…');
       http
         .expectOne('/api/donors/auth/password-reset/request')
@@ -1850,7 +1868,6 @@ describe('Given the sign-in dialog', () => {
 
       await click('.reset-resend');
 
-      expect(element<HTMLButtonElement>('.reset-resend').disabled).toBe(true);
       expectBusy('.reset-resend', 'Poslat znovu', 'Odesíláme…');
       http
         .expectOne('/api/donors/auth/password-reset/request')

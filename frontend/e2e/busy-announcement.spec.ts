@@ -6,6 +6,7 @@ import {
   mockDonorApi,
   noDonations,
   openDonorSection,
+  openSignInDialog,
   problem,
   signedInDevices,
   signIn,
@@ -430,3 +431,60 @@ async function lockedAndDisabledLooks(
     return looks;
   });
 }
+
+test.describe('Given a visitor signing in from the sign-in dialog', () => {
+  test('when the server takes longer than the loading delay, then the pressed Přihlásit se keeps the focus, takes no second press and the dialog says first Přihlašujeme… and then only the result', async ({
+    page,
+  }) => {
+    await page.clock.install();
+    await mockDonorApi(page);
+    let answer: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => (answer = resolve));
+    let requests = 0;
+    await page.route('**/api/donors/auth/login', async (route) => {
+      requests += 1;
+      await answered;
+      await route.fulfill(
+        problem(
+          401,
+          'auth/invalid-credentials',
+          'Nesprávný e-mail nebo heslo',
+          'Zkontrolujte prosím e-mail a heslo.',
+        ),
+      );
+    });
+    await openSignInDialog(page);
+    const dialog = page.getByRole('dialog');
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('wrong horse battery');
+    const submit = dialog.locator('.login-form .ui-button--primary');
+    const status = dialog.locator('.login-form [role="status"]');
+    const heard = await listenTo(status);
+    await lengthenLoadingDelay(page);
+    await submit.focus();
+
+    await submit.press('Enter');
+
+    await expect(submit).toHaveAttribute('aria-busy', 'true');
+    await expect(submit).toBeFocused();
+    await expect(status).toHaveText('');
+
+    await page.clock.fastForward(10_000);
+
+    await expect(status).toHaveText('Přihlašujeme…');
+    await expect(submit.locator('.busy-label__face--shown')).toHaveText('Přihlašujeme…');
+    await expect(submit).toHaveAccessibleName('Přihlásit se');
+    await expect(submit).toBeFocused();
+
+    await submit.press('Enter');
+
+    answer();
+
+    await expect(dialog.getByRole('alert')).toContainText('Nesprávný e-mail nebo heslo');
+    await expect(status).toHaveText('');
+    await expect(submit).not.toHaveAttribute('aria-busy');
+    await expect(submit).toBeFocused();
+    expect(requests).toBe(1);
+    expect(await heard()).toEqual(['Přihlašujeme…']);
+  });
+});
