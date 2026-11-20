@@ -27,13 +27,14 @@ import { HomeApi } from '../home-api';
 import { DonateBandPhotoResponse } from '../donate-band-api';
 import { PROJECT_CATEGORIES, ProjectCategory, ProjectResponse } from '../projects-api';
 import { PublishedStoriesStore } from './published-stories';
+import { StoryStrip } from './story-strip';
 import { StoryTile, StoryTileSize } from './story-tile';
 
 export const ALL_YEARS = 'vse';
 
 type Choice = number | 'all';
 type LoadState = 'loading' | 'ready' | 'error';
-type Arrangement = 'single' | 'pair' | 'trio' | 'many';
+type Arrangement = 'single' | 'pair' | 'trio' | 'row' | 'many';
 
 export interface YearTile {
   readonly item: ProjectResponse;
@@ -62,7 +63,7 @@ interface YearChip {
 
 @Component({
   selector: 'app-projects-page',
-  imports: [NeedsConnection, RouterLink, StoryTile, DonateBand, Reveal],
+  imports: [NeedsConnection, RouterLink, StoryTile, StoryStrip, DonateBand, Reveal],
   templateUrl: './projects-page.html',
   styleUrl: './projects-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -239,6 +240,8 @@ function arrangementOf(count: number): Arrangement {
       return 'pair';
     case 3:
       return 'trio';
+    case SMALL_TILES_IN_ROW:
+      return 'row';
     default:
       return 'many';
   }
@@ -247,6 +250,9 @@ function arrangementOf(count: number): Arrangement {
 function tileSize(arrangement: Arrangement, index: number): StoryTileSize {
   if (arrangement === 'single') {
     return 'split';
+  }
+  if (arrangement === 'row') {
+    return 'small';
   }
   return index === 0 || arrangement === 'pair' ? 'large' : 'small';
 }

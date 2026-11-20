@@ -279,6 +279,23 @@ describe('Given the Pomáháme tab', () => {
     ).toEqual(['Děti s rakovinou', 'Sofinka', 'Michal, profesionální hasič']);
   });
 
+  it('when a computer shows a year of four stories, then all four are small and fill one row, and a phone keeps the first large', async () => {
+    const four = Array.from({ length: 4 }, (_, index) =>
+      project({ id: `q${index}`, slug: `q${index}`, title: `Q ${index}`, year: 2022 }),
+    );
+    const page = await open('/projekty?rok=2022', [...STORIES, ...four]);
+
+    const large = () =>
+      [...page.querySelectorAll('.grid-item')].map((item) =>
+        item.classList.contains('grid-item--large'),
+      );
+    expect(large()).toEqual([false, false, false, false]);
+
+    compact.set(true);
+    await harness.fixture.whenStable();
+    expect(large()).toEqual([true, false, false, false]);
+  });
+
   it('when a chip is chosen, then the address names the year without moving the page, and the new count is announced', async () => {
     const page = await open('/projekty');
     const router = TestBed.inject(Router);
