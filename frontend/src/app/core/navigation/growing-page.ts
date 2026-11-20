@@ -35,6 +35,7 @@ export function placeOnceGrown(restored: Scroll, injector: Injector, placed: () 
   let growth: ResizeObserver | null = null;
   let timer: number | undefined;
   let restingAt = view.scrollY;
+  let waitForRelease = (): void => undefined;
   const movedByOthers = (): void => {
     if (Math.abs(view.scrollY - restingAt) > 1) {
       stop();
@@ -60,7 +61,7 @@ export function placeOnceGrown(restored: Scroll, injector: Injector, placed: () 
     }
   };
   stopWaiting = stop;
-  const waitForRelease = scrollHold.whenReleased(() => {
+  waitForRelease = scrollHold.whenReleased(() => {
     restingAt = view.scrollY;
     timer = view.setTimeout(stop, PLACE_WAIT_LONGEST_MS);
     VISITOR_MOVES.forEach((type) => view.addEventListener(type, stop, LISTENING));
@@ -82,5 +83,8 @@ function hidesFocus(view: Window, top: number): boolean {
   }
   const box = focused.getBoundingClientRect();
   const shift = top - view.scrollY;
-  return box.bottom - shift <= 0 || box.top - shift >= view.innerHeight;
+  const hiddenAfter = box.bottom - shift <= 0 || box.top - shift >= view.innerHeight;
+  const leavesAtTop = box.top >= 0 && box.top - shift < 0;
+  const leavesAtBottom = box.bottom <= view.innerHeight && box.bottom - shift > view.innerHeight;
+  return hiddenAfter || leavesAtTop || leavesAtBottom;
 }
