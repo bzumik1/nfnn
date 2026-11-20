@@ -185,3 +185,31 @@ test.describe('Given a donor whose account verification of 1 Kč stands between 
     expect(Math.abs(belowGift - belowVerification)).toBeLessThanOrEqual(1);
   });
 });
+
+test.describe('Given a donor whose account verification of 1 Kč arrived beside a gift, with the largest system text', () => {
+  for (const list of LISTS) {
+    test(`when ${list.name} shows them as rows on a 320 pt phone at a root of 53 px, then the badge Ověření účtu stays inside its row`, async ({
+      page,
+    }) => {
+      const { verificationRow } = await openList(page, list, 320);
+      await page.addStyleTag({ content: 'html { font-size: 53px; }' });
+
+      const badge = verificationRow.locator('.ui-badge', { hasText: 'Ověření účtu' });
+      await expect(badge).toBeVisible();
+      const overflow = await badge.evaluate((element) => {
+        const row = element.closest('.ui-list__row')!;
+        const rowStyle = getComputedStyle(row);
+        const rowEnd =
+          row.getBoundingClientRect().right -
+          parseFloat(rowStyle.paddingRight) -
+          parseFloat(rowStyle.borderRightWidth);
+        return {
+          beyondRow: element.getBoundingClientRect().right - rowEnd,
+          beyondBadge: element.scrollWidth - element.clientWidth,
+        };
+      });
+      expect(overflow.beyondRow).toBeLessThanOrEqual(0.5);
+      expect(overflow.beyondBadge).toBeLessThanOrEqual(0);
+    });
+  }
+});
