@@ -292,6 +292,7 @@ $_pressed: (--pressed-tint, filter);
 
 @mixin expand-on-open {
   display: grid;
+  grid-template-rows: 1fr;
   animation:
     motion-expand-rows var(--duration-base) var(--ease-standard),
     motion-fade-in var(--duration-fast) var(--ease-out) backwards;
