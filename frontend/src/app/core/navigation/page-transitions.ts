@@ -293,7 +293,7 @@ export class PageTransitions {
       first: event.id === 1 || !this.router.navigated,
       reducedMotion: view?.matchMedia?.(LESS_MOTION).matches !== false,
       compact: this.compact(),
-      dialogOpen: this.document.querySelector(SHOWN_DIALOG) !== null,
+      dialogOpen: liveDialogs(this.document, SHOWN_DIALOG).length > 0,
       fromSheet:
         returningSheet !== null && this.trigger === 'imperative' && extras.info !== BACK_NAVIGATION,
       trigger: this.trigger,
@@ -577,10 +577,9 @@ export class PageTransitions {
   }
 
   standingSheetCopy(): HTMLElement | null {
-    const dialogs = this.document.querySelectorAll<HTMLElement>(STANDING_DIALOG);
-    const top = dialogs.item(dialogs.length - 1);
+    const top = liveDialogs(this.document, STANDING_DIALOG).at(-1);
     const view = this.document.defaultView;
-    if (top === null || view === null) {
+    if (top === undefined || view === null) {
       return null;
     }
     const layer = this.document.createElement('div');
@@ -688,6 +687,12 @@ export class PageTransitions {
       this.drawing?.standAtOnce(this.document.querySelectorAll('dialog[open]'));
     }
   }
+}
+
+export function liveDialogs(document: Document, selector: string): HTMLDialogElement[] {
+  return Array.from(document.querySelectorAll<HTMLDialogElement>(selector)).filter(
+    (dialog) => dialog.closest(`.${PAGE_TRANSITION_CLASS}`) === null,
+  );
 }
 
 export function motionAllowed(view: Window): boolean {

@@ -14,6 +14,7 @@ import {
   BarCurve,
   BarItem,
   FRAME_LATE_MS,
+  liveDialogs,
   motionAllowed,
   nextFrame,
   PAGE_COVER_LONGEST_MS,
@@ -214,7 +215,7 @@ export function startSwipe(
     stage.running !== null ||
     !motionAllowed(view) ||
     !stage.stepsBySwipe() ||
-    stage.document.querySelector(SHOWN_DIALOG) !== null
+    liveDialogs(stage.document, SHOWN_DIALOG).length > 0
   ) {
     return null;
   }

@@ -1265,3 +1265,52 @@ describe('Given the app on the home screen of a phone opened straight on the don
     expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
   });
 });
+
+describe('Given the app on a phone with a sheet open at its list', () => {
+  let sheet: HTMLDialogElement;
+  let transitions: PageTransitions;
+
+  function overlayPage(position: 'over' | 'under'): HTMLElement | null {
+    return document.querySelector<HTMLElement>(
+      `.${PAGE_TRANSITION_CLASS} .${PAGE_TRANSITION_CLASS}__page--${position}`,
+    );
+  }
+
+  beforeEach(() => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
+    });
+    sheet = document.createElement('dialog');
+    sheet.setAttribute('open', '');
+    sheet.textContent = 'Účet';
+    document.body.append(sheet);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    transitions = TestBed.inject(PageTransitions);
+  });
+
+  afterEach(() => {
+    transitions.finish();
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}, dialog`).forEach((node) => node.remove());
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
+  it('when a section opens inside the sheet, then the page that slides in is the section over the list it leaves', () => {
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      change: () => (sheet.textContent = 'Moje dary'),
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(overlayPage('under')?.textContent).toContain('Účet');
+    expect(overlayPage('over')?.textContent).toContain('Moje dary');
+    expect(overlayPage('over')?.textContent).not.toContain('Účet');
+  });
+});

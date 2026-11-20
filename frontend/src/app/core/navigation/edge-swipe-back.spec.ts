@@ -8,7 +8,7 @@ import { BackTarget } from './back-target';
 import { EdgeSwipeBack } from './edge-swipe-back';
 import { edgeSwipeBackAtStart } from './edge-swipe-back-start';
 import { SheetSteps, StepsInside } from './sheet-steps';
-import { PageTransitions, SwipePreview } from './page-transitions';
+import { PAGE_TRANSITION_CLASS, PageTransitions, SwipePreview } from './page-transitions';
 import { Chrome, RouteChrome } from './route-chrome';
 
 interface Device {
@@ -449,6 +449,25 @@ describe('Given the app opened from the home screen of an iPhone', () => {
     TestBed.inject(SheetSteps).offer(dialog, steps);
 
     drag(dialog, ACROSS);
+
+    expect(steps.back).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
+    expect(location.back).not.toHaveBeenCalled();
+  });
+
+  it('when a step inside the sheet is still moving over still copies of the sheet, then a swipe steps back inside the live sheet', () => {
+    const sheet = openDialog();
+    const steps = sheetSteps();
+    TestBed.inject(SheetSteps).offer(sheet, steps);
+    const overlay = document.createElement('div');
+    overlay.className = `${PAGE_TRANSITION_CLASS} ${PAGE_TRANSITION_CLASS}--push`;
+    overlay.setAttribute('aria-hidden', 'true');
+    const copy = document.createElement('dialog');
+    copy.setAttribute('open', '');
+    overlay.append(copy);
+    document.body.append(overlay);
+
+    drag(sheet, ACROSS);
 
     expect(steps.back).toHaveBeenCalledTimes(1);
     expect(backTarget.back).not.toHaveBeenCalled();
