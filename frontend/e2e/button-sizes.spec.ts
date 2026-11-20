@@ -128,7 +128,7 @@ test.describe('Given a donor who has given in two years', () => {
 });
 
 test.describe('Given an administrator with Claude connected', () => {
-  test('when they open Údaje a zabezpečení, then the dates of the devices, the connected app and the device data share one size and weight', async ({
+  test('when they open Údaje a zabezpečení, then the dates of the devices and the connected app share one size and weight, and the state line of the device data keeps the size of a card intro at the same weight', async ({
     page,
   }) => {
     await mockDonorApi(page);
@@ -147,9 +147,8 @@ test.describe('Given an administrator with Claude connected', () => {
     await expect(storedData).toContainText('aktualizováno');
 
     const { fontSize, fontWeight } = await lookOf(deviceDates);
-    for (const dates of [connectionDates, storedData]) {
-      expect(await lookOf(dates)).toMatchObject({ fontSize, fontWeight });
-    }
+    expect(await lookOf(connectionDates)).toMatchObject({ fontSize, fontWeight });
+    expect((await lookOf(storedData)).fontWeight).toBe(fontWeight);
   });
 
   test('when the overview of the administration lists a failed check beside the message for the technician, then Zkusit znovu and Kopírovat look the same', async ({
