@@ -18,7 +18,7 @@ const article = {
 };
 
 async function missedEdges(control: Locator): Promise<string[]> {
-  await control.scrollIntoViewIfNeeded();
+  await control.evaluate((element) => element.scrollIntoView({ block: 'center' }));
   return control.evaluate((element, finger) => {
     const box = element.getBoundingClientRect();
     const x = box.left + box.width / 2;

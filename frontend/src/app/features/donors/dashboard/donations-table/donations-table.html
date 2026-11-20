@@ -171,16 +171,21 @@
           >
         }
       </button>
-      <app-pdf-progress
-        class="receipt-saved"
-        [progress]="donations.singleProgress(item)"
-        [compact]="true"
-        cancelOf="přípravu potvrzení, dar z {{ formatDate(item.receivedAt) }}, {{
-          crowns(item.amountMinor)
-        }}&nbsp;Kč"
-        i18n-cancelOf="@@donor.dashboard.payments.cancelOf"
-        (cancelled)="donations.cancelSingleReceipt(item)"
-      />
+      <div class="receipt-status" [class.receipt-status--closing]="status.idle()">
+        <div class="receipt-status__inner">
+          <app-pdf-progress
+            #status
+            class="receipt-saved"
+            [progress]="donations.singleProgress(item)"
+            [compact]="true"
+            cancelOf="přípravu potvrzení, dar z {{ formatDate(item.receivedAt) }}, {{
+              crowns(item.amountMinor)
+            }}&nbsp;Kč"
+            i18n-cancelOf="@@donor.dashboard.payments.cancelOf"
+            (cancelled)="donations.cancelSingleReceipt(item)"
+          />
+        </div>
+      </div>
     </div>
   } @else {
     @switch (missingReceipt(item)) {

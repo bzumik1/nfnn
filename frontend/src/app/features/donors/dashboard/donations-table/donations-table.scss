@@ -307,6 +307,11 @@ td .receipt-diagnostics {
     flex: none;
   }
 
+  .receipt-status,
+  .receipt-status__inner {
+    display: contents;
+  }
+
   .receipt-download .receipt-saved {
     max-width: 100%;
     justify-content: flex-end;
@@ -396,9 +401,20 @@ td .receipt-diagnostics {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-1-5) var(--space-2);
+    gap: 0 var(--space-2);
     min-inline-size: 0;
     max-inline-size: 100%;
+  }
+
+  .receipt-status {
+    @include motion.expand($closes-by: class);
+
+    flex: none;
+    max-inline-size: 100%;
+
+    &--closing {
+      visibility: visible;
+    }
   }
 
   .receipt-download .receipt-saved {
@@ -407,5 +423,9 @@ td .receipt-diagnostics {
     inline-size: var(--pdf-status-reserve-compact);
     max-inline-size: 100%;
     margin-top: 0;
+  }
+
+  .receipt-status__inner > .receipt-saved {
+    padding-block: var(--space-1-5);
   }
 }
