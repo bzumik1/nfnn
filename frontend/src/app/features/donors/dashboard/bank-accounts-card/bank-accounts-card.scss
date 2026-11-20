@@ -152,6 +152,7 @@
 }
 
 .account-number {
+  align-self: start;
   font-size: var(--text-account-number);
   max-width: 100%;
   white-space: normal;
