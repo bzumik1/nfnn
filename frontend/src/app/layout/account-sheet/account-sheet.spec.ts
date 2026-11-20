@@ -419,7 +419,11 @@ describe('Given the account sheet of a signed-in donor', () => {
       expect(history.handedOver).toEqual(['/overit']);
       expect(navigate).toHaveBeenCalledWith('/overit', {
         replaceUrl: true,
-        state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '/darce/potvrzeni', [APP_ACCOUNT_SCROLL_KEY]: 0 },
+        state: {
+          [APP_DEPTH_KEY]: 1,
+          [APP_ACCOUNT_KEY]: '/darce/potvrzeni',
+          [APP_ACCOUNT_SCROLL_KEY]: 0,
+        },
       });
     });
 
