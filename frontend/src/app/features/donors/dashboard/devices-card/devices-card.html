@@ -114,7 +114,7 @@
                     appNeedsConnection
                     type="button"
                     class="ui-button ui-button--danger devices-confirm-yes"
-                    [disabled]="signingOut() !== null"
+                    [appBusy]="signingOut() !== null"
                     (click)="signOutOthers()"
                   >
                     <app-busy-label [busy]="signingOutOthers()">
@@ -286,7 +286,7 @@
                     appNeedsConnection
                     type="button"
                     class="ui-button ui-button--danger devices-confirm-yes"
-                    [disabled]="signingOut() !== null"
+                    [appBusy]="signingOut() !== null"
                     (click)="signOut(device)"
                   >
                     <app-busy-label [busy]="signingOut() === device.id">

@@ -66,7 +66,7 @@
                           appNeedsConnection
                           type="button"
                           class="ui-button passkeys-action ui-button--danger-soft"
-                          [disabled]="removing() !== null"
+                          [appBusy]="removing() !== null"
                           (click)="remove(passkey)"
                         >
                           <app-busy-label [busy]="removing() === passkey.id">
@@ -120,7 +120,7 @@
                         appNeedsConnection
                         type="submit"
                         class="ui-button ui-button--primary passkeys-save"
-                        [disabled]="renameSaving()"
+                        [appBusy]="renameSaving()"
                       >
                         <app-busy-label [busy]="renameSaving()">
                           <span when-idle i18n="@@donor.passkeys.rename.submit">Uložit název</span>
@@ -287,7 +287,7 @@
           appNeedsConnection
           type="submit"
           class="ui-button ui-button--primary passkeys-save"
-          [disabled]="saving()"
+          [appBusy]="saving()"
         >
           <app-busy-label [busy]="saving()">
             <span when-idle i18n="@@donor.passkeys.submit">Vytvořit klíč</span>

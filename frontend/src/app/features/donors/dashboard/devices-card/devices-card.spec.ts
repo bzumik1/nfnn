@@ -10,6 +10,11 @@ import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessi
 import { deviceNameInSentence } from './device-labels';
 import { DevicesCard } from './devices-card';
 
+function expectLockedInPlace(button: HTMLButtonElement): void {
+  expect(button.disabled).toBe(false);
+  expect(button.getAttribute('aria-disabled')).toBe('true');
+}
+
 function announcers(element: Element): Element[] {
   return [element, ...Array.from(element.querySelectorAll('*'))].filter(
     (node) =>
@@ -339,10 +344,26 @@ describe("Given a donor's signed-in devices card", () => {
       await confirmSignOut();
 
       const yes = element<HTMLButtonElement>('.devices-confirm-yes');
-      expect(yes.disabled).toBe(true);
+      expectLockedInPlace(yes);
       expect(
         Array.from(yes.querySelectorAll('.busy-label__face')).map((face) => text(face)),
       ).toEqual(['Odhlásit', 'Odhlašujeme…']);
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+    });
+
+    it('and the donor presses the focused Odhlásit again while the iPhone signs out, then nothing more is sent and the focus stays on it', async () => {
+      await ask(signOutButton(rows()[1]));
+      const yes = element<HTMLButtonElement>('.devices-confirm-yes');
+      yes.focus();
+      await confirmSignOut();
+
+      yes.click();
+      await settle();
+
+      expect(document.activeElement).toBe(yes);
       http
         .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
         .flush(null, { status: 204, statusText: 'No Content' });
@@ -354,7 +375,7 @@ describe("Given a donor's signed-in devices card", () => {
       await confirmSignOut();
 
       const yes = element<HTMLButtonElement>('.devices-confirm-yes');
-      expect(yes.disabled).toBe(true);
+      expectLockedInPlace(yes);
       expect(
         Array.from(yes.querySelectorAll('.busy-label__face')).map((face) => text(face)),
       ).toEqual(['Odhlásit', 'Odhlašujeme…']);

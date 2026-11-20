@@ -19,6 +19,7 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { ConnectedApp } from '../../../../core/auth/donor';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { describeScopes } from '../../connect-app/oauth-scopes';
+import { BusyButton } from '../../../../shared/ui/busy-button/busy-button';
 import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';
 import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
@@ -31,7 +32,7 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 @Component({
   selector: 'app-connected-apps-card',
   providers: [BusyAnnouncement],
-  imports: [BusyLabel, NeedsConnection],
+  imports: [BusyButton, BusyLabel, NeedsConnection],
   templateUrl: './connected-apps-card.html',
   styleUrl: './connected-apps-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

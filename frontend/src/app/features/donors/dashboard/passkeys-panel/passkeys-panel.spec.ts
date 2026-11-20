@@ -20,6 +20,11 @@ import {
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { PasskeysPanel } from './passkeys-panel';
 
+function expectLockedInPlace(button: HTMLButtonElement): void {
+  expect(button.disabled).toBe(false);
+  expect(button.getAttribute('aria-disabled')).toBe('true');
+}
+
 function announcers(element: Element): Element[] {
   return [element, ...Array.from(element.querySelectorAll('*'))].filter(
     (node) =>
@@ -257,6 +262,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
       await fillIn('#passkey-password', 'correct horse battery');
       await submit();
 
+      expectLockedInPlace(element<HTMLButtonElement>('.passkeys-save'));
       const options = http.expectOne(OPTIONS_URL);
       expect(options.request.body).toEqual({ password: 'correct horse battery' });
       options.flush(passkeyCreationOptions());
@@ -360,7 +366,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
       await settle();
 
       expect(element('.ui-field-error').textContent).toContain('Klíč se nevytvořil');
-      expect(element<HTMLButtonElement>('.passkeys-save').disabled).toBe(false);
+      expect(element('.passkeys-save').hasAttribute('aria-disabled')).toBe(false);
     });
 
     it('and the device already holds a key of the account, then the card says so', async () => {
@@ -405,13 +411,28 @@ describe('Given the passkeys panel of the sign-in card', () => {
       expect(status.textContent).toContain('Přístupový klíč iPhone je odebraný');
     });
 
+    it('then pressing the focused Ano, odebrat again while the key is removed sends nothing more and the focus stays on it', async () => {
+      await clickButton('Odebrat');
+      const yes = element<HTMLButtonElement>('.passkey-confirm .ui-button--danger-soft');
+      yes.focus();
+      yes.click();
+      await settle();
+
+      yes.click();
+      await settle();
+
+      expect(document.activeElement).toBe(yes);
+      http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`).flush(null);
+      await settle();
+    });
+
     it('then the removal asks first and the confirmed key disappears', async () => {
       await clickButton('Odebrat');
       expect(element('.passkey-confirm').textContent).toContain('Odebrat klíč iPhone?');
 
       await clickButton('Ano, odebrat');
       const yes = element<HTMLButtonElement>('.passkey-confirm .ui-button--danger-soft');
-      expect(yes.disabled).toBe(true);
+      expectLockedInPlace(yes);
       expect(accessibleText(yes)).toBe('Ano, odebrat');
       expect(yes.getAttribute('aria-busy')).toBe('true');
       expect(labels(yes)).toEqual(['Ano, odebrat', 'Odebíráme…']);
@@ -499,6 +520,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
       await fillIn('#passkey-rename', '  iPhone 16 Pro Max  ');
       await submit();
+      expectLockedInPlace(element<HTMLButtonElement>('.passkey-rename .passkeys-save'));
       const rename = http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`);
       expect(rename.request.method).toBe('PATCH');
       expect(rename.request.body).toEqual({ name: 'iPhone 16 Pro Max' });

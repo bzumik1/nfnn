@@ -41,7 +41,7 @@
                 #resendButton
                 type="button"
                 class="ui-button account-resend"
-                [disabled]="pendingAction() !== null"
+                [appBusy]="pendingAction() !== null"
                 (click)="resendEmailChange()"
               >
                 <app-busy-label [busy]="pendingAction() === 'resend'">
@@ -55,7 +55,7 @@
                 appNeedsConnection
                 type="button"
                 class="ui-button ui-button--quiet account-cancel-change"
-                [disabled]="pendingAction() !== null"
+                [appBusy]="pendingAction() !== null"
                 (click)="cancelEmailChange()"
               >
                 <app-busy-label [busy]="pendingAction() === 'cancel'">
@@ -172,7 +172,7 @@
                     appNeedsConnection
                     type="submit"
                     class="ui-button ui-button--primary account-save"
-                    [disabled]="saving()"
+                    [appBusy]="saving()"
                   >
                     <app-busy-label [busy]="saving()">
                       <span when-idle i18n="@@donor.account.email.submit"
@@ -359,7 +359,7 @@
                     appNeedsConnection
                     type="submit"
                     class="ui-button ui-button--primary account-save"
-                    [disabled]="saving()"
+                    [appBusy]="saving()"
                   >
                     <app-busy-label [busy]="saving()">
                       <span when-idle>
@@ -438,7 +438,7 @@
                     appNeedsConnection
                     type="submit"
                     class="ui-button ui-button--primary account-save"
-                    [disabled]="saving()"
+                    [appBusy]="saving()"
                   >
                     <app-busy-label [busy]="saving()">
                       <span when-idle i18n="@@donor.account.removePassword">Odebrat heslo</span>
@@ -601,7 +601,7 @@
                     appNeedsConnection
                     type="submit"
                     class="ui-button ui-button--primary account-save"
-                    [disabled]="saving()"
+                    [appBusy]="saving()"
                   >
                     <app-busy-label [busy]="saving()">
                       <span when-idle i18n="@@donor.account.secondFactor.continue">Pokračovat</span>
@@ -708,7 +708,7 @@
                     appNeedsConnection
                     type="submit"
                     class="ui-button ui-button--primary account-save"
-                    [disabled]="saving()"
+                    [appBusy]="saving()"
                   >
                     <app-busy-label [busy]="saving()">
                       <span when-idle i18n="@@donor.account.secondFactor.turnOn"
@@ -817,7 +817,7 @@
                     appNeedsConnection
                     type="submit"
                     class="ui-button ui-button--primary account-save"
-                    [disabled]="saving()"
+                    [appBusy]="saving()"
                   >
                     <app-busy-label [busy]="saving()">
                       <span when-idle i18n="@@donor.account.secondFactor.turnOff"

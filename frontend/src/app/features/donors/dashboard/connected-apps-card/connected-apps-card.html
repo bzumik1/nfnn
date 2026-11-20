@@ -46,7 +46,7 @@
                   appNeedsConnection
                   type="button"
                   class="ui-button ui-button--danger-soft connection-disconnect"
-                  [disabled]="disconnecting() !== null"
+                  [appBusy]="disconnecting() !== null"
                   (click)="disconnect(app)"
                 >
                   <app-busy-label [busy]="disconnecting() === app.id">
