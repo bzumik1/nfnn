@@ -263,6 +263,24 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await expect(page).toHaveURL('/o-nas');
   });
 
+  test('when they open the sheet on Moje dary, then its row says so in semibold, not by colour alone, and keeps the height of the rows beside it', async ({
+    page,
+  }) => {
+    await page.goto('/darce/dary');
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const nav = page.getByRole('dialog').getByRole('navigation');
+    const current = nav.getByRole('link', { name: 'Moje dary' });
+    const beside = nav.getByRole('link', { name: 'Můj přehled' });
+
+    await expect(current).toHaveAttribute('aria-current', 'page');
+    await expect(current.locator('.ui-list__title')).toHaveCSS('font-weight', '600');
+    await expect(beside.locator('.ui-list__title')).toHaveCSS('font-weight', '400');
+    expect((await current.boundingBox())!.height).toBeCloseTo(
+      (await beside.boundingBox())!.height,
+      0,
+    );
+  });
+
   test('when they press Zpět in the sheet, then the account list returns with the focus on the section they left', async ({
     page,
   }) => {

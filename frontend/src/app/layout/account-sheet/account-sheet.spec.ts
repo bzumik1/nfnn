@@ -41,6 +41,33 @@ function sectionPages(): AccountSectionPages {
   };
 }
 
+interface LeavingStep {
+  readonly inert: boolean;
+  readonly hidden: boolean;
+  readonly ids: readonly string[];
+}
+
+function watchLeavingSteps(sheet: HTMLElement): () => LeavingStep[] {
+  const steps = Array.from(sheet.querySelectorAll('.account-step'));
+  const marked = new Map<Element, LeavingStep>();
+  const observer = new MutationObserver(() => {
+    for (const step of steps) {
+      if (step.classList.contains('account-step--leaving') && !marked.has(step)) {
+        marked.set(step, {
+          inert: step.hasAttribute('inert'),
+          hidden: step.getAttribute('aria-hidden') === 'true',
+          ids: Array.from(step.querySelectorAll('[id]')).map((element) => element.id),
+        });
+      }
+    }
+  });
+  observer.observe(sheet, { attributes: true, subtree: true });
+  return () => {
+    observer.disconnect();
+    return [...marked.values()];
+  };
+}
+
 describe('Given the account sheet of a signed-in donor', () => {
   const donor = signal<Donor | null>(null);
   const admin = signal(false);
@@ -221,6 +248,30 @@ describe('Given the account sheet of a signed-in donor', () => {
 
     it('then its title takes the focus', () => {
       expect(document.activeElement?.id).toBe('account-section-title');
+    });
+
+    it('then the sheet pushes the section in, which it does not when it opens', () => {
+      expect(fixture.nativeElement.classList).toContain('account-sheet--push');
+      expect(fixture.nativeElement.classList).not.toContain('account-sheet--pop');
+    });
+
+    it('and the visitor goes back, then the sheet pops the section off', async () => {
+      history.listener?.stepBack();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.classList).toContain('account-sheet--pop');
+      expect(fixture.nativeElement.classList).not.toContain('account-sheet--push');
+    });
+
+    it('and the visitor goes back, then the section it leaves is out of reach at once and gives up the ids of the sheet', async () => {
+      const marked = watchLeavingSteps(sheet);
+
+      history.listener?.stepBack();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(marked()).toEqual([{ inert: true, hidden: true, ids: [] }]);
     });
 
     it('and Zpět is pressed, then the sheet steps back through the history', () => {
@@ -451,6 +502,44 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(shown()[0]).not.toBe(automatic[0]);
     expect(icons().every((icon) => icon.getAttribute('aria-hidden') === 'true')).toBe(true);
     document.documentElement.removeAttribute('data-appearance');
+  });
+
+  it('when it opens, then the sheet neither pushes nor pops a step', () => {
+    open();
+
+    expect(fixture.nativeElement.classList).not.toContain('account-sheet--push');
+    expect(fixture.nativeElement.classList).not.toContain('account-sheet--pop');
+  });
+
+  it('when a section is chosen on a phone, then the list it leaves is out of reach at once and gives up the ids of the sheet', async () => {
+    const sheet = open();
+    const marked = watchLeavingSteps(sheet);
+
+    sheet
+      .querySelector<HTMLAnchorElement>('nav a[href="/darce/dary"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(marked()).toEqual([{ inert: true, hidden: true, ids: [] }]);
+  });
+
+  it('when it opens, then each row that can be the current page carries its own wording, so its bold weight keeps the width the row reserves for it', () => {
+    admin.set(true);
+    const sheet = open();
+
+    const labels = Array.from(sheet.querySelectorAll<HTMLElement>('.account-current-label')).map(
+      (label) => [label.textContent?.trim(), label.dataset['label']],
+    );
+
+    expect(labels).toEqual([
+      ['Údaje a\u00a0zabezpečení', 'Údaje a\u00a0zabezpečení'],
+      ['Můj přehled', 'Můj přehled'],
+      ['Moje dary', 'Moje dary'],
+      ['Potvrzení o\u00a0daru', 'Potvrzení o\u00a0daru'],
+      ['Bankovní účty', 'Bankovní účty'],
+      ['Správa', 'Správa'],
+    ]);
   });
 
   it('when the card of the donor is chosen on a phone, then Údaje a zabezpečení opens inside the sheet', async () => {
