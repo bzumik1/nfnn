@@ -80,11 +80,10 @@ export async function thumbEdgesWhile(
     watch.thumbEdges = [];
     watch.thumbWatched = false;
     const began = performance.now();
-    const sample = (): void => {
+    const sample = (frameTime: DOMHighResTimeStamp): void => {
       const box = element.getBoundingClientRect();
-      const at = performance.now();
-      watch.thumbEdges.push({ edges: [box.left, box.right], at });
-      if (at - began < watchedMs) {
+      watch.thumbEdges.push({ edges: [box.left, box.right], at: frameTime });
+      if (performance.now() - began < watchedMs) {
         requestAnimationFrame(sample);
       } else {
         watch.thumbWatched = true;
