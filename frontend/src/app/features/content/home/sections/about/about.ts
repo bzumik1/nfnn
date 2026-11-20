@@ -9,6 +9,7 @@ import { Avatar } from '../../../../../shared/ui/avatar/avatar';
 import { FocalPointCrop } from '../../../../../shared/ui/focal-point/focal-point';
 import { ZoomPhoto } from '../../../../../shared/ui/zoom-viewer/zoom-content';
 import { Zoomable } from '../../../../../shared/ui/zoom-viewer/zoomable';
+import { QuoteMark } from '../../../../../shared/ui/quote-mark/quote-mark';
 import { Reveal } from '../../../../../shared/ui/reveal/reveal';
 import { StatsBar } from '../stats-bar/stats-bar';
 
@@ -20,7 +21,7 @@ const NO_BREAK_SPACE = '\u00a0';
 
 @Component({
   selector: 'app-about',
-  imports: [NgTemplateOutlet, Avatar, Zoomable, FocalPointCrop, StatsBar, Reveal],
+  imports: [NgTemplateOutlet, Avatar, Zoomable, FocalPointCrop, StatsBar, Reveal, QuoteMark],
   templateUrl: './about.html',
   styleUrl: './about.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

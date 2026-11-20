@@ -1,0 +1,11 @@
+:host {
+  display: inline-block;
+  width: var(--space-12);
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  fill: currentColor;
+}

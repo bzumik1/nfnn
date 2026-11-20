@@ -107,10 +107,8 @@
 }
 
 .quote-mark {
-  width: var(--space-12);
-  height: auto;
   margin-bottom: var(--space-6);
-  fill: var(--color-accent-fill);
+  color: var(--color-accent-fill);
 }
 
 .quote-text {
@@ -137,6 +135,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: start;
   gap: var(--space-8) var(--space-16);
   margin: var(--space-10) 0 0;
   padding: 0;
@@ -145,6 +144,7 @@
 
 .signer {
   display: grid;
+  align-content: start;
   justify-items: center;
   gap: var(--space-1);
   max-width: 16rem;
