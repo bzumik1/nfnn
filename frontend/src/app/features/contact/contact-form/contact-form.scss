@@ -140,15 +140,6 @@ app-form-field {
 
 .form-privacy {
   margin-top: var(--space-3-5);
-  font-size: var(--text-xs);
-  line-height: var(--leading-normal);
-  text-align: center;
-  color: var(--color-text-subtle);
-
-  a {
-    color: var(--color-accent);
-    font-weight: var(--weight-semibold);
-  }
 }
 
 .form-success,
@@ -219,6 +210,10 @@ app-form-field {
   margin: var(--space-2) var(--space-6) 0;
 }
 
+.two-col:has(.form-privacy) .contact-legal {
+  display: none;
+}
+
 @include bp.down(tablet) {
   .contact {
     padding: var(--space-16) 0;
@@ -244,10 +239,6 @@ app-form-field {
 
   .contact-form-wrap {
     padding: var(--space-6);
-  }
-
-  .two-col:has(.form-privacy) .contact-legal {
-    display: none;
   }
 }
 

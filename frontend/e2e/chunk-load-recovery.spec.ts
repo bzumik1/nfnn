@@ -65,7 +65,7 @@ test.describe('Given a visitor whose open tab is older than the deployed version
     await page.goto(`${policyPath}#kontakt`);
 
     await expect(
-      page.getByRole('heading', { level: 2, name: 'Kontakt', exact: true }),
+      page.getByRole('heading', { level: 2, name: '8. Kontakt', exact: true }),
     ).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`${policyPath}#kontakt$`));
     expect(chunks.documents).toEqual([policyPath, policyPath]);
@@ -112,7 +112,7 @@ test.describe('Given a visitor whose browser keeps no session storage', () => {
     await page.getByRole('button', { name: 'Načíst znovu' }).click();
 
     await expect(
-      page.getByRole('heading', { level: 2, name: 'Kontakt', exact: true }),
+      page.getByRole('heading', { level: 2, name: '8. Kontakt', exact: true }),
     ).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`${policyPath}#kontakt$`));
     expect(chunks.documents).toEqual([policyPath, policyPath]);

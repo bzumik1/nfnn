@@ -25,7 +25,9 @@ describe('Given the privacy policy page', () => {
   function sectionText(heading: string): string {
     const section = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('section')).find(
       (candidate) =>
-        withOrdinarySpaces(candidate.querySelector('h2')?.textContent)?.trim() === heading,
+        withOrdinarySpaces(candidate.querySelector('h2')?.textContent)
+          ?.trim()
+          .replace(/^\d+\. /, '') === heading,
     );
     return withOrdinarySpaces(section!.textContent)!.replace(/\s+/g, ' ');
   }
@@ -46,15 +48,15 @@ describe('Given the privacy policy page', () => {
 
   it('when it renders, then it walks through every part of the policy in order', () => {
     expect(texts('h2')).toEqual([
-      'Správce osobních údajů',
-      'Jaké údaje zpracováváme a proč',
-      'Jaké e-maily posíláme',
-      'Jak dlouho údaje uchováváme',
-      'Komu údaje předáváme',
-      'Cookies',
-      'Vaše práva',
-      'Kontakt',
-      'Účinnost',
+      '1. Správce osobních údajů',
+      '2. Jaké údaje zpracováváme a proč',
+      '3. Jaké e-maily posíláme',
+      '4. Jak dlouho údaje uchováváme',
+      '5. Komu údaje předáváme',
+      '6. Cookies',
+      '7. Vaše práva',
+      '8. Kontakt',
+      '9. Účinnost',
     ]);
   });
 
@@ -62,12 +64,12 @@ describe('Given the privacy policy page', () => {
     const toc = fixture.nativeElement.querySelector('nav.toc') as HTMLElement;
     expect(toc.getAttribute('aria-label')).toBe('Obsah');
 
-    const entries = Array.from(toc.querySelectorAll('a')).map((link) => {
+    const entries = Array.from(toc.querySelectorAll('a')).map((link, index) => {
       const fragment = link.getAttribute('href')!.split('#')[1];
       const section = fixture.nativeElement.querySelector(`section#${fragment}`) as HTMLElement;
       return [
-        withOrdinarySpaces(link.textContent)?.trim(),
-        withOrdinarySpaces(section?.querySelector('h2')?.textContent)?.trim(),
+        `${index + 1}. ${withOrdinarySpaces(link.textContent)?.trim()}`,
+        withOrdinarySpaces(section?.querySelector('h2')?.textContent)?.replace(/\s+/g, ' ').trim(),
       ];
     });
     expect(entries).toHaveLength(9);
