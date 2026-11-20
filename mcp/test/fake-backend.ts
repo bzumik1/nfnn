@@ -67,6 +67,7 @@ export class FakeBackend {
   metadataAvailable = true;
   receiptSigningKeysAvailable = true;
   releaseAvailable = true;
+  releaseHistoryAvailable = true;
   receiptSigningKeysAnswer: Record<string, unknown> | undefined;
   previousSignInAt: string | null = '2026-10-28T20:14:00Z';
   signatoryChosen = true;
@@ -180,6 +181,9 @@ export class FakeBackend {
       return [200, NO_SIGNATORY];
     }
     if (!this.releaseAvailable && url.pathname === '/api/admin/operations/release') {
+      return [404, problem(404, 'not-found', 'Nenalezeno')];
+    }
+    if (!this.releaseHistoryAvailable && url.pathname === '/api/admin/operations/release/history') {
       return [404, problem(404, 'not-found', 'Nenalezeno')];
     }
     if (
@@ -549,6 +553,26 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           succeededAt: '2026-11-15T05:10:00Z',
           failure: null,
           updateAvailable: true,
+        },
+      ];
+    case 'GET /api/admin/operations/release/history':
+      return [
+        200,
+        {
+          entries: [
+            releaseRun(
+              '2026.11.109',
+              '2b79cb3',
+              '2026-11-19T18:02:11Z',
+              null,
+              '2026-11-20T07:40:03Z',
+            ),
+            releaseRun('2026.11.98', 'd953749', '2026-11-12T16:30:00Z', '2026-11-19T18:02:11Z'),
+            releaseRun('2026.11.90', 'e4f5a6b', '2026-11-10T08:00:00Z', '2026-11-12T16:30:00Z'),
+            releaseRun(null, 'dev', '2026-11-09T08:00:00Z', '2026-11-10T08:00:00Z'),
+            releaseRun('2026.11.70', 'c1c1c1c', '2026-11-05T08:00:00Z', '2026-11-09T08:00:00Z'),
+            releaseRun('2026.11.60', 'a0a0a01', '2026-11-01T08:00:00Z', '2026-11-05T08:00:00Z'),
+          ],
         },
       ];
     case 'GET /api/admin/donations/report':
@@ -1267,4 +1291,14 @@ function person(
     fundEmail: fields['fundEmail'] ?? null,
     linkedToAccount: false,
   };
+}
+
+function releaseRun(
+  release: string | null,
+  revision: string,
+  startedAt: string,
+  endedAt: string | null,
+  lastStartedAt = startedAt,
+): Record<string, unknown> {
+  return { release, revision, startedAt, lastStartedAt, endedAt };
 }

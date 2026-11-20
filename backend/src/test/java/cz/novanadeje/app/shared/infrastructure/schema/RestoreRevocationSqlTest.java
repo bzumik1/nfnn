@@ -46,7 +46,7 @@ class RestoreRevocationSqlTest {
             "issued_receipt", "receipt_image", "receipt_signing_key", "receipt_signing_key_adoption",
             "donor", "donor_passkey", "donor_registration_reminder", "donor_role", "donor_second_factor", "donor_second_factor_wrong_codes",
             "operations_alert", "operations_backup_alert", "operations_backup_key_confirmation", "operations_backup_schedule", "operations_carried_settings_key",
-            "operations_push_key", "operations_restore_record", "operations_setting", "operations_setup");
+            "operations_push_key", "operations_release_run", "operations_restore_record", "operations_setting", "operations_setup");
 
     private static final Pattern SPENT_TABLES = Pattern.compile("foreach one_time_table in array array\\[(?<tables>[^]]*)]");
     private static final Pattern END_SESSIONS = Pattern.compile("function pg_temp\\.end_sessions\\(\\).*?\\$\\$(?<body>.*?)\\$\\$", Pattern.DOTALL);

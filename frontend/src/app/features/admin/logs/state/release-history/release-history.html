@@ -1,0 +1,73 @@
+<p class="visually-hidden" role="status">
+  @if (state() === 'loading') {
+    <span i18n="@@admin.logs.state.history.loading">Načítáme historii vydání…</span>
+  }
+</p>
+@switch (state()) {
+  @case ('error') {
+    <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+      <p i18n="@@admin.logs.state.history.failed">Historii vydání se nepodařilo načíst.</p>
+      <button
+        appNeedsConnection
+        type="button"
+        class="ui-button"
+        (click)="load()"
+        i18n="@@admin.logs.error.retry"
+      >
+        Zkusit znovu
+      </button>
+    </div>
+  }
+  @case ('ready') {
+    @if (entries().length === 0) {
+      <p class="release-history-empty" i18n="@@admin.logs.state.history.empty">
+        Server zatím žádné vydání nezapsal.
+      </p>
+    } @else {
+      <ol class="ui-list release-history-list">
+        @for (entry of entries(); track entry.startedAt + entry.revision) {
+          <li>
+            <div class="ui-list__row">
+              @if (entry.release; as release) {
+                <span class="ui-list__title ui-mono">{{ release }}</span>
+              } @else {
+                <span class="ui-list__title" i18n="@@admin.logs.state.history.noRelease"
+                  >Bez čísla vydání</span
+                >
+              }
+              <span class="ui-list__meta release-history-meta">
+                @if (entry.endedAt; as endedAt) {
+                  <span i18n="@@admin.logs.state.history.ended"
+                    >od <span class="ui-date">{{ time(entry.startedAt) }}</span> do
+                    <span class="ui-date">{{ time(endedAt) }}</span></span
+                  >
+                } @else {
+                  <span i18n="@@admin.logs.state.history.running"
+                    >běží od <span class="ui-date">{{ time(entry.startedAt) }}</span></span
+                  >
+                }
+                @if (restarted(entry)) {
+                  <span i18n="@@admin.logs.state.history.lastStarted"
+                    >naposledy spuštěno
+                    <span class="ui-date">{{ time(entry.lastStartedAt) }}</span></span
+                  >
+                }
+              </span>
+              <span class="ui-list__value ui-mono">{{ entry.revision }}</span>
+              @if (entry.release; as release) {
+                <a
+                  class="ui-list__extra release-history-notes"
+                  [href]="notesLink(release)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  i18n="@@admin.logs.state.history.notes"
+                  >Co je nového<span class="visually-hidden"> v {{ release }}</span></a
+                >
+              }
+            </div>
+          </li>
+        }
+      </ol>
+    }
+  }
+}

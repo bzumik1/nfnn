@@ -814,6 +814,18 @@ export interface ReleaseResponse {
   readonly updateAvailable: boolean;
 }
 
+export interface ReleaseRunResponse {
+  readonly release: string | null;
+  readonly revision: string;
+  readonly startedAt: string;
+  readonly lastStartedAt: string;
+  readonly endedAt: string | null;
+}
+
+export interface ReleaseHistoryResponse {
+  readonly entries: readonly ReleaseRunResponse[];
+}
+
 export interface DiagnosticsResponse {
   now: string;
   jvm: JvmDiagnosticsResponse;
@@ -1228,6 +1240,10 @@ export class AdminApi {
 
   release(): Observable<ReleaseResponse> {
     return this.http.get<ReleaseResponse>(RELEASE_URL);
+  }
+
+  releaseHistory(): Observable<ReleaseHistoryResponse> {
+    return this.http.get<ReleaseHistoryResponse>(`${RELEASE_URL}/history`);
   }
 
   threadDump(): Observable<string> {

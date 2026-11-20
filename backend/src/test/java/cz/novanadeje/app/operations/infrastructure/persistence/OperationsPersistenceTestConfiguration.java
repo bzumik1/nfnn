@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Import;
 
 @TestConfiguration(proxyBeanMethods = false)
 @Import({JpaBackupAlertRepository.class, JpaBackupAlertStateRepository.class, JpaBackupKeyConfirmationRepository.class, JpaBackupScheduleRepository.class,
-        JpaCarriedSettingsKeyRepository.class, JpaDonorPushSubscriptionRepository.class, JpaOperationalAlertRepository.class, JpaPushKeyRepository.class, JpaPushSubscriptionRepository.class,
+        JpaCarriedSettingsKeyRepository.class, JpaDonorPushSubscriptionRepository.class, JpaOperationalAlertRepository.class, JpaPushKeyRepository.class, JpaPushSubscriptionRepository.class, JpaReleaseRunRepository.class,
         JpaRestoreRecordRepository.class, JpaSettingsRepository.class, JpaSetupStateRepository.class})
 public class OperationsPersistenceTestConfiguration {
 }

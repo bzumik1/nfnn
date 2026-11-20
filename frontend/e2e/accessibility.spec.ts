@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { routeLogsApi } from './admin-logs-api';
+import { routeLogsApi, routeReleaseApi } from './admin-logs-api';
 import { mockAdministrationCopy } from './administration-copy';
 import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
 import { Locator, Page } from '@playwright/test';
@@ -2876,6 +2876,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await routeLogsApi(page);
+    await routeReleaseApi(page);
     await page.route('**/api/donors/auth/refresh', (route) =>
       route.fulfill(session(200, administrator)),
     );
@@ -2912,6 +2913,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.goto('/sprava/logy/stav');
     await expect(page.getByRole('heading', { level: 2, name: 'Bez poruchy' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+    await page.getByRole('button', { name: 'Historie vydání' }).click();
+    await expect(page.locator('#historie-vydani .ui-list__row')).toHaveCount(3);
     expect(await violations(page)).toEqual([]);
 
     await page.goto('/sprava/logy/vlakna');

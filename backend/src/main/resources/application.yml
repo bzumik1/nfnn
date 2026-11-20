@@ -159,6 +159,8 @@ app:
     releases:
       source: https://api.github.com/repos/bzumik1/nfnn/releases/latest
       cron: "0 10 6 * * *"
+    release-history:
+      cleanup-cron: "0 40 3 * * *"
     backups:
       directory: /backups
       restore-directory: /restore

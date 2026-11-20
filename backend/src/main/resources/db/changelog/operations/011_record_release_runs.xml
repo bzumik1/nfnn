@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="011-record-release-runs" author="nfnn">
+        <createTable tableName="operations_release_run">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_operations_release_run" nullable="false"/>
+            </column>
+            <column name="revision" type="varchar(40)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="release" type="varchar(12)"/>
+            <column name="started_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_started_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table operations_release_run add constraint ck_operations_release_run_revision check (revision ~ '^[0-9A-Za-z._-]{1,40}$')</sql>
+        <sql>alter table operations_release_run add constraint ck_operations_release_run_release check (release ~ '^[0-9]{4}\.(1[0-2]|[1-9])\.[1-9][0-9]{0,3}$')</sql>
+        <sql>alter table operations_release_run add constraint ck_operations_release_run_starts check (last_started_at &gt;= started_at)</sql>
+    </changeSet>
+
+</databaseChangeLog>

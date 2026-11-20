@@ -1,0 +1,9 @@
+[
+  {
+    "kind": "added",
+    "path": "GET /api/admin/operations/release/history",
+    "scenario": "operations/release_history: *",
+    "reason": "Jakub 2026-11-20 (#1539): the backend records at every start the revision and release it runs and keeps a year of them; administrators read the history under Vydání and the connector's nfnn_status the newest five; v2 kept no history",
+    "contract": "docs/api-contract.md, Release history; MCP connector"
+  }
+]

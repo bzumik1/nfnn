@@ -5,6 +5,8 @@ import type { RouteTarget } from './fixtures';
 export const LOGS = '/api/admin/operations/logs';
 export const LOGGERS = '/api/admin/operations/loggers';
 export const DIAGNOSTICS = '/api/admin/operations/diagnostics';
+export const RELEASE = '/api/admin/operations/release';
+export const RELEASE_HISTORY = '/api/admin/operations/release/history';
 
 const TAIL = Array.from(
   { length: 40 },
@@ -159,6 +161,54 @@ export async function routeLogsApi(page: RouteTarget): Promise<void> {
         status: 200,
         contentType: 'text/plain',
         body: '"main" #1 state=RUNNABLE\n    at java.base/java.lang.Thread.run(Thread.java:1583)\n',
+      }),
+  );
+}
+
+export async function routeReleaseApi(page: RouteTarget): Promise<void> {
+  await page.route(
+    (url) => url.pathname === RELEASE,
+    (route) =>
+      route.fulfill({
+        json: {
+          running: '2026.11.109',
+          latest: { version: '2026.11.109', publishedAt: '2026-11-19T17:40:00Z' },
+          checkedAt: '2026-11-20T05:10:00Z',
+          succeededAt: '2026-11-20T05:10:00Z',
+          failure: null,
+          updateAvailable: false,
+        },
+      }),
+  );
+  await page.route(
+    (url) => url.pathname === RELEASE_HISTORY,
+    (route) =>
+      route.fulfill({
+        json: {
+          entries: [
+            {
+              release: '2026.11.109',
+              revision: '2b79cb3',
+              startedAt: '2026-11-19T18:02:11Z',
+              lastStartedAt: '2026-11-20T07:40:03Z',
+              endedAt: null,
+            },
+            {
+              release: null,
+              revision: 'dev',
+              startedAt: '2026-11-15T09:00:00Z',
+              lastStartedAt: '2026-11-15T09:00:00Z',
+              endedAt: '2026-11-19T18:02:11Z',
+            },
+            {
+              release: '2026.11.98',
+              revision: 'd953749',
+              startedAt: '2026-11-12T16:30:00Z',
+              lastStartedAt: '2026-11-12T16:30:00Z',
+              endedAt: '2026-11-15T09:00:00Z',
+            },
+          ],
+        },
       }),
   );
 }

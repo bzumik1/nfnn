@@ -430,6 +430,30 @@ describe('Given an administrator connected with the reading permission only', ()
     );
   });
 
+  it('when the status is asked, then it names the newest five releases the server ran, newest first, each from its first start to when the next began', async () => {
+    const text = textOf(await client.callTool({ name: 'nfnn_status', arguments: {} }));
+
+    expect(text).toContain(
+      '"releaseHistory":[{"release":"2026.11.109","revision":"2b79cb3","startedAt":"2026-11-19T19:02:11+01:00","lastStartedAt":"2026-11-20T08:40:03+01:00","endedAt":null},{"release":"2026.11.98","revision":"d953749","startedAt":"2026-11-12T17:30:00+01:00","lastStartedAt":"2026-11-12T17:30:00+01:00","endedAt":"2026-11-19T19:02:11+01:00"},',
+    );
+    expect(text).not.toContain('"revision":"a0a0a01"');
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/operations/release/history',
+    );
+  });
+
+  it('when the status is asked of a backend without the release history, then the rest still comes and the history part says it is unavailable', async () => {
+    stack.backend.releaseHistoryAvailable = false;
+    try {
+      const text = textOf(await client.callTool({ name: 'nfnn_status', arguments: {} }));
+      expect(text).toContain('"revision":"abc1234"');
+      expect(text).toContain('"releaseHistory":"unavailable"');
+      expect(text).toContain('"updateAvailable":true');
+    } finally {
+      stack.backend.releaseHistoryAvailable = true;
+    }
+  });
+
   it('when the status is asked of a backend without the release check, then the rest still comes and the release part says it is unavailable', async () => {
     stack.backend.releaseAvailable = false;
     try {
