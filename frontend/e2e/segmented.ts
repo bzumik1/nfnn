@@ -54,17 +54,23 @@ export function withoutWeight(layouts: SegmentLayout[]): Omit<SegmentLayout, 'we
   }));
 }
 
+export interface EdgeSample {
+  readonly edges: [number, number];
+  readonly at: number;
+}
+
 interface EdgeWatch {
-  thumbEdges: [number, number][];
+  thumbEdges: EdgeSample[];
   thumbWatched: boolean;
 }
 
 const WATCHED_MS = 1500;
+const LONGEST_STEP_SHARE_PER_FRAME = 0.4;
 
 export async function thumbEdgesWhile(
   thumb: Locator,
   press: () => Promise<void>,
-): Promise<{ start: [number, number]; frames: [number, number][] }> {
+): Promise<{ start: [number, number]; frames: EdgeSample[] }> {
   const start = await thumb.evaluate((element): [number, number] => {
     const box = element.getBoundingClientRect();
     return [box.left, box.right];
@@ -76,8 +82,9 @@ export async function thumbEdgesWhile(
     const began = performance.now();
     const sample = (): void => {
       const box = element.getBoundingClientRect();
-      watch.thumbEdges.push([box.left, box.right]);
-      if (performance.now() - began < watchedMs) {
+      const at = performance.now();
+      watch.thumbEdges.push({ edges: [box.left, box.right], at });
+      if (at - began < watchedMs) {
         requestAnimationFrame(sample);
       } else {
         watch.thumbWatched = true;
@@ -93,26 +100,44 @@ export async function thumbEdgesWhile(
   return { start, frames };
 }
 
-export function jumpsOfTheEdges(start: [number, number], frames: [number, number][]): string[] {
+function frameInterval(frames: EdgeSample[]): number {
+  const gaps = frames
+    .slice(1)
+    .map((frame, index) => frame.at - frames[index].at)
+    .sort((one, other) => one - other);
+  return gaps.length === 0 ? Infinity : gaps[Math.floor(gaps.length / 2)];
+}
+
+export function jumpsOfTheEdges(start: [number, number], frames: EdgeSample[]): string[] {
   const jumps: string[] = [];
+  const interval = frameInterval(frames);
   for (const [edge, name] of [
     [0, 'left'],
     [1, 'right'],
   ] as const) {
-    const target = frames[frames.length - 1][edge];
+    const target = frames[frames.length - 1].edges[edge];
     const travel = target - start[edge];
     let previous = start[edge];
+    let previousAt: number | null = null;
     for (const [index, frame] of frames.entries()) {
-      const step = frame[edge] - previous;
-      if (Math.sign(travel) * step < -1 || Math.abs(step) > Math.abs(travel) * 0.4 + 1) {
+      const step = frame.edges[edge] - previous;
+      const framesPassed =
+        previousAt === null ? 1 : Math.max(1, Math.round((frame.at - previousAt) / interval));
+      const longestStep = Math.abs(travel) * LONGEST_STEP_SHARE_PER_FRAME * framesPassed + 1;
+      if (Math.sign(travel) * step < -1 || Math.abs(step) > longestStep) {
+        const after =
+          previousAt === null
+            ? ''
+            : `, ${Math.round(frame.at - previousAt)} ms after the previous one`;
         jumps.push(
-          `${name} edge ${Math.round(previous)} → ${Math.round(frame[edge])} in frame ${index}`,
+          `${name} edge ${Math.round(previous)} → ${Math.round(frame.edges[edge])} in frame ${index}${after}`,
         );
       }
-      if (Math.abs(frame[edge] - target) < 1) {
+      if (Math.abs(frame.edges[edge] - target) < 1) {
         break;
       }
-      previous = frame[edge];
+      previous = frame.edges[edge];
+      previousAt = frame.at;
     }
   }
   return jumps;
