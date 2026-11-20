@@ -567,6 +567,16 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     expect(scrolledTo).toEqual([]);
   });
 
+  it('when the control holding the focus stands wholly on screen and the move would push part of it under the bottom edge, then the page stays where the whole control is seen', async () => {
+    focusedHeadingAt(window.innerHeight - 60);
+    await stepBack();
+    scrolledBy(942);
+    scrolledTo = [];
+    grows(3000);
+
+    expect(scrolledTo).toEqual([]);
+  });
+
   it('when the content fades through on a computer, then the page waits for the fade to let the scroll go and is put where they left it only then', async () => {
     const hold = TestBed.inject(ScrollHold);
     hold.hold();

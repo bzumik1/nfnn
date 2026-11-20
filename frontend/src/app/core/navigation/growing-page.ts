@@ -83,5 +83,7 @@ function hidesFocus(view: Window, top: number): boolean {
   }
   const box = focused.getBoundingClientRect();
   const shift = top - view.scrollY;
-  return box.bottom - shift <= 0 || box.top - shift >= view.innerHeight;
+  const leavesAtTop = box.top >= 0 && box.top - shift < 0;
+  const leavesAtBottom = box.bottom <= view.innerHeight && box.bottom - shift > view.innerHeight;
+  return leavesAtTop || leavesAtBottom;
 }
