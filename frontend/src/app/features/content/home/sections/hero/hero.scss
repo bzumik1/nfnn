@@ -81,6 +81,10 @@
     max(var(--space-8), env(safe-area-inset-left));
   width: 100%;
   animation: fadeInUp var(--duration-entrance) ease both;
+
+  @include bp.up(wide) {
+    max-width: var(--content-max-wide);
+  }
 }
 
 .hero-eyebrow {
@@ -161,7 +165,9 @@
   > .hero-figures {
     grid-column: 2;
     justify-self: end;
-    width: min(100%, 36rem);
+    width: min(100%, 38rem);
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-card);
   }
 }
 

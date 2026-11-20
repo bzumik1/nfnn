@@ -6,6 +6,7 @@ export const BREAKPOINTS = {
   narrow: 420,
   phone: 480,
   amounts: 520,
+  figures: 551,
   cards: 640,
   tablet: 768,
   ledger: 864,
