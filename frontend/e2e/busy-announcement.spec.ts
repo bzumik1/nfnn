@@ -330,7 +330,7 @@ async function holdTheAnswer(page: Page, step: DetailsBusyButton): Promise<() =>
 
 test.describe('Given an administrator on Údaje a zabezpečení pressing a busy button whose answer is slower than the loading delay', () => {
   for (const step of DETAILS_BUSY_BUTTONS) {
-    test(`when they press ${step.name}, then exactly one status region says ${step.busy} while the button keeps the focus, takes no second press and looks as a disabled button did, and none says it after the answer`, async ({
+    test(`when they press ${step.name}, then exactly one status region says ${step.busy} while the button keeps the focus, takes no second press and looks as a disabled button did, light and dark, drawn in GrayText when the system forces its colours, and none says it after the answer`, async ({
       page,
     }) => {
       await page.clock.install();
@@ -358,6 +358,17 @@ test.describe('Given an administrator on Údaje a zabezpečení pressing a busy 
       await expect(button).toBeFocused();
       const looks = await lockedAndDisabledLooks(button);
       expect(looks.locked).toEqual(looks.disabled);
+      await page.emulateMedia({ colorScheme: 'dark' });
+      const darkLooks = await lockedAndDisabledLooks(button);
+      expect(darkLooks.locked).toEqual(darkLooks.disabled);
+      await page.emulateMedia({ colorScheme: 'light', forcedColors: 'active' });
+      const forcedLook = await lockedAndDisabledLooks(button);
+      const grayText = await systemColour(button, 'GrayText');
+      expect([forcedLook.locked.color, forcedLook.locked.borderColor]).toEqual([
+        grayText,
+        grayText,
+      ]);
+      await page.emulateMedia({ forcedColors: 'none' });
 
       await button.press('Enter');
       await button.press(' ');
@@ -378,6 +389,18 @@ interface ButtonLook {
   readonly opacity: string;
   readonly borderColor: string;
   readonly boxShadow: string;
+}
+
+function systemColour(near: Locator, keyword: string): Promise<string> {
+  return near.evaluate((element, colour) => {
+    const probe = element.ownerDocument.createElement('span');
+    probe.style.forcedColorAdjust = 'none';
+    probe.style.color = colour;
+    element.ownerDocument.body.append(probe);
+    const computed = getComputedStyle(probe).color;
+    probe.remove();
+    return computed;
+  }, keyword);
 }
 
 async function lockedAndDisabledLooks(
