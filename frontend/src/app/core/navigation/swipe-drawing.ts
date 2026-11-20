@@ -10,6 +10,7 @@ import { pushWithinSection } from './page-transition-kind';
 import { BackDestination } from './back-target';
 import { SwipeSettle } from './back-swipe';
 import {
+  afterDrawn,
   BarCurve,
   BarItem,
   FRAME_LATE_MS,
@@ -303,6 +304,9 @@ export function startSwipe(
       ...(dim === null ? [] : [dim.animate([{ opacity: end.completes ? 0 : 1 }], timing)]),
       ...barMotions(bar.items, end.completes ? 1 : 0, timing),
     ];
+    motions.forEach((motion) => motion.pause());
+    await afterDrawn(view);
+    motions.forEach((motion) => motion.play());
     await Promise.race([
       Promise.allSettled(motions.map((motion) => motion.finished)),
       new Promise((done) => view.setTimeout(done, PAGE_TRANSITION_LONGEST_MS)),
