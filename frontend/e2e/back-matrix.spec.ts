@@ -21,8 +21,6 @@ const SHEET_TOP_GAP_PX = 80;
 const BAND = { y: 4, height: 20 };
 const SAME_COLOUR = 3;
 const SCROLLED_BY_PX = 160;
-const PAGE_DURATION_MS = 350;
-const FASTEST_EASE = 3;
 const STEP_ENDS_WITHIN_MS = 6000;
 const FIRST_SHOWN_AT_MOST = 0.25;
 const BUSY_AS_ON_THE_PHONE_MS = 140;
@@ -61,6 +59,7 @@ interface StepProbe {
   tappedAt: number | null;
   busyFrameAt: number | null;
   busyFor: number;
+  steepestPerMs: number;
 }
 
 declare global {
@@ -168,7 +167,9 @@ async function onThePhone(page: Page, look: Look): Promise<void> {
     Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
     Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
     localStorage.setItem('nfnn.donor-session-app', '1');
-    document.documentElement.style.setProperty('--sheet-top-gap', `${gap}px`, 'important');
+    const gapSheet = new CSSStyleSheet();
+    gapSheet.replaceSync(`:root { --sheet-top-gap: ${gap}px !important; }`);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, gapSheet];
   }, SHEET_TOP_GAP_PX);
   await page.route('**/api/donors/auth/refresh', (route) =>
     route.fulfill(session(200, administrator)),
@@ -289,6 +290,38 @@ function measuresFrames(page: Page): boolean {
 async function watchTheStep(page: Page): Promise<void> {
   await page.evaluate(
     (busyMs) => {
+      const curves: Record<string, readonly number[]> = {
+        linear: [0, 0, 1, 1],
+        ease: [0.25, 0.1, 0.25, 1],
+        'ease-in': [0.42, 0, 1, 1],
+        'ease-out': [0, 0, 0.58, 1],
+        'ease-in-out': [0.42, 0, 0.58, 1],
+      };
+      const theme = getComputedStyle(document.documentElement);
+      const ease = theme.getPropertyValue('--ease-page').trim();
+      const points =
+        curves[ease] ??
+        /^cubic-bezier\((.+)\)$/
+          .exec(ease)?.[1]
+          .split(',')
+          .map((point) => Number(point.trim()));
+      const durationText = theme.getPropertyValue('--duration-page').trim();
+      const durationMs = Number.parseFloat(durationText) * (durationText.endsWith('ms') ? 1 : 1000);
+      const along = (from: number, to: number, t: number): number =>
+        3 * (1 - t) * (1 - t) * t * from + 3 * (1 - t) * t * t * to + t * t * t;
+      let steepest = 0;
+      if (points !== undefined && points.length === 4) {
+        const [x1, y1, x2, y2] = points;
+        for (let step = 0; step < 1000; step++) {
+          const t = step / 1000;
+          const next = (step + 1) / 1000;
+          const dx = along(x1, x2, next) - along(x1, x2, t);
+          const dy = along(y1, y2, next) - along(y1, y2, t);
+          if (dx > 0) {
+            steepest = Math.max(steepest, Math.abs(dy) / dx);
+          }
+        }
+      }
       const probe: StepProbe = {
         frames: [],
         under: null,
@@ -296,6 +329,7 @@ async function watchTheStep(page: Page): Promise<void> {
         tappedAt: null,
         busyFrameAt: null,
         busyFor: 0,
+        steepestPerMs: steepest / durationMs,
       };
       window.nfnnStepProbe = probe;
       const started = performance.now();
@@ -408,14 +442,18 @@ function travelled(frames: readonly Frame[]): Frame[] {
   return shown.filter((frame) => frame.offset !== null);
 }
 
-function expectNoJump(frames: readonly Frame[], width: number): void {
+function expectNoJump(probe: StepProbe, frames: readonly Frame[], width: number): void {
+  expect(
+    Number.isFinite(probe.steepestPerMs) && probe.steepestPerMs > 0,
+    'the theme names no curve and duration for the page',
+  ).toBe(true);
   for (let at = 1; at < frames.length; at++) {
     const gap = Math.abs(frames[at].offset! - frames[at - 1].offset!);
     const elapsed = frames[at].at - frames[at - 1].at;
     expect(
       gap,
-      `the leaving page jumped ${Math.round(gap)} px in ${Math.round(elapsed)} ms`,
-    ).toBeLessThanOrEqual((width * FASTEST_EASE * elapsed) / PAGE_DURATION_MS + 2);
+      `the page jumped ${Math.round(gap)} px in ${Math.round(elapsed)} ms, faster than its curve`,
+    ).toBeLessThanOrEqual(width * probe.steepestPerMs * elapsed + 2);
   }
 }
 
@@ -461,7 +499,7 @@ function expectLeftAway(probe: StepProbe, width: number, from: number): void {
       moving[at - 1].offset! - 1,
     );
   }
-  expectNoJump(moving, width);
+  expectNoJump(probe, moving, width);
 }
 
 function expectArrived(probe: StepProbe, width: number): void {
@@ -481,7 +519,7 @@ function expectArrived(probe: StepProbe, width: number): void {
       moving[at - 1].offset! + 1,
     );
   }
-  expectNoJump(moving, width);
+  expectNoJump(probe, moving, width);
 }
 
 function expectSlidBack(probe: StepProbe, width: number, from: number): void {
@@ -494,7 +532,7 @@ function expectSlidBack(probe: StepProbe, width: number, from: number): void {
       moving[at - 1].offset! + 1,
     );
   }
-  expectNoJump(moving, width);
+  expectNoJump(probe, moving, width);
 }
 
 interface Colour {
@@ -879,6 +917,7 @@ for (const look of LOOKS) {
           }
           await expect(page.locator('main h1, .admin-page h1').first()).toBeVisible();
           const within = page.locator(administration ? '.admin-frame' : 'main').first();
+          await expect(within.locator(`a[href^="${list}/"]`).first()).toBeVisible();
           const [detail] = await linksOut(list, within);
           expect(detail, `${list} offers no ${path}`).toBeDefined();
           const screens: Screens = {
@@ -918,8 +957,12 @@ for (const look of LOOKS) {
       const top = await pageScroll(page).scrollTo(SCROLLED_BY_PX);
       const account = page.getByRole('banner').getByRole('button', { name: 'Účet' });
       await account.focus();
+      expect(await pageScroll(page).scrollTop(), 'the news moved before the sheet opened').toBe(
+        top,
+      );
       await page.keyboard.press('Enter');
       await accountListShown(page);
+      expect(await pageScroll(page).scrollTop(), 'the news moved as the sheet opened').toBe(top);
       await page.evaluate(() => {
         const seen: number[] = [];
         (window as unknown as { nfnnSheetTops: number[] }).nfnnSheetTops = seen;
