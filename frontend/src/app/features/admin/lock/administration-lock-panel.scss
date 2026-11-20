@@ -3,11 +3,11 @@
 
 :host {
   display: block;
+  container: lock-panel / inline-size;
   padding-inline: var(--space-4);
 }
 
 .lock-panel {
-  container: lock-panel / inline-size;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);

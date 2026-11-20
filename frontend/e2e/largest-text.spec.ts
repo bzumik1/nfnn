@@ -3245,3 +3245,58 @@ test.describe('Given a donor on an iPhone 390 pt wide with the text at its defau
     expect(oneLineEach(lines)).toEqual([]);
   });
 });
+
+test.describe('Given a phone 320 pt wide with the text at its default size', () => {
+  test.use({ viewport: { width: 320, height: 568 }, unlocksAdministration: false });
+
+  test('when a donor with a verified account opens Přidat bankovní účet, then no word of the sheet breaks inside', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-accounts',
+      (route) => route.fulfill({ json: { items: [bankAccountItem()] } }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-check',
+      (route) =>
+        route.fulfill({
+          status: 202,
+          json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false },
+        }),
+    );
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
+    await expect(dialog.locator('.watch-detail')).toBeVisible();
+
+    for (const text of await dialog.locator('.watch-title, .watch-detail').all()) {
+      expect(await wordsBrokenInside(text)).toEqual([]);
+    }
+  });
+
+  test('when an administrator opens the locked administration and its password view, then no word of the lock card breaks inside', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedSession(page);
+    await page.goto('/sprava');
+    const card = page.locator('.lock-panel');
+    await expect(card.getByRole('heading', { level: 1, name: 'Správa je zamčená' })).toBeVisible();
+
+    for (const step of ['locked', 'password']) {
+      if (step === 'password') {
+        await card.getByRole('button', { name: 'Použít heslo' }).click();
+        await expect(
+          card.getByRole('heading', { level: 1, name: 'Odemknout heslem' }),
+        ).toBeVisible();
+      }
+      for (const text of await card.locator('.lock-lead, .lock-note, .ui-button').all()) {
+        expect(await wordsBrokenInside(text), step).toEqual([]);
+      }
+    }
+  });
+});
