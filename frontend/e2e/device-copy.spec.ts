@@ -237,12 +237,21 @@ test.describe('Given a donor whose copy on this device holds her gifts and her y
 
 const STORED = 'Správa je uložená v tomto zařízení.';
 
+interface FoldTransition {
+  readonly property: string;
+  readonly running: boolean;
+  readonly duration: number;
+  readonly easing: string;
+}
+
 interface NoticeFrame {
   readonly at: number;
   readonly card: number | null;
   readonly fold: number | null;
   readonly heard: string;
   readonly onHeading: boolean;
+  readonly onBody: boolean;
+  readonly transitions: readonly FoldTransition[];
 }
 
 async function openCardWithFailedCopy(page: Page): Promise<void> {
@@ -266,12 +275,22 @@ async function followNoticeFrames(page: Page): Promise<void> {
       const card = document.querySelector('[aria-label="Shrnutí dárce"]');
       const fold = document.querySelector('app-first-download-notice app-fold');
       const live = document.querySelector('.admin-first-download [aria-live="polite"]');
+      const active = document.activeElement;
       frames.push({
         at: performance.now(),
         card: card?.getBoundingClientRect().top ?? null,
         fold: fold?.getBoundingClientRect().height ?? null,
         heard: (live?.textContent ?? '').replace(/\s+/g, ' ').trim(),
-        onHeading: document.activeElement?.tagName === 'H1',
+        onHeading: active?.tagName === 'H1',
+        onBody: active === null || active === document.body,
+        transitions: (fold?.getAnimations({ subtree: true }) ?? [])
+          .filter((animation) => animation instanceof CSSTransition)
+          .map((transition) => ({
+            property: transition.transitionProperty,
+            running: transition.playState === 'running',
+            duration: Number(transition.effect?.getComputedTiming().duration ?? 0),
+            easing: transition.effect?.getTiming().easing ?? '',
+          })),
       });
       requestAnimationFrame(sample);
     };
@@ -302,6 +321,74 @@ async function durationOf(page: Page, token: string): Promise<number> {
   }, token);
 }
 
+async function easingOf(page: Page, token: string): Promise<string> {
+  return page.evaluate((name) => {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const probe = document.createElement('div');
+    document.body.append(probe);
+    const easing = probe.animate([], { duration: 1, easing: value }).effect!.getTiming().easing!;
+    probe.remove();
+    return easing;
+  }, token);
+}
+
+async function expectFoldsOverFrames(
+  page: Page,
+  frames: readonly NoticeFrame[],
+  notice: { readonly height: number },
+): Promise<void> {
+  const tops = frames.map((frame) => frame.card!);
+  const start = tops[0];
+  const end = tops.at(-1)!;
+  const steps = tops.slice(1).map((top, index) => tops[index] - top);
+  expect(Math.min(...steps)).toBeGreaterThanOrEqual(-0.5);
+  expect(Math.max(...steps)).toBeLessThanOrEqual(notice.height / 2);
+  const between = frames.filter((frame) => frame.card! < start - 0.5 && frame.card! > end + 0.5);
+  expect(between.length).toBeGreaterThanOrEqual(2);
+
+  const first = frames.findIndex((frame) => frame.card! < start - 0.5);
+  const last = frames.findIndex((frame) => frame.card! <= end + 0.5);
+  expect(frames[last].at - frames[first].at).toBeLessThanOrEqual(
+    (await durationOf(page, '--duration-base')) + 100,
+  );
+}
+
+async function expectFoldsOverTime(
+  page: Page,
+  frames: readonly NoticeFrame[],
+  notice: { readonly height: number },
+): Promise<void> {
+  const duration = await durationOf(page, '--duration-base');
+  expect(duration).toBeGreaterThan(0);
+  const rows = frames
+    .flatMap((frame) => frame.transitions)
+    .filter((transition) => transition.property === 'grid-template-rows' && transition.running);
+  expect(rows.length).toBeGreaterThan(0);
+  expect(rows.map((transition) => transition.duration)).toEqual(rows.map(() => duration));
+  const easing = await easingOf(page, '--ease-standard');
+  expect(rows.every((transition) => transition.easing === easing)).toBe(true);
+
+  const folding = frames.filter((frame) => frame.fold! > 0 && frame.fold! < notice.height - 0.5);
+  const heights = folding.map((frame) => frame.fold!);
+  expect(new Set(heights).size).toBeGreaterThanOrEqual(2);
+  const falls = folding.slice(1).every((frame, index) => frame.fold! <= heights[index]);
+  expect(falls).toBe(true);
+  expect(heights.at(-1)!).toBeLessThan(heights[0]);
+  const times = folding.map((frame) => frame.at);
+  expect(times.at(-1)!).toBeGreaterThan(times[0]);
+
+  const start = frames[0].card!;
+  const end = frames.at(-1)!.card!;
+  expect(frames.some((frame) => frame.card! < start - 0.5 && frame.card! > end + 0.5)).toBe(true);
+
+  const lastFull = frames.findLastIndex(
+    (frame, index) => index < frames.indexOf(folding[0]) && frame.fold! >= notice.height - 0.5,
+  );
+  const firstGone = frames.findIndex((frame) => frame.fold === 0);
+  expect(lastFull).toBeGreaterThanOrEqual(0);
+  expect(frames[firstGone].at - frames[lastFull].at).toBeGreaterThanOrEqual(duration * 0.8);
+}
+
 async function cardGapUnderHeader(page: Page): Promise<number> {
   const header = (await page.getByRole('banner').boundingBox())!;
   const cardTop = await page
@@ -319,9 +406,9 @@ function timesSaid(frames: readonly NoticeFrame[], sentence: string): number {
 test.describe('Given an administrator on the card of a donor whose device could not store the administration', () => {
   test.use({ reducedMotion: 'no-preference' });
 
-  test('when Uložit znovu stores it, then the notice folds its height away over several frames, the card rises by exactly the notice and its gaps to the gap of the page without the notice, and at the start the focus is on the heading and screen readers hear once that it is stored', async ({
+  test('when Uložit znovu stores it, then it folds over the token duration, not in one cut (in Chromium frame by frame, in WebKit by its running transition and its heights in time), the card rises by exactly the notice and ends at the gap of the page without the notice, and from the start of the fold the focus is on the heading and screen readers hear once that it is stored', async ({
     page,
-  }) => {
+  }, testInfo) => {
     await openCardWithFailedCopy(page);
     const fold = page.locator('app-first-download-notice app-fold');
     const notice = (await fold.boundingBox())!;
@@ -341,19 +428,15 @@ test.describe('Given an administrator on the card of a donor whose device could 
     expect(Math.abs(start - end - notice.height)).toBeLessThanOrEqual(0.5);
     expect(notice.height).toBeGreaterThan(40);
 
-    const steps = tops.slice(1).map((top, index) => tops[index]! - top!);
-    expect(Math.min(...steps)).toBeGreaterThanOrEqual(-0.5);
-    expect(Math.max(...steps)).toBeLessThanOrEqual(notice.height / 2);
-    const between = frames.filter((frame) => frame.card! < start - 0.5 && frame.card! > end + 0.5);
-    expect(between.length).toBeGreaterThanOrEqual(2);
+    if (testInfo.project.name === 'iphone') {
+      await expectFoldsOverTime(page, frames, notice);
+    } else {
+      await expectFoldsOverFrames(page, frames, notice);
+    }
 
     const first = frames.findIndex((frame) => frame.card! < start - 0.5);
-    const last = frames.findIndex((frame) => frame.card! <= end + 0.5);
     expect(frames.slice(first).every((frame) => frame.onHeading)).toBe(true);
     expect(frames[first].heard).toBe(STORED);
-    expect(frames[last].at - frames[first].at).toBeLessThanOrEqual(
-      (await durationOf(page, '--duration-base')) + 100,
-    );
     expect(timesSaid(frames, STORED)).toBe(1);
     await expect(page.locator('.first-download').getByText(STORED)).toHaveCount(0);
 
@@ -368,7 +451,7 @@ test.describe('Given an administrator on the card of a donor whose device could 
 test.describe('Given an administrator who asks for less motion, on the card of a donor whose device could not store the administration', () => {
   test.use({ reducedMotion: 'reduce' });
 
-  test('when Uložit znovu stores it, then the notice goes at once without folding its height, the card takes its place and the focus and the sentence come as with motion', async ({
+  test('when Uložit znovu stores it, then the notice goes at once or by a short fade without folding its height, the card takes its place, and while it goes the focus stays on the heading, never on the page body, and the sentence stays said once', async ({
     page,
   }) => {
     await openCardWithFailedCopy(page);
@@ -385,6 +468,22 @@ test.describe('Given an administrator who asks for less motion, on the card of a
     const end = tops.at(-1)!;
     expect(Math.abs(start - end - notice.height)).toBeLessThanOrEqual(0.5);
     expect(tops.filter((top) => top < start - 0.5 && top > end + 0.5)).toEqual([]);
+    expect(frames.filter((frame) => frame.fold! > 0 && frame.fold! < notice.height - 0.5)).toEqual(
+      [],
+    );
+    const reduced = await durationOf(page, '--duration-reduced');
+    const moves = frames.flatMap((frame) => frame.transitions).filter((move) => move.running);
+    expect(moves.filter((move) => move.property === 'grid-template-rows')).toEqual([]);
+    expect(moves.filter((move) => move.property === 'opacity' && move.duration > reduced)).toEqual(
+      [],
+    );
+
+    expect(frames.filter((frame) => frame.onBody)).toEqual([]);
+    const said = frames.findIndex((frame) => frame.heard === STORED);
+    expect(said).toBeGreaterThanOrEqual(0);
+    const after = frames.slice(said);
+    expect(after.every((frame) => frame.heard === STORED)).toBe(true);
+    expect(after.every((frame) => frame.onHeading)).toBe(true);
     expect(timesSaid(frames, STORED)).toBe(1);
   });
 });
