@@ -118,6 +118,16 @@
   container: account / inline-size;
 }
 
+.account-lead {
+  align-self: start;
+  font-size: var(--text-account-number);
+  margin-block: calc((1lh - var(--list-lead-size)) / 2);
+}
+
+.account-row > .account-line {
+  align-self: start;
+}
+
 @include bp.container-down(account, tabs) {
   .account > .account-row {
     grid-template-columns: minmax(0, 1fr);
@@ -130,7 +140,7 @@
   .account-lead {
     justify-content: start;
     margin-inline-end: 0;
-    margin-block-end: var(--space-2);
+    margin-block: 0 var(--space-2);
   }
 }
 
