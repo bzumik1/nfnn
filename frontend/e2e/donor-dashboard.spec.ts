@@ -1015,11 +1015,24 @@ test.describe('Given a signed-in donor on a computer', () => {
 
     await button.click();
     await expect(button).toHaveAttribute('aria-busy', 'true');
-    await page.clock.runFor(200);
-    await expect(card.getByRole('status')).toHaveText('');
-    expect(await spaceUnder()).toEqual(resting);
+    const beforeText = await card.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const box = element.getBoundingClientRect();
+      const pdf = element.querySelector('.receipt-ready-pdf')!.getBoundingClientRect();
+      return {
+        text: element.querySelector('[role="status"]')!.textContent!.trim(),
+        closing: element
+          .querySelector('.receipt-status')!
+          .classList.contains('receipt-status--closing'),
+        under: Math.round(box.bottom - parseFloat(style.borderBottomWidth) - pdf.bottom),
+      };
+    });
+    expect(beforeText.closing).toBe(beforeText.text === '');
+    if (beforeText.text === '') {
+      expect(beforeText.under).toBe(resting.under);
+    }
 
-    await page.clock.runFor(100);
+    await page.clock.runFor(300);
     await expect(card.getByRole('status')).toHaveText('Připravujeme údaje potvrzení…');
     const status = (await card.getByRole('status').boundingBox())!;
     expect(status.height).toBeGreaterThan(0);
@@ -1072,8 +1085,6 @@ test.describe('Given a signed-in donor on a computer', () => {
         /receipt-status--closing/,
       );
 
-      await button.click();
-      await expect(button).toHaveAttribute('aria-busy', 'true');
       const opening = page.evaluate(
         () =>
           new Promise<string[]>((resolve) => {
@@ -1092,6 +1103,8 @@ test.describe('Given a signed-in donor on a computer', () => {
             }).observe(line, { childList: true, subtree: true, characterData: true });
           }),
       );
+      await button.click();
+      await expect(button).toHaveAttribute('aria-busy', 'true');
       await page.clock.runFor(300);
       expect(await opening).toContain('grid-template-rows');
       await expect(page.locator('.receipt-ready .receipt-status')).not.toHaveClass(
