@@ -66,7 +66,7 @@ describe('Given a page the router brings back and puts at its kept scroll', () =
   it('when the page reads its data while it is put back, then it counts as answered only once those reads have come', async () => {
     await router.navigateByUrl('/sprava/lide-fondu');
     client.get('/api/admin/donations/receipt-signatory').subscribe();
-    client.get('/api/admin/operations/backups').subscribe();
+    client.get('/api/admin/operations/backups').subscribe({ error: () => undefined });
     routerScrolls();
 
     expect(placement.isAnswered()).toBe(false);
