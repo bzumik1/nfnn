@@ -368,7 +368,12 @@
               i18n="@@donor.bankAccounts.addDialog.paymentArrived"
             >
               Platba z&nbsp;účtu
-              <span class="watch-account ui-figures">{{ account.accountNumber }}</span> dorazila
+              <span class="watch-account add-account-number ui-figures"
+                >{{ accountParts(account.accountNumber).head }}<wbr />{{
+                  accountParts(account.accountNumber).bankCode
+                }}</span
+              >
+              dorazila
             </p>
           } @else {
             <p
@@ -377,8 +382,13 @@
               tabindex="-1"
               i18n="@@donor.bankAccounts.addDialog.verified"
             >
-              Účet <span class="watch-account ui-figures">{{ account.accountNumber }}</span> je
-              ověřený
+              Účet
+              <span class="watch-account add-account-number ui-figures"
+                >{{ accountParts(account.accountNumber).head }}<wbr />{{
+                  accountParts(account.accountNumber).bankCode
+                }}</span
+              >
+              je ověřený
             </p>
           }
           @if (account.symbolOffer === null) {
@@ -435,7 +445,17 @@
 
     @if (!newlyVerified()) {
       @if (alreadyVerified(); as verified) {
-        <p class="add-account-verified">{{ verified }}</p>
+        <p class="add-account-verified">
+          @for (part of verified; track $index) {
+            @if (part.account; as account) {
+              <span class="add-account-number ui-figures"
+                >{{ account.head }}<wbr />{{ account.bankCode }}</span
+              >
+            } @else {
+              <span>{{ part.text }}</span>
+            }
+          }
+        </p>
       }
     }
 
@@ -510,7 +530,11 @@
             <div class="add-account-row">
               <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
               <dd>
-                <span class="bank-value ui-figures">{{ response.account.number }}</span>
+                <span class="bank-value add-account-number ui-figures"
+                  >{{ accountParts(response.account.number).head }}<wbr />{{
+                    accountParts(response.account.number).bankCode
+                  }}</span
+                >
                 <app-copy-button
                   [value]="response.account.number"
                   what="číslo účtu"

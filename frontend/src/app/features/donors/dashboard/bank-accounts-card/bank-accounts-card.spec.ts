@@ -1343,6 +1343,15 @@ describe('Given the bank accounts card in the overview', () => {
       ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     });
 
+    it('then each named account number may break only before its bank code', async () => {
+      await openWith([bankAccount({ accountNumber: '8877665544/2700' })]);
+
+      const numbers = Array.from(
+        (element('.add-account-verified') as HTMLElement).querySelectorAll('.add-account-number'),
+      ).map((number) => number.innerHTML.replace(/<!--.*?-->/g, ''));
+      expect(numbers).toEqual(['8877665544/<wbr>2700']);
+    });
+
     it('then two verified accounts are named together', async () => {
       await openWith([
         bankAccount({ accountNumber: '3344556677/0300' }),

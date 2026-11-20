@@ -405,6 +405,12 @@
   color: var(--color-text);
 }
 
+.add-account-number {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+}
+
 .add-account-watch {
   display: flex;
   align-items: flex-start;

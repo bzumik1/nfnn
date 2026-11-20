@@ -330,6 +330,10 @@
   --sheet-chevron-size: 1rem;
   --text-sheet-body: 1rem;
   --text-sheet-head: min(var(--text-sheet-body), 5.2vw);
+  --text-card-title: max(
+    var(--text-sheet-body),
+    min(var(--text-2xl), (100vw - 2 * var(--space-4) - 2 * var(--space-6)) / 6.25)
+  );
   --text-dialog-title-large: max(
     var(--text-sheet-body),
     min(var(--text-xl), (100cqi - var(--space-8)) / 7.25)

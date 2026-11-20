@@ -7,6 +7,7 @@
 
 .lock-panel {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   max-width: min(var(--dialog-max-width), 100% - 2 * var(--space-5));
   margin: var(--space-6) auto;
@@ -40,6 +41,7 @@
 .lock-actions,
 .lock-form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
 }
 

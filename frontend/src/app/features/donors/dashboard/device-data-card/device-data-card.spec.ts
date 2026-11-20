@@ -133,7 +133,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
     vault.opened.set(openedWith({ chunks: [], summary: {}, storedAt: '2026-11-05T09:30:00Z' }));
     await settle();
 
-    const parts = Array.from(root().querySelectorAll('.device-data-time')).map((part) =>
+    const parts = Array.from(root().querySelectorAll('.ui-date')).map((part) =>
       normalized(withOrdinarySpaces(part.textContent)),
     );
     expect(parts).toEqual(['5. 11. 2026', '10:30']);
