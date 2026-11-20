@@ -7,7 +7,7 @@ const POLICY = '/zasady-ochrany-osobnich-udaju';
 
 function privacyLinkOfContact(page: Page) {
   return page
-    .locator('#kontakt .contact-legal')
+    .locator('#kontakt .form-privacy')
     .getByRole('link', { name: 'zásady ochrany osobních údajů' });
 }
 const APP_API_UNREACHABLE =

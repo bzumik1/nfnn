@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { mockDonorApi, openSection, signIn } from './donor-session';
 
@@ -120,6 +120,39 @@ test.describe('Given a visitor on the About page', () => {
     ).toBeVisible();
 
     expect(await tabOrderFromContactEmail(page)).toEqual(['copy', 'form']);
+  });
+
+  test.describe('on a computer', () => {
+    test.use({ viewport: { width: 1280, height: 900 } });
+
+    test('when they read the form, then the privacy line shows once, under the button and starting at its edge, and the grey note under the details comes back after sending', async ({
+      page,
+    }) => {
+      await page.route('**/api/contact/messages', (route) => route.fulfill({ status: 202 }));
+      await page.goto('/o-nas');
+      const note = page.locator('.contact-legal');
+      const line = page.locator('.form-privacy');
+      await expect(line).toBeVisible();
+      await expect(note).toBeHidden();
+      await expect(
+        page.locator('#kontakt').getByRole('link', { name: 'zásady ochrany osobních údajů' }),
+      ).toHaveCount(1);
+      const button = await page.getByRole('button', { name: 'Odeslat zprávu' }).boundingBox();
+      const starts = await lineStarts(line);
+      expect(starts.length).toBeGreaterThan(0);
+      expect(starts).toEqual(starts.map(() => Math.round(button!.x)));
+
+      await page.locator('#contact-name').fill('Jana Nováková');
+      await page.locator('#contact-email').fill('jana@example.cz');
+      await page.locator('#contact-message').fill('Mám dotaz k projektu.');
+      await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
+
+      await expect(page.getByRole('heading', { name: 'Zpráva je odeslaná' })).toBeFocused();
+      await expect(note).toBeVisible();
+      await expect(
+        page.locator('#kontakt').getByRole('link', { name: 'zásady ochrany osobních údajů' }),
+      ).toHaveCount(1);
+    });
   });
 
   test.describe('on a phone', () => {
@@ -295,4 +328,22 @@ async function tabOrderFromContactEmail(page: Page): Promise<string[]> {
     }
   }
   return reached;
+}
+
+async function lineStarts(text: Locator): Promise<number[]> {
+  return text.evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const starts = new Map<number, number>();
+    for (const rect of Array.from(range.getClientRects())) {
+      if (rect.width === 0) {
+        continue;
+      }
+      const line = Math.round(rect.top + rect.height / 2);
+      const known = [...starts.keys()].find((top) => Math.abs(top - line) < rect.height / 2);
+      const key = known ?? line;
+      starts.set(key, Math.min(starts.get(key) ?? Infinity, rect.left));
+    }
+    return [...starts.values()].map(Math.round);
+  });
 }

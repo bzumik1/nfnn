@@ -68,6 +68,10 @@ $contents-width: 20rem;
     margin-bottom: var(--space-5);
   }
 
+  .part-number {
+    color: var(--color-accent);
+  }
+
   h3 {
     font-family: var(--font-display);
     font-size: var(--text-3xl);

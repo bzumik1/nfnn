@@ -122,7 +122,7 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
   }) => {
     await page.goto('/o-nas');
     await page
-      .locator('#kontakt .contact-legal')
+      .locator('#kontakt .form-privacy')
       .getByRole('link', { name: 'zásady ochrany osobních údajů' })
       .click();
 
@@ -656,8 +656,8 @@ for (const width of [320, 390, 1280]) {
       const pageEndCovered = await page.evaluate(() => {
         const bar = document.querySelector('app-chunk-load-notice .chunk-load-bar')!;
         window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
-        const lastText = document.querySelector('#kontakt .contact-legal')!.getBoundingClientRect();
-        return lastText.bottom > bar.getBoundingClientRect().top;
+        const contactEnd = document.querySelector('#kontakt .two-col')!.getBoundingClientRect();
+        return contactEnd.bottom > bar.getBoundingClientRect().top;
       });
       expect(pageEndCovered).toBe(false);
     });
