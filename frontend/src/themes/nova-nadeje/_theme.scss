@@ -181,7 +181,10 @@
   --color-sheet-chevron: var(--color-text-subtle);
   --shadow-sheet-close: 0 0 0 1px var(--color-tab-bar-rim), var(--shadow-tab-bar);
   --color-segment-thumb: var(--color-surface);
-  --shadow-segment-thumb: 0 3px 8px rgb(15 23 42 / 0.12), 0 1px 1px rgb(15 23 42 / 0.04);
+  --color-segment-thumb-edge: transparent;
+  --shadow-segment-thumb:
+    inset 0 0 0 1px var(--color-segment-thumb-edge), 0 3px 8px rgb(15 23 42 / 0.12),
+    0 1px 1px rgb(15 23 42 / 0.04);
 
   --font-serif: 'Playfair Display', serif;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
@@ -563,8 +566,8 @@
   --color-badge-accent-bg: var(--color-accent-soft);
   --color-sheet-grouped: var(--color-surface);
   --color-sheet-group: var(--color-surface-muted);
-  --color-segment-thumb: #3a4356;
-  --shadow-segment-thumb: none;
+  --color-segment-thumb: #5d6780;
+  --shadow-segment-thumb: inset 0 0 0 1px var(--color-segment-thumb-edge);
   --color-tab-bar: color-mix(in srgb, #1b2130 90%, transparent);
   --color-tab-bar-rim: color-mix(in srgb, #ffffff 12%, transparent);
   --color-tab-pill: color-mix(in srgb, #ffffff 8%, transparent);
@@ -661,6 +664,7 @@
   --color-log-code: #cbdaf5;
   --color-log-warn: #fcd34d;
   --color-skeleton: color-mix(in srgb, #767680 40%, transparent);
+  --color-segment-thumb-edge: #8a93a3;
 }
 
 @media (prefers-color-scheme: dark) {

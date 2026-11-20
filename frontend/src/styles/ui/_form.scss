@@ -53,7 +53,7 @@
     }
   }
 
-  &:not(.ui-segmented--thumb) button.is-active {
+  &:not(.ui-segmented--thumb) button:is(.is-active, [aria-checked='true'], [aria-pressed='true']) {
     background-color: var(--color-segment-thumb);
     box-shadow: var(--shadow-segment-thumb);
   }
