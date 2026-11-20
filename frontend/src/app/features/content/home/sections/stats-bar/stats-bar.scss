@@ -29,12 +29,19 @@
 
 :host(.on-image) {
   .stats {
+    container: figures / inline-size;
     padding-top: 0;
     border-top: 0;
   }
 
   .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  @include bp.container-down(figures, figures) {
+    .stats-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   .stat-value {

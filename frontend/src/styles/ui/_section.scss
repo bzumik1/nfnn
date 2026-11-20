@@ -80,7 +80,7 @@
 .ui-cta {
   display: inline-block;
   padding: var(--space-4) var(--space-9);
-  border: none;
+  border: var(--cta-border-width) solid transparent;
   border-radius: var(--radius-pill);
   background-color: var(--color-accent-fill);
   color: var(--color-on-accent);
@@ -105,8 +105,7 @@
 .ui-cta--ghost {
   background-color: transparent;
   color: var(--color-text);
-  font-weight: var(--weight-semibold);
-  border: 1.5px solid var(--color-border);
+  border-color: var(--color-border);
   box-shadow: none;
 
   @media (hover: hover) {
