@@ -60,7 +60,7 @@ export default defineConfig<DeviceOptions, { safariPose?: SafariPose }>({
         {
           name: 'iphone',
           testMatch:
-            /(receipt-pdf|yearly-pdf-phone|verify-receipt|donate-qr|pressed-tint|second-factor|dialog-back|security-headers|device-copy|app-shell|tab-bar-drag|largest-text|diagnostics|offline-sign-in|page-transitions|tab-switching|story-grid|edge-swipe|busy-announcement|back-keeps-scroll|back-motion-start|admin-donor-search-names|failure-and-loading|focus-ring|account-sheet-fit)\.spec\.ts$/,
+            /(receipt-pdf|yearly-pdf-phone|verify-receipt|donate-qr|pressed-tint|second-factor|dialog-back|security-headers|device-copy|app-shell|tab-bar-drag|largest-text|diagnostics|offline-sign-in|page-transitions|tab-switching|story-grid|edge-swipe|busy-announcement|back-keeps-scroll|back-motion-start|admin-donor-search-names|failure-and-loading|focus-ring|account-sheet-fit|back-matrix)\.spec\.ts$/,
           testIgnore: /pwa\//,
           use: { ...devices['iPhone 15'] },
         },
