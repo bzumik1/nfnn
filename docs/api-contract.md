@@ -1640,6 +1640,20 @@ Tests: `diagnostics.feature` (the database reachable, threads and heap positive,
 
 `running` is `YYYY.M.N` or `dev`; `latest` is `null` until a check succeeds and stays when a later one fails; `failure` is `null` after a success, otherwise the kind of the last failure (`STATUS`, `REFUSED_ANSWER`, `TOO_LARGE`, `TIMEOUT`, `UNREACHABLE`, `UNKNOWN_HOST`, `NON_PUBLIC_ADDRESS`, `NOT_HTTPS`, `INTERRUPTED`); `updateAvailable` is true only when `running` is a release and `latest` is newer, compared by year, month and order as numbers. Tests: `release_check.feature` (before the first check, after it, a failed check keeping the release, a release from a later month refused, 403 for a donor and 401 without a token), `ReleaseCheckServiceTest`, `GitHubReleaseSourceTest`.
 
+#### Release history
+
+`AdminReleaseController` → `application/release/ReleaseHistoryService` (Jakub 2026-11-20, #1539): at every start the backend records the release it runs (`operations/infrastructure/startup/ReleaseRunAtStart`, at `ApplicationReadyEvent`), and keeps a year of them.
+
+`GET /api/admin/operations/release/history` (`ADMIN`, connector-reachable) →
+
+```json
+{ "entries": [
+    { "release": "2026.11.109", "revision": "2b79cb3", "startedAt": "2026-11-19T18:02:11Z", "lastStartedAt": "2026-11-20T07:40:03Z", "endedAt": null },
+    { "release": "2026.11.98", "revision": "d953749", "startedAt": "2026-11-12T16:30:00Z", "lastStartedAt": "2026-11-12T16:30:00Z", "endedAt": "2026-11-19T18:02:11Z" } ] }
+```
+
+One entry per run: a run starts with the first start of a revision and release that differ from the newest entry's (a deploy, or a rollback to an earlier image, which starts a run of its own), and every later start of the same pair only moves `lastStartedAt`. Newest first, at most the newest 500. `release` is `YYYY.M.N` or `null` for an image without a release number (`dev`); `revision` is the image's short commit (`2b79cb3`, `dev` locally); `endedAt` is the `startedAt` of the next newer entry, `null` for the newest, which the server runs now. A run that ended more than a year ago (Prague calendar) is deleted daily at 03:40 Prague time (`app.operations.release-history.cleanup-cron`, `-` turns it off), so the newest entry always stays. Nothing in it is personal data; it is not audited. Tests: `release_history.feature` (the first start, a restart of the same release, a deploy, a rollback, the year's edge of the clean-up keeping the newest, 403 for a donor and 401 without a token), `ReleaseRunTest`, `ReleaseHistoryTest`, `ReleaseHistoryServiceTest`, `JpaReleaseRunRepositoryTest`, `ReleaseHistoryConcurrencyTest`.
+
 #### Push alerts of the administration
 
 Slice 2.27 (plan v3): the server's side of Web Push for administrators; slice 2.28 sends the operational alerts over it (below) and adds the page `/sprava/upozorneni` and the app's badge (`docs/frontend-overview.md`). `AdminPushController` → `application/push/PushSubscriptionService`, `PushKeyService` and `PushSender` over the ports `PushKeyGenerator` (`infrastructure/push/JcaPushKeyGenerator`) and `PushDelivery` (`FanOutPushDelivery`, which sends to every recipient on a virtual thread each, all at once for the administration and paced for donors, each through `WebPushDelivery`, which encrypts the message (RFC 8291, `aes128gcm`, one record of 4096 bytes) and signs a VAPID token (RFC 8292, ES256) and hands both to `PushTransport`: `HttpClientPushTransport`, `support/RecordingPushTransport` in tests). The server generates its VAPID key pair (P-256) itself at the first use and keeps it in `operations_push_key`, the private key sealed by `SecretSealer` under the server's `settings-key` (purpose `push-vapid-private-key`); it is never returned, logged or put into a backup in the clear.
