@@ -1,7 +1,7 @@
 @use 'breakpoints' as bp;
 
 .receipts-footer {
-  margin: var(--space-5) calc(-1 * var(--space-6)) calc(-1 * var(--space-5));
+  margin: var(--space-5) calc(-1 * var(--card-inset)) calc(-1 * var(--space-5));
 }
 
 .ui-card__title {
@@ -203,7 +203,7 @@ a {
 
 .single-gifts {
   margin-top: var(--space-4);
-  margin-inline: calc(-1 * var(--space-6));
+  margin-inline: calc(-1 * var(--card-inset));
 }
 
 .verify-link {

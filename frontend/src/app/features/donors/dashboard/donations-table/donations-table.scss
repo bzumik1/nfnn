@@ -60,12 +60,12 @@ td {
 
 th:first-child,
 td:first-child {
-  padding-inline-start: var(--space-6);
+  padding-inline-start: var(--card-inset);
 }
 
 th:last-child,
 td:last-child {
-  padding-inline-end: var(--space-6);
+  padding-inline-end: var(--card-inset);
 }
 
 td.date,
@@ -194,7 +194,7 @@ td .receipt-diagnostics {
     align-items: start;
     align-content: start;
     gap: var(--space-1-5) var(--space-3);
-    padding: var(--space-3-5) var(--space-5);
+    padding: var(--space-3-5) var(--card-inset);
 
     @media (hover: hover) and (pointer: fine) {
       &:hover:not([aria-disabled='true']) {
@@ -262,18 +262,8 @@ td .receipt-diagnostics {
   }
 }
 
-@include bp.down(cards) {
-  @include table-as-cards;
-}
-
-@include bp.container-down(donations-table, tablet) {
-  @include table-as-cards;
-}
-
 @include bp.container-down(donations-table, ledger) {
-  :host(.with-receipts) {
-    @include table-as-cards;
-  }
+  @include table-as-cards;
 }
 
 @include bp.up(nav) {
@@ -316,7 +306,7 @@ td .receipt-diagnostics {
   border-top: 1px solid var(--color-divider);
 
   .ui-list__row {
-    padding-inline: var(--space-5);
+    padding-inline: var(--card-inset);
   }
 
   .donation-amount {

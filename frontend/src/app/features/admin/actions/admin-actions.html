@@ -137,109 +137,119 @@
               }
             </ul>
           } @else {
-            <table role="table" class="ui-table" [class.ui-skeleton-reveal]="loadView.appears()">
-              <thead role="rowgroup">
-                <tr role="row">
-                  <th role="columnheader" i18n="@@admin.actions.col.when">Kdy</th>
-                  <th role="columnheader" i18n="@@admin.actions.col.admin">Správce</th>
-                  <th role="columnheader" i18n="@@admin.actions.col.action">Zásah</th>
-                  <th role="columnheader" i18n="@@admin.actions.col.details">Podrobnosti</th>
-                </tr>
-              </thead>
-              <tbody role="rowgroup">
-                @for (item of items(); track item.id) {
+            <div class="ui-table-frame">
+              <table role="table" class="ui-table" [class.ui-skeleton-reveal]="loadView.appears()">
+                <thead role="rowgroup">
                   <tr role="row">
-                    <td role="cell" data-label="Kdy" i18n-data-label="@@admin.actions.col.when">
-                      <span class="admin-time">{{ performedAt(item) }}</span>
-                    </td>
-                    <td
-                      role="cell"
-                      class="admin-col"
-                      data-label="Správce"
-                      i18n-data-label="@@admin.actions.col.admin"
-                    >
-                      @if (byServer(item)) {
-                        <span class="admin-name" i18n="@@admin.actions.admin.server">server</span>
-                      } @else if (item.adminName) {
-                        <span class="admin-name">{{ item.adminName }}</span>
-                        <span class="admin-email">{{ item.adminEmail }}</span>
-                      } @else {
-                        <span class="muted" i18n="@@admin.actions.admin.missing"
-                          >správce bez účtu</span
-                        >
-                      }
-                      @if (item.client) {
-                        <span class="admin-client" i18n="@@admin.actions.admin.client"
-                          >přes aplikaci {{ item.client }}</span
-                        >
-                      }
-                    </td>
-                    <td role="cell" data-label="Zásah" i18n-data-label="@@admin.actions.col.action">
-                      <span class="admin-name">{{ actionName(item) }}</span>
-                      @if (item.donorId; as donorId) {
-                        <a
-                          class="donor-link"
-                          [routerLink]="['/sprava/darci', donorId]"
-                          i18n="@@admin.actions.openDonor"
-                          >Otevřít kartu dárce</a
-                        >
-                      }
-                    </td>
-                    <td
-                      role="cell"
-                      data-label="Podrobnosti"
-                      i18n-data-label="@@admin.actions.col.details"
-                    >
-                      @if (item.summary) {
-                        <span class="summary">{{ item.summary }}</span>
-                      }
-                      <details class="details">
-                        <summary>
-                          <svg
-                            class="details-chevron"
-                            aria-hidden="true"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
+                    <th role="columnheader" i18n="@@admin.actions.col.when">Kdy</th>
+                    <th role="columnheader" i18n="@@admin.actions.col.admin">Správce</th>
+                    <th role="columnheader" i18n="@@admin.actions.col.action">Zásah</th>
+                    <th role="columnheader" i18n="@@admin.actions.col.details">Podrobnosti</th>
+                  </tr>
+                </thead>
+                <tbody role="rowgroup">
+                  @for (item of items(); track item.id) {
+                    <tr role="row">
+                      <td role="cell" data-label="Kdy" i18n-data-label="@@admin.actions.col.when">
+                        <span class="admin-time">{{ performedAt(item) }}</span>
+                      </td>
+                      <td
+                        role="cell"
+                        class="admin-col"
+                        data-label="Správce"
+                        i18n-data-label="@@admin.actions.col.admin"
+                      >
+                        @if (byServer(item)) {
+                          <span class="admin-name" i18n="@@admin.actions.admin.server">server</span>
+                        } @else if (item.adminName) {
+                          <span class="admin-name">{{ item.adminName }}</span>
+                          <span class="admin-email">{{ item.adminEmail }}</span>
+                        } @else {
+                          <span class="muted" i18n="@@admin.actions.admin.missing"
+                            >správce bez účtu</span
                           >
-                            <path d="m9 18 6-6-6-6" /></svg
-                          ><span i18n="@@admin.actions.details.summary">Technické podrobnosti</span>
-                        </summary>
-                        <div class="details-body">
-                          <div>
-                            @if (detailsOnServerOnly(item)) {
-                              @if (serverAway()) {
-                                <span class="details-text" i18n="@@admin.actions.details.serverAway"
-                                  >Podrobnosti ukážeme, až server zase odpoví.</span
-                                >
+                        }
+                        @if (item.client) {
+                          <span class="admin-client" i18n="@@admin.actions.admin.client"
+                            >přes aplikaci {{ item.client }}</span
+                          >
+                        }
+                      </td>
+                      <td
+                        role="cell"
+                        data-label="Zásah"
+                        i18n-data-label="@@admin.actions.col.action"
+                      >
+                        <span class="admin-name">{{ actionName(item) }}</span>
+                        @if (item.donorId; as donorId) {
+                          <a
+                            class="donor-link"
+                            [routerLink]="['/sprava/darci', donorId]"
+                            i18n="@@admin.actions.openDonor"
+                            >Otevřít kartu dárce</a
+                          >
+                        }
+                      </td>
+                      <td
+                        role="cell"
+                        data-label="Podrobnosti"
+                        i18n-data-label="@@admin.actions.col.details"
+                      >
+                        @if (item.summary) {
+                          <span class="summary">{{ item.summary }}</span>
+                        }
+                        <details class="details">
+                          <summary>
+                            <svg
+                              class="details-chevron"
+                              aria-hidden="true"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            >
+                              <path d="m9 18 6-6-6-6" /></svg
+                            ><span i18n="@@admin.actions.details.summary"
+                              >Technické podrobnosti</span
+                            >
+                          </summary>
+                          <div class="details-body">
+                            <div>
+                              @if (detailsOnServerOnly(item)) {
+                                @if (serverAway()) {
+                                  <span
+                                    class="details-text"
+                                    i18n="@@admin.actions.details.serverAway"
+                                    >Podrobnosti ukážeme, až server zase odpoví.</span
+                                  >
+                                } @else {
+                                  <span
+                                    class="details-text"
+                                    i18n="@@admin.actions.details.needConnection"
+                                    >Podrobnosti ukážeme, až budete online.</span
+                                  >
+                                }
                               } @else {
-                                <span
-                                  class="details-text"
-                                  i18n="@@admin.actions.details.needConnection"
-                                  >Podrobnosti ukážeme, až budete online.</span
+                                <span class="details-text">{{ item.details }}</span>
+                              }
+                              @if (!item.adminName && !byServer(item)) {
+                                <span class="details-text" i18n="@@admin.actions.details.adminId"
+                                  >Správce: {{ item.adminId }}</span
                                 >
                               }
-                            } @else {
-                              <span class="details-text">{{ item.details }}</span>
-                            }
-                            @if (!item.adminName && !byServer(item)) {
-                              <span class="details-text" i18n="@@admin.actions.details.adminId"
-                                >Správce: {{ item.adminId }}</span
-                              >
-                            }
+                            </div>
                           </div>
-                        </div>
-                      </details>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+                        </details>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
           }
           @if (hasMore()) {
             <div class="admin-more" [class.ui-skeleton-reveal]="loadView.appears()">

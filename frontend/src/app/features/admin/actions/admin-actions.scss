@@ -93,7 +93,7 @@ td.admin-col {
   color: var(--color-text-muted);
 }
 
-@include bp.down(cards) {
+@include bp.container-down(ui-table, ledger) {
   .actions,
   .confirm {
     justify-content: flex-start;

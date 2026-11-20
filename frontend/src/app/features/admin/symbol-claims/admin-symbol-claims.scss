@@ -38,17 +38,6 @@ td.action {
   font-weight: var(--weight-semibold);
 }
 
-a.admin-name {
-  color: var(--color-accent);
-  text-decoration: none;
-
-  @media (hover: hover) {
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-}
-
 .muted {
   color: var(--color-text-muted);
   font-size: var(--text-sm);
@@ -73,7 +62,7 @@ a.admin-name {
   color: var(--color-text-muted);
 }
 
-@include bp.up(nav) {
+@include bp.container-up(ui-table, ledger) {
   .ui-table {
     th,
     td {
@@ -82,12 +71,12 @@ a.admin-name {
 
     th:first-child,
     td:first-child {
-      padding-inline-start: var(--space-6);
+      padding-inline-start: var(--card-inset);
     }
 
     th:last-child,
     td:last-child {
-      padding-inline-end: var(--space-6);
+      padding-inline-end: var(--card-inset);
     }
   }
 }
@@ -99,7 +88,7 @@ a.admin-name {
   color: var(--color-text-muted);
 }
 
-@include bp.down(cards) {
+@include bp.container-down(ui-table, ledger) {
   td.action {
     text-align: left;
   }
