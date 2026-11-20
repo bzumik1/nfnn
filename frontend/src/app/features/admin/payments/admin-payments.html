@@ -228,69 +228,71 @@
                 </h3>
                 <ul class="ui-list">
                   @for (item of month.items; track item.id) {
-                    <li>
-                      <button
-                        type="button"
-                        class="ui-list__row payment-row"
-                        [id]="paymentRowId(item)"
-                        data-payment-row
-                        aria-haspopup="dialog"
-                        (click)="openRow(item)"
-                      >
-                        <span class="ui-list__title">
-                          @if (item.counterpartyName) {
-                            {{ item.counterpartyName }}
-                          } @else {
-                            <ng-container i18n="@@admin.payments.row.noName"
-                              >Bez jména odesílatele</ng-container
-                            >
-                          }
-                        </span>
-                        <span class="ui-list__meta">
-                          <span class="ui-date">{{ date(item.bookedOn) }}</span> ·
-                          @if (item.variableSymbol) {
-                            <ng-container i18n="@@admin.payments.row.symbol"
-                              >VS {{ item.variableSymbol }}</ng-container
-                            >
-                          } @else {
-                            <ng-container i18n="@@admin.payments.noSymbol">bez VS</ng-container>
-                          }
-                          @if (item.donation; as donation) {
-                            ·
-                            @if (donation.donorName) {
-                              <ng-container i18n="@@admin.payments.row.donor"
-                                >dárce {{ donation.donorName }}</ng-container
-                              >
+                    <li [attr.data-month]="month.key" (animate.leave)="leaveRow($event)">
+                      <div>
+                        <button
+                          type="button"
+                          class="ui-list__row payment-row"
+                          [id]="paymentRowId(item)"
+                          data-payment-row
+                          aria-haspopup="dialog"
+                          (click)="openRow(item)"
+                        >
+                          <span class="ui-list__title">
+                            @if (item.counterpartyName) {
+                              {{ item.counterpartyName }}
                             } @else {
-                              <ng-container i18n="@@admin.payments.donor.unknown"
-                                >dárce bez záznamu</ng-container
+                              <ng-container i18n="@@admin.payments.row.noName"
+                                >Bez jména odesílatele</ng-container
                               >
                             }
-                          }
-                        </span>
-                        <span class="ui-list__value ui-figures"
-                          >{{ crowns(item.amountMinor) }}&nbsp;Kč</span
-                        >
-                        @if (rowState(item); as state) {
-                          <span class="ui-list__state">
-                            <span class="ui-badge" [class]="state.badge">{{ state.text }}</span>
                           </span>
-                        }
-                        <svg
-                          class="ui-list__chevron"
-                          aria-hidden="true"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <polyline points="9 18 15 12 9 6" />
-                        </svg>
-                      </button>
+                          <span class="ui-list__meta">
+                            <span class="ui-date">{{ date(item.bookedOn) }}</span> ·
+                            @if (item.variableSymbol) {
+                              <ng-container i18n="@@admin.payments.row.symbol"
+                                >VS {{ item.variableSymbol }}</ng-container
+                              >
+                            } @else {
+                              <ng-container i18n="@@admin.payments.noSymbol">bez VS</ng-container>
+                            }
+                            @if (item.donation; as donation) {
+                              ·
+                              @if (donation.donorName) {
+                                <ng-container i18n="@@admin.payments.row.donor"
+                                  >dárce {{ donation.donorName }}</ng-container
+                                >
+                              } @else {
+                                <ng-container i18n="@@admin.payments.donor.unknown"
+                                  >dárce bez záznamu</ng-container
+                                >
+                              }
+                            }
+                          </span>
+                          <span class="ui-list__value ui-figures"
+                            >{{ crowns(item.amountMinor) }}&nbsp;Kč</span
+                          >
+                          @if (rowState(item); as state) {
+                            <span class="ui-list__state">
+                              <span class="ui-badge" [class]="state.badge">{{ state.text }}</span>
+                            </span>
+                          }
+                          <svg
+                            class="ui-list__chevron"
+                            aria-hidden="true"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </button>
+                      </div>
                     </li>
                   }
                 </ul>

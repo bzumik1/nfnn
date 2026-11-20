@@ -214,7 +214,10 @@ export class AdminPayments {
   protected readonly rows = this.layout.listsAsRows;
   protected readonly chosenFrom = computed(() => this.chosenOn(this.filters().from));
   protected readonly chosenTo = computed(() => this.chosenOn(this.filters().to));
-  protected readonly months = computed(() => byMonth(this.items()));
+  private readonly leavingMonths = signal<ReadonlySet<string>>(new Set());
+  protected readonly months = computed(() =>
+    withLeavingMonths(byMonth(this.items()), this.leavingMonths()),
+  );
   protected readonly changedMeanwhile = signal(false);
   private afterReload: (() => void) | null = null;
   private leftByStep: string | null = null;
@@ -413,6 +416,8 @@ export class AdminPayments {
 
   protected load(): void {
     this.rowLeft.set(false);
+    this.rowsLeaving.set(0);
+    this.leavingMonths.set(new Set());
     this.incoming.set(null);
     this.state.set('loading');
     this.moreFailed.set(false);
@@ -871,9 +876,13 @@ export class AdminPayments {
         Number(motion.effect?.getComputedTiming().endTime ?? 0),
       ),
     );
+    const month = row.dataset['month'];
     const left = (): void => {
       event.animationComplete();
       this.rowsLeaving.update((count) => Math.max(0, count - 1));
+      if (month !== undefined) {
+        this.leavingMonths.update((months) => new Set([...months].filter((key) => key !== month)));
+      }
     };
     if (longest === 0) {
       left();
@@ -905,9 +914,13 @@ export class AdminPayments {
       row,
       this.host.nativeElement.querySelectorAll<HTMLElement>(ROW_CONTROLS),
     );
-    if (row?.matches('tr')) {
-      markRowsLeaving([row]);
+    const slot = row?.matches('tr') ? row : row?.closest('li[data-month]');
+    if (slot) {
+      markRowsLeaving([slot]);
       this.rowsLeaving.update((count) => count + 1);
+      if (slot.matches('li')) {
+        this.leavingMonths.update((months) => new Set([...months, monthOf(payment)]));
+      }
     }
     this.rowLeft.set(true);
     this.items.update((list) => list.filter((item) => item.id !== payment.id));
@@ -933,16 +946,34 @@ export class AdminPayments {
   }
 }
 
+function monthOf(item: AdminPaymentResponse): string {
+  return item.bookedOn.slice(0, 7);
+}
+
+function monthGroup(key: string, items: AdminPaymentResponse[]): MonthGroup {
+  const label = formatMonth(key);
+  return { key, label: label.charAt(0).toUpperCase() + label.slice(1), items };
+}
+
 function byMonth(items: AdminPaymentResponse[]): MonthGroup[] {
   const groups = new Map<string, AdminPaymentResponse[]>();
   for (const item of items) {
-    const key = item.bookedOn.slice(0, 7);
+    const key = monthOf(item);
     groups.set(key, [...(groups.get(key) ?? []), item]);
   }
-  return [...groups].map(([key, monthItems]) => {
-    const label = formatMonth(key);
-    return { key, label: label.charAt(0).toUpperCase() + label.slice(1), items: monthItems };
-  });
+  return [...groups].map(([key, monthItems]) => monthGroup(key, monthItems));
+}
+
+function withLeavingMonths(groups: MonthGroup[], leaving: ReadonlySet<string>): MonthGroup[] {
+  const shown = [...groups];
+  for (const key of leaving) {
+    if (shown.some((group) => group.key === key)) {
+      continue;
+    }
+    const later = shown.findIndex((group) => group.key < key);
+    shown.splice(later < 0 ? shown.length : later, 0, monthGroup(key, []));
+  }
+  return shown;
 }
 
 function incomingText(count: number): string {

@@ -112,6 +112,10 @@
   display: table-row;
 }
 
+.payments-month li.payment-row--leaving {
+  @include motion.row-leave;
+}
+
 .payments-empty--after-rows {
   @include motion.after-rows-left;
 }
