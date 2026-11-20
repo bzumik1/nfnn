@@ -26,6 +26,7 @@ import { canPullSheetFrom, PullIntent, pullIntent, SheetDrag, TouchOrigin } from
 import { Appearance } from '../../../core/appearance/appearance';
 import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { EDGE_SWIPE_DRAGGING_CLASS } from '../../../core/navigation/edge-swipe-back';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
@@ -307,6 +308,9 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   protected touchMoved(event: TouchEvent): void {
+    if (this.document.documentElement.classList.contains(EDGE_SWIPE_DRAGGING_CLASS)) {
+      this.forgetPress();
+    }
     const origin = this.touchOrigin;
     if (origin === null || this.touchIntent === 'content' || event.touches.length !== 1) {
       return;
@@ -437,6 +441,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   private pullTo(y: number, time: number): void {
+    this.forgetPress();
     const offset = this.drag.move(y, time);
     this.dragOffset.set(offset);
     this.sheetPull.set(Math.min(1, offset / Math.max(1, this.panelHeight())));
