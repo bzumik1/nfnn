@@ -277,21 +277,7 @@ export class AccountSheet {
   }
 
   protected stepLeaves(event: AnimationCallbackEvent): void {
-    const step = event.target;
-    step.setAttribute('inert', '');
-    step.setAttribute('aria-hidden', 'true');
-    step.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
-    step.classList.add('account-step--leaving');
-    const motions = Array.from(step.children).flatMap((part) =>
-      typeof part.getAnimations === 'function' ? part.getAnimations() : [],
-    );
-    if (motions.length === 0) {
-      event.animationComplete();
-      return;
-    }
-    void Promise.allSettled(motions.map((motion) => motion.finished)).then(() =>
-      event.animationComplete(),
-    );
+    leaveAccountStep(event);
   }
 
   private followInSection(event: MouseEvent): void {
@@ -382,6 +368,8 @@ export class AccountSheet {
   }
 }
 
+const STEP_LEAVE_GRACE_MS = 300;
+
 const APPEARANCE_LABELS: Record<AppearanceChoice, string> = {
   auto: $localize`:@@layout.account.appearance.auto:Vzhled: Automaticky`,
   light: $localize`:@@layout.account.appearance.light:Vzhled: Světlý`,
@@ -393,6 +381,37 @@ const NEXT_APPEARANCE: Record<AppearanceChoice, AppearanceChoice> = {
   light: 'dark',
   dark: 'auto',
 };
+
+export function leaveAccountStep(event: AnimationCallbackEvent): void {
+  const step = event.target;
+  step.setAttribute('inert', '');
+  step.setAttribute('aria-hidden', 'true');
+  step.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
+  step.classList.add('account-step--leaving');
+  const motions = Array.from(step.children).flatMap((part) =>
+    typeof part.getAnimations === 'function' ? part.getAnimations() : [],
+  );
+  if (motions.length === 0) {
+    event.animationComplete();
+    return;
+  }
+  let gone = false;
+  const leaves = (): void => {
+    if (!gone) {
+      gone = true;
+      clearTimeout(fallback);
+      event.animationComplete();
+    }
+  };
+  const longest = Math.max(
+    0,
+    ...motions
+      .map((motion) => Number(motion.effect?.getComputedTiming().endTime ?? 0))
+      .filter(Number.isFinite),
+  );
+  const fallback = setTimeout(leaves, longest + STEP_LEAVE_GRACE_MS);
+  void Promise.allSettled(motions.map((motion) => motion.finished)).then(leaves);
+}
 
 function pressedAside(event: MouseEvent): boolean {
   return event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;

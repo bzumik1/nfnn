@@ -5,6 +5,7 @@
 
 .account-steps {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .account-steps--sheet {
@@ -261,6 +262,7 @@
   a {
     display: inline-block;
     min-height: var(--space-6);
+    z-index: 1;
     color: var(--color-accent);
     @include touch-target.reaches-finger-size;
   }

@@ -430,6 +430,7 @@ export async function showAccountList(page: Page): Promise<Locator> {
     await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
   }
   await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeVisible();
+  await expect(sheet.locator('.account-step--leaving')).toHaveCount(0);
   return sheet;
 }
 
@@ -488,6 +489,7 @@ export async function openAccountItem(page: Page, name: string): Promise<void> {
   await item.click();
   if (opensInSheet) {
     await expect(sheet.getByRole('heading', { level: 2, name: sectionName(name) })).toBeVisible();
+    await expect(sheet.locator('.account-step--leaving')).toHaveCount(0);
     return;
   }
   await expect(page.getByRole('dialog')).toHaveCount(0);

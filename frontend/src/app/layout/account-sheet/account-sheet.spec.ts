@@ -19,7 +19,7 @@ import { AccountBadges } from '../../core/layout/account-badges';
 import { AppInstall, InstallWay } from '../../core/install/app-install';
 import { OpenAlerts } from '../../core/push/open-alerts';
 import { OpenAlert } from '../../core/push/open-alerts-api';
-import { AccountSheet } from './account-sheet';
+import { AccountSheet, leaveAccountStep } from './account-sheet';
 import { ACCOUNT_SECTION_PAGES, AccountSectionPages } from './account-section';
 
 @Component({
@@ -38,33 +38,6 @@ function sectionPages(): AccountSectionPages {
     '/darce/potvrzeni': () => Promise.resolve(StubSection),
     '/darce/ucty': () => Promise.resolve(StubSection),
     '/darce/udaje': () => Promise.resolve(StubSection),
-  };
-}
-
-interface LeavingStep {
-  readonly inert: boolean;
-  readonly hidden: boolean;
-  readonly ids: readonly string[];
-}
-
-function watchLeavingSteps(sheet: HTMLElement): () => LeavingStep[] {
-  const steps = Array.from(sheet.querySelectorAll('.account-step'));
-  const marked = new Map<Element, LeavingStep>();
-  const observer = new MutationObserver(() => {
-    for (const step of steps) {
-      if (step.classList.contains('account-step--leaving') && !marked.has(step)) {
-        marked.set(step, {
-          inert: step.hasAttribute('inert'),
-          hidden: step.getAttribute('aria-hidden') === 'true',
-          ids: Array.from(step.querySelectorAll('[id]')).map((element) => element.id),
-        });
-      }
-    }
-  });
-  observer.observe(sheet, { attributes: true, subtree: true });
-  return () => {
-    observer.disconnect();
-    return [...marked.values()];
   };
 }
 
@@ -262,16 +235,6 @@ describe('Given the account sheet of a signed-in donor', () => {
 
       expect(fixture.nativeElement.classList).toContain('account-sheet--pop');
       expect(fixture.nativeElement.classList).not.toContain('account-sheet--push');
-    });
-
-    it('and the visitor goes back, then the section it leaves is out of reach at once and gives up the ids of the sheet', async () => {
-      const marked = watchLeavingSteps(sheet);
-
-      history.listener?.stepBack();
-      fixture.detectChanges();
-      await fixture.whenStable();
-
-      expect(marked()).toEqual([{ inert: true, hidden: true, ids: [] }]);
     });
 
     it('and Zpět is pressed, then the sheet steps back through the history', () => {
@@ -509,19 +472,6 @@ describe('Given the account sheet of a signed-in donor', () => {
 
     expect(fixture.nativeElement.classList).not.toContain('account-sheet--push');
     expect(fixture.nativeElement.classList).not.toContain('account-sheet--pop');
-  });
-
-  it('when a section is chosen on a phone, then the list it leaves is out of reach at once and gives up the ids of the sheet', async () => {
-    const sheet = open();
-    const marked = watchLeavingSteps(sheet);
-
-    sheet
-      .querySelector<HTMLAnchorElement>('nav a[href="/darce/dary"]')!
-      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    expect(marked()).toEqual([{ inert: true, hidden: true, ids: [] }]);
   });
 
   it('when it opens, then each row that can be the current page carries its own wording, so its bold weight keeps the width the row reserves for it', () => {
@@ -869,5 +819,89 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(navigate).toHaveBeenCalledWith('/', expect.objectContaining({ replaceUrl: true }));
     expect(TestBed.inject(SignedOutNotice).shown()).toBe(true);
     expect(closed).toBe(1);
+  });
+});
+
+describe('Given a step of the account sheet that leaves', () => {
+  interface Motion {
+    readonly finished: Promise<unknown>;
+    readonly effect: { getComputedTiming: () => { endTime: number } };
+  }
+
+  let step: HTMLElement;
+  let complete: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    step = document.createElement('div');
+    step.className = 'account-step';
+    step.innerHTML = `
+      <div class="account-step-head"><h2 id="account-section-title">Moje dary</h2></div>
+      <div class="account-step-body"><div id="account-install-how"></div></div>
+    `;
+    document.body.append(step);
+    complete = vi.fn();
+  });
+
+  afterEach(() => {
+    step.remove();
+    vi.useRealTimers();
+  });
+
+  function moving(endTime: number, finished: Promise<unknown>): void {
+    for (const part of Array.from(step.children)) {
+      (part as unknown as { getAnimations: () => Motion[] }).getAnimations = () => [
+        { finished, effect: { getComputedTiming: () => ({ endTime }) } },
+      ];
+    }
+  }
+
+  function leave(): void {
+    leaveAccountStep({ target: step, animationComplete: complete });
+  }
+
+  it('when it starts to leave, then it is out of reach and gives up its ids at once, before its motion ends', () => {
+    moving(350, new Promise(() => undefined));
+
+    leave();
+
+    expect(step.hasAttribute('inert')).toBe(true);
+    expect(step.getAttribute('aria-hidden')).toBe('true');
+    expect(step.classList).toContain('account-step--leaving');
+    expect(step.querySelectorAll('[id]')).toHaveLength(0);
+    expect(complete).not.toHaveBeenCalled();
+  });
+
+  it('when its head and body have moved away, then it is gone', async () => {
+    let finish!: () => void;
+    moving(
+      350,
+      new Promise<void>((done) => {
+        finish = done;
+      }),
+    );
+
+    leave();
+    finish();
+    await new Promise((done) => setTimeout(done));
+
+    expect(complete).toHaveBeenCalledOnce();
+  });
+
+  it('when the browser never ends its motion, then it is gone at the latest 0.3 s after its duration, so it never stays over the new step', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    moving(350, new Promise(() => undefined));
+
+    leave();
+    vi.advanceTimersByTime(649);
+    expect(complete).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+
+    expect(complete).toHaveBeenCalledOnce();
+  });
+
+  it('when nothing moves it, then it is gone at once', () => {
+    leave();
+
+    expect(complete).toHaveBeenCalledOnce();
   });
 });
