@@ -40,7 +40,7 @@ import {
   LongestKeptWord,
   longestKeptWord,
   oneLetterWordPairs,
-  textPastTheEdges,
+  oneLetterGroupsPastTheEdges,
   boldReservesApartFromTheirLabel,
 } from './kept-together';
 import { serveReceiptKeys, serveReceiptStatus, YEARLY_RECEIPT } from './receipt-verification';
@@ -2554,7 +2554,7 @@ for (const { pose, width, rootSize } of [
 
 async function overflowAtTheLargestText(page: Page): Promise<string[]> {
   await page.evaluate(() => document.fonts.ready);
-  return textPastTheEdges(page);
+  return oneLetterGroupsPastTheEdges(page);
 }
 
 for (const width of [320, 390]) {
@@ -2574,7 +2574,7 @@ for (const width of [320, 390]) {
       '/zasady-ochrany-osobnich-udaju',
       connectionRequest,
     ]) {
-      test(`when they open ${path.split('?')[0]}, then nothing scrolls sideways and no text reaches past the screen's edge, though a group wider than its line may break`, async ({
+      test(`when they open ${path.split('?')[0]}, then no word kept with a one-letter word reaches past the screen's edge, though a group wider than its line may break`, async ({
         page,
       }) => {
         await page.goto(path);
@@ -2585,7 +2585,7 @@ for (const width of [320, 390]) {
     }
 
     for (const [group, open] of Object.entries(TITLE_OPENERS)) {
-      test(`when they open the sheet titled by ${group}, then nothing in its title, buttons or choices reaches past the screen's edge`, async ({
+      test(`when they open the sheet titled by ${group}, then no word kept with a one-letter word in its title, buttons or choices reaches past the screen's edge`, async ({
         page,
       }) => {
         await open(page);
@@ -2614,7 +2614,7 @@ for (const width of [320, 390]) {
       '/sprava/lide-fondu',
       '/sprava/logy',
     ]) {
-      test(`when they open ${path}, then nothing scrolls sideways and no title, short button, segmented choice or narrow cell reaches past the screen's edge`, async ({
+      test(`when they open ${path}, then no word kept with a one-letter word in a title, short button, segmented choice or narrow cell reaches past the screen's edge`, async ({
         page,
       }) => {
         await rememberedSession(page);

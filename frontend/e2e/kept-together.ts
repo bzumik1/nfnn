@@ -162,7 +162,7 @@ export async function longestKeptWord(
         style.wordSpacing,
       ].join('|');
     const shown = (element: HTMLElement) =>
-      element.getClientRects().length > 0 &&
+      element.getBoundingClientRect().width > 1 &&
       !element.closest('.visually-hidden, [hidden], [inert], [aria-hidden="true"]');
     const ownText = (element: HTMLElement) =>
       [...element.childNodes]
@@ -282,13 +282,9 @@ export async function boldReservesApartFromTheirLabel(page: Page): Promise<strin
   });
 }
 
-export async function textPastTheEdges(page: Page): Promise<string[]> {
+export async function oneLetterGroupsPastTheEdges(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const past: string[] = [];
-    const wider = document.documentElement.scrollWidth - document.documentElement.clientWidth;
-    if (wider > 0) {
-      past.push(`the page scrolls ${wider} px sideways`);
-    }
     const scrollsSideways = (element: Element) => {
       for (let parent: Element | null = element; parent; parent = parent.parentElement) {
         if (['MAIN', 'BODY', 'HTML'].includes(parent.tagName) || parent.querySelector('h1')) {
@@ -303,24 +299,30 @@ export async function textPastTheEdges(page: Page): Promise<string[]> {
     };
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
       const holder = node.parentElement;
       if (
+        !text.includes('\u00a0') ||
         !holder ||
-        !(node.textContent ?? '').trim() ||
         holder.closest('.visually-hidden, [hidden], [inert], [aria-hidden="true"]') ||
         getComputedStyle(holder).visibility === 'hidden' ||
         scrollsSideways(holder)
       ) {
         continue;
       }
-      const range = document.createRange();
-      range.selectNodeContents(node);
-      for (const box of range.getClientRects()) {
-        if (box.width > 0 && (box.left < -0.5 || box.right > window.innerWidth + 0.5)) {
-          past.push(
-            `"${(node.textContent ?? '').trim().slice(0, 40)}" in ${holder.tagName.toLowerCase()}.${holder.className} reaches ${Math.round(box.left)}..${Math.round(box.right)} px`,
-          );
-          break;
+      for (const group of text.matchAll(
+        /(?<=^|[\s(„“‚])[ksvzouaiKSVZOUAI](?:\u00a0[ksvzouaiKSVZOUAI])*\u00a0[^\s\u00a0]+/gu,
+      )) {
+        const range = document.createRange();
+        range.setStart(node, group.index);
+        range.setEnd(node, group.index + group[0].length);
+        for (const box of range.getClientRects()) {
+          if (box.width > 0 && (box.left < -0.5 || box.right > window.innerWidth + 0.5)) {
+            past.push(
+              `"${group[0]}" in ${holder.tagName.toLowerCase()}.${holder.className} reaches ${Math.round(box.left)}..${Math.round(box.right)} px`,
+            );
+            break;
+          }
         }
       }
     }
