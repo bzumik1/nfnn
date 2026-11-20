@@ -108,7 +108,8 @@ export class Hero {
   private fitAboveTabBar(): void {
     const content = this.content().nativeElement;
     const room = this.fullScreen().nativeElement.offsetHeight;
-    const contentHeight = content.offsetHeight - this.buttonsDrop();
+    const shift = this.buttonsShift();
+    const contentHeight = content.offsetHeight - shift;
     const figures = content.querySelector<HTMLElement>(':scope > .hero-figures');
     const fit = this.fitKey(room);
     if (figures) {
@@ -129,7 +130,7 @@ export class Hero {
       this.crowded.set(false);
     }
     this.keepLeadBesideFace(content);
-    this.keepButtonsOutOfTabBarStrip(room, contentHeight);
+    this.keepButtonsOutOfTabBarStrip(room, contentHeight, shift);
   }
 
   private keepLeadBesideFace(content: HTMLElement): void {
@@ -213,19 +214,45 @@ export class Hero {
     return parseFloat(getComputedStyle(root).fontSize) > usual * LARGEST_TEXT_KEEPING_FACE_CLEAR;
   }
 
-  private keepButtonsOutOfTabBarStrip(room: number, contentHeight: number): void {
+  private keepButtonsOutOfTabBarStrip(room: number, contentHeight: number, shift: number): void {
     const buttons = this.buttons()?.nativeElement;
     if (!buttons) {
       this.buttonsDrop.set(0);
       return;
     }
-    const drop = this.buttonsDrop();
     const contentTop = Math.max(0, room - contentHeight);
-    const top = contentTop + buttons.offsetTop - drop;
+    const top = contentTop + buttons.offsetTop - shift;
     const bottom = top + buttons.offsetHeight;
     const stripTop = this.tabBarStrip().nativeElement.offsetTop;
-    const stripEdge = drop > 0 ? stripTop - RETURN_HYSTERESIS_PX : stripTop;
+    const stripEdge = this.buttonsDrop() > 0 ? stripTop - RETURN_HYSTERESIS_PX : stripTop;
     const reachesStrip = bottom > stripEdge && top < room;
-    this.buttonsDrop.set(reachesStrip ? room - top : 0);
+    this.buttonsDrop.set(reachesStrip ? this.marginAbove(buttons) + room - top : 0);
+  }
+
+  private buttonsShift(): number {
+    const buttons = this.buttons()?.nativeElement;
+    const drop = this.buttonsDrop();
+    if (!buttons || drop === 0) {
+      return 0;
+    }
+    const above = this.inFlowBefore(buttons);
+    if (!above) {
+      return drop;
+    }
+    const gap = buttons.offsetTop - (above.offsetTop + above.offsetHeight);
+    return Math.max(0, gap - this.marginAbove(buttons));
+  }
+
+  private marginAbove(element: HTMLElement): number {
+    const above = this.inFlowBefore(element);
+    return above ? parseFloat(getComputedStyle(above).marginBottom) : 0;
+  }
+
+  private inFlowBefore(element: HTMLElement): HTMLElement | null {
+    let sibling = element.previousElementSibling;
+    while (sibling instanceof HTMLElement && getComputedStyle(sibling).position === 'absolute') {
+      sibling = sibling.previousElementSibling;
+    }
+    return sibling instanceof HTMLElement ? sibling : null;
   }
 }
