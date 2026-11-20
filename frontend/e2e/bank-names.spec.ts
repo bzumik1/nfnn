@@ -76,10 +76,11 @@ test.describe('Given a donor whose accounts are at a bank with a logo and at one
   });
 });
 
+const SYSTEM_DEFAULT_TEXT_PX = 17;
 const LARGEST_SYSTEM_TEXT_PX = 53;
 
 test.describe('Given a donor with one account that has gifts without a symbol and one that has none', () => {
-  for (const rootPx of [null, LARGEST_SYSTEM_TEXT_PX]) {
+  for (const rootPx of [null, SYSTEM_DEFAULT_TEXT_PX, LARGEST_SYSTEM_TEXT_PX]) {
     const textSize = rootPx ? `with a root of ${rootPx} px` : 'at the default text size';
     test(`when the donor opens Bankovní účty 390 px wide ${textSize}, then both logos sit at the same place against the account number`, async ({
       page,
@@ -129,12 +130,17 @@ test.describe('Given a donor with one account that has gifts without a symbol an
         const logo = (await account.locator('app-bank-logo').boundingBox())!;
         const number = (await account.locator('.account-number').boundingBox())!;
         const meta = (await account.locator('.account-meta-wrap').boundingBox())!;
-        return { logo, number, meta, offset: logo.y - number.y };
+        const status = (await account.locator('.account-status').boundingBox())!;
+        return { logo, number, meta, status, offset: logo.y - number.y };
       };
       const first = await offsetOf(withGifts);
       const second = await offsetOf(withoutGifts);
 
       expect(first.meta.height).toBeGreaterThan(second.meta.height + 1);
+      if (rootPx === SYSTEM_DEFAULT_TEXT_PX) {
+        expect(first.status.y).toBeLessThan(first.number.y + first.number.height);
+        expect(second.status.y).toBeGreaterThanOrEqual(second.number.y + second.number.height);
+      }
       expect(Math.abs(first.offset - second.offset)).toBeLessThanOrEqual(1);
       for (const { logo, number } of [first, second]) {
         const beside = logo.x + logo.width <= number.x;
