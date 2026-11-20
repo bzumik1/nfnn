@@ -352,6 +352,11 @@ async function administratorRows(page: Page): Promise<AdministratorRowLayout[]> 
     rows.map((row) => {
       const text = row.querySelector('.administrator-text') as HTMLElement;
       const email = row.querySelector('.ui-person-row__meta') as HTMLElement;
+      const linesOf = (element: Element) => {
+        const range = element.ownerDocument.createRange();
+        range.selectNodeContents(element);
+        return new Set(Array.from(range.getClientRects(), (box) => Math.round(box.bottom))).size;
+      };
       const overlaps = (a: DOMRect, b: DOMRect) =>
         a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
       const badges = Array.from(row.querySelectorAll('.ui-badge')).map((badge) =>
@@ -363,9 +368,7 @@ async function administratorRows(page: Page): Promise<AdministratorRowLayout[]> 
       return {
         textColumnEm:
           text.getBoundingClientRect().width / parseFloat(getComputedStyle(text).fontSize),
-        emailLines: Math.round(
-          email.getBoundingClientRect().height / parseFloat(getComputedStyle(email).lineHeight),
-        ),
+        emailLines: linesOf(email),
         badgeOverButton: badges.some((badge) => buttons.some((button) => overlaps(badge, button))),
       };
     }),
