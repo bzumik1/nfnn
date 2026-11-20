@@ -1,7 +1,9 @@
+import { Location } from '@angular/common';
 import { ApplicationRef, Component, signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   GuardsCheckEnd,
+  NavigationEnd,
   provideRouter,
   Router,
   RouterOutlet,
@@ -225,6 +227,109 @@ describe('Given a phone that animates, an article opened from the news, and the 
     } finally {
       frames.mockRestore();
     }
+  });
+});
+
+describe('Given a phone that animates and an article opened from the news, which was kept behind it', () => {
+  let router: Router;
+  let layer: HTMLElement;
+  let moved: boolean;
+  let watch: MutationObserver;
+
+  beforeEach(async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
+    });
+    document.documentElement.style.setProperty('--duration-page', '300ms');
+    layer = document.createElement('div');
+    layer.className = PAGE_LAYER_CLASS;
+    layer.textContent = 'Aktuality';
+    document.body.append(layer);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: 'aktuality', component: Blank },
+          { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
+        ]),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    router = TestBed.inject(Router);
+    router.setUpLocationChangeListener();
+    TestBed.inject(PageTransitions);
+    vi.useFakeTimers();
+    await router.navigateByUrl('/aktuality');
+    await router.navigateByUrl('/aktuality/clanek');
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+    layer.textContent = 'Článek';
+    moved = false;
+    watch = new MutationObserver(() => {
+      moved ||= document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`) !== null;
+    });
+    watch.observe(document.body, { subtree: true, attributes: true, childList: true });
+  });
+
+  afterEach(() => {
+    watch.disconnect();
+    vi.useRealTimers();
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+    layer.remove();
+    document.documentElement.style.removeProperty('--duration-page');
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
+  async function stepsBack(): Promise<void> {
+    const returned = new Promise<void>((done) => {
+      const events = router.events.subscribe((event) => {
+        if (event instanceof NavigationEnd) {
+          events.unsubscribe();
+          done();
+        }
+      });
+    });
+    TestBed.inject(Location).back();
+    await vi.advanceTimersByTimeAsync(0);
+    await returned;
+  }
+
+  it('when the app steps back to it, then the news moves in at once over the copy kept at the push, never waiting for the live news to be drawn and placed', async () => {
+    TestBed.inject(PagePlacement).pending();
+
+    await stepsBack();
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+
+    expect(moved).toBe(true);
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under`)?.textContent).toContain(
+      'Aktuality',
+    );
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--over`)?.textContent).toContain(
+      'Článek',
+    );
+  });
+
+  it('when the news has moved in over its kept copy, then the cover stays until the live news is placed, and goes once it is', async () => {
+    const placed = TestBed.inject(PagePlacement).pending();
+
+    await stepsBack();
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).not.toBeNull();
+    placed();
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+  });
+
+  it('when the window has another width than when the news was kept, then the step back waits for the live news as before', async () => {
+    const width = Object.getOwnPropertyDescriptor(window, 'innerWidth')!;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 420 });
+    onTestFinished(() => Object.defineProperty(window, 'innerWidth', width));
+    TestBed.inject(PagePlacement).pending();
+
+    await stepsBack();
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+
+    expect(moved).toBe(false);
   });
 });
 
