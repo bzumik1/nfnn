@@ -475,6 +475,19 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     expect(scrolledTo).toEqual([900]);
   });
 
+  it('when the page is already tall enough once it is drawn, then it is put where they left it once, and a notice that grows above the place later moves it no more', async () => {
+    pageHeight(3000);
+    await stepBack();
+    expect(scrolledTo.at(-1)).toBe(900);
+
+    scrolledBy(942);
+    scrolledTo = [];
+    grows(3042);
+
+    expect(scrolledTo).toEqual([]);
+    expect(window.scrollY).toBe(942);
+  });
+
   function placedYet(): () => boolean {
     let placed = false;
     void TestBed.inject(PagePlacement)
