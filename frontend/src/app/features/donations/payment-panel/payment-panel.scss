@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 @use 'touch-target';
 
 :host {
@@ -96,21 +97,13 @@
   border-radius: var(--radius-pill);
   padding: var(--space-2-5) var(--space-5-5);
   cursor: pointer;
-  transition:
-    background var(--duration-base),
-    border-color var(--duration-base),
-    color var(--duration-base),
-    transform var(--duration-base);
 
-  @media (hover: hover) {
-    &:hover {
-      border-color: var(--color-accent);
-      transform: translateY(-1px);
-    }
+  @include motion.hover(background-color, border-color, color) {
+    border-color: var(--color-accent);
   }
 
   &.active {
-    background: var(--color-accent-fill);
+    background-color: var(--color-accent-fill);
     border-color: var(--color-accent-fill);
     color: var(--color-on-accent);
     box-shadow: var(--shadow-cta);
@@ -199,6 +192,115 @@
   font-size: var(--text-md);
 }
 
+.bank-row-amount {
+  margin-inline: calc(-1 * var(--space-2));
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-sm);
+  @include motion.state(background-color);
+
+  &.is-changed {
+    background-color: color-mix(in srgb, var(--color-accent) 12%, transparent);
+    transition: none;
+  }
+}
+
+.bank-pending {
+  display: grid;
+
+  > * {
+    grid-area: 1 / 1;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.bank-skeleton {
+  &.is-held {
+    visibility: hidden;
+  }
+
+  .bank-value-wrap {
+    flex-wrap: nowrap;
+  }
+}
+
+.bank-skeleton-line {
+  display: inline-block;
+  vertical-align: middle;
+  inline-size: 7em;
+  max-inline-size: 100%;
+  block-size: 1em;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-skeleton);
+
+  .is-shown & {
+    @include motion.pulse;
+  }
+
+  @media (forced-colors: active) {
+    border: 1px solid GrayText;
+  }
+}
+
+.bank-skeleton-label {
+  inline-size: 9em;
+}
+
+.bank-skeleton-value {
+  inline-size: 5em;
+}
+
+.bank-skeleton-pill {
+  display: inline-block;
+  color: transparent;
+}
+
+.bank-skeleton-line,
+.bank-skeleton-pill,
+.qr-image {
+  @include motion.state(opacity);
+}
+
+.bank-skeleton-line,
+.bank-skeleton-pill {
+  opacity: 0;
+
+  .is-shown & {
+    opacity: 1;
+  }
+}
+
+.qr-desc .bank-skeleton-line {
+  display: block;
+  inline-size: 100%;
+  margin-block: calc((1lh - 1em) / 2);
+}
+
+.bank-failure {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: var(--space-4);
+  @include motion.appear($rises: false);
+}
+
+.bank-failure-text {
+  max-inline-size: var(--measure-prose);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text);
+
+  a {
+    color: var(--color-accent);
+  }
+}
+
+.bank-failure-retry {
+  min-block-size: var(--touch-target-size);
+}
+
 .gift-arrival.ui-notice {
   display: flex;
   flex-wrap: wrap;
@@ -234,22 +336,31 @@
 
 .qr-code {
   flex-shrink: 0;
-  background: var(--color-surface);
+  background-color: var(--color-surface);
   border-radius: var(--radius-card);
   padding: var(--space-2-5);
   box-shadow: var(--shadow-qr);
-  border: 2px solid color-mix(in srgb, var(--color-accent) 13%, transparent);
+
+  &:has(.qr-image) {
+    background-color: var(--color-qr-ground);
+  }
 }
 
 .qr-image {
   width: 200px;
   border-radius: var(--radius-qr-ground);
   overflow: hidden;
-  transition: opacity var(--duration-base) ease;
+}
+
+.qr-image-swapped {
+  @starting-style {
+    opacity: 0;
+  }
 }
 
 .qr-image-stale {
   opacity: 0.85;
+  transition: none;
 }
 
 .qr-placeholder {
@@ -268,17 +379,7 @@
 }
 
 .qr-placeholder-loading {
-  animation: qrPulse 1.4s ease-in-out infinite;
-}
-
-@keyframes qrPulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
+  @include motion.pulse;
 }
 
 .qr-title {
@@ -288,7 +389,9 @@
   margin-bottom: var(--space-1-5);
 }
 
-.qr-desc {
+.qr-desc,
+.bank-app-progress,
+.qr-caption {
   max-inline-size: var(--measure-prose);
   font-size: var(--text-sm);
   color: var(--color-text-soft);
@@ -299,8 +402,8 @@
   font-size: var(--text-sm);
 }
 
-.qr-retry {
-  margin-top: var(--space-1-5);
+.qr-retry,
+.qr-save {
   padding: 0;
   border: none;
   background: none;
@@ -310,6 +413,10 @@
   font-weight: var(--weight-bold);
   text-decoration: underline;
   cursor: pointer;
+}
+
+.qr-retry {
+  margin-top: var(--space-1-5);
 }
 
 .qr-saved span {
@@ -320,15 +427,6 @@
 .qr-save {
   display: inline-block;
   margin-top: var(--space-2-5);
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--color-accent);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-  text-decoration: underline;
-  cursor: pointer;
 
   &:disabled {
     cursor: progress;
@@ -472,10 +570,7 @@
 }
 
 .bank-app-progress {
-  max-inline-size: var(--measure-prose);
   color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  line-height: var(--leading-relaxed);
 }
 
 .bank-app .bank-app-second {
@@ -552,10 +647,6 @@
 }
 
 .qr-caption {
-  max-inline-size: var(--measure-prose);
   margin-inline: auto;
-  font-size: var(--text-sm);
-  color: var(--color-text-soft);
-  line-height: var(--leading-relaxed);
   text-align: center;
 }

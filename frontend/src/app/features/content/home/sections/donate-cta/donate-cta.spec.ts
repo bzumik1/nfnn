@@ -13,6 +13,7 @@ import { encodeText } from '../../../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../../../shared/ui/qr-code/qr-matrix';
 import { PaymentDetails } from '../../../../donations/payment-details-api';
 import { KEPT_PAYMENT_DETAILS } from '../../../../donations/payment-details-store';
+import { LOADING_TIMINGS } from '../../../../../shared/ui/skeleton/loading-view';
 import {
   foundationPaymentDetails,
   paymentQrCase,
@@ -20,12 +21,14 @@ import {
 import { DonateCta } from './donate-cta';
 
 const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
-const REDRAW_MS = 400;
+const REDRAW_MS = 300;
 const ANNOUNCE_MS = 1200;
 const QR_OF_500 = paymentQrCase('500 Kč without a variable symbol');
 const QR_OF_1000 = paymentQrCase('1 000 Kč without a variable symbol');
 const QR_OF_100 = paymentQrCase('100 Kč without a variable symbol');
 const QR_OF_500_FOR_JANA = paymentQrCase('500 Kč with a ten-digit variable symbol');
+const DETAILS_FAILED =
+  'Platební údaje se nepodařilo načíst. Zkuste to prosím znovu. Když to nepomůže, napište na info@nfnn.cz.';
 
 function qrOfTyped(crowns: number): QrMatrix {
   return encodeText(
@@ -41,7 +44,15 @@ describe('Given the donate section', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DonateCta],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: LOADING_TIMINGS,
+          useValue: () => ({ delayMs: REDRAW_MS, minimumMs: 400, appearMs: 300 }),
+        },
+      ],
     }).compileComponents();
     vi.useFakeTimers();
     fixture = TestBed.createComponent(DonateCta);
@@ -72,7 +83,7 @@ describe('Given the donate section', () => {
     const buttons = Array.from(
       fixture.nativeElement.querySelectorAll('button'),
     ) as HTMLButtonElement[];
-    const match = buttons.find((candidate) => candidate.textContent?.trim() === label);
+    const match = buttons.find((candidate) => spokenText(candidate) === label);
     if (!match) {
       throw new Error(`No button labelled "${label}"`);
     }
@@ -113,6 +124,18 @@ describe('Given the donate section', () => {
     );
   }
 
+  function spokenText(node: Element): string {
+    const copy = node.cloneNode(true) as Element;
+    copy.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => hidden.remove());
+    return copy.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+  }
+
+  function outsideSkeleton(selector: string): Element[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll(selector) as NodeListOf<Element>,
+    ).filter((found) => found.closest('.bank-skeleton') === null);
+  }
+
   function squashed(selector: string): string {
     return text(selector).replace(/\s+/g, ' ').trim();
   }
@@ -130,10 +153,6 @@ describe('Given the donate section', () => {
       busy: element('.qr-code').getAttribute('aria-busy'),
       old: drawnMatrixIs(QR_OF_500),
     };
-  }
-
-  function drawsMatrixInFocus(): boolean {
-    return document.activeElement === element('.qr-code') && drawnMatrixIs(QR_OF_500);
   }
 
   function isDimmed(): boolean {
@@ -182,7 +201,7 @@ describe('Given the donate section', () => {
     expect(text('.bank')).toContain('5544332217/2010');
     expect(text('.bank')).toContain('CZ26 2010 0000 0055 4433 2217');
     expect(text('.bank')).not.toContain('Variabilní symbol');
-    expect(button('500 Kč').getAttribute('aria-pressed')).toBe('true');
+    expect(button('500 Kč').getAttribute('aria-checked')).toBe('true');
   });
 
   it('when it renders, then the shared header names the gift and says in one sentence why, with no label above the title', async () => {
@@ -199,11 +218,25 @@ describe('Given the donate section', () => {
     await openWithQr();
 
     expect(stepOrder()).toEqual(['.amount', '.before-pay', '.bank', '.qr', '.next']);
-    expect(
-      Array.from(fixture.nativeElement.querySelectorAll('h3') as NodeListOf<Element>).map(
-        (heading) => heading.textContent?.trim(),
-      ),
-    ).toEqual(['Zaplaťte', 'Co bude dál']);
+  });
+
+  it('when it renders under the page title, then Zaplaťte and Co bude dál are the next heading level', async () => {
+    await openWithQr();
+
+    const headings = Array.from(
+      fixture.nativeElement.querySelectorAll('h1, h2, h3') as NodeListOf<Element>,
+    ).map((heading) => `${heading.tagName} ${heading.textContent?.trim()}`);
+    expect(headings).toEqual(['H1 Přispějte na pomůcky pro děti', 'H2 Zaplaťte', 'H2 Co bude dál']);
+  });
+
+  it('when it is placed one level deeper, then its steps are headings of that level', async () => {
+    fixture.componentRef.setInput('stepLevel', 3);
+    await openWithQr();
+
+    const steps = Array.from(
+      fixture.nativeElement.querySelectorAll('.step-title') as NodeListOf<Element>,
+    ).map((heading) => heading.tagName);
+    expect(steps).toEqual(['H3', 'H3']);
   });
 
   it('when it renders, then a grey note at the end of what comes next says what the bank passes on with the payment and links the privacy policy', async () => {
@@ -276,9 +309,9 @@ describe('Given the donate section', () => {
     await openWithQr();
 
     button('1 000 Kč').click();
-    await settle();
+    await settle(REDRAW_MS);
     button('100 Kč').click();
-    await settle();
+    await settle(REDRAW_MS);
     expect(drawnMatrixIs(QR_OF_100)).toBe(true);
     await enterCustomAmount('250');
     await settle(REDRAW_MS);
@@ -287,28 +320,58 @@ describe('Given the donate section', () => {
     expect(drawnMatrixIs(qrOfTyped(250))).toBe(true);
   });
 
-  it('when the visitor picks 1 000 Kč, then its QR payment is drawn at once in the browser, with other dots than for 500 Kč', async () => {
+  it('when the visitor picks 1 000 Kč, then the old QR dims at once and the QR payment of 1 000 Kč, with other dots than for 500 Kč, replaces it after the loading delay', async () => {
     await openWithQr();
 
     button('1 000 Kč').click();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await settle(REDRAW_MS - 1);
+    expect(isDimmed()).toBe(true);
+    expect(drawnMatrixIs(QR_OF_500)).toBe(true);
+    await settle(1);
 
     expect(QR_OF_1000.modules).not.toBe(QR_OF_500.modules);
     expect(drawnMatrixIs(QR_OF_1000)).toBe(true);
     expect(isDimmed()).toBe(false);
     expect(text('.qr-code')).not.toContain('Připravujeme QR kód');
-    expect(button('1 000 Kč').getAttribute('aria-pressed')).toBe('true');
-    expect(button('500 Kč').getAttribute('aria-pressed')).toBe('false');
+    expect(button('1 000 Kč').getAttribute('aria-checked')).toBe('true');
+    expect(button('500 Kč').getAttribute('aria-checked')).toBe('false');
 
     button('500 Kč').click();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await settle(REDRAW_MS);
 
     expect(drawnMatrixIs(QR_OF_500)).toBe(true);
   });
 
-  it('when the visitor enters another amount, then its QR payment is drawn 400 ms after the last key', async () => {
+  it('when the visitor picks another amount, then the new QR is a new image in place of the old one, so the old one never fades back in', async () => {
+    await openWithQr();
+    const first = element('app-qr-code');
+    expect(first.classList.contains('qr-image-swapped')).toBe(false);
+
+    button('1 000 Kč').click();
+    await settle(REDRAW_MS);
+
+    const second = element('app-qr-code');
+    expect(fixture.nativeElement.querySelectorAll('app-qr-code')).toHaveLength(1);
+    expect(second).not.toBe(first);
+    expect(first.isConnected).toBe(false);
+    expect(second.classList.contains('qr-image-swapped')).toBe(true);
+  });
+
+  it('when the visitor picks another amount, then Částka keeps the amount of the QR shown until the new QR replaces it', async () => {
+    await openWithQr();
+    const amountRow = () => squashed('.bank-row-amount .bank-value');
+
+    button('1 000 Kč').click();
+    await settle();
+    expect(amountRow()).toBe('500 Kč');
+    expect(drawnMatrixIs(QR_OF_500)).toBe(true);
+
+    await settle(REDRAW_MS);
+    expect(amountRow()).toBe('1 000 Kč');
+    expect(drawnMatrixIs(QR_OF_1000)).toBe(true);
+  });
+
+  it('when the visitor enters another amount, then its QR payment is drawn the loading delay after the last key', async () => {
     await openWithQr();
 
     await enterCustomAmount('250');
@@ -329,8 +392,9 @@ describe('Given the donate section', () => {
     expect(drawnMatrixIs(QR_OF_500)).toBe(true);
     expect(element('.qr-code').getAttribute('aria-busy')).toBe('true');
     expect(element<HTMLButtonElement>('.qr-save').disabled).toBe(true);
-    expect(text('.bank')).toContain('250');
+    expect(text('.bank')).not.toContain('250');
     await settle(REDRAW_MS);
+    expect(text('.bank')).toContain('250');
     expect(isDimmed()).toBe(false);
     expect(element('.qr-code').getAttribute('aria-busy')).toBe('false');
     expect(element<HTMLButtonElement>('.qr-save').disabled).toBe(false);
@@ -390,7 +454,7 @@ describe('Given the donate section', () => {
     expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
   });
 
-  it('when the visitor types an amount that is not valid yet, then the QR stays dimmed until 400 ms after the last key and only then asks for an amount', async () => {
+  it('when the visitor types an amount that is not valid yet, then the QR stays dimmed until the loading delay after the last key and only then asks for an amount', async () => {
     await openWithQr();
 
     await enterCustomAmount('0');
@@ -465,7 +529,7 @@ describe('Given the donate section', () => {
     });
 
     button('1 000 Kč').click();
-    await settle();
+    await settle(REDRAW_MS);
     expect(squashed('.qr-saved')).toBe('');
     vi.restoreAllMocks();
   });
@@ -483,8 +547,8 @@ describe('Given the donate section', () => {
     expect(qrCode()).toBeNull();
     expect(squashed('.qr-placeholder')).toBe('Nejprve zadejte částku');
     expect(squashed('.bank')).not.toContain('Částka');
-    expect(button('500 Kč').getAttribute('aria-pressed')).toBe('false');
-    expect(button('Jiná částka').getAttribute('aria-pressed')).toBe('true');
+    expect(button('500 Kč').getAttribute('aria-checked')).toBe('false');
+    expect(button('Jiná částka').getAttribute('aria-checked')).toBe('true');
   });
 
   describe('when the visitor taps Jiná částka', () => {
@@ -564,14 +628,14 @@ describe('Given the donate section', () => {
   it('when the visitor picked 1 000 Kč and the section opens again while the site stays open, then 1 000 Kč stays chosen and its QR is drawn from the details already held', async () => {
     await openWithQr();
     button('1 000 Kč').click();
-    await settle();
+    await settle(REDRAW_MS);
 
     await openAgain();
 
     http.expectNone((request) => request.url === PAYMENT_DETAILS_URL);
     expect(drawnMatrixIs(QR_OF_1000)).toBe(true);
-    expect(button('1 000 Kč').getAttribute('aria-pressed')).toBe('true');
-    expect(button('500 Kč').getAttribute('aria-pressed')).toBe('false');
+    expect(button('1 000 Kč').getAttribute('aria-checked')).toBe('true');
+    expect(button('500 Kč').getAttribute('aria-checked')).toBe('false');
   });
 
   it('when the visitor entered 300 Kč and the section opens again while the site stays open, then Jiná částka stays chosen with 300 in its field', async () => {
@@ -582,7 +646,7 @@ describe('Given the donate section', () => {
     await openAgain();
 
     expect(drawnMatrixIs(qrOfTyped(300))).toBe(true);
-    expect(button('Jiná částka').getAttribute('aria-pressed')).toBe('true');
+    expect(button('Jiná částka').getAttribute('aria-checked')).toBe('true');
     expect(element<HTMLInputElement>('#donate-custom-amount').value).toBe('300');
     expect(squashed('.bank')).toContain('300 Kč');
   });
@@ -590,13 +654,13 @@ describe('Given the donate section', () => {
   it('when the visitor left Jiná částka empty and the section opens again, then the last whole amount picked stays chosen', async () => {
     await openWithQr();
     button('100 Kč').click();
-    await settle();
+    await settle(REDRAW_MS);
     button('Jiná částka').click();
     await settle();
 
     await openAgain();
 
-    expect(button('100 Kč').getAttribute('aria-pressed')).toBe('true');
+    expect(button('100 Kč').getAttribute('aria-checked')).toBe('true');
     expect(drawnMatrixIs(QR_OF_100)).toBe(true);
   });
 
@@ -717,7 +781,7 @@ describe('Given the donate section', () => {
     fixture.detectChanges();
 
     expect(qrCode()).toBeNull();
-    expect(text('.qr-error')).toContain('QR platbu se nepodařilo připravit');
+    expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
 
     button('Zkusit znovu').click();
     await settle();
@@ -725,40 +789,117 @@ describe('Given the donate section', () => {
     respondWithDetails();
     await settle();
     expect(drawnMatrixIs(QR_OF_500)).toBe(true);
-    expect(element('.qr-error')).toBeNull();
+    expect(element('.bank [role="alert"]')).toBeNull();
   });
 
-  it('when the payment details fail to load, then a polite status says so, and only a retry the visitor started that fails again is an alert, with the focus on the QR meanwhile and on the retry after', async () => {
+  it('when the payment details fail to load, then the whole card says so as an alert, with the address to write to, and nothing invites to scan a code that is not there', async () => {
     await settle();
     http
       .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
       .flush(null, { status: 503, statusText: 'Service Unavailable' });
     await settle();
 
-    expect(element('[role="alert"]')).toBeNull();
-    expect(element('[role="status"] .qr-error')?.textContent).toContain(
-      'QR platbu se nepodařilo připravit. Zkuste to prosím znovu.',
-    );
+    expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
+    expect(element('.bank [role="alert"] a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
+    expect(element('.bank-skeleton').classList.contains('is-held')).toBe(true);
+    expect(outsideSkeleton('.qr-code')).toEqual([]);
+    expect(outsideSkeleton('.qr-title')).toEqual([]);
+    expect(element('.qr-error')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Naskenujte a přispějte');
+    expect(button('Zkusit znovu')).not.toBeNull();
+  });
+
+  it('when the visitor retries and it fails again, then the button says it loads meanwhile, keeps the focus and the failure is said again', async () => {
+    document.body.appendChild(fixture.nativeElement);
+    await settle();
+    http
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(null, { status: 503, statusText: 'Service Unavailable' });
+    await settle();
+    const firstAlert = element('.bank [role="alert"]');
+    const retry = element<HTMLButtonElement>('.bank-failure-retry');
+    retry.focus();
+
+    retry.click();
+    await settle();
+    expect(retry.getAttribute('aria-disabled')).toBe('true');
+    expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
+    expect(document.activeElement).toBe(retry);
+
+    http
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(null, { status: 503, statusText: 'Service Unavailable' });
+    await settle();
+    expect(retry.getAttribute('aria-disabled')).toBeNull();
+    expect(element('.bank [role="alert"]')).not.toBe(firstAlert);
+    expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
+    expect(document.activeElement).toBe(retry);
+    fixture.nativeElement.remove();
+  });
+
+  it('when the visitor picks another amount while the details failed, then the choice stays live, nothing loads by itself, and Zkusit znovu loads them for the new amount and says so', async () => {
+    document.body.appendChild(fixture.nativeElement);
+    await settle();
+    http
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(null, { status: 503, statusText: 'Service Unavailable' });
+    await settle();
+
+    button('1 000 Kč').click();
+    await settle(REDRAW_MS);
+    http.expectNone((request) => request.url === PAYMENT_DETAILS_URL);
+    expect(button('1 000 Kč').disabled).toBe(false);
+    expect(button('1 000 Kč').getAttribute('aria-checked')).toBe('true');
+    expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
+
     button('Zkusit znovu').focus();
-    button('Zkusit znovu').click();
-    await settle();
-    expect(document.activeElement).toBe(element('.qr-code'));
-
-    http
-      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
-      .flush(null, { status: 503, statusText: 'Service Unavailable' });
-    await settle();
-    expect(element('.qr-error[role="alert"]')?.textContent).toContain(
-      'QR platbu se nepodařilo připravit. Zkuste to prosím znovu.',
-    );
-    expect(element('[role="status"] .qr-error')).toBeNull();
-    expect(document.activeElement).toBe(button('Zkusit znovu'));
-
     button('Zkusit znovu').click();
     await settle();
     respondWithDetails();
     await settle();
-    expect(drawsMatrixInFocus()).toBe(true);
+
+    expect(drawnMatrixIs(QR_OF_1000)).toBe(true);
+    expect(announcement()).toBe('QR platba na 1 000 Kč je připravená.');
+    expect(document.activeElement).toBe(element('.bank .panel-label'));
+    fixture.nativeElement.remove();
+  });
+
+  it('when the focus was on the QR and reloading the details fails with a server error, then the focus moves to Zkusit znovu, never to the page', async () => {
+    document.body.appendChild(fixture.nativeElement);
+    await settle();
+    const details = foundationPaymentDetails();
+    respondWithDetails({ ...details, messages: { ...details.messages, donation: 'Dar*AM:1' } });
+    await settle();
+    element<HTMLButtonElement>('.qr-retry').focus();
+
+    button('Zkusit znovu').click();
+    await settle();
+    expect(document.activeElement).not.toBe(document.body);
+    http
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    await settle();
+
+    expect(document.activeElement).toBe(element('.bank-failure-retry'));
+    fixture.nativeElement.remove();
+  });
+
+  it('when the payment details are on their way, then the card stands as a skeleton of its finished rows with one status line', async () => {
+    await settle();
+
+    const skeleton = element('.bank .bank-skeleton');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton.querySelectorAll('[aria-hidden="true"] .bank-row')).toHaveLength(3);
+    expect(element('.bank').querySelectorAll('[role="status"]')).toHaveLength(1);
+    expect(squashed('.bank [role="status"]')).toBe('Připravujeme QR kód…');
+    expect(skeleton.classList.contains('is-shown')).toBe(false);
+
+    await settle(REDRAW_MS);
+    expect(skeleton.classList.contains('is-shown')).toBe(true);
+    respondWithDetails();
+    await settle(400);
+    expect(element('.bank-skeleton')).toBeNull();
+    expect(drawnMatrixIs(QR_OF_500)).toBe(true);
   });
 
   it('when the answer is not payment details, then no QR is drawn and it offers to try again instead of breaking the section', async () => {
@@ -767,7 +908,7 @@ describe('Given the donate section', () => {
     await settle();
 
     expect(qrCode()).toBeNull();
-    expect(text('.qr-error')).toContain('QR platbu se nepodařilo připravit');
+    expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
     expect(button('Zkusit znovu')).not.toBeNull();
   });
 
@@ -794,7 +935,7 @@ describe('Given the donate section', () => {
     expect(element('.qr-error')).toBeNull();
   });
 
-  it('when the visitor types keys 300 ms apart, then the old QR stays dimmed until 400 ms after the last key and is redrawn once, for the finished amount', async () => {
+  it('when the visitor types keys 200 ms apart, then the old QR stays dimmed until the loading delay after the last key and is redrawn once, for the finished amount', async () => {
     await openWithQr();
     button('Jiná částka').click();
     fixture.detectChanges();
@@ -802,7 +943,7 @@ describe('Given the donate section', () => {
     const frames: { dimmed: boolean; busy: string | null; old: boolean }[] = [];
 
     for (const typed of ['25', '250', '2500']) {
-      await settle(300);
+      await settle(REDRAW_MS - 100);
       frames.push(frame());
       await type(typed);
     }
@@ -904,9 +1045,9 @@ describe('Given the donate section', () => {
     await settle();
 
     expect(qrCode()).toBeNull();
-    expect(element('.bank-rows')).toBeNull();
+    expect(text('.bank')).not.toContain('Číslo účtu');
     expect(fixture.nativeElement.textContent).not.toContain('5544332217/2010');
-    expect(text('.qr-error')).toContain('QR platbu se nepodařilo připravit');
+    expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
     expect(button('Zkusit znovu')).not.toBeNull();
   });
 
@@ -915,7 +1056,7 @@ describe('Given the donate section', () => {
     await settle(5 * 60 * 1000);
 
     button('1 000 Kč').click();
-    await settle();
+    await settle(REDRAW_MS);
 
     const check = http.expectOne((request) => request.url === PAYMENT_DETAILS_URL);
     expect(check.request.headers.get('Cache-Control')).toBe('no-cache');

@@ -1,0 +1,74 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the payment details fail to load, then a polite status says so, and only a retry the visitor started that fails again is an alert, with the focus on the QR meanwhile and on the retry after",
+    "reason": "Both teams 12/12 on #1303 and #1314 (#1373): when the payment details fail, one alert with a mailto link and Zkusit znovu replaces the whole card over its hidden skeleton, and Zkusit znovu keeps the focus while it loads, instead of a polite status in the QR column and the focus on the QR",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor retries and it fails again, then the button says it loads meanwhile, keeps the focus and the failure is said again",
+    "contract": "docs/frontend-overview.md, Payment panel"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor enters another amount, then its QR payment is drawn 400 ms after the last key",
+    "reason": "Both teams 12/12 on #1309 and #1312 (#1373): an amount change dims the old QR at once and swaps it for the new one after --delay-loading, the theme's loading delay (300 ms), instead of drawing it at once or 400 ms after the last key; the test now names the loading delay",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor enters another amount, then its QR payment is drawn the loading delay after the last key",
+    "contract": "docs/frontend-overview.md, Payment panel"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picks 1 000 Kč, then its QR payment is drawn at once in the browser, with other dots than for 500 Kč",
+    "reason": "Both teams 12/12 on #1309 and #1312 (#1373): an amount change dims the old QR at once and swaps it for the new one after --delay-loading, the theme's loading delay (300 ms), instead of drawing it at once or 400 ms after the last key; the test now names the loading delay",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor picks 1 000 Kč, then the old QR dims at once and the QR payment of 1 000 Kč, with other dots than for 500 Kč, replaces it after the loading delay",
+    "contract": "docs/frontend-overview.md, Payment panel"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor types an amount that is not valid yet, then the QR stays dimmed until 400 ms after the last key and only then asks for an amount",
+    "reason": "Both teams 12/12 on #1309 and #1312 (#1373): an amount change dims the old QR at once and swaps it for the new one after --delay-loading, the theme's loading delay (300 ms), instead of drawing it at once or 400 ms after the last key; the test now names the loading delay",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor types an amount that is not valid yet, then the QR stays dimmed until the loading delay after the last key and only then asks for an amount",
+    "contract": "docs/frontend-overview.md, Payment panel"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor types keys 300 ms apart, then the old QR stays dimmed until 400 ms after the last key and is redrawn once, for the finished amount",
+    "reason": "Both teams 12/12 on #1309 and #1312 (#1373): an amount change dims the old QR at once and swaps it for the new one after --delay-loading, the theme's loading delay (300 ms), instead of drawing it at once or 400 ms after the last key; the test now names the loading delay",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when the visitor types keys 200 ms apart, then the old QR stays dimmed until the loading delay after the last key and is redrawn once, for the finished amount",
+    "contract": "docs/frontend-overview.md, Payment panel"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when the payment details fail to load, then the failure and its retry show without unfolding the QR",
+    "reason": "Both teams 12/12 on #1303 and #1314 (#1373): when the payment details fail, one alert with a mailto link and Zkusit znovu replaces the whole card over its hidden skeleton, and Zkusit znovu keeps the focus while it loads, instead of a polite status in the QR column and the focus on the QR",
+    "replacement": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when the payment details fail to load, then the card says only that with its retry, without the bank buttons, the other device or a QR, and the retry keeps the focus until the bank buttons are back",
+    "contract": "docs/frontend-overview.md, Payment panel"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility-keyboard.spec.ts > Given a visitor who uses only the keyboard or a screen reader > when a signed-in donor chooses an amount in Poslat dar with the keyboard, then it is pressed, the bank details follow it and Tab reaches the copy buttons before the QR",
+    "reason": "Both teams 12/12 on #1316 (#1373): the amounts are one radio group (role radio, aria-checked, arrows), so a chosen amount is checked rather than pressed; the test now says checked",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor who uses only the keyboard or a screen reader > when a signed-in donor chooses an amount in Poslat dar with the keyboard, then it is checked, the bank details follow it and Tab reaches the copy buttons before the QR",
+    "contract": "docs/frontend-overview.md, Payment panel"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > when the payment details failed and the visitor retries, then the focus waits on the bank buttons and then rests on Otevřít v aplikaci banky",
+    "reason": "Both teams 12/12 on #1303 and #1314 (#1373): when the payment details fail, one alert with a mailto link and Zkusit znovu replaces the whole card over its hidden skeleton, and Zkusit znovu keeps the focus while it loads, instead of a polite status in the QR column and the focus on the QR",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > when the payment details failed and the visitor retries, then the focus stays on Zkusit znovu and then rests on Otevřít v aplikaci banky",
+    "contract": "docs/frontend-overview.md, Payment panel"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > when the payment details failed and the visitor retries, then the focus waits on the bank buttons and then rests on Otevřít v aplikaci banky #2",
+    "reason": "Both teams 12/12 on #1303 and #1314 (#1373): when the payment details fail, one alert with a mailto link and Zkusit znovu replaces the whole card over its hidden skeleton, and Zkusit znovu keeps the focus while it loads, instead of a polite status in the QR column and the focus on the QR",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > on a phone > when the payment details failed and the visitor retries, then the focus stays on Zkusit znovu and then rests on Otevřít v aplikaci banky #2",
+    "contract": "docs/frontend-overview.md, Payment panel"
+  }
+]

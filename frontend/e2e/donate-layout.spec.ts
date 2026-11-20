@@ -138,8 +138,8 @@ test.describe('Given forced colours', () => {
     }) => {
       await page.setViewportSize({ width: 1280, height: 900 });
       await open(page);
-      const chosen = page.getByRole('button', { name: '500 Kč', pressed: true });
-      const other = page.getByRole('button', { name: '1 000 Kč', pressed: false });
+      const chosen = page.getByRole('radio', { name: '500 Kč', checked: true });
+      const other = page.getByRole('radio', { name: '1 000 Kč', checked: false });
       await expect(chosen).toBeVisible();
 
       const coloursOf = (button: typeof chosen) =>

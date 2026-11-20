@@ -17,6 +17,7 @@ export class DonateCta {
 
   readonly variableSymbol = input<string | null>(null);
   readonly donorName = input<string | null>(null);
+  readonly stepLevel = input<2 | 3>(2);
 
   register(): void {
     this.loginDialog.open('register', { confirmationReturnTo: DONATE_SECTION });

@@ -132,7 +132,7 @@ test.describe('Given the app registered its own service worker on a phone that c
       return route.abort();
     });
     await page.goto('/prispet');
-    await page.getByRole('button', { name: '1 000 Kč' }).click();
+    await page.getByRole('radio', { name: '1 000 Kč' }).click();
 
     const opened = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Otevřít v aplikaci banky' }).click();

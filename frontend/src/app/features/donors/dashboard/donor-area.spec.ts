@@ -1007,7 +1007,7 @@ describe('Given a signed-in donor in the donor area', () => {
       const thousand = [
         ...root().querySelectorAll<HTMLButtonElement>('.send-gift .amount-option'),
       ][0];
-      expect(thousand.getAttribute('aria-pressed')).toBe('true');
+      expect(thousand.getAttribute('aria-checked')).toBe('true');
       expect(texts('.send-gift .bank-value')[1]).toBe('1 000 Kč');
     });
 
@@ -1097,7 +1097,7 @@ describe('Given a signed-in donor in the donor area', () => {
       thousand.click();
       await settle();
 
-      expect(thousand.getAttribute('aria-pressed')).toBe('true');
+      expect(thousand.getAttribute('aria-checked')).toBe('true');
       expect(texts('.send-gift .bank-value')[1]).toBe('1 000 Kč');
     });
 

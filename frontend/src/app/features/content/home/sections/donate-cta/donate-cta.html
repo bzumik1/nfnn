@@ -73,9 +73,15 @@
         }
       </div>
 
-      <h3 beforeBankDetails class="step-title pay-title" i18n="@@home.donate.pay.title">
-        Zaplaťte
-      </h3>
+      @if (stepLevel() === 2) {
+        <h2 beforeBankDetails class="step-title pay-title" i18n="@@home.donate.pay.title">
+          Zaplaťte
+        </h2>
+      } @else {
+        <h3 beforeBankDetails class="step-title pay-title" i18n="@@home.donate.pay.title">
+          Zaplaťte
+        </h3>
+      }
 
       @if (!variableSymbol()) {
         <p afterBankDetails class="ui-callout ui-callout--warning bank-receipt-note">
@@ -95,7 +101,11 @@
       }
 
       <div afterPayment class="next">
-        <h3 class="step-title" i18n="@@home.donate.next.title">Co bude dál</h3>
+        @if (stepLevel() === 2) {
+          <h2 class="step-title" i18n="@@home.donate.next.title">Co bude dál</h2>
+        } @else {
+          <h3 class="step-title" i18n="@@home.donate.next.title">Co bude dál</h3>
+        }
         <ul class="next-list">
           @if (variableSymbol()) {
             <li i18n="@@home.donate.bank.noteSignedIn">

@@ -330,7 +330,7 @@ const SCREENS: Screen[] = [
     ],
     open: async (page) => {
       await openDonateSection(page);
-      await page.getByRole('button', { name: '1 000 Kč' }).click();
+      await page.getByRole('radio', { name: '1 000 Kč' }).click();
       await expect(page.locator(DONATE_BANK)).toContainText('1 000 Kč');
     },
     ready: (page) => paymentDrawn(page, [DONATE_QR, DONATE_BANK]),
@@ -344,7 +344,7 @@ const SCREENS: Screen[] = [
     ],
     open: async (page) => {
       await openDonateSection(page);
-      await page.getByRole('button', { name: 'Jiná částka' }).click();
+      await page.getByRole('radio', { name: 'Jiná částka' }).click();
       await page.locator('#donate-custom-amount').fill('1 234');
       await expect(page.locator(DONATE_BANK)).toContainText('1 234 Kč');
     },
@@ -366,21 +366,15 @@ const SCREENS: Screen[] = [
   {
     name: 'home-donate-qr-error',
     region: '#prispet',
-    elements: [element('home-donate-qr-error--qr', '#prispet .qr')],
+    elements: [element('home-donate-qr-error--qr', DONATE_BANK)],
     open: async (page) => {
       await mockDonorApi(page);
       await mockPublicContent(page);
       await failPaymentDetails(page);
       await page.goto('/prispet');
-      await expect(page.locator('#prispet .qr-error')).toBeVisible();
-      const otherDevice = page
-        .locator('#prispet')
-        .getByRole('button', { name: /Platíte z jiného zařízení\?/ });
-      if (await otherDevice.isVisible()) {
-        await otherDevice.click();
-      }
+      await expect(page.locator('#prispet .bank-failure')).toBeVisible();
     },
-    ready: (page) => elementsShown(page, ['#prispet .qr']),
+    ready: (page) => elementsShown(page, [DONATE_BANK]),
   },
   {
     name: 'donor-details-second-factor-setup',

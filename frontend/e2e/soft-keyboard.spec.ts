@@ -120,7 +120,7 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
   }) => {
     await page.goto('/prispet');
 
-    await page.getByRole('button', { name: 'Jiná částka' }).tap();
+    await page.getByRole('radio', { name: 'Jiná částka' }).tap();
 
     await expect(page.locator('#donate-custom-amount')).toBeFocused();
   });

@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test';
 import jsQR from 'jsqr';
 import { expect, test } from './fixtures';
+import { waitWhileNothingMayHappen } from './fixed-waits';
 import { openSection } from './donor-session';
 import {
   FOUNDATION_PAYMENT_DETAILS,
@@ -16,6 +17,10 @@ const PAYMENT_QR_1000_SPAYD = paymentSpayd('1 000 Kč without a variable symbol'
 const PAYMENT_DETAILS_PATH = '/api/donations/payment-details';
 const QR_NAME = 'QR platba na účet Nadačního fondu Nová naděje';
 const PHONE_LAYOUT_MAX_WIDTH = 899;
+const GAP_WITHOUT_ACTIONS = 64;
+const ONE_FRAME_MS = 17;
+const DETAILS_FAILED =
+  'Platební údaje se nepodařilo načíst. Zkuste to prosím znovu. Když to nepomůže, napište na info@nfnn.cz.';
 
 function phoneLayout(page: Page): boolean {
   return (page.viewportSize()?.width ?? 0) <= PHONE_LAYOUT_MAX_WIDTH;
@@ -51,6 +56,139 @@ async function decodedQrText(page: Page, png: Buffer): Promise<string | undefine
     ?.data;
 }
 
+interface QrSwap {
+  amountAt: number | null;
+  shownAt: number | null;
+}
+
+type QrSwapWindow = Window & { qrSwap?: QrSwap };
+
+async function watchQrSwap(page: Page, amount: string): Promise<void> {
+  await page.evaluate((expected) => {
+    const swap: QrSwap = { amountAt: null, shownAt: null };
+    (window as QrSwapWindow).qrSwap = swap;
+    const frame = (): void => {
+      const now = performance.now();
+      const shown = document
+        .querySelector('#prispet .bank-row-amount .bank-value')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim();
+      if (swap.amountAt === null && shown === expected) {
+        swap.amountAt = now;
+      }
+      const drawn = document.querySelector('#prispet app-qr-code.qr-image-swapped');
+      if (
+        drawn !== null &&
+        !drawn.classList.contains('qr-image-stale') &&
+        Number(getComputedStyle(drawn).opacity) >= 0.999
+      ) {
+        swap.shownAt = now;
+        return;
+      }
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }, amount);
+}
+
+async function qrSwap(page: Page): Promise<QrSwap> {
+  return page.evaluate(() => ({ ...(window as QrSwapWindow).qrSwap! }));
+}
+
+async function tokenMilliseconds(page: Page, token: string): Promise<number> {
+  return page.evaluate((name) => {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value.endsWith('ms') ? Number.parseFloat(value) : Number.parseFloat(value) * 1000;
+  }, token);
+}
+
+interface FoldedFailure {
+  alertAt: number;
+  focusAt: number;
+  foldedAt: number;
+  inertAtAlert: boolean;
+}
+
+async function failureAfterRefusedQr(page: Page): Promise<FoldedFailure> {
+  let answers = 0;
+  await page.route(
+    (url) => url.pathname === PAYMENT_DETAILS_PATH,
+    async (route) => {
+      answers += 1;
+      await (answers === 1
+        ? route.fulfill({
+            json: {
+              ...FOUNDATION_PAYMENT_DETAILS,
+              messages: { ...FOUNDATION_PAYMENT_DETAILS.messages, donation: 'Dar*AM:1' },
+            },
+          })
+        : route.fulfill({ status: 500, json: { title: 'Chyba serveru' } }));
+    },
+  );
+  await page.goto('/prispet');
+  const retry = page.locator('#prispet .qr-retry');
+  await expect(retry).toBeVisible();
+  await page.evaluate(() => {
+    const seen: Partial<FoldedFailure> = {};
+    (window as FoldedFailureWindow).foldedFailure = seen;
+    const frame = (): void => {
+      const now = performance.now();
+      const actions = document.querySelector<HTMLElement>('#prispet .pay-actions');
+      if (seen.alertAt === undefined && document.querySelector('#prispet .bank [role="alert"]')) {
+        seen.alertAt = now;
+        seen.inertAtAlert = actions?.hasAttribute('inert') ?? false;
+      }
+      if (
+        seen.focusAt === undefined &&
+        document.activeElement?.matches('#prispet .bank-failure-retry')
+      ) {
+        seen.focusAt = now;
+      }
+      if (
+        seen.alertAt !== undefined &&
+        seen.foldedAt === undefined &&
+        (actions === null || actions.getBoundingClientRect().height < 1)
+      ) {
+        seen.foldedAt = now;
+      }
+      if (seen.focusAt === undefined || seen.foldedAt === undefined) {
+        requestAnimationFrame(frame);
+      }
+    };
+    requestAnimationFrame(frame);
+  });
+  await retry.focus();
+  await retry.click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const seen = (window as FoldedFailureWindow).foldedFailure!;
+        return seen.focusAt !== undefined && seen.foldedAt !== undefined;
+      }),
+    )
+    .toBe(true);
+  return page.evaluate(() => (window as FoldedFailureWindow).foldedFailure as FoldedFailure);
+}
+
+type FoldedFailureWindow = Window & { foldedFailure?: Partial<FoldedFailure> };
+
+async function heldPaymentDetails(page: Page): Promise<{ fail: () => void }> {
+  let fail: () => void = () => undefined;
+  const failed = new Promise<void>((resolve) => (fail = resolve));
+  await page.route(
+    (url) => url.pathname === PAYMENT_DETAILS_PATH,
+    async (route) => {
+      await failed;
+      await route.fulfill({ status: 503, json: { title: 'Nedostupné' } });
+    },
+  );
+  return { fail };
+}
+
+async function cardHeight(page: Page): Promise<number> {
+  return (await page.locator('#prispet .bank').boundingBox())!.height;
+}
+
 async function enlargedText(page: Page, percent: number): Promise<void> {
   await page.addInitScript((scale) => {
     const style = document.createElement('style');
@@ -72,9 +210,9 @@ test.describe('Given a visitor on the Přispět page', () => {
     await expect(qrCode).toBeVisible();
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
 
-    await page.getByRole('button', { name: '1 000 Kč' }).click();
+    await page.getByRole('radio', { name: '1 000 Kč' }).click();
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_1000)).toBe(true);
-    await page.getByRole('button', { name: '500 Kč' }).click();
+    await page.getByRole('radio', { name: '500 Kč' }).click();
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
 
     expect(PAYMENT_QR_1000.modules).not.toBe(PAYMENT_QR_500.modules);
@@ -92,7 +230,7 @@ test.describe('Given a visitor on the Přispět page', () => {
     const qrCode = page.getByRole('img', { name: QR_NAME });
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
 
-    await page.getByRole('button', { name: 'Jiná částka' }).click();
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
     await page.locator('#donate-custom-amount').pressSequentially('1000');
 
     await expect(page.locator('#prispet .qr-image')).not.toHaveClass(/qr-image-stale/);
@@ -101,6 +239,105 @@ test.describe('Given a visitor on the Přispět page', () => {
       'QR platba na 1 000\u00a0Kč je připravená.',
     );
     expect(asked).toEqual([PAYMENT_DETAILS_PATH]);
+  });
+
+  test('when they choose another amount, then the page shows the new QR in full within --duration-page of Částka showing it, and that QR reads as the new payment', async ({
+    page,
+  }) => {
+    await servePaymentDetails(page, []);
+    await page.goto('/prispet');
+    await showQr(page);
+    const qrCode = page.getByRole('img', { name: QR_NAME });
+    await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500)).toBe(true);
+    const budget = await tokenMilliseconds(page, '--duration-page');
+    await watchQrSwap(page, '1 000 Kč');
+
+    await page.getByRole('radio', { name: '1 000 Kč' }).click();
+
+    await expect.poll(() => qrSwap(page).then((swap) => swap.shownAt !== null)).toBe(true);
+    const swap = await qrSwap(page);
+    expect(swap.amountAt).not.toBeNull();
+    expect(swap.shownAt! - swap.amountAt!).toBeLessThanOrEqual(budget);
+    expect(await drawnModulesMatch(qrCode, PAYMENT_QR_1000)).toBe(true);
+    const picture = await page
+      .locator('#prispet app-qr-code')
+      .screenshot({ animations: 'disabled', scale: 'css' });
+    expect(await decodedQrText(page, picture)).toBe(PAYMENT_QR_1000_SPAYD);
+  });
+
+  test('when the payment details fail, then the card says so with the address to write to, and an amount chosen meanwhile loads nothing until Zkusit znovu, which says the QR is ready', async ({
+    page,
+  }) => {
+    test.skip(
+      phoneLayout(page),
+      'The phone keeps the QR folded; its failure is covered on a phone below',
+    );
+    const asked: string[] = [];
+    await page.route(
+      (url) => url.pathname === PAYMENT_DETAILS_PATH,
+      async (route) => {
+        asked.push(route.request().url());
+        await (asked.length === 1
+          ? route.fulfill({ status: 503, json: { title: 'Nedostupné' } })
+          : route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS }));
+      },
+    );
+    await page.goto('/prispet');
+    const alert = page.locator('#prispet .bank').getByRole('alert');
+    await expect(alert).toHaveText(DETAILS_FAILED);
+    await expect(alert.getByRole('link', { name: 'info@nfnn.cz' })).toHaveAttribute(
+      'href',
+      'mailto:info@nfnn.cz',
+    );
+    await expect(page.locator('#prispet app-qr-code')).toHaveCount(0);
+    await expect(page.locator('#prispet .qr-code')).toBeHidden();
+    await expect(page.locator('#prispet')).not.toContainText('Naskenujte a přispějte');
+    const failedHeight = await cardHeight(page);
+
+    await page.getByRole('radio', { name: '1 000 Kč' }).click();
+    await expect(page.getByRole('radio', { name: '1 000 Kč' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await waitWhileNothingMayHappen(page, 1000);
+    expect(asked).toHaveLength(1);
+
+    await page.locator('#prispet').getByRole('button', { name: 'Zkusit znovu' }).click();
+
+    await expect(page.locator('#prispet .qr-announcement')).toHaveText(
+      'QR platba na 1 000\u00a0Kč je připravená.',
+    );
+    await expect(page.locator('#prispet .bank-row-amount .bank-value')).toHaveText('1 000\u00a0Kč');
+    expect(Math.abs((await cardHeight(page)) - failedHeight)).toBeLessThanOrEqual(1);
+  });
+
+  test('when the payment details come slowly, then the card stands as its skeleton at the size of the finished card', async ({
+    page,
+  }) => {
+    test.skip(
+      phoneLayout(page),
+      'On a phone the IBAN wraps by its own length, which the skeleton cannot know before the details come',
+    );
+    let release: () => void = () => undefined;
+    const answer = new Promise<void>((resolve) => (release = resolve));
+    await page.route(
+      (url) => url.pathname === PAYMENT_DETAILS_PATH,
+      async (route) => {
+        await answer;
+        await route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS });
+      },
+    );
+    await page.goto('/prispet');
+    await expect(page.locator('#prispet .bank-skeleton.is-shown')).toBeVisible();
+    await expect(page.locator('#prispet .bank').getByRole('status')).toHaveText(
+      'Připravujeme QR kód…',
+    );
+    const loadingHeight = await cardHeight(page);
+
+    release();
+
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    expect(Math.abs((await cardHeight(page)) - loadingHeight)).toBeLessThanOrEqual(1);
   });
 
   test('when they save the QR code, then a PNG image of it downloads', async ({ page }) => {
@@ -133,7 +370,7 @@ test.describe('Given a visitor on the Přispět page', () => {
     await servePaymentDetails(page, []);
     await page.goto('/prispet');
     await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
-    await page.getByRole('button', { name: 'Jiná částka' }).focus();
+    await page.getByRole('radio', { name: 'Jiná částka' }).focus();
 
     const expected = phoneLayout(page)
       ? [
@@ -178,7 +415,7 @@ test.describe('Given a visitor on the Přispět page', () => {
   }) => {
     await servePaymentDetails(page, []);
     await page.goto('/prispet');
-    await page.getByRole('button', { name: 'Jiná částka' }).click();
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
     await page.getByLabel('Vlastní částka v korunách').fill('300');
     await expect(page.locator('#prispet .bank')).toContainText('300 Kč');
 
@@ -189,8 +426,8 @@ test.describe('Given a visitor on the Přispět page', () => {
     await expect(page).toHaveURL(/zasady-ochrany-osobnich-udaju/);
     await openSection(page, 'Přispět');
 
-    await expect(page.getByRole('button', { name: 'Jiná částka' })).toHaveAttribute(
-      'aria-pressed',
+    await expect(page.getByRole('radio', { name: 'Jiná částka' })).toHaveAttribute(
+      'aria-checked',
       'true',
     );
     await expect(page.getByLabel('Vlastní částka v korunách')).toHaveValue('300');
@@ -223,7 +460,51 @@ test.describe('Given a visitor on the Přispět page', () => {
       expect(bankTop).toBeLessThan(qrTop);
     });
 
-    test('when the payment details failed and the visitor retries, then the focus waits on the bank buttons and then rests on Otevřít v aplikaci banky', async ({
+    test('when the payment details fail, then the card says only that at the height it had while loading, with no bank buttons, other device or QR left under it', async ({
+      page,
+    }) => {
+      const answer = await heldPaymentDetails(page);
+      await page.goto('/prispet');
+      const card = page.locator('#prispet .bank');
+      await expect(card.locator('.bank-skeleton')).toBeAttached();
+      const loadingHeight = await cardHeight(page);
+
+      answer.fail();
+
+      await expect(card.getByRole('alert')).toHaveText(DETAILS_FAILED);
+      expect(Math.abs((await cardHeight(page)) - loadingHeight)).toBeLessThanOrEqual(1);
+      await expect(page.locator('#prispet .pay-actions')).toHaveAttribute('inert', '');
+      await expect(page.locator('#prispet .bank-app')).toBeHidden();
+      await expect(page.locator('#prispet .other-device')).toBeHidden();
+      await expect(page.locator('#prispet .qr')).toBeHidden();
+    });
+
+    test('when the payment details fail after the code could not be made, then the bank actions are inert at once, the alert and the focus on Zkusit znovu come before they fold away, and Co bude dál then follows the note without a gap', async ({
+      page,
+    }) => {
+      const failure = await failureAfterRefusedQr(page);
+
+      expect(failure.inertAtAlert).toBe(true);
+      expect(failure.alertAt).toBeLessThan(failure.foldedAt);
+      expect(failure.focusAt).toBeLessThan(failure.foldedAt);
+      await expect(page.locator('#prispet .pay-actions')).toBeHidden();
+      const note = (await page.locator('#prispet .bank-receipt-note').boundingBox())!;
+      const next = (await page.locator('#prispet .next').boundingBox())!;
+      expect(next.y - (note.y + note.height)).toBeLessThan(GAP_WITHOUT_ACTIONS);
+    });
+
+    test('when the payment details fail with reduced motion, then the bank actions are gone in the frame the alert comes', async ({
+      page,
+    }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+
+      const failure = await failureAfterRefusedQr(page);
+
+      expect(failure.inertAtAlert).toBe(true);
+      expect(failure.foldedAt - failure.alertAt).toBeLessThanOrEqual(ONE_FRAME_MS * 2);
+    });
+
+    test('when the payment details failed and the visitor retries, then the focus stays on Zkusit znovu and then rests on Otevřít v aplikaci banky', async ({
       page,
     }) => {
       let answers = 0;
@@ -252,7 +533,7 @@ test.describe('Given a visitor on the Přispět page', () => {
       });
       await servePaymentDetails(page, []);
       await page.goto('/prispet');
-      await page.getByRole('button', { name: '1 000 Kč' }).click();
+      await page.getByRole('radio', { name: '1 000 Kč' }).click();
 
       const download = page.waitForEvent('download');
       await page.getByRole('button', { name: 'Otevřít v aplikaci banky' }).click();
@@ -400,7 +681,7 @@ test.describe('Given a visitor on the Přispět page', () => {
         const bank = page.locator('#prispet .bank');
         await expect(bank).toContainText('5544332217/2010');
 
-        await page.getByRole('button', { name: 'Jiná částka' }).click();
+        await page.getByRole('radio', { name: 'Jiná částka' }).click();
         await expect(page.locator('#donate-custom-amount')).toHaveValue('');
         await showQr(page);
         await expect(page.locator('#prispet .qr-placeholder')).toHaveText('Nejprve zadejte částku');
