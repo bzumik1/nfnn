@@ -883,7 +883,7 @@ describe('Given the sign-in and security card of the details page', () => {
 
       http.expectNone('/api/donors/me/password');
       expect(card.element('#account-new-password-error').textContent).toContain(
-        'Heslo musí mít alespoň 12 znaků.',
+        'Heslo musí mít alespoň 12\u00a0znaků.',
       );
     });
 

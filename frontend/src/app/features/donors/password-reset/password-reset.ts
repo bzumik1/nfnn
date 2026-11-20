@@ -72,7 +72,7 @@ export class PasswordReset {
   protected readonly passwordHint = $localize`:@@donor.passwordReset.form.hint:Alespoň 12 znaků. Klidně celá věta, která se vám dobře pamatuje.`;
   protected readonly passwordMessages = {
     required: $localize`:@@donor.form.newPassword.required:Zvolte si prosím heslo.`,
-    minlength: $localize`:@@donor.form.newPassword.tooShort:Heslo musí mít alespoň 12 znaků.`,
+    minlength: $localize`:@@donor.form.newPassword.tooShort:Heslo musí mít alespoň 12\u00a0znaků.`,
   };
   protected readonly nameMaxLength = PASSKEY_NAME_MAX_LENGTH;
   protected readonly nameHint = $localize`:@@donor.passkeys.name.hint:Podle názvu klíč později poznáte, třeba „iPhone“ nebo „Pracovní notebook“.`;
@@ -81,7 +81,7 @@ export class PasswordReset {
   };
   protected readonly codeHint = $localize`:@@donor.passwordReset.passkey.codeHint:Účet má zapnuté dvoufaktorové ověření, opište proto šest číslic z ověřovací aplikace.`;
   protected readonly codeMessages = {
-    required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
+    required: $localize`:@@donor.form.code.required:Opište prosím kód z\u00a0aplikace.`,
     pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
   };
   protected readonly passkeysSupported = this.authenticator.supported();

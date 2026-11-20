@@ -35,7 +35,7 @@ import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-co
 import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 
 const CODE_MESSAGES: FieldMessages = {
-  required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
+  required: $localize`:@@donor.form.code.required:Opište prosím kód z\u00a0aplikace.`,
   pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
 };
 

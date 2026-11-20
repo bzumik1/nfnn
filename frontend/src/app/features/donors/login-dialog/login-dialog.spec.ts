@@ -28,6 +28,8 @@ import {
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
 import { drawsText } from '../../../shared/ui/qr-code/testing/branded-qr';
 import { FakeDialogHistory } from '../../../shared/ui/dialog/testing/fake-dialog-history';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { LoginDialog } from './login-dialog';
 import { Connectivity, PROBE_PATH } from '../../../core/connectivity/connectivity';
 import { CompactLayout } from '../../../core/layout/compact-layout';
@@ -174,7 +176,7 @@ describe('Given the sign-in dialog', () => {
           (tab as HTMLElement).textContent?.trim(),
         ),
       ).toEqual(['Přihlášení', 'Registrace']);
-      expect(element('.login-form button[type="submit"]').textContent?.trim()).toBe('Přihlásit se');
+      expect(accessibleText(element('.login-form button[type="submit"]'))).toBe('Přihlásit se');
     });
 
     it('then the e-mail field is labelled E-mail with an ordinary hyphen, so a screen reader says the word as written', () => {
@@ -1175,7 +1177,7 @@ describe('Given the sign-in dialog', () => {
     it('then the consent stands before the button, which says it creates the account', () => {
       const send = element('.register-form button[type="submit"]');
 
-      expect(send.textContent?.trim()).toBe('Vytvořit účet');
+      expect(accessibleText(send)).toBe('Vytvořit účet');
       expect(element('.consent').compareDocumentPosition(send)).toBe(
         Node.DOCUMENT_POSITION_FOLLOWING,
       );
@@ -1521,7 +1523,7 @@ describe('Given the sign-in dialog', () => {
 
       http.expectNone('/api/donors/auth/register');
       expect(element('#register-password-error').textContent).toContain(
-        'Heslo musí mít alespoň 12 znaků.',
+        'Heslo musí mít alespoň 12\u00a0znaků.',
       );
       expect(element('#register-password').getAttribute('aria-describedby')).toBe(
         'register-password-hint register-password-error',
@@ -1763,21 +1765,25 @@ describe('Given the sign-in dialog', () => {
   });
 
   describe('when the visitor sends a form and the answer is on its way', () => {
-    function busyLabel(selector: string): string {
-      return element(selector).textContent?.trim() ?? '';
+    function expectBusy(selector: string, idle: string, busy: string): void {
+      const button = element<HTMLButtonElement>(selector);
+      expect(labelFaces(button)).toEqual([idle, busy]);
+      expect(accessibleText(button)).toBe(busy);
+      expect(button.hasAttribute('aria-busy')).toBe(false);
     }
 
-    it('then signing in says Přihlašujeme…', async () => {
+    it('then signing in is locked and says Přihlašujeme…, keeping Přihlásit se for its width', async () => {
       await render();
       await fillIn('#login-email', 'jana@example.cz');
       await fillIn('#login-password', 'correct horse battery');
       await submit('.login-form');
 
-      expect(busyLabel('.login-form .ui-button--primary')).toBe('Přihlašujeme…');
+      expect(element<HTMLButtonElement>('.login-form .ui-button--primary').disabled).toBe(true);
+      expectBusy('.login-form .ui-button--primary', 'Přihlásit se', 'Přihlašujeme…');
       http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
     });
 
-    it('then the code from the app says Ověřujeme kód…', async () => {
+    it('then the code from the app is locked and says Ověřujeme kód…, keeping Přihlásit se for its width', async () => {
       await render();
       await fillIn('#login-email', 'jana@example.cz');
       await fillIn('#login-password', 'correct horse battery');
@@ -1789,11 +1795,12 @@ describe('Given the sign-in dialog', () => {
       await fillIn('#login-code', '287082');
       await submit('.code-form');
 
-      expect(busyLabel('.code-form .ui-button--primary')).toBe('Ověřujeme kód…');
+      expect(element<HTMLButtonElement>('.code-form .ui-button--primary').disabled).toBe(true);
+      expectBusy('.code-form .ui-button--primary', 'Přihlásit se', 'Ověřujeme kód…');
       http.expectOne('/api/donors/auth/login/second-factor').flush(authResponse('token-1'));
     });
 
-    it('then the registration says Vytváříme účet… and sending the link again says Odesíláme…, with the link valid 24 hours on one line', async () => {
+    it('then the registration is locked and says Vytváříme účet… and sending the link again says Odesíláme…, with the link valid 24 hours on one line', async () => {
       await render('register');
       await fillIn('#register-name', 'Jana Nováková');
       await fillIn('#register-street', 'Dlouhá 12');
@@ -1803,30 +1810,64 @@ describe('Given the sign-in dialog', () => {
       await fillIn('#register-password', 'correct horse battery');
       await submit('.register-form');
 
-      expect(busyLabel('.register-form .ui-button--primary')).toBe('Vytváříme účet…');
+      expect(element<HTMLButtonElement>('.register-form .ui-button--primary').disabled).toBe(true);
+      expectBusy('.register-form .ui-button--primary', 'Vytvořit účet', 'Vytváříme účet…');
       http
         .expectOne('/api/donors/auth/register')
         .flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
-      expect(element('.reset-success [role="status"]').textContent).toContain('24 hodin');
+      expect(element('.reset-success [role="status"]').textContent).toContain('24\u00a0hodin');
 
       await click('.registration-resend');
 
-      expect(busyLabel('.registration-resend')).toBe('Odesíláme…');
+      expect(element<HTMLButtonElement>('.registration-resend').disabled).toBe(true);
+      expectBusy('.registration-resend', 'Poslat odkaz znovu', 'Odesíláme…');
       http
         .expectOne('/api/donors/auth/email-verification/request')
         .flush(null, { status: 202, statusText: 'Accepted' });
     });
 
-    it('then asking for a reset link says Odesíláme…', async () => {
+    it('then asking for a reset link is locked and says Odesíláme…, keeping Odeslat odkaz for its width', async () => {
       await render('reset');
       await fillIn('#reset-email', 'jana@example.cz');
       await submit('.reset-form');
 
-      expect(busyLabel('.reset-form .ui-button--primary')).toBe('Odesíláme…');
+      expect(element<HTMLButtonElement>('.reset-form .ui-button--primary').disabled).toBe(true);
+      expectBusy('.reset-form .ui-button--primary', 'Odeslat odkaz', 'Odesíláme…');
       http
         .expectOne('/api/donors/auth/password-reset/request')
         .flush(null, { status: 202, statusText: 'Accepted' });
+    });
+
+    it('then asking for the reset link again is locked and says Odesíláme…, keeping Poslat znovu for its width', async () => {
+      await render('reset');
+      await fillIn('#reset-email', 'jana@example.cz');
+      await submit('.reset-form');
+      http
+        .expectOne('/api/donors/auth/password-reset/request')
+        .flush(null, { status: 202, statusText: 'Accepted' });
+      await settle();
+
+      await click('.reset-resend');
+
+      expect(element<HTMLButtonElement>('.reset-resend').disabled).toBe(true);
+      expectBusy('.reset-resend', 'Poslat znovu', 'Odesíláme…');
+      http
+        .expectOne('/api/donors/auth/password-reset/request')
+        .flush(null, { status: 202, statusText: 'Accepted' });
+    });
+
+    it('then trying the connection again while offline is locked and says Zkoušíme se připojit…, keeping Zkusit znovu for its width', async () => {
+      TestBed.inject(Connectivity);
+      window.dispatchEvent(new Event('offline'));
+      http.expectOne(PROBE_PATH).error(new ProgressEvent('error'), { status: 0 });
+      await render();
+
+      await click('.offline-entry-try-again');
+
+      expect(element('.offline-entry-try-again').getAttribute('aria-disabled')).toBe('true');
+      expectBusy('.offline-entry-try-again', 'Zkusit znovu', 'Zkoušíme se připojit…');
+      http.expectOne(PROBE_PATH).error(new ProgressEvent('error'), { status: 0 });
     });
   });
 

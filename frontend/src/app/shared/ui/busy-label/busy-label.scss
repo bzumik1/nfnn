@@ -11,15 +11,14 @@
 
 .busy-label__face {
   grid-area: 1 / 1;
-  block-size: 0;
-  overflow-wrap: anywhere;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: break-word;
   opacity: 0;
   transition-property: none;
 }
 
 .busy-label__face--shown {
-  block-size: auto;
-  overflow-wrap: normal;
   opacity: 1;
   @include motion.state(opacity);
 }

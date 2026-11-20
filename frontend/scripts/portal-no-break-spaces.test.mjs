@@ -6,17 +6,8 @@ import { describe, it } from 'node:test';
 const APP = new URL('../src/app/', import.meta.url).pathname;
 const PORTAL = ['features/donors/dashboard', 'layout/account-sheet'];
 
-const SHARED_BEYOND_THE_PORTAL =
-  'its id also names the same text in the sign-in dialog, password reset or connecting an app, which #1292 leaves as they are';
-
 const NOT_CHECKED = {
   'donor.bankAccounts.hint.warningPrefix': 'visually hidden prefix of a hint',
-  'donor.form.code.required': SHARED_BEYOND_THE_PORTAL,
-  'donor.form.newPassword.tooShort': SHARED_BEYOND_THE_PORTAL,
-  'donor.login.name': SHARED_BEYOND_THE_PORTAL,
-  'donor.login.secondFactor.code': SHARED_BEYOND_THE_PORTAL,
-  'donor.register.companyStreet': SHARED_BEYOND_THE_PORTAL,
-  'donor.register.street': SHARED_BEYOND_THE_PORTAL,
 };
 
 const BREAKS = [
@@ -27,6 +18,7 @@ const BREAKS = [
       /(?:^|[^\d.,:])\d+[ \t\r\n]+(?=(?:Kč|%|znak|dn[ií]|den\b|hodin|sekund|minut|zaříz|číslic|platb|plateb|týd|měsíc)[^\s]*)/,
   },
   { rule: 'IČO and its number', pattern: /IČO[ \t\r\n]+(?=\d)/ },
+  { rule: 'dash and the word before it', pattern: /\p{L}{2,}[ \t\r\n]+(?=–)/u },
 ];
 
 function decode(text) {
@@ -77,7 +69,7 @@ export function localizedTexts(source) {
 
 export function breaksIn(text) {
   return BREAKS.flatMap(({ rule, pattern }) =>
-    [...text.matchAll(new RegExp(pattern.source, 'g'))].map(
+    [...text.matchAll(new RegExp(pattern.source, `${pattern.flags}g`))].map(
       ({ index }) =>
         `${rule}: …${text.slice(Math.max(0, index - 20), index + 30).replace(/\s+/g, ' ')}…`,
     ),
@@ -101,7 +93,7 @@ function portalFindings() {
 }
 
 describe('Given the texts the donor portal shows', () => {
-  it('when they are read, then no line breaks after a one-letter word, inside 1 Kč, IČO or a number with its unit', () => {
+  it('when they are read, then no line breaks after a one-letter word, before a dash, inside 1 Kč, IČO or a number with its unit', () => {
     assert.deepEqual(portalFindings(), []);
   });
 
@@ -129,6 +121,14 @@ describe('Given the texts the donor portal shows', () => {
     const texts = shownTexts('<app-form-field label="Kód z aplikace" i18n-label="@@donor.x">');
 
     assert.equal(texts.flatMap(breaksIn).length, 1);
+  });
+
+  it('when a word stands before a dash with an ordinary space, then it is reported, and with a no-break space it is not', () => {
+    const [broken] = shownTexts('<p i18n="@@donor.x">Sídlo – ulice</p>');
+    const [kept] = shownTexts('<p i18n="@@donor.x">Sídlo&nbsp;– ulice</p>');
+
+    assert.equal(breaksIn(broken).length, 1);
+    assert.deepEqual(breaksIn(kept), []);
   });
 
   it('when a localized text has an ordinary space inside 1 Kč or after a count, then both are reported', () => {
