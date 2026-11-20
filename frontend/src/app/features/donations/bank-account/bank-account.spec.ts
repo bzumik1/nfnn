@@ -97,3 +97,25 @@ describe('Given an account shown in the administration', () => {
     expect(host(render('CZ6508000000192000145399')).querySelector('app-bank-logo')).toBeNull();
   });
 });
+
+describe('Given a Czech account with a prefix, as long as an account number gets', () => {
+  it('when it renders, then the number keeps its digits together and may break only before the bank code', () => {
+    const element = host(render('000019-2000145399/0800'));
+
+    const groups = element.querySelectorAll('.ui-figures.ui-figures--groups > span');
+    expect([...groups].map((group) => group.textContent)).toEqual(['000019-2000145399/', '0800']);
+    expect(element.querySelector('.ui-figures')?.textContent?.trim()).toBe(
+      '000019-2000145399/0800',
+    );
+  });
+});
+
+describe('Given an account that is not a Czech account number', () => {
+  it('when it renders, then the whole number stays one group', () => {
+    const fixture = render('CZ6508000000192000145399');
+    http.expectNone(BANK_CODES_URL);
+
+    const groups = host(fixture).querySelectorAll('.ui-figures--groups > span');
+    expect([...groups].map((group) => group.textContent)).toEqual(['CZ6508000000192000145399']);
+  });
+});

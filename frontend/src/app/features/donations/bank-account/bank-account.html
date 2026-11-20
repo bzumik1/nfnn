@@ -3,7 +3,11 @@
     @if (czech()) {
       <app-bank-logo class="logo" [account]="account()" [size]="24" />
     }
-    <span class="ui-figures">{{ account() }}</span>
+    <span class="ui-figures ui-figures--groups">
+      @for (group of groups(); track $index) {
+        <span>{{ group }}</span>
+      }
+    </span>
   </span>
   @if (bank(); as bank) {
     &ngsp;<span class="bank ui-separated__item"

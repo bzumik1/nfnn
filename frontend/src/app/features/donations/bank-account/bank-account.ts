@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
 import { BankLogo } from '../bank-logo/bank-logo';
 import { BankNames } from '../bank-names';
-import { bankCodeOf } from '../czech-account';
+import { bankCodeOf, splitBeforeBankCode } from '../czech-account';
 
 @Component({
   selector: 'app-bank-account',
@@ -14,6 +14,10 @@ export class BankAccount {
   private readonly bankNames = inject(BankNames);
   readonly account = input.required<string>();
   protected readonly czech = computed(() => bankCodeOf(this.account()) !== null);
+  protected readonly groups = computed(() => {
+    const { head, bankCode } = splitBeforeBankCode(this.account());
+    return bankCode === '' ? [head] : [head, bankCode];
+  });
   protected readonly bank = computed(() => this.bankNames.nameOf(this.account()));
 
   constructor() {
