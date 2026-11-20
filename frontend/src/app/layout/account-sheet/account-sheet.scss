@@ -115,6 +115,7 @@
 
 .account-name {
   overflow: hidden;
+  overflow-wrap: normal;
   font-size: var(--text-sheet-body);
   font-weight: var(--weight-semibold);
   text-overflow: ellipsis;
