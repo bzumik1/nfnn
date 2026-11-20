@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/backups/admin-backups.spec.ts > Given an administrator on the backups page > when a problem and a failed run carry technical details, then each opens as a disclosure under an aria-hidden chevron",
+    "replacement": "src/app/features/admin/backups/admin-backups.spec.ts > Given an administrator on the backups page > when a problem and a failed run carry technical details, then the card has one disclosure, at the failed run, under an aria-hidden chevron",
+    "reason": "#1575 (independent graphic audit, round R102): the backups card keeps one „Technické podrobnosti“ disclosure, at the failed run; the problem box no longer has its own, so the test that expected one disclosure per item now expects the single one",
+    "contract": "docs/frontend-overview.md, administration backups"
+  }
+]

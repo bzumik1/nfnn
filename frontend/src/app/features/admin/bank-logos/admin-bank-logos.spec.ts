@@ -191,6 +191,18 @@ describe('Given an administrator on the bank logos page', () => {
     }
   });
 
+  it('when the list arrives, then no row action is filled and only adding a logo for another bank is the primary action', async () => {
+    await listed();
+
+    const primary = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        '.ui-button--primary',
+      ),
+    ).map((candidate) => accessibleText(candidate));
+    expect(primary).toEqual(['Přidat a stáhnout']);
+    expect(button(row('0800'), 'Uložit a stáhnout').classList).toContain('ui-button--small');
+  });
+
   it('when the session has ended, then the administrator is sent home to sign in', async () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     const ended = problem(401, 'auth/unauthenticated', 'Přihlaste se', '');

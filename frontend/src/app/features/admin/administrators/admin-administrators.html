@@ -38,7 +38,7 @@
       }
       @case ('ready') {
         <div class="ui-card__body">
-          <ul class="ui-person-list">
+          <ul class="ui-person-list administrators-list">
             @for (item of items(); track item.donorId) {
               <li class="ui-person-row administrator-row">
                 <app-avatar
@@ -47,7 +47,7 @@
                   [src]="portraitOf(item)"
                   [size]="48"
                 />
-                <div>
+                <div class="administrator-text">
                   <p class="ui-person-row__name">
                     <a class="admin-name" [routerLink]="['/sprava/darci', item.donorId]">{{
                       item.name

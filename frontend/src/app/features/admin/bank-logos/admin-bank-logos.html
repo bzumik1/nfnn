@@ -75,7 +75,7 @@
                   }
                   <form
                     #rowForm="ngForm"
-                    class="ui-person-row__detail bank-form"
+                    class="bank-form"
                     appFocusFirstInvalid
                     (ngSubmit)="save(item, rowForm)"
                     novalidate
@@ -109,7 +109,7 @@
                       <button
                         appNeedsConnection
                         type="submit"
-                        class="ui-button ui-button--small ui-button--primary"
+                        class="ui-button ui-button--small"
                         [disabled]="busy() !== null"
                         [attr.aria-busy]="isBusy(item.code, 'save')"
                         [attr.aria-describedby]="titleId(item.code)"

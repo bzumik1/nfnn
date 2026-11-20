@@ -338,3 +338,65 @@ test.describe('Given an administrator on Zálohy on a computer', () => {
     });
   }
 });
+
+const TEXT_COLUMN_MINIMUM_EM = 12;
+
+interface AdministratorRowLayout {
+  readonly textColumnEm: number;
+  readonly emailLines: number;
+  readonly badgeOverButton: boolean;
+}
+
+async function administratorRows(page: Page): Promise<AdministratorRowLayout[]> {
+  return page.locator('.administrator-row').evaluateAll((rows) =>
+    rows.map((row) => {
+      const text = row.querySelector('.administrator-text') as HTMLElement;
+      const email = row.querySelector('.ui-person-row__meta') as HTMLElement;
+      const linesOf = (element: Element) => {
+        const range = element.ownerDocument.createRange();
+        range.selectNodeContents(element);
+        return new Set(Array.from(range.getClientRects(), (box) => Math.round(box.bottom))).size;
+      };
+      const overlaps = (a: DOMRect, b: DOMRect) =>
+        a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      const badges = Array.from(row.querySelectorAll('.ui-badge')).map((badge) =>
+        badge.getBoundingClientRect(),
+      );
+      const buttons = Array.from(row.querySelectorAll('button')).map((button) =>
+        button.getBoundingClientRect(),
+      );
+      return {
+        textColumnEm:
+          text.getBoundingClientRect().width / parseFloat(getComputedStyle(text).fontSize),
+        emailLines: linesOf(email),
+        badgeOverButton: badges.some((badge) => buttons.some((button) => overlaps(badge, button))),
+      };
+    }),
+  );
+}
+
+test.describe('Given an administrator on Správci on a narrow computer', () => {
+  for (const [width, percent] of [
+    [900, 100],
+    [1000, 200],
+  ] as const) {
+    test(`when the page opens at ${width} px with ${percent} % text, then the text column keeps its minimum width and no badge lies over a button`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: HEIGHT });
+      await openUnlocked(page, '/sprava/spravci');
+      if (percent !== 100) {
+        await textSize(page, percent);
+      }
+      await expect(page.getByRole('button', { name: 'Odebrat roli správce' })).toBeVisible();
+
+      const rows = await administratorRows(page);
+      expect(rows.length).toBeGreaterThan(1);
+      for (const row of rows) {
+        expect(row.textColumnEm).toBeGreaterThanOrEqual(TEXT_COLUMN_MINIMUM_EM);
+        expect(row.emailLines).toBe(1);
+        expect(row.badgeOverButton).toBe(false);
+      }
+    });
+  }
+});

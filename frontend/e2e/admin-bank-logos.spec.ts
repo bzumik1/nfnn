@@ -128,6 +128,37 @@ test.describe('Given an administrator on the bank logos page', () => {
     ]);
   });
   for (const width of [390, 1280]) {
+    test(`when the logos open ${width} px wide, then each row starts its name, its field and its buttons on one edge`, async ({
+      page,
+    }) => {
+      await page.route(
+        (url) => url.pathname === LOGOS,
+        (route) => route.fulfill({ json: { items: [csas, fio] } }),
+      );
+      await page.setViewportSize({ width, height: 900 });
+
+      await page.goto('/sprava/loga-bank');
+      await expect(page.locator('.bank-row')).toHaveCount(2);
+
+      const edges = await page.locator('.bank-row').evaluateAll((rows) =>
+        rows.map((row) => {
+          const left = (selector: string) =>
+            (row.querySelector(selector) as HTMLElement).getBoundingClientRect().left;
+          return {
+            name: left('.bank-title'),
+            field: left('input'),
+            buttons: left('.bank-actions'),
+          };
+        }),
+      );
+      for (const edge of edges) {
+        expect(edge.field).toBeCloseTo(edge.name, 0);
+        expect(edge.buttons).toBeCloseTo(edge.name, 0);
+      }
+    });
+  }
+
+  for (const width of [390, 1280]) {
     test(`when a bank's last download failed ${width} px wide, then its mark centres on the code and state lines, not on the failure`, async ({
       page,
     }) => {

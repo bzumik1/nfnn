@@ -423,6 +423,49 @@ describe('Given an administrator on the alerts page', () => {
     expect(alerts()).toContain('Toto přihlášení nemá zařízení. Odhlaste se a přihlaste znovu.');
   });
 
+  describe('when two other devices of one service were turned on the same day', () => {
+    beforeEach(async () => {
+      withPushApi();
+      await open(
+        adminPush({
+          subscriptions: [
+            pushSubscription({
+              id: 'push-phone',
+              service: 'apple',
+              current: false,
+              createdAt: '2026-10-20T08:05:00Z',
+            }),
+            pushSubscription({
+              id: 'push-tablet',
+              service: 'apple',
+              current: false,
+              createdAt: '2026-10-20T14:30:00Z',
+            }),
+            pushSubscription({
+              id: 'push-laptop',
+              service: 'apple',
+              current: false,
+              createdAt: '2026-10-22T09:00:00Z',
+            }),
+            pushSubscription(),
+          ],
+        }),
+      );
+    });
+
+    it('then their rows tell them apart by the time and a device alone on its day keeps the date', () => {
+      const titles = Array.from(
+        section('Další zařízení').querySelectorAll('.ui-list__title') as NodeListOf<HTMLElement>,
+      ).map((title) => (title.textContent ?? '').trim());
+
+      expect(titles).toEqual([
+        'Apple, zapnuto 20.\u00a010. 2026 10:05',
+        'Apple, zapnuto 20.\u00a010. 2026 16:30',
+        'Apple, zapnuto 22.\u00a010. 2026',
+      ]);
+    });
+  });
+
   describe('when this device is subscribed and another one too', () => {
     beforeEach(async () => {
       withPushApi();
@@ -513,7 +556,7 @@ describe('Given an administrator on the alerts page', () => {
       expect(sectionText('Další zařízení')).toContain('Apple, zapnuto 30. 10. 2026');
       expect(sectionText('Další zařízení')).toContain('Zatím nic nedoručeno.');
       expect(sectionText('Další zařízení')).toContain('Nedoručeno 3× po sobě.');
-      expect(sectionText('Další zařízení')).toContain('2 ze 3');
+      expect(text('.others .ui-list__value')).toBe('2 ze 3 upozornění');
       expect(switches(section('Další zařízení'))).toEqual([]);
     });
 
