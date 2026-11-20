@@ -282,34 +282,29 @@ export async function boldReservesApartFromTheirLabel(page: Page): Promise<strin
   });
 }
 
-export async function oneLetterGroupsPastTheEdges(page: Page): Promise<string[]> {
+export async function oneLetterGroupsPastTheirLine(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const past: string[] = [];
-    const scrollsSideways = (element: Element) => {
-      for (let parent: Element | null = element; parent; parent = parent.parentElement) {
-        if (['MAIN', 'BODY', 'HTML'].includes(parent.tagName) || parent.querySelector('h1')) {
-          return false;
-        }
-        const overflow = getComputedStyle(parent).overflowX;
-        if (['auto', 'scroll'].includes(overflow) && parent.scrollWidth > parent.clientWidth) {
-          return true;
-        }
-      }
-      return false;
-    };
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       const text = node.textContent ?? '';
-      const holder = node.parentElement;
+      let holder = node.parentElement;
+      while (holder && ['inline', 'contents'].includes(getComputedStyle(holder).display)) {
+        holder = holder.parentElement;
+      }
       if (
         !text.includes('\u00a0') ||
         !holder ||
         holder.closest('.visually-hidden, [hidden], [inert], [aria-hidden="true"]') ||
-        getComputedStyle(holder).visibility === 'hidden' ||
-        scrollsSideways(holder)
+        getComputedStyle(holder).visibility === 'hidden'
       ) {
         continue;
       }
+      const style = getComputedStyle(holder);
+      const edges = holder.getBoundingClientRect();
+      const start = edges.left + holder.clientLeft + parseFloat(style.paddingLeft);
+      const end =
+        edges.left + holder.clientLeft + holder.clientWidth - parseFloat(style.paddingRight);
       for (const group of text.matchAll(
         /(?<=^|[\s(„“‚])[ksvzouaiKSVZOUAI](?:\u00a0[ksvzouaiKSVZOUAI])*\u00a0[^\s\u00a0]+/gu,
       )) {
@@ -317,9 +312,9 @@ export async function oneLetterGroupsPastTheEdges(page: Page): Promise<string[]>
         range.setStart(node, group.index);
         range.setEnd(node, group.index + group[0].length);
         for (const box of range.getClientRects()) {
-          if (box.width > 0 && (box.left < -0.5 || box.right > window.innerWidth + 0.5)) {
+          if (box.width > 0 && (box.left < start - 0.5 || box.right > end + 0.5)) {
             past.push(
-              `"${group[0]}" in ${holder.tagName.toLowerCase()}.${holder.className} reaches ${Math.round(box.left)}..${Math.round(box.right)} px`,
+              `"${group[0]}" in ${holder.tagName.toLowerCase()}.${holder.className} reaches ${Math.round(box.left)}..${Math.round(box.right)} px, its line ${Math.round(start)}..${Math.round(end)} px`,
             );
             break;
           }
