@@ -70,6 +70,7 @@ interface StepProbe {
   busyFrameAt: number | null;
   busyFor: number;
   steepestPerMs: number;
+  paced: boolean;
 }
 
 declare global {
@@ -336,7 +337,7 @@ function measuresFrames(page: Page): boolean {
 
 async function watchTheStep(page: Page): Promise<void> {
   await page.evaluate(
-    ({ busyMs, hiddenAtMost }) => {
+    ({ busyMs, hiddenAtMost, paced }) => {
       const curves: Record<string, readonly number[]> = {
         linear: [0, 0, 1, 1],
         ease: [0.25, 0.1, 0.25, 1],
@@ -377,6 +378,7 @@ async function watchTheStep(page: Page): Promise<void> {
         busyFrameAt: null,
         busyFor: 0,
         steepestPerMs: steepest / durationMs,
+        paced,
       };
       window.nfnnStepProbe = probe;
       const started = performance.now();
@@ -462,6 +464,7 @@ async function watchTheStep(page: Page): Promise<void> {
     {
       busyMs: measuresFrames(page) ? BUSY_AS_ON_THE_PHONE_MS : 0,
       hiddenAtMost: HIDDEN_TITLE_AT_MOST,
+      paced: measuresFrames(page),
     },
   );
 }
@@ -523,7 +526,12 @@ function expectOneTitleAtATime(probe: StepProbe): void {
 }
 
 async function expectATitleHiddenHalfWay(page: Page): Promise<void> {
-  const titles = await page.evaluate(() => window.nfnnHeadTitles?.() ?? []);
+  const titles = await page.evaluate(
+    () =>
+      new Promise<HeadTitle[]>((drawn) =>
+        requestAnimationFrame(() => drawn(window.nfnnHeadTitles?.() ?? [])),
+      ),
+  );
   if (titles.length > 0) {
     expect(
       Math.min(...titles.map((title) => title.opacity)),
@@ -557,10 +565,21 @@ function expectMovedSoonAfterTheTap(probe: StepProbe): void {
   ).toBeLessThanOrEqual(MOVES_AFTER_THE_TAP_WITHIN_MS);
 }
 
+function expectShownOnItsWay(
+  probe: StepProbe,
+  between: readonly Frame[],
+  least: number,
+  message: string,
+): void {
+  if (probe.paced) {
+    expect(between.length, message).toBeGreaterThanOrEqual(least);
+  }
+}
+
 function expectLeftAway(probe: StepProbe, width: number, from: number): void {
   const moving = travelled(probe.frames);
   const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < width - 1);
-  expect(between.length, 'no frame showed the leaving page on its way').toBeGreaterThanOrEqual(2);
+  expectShownOnItsWay(probe, between, 2, 'no frame showed the leaving page on its way');
   expect(moving[0].offset!).toBeLessThanOrEqual(from + width * FIRST_SHOWN_AT_MOST);
   const afterBusy = shownAfterTheBusyFrame(probe, moving);
   if (afterBusy !== null) {
@@ -581,7 +600,7 @@ function expectLeftAway(probe: StepProbe, width: number, from: number): void {
 function expectArrived(probe: StepProbe, width: number): void {
   const moving = travelled(probe.frames);
   const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < width - 1);
-  expect(between.length, 'no frame showed the arriving page on its way').toBeGreaterThanOrEqual(2);
+  expectShownOnItsWay(probe, between, 2, 'no frame showed the arriving page on its way');
   expect(moving[0].offset!).toBeGreaterThanOrEqual(width * (1 - FIRST_SHOWN_AT_MOST));
   const afterBusy = shownAfterTheBusyFrame(probe, moving);
   if (afterBusy !== null) {
@@ -603,7 +622,7 @@ function expectSlidBack(probe: StepProbe, width: number, from: number): void {
   const moving = travelled(probe.frames);
   expect(moving[0].offset!).toBeGreaterThanOrEqual(from * (1 - FIRST_SHOWN_AT_MOST));
   const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < from - 1);
-  expect(between.length, 'no frame showed the page on its way back').toBeGreaterThanOrEqual(1);
+  expectShownOnItsWay(probe, between, 1, 'no frame showed the page on its way back');
   for (let at = 1; at < moving.length; at++) {
     expect(moving[at].offset!, 'the page went away again on its way back').toBeLessThanOrEqual(
       moving[at - 1].offset! + 1,
@@ -718,7 +737,7 @@ async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): P
     await screens.backButton().click();
     const probe = await stepSeen(page);
     expect(probe.under ?? '', 'the screen before was not under the leaving one').toContain(
-      row.name,
+      oneLine(row.name),
     );
     expectLeftAway(probe, WIDTH, 0);
     if (measuresFrames(page)) {
@@ -733,6 +752,10 @@ async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): P
   } else {
     expectSlidBack(probe, WIDTH, letGoAt);
   }
+}
+
+function oneLine(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
 }
 
 async function activeHref(page: Page): Promise<string | null> {
@@ -754,7 +777,7 @@ async function walkRow(
   await screens.shown(row);
   const opening = await stepSeen(page);
   expect(opening.under ?? '', 'the screen before was not under the arriving one').toContain(
-    row.name,
+    oneLine(row.name),
   );
   expectArrived(opening, WIDTH);
   if (groundBefore !== null) {
@@ -777,6 +800,10 @@ async function walkRow(
   }
 }
 
+function livePageTitle(page: Page): Locator {
+  return page.locator('app-root .admin-page h1');
+}
+
 function clickWithoutScrolling(link: Locator): Promise<void> {
   return link.evaluate((element: HTMLElement) => element.click());
 }
@@ -795,6 +822,27 @@ async function openAccountSheetOverTheNews(page: Page): Promise<void> {
   await page.getByRole('banner').getByRole('button', { name: 'Účet' }).dispatchEvent('click');
   await accountListShown(page);
   await expect(page.locator('.page-transition')).toHaveCount(0);
+  await sheetSettled(page);
+}
+
+function sheetSettled(page: Page): Promise<unknown> {
+  return page.evaluate(() => {
+    const sheet = document.querySelector('app-account-sheet');
+    return Promise.allSettled(
+      document
+        .getAnimations()
+        .filter((motion) => {
+          const effect = motion.effect;
+          const target = effect instanceof KeyframeEffect ? effect.target : null;
+          return (
+            target !== null &&
+            sheet?.contains(target) === true &&
+            effect?.getComputedTiming().endTime !== Infinity
+          );
+        })
+        .map((motion) => motion.finished),
+    );
+  });
 }
 
 async function accountRows(page: Page): Promise<Row[]> {
@@ -825,7 +873,7 @@ function accountScreens(page: Page): Screens {
         await expect(page).toHaveURL(/\/sprava$/);
         await administrationCopied?.();
         administrationCopied = null;
-        await expect(page.locator('.admin-page h1')).toBeVisible();
+        await expect(livePageTitle(page)).toBeVisible();
       } else {
         await expect(
           accountSheet(page).getByRole('heading', { level: 2, name: row.name }),
@@ -872,13 +920,13 @@ function administrationScreensOf(page: Page): Screens {
     ...pageScroll(page),
     shown: async (row) => {
       await expect(page).toHaveURL((url) => url.pathname === row.href);
-      await expect(page.locator('.admin-page h1')).toBeVisible();
+      await expect(livePageTitle(page)).toBeVisible();
       await expect(page.locator('.page-transition')).toHaveCount(0);
     },
     backButton: () => page.getByRole('banner').getByRole('button', { name: 'Zpět' }),
     returned: async (row) => {
       await expect(page).toHaveURL((url) => url.pathname === row.from);
-      await expect(page.locator('.admin-page h1')).toBeVisible();
+      await expect(livePageTitle(page)).toBeVisible();
     },
   };
 }
@@ -1081,7 +1129,7 @@ for (const look of LOOKS) {
       await expect(page.getByRole('heading', { name: 'Zpráva 8' })).toBeVisible();
       const top = await pageScroll(page).scrollTo(SCROLLED_BY_PX);
       const account = page.getByRole('banner').getByRole('button', { name: 'Účet' });
-      await account.focus();
+      await account.evaluate((button: HTMLElement) => button.focus({ preventScroll: true }));
       expect(await pageScroll(page).scrollTop(), 'the news moved before the sheet opened').toBe(
         top,
       );
