@@ -102,7 +102,7 @@ export class ConnectApp {
     () => this.usesCode() && !(this.passkeySupported && this.hasPasskey() && !this.codeChosen()),
   );
   protected code = '';
-  protected readonly codeHint = $localize`:@@donor.connect.consent.codeHint:Počkejte, až aplikace ukáže nový kód (mění se každých 30 sekund), a opište ho.`;
+  protected readonly codeHint = $localize`:@@donor.connect.consent.codeHint:Počkejte, až aplikace ukáže nový kód (mění se každých 30\u00a0sekund), a\u00a0opište ho.`;
   protected readonly codeMessages = {
     required: $localize`:@@donor.form.code.required:Opište prosím kód z\u00a0aplikace.`,
     pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
@@ -160,7 +160,7 @@ export class ConnectApp {
         if (failure instanceof PasskeyCeremonyError) {
           this.error.set(
             failure.reason === 'unsupported'
-              ? $localize`:@@donor.connect.consent.passkeyUnsupported:Tento prohlížeč přístupové klíče nepodporuje. Připojení povolte v prohlížeči, ve kterém se klíčem přihlašujete.`
+              ? $localize`:@@donor.connect.consent.passkeyUnsupported:Tento prohlížeč přístupové klíče nepodporuje. Připojení povolte v\u00a0prohlížeči, ve kterém se klíčem přihlašujete.`
               : $localize`:@@donor.connect.consent.passkeyCancelled:Zařízení připojení nepotvrdilo. Zkuste to prosím znovu.`,
           );
           return;

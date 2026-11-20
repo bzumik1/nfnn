@@ -150,7 +150,7 @@ export class AdminAdministrators {
             kind: 'status',
             text: added.secondFactorEnabled
               ? $localize`:@@admin.administrators.grant.doneWithFactor:${added.name}:name: je teď správce. Správa se mu otevře po dalším přihlášení.`
-              : $localize`:@@admin.administrators.grant.done:${added.name}:name: je teď správce. Správa se mu otevře, až se přihlásí s kódem z ověřovací aplikace nebo přístupovým klíčem.`,
+              : $localize`:@@admin.administrators.grant.done:${added.name}:name: je teď správce. Správa se mu otevře, až se přihlásí s\u00a0kódem z\u00a0ověřovací aplikace nebo přístupovým klíčem.`,
           });
           this.changes.changed(false);
           this.load();
@@ -186,7 +186,7 @@ export class AdminAdministrators {
   }
 
   protected revokeQuestion(item: AdministratorResponse): string {
-    return $localize`:@@admin.administrators.revoke.confirm.question:${item.name}:name: přestane být správcem a všechna jeho přihlášení skončí. Jeho dárcovský účet zůstane. Odebrat roli správce?`;
+    return $localize`:@@admin.administrators.revoke.confirm.question:${item.name}:name: přestane být správcem a\u00a0všechna jeho přihlášení skončí. Jeho dárcovský účet zůstane. Odebrat roli správce?`;
   }
 
   protected revokeLabel(item: AdministratorResponse): string {
@@ -209,7 +209,7 @@ export class AdminAdministrators {
   protected reset(item: AdministratorResponse): void {
     this.run(
       this.api.resetSecondFactor(item.donorId),
-      $localize`:@@admin.administrators.reset.done:Dvoufaktorové ověření u ${item.name}:name: je vypnuté a všechna jeho přihlášení jsme ukončili. Poslali jsme mu e-mail; po přihlášení heslem si ho může zapnout znovu.`,
+      $localize`:@@admin.administrators.reset.done:Dvoufaktorové ověření u\u00a0${item.name}:name: je vypnuté a\u00a0všechna jeho přihlášení jsme ukončili. Poslali jsme mu e-mail; po přihlášení heslem si ho může zapnout znovu.`,
       $localize`:@@admin.administrators.reset.failed:Dvoufaktorové ověření se nepodařilo vypnout. Zkuste to prosím znovu.`,
     );
   }

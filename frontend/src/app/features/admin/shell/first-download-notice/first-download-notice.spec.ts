@@ -11,6 +11,7 @@ import {
   FIRST_DOWNLOAD_STORED_MS,
   FirstDownloadNotice,
 } from './first-download-notice';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 describe('Given the line about the first saving of the administration on this device', () => {
   let fixture: ComponentFixture<FirstDownloadNotice>;
@@ -66,11 +67,15 @@ describe('Given the line about the first saving of the administration on this de
   }
 
   function said(): string {
-    return clean(region()?.querySelector('app-fold:not([inert]) .first-download')?.textContent);
+    return clean(
+      withOrdinarySpaces(
+        region()?.querySelector('app-fold:not([inert]) .first-download')?.textContent,
+      ),
+    );
   }
 
   function kept(): string {
-    return clean(fold()?.querySelector('.first-download')?.textContent);
+    return clean(withOrdinarySpaces(fold()?.querySelector('.first-download')?.textContent));
   }
 
   function retryButton(): HTMLButtonElement {
@@ -78,7 +83,7 @@ describe('Given the line about the first saving of the administration on this de
   }
 
   function heard(): string {
-    return clean(live()?.textContent);
+    return clean(withOrdinarySpaces(live()?.textContent));
   }
 
   function after(ms: number): void {

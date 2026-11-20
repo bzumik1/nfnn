@@ -19,6 +19,7 @@ import {
 import { ExternalNavigation } from '../../../core/navigation/external-navigation';
 import { ConnectApp } from './connect-app';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 
 const CLIENT_ID = 'https://claude.ai/.well-known/oauth-client';
@@ -141,8 +142,10 @@ describe('Given an application sent the browser to the connection page', () => {
     beforeEach(() => configure(QUERY));
 
     it('then the page asks for an administrator sign-in and opens the dialog without leaving the page', () => {
-      expect(element('h1').textContent).toContain('Aplikace žádá o přístup ke správě');
-      expect(element('.ui-panel__lead').textContent).toContain('účtem správce');
+      expect(withOrdinarySpaces(element('h1').textContent)).toContain(
+        'Aplikace žádá o přístup ke správě',
+      );
+      expect(withOrdinarySpaces(element('.ui-panel__lead').textContent)).toContain('účtem správce');
       http.expectNone(CLIENT_URL);
 
       element<HTMLButtonElement>('.ui-button--primary').click();
@@ -162,26 +165,30 @@ describe('Given an application sent the browser to the connection page', () => {
       http.expectOne(CLIENT_URL).flush(CLAUDE);
       await settle();
 
-      expect(element('h1').textContent).toContain('Povolit přístup ke správě aplikaci claude.ai?');
-      expect(element('.client-host').textContent).toBe('claude.ai');
-      expect(element('.ui-panel__lead').textContent).toContain('„Claude“');
-      expect(element('.ui-panel__lead').textContent).toContain('Jana Nováková');
+      const shown = (text: string | null | undefined) => withOrdinarySpaces(text)?.trim();
+      const textOf = (selector: string) => shown(withOrdinarySpaces(element(selector).textContent));
+      expect(textOf('h1')).toContain('Povolit přístup ke správě aplikaci claude.ai?');
+      expect(textOf('.client-host')).toBe('claude.ai');
+      expect(textOf('.ui-panel__lead')).toContain('„Claude“');
+      expect(textOf('.ui-panel__lead')).toContain('Jana Nováková');
       const bullets = (selector: string) =>
-        Array.from(root().querySelectorAll(selector)).map((li) => li.textContent?.trim());
+        Array.from(root().querySelectorAll(selector)).map((li) =>
+          shown(withOrdinarySpaces(li.textContent)),
+        );
       expect(bullets('.scopes li')).toContain('vidět dárce, jejich dary a platby z banky');
       expect(bullets('.scopes li')).toContain('vidět stav záloh a provozní záznamy webu');
       const writeOption = element<HTMLInputElement>('#connect-app-write');
       expect(writeOption.checked).toBe(false);
-      expect(element('label[for="connect-app-write"]').textContent?.trim()).toBe('Povolit i změny');
+      expect(textOf('label[for="connect-app-write"]')).toBe('Povolit i změny');
       expect(bullets('.write-scopes li')).toContain('nastavit a odeslat měsíční report');
       expect(writeOption.getAttribute('aria-describedby')).toBe(
         'connect-app-write-scopes connect-app-write-hint',
       );
-      expect(element('.scope-hint').textContent).toContain('jen čtení');
-      expect(element('.never').textContent).toContain('Nikdy nebude smět');
-      expect(element('.never').textContent).not.toContain('nic mazat');
-      expect(element('.never').textContent).not.toContain('podpis na potvrzeních');
-      expect(element('.never').textContent).toContain('mazat aktuality, projekty, dárce');
+      expect(textOf('.scope-hint')).toContain('jen čtení');
+      expect(textOf('.never')).toContain('Nikdy nebude smět');
+      expect(textOf('.never')).not.toContain('nic mazat');
+      expect(textOf('.never')).not.toContain('podpis na potvrzeních');
+      expect(textOf('.never')).toContain('mazat aktuality, projekty, dárce');
       expect(bullets('.write-scopes li')).toContain('vystavit dárci první potvrzení o daru');
       expect(bullets('.write-scopes li')).toContain(
         'upravit lidi fondu, jejich podpis včetně podpisu na potvrzeních, a lidi i odebrat',
@@ -189,7 +196,9 @@ describe('Given an application sent the browser to the connection page', () => {
       expect(bullets('.write-scopes li')).toContain(
         'měnit nastavení webu kromě tajných údajů, adresy webu, pošty a příjemců reportu',
       );
-      expect(root().textContent).toContain('v části „Údaje a zabezpečení“ → „Připojené aplikace“;');
+      expect(shown(withOrdinarySpaces(root().textContent))).toContain(
+        'v části „Údaje a zabezpečení“ → „Připojené aplikace“;',
+      );
       expect(document.activeElement).toBe(element('h1'));
     });
   });
@@ -202,21 +211,23 @@ describe('Given an application sent the browser to the connection page', () => {
     });
 
     it('then the consent asks for a fresh code even though the session was opened with one', () => {
-      expect(element('label[for="connect-app-code"]').textContent).toContain('Kód z aplikace');
-      expect(element('.confirm-note').textContent?.trim()).toBe(
+      expect(withOrdinarySpaces(element('label[for="connect-app-code"]').textContent)).toContain(
+        'Kód z aplikace',
+      );
+      expect(withOrdinarySpaces(element('.confirm-note').textContent)?.trim()).toBe(
         'Povolení potvrďte kódem z ověřovací aplikace.',
       );
-      expect(element('#connect-app-code-hint').textContent).toContain(
+      expect(withOrdinarySpaces(element('#connect-app-code-hint').textContent)).toContain(
         'Počkejte, až aplikace ukáže nový kód',
       );
-      expect(root().textContent).not.toContain('Povolit přístupovým klíčem');
+      expect(withOrdinarySpaces(root().textContent)).not.toContain('Povolit přístupovým klíčem');
     });
 
     it('and allows without the code, then the field asks for it and nothing is sent', async () => {
       await clickButton('Povolit');
 
       expect(element('#connect-app-code').getAttribute('aria-invalid')).toBe('true');
-      expect(root().textContent).toContain('Opište prosím kód z\u00a0aplikace.');
+      expect(withOrdinarySpaces(root().textContent)).toContain('Opište prosím kód z aplikace.');
       expect(document.activeElement).toBe(element('#connect-app-code'));
       http.expectNone('/api/donors/oauth/authorize');
     });
@@ -250,7 +261,7 @@ describe('Given an application sent the browser to the connection page', () => {
       expect(navigation.assigned).toEqual([
         `${REDIRECT}?code=abc&state=xyz&iss=http%3A%2F%2Flocalhost%3A4200`,
       ]);
-      expect(element('h1').textContent).toContain('Vracíme vás do aplikace');
+      expect(withOrdinarySpaces(element('h1').textContent)).toContain('Vracíme vás do aplikace');
     });
 
     it('and ticks the changes before allowing, then both permissions go to the API', async () => {
@@ -299,13 +310,15 @@ describe('Given an application sent the browser to the connection page', () => {
         );
       await settle();
 
-      expect(element('h1').textContent).toContain('Povolit přístup ke správě aplikaci');
-      expect(element('[role="alert"]').textContent).toContain('Nesprávný kód');
+      expect(withOrdinarySpaces(element('h1').textContent)).toContain(
+        'Povolit přístup ke správě aplikaci',
+      );
+      expect(withOrdinarySpaces(element('[role="alert"]').textContent)).toContain('Nesprávný kód');
       const field = element<HTMLInputElement>('#connect-app-code');
       expect(field.value).toBe('123456');
       expect(document.activeElement).toBe(field);
       expect([field.selectionStart, field.selectionEnd]).toEqual([0, 6]);
-      expect(root().textContent).not.toContain('Opište');
+      expect(withOrdinarySpaces(root().textContent)).not.toContain('Opište');
       expect(navigation.assigned).toEqual([]);
     });
 
@@ -324,8 +337,12 @@ describe('Given an application sent the browser to the connection page', () => {
         );
       await settle();
 
-      expect(element('h1').textContent).toContain('Aplikaci se nepodařilo připojit');
-      expect(element('[role="alert"]').textContent).toContain('Neplatná žádost o připojení');
+      expect(withOrdinarySpaces(element('h1').textContent)).toContain(
+        'Aplikaci se nepodařilo připojit',
+      );
+      expect(withOrdinarySpaces(element('[role="alert"]').textContent)).toContain(
+        'Neplatná žádost o připojení',
+      );
       expect(navigation.assigned).toEqual([]);
     });
   });
@@ -368,7 +385,9 @@ describe('Given an application sent the browser to the connection page', () => {
       await settle();
 
       http.expectNone('/api/donors/oauth/authorize');
-      expect(element('[role="alert"]').textContent).toContain('Zařízení připojení nepotvrdilo');
+      expect(withOrdinarySpaces(element('[role="alert"]').textContent)).toContain(
+        'Zařízení připojení nepotvrdilo',
+      );
       expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
     });
   });
@@ -389,7 +408,9 @@ describe('Given an application sent the browser to the connection page', () => {
 
       expect(store.signedIn()).toBe(false);
       expect(dialog.isOpen()).toBe(true);
-      expect(element('h1').textContent).toContain('Aplikace žádá o přístup ke správě');
+      expect(withOrdinarySpaces(element('h1').textContent)).toContain(
+        'Aplikace žádá o přístup ke správě',
+      );
 
       store.login('jana@example.cz', 'correct horse battery').subscribe();
       http
@@ -399,14 +420,20 @@ describe('Given an application sent the browser to the connection page', () => {
       http.expectOne(CLIENT_URL).flush(CLAUDE);
       await settle();
 
-      expect(element('h1').textContent).toContain('Povolit přístup ke správě aplikaci claude.ai?');
+      expect(withOrdinarySpaces(element('h1').textContent)).toContain(
+        'Povolit přístup ke správě aplikaci claude.ai?',
+      );
     });
 
     it('then the page explains that only an administrator can connect and offers to decline', async () => {
-      expect(element('h1').textContent).toContain('Připojit aplikaci může jen správce');
-      expect(element('.ui-panel__lead').textContent).toContain('claude.ai');
-      expect(root().textContent).not.toContain('Povolit');
-      expect(element('.ui-button--primary').textContent).toContain('Přihlásit se jiným účtem');
+      expect(withOrdinarySpaces(element('h1').textContent)).toContain(
+        'Připojit aplikaci může jen správce',
+      );
+      expect(withOrdinarySpaces(element('.ui-panel__lead').textContent)).toContain('claude.ai');
+      expect(withOrdinarySpaces(root().textContent)).not.toContain('Povolit');
+      expect(withOrdinarySpaces(element('.ui-button--primary').textContent)).toContain(
+        'Přihlásit se jiným účtem',
+      );
 
       await clickButton('Odmítnout');
       const denying = button('Odmítám…');
@@ -436,14 +463,20 @@ describe('Given an application sent the browser to the connection page', () => {
         );
       await settle();
 
-      expect(element('h1').textContent).toContain('Aplikaci se nepodařilo připojit');
-      expect(element('[role="alert"]').textContent).toContain('Aplikaci nelze ověřit');
+      expect(withOrdinarySpaces(element('h1').textContent)).toContain(
+        'Aplikaci se nepodařilo připojit',
+      );
+      expect(withOrdinarySpaces(element('[role="alert"]').textContent)).toContain(
+        'Aplikaci nelze ověřit',
+      );
 
       await clickButton('Zkusit znovu');
       http.expectOne(CLIENT_URL).flush(CLAUDE);
       await settle();
 
-      expect(element('h1').textContent).toContain('Povolit přístup ke správě aplikaci');
+      expect(withOrdinarySpaces(element('h1').textContent)).toContain(
+        'Povolit přístup ke správě aplikaci',
+      );
     });
 
     it('then an administrator with the code and a browser with passkeys but no passkey of their own confirms with the code', async () => {
@@ -466,7 +499,7 @@ describe('Given an application sent the browser to the connection page', () => {
       await settle();
 
       expect(element('#connect-app-code')).toBeNull();
-      expect(element('.confirm-note').textContent?.trim()).toBe(
+      expect(withOrdinarySpaces(element('.confirm-note').textContent)?.trim()).toBe(
         'Povolení potvrďte svým přístupovým klíčem, i když jste se jím už přihlásili.',
       );
       const labels = Array.from(root().querySelectorAll('form button')).map((button) =>
@@ -520,7 +553,9 @@ describe('Given an application sent the browser to the connection page', () => {
       await settle();
 
       expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(true);
-      expect(element('[role="alert"]').textContent).toContain('oprávnění, které web nenabízí');
+      expect(withOrdinarySpaces(element('[role="alert"]').textContent)).toContain(
+        'oprávnění, které web nenabízí',
+      );
       expect(
         element<HTMLButtonElement>('.ui-button--block:not(.ui-button--primary)').disabled,
       ).toBe(false);
@@ -540,7 +575,9 @@ describe('Given an application sent the browser to the connection page', () => {
         .flush({ host: 'claude.ai', name: 'Claude Code', loopback: true });
       await settle();
 
-      expect(element('.ui-panel__lead').textContent).toContain('Běží na tomto počítači');
+      expect(withOrdinarySpaces(element('.ui-panel__lead').textContent)).toContain(
+        'Běží na tomto počítači',
+      );
     });
   });
 
@@ -548,7 +585,9 @@ describe('Given an application sent the browser to the connection page', () => {
     it('then the page says the request is incomplete and asks nothing of the server', async () => {
       await configure({ client_id: CLIENT_ID });
 
-      expect(element('h1').textContent).toContain('Žádost o připojení je neúplná');
+      expect(withOrdinarySpaces(element('h1').textContent)).toContain(
+        'Žádost o připojení je neúplná',
+      );
       http.expectNone((request) => request.url.startsWith('/api/donors/oauth'));
       expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
     });

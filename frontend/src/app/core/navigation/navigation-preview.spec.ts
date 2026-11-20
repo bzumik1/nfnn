@@ -10,6 +10,7 @@ import { NavigationPreview } from './navigation-preview';
 import { PreviewingReuse } from './previewing-reuse';
 import { PageFocus } from './page-focus';
 import { TabMemory } from './tab-memory';
+import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
 const created: string[] = [];
 const destroyed: string[] = [];
@@ -59,14 +60,17 @@ describe('Given the administration opened straight from the home screen, whose Z
   });
 
   it('when the landing page is previewed, then it is drawn for the look taken of it while the administration stays the same live page at its address', async () => {
-    const seen = await preview.visit('/', () => document.querySelector('h1')?.textContent ?? '');
+    const seen = await preview.visit(
+      '/',
+      () => withOrdinarySpaces(document.querySelector('h1')?.textContent) ?? '',
+    );
     harness.detectChanges();
 
     expect(seen).toBe('/');
     expect(router.url).toBe('/sprava');
     expect(created).toEqual(['/sprava', '/']);
     expect(destroyed).toEqual([]);
-    expect(harness.routeNativeElement?.textContent).toContain('/sprava');
+    expect(withOrdinarySpaces(harness.routeNativeElement?.textContent)).toContain('/sprava');
   });
 
   it('when the swipe then goes back to the landing page, then the page drawn for the preview is the one shown, not a new one', async () => {
@@ -126,7 +130,7 @@ describe('Given the administration opened straight from the home screen, whose Z
     harness.detectChanges();
 
     expect(router.url).toBe('/aktuality');
-    expect(harness.routeNativeElement?.textContent).toContain('/aktuality');
+    expect(withOrdinarySpaces(harness.routeNativeElement?.textContent)).toContain('/aktuality');
     expect(destroyed).toContain('/sprava');
     expect(preview.active()).toBe(false);
   });

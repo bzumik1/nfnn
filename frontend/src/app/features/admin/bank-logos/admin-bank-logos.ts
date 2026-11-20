@@ -64,11 +64,11 @@ const SOURCE_CONTROL = 'sourceUrl';
 const CODE_CONTROL = 'code';
 
 const FAILURE_WORDS: Readonly<Record<BankLogoFailure, string>> = {
-  status: $localize`:@@admin.bankLogos.failure.status:server s obrázkem odpověděl chybou`,
+  status: $localize`:@@admin.bankLogos.failure.status:server s\u00a0obrázkem odpověděl chybou`,
   redirected: $localize`:@@admin.bankLogos.failure.redirected:adresa přesměrovává jinam`,
-  timeout: $localize`:@@admin.bankLogos.failure.timeout:server neodpověděl do 10 sekund`,
+  timeout: $localize`:@@admin.bankLogos.failure.timeout:server neodpověděl do 10\u00a0sekund`,
   unreachable: $localize`:@@admin.bankLogos.failure.unreachable:se serverem se nepodařilo spojit`,
-  'unknown-host': $localize`:@@admin.bankLogos.failure.unknownHost:server s tímto názvem neexistuje`,
+  'unknown-host': $localize`:@@admin.bankLogos.failure.unknownHost:server s\u00a0tímto názvem neexistuje`,
   'non-public-address': $localize`:@@admin.bankLogos.failure.nonPublicAddress:adresa vede do neveřejné sítě`,
   'too-large': $localize`:@@admin.bankLogos.failure.tooLarge:soubor je větší než 1 MB`,
   'unsupported-type': $localize`:@@admin.bankLogos.failure.unsupportedType:na adrese není obrázek PNG ani JPEG`,
@@ -137,8 +137,8 @@ export class AdminBankLogos {
   protected readonly codePattern = '[0-9]{4}';
   protected readonly sourceMessages = {
     required: $localize`:@@admin.bankLogos.source.required:Vyplňte prosím adresu loga.`,
-    pattern: $localize`:@@admin.bankLogos.source.pattern:Adresa musí začínat https:// a nesmí obsahovat mezery.`,
-    maxlength: $localize`:@@admin.bankLogos.source.maxlength:Adresa může mít nejvýš 500 znaků.`,
+    pattern: $localize`:@@admin.bankLogos.source.pattern:Adresa musí začínat https:// a\u00a0nesmí obsahovat mezery.`,
+    maxlength: $localize`:@@admin.bankLogos.source.maxlength:Adresa může mít nejvýš 500\u00a0znaků.`,
   };
   protected readonly codeMessages = {
     required: $localize`:@@admin.bankLogos.code.required:Vyplňte prosím kód banky.`,
@@ -268,7 +268,7 @@ export class AdminBankLogos {
     if (this.items().some((item) => item.code === code)) {
       const control = form.controls[CODE_CONTROL];
       control?.setErrors({
-        server: $localize`:@@admin.bankLogos.add.exists:Banka ${code}:code: už logo má. Adresu změňte v jejím řádku výše.`,
+        server: $localize`:@@admin.bankLogos.add.exists:Banka ${code}:code: už logo má. Adresu změňte v\u00a0jejím řádku výše.`,
       });
       control?.markAsTouched();
       return;
@@ -342,7 +342,7 @@ export class AdminBankLogos {
           this.changedHere();
           this.bankNames.forgetLogos();
           this.announce(
-            $localize`:@@admin.bankLogos.remove.done:Logo banky ${item.code}:code: jsme odebrali. U jejích účtů se teď ukazuje zkratka názvu.`,
+            $localize`:@@admin.bankLogos.remove.done:Logo banky ${item.code}:code: jsme odebrali. U\u00a0jejích účtů se teď ukazuje zkratka názvu.`,
           );
           this.focusAfterRender(() => this.noticeElement());
         },
@@ -390,7 +390,7 @@ export class AdminBankLogos {
     }
     this.load(() => {
       this.announce(
-        $localize`:@@admin.bankLogos.reloaded:Načetli jsme aktuální loga bank. Zkontrolujte je a rozhodněte znovu.`,
+        $localize`:@@admin.bankLogos.reloaded:Načetli jsme aktuální loga bank. Zkontrolujte je a\u00a0rozhodněte znovu.`,
       );
       this.focusRowOrNotice(stale?.code);
     });
@@ -502,11 +502,11 @@ export class AdminBankLogos {
 
   private savedLine(code: string, created: boolean, unchanged: boolean): string {
     if (created) {
-      return $localize`:@@admin.bankLogos.add.done:Logo banky ${code}:code: jsme stáhli a uložili.`;
+      return $localize`:@@admin.bankLogos.add.done:Logo banky ${code}:code: jsme stáhli a\u00a0uložili.`;
     }
     return unchanged
-      ? $localize`:@@admin.bankLogos.save.unchanged:Logo banky ${code}:code: jsme znovu stáhli a uložili.`
-      : $localize`:@@admin.bankLogos.save.done:Logo banky ${code}:code: jsme stáhli z nové adresy a uložili.`;
+      ? $localize`:@@admin.bankLogos.save.unchanged:Logo banky ${code}:code: jsme znovu stáhli a\u00a0uložili.`
+      : $localize`:@@admin.bankLogos.save.done:Logo banky ${code}:code: jsme stáhli z\u00a0nové adresy a\u00a0uložili.`;
   }
 
   private gone(code: string, failure: unknown): void {

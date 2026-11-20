@@ -9,6 +9,7 @@ import { ChunkProbe } from '../../core/reload/chunk-probe';
 import { ReloadGuard } from '../../core/reload/reload-guard';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { ChunkLoadNotice } from './chunk-load-notice';
+import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
 @Component({ template: '' })
 class Page {}
@@ -43,10 +44,10 @@ describe('Given the chunk-load notice', () => {
 
   const element = () => fixture.nativeElement as HTMLElement;
   const text = (selector: string) =>
-    element().querySelector(selector)?.textContent?.replace(/\s+/g, ' ').trim();
+    withOrdinarySpaces(element().querySelector(selector)?.textContent)?.replace(/\s+/g, ' ').trim();
   const reloadButton = () =>
     Array.from(element().querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === 'Načíst znovu',
+      (button) => withOrdinarySpaces(button.textContent)?.trim() === 'Načíst znovu',
     );
 
   async function failToLoad(): Promise<void> {
@@ -61,7 +62,7 @@ describe('Given the chunk-load notice', () => {
   }
 
   it('when every page loaded, then it shows nothing and reserves no room', () => {
-    expect(element().textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(element().textContent)?.trim()).toBe('');
     expect(document.documentElement.classList).not.toContain('has-floating-notice');
   });
 
@@ -110,9 +111,11 @@ describe('Given the chunk-load notice', () => {
 
     it('then its button is described by the message, so moving the focus there keeps it announced', () => {
       const describedBy = reloadButton()?.getAttribute('aria-describedby') ?? '';
-      expect(document.getElementById(describedBy)?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-        MESSAGE,
-      );
+      expect(
+        withOrdinarySpaces(document.getElementById(describedBy)?.textContent)
+          ?.replace(/\s+/g, ' ')
+          .trim(),
+      ).toBe(withOrdinarySpaces(MESSAGE));
     });
 
     it('then no alert or live region announces the message a second time', () => {
@@ -192,7 +195,9 @@ describe('Given the chunk-load notice', () => {
     it('then a page of its own says so under a main heading that takes the focus', () => {
       const heading = element().querySelector('main h1');
 
-      expect(heading?.textContent?.trim()).toBe('Stránku se nepodařilo otevřít');
+      expect(withOrdinarySpaces(heading?.textContent)?.trim()).toBe(
+        'Stránku se nepodařilo otevřít',
+      );
       expect(document.activeElement).toBe(heading);
       expect(text('main p')).toBe(
         'Web byl mezitím možná aktualizován nebo vypadlo připojení. Zkuste ji načíst znovu.',
@@ -202,7 +207,7 @@ describe('Given the chunk-load notice', () => {
     it('then it offers to load the page again or to go to the home page', () => {
       expect(reloadButton()).toBeTruthy();
       const home = element().querySelector<HTMLAnchorElement>('main a');
-      expect(home?.textContent?.trim()).toBe('Přejít na úvod');
+      expect(withOrdinarySpaces(home?.textContent)?.trim()).toBe('Přejít na úvod');
       expect(home?.getAttribute('href')).toBe('/');
     });
 

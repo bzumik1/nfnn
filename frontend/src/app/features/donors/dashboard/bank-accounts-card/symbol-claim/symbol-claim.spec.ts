@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { symbolOffer } from '../../../../donations/testing/bank-account-fixtures';
 import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim';
+import { withOrdinarySpaces } from '../../../../../../testing/ordinary-spaces';
 
 describe('Given a question about payments with an older variable symbol from a verified account', () => {
   let fixture: ComponentFixture<SymbolClaim>;
@@ -25,7 +26,7 @@ describe('Given a question about payments with an older variable symbol from a v
   }
 
   function text(selector: string): string {
-    return normalized(element(selector)?.textContent ?? '');
+    return normalized(withOrdinarySpaces(element(selector)?.textContent) ?? '');
   }
 
   function normalized(value: string): string {
@@ -67,7 +68,7 @@ describe('Given a question about payments with an older variable symbol from a v
     });
 
     expect(counts).toEqual(['1 platba', '3 platby', '14 plateb', '22 plateb']);
-    expect(element('.claim-question').textContent).toContain('22\u00a0plateb');
+    expect(withOrdinarySpaces(element('.claim-question').textContent)).toContain('22 plateb');
   });
 
   it('when all the payments came in one month, then only that month shows', () => {

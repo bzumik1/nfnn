@@ -115,7 +115,7 @@
               <app-form-field
                 label="Rok"
                 i18n-label="@@admin.projectEditor.year"
-                hint="Rok, do kterého příběh patří. Jak web řadí příběhy podle roku a kategorie, vyberete v seznamu příběhů."
+                hint="Rok, do kterého příběh patří. Jak web řadí příběhy podle roku a&nbsp;kategorie, vyberete v&nbsp;seznamu příběhů."
                 i18n-hint="@@admin.projectEditor.year.hint"
                 [messages]="yearMessages"
               >
@@ -135,7 +135,7 @@
               <app-form-field
                 label="Kategorie"
                 i18n-label="@@admin.projectEditor.category"
-                hint="Koho se příběh týká. Jak web řadí příběhy podle kategorie a roku, vyberete v seznamu příběhů."
+                hint="Koho se příběh týká. Jak web řadí příběhy podle kategorie a&nbsp;roku, vyberete v&nbsp;seznamu příběhů."
                 i18n-hint="@@admin.projectEditor.category.hint"
               >
                 <select
@@ -192,7 +192,7 @@
               <app-form-field
                 label="Krátký souhrn"
                 i18n-label="@@admin.projectEditor.perex"
-                hint="Ukáže se na kartě příběhu, nejvíc 300 znaků."
+                hint="Ukáže se na kartě příběhu, nejvíc 300&nbsp;znaků."
                 i18n-hint="@@admin.projectEditor.perex.hint"
                 [messages]="perexMessages"
               >
@@ -210,7 +210,7 @@
               <app-form-field
                 label="Text"
                 i18n-label="@@admin.projectEditor.body"
-                hint="Odstavce oddělte prázdným řádkem; formát přidáte tlačítky nad polem a vzhled ověříte přepínačem Náhled nahoře."
+                hint="Odstavce oddělte prázdným řádkem; formát přidáte tlačítky nad polem a&nbsp;vzhled ověříte přepínačem Náhled nahoře."
                 i18n-hint="@@admin.projectEditor.body.hint"
                 [messages]="bodyMessages"
               >
@@ -273,8 +273,8 @@
                   class="field-hint"
                   i18n="@@admin.projectEditor.image.hint"
                 >
-                  Ukáže se na kartě příběhu a nahoře v jeho detailu. JPEG, PNG nebo WebP do 10 MB;
-                  web si z fotky vyrobí zmenšené kopie.
+                  Ukáže se na kartě příběhu a&nbsp;nahoře v&nbsp;jeho detailu. JPEG, PNG nebo WebP
+                  do 10 MB; web si z&nbsp;fotky vyrobí zmenšené kopie.
                 </p>
                 <div role="status">
                   @if (uploading()) {
@@ -283,7 +283,7 @@
                     </p>
                   } @else if (coverUnsaved() && coverImage()) {
                     <p class="field-status" i18n="@@admin.projectEditor.image.uploaded">
-                      Fotka je nahraná. K příběhu se připojí, až ho uložíte.
+                      Fotka je nahraná. K&nbsp;příběhu se připojí, až ho uložíte.
                     </p>
                   }
                 </div>
@@ -295,7 +295,7 @@
                     class="alt-field"
                     label="Popis fotky (nepovinné)"
                     i18n-label="@@admin.projectEditor.imageAlt"
-                    hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a ukáže se, když se fotka nenačte."
+                    hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a&nbsp;ukáže se, když se fotka nenačte."
                     i18n-hint="@@admin.projectEditor.imageAlt.hint"
                     [messages]="altMessages"
                   >
@@ -389,7 +389,7 @@
                     <span when-idle>
                       @if (publishState() === 'live') {
                         <span i18n="@@admin.projectEditor.save.published"
-                          >Uložit a ukázat na webu</span
+                          >Uložit a&nbsp;ukázat na webu</span
                         >
                       } @else {
                         <span i18n="@@admin.projectEditor.save.scheduled">Uložit změny</span>
@@ -409,7 +409,7 @@
                     <span when-idle>
                       @if (publishState() === 'live') {
                         <ng-container i18n="@@admin.projectEditor.unpublish"
-                          >Stáhnout z webu</ng-container
+                          >Stáhnout z&nbsp;webu</ng-container
                         >
                       } @else {
                         <ng-container i18n="@@admin.projectEditor.unpublish.scheduled"
@@ -454,7 +454,7 @@
                 >
                   <app-busy-label [busy]="saving() === 'publish'">
                     <span when-idle i18n="@@admin.projectEditor.publish.saveAndPublish"
-                      >Uložit a zveřejnit</span
+                      >Uložit a&nbsp;zveřejnit</span
                     >
                     <span when-busy i18n="@@admin.projectEditor.publishing">Zveřejňujeme…</span>
                   </app-busy-label>
@@ -480,8 +480,8 @@
           </h2>
           <div class="ui-card__body">
             <p class="ui-card__intro" i18n="@@admin.projectEditor.delete.intro">
-              Smazaný příběh zmizí z webu i ze správy spolu s fotkou a nejde vrátit. Chcete-li ho
-              jen schovat, stáhněte ho z webu.
+              Smazaný příběh zmizí z&nbsp;webu i&nbsp;ze správy spolu s&nbsp;fotkou a&nbsp;nejde
+              vrátit. Chcete-li ho jen schovat, stáhněte ho z&nbsp;webu.
             </p>
             @if (confirmingDelete()) {
               <span

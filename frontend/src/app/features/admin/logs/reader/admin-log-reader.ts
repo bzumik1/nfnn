@@ -288,7 +288,7 @@ export class AdminLogReader {
     const time = this.time(entry);
     return time === ''
       ? level
-      : $localize`:@@admin.logs.reader.sheetTitle:${level}:level: v ${time}:time:`;
+      : $localize`:@@admin.logs.reader.sheetTitle:${level}:level: v\u00a0${time}:time:`;
   }
 
   protected segments(message: string): readonly MessageSegment[] {
@@ -335,7 +335,7 @@ export class AdminLogReader {
     const pattern = this.pattern();
     if (pattern.length > MAX_PATTERN_LENGTH) {
       this.searchError.set(
-        $localize`:@@admin.logs.reader.patternTooLong:Výraz je i s filtrem úrovně delší než 200 znaků. Zkraťte ho.`,
+        $localize`:@@admin.logs.reader.patternTooLong:Výraz je i\u00a0s\u00a0filtrem úrovně delší než 200\u00a0znaků. Zkraťte ho.`,
       );
       return;
     }

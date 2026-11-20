@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { LiveNotice, Notice } from './live-notice';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   imports: [LiveNotice],
@@ -25,8 +26,8 @@ describe('Given a page with a live notice', () => {
   }
 
   it('when nothing has happened yet, then both live regions are already there and empty', () => {
-    expect(region('status')?.textContent?.trim()).toBe('');
-    expect(region('alert')?.textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(region('status')?.textContent)?.trim()).toBe('');
+    expect(withOrdinarySpaces(region('alert')?.textContent)?.trim()).toBe('');
   });
 
   it('when a status arrives, then its text fills the status region in place', async () => {
@@ -36,8 +37,8 @@ describe('Given a page with a live notice', () => {
     await fixture.whenStable();
 
     expect(region('status')).toBe(statusRegion);
-    expect(region('status')?.textContent?.trim()).toBe('Uloženo.');
-    expect(region('alert')?.textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(region('status')?.textContent)?.trim()).toBe('Uloženo.');
+    expect(withOrdinarySpaces(region('alert')?.textContent)?.trim()).toBe('');
   });
 
   it('when a shown line changes its text, then the same line keeps standing, so its fade does not replay', async () => {
@@ -49,7 +50,7 @@ describe('Given a page with a live notice', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('[role="status"] > p')).toBe(line);
-    expect(line?.textContent?.trim()).toBe('Uloženo znovu.');
+    expect(withOrdinarySpaces(line?.textContent)?.trim()).toBe('Uloženo znovu.');
   });
 
   it('when a line shows, then it never takes the focus', async () => {
@@ -68,8 +69,8 @@ describe('Given a page with a live notice', () => {
     fixture.componentInstance.notice.set({ kind: 'alert', text: 'Nepovedlo se.' });
     await fixture.whenStable();
 
-    expect(region('status')?.textContent?.trim()).toBe('');
-    expect(region('alert')?.textContent?.trim()).toBe('Nepovedlo se.');
+    expect(withOrdinarySpaces(region('status')?.textContent)?.trim()).toBe('');
+    expect(withOrdinarySpaces(region('alert')?.textContent)?.trim()).toBe('Nepovedlo se.');
   });
 });
 
@@ -99,7 +100,7 @@ describe('Given a live notice under the rows of a card', () => {
     await fixture.whenStable();
 
     const line = fixture.nativeElement.querySelector('[role="status"] > p');
-    expect(line?.textContent?.trim()).toBe('Uloženo.');
+    expect(withOrdinarySpaces(line?.textContent)?.trim()).toBe('Uloženo.');
     expect(line?.classList).toContain('ui-card__footer');
     expect(line?.classList).toContain('ui-card__footer--status');
   });
@@ -109,7 +110,7 @@ describe('Given a live notice under the rows of a card', () => {
     await fixture.whenStable();
 
     const line = fixture.nativeElement.querySelector('[role="alert"] > p');
-    expect(line?.textContent?.trim()).toBe('Nepovedlo se.');
+    expect(withOrdinarySpaces(line?.textContent)?.trim()).toBe('Nepovedlo se.');
     expect(line?.classList).toContain('ui-card__footer');
     expect(line?.classList).toContain('ui-card__footer--alert');
   });

@@ -6,7 +6,7 @@ import { ALERTS_PAGE } from './alert-routes';
 import { OpenAlert, OpenAlertArea } from './open-alerts-api';
 
 export const ALERT_AREA_NAMES: Record<OpenAlertArea, string> = {
-  bankImport: $localize`:@@admin.alerts.area.bankImport:Import plateb z banky`,
+  bankImport: $localize`:@@admin.alerts.area.bankImport:Import plateb z\u00a0banky`,
   backups: $localize`:@@admin.alerts.area.backups:Zálohy`,
   mail: $localize`:@@admin.alerts.area.mail:Odesílání e-mailů`,
 };

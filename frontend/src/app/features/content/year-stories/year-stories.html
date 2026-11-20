@@ -1,7 +1,7 @@
 <section class="stories" [attr.aria-labelledby]="titleId">
   <div class="section-head">
     <h2 class="section-title" [id]="titleId" i18n="@@content.news.stories.title">
-      Příběhy z roku {{ stories().year }}
+      Příběhy z&nbsp;roku {{ stories().year }}
     </h2>
     <a
       class="stories-all"
@@ -9,7 +9,7 @@
       [queryParams]="{ rok: stories().year }"
       i18n="@@content.news.stories.all"
       >{stories().projects.length, plural,
-        one {Zobrazit v Pomáháme}
+        one {Zobrazit v&nbsp;Pomáháme}
         few {Všechny {{ stories().projects.length }} příběhy}
         other {Všech {{ stories().projects.length }} příběhů}
       }</a

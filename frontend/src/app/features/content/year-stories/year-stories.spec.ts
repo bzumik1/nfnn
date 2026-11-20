@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { project } from '../testing/project-fixtures';
 import { StoriesOfYear, YearStories } from './year-stories';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   imports: [YearStories],
@@ -36,7 +37,7 @@ describe('Given the stories of two years on one page', () => {
     const root: HTMLElement = fixture.nativeElement;
     const names = Array.from(root.querySelectorAll('section')).map((section) => {
       const heading = root.querySelector(`[id="${section.getAttribute('aria-labelledby')}"]`);
-      return heading?.textContent?.trim() ?? '';
+      return withOrdinarySpaces(heading?.textContent)?.trim() ?? '';
     });
     expect(names).toEqual(['Příběhy z roku 2025', 'Příběhy z roku 2024']);
   });

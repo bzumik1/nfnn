@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { DonateBandPhotoResponse } from '../donate-band-api';
 import { DONATE_BAND_PHOTO_ID, donateBandPhoto } from '../testing/donate-band-fixtures';
 import { DonateBand } from './donate-band';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given the Přispět band that ends a tab', () => {
   let fixture: ComponentFixture<DonateBand>;
@@ -29,10 +30,10 @@ describe('Given the Přispět band that ends a tab', () => {
     const region = band.querySelector('section');
     const heading = band.querySelector('h2');
     expect(region?.getAttribute('aria-labelledby')).toBe(heading?.id);
-    expect(heading?.textContent).toBe('Pomozte nám napsat další příběh');
-    expect(band.textContent).toContain('do poslední koruny');
+    expect(withOrdinarySpaces(heading?.textContent)).toBe('Pomozte nám napsat další příběh');
+    expect(withOrdinarySpaces(band.textContent)).toContain('do poslední koruny');
     const links = [...band.querySelectorAll('a')].map((link) => [
-      link.textContent?.trim(),
+      withOrdinarySpaces(link.textContent)?.trim(),
       link.getAttribute('href'),
     ]);
     expect(links).toEqual([
@@ -45,9 +46,9 @@ describe('Given the Přispět band that ends a tab', () => {
     fixture.componentRef.setInput('showsProjects', false);
     const band = await render();
 
-    expect([...band.querySelectorAll('a')].map((link) => link.textContent?.trim())).toEqual([
-      'Přispět',
-    ]);
+    expect(
+      [...band.querySelectorAll('a')].map((link) => withOrdinarySpaces(link.textContent)?.trim()),
+    ).toEqual(['Přispět']);
   });
 
   it('when the page around it keeps the usual width, then the band keeps it too', async () => {

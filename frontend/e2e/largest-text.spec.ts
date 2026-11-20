@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { devices, Locator, Page, Route } from '@playwright/test';
 import { DIAGNOSTICS, logsApi, routeLogsApi } from './admin-logs-api';
 import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
@@ -7,6 +9,7 @@ import {
   PETR_DETAIL_PATH,
   rememberedSession,
   renamePetr,
+  serveEmptyAdministrationCopy,
 } from './baseline/screen-mocks';
 import {
   DialogTitle,
@@ -19,7 +22,9 @@ import {
   administrator,
   bankAccountItem,
   claudeConnection,
+  connectionRequest,
   donationItem,
+  mockConnectApi,
   mockDonorApi,
   noDonations,
   openDonorSection,
@@ -30,7 +35,14 @@ import {
   signIn,
   whenAdministrationCopied,
 } from './donor-session';
-import { expect, test } from './fixtures';
+import { ADMINISTRATION_LOCKED, expect, test } from './fixtures';
+import {
+  LongestKeptWord,
+  longestKeptWord,
+  oneLetterWordPairs,
+  textPastTheEdges,
+  boldReservesApartFromTheirLabel,
+} from './kept-together';
 import { serveReceiptKeys, serveReceiptStatus, YEARLY_RECEIPT } from './receipt-verification';
 
 const LARGEST_SYSTEM_TEXT_PX = 53;
@@ -2537,5 +2549,211 @@ for (const { pose, width, rootSize } of [
       expectHeldByTheTallerLabel(working, 'Zálohujeme…');
       expectSameHeight(resting, working, 'Zálohovat teď');
     });
+  });
+}
+
+async function overflowAtTheLargestText(page: Page): Promise<string[]> {
+  await page.evaluate(() => document.fonts.ready);
+  return textPastTheEdges(page);
+}
+
+for (const width of [320, 390]) {
+  test.describe(`Given a visitor on an iPhone ${width} pt wide whose installed app shows the largest accessibility text, whose groups kept together may break only where they are wider than the line`, () => {
+    test.use({ viewport: { width, height: 844 } });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await mockDonorApi(page);
+      await mockConnectApi(page);
+    });
+
+    for (const path of [
+      '/',
+      '/o-nas',
+      '/prispet',
+      '/zasady-ochrany-osobnich-udaju',
+      connectionRequest,
+    ]) {
+      test(`when they open ${path.split('?')[0]}, then nothing scrolls sideways and no text reaches past the screen's edge, though a group wider than its line may break`, async ({
+        page,
+      }) => {
+        await page.goto(path);
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+        expect.soft(await overflowAtTheLargestText(page), path).toEqual([]);
+      });
+    }
+
+    for (const [group, open] of Object.entries(TITLE_OPENERS)) {
+      test(`when they open the sheet titled by ${group}, then nothing in its title, buttons or choices reaches past the screen's edge`, async ({
+        page,
+      }) => {
+        await open(page);
+
+        expect.soft(await overflowAtTheLargestText(page), group).toEqual([]);
+      });
+    }
+  });
+
+  test.describe(`Given an administrator on an iPhone ${width} pt wide whose installed app shows the largest accessibility text, whose groups kept together may break only where they are wider than the line`, () => {
+    test.use({ viewport: { width, height: 844 } });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await mockDonorApi(page, donorWithDonations);
+      await mockAdministration(page);
+      await serveEmptyAdministrationCopy(page);
+    });
+
+    for (const path of [
+      '/sprava',
+      '/sprava/platby',
+      '/sprava/darci',
+      '/sprava/zalohy',
+      '/sprava/nastaveni',
+      '/sprava/lide-fondu',
+      '/sprava/logy',
+    ]) {
+      test(`when they open ${path}, then nothing scrolls sideways and no title, short button, segmented choice or narrow cell reaches past the screen's edge`, async ({
+        page,
+      }) => {
+        await rememberedSession(page);
+        const copied = whenAdministrationCopied(page);
+        await page.goto(path);
+        await expect(page.locator('h1').first()).not.toHaveText(ADMINISTRATION_LOCKED);
+        await copied();
+
+        expect.soft(await overflowAtTheLargestText(page), path).toEqual([]);
+      });
+    }
+  });
+}
+
+const { longestWordKeptWithAOneLetterWord: LONGEST_KEPT_WORD } = JSON.parse(
+  readFileSync(join(__dirname, '..', 'scripts', 'one-letter-word-limit.json'), 'utf8'),
+) as { longestWordKeptWithAOneLetterWord: number };
+
+function shownSources(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      return shownSources(path);
+    }
+    if (entry.name.endsWith('.html')) {
+      return [readFileSync(path, 'utf8')];
+    }
+    if (entry.name.endsWith('.ts') && !entry.name.endsWith('.spec.ts')) {
+      return [
+        ...readFileSync(path, 'utf8').matchAll(/\$localize`:@@[^:]+:((?:[^`\\]|\\.)*)`/g),
+      ].map((message) => message[1]);
+    }
+    return [];
+  });
+}
+
+const MEASURED_PUBLIC_PAGES = [
+  '/',
+  '/o-nas',
+  '/prispet',
+  '/zasady-ochrany-osobnich-udaju',
+  connectionRequest,
+];
+
+const MEASURED_ADMIN_PAGES = [
+  '/sprava',
+  '/sprava/platby',
+  '/sprava/darci',
+  '/sprava/zalohy',
+  '/sprava/nastaveni',
+  '/sprava/lide-fondu',
+  '/sprava/logy',
+];
+
+const MEASURED_ADMIN_TABLES = [
+  '/sprava',
+  '/sprava/platby',
+  '/sprava/darci',
+  PETR_DETAIL_PATH,
+  '/sprava/prehledy',
+];
+
+const MEASURED_PLACES = [
+  ...[...MEASURED_PUBLIC_PAGES, ...MEASURED_ADMIN_PAGES].map((path) => ({ path, width: 320 })),
+  ...MEASURED_ADMIN_TABLES.flatMap((path) => [900, 1000].map((width) => ({ path, width }))),
+];
+
+test.describe(`Given the longest word a one-letter word keeps beside it, ${LONGEST_KEPT_WORD} letters in scripts/one-letter-word-limit.json, with the text at 200 % on a phone 320 pt wide and on a computer 900 and 1000 px wide`, () => {
+  test.describe.configure({ mode: 'serial' });
+
+  const pairs = oneLetterWordPairs(shownSources(join(__dirname, '..', 'src', 'app')));
+  const measured = new Map<string, LongestKeptWord>();
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await mockConnectApi(page);
+    await mockAdministration(page);
+    await serveEmptyAdministrationCopy(page);
+  });
+
+  for (const { path, width } of MEASURED_PLACES) {
+    test(`when ${path.split('?')[0]} is measured ${width} px wide, then the longest word whose group fits each of its lines, table headers and cells, badges and pill buttons is recorded`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await rememberedSession(page);
+      if (path.startsWith('/sprava')) {
+        const copied = whenAdministrationCopied(page);
+        await page.goto(path);
+        await expect(page.locator('h1').first()).not.toHaveText(ADMINISTRATION_LOCKED);
+        await copied();
+      } else {
+        await page.goto(path);
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      }
+      await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
+      await page.evaluate(() => document.fonts.ready);
+
+      const longest = await longestKeptWord(page, pairs);
+      measured.set(`${path.split('?')[0]} @ ${width} px`, longest);
+
+      expect(longest.places).toBeGreaterThanOrEqual(0);
+    });
+  }
+
+  test(`when every page is measured, then ${LONGEST_KEPT_WORD} letters is the longest word whose group fits the narrowest line`, () => {
+    const narrowest = [...measured.entries()].reduce((least, entry) =>
+      entry[1].letters < least[1].letters ? entry : least,
+    );
+    const report = [...measured.entries()]
+      .map(([place, longest]) => `${place}: ${longest.letters} letters, ${longest.binding}`)
+      .join('\n');
+
+    expect(measured.size).toBe(MEASURED_PLACES.length);
+    expect(narrowest[1].letters, report).toBe(LONGEST_KEPT_WORD);
+  });
+});
+
+for (const width of [390, 1280]) {
+  test.describe(`Given a visitor ${width} px wide whose segments, tabs and list sections reserve the width of their bold label`, () => {
+    test.use({ viewport: { width, height: 844 } });
+
+    test.beforeEach(async ({ page }) => {
+      await mockDonorApi(page, donorWithDonations);
+      await mockAdministration(page);
+      await serveEmptyAdministrationCopy(page);
+    });
+
+    for (const path of ['/', '/prispet', '/sprava', '/sprava/platby', PETR_DETAIL_PATH]) {
+      test(`when ${path} shows a label kept together by a no-break space, then its bold reserve is exactly as wide as the label`, async ({
+        page,
+      }) => {
+        await rememberedSession(page);
+        await page.goto(path);
+        await expect(page.locator('h1').first()).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+
+        expect(await boldReservesApartFromTheirLabel(page)).toEqual([]);
+      });
+    }
   });
 }

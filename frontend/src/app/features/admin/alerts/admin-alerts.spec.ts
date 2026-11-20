@@ -27,6 +27,7 @@ import { AdminAlerts } from './admin-alerts';
 import { DeviceAlertMarks } from './device-alert-marks';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const PUSH_URL = '/api/admin/operations/push';
 const DEVICE: DevicePushSubscription = {
@@ -97,7 +98,7 @@ describe('Given an administrator on the alerts page', () => {
   }
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -105,7 +106,10 @@ describe('Given an administrator on the alerts page', () => {
   function section(title: string): HTMLElement {
     const found = Array.from(
       fixture.nativeElement.querySelectorAll('section') as NodeListOf<HTMLElement>,
-    ).find((candidate) => candidate.querySelector('h2')?.textContent?.trim() === title);
+    ).find(
+      (candidate) =>
+        withOrdinarySpaces(candidate.querySelector('h2')?.textContent)?.trim() === title,
+    );
     if (found === undefined) {
       throw new Error(`No section titled ${title}`);
     }
@@ -113,7 +117,7 @@ describe('Given an administrator on the alerts page', () => {
   }
 
   function sectionText(title: string): string {
-    return (section(title).textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(section(title).textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function button(name: string): HTMLButtonElement {
@@ -136,7 +140,7 @@ describe('Given an administrator on the alerts page', () => {
   function described(element: HTMLElement): string {
     return (element.getAttribute('aria-describedby') ?? '')
       .split(' ')
-      .map((id) => document.getElementById(id)?.textContent ?? '')
+      .map((id) => withOrdinarySpaces(document.getElementById(id)?.textContent) ?? '')
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();
@@ -153,7 +157,11 @@ describe('Given an administrator on the alerts page', () => {
   async function openOtherDevice(name: string): Promise<void> {
     const row = Array.from(
       section('Další zařízení').querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.querySelector('.ui-list__title')?.textContent?.trim() === name);
+    ).find(
+      (candidate) =>
+        withOrdinarySpaces(candidate.querySelector('.ui-list__title')?.textContent)?.trim() ===
+        name,
+    );
     if (row === undefined) {
       throw new Error(`No device row named ${name}`);
     }
@@ -163,14 +171,22 @@ describe('Given an administrator on the alerts page', () => {
 
   function status(): string {
     return Array.from(fixture.nativeElement.querySelectorAll('[role="status"]:not(:empty)'))
-      .map((element) => ((element as HTMLElement).textContent ?? '').replace(/\s+/g, ' ').trim())
+      .map((element) =>
+        (withOrdinarySpaces((element as HTMLElement).textContent) ?? '')
+          .replace(/\s+/g, ' ')
+          .trim(),
+      )
       .filter((line) => line !== '')
       .join(' | ');
   }
 
   function alerts(): string {
     return Array.from(fixture.nativeElement.querySelectorAll('[role="alert"]'))
-      .map((element) => ((element as HTMLElement).textContent ?? '').replace(/\s+/g, ' ').trim())
+      .map((element) =>
+        (withOrdinarySpaces((element as HTMLElement).textContent) ?? '')
+          .replace(/\s+/g, ' ')
+          .trim(),
+      )
       .filter((line) => line !== '')
       .join(' | ');
   }
@@ -219,14 +235,14 @@ describe('Given an administrator on the alerts page', () => {
       const rows = Array.from(
         section('Co se hlídá').querySelectorAll('a') as NodeListOf<HTMLAnchorElement>,
       ).map((link) => [
-        link.querySelector('.ui-list__title')?.textContent?.trim(),
-        link.querySelector('.ui-list__meta')?.textContent?.trim(),
+        withOrdinarySpaces(link.querySelector('.ui-list__title')?.textContent)?.trim(),
+        withOrdinarySpaces(link.querySelector('.ui-list__meta')?.textContent)?.trim(),
         link.getAttribute('href'),
       ]);
 
       expect(rows).toEqual([
         ['Import plateb z banky', undefined, '/sprava'],
-        ['Zálohy', 'Nefunguje od 4.\u00a011. 2026 6:15', '/sprava/zalohy'],
+        ['Zálohy', 'Nefunguje od 4. 11. 2026 6:15', '/sprava/zalohy'],
         ['Odesílání e-mailů', undefined, '/sprava/nastaveni'],
       ]);
     });
@@ -249,9 +265,11 @@ describe('Given an administrator on the alerts page', () => {
       expect(section('Toto zařízení').querySelector('.ui-card__footer')?.id).toBe(
         'alerts-device-offer',
       );
-      expect(section('Další zařízení').querySelector('.ui-card__empty')?.textContent?.trim()).toBe(
-        'Na jiném zařízení upozornění zapnutá nemáte.',
-      );
+      expect(
+        withOrdinarySpaces(
+          section('Další zařízení').querySelector('.ui-card__empty')?.textContent,
+        )?.trim(),
+      ).toBe('Na jiném zařízení upozornění zapnutá nemáte.');
       expect(section('Další zařízení').querySelector('.ui-card__footer')).toBeNull();
     });
 
@@ -317,7 +335,7 @@ describe('Given an administrator on the alerts page', () => {
     await settle();
 
     expect(status()).toContain('Upozornění jsme na tomto zařízení zapnuli.');
-    expect(document.activeElement?.textContent?.trim()).toBe('Toto zařízení');
+    expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe('Toto zařízení');
     await vi.waitFor(async () =>
       expect(await TestBed.inject(DeviceAlertMarks).ownedBy(sampleDonor().id)).toBe(true),
     );
@@ -505,7 +523,9 @@ describe('Given an administrator on the alerts page', () => {
     it('then the switches and the turn-off row come first and the note of this device closes its card as the footer, as does the note of the test alert', () => {
       const card = section('Toto zařízení');
       const deviceNote = card.querySelector('.ui-card__footer');
-      expect(deviceNote?.textContent).toContain('Upozornění máte na tomto zařízení zapnutá');
+      expect(withOrdinarySpaces(deviceNote?.textContent)).toContain(
+        'Upozornění máte na tomto zařízení zapnutá',
+      );
       expect(card.querySelectorAll('.ui-card__footer').length).toBe(1);
       const turnOff = button('Vypnout na tomto zařízení');
       expect(turnOff.closest('ul')).toBe(switches(card)[0].closest('ul'));
@@ -516,7 +536,7 @@ describe('Given an administrator on the alerts page', () => {
         Array.from(card.querySelectorAll('*')).some(
           (element) =>
             deviceNote!.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING &&
-            (element.textContent ?? '').trim() !== '' &&
+            (withOrdinarySpaces(element.textContent) ?? '').trim() !== '' &&
             !deviceNote!.contains(element),
         ),
       ).toBe(false);
@@ -539,7 +559,7 @@ describe('Given an administrator on the alerts page', () => {
     it('then each switch of this device is named by its area and says what it reports', () => {
       const [bank, backups, mail] = switches(section('Toto zařízení'));
 
-      expect(bank.labels?.[0]?.textContent).toContain('Import plateb z banky');
+      expect(withOrdinarySpaces(bank.labels?.[0]?.textContent)).toContain('Import plateb z banky');
       expect(described(bank)).toBe(
         'Když se platby z banky přestanou stahovat a když se zase stahují.',
       );
@@ -561,10 +581,10 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and the other device is opened, then a sheet shows its switches and its removal', async () => {
-      await openOtherDevice('Apple, zapnuto 30.\u00a010. 2026');
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
 
-      expect(sheet().querySelector('h2')?.textContent?.trim()).toBe(
-        'Apple, zapnuto 30.\u00a010. 2026',
+      expect(withOrdinarySpaces(sheet().querySelector('h2')?.textContent)?.trim()).toBe(
+        'Apple, zapnuto 30. 10. 2026',
       );
       expect(switches(sheet()).map((box) => box.checked)).toEqual([true, false, true]);
       expect(button('Odebrat zařízení Apple, zapnuto 30.\u00a010. 2026')).toBeTruthy();
@@ -605,7 +625,7 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and saving a switch fails, then the switch goes back and the failure is shown', async () => {
-      await openOtherDevice('Apple, zapnuto 30.\u00a010. 2026');
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
       const backups = switches(sheet())[1];
       backups.checked = true;
       backups.dispatchEvent(new Event('change'));
@@ -704,11 +724,11 @@ describe('Given an administrator on the alerts page', () => {
       expect(push.unsubscribe).toHaveBeenCalled();
       expect(await TestBed.inject(DeviceAlertMarks).ownedBy(sampleDonor().id)).toBe(false);
       expect(button('Zapnout upozornění na tomto zařízení')).toBeTruthy();
-      expect(document.activeElement?.textContent?.trim()).toBe('Toto zařízení');
+      expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe('Toto zařízení');
     });
 
     it('and the other device is being removed, then its button names the running removal', async () => {
-      await openOtherDevice('Apple, zapnuto 30.\u00a010. 2026');
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
       button('Odebrat zařízení Apple, zapnuto 30.\u00a010. 2026').click();
       await settle();
 
@@ -720,11 +740,13 @@ describe('Given an administrator on the alerts page', () => {
         .expectOne({ method: 'DELETE', url: `${PUSH_URL}/subscriptions/push-phone` })
         .flush(null, { status: 204, statusText: 'No Content' });
       await settle();
-      expect(document.activeElement?.textContent?.trim()).toBe('Další zařízení');
+      expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe(
+        'Další zařízení',
+      );
     });
 
     it('and a switch of the other device is saved, then the line names that device', async () => {
-      await openOtherDevice('Apple, zapnuto 30.\u00a010. 2026');
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
       const bank = switches(sheet())[0];
       bank.checked = false;
       bank.dispatchEvent(new Event('change'));
@@ -746,7 +768,7 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and the other device is removed, then the sheet closes and it leaves the list', async () => {
-      await openOtherDevice('Apple, zapnuto 30.\u00a010. 2026');
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
       button('Odebrat zařízení Apple, zapnuto 30.\u00a010. 2026').click();
       await settle();
       http
@@ -774,13 +796,15 @@ describe('Given an administrator on the alerts page', () => {
     const card = section('Toto zařízení');
     const warning = card.querySelector('.ui-callout--warning');
     const again = button('Zapnout znovu');
-    expect(warning?.textContent).toContain('už nepřijímá');
+    expect(withOrdinarySpaces(warning?.textContent)).toContain('už nepřijímá');
     expect(again.classList).toContain('ui-button--primary');
     expect(warning!.compareDocumentPosition(again) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(
       again.compareDocumentPosition(switches(card)[0]) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(card.querySelector('.ui-card__footer')?.textContent).not.toContain('už nepřijímá');
+    expect(withOrdinarySpaces(card.querySelector('.ui-card__footer')?.textContent)).not.toContain(
+      'už nepřijímá',
+    );
     again.click();
     await settle();
     expect(again.disabled).toBe(true);
@@ -806,9 +830,11 @@ describe('Given an administrator on the alerts page', () => {
     expect(sectionText('Toto zařízení')).toContain(
       'Prohlížeč ale upozornění tohoto webu teď blokuje',
     );
-    expect(section('Toto zařízení').querySelector('.ui-callout--warning')?.textContent).toContain(
-      'teď blokuje',
-    );
+    expect(
+      withOrdinarySpaces(
+        section('Toto zařízení').querySelector('.ui-callout--warning')?.textContent,
+      ),
+    ).toContain('teď blokuje');
     expect(() => button('Zapnout znovu')).toThrow();
   });
 
@@ -819,9 +845,9 @@ describe('Given an administrator on the alerts page', () => {
     expect(sectionText('Toto zařízení')).toContain(
       'Upozornění má tento web v prohlížeči zakázaná.',
     );
-    expect(section('Toto zařízení').querySelector('.ui-card__footer')?.textContent).toContain(
-      'Upozornění má tento web v prohlížeči zakázaná.',
-    );
+    expect(
+      withOrdinarySpaces(section('Toto zařízení').querySelector('.ui-card__footer')?.textContent),
+    ).toContain('Upozornění má tento web v prohlížeči zakázaná.');
   });
 
   it('when the browser has no Push API, then the page says so', async () => {
@@ -862,8 +888,12 @@ describe('Given an administrator on the alerts page', () => {
     it('then the button to try again sits with the sentence in the footer of the device card', () => {
       const footer = section('Toto zařízení').querySelector('.ui-card__footer.device-retry');
 
-      expect(footer?.textContent).toContain('Prohlížeč zatím nespustil část webu');
-      expect(footer?.querySelector('button')?.textContent?.trim()).toBe('Zkusit znovu');
+      expect(withOrdinarySpaces(footer?.textContent)).toContain(
+        'Prohlížeč zatím nespustil část webu',
+      );
+      expect(withOrdinarySpaces(footer?.querySelector('button')?.textContent)?.trim()).toBe(
+        'Zkusit znovu',
+      );
     });
 
     it('then trying again loads the page again and asks for the focus on the device heading after it', () => {
@@ -978,7 +1008,7 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('then the devices show at once, without the loading line, and are refreshed behind them', async () => {
-      expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
+      expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain('Načítáme');
       expect(sectionText('Další zařízení')).toContain('Apple');
 
       http
@@ -1003,7 +1033,7 @@ describe('Given an administrator on the alerts page', () => {
 
     it('then a device removed before the refresh answers does not come back with that answer, and the list is asked for again', async () => {
       const refresh = http.expectOne({ method: 'GET', url: PUSH_URL });
-      await openOtherDevice('Apple, zapnuto 30.\u00a010. 2026');
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
       button('Odebrat zařízení Apple, zapnuto 30.\u00a010. 2026').click();
       await settle();
       http

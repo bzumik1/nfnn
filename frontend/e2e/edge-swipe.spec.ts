@@ -12,7 +12,7 @@ import { expect, test } from './fixtures';
 import { waitWhileNothingMayHappen } from './fixed-waits';
 
 const FINGER_Y = 420;
-const LIST_TITLE = 'Co je u nás nového';
+const LIST_TITLE = 'Co je u\u00a0nás nového';
 const SETTLED_MS = 600;
 const TRANSITION_ENDS_WITHIN_MS = 4000;
 

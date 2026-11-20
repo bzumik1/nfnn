@@ -105,7 +105,7 @@ interface ProjectDraftValues {
   readonly publishDate: string;
 }
 
-const PUBLISH_DATE_MOVED_TEXT = $localize`:@@admin.projectEditor.draft.dateMoved:Datum zveřejnění z rozepsaných úprav už minulo, proto jsme ho posunuli na dnešek.`;
+const PUBLISH_DATE_MOVED_TEXT = $localize`:@@admin.projectEditor.draft.dateMoved:Datum zveřejnění z\u00a0rozepsaných úprav už minulo, proto jsme ho posunuli na dnešek.`;
 
 @Component({
   selector: 'app-admin-project-editor',
@@ -200,7 +200,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     max: $localize`:@@admin.projectEditor.year.max:Zadejte prosím rok nejvýše ${MAX_YEAR}:max:.`,
   };
   protected readonly slugMessages = {
-    pattern: $localize`:@@admin.projectEditor.slug.pattern:Adresa smí mít jen malá písmena bez diakritiky, číslice a pomlčky mezi slovy.`,
+    pattern: $localize`:@@admin.projectEditor.slug.pattern:Adresa smí mít jen malá písmena bez diakritiky, číslice a\u00a0pomlčky mezi slovy.`,
     maxlength: $localize`:@@admin.projectEditor.slug.tooLong:Adresa může mít nejvíc ${MAX_SLUG_LENGTH}:max: znaků.`,
     taken: $localize`:@@admin.projectEditor.slug.taken:Tuto adresu už má jiný příběh nebo aktualita. Zvolte prosím jinou.`,
   };
@@ -292,15 +292,15 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly focalShapes: readonly PreviewShape[] = [
     {
       shape: 'projectCard',
-      label: $localize`:@@admin.projectEditor.focalPoint.card:Karta v Pomáháme`,
+      label: $localize`:@@admin.projectEditor.focalPoint.card:Karta v\u00a0Pomáháme`,
     },
     {
       shape: 'storyTile',
-      label: $localize`:@@admin.projectEditor.focalPoint.story:Příběh roku v Aktualitách`,
+      label: $localize`:@@admin.projectEditor.focalPoint.story:Příběh roku v\u00a0Aktualitách`,
     },
     {
       shape: 'articleTop',
-      label: $localize`:@@admin.projectEditor.focalPoint.top:Nahoře v článku`,
+      label: $localize`:@@admin.projectEditor.focalPoint.top:Nahoře v\u00a0článku`,
     },
   ];
   protected readonly publicUrl = computed(() => {
@@ -314,7 +314,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       case 'scheduled':
         return $localize`:@@admin.projectEditor.publishDate.hint.scheduled:Na web se příběh dostane ${this.publishedOn()}:date:, do té doby ho vidíte jen vy. Příběhy na stejném místě řazení ukazuje web od naposledy zveřejněného.`;
       default:
-        return $localize`:@@admin.projectEditor.publishDate.hint.draft:Příběh zatím vidíte jen vy. Tlačítko Uložit a zveřejnit ho pustí na web s tímto datem, s pozdějším datem až ten den.`;
+        return $localize`:@@admin.projectEditor.publishDate.hint.draft:Příběh zatím vidíte jen vy. Tlačítko Uložit a\u00a0zveřejnit ho pustí na web s\u00a0tímto datem, s\u00a0pozdějším datem až ten den.`;
     }
   });
   private readonly slugOrDraft = signal('');
@@ -322,7 +322,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     const slug = this.slugOrDraft().trim();
     const address =
       slug === ''
-        ? $localize`:@@admin.projectEditor.slug.hint.empty:Doplní se z titulku; malá písmena bez diakritiky a pomlčky.`
+        ? $localize`:@@admin.projectEditor.slug.hint.empty:Doplní se z\u00a0titulku; malá písmena bez diakritiky a\u00a0pomlčky.`
         : $localize`:@@admin.projectEditor.slug.hint:Příběh bude na nfnn.cz/projekty/${slug}:slug:. Můžete upravit.`;
     const saved = this.project();
     if (saved?.publishedOn == null || slug === saved.slug) {
@@ -599,7 +599,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     }
     if (file.size > MAX_IMAGE_BYTES) {
       this.uploadError.set(
-        $localize`:@@admin.projectEditor.image.tooLarge:Fotka je větší než 10 MB. Zmenšete ji prosím a zkuste to znovu.`,
+        $localize`:@@admin.projectEditor.image.tooLarge:Fotka je větší než 10 MB. Zmenšete ji prosím a\u00a0zkuste to znovu.`,
       );
       return;
     }
@@ -665,7 +665,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
           this.notice.set({
             kind: 'status',
             text: project.live
-              ? $localize`:@@admin.projectEditor.published:Příběh je na webu s datem ${formatDonationDate(project.publishedOn ?? date)}:date:.`
+              ? $localize`:@@admin.projectEditor.published:Příběh je na webu s\u00a0datem ${formatDonationDate(project.publishedOn ?? date)}:date:.`
               : $localize`:@@admin.projectEditor.scheduled:Příběh se na webu ukáže ${on}:date:.`,
           });
         },
@@ -709,7 +709,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
           }
           this.notice.set({
             kind: 'status',
-            text: $localize`:@@admin.projectEditor.unpublished:Příběh jsme z webu stáhli. Zůstává tu jako koncept.`,
+            text: $localize`:@@admin.projectEditor.unpublished:Příběh jsme z\u00a0webu stáhli. Zůstává tu jako koncept.`,
           });
         },
         error: (failure: unknown) => {
@@ -722,7 +722,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
             kind: 'alert',
             text: describeProblem(
               failure,
-              $localize`:@@admin.projectEditor.unpublish.failed:Příběh se nepodařilo stáhnout z webu. Zkuste to prosím znovu.`,
+              $localize`:@@admin.projectEditor.unpublish.failed:Příběh se nepodařilo stáhnout z\u00a0webu. Zkuste to prosím znovu.`,
             ),
           });
         },
@@ -809,8 +809,8 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       this.notice.set({
         kind: 'status',
         text: discardedEdits
-          ? $localize`:@@admin.projectEditor.reloaded.discarded:Vaše úpravy jsme zahodili a načetli novější verzi příběhu.`
-          : $localize`:@@admin.projectEditor.reloaded:Načetli jsme aktuální stav příběhu. Zkontrolujte ho a rozhodněte znovu.`,
+          ? $localize`:@@admin.projectEditor.reloaded.discarded:Vaše úpravy jsme zahodili a\u00a0načetli novější verzi příběhu.`
+          : $localize`:@@admin.projectEditor.reloaded:Načetli jsme aktuální stav příběhu. Zkontrolujte ho a\u00a0rozhodněte znovu.`,
       });
       afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
     });
@@ -888,13 +888,13 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
 
   private savedText(project: ProjectResponse, created: boolean): string {
     if (created) {
-      return $localize`:@@admin.projectEditor.saved.created:Příběh jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.`;
+      return $localize`:@@admin.projectEditor.saved.created:Příběh jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a\u00a0zveřejnit.`;
     }
     if (project.publishedOn === null) {
       return $localize`:@@admin.projectEditor.saved.updated:Změny jsme uložili.`;
     }
     return project.live
-      ? $localize`:@@admin.projectEditor.saved.live:Změny jsme uložili a na webu už jsou.`
+      ? $localize`:@@admin.projectEditor.saved.live:Změny jsme uložili a\u00a0na webu už jsou.`
       : $localize`:@@admin.projectEditor.saved.scheduled:Změny jsme uložili. Příběh se na webu ukáže ${formatDonationDate(project.publishedOn)}:date:.`;
   }
 

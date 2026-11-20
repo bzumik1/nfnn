@@ -8,9 +8,9 @@ const MINUTE = 60_000;
 const DESCRIPTIONS: Readonly<Record<string, string>> = {
   ROOT: $localize`:@@admin.logs.level.describe.root:Vše ostatní`,
   'cz.novanadeje.app': $localize`:@@admin.logs.level.describe.app:Aplikace`,
-  'io.github.bzumik1.fio': $localize`:@@admin.logs.level.describe.fio:Import z Fio`,
+  'io.github.bzumik1.fio': $localize`:@@admin.logs.level.describe.fio:Import z\u00a0Fio`,
   'org.springframework.web': $localize`:@@admin.logs.level.describe.web:Požadavky na API`,
-  'org.springframework.security': $localize`:@@admin.logs.level.describe.security:Přihlašování a oprávnění`,
+  'org.springframework.security': $localize`:@@admin.logs.level.describe.security:Přihlašování a\u00a0oprávnění`,
   'org.hibernate.SQL': $localize`:@@admin.logs.level.describe.sql:Dotazy do databáze, bez hodnot`,
   liquibase: $localize`:@@admin.logs.level.describe.liquibase:Změny schématu databáze`,
   'org.springframework.mail': $localize`:@@admin.logs.level.describe.mail:Odesílání e-mailů`,

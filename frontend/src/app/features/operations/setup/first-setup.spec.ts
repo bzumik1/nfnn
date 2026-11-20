@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FirstSetup } from './first-setup';
 import { RESTART_POLL_MS } from './setup-api';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const STATUS_URL = '/api/operations/setup';
 const UNLOCK_URL = '/api/operations/setup/unlock';
@@ -49,7 +50,7 @@ describe('Given the first setup page', () => {
   }
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -57,7 +58,7 @@ describe('Given the first setup page', () => {
   function button(name: string): HTMLButtonElement {
     const found = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.trim() === name);
+    ).find((candidate) => withOrdinarySpaces(candidate.textContent)?.trim() === name);
     if (found === undefined) {
       throw new Error(`No button ${name}`);
     }
@@ -160,7 +161,7 @@ describe('Given the first setup page', () => {
   function fieldErrors(): (string | undefined)[] {
     return Array.from(
       fixture.nativeElement.querySelectorAll('.field-error') as NodeListOf<HTMLElement>,
-    ).map((error) => error.textContent?.trim());
+    ).map((error) => withOrdinarySpaces(error.textContent)?.trim());
   }
 
   it('when the page opens, then it says it is finding out whether the site is set up', () => {
@@ -444,7 +445,7 @@ describe('Given the first setup page', () => {
       expect(
         Array.from(
           fixture.nativeElement.querySelectorAll('.next-steps li') as NodeListOf<HTMLElement>,
-        ).map((step) => step.textContent?.replace(/\s+/g, ' ').trim()),
+        ).map((step) => withOrdinarySpaces(step.textContent)?.replace(/\s+/g, ' ').trim()),
       ).toEqual([
         'Zaregistrujte se s adresou spravce@example.cz.',
         'Otevřete odkaz z e-mailu, který vám přijde.',
@@ -742,7 +743,7 @@ describe('Given the first setup page', () => {
       expect(
         Array.from(
           fixture.nativeElement.querySelectorAll('.ui-field-error li') as NodeListOf<HTMLElement>,
-        ).map((item) => item.textContent?.trim()),
+        ).map((item) => withOrdinarySpaces(item.textContent)?.trim()),
       ).toEqual(['S těmito hodnotami web nenastartuje.']);
       expect(text('#setup-mail-port-error')).toBe('Port je číslo od 1 do 65535.');
       expect(document.activeElement).toBe(element('#setup-mail-port'));
@@ -776,7 +777,9 @@ describe('Given the first setup page on a server whose backup key is not there y
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Klíč k zálohám se ještě nevytvořil');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
+      'Klíč k zálohám se ještě nevytvořil',
+    );
     expect(fixture.nativeElement.querySelector('#setup-backup-key-word-2')).toBeNull();
   });
 
@@ -785,10 +788,12 @@ describe('Given the first setup page on a server whose backup key is not there y
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Klíč k zálohám se nepodařilo načíst.');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
+      'Klíč k zálohám se nepodařilo načíst.',
+    );
     const retry = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.trim() === 'Načíst znovu');
+    ).find((candidate) => withOrdinarySpaces(candidate.textContent)?.trim() === 'Načíst znovu');
     retry?.click();
     await fixture.whenStable();
     http.expectOne(BACKUP_KEY_URL).flush({ key: BACKUP_KEY, checkPositions: [2, 13, 24] });

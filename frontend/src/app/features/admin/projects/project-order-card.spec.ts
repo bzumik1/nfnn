@@ -8,6 +8,7 @@ import { type FakeConnectivity, fakeConnectivity } from '../device-copy/testing/
 import { ProjectOrderCard } from './project-order-card';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const ORDER_URL = '/api/admin/content/project-order';
 
@@ -49,7 +50,7 @@ describe('Given an administrator choosing the order of the projects', () => {
   }
 
   function text(element: Element | null): string {
-    return (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(element?.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function radio(order: ProjectOrder): HTMLInputElement {

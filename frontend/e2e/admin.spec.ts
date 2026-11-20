@@ -481,7 +481,7 @@ test.describe('Given an administrator', () => {
     await expect(row).toHaveText(
       'Naléhavé: Klíč k ověřovacím QR kódům není zveřejněný Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru.',
     );
-    await row.getByRole('link', { name: /Klíč k ověřovacím QR kódům není zveřejněný/ }).click();
+    await row.getByRole('link', { name: /Klíč k\sověřovacím QR kódům není zveřejněný/ }).click();
 
     await expect(page).toHaveURL(/\/sprava\/nastaveni#klic-k-overovacim-qr$/);
     await expect(
@@ -571,7 +571,7 @@ test.describe('Given an administrator', () => {
     const sections = page.getByRole('navigation', { name: 'Sekce správy' });
     const back = page.getByRole('banner').getByRole('button', { name: 'Zpět' });
     await expect(page.getByRole('navigation', { name: 'Správa' })).toHaveCount(0);
-    await expect(sections.getByRole('link', { name: /Platby z banky/ })).toBeVisible();
+    await expect(sections.getByRole('link', { name: /Platby z\sbanky/ })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toHaveCount(0);
 
     await sections.getByRole('link', { name: /Lidé fondu, správci, zálohy/ }).click();

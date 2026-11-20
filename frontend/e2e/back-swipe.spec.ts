@@ -370,7 +370,7 @@ test.describe("Given the app on the home screen of a phone and an administrator 
     await copied();
     await page
       .getByRole('main')
-      .getByRole('link', { name: /^Platby z banky/ })
+      .getByRole('link', { name: /^Platby z\sbanky/ })
       .first()
       .click();
     await expect(page).toHaveURL(/\/sprava\/platby/);

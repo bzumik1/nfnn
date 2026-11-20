@@ -1,9 +1,9 @@
 /// <reference types="@angular/localize" />
 
-const PRINTABLE_ON_RECEIPT = $localize`:@@donor.register.printableOnReceipt:Obsahuje znak, který na potvrzení o daru nevytiskneme, například emoji nebo čínské písmo. Napište prosím tento údaj latinkou, cyrilicí nebo řeckým písmem.`;
+const PRINTABLE_ON_RECEIPT = $localize`:@@donor.register.printableOnReceipt:Obsahuje znak, který na potvrzení o\u00a0daru nevytiskneme, například emoji nebo čínské písmo. Napište prosím tento údaj latinkou, cyrilicí nebo řeckým písmem.`;
 
 export const PERSON_NAME_MESSAGES = {
-  required: $localize`:@@donor.register.name.required:Vyplňte prosím jméno a příjmení, uvedeme je na potvrzení o daru.`,
+  required: $localize`:@@donor.register.name.required:Vyplňte prosím jméno a\u00a0příjmení, uvedeme je na potvrzení o\u00a0daru.`,
   printableOnReceipt: PRINTABLE_ON_RECEIPT,
 };
 
@@ -13,7 +13,7 @@ export const COMPANY_NAME_MESSAGES = {
 };
 
 export const STREET_MESSAGES = {
-  required: $localize`:@@donor.register.street.required:Vyplňte prosím ulici a číslo domu.`,
+  required: $localize`:@@donor.register.street.required:Vyplňte prosím ulici a\u00a0číslo domu.`,
   printableOnReceipt: PRINTABLE_ON_RECEIPT,
 };
 

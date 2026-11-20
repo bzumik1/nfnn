@@ -19,6 +19,7 @@ import {
   textOf,
 } from '../device-copy/testing/opened-copy';
 import { readDetailsDisclosures } from '../../../shared/ui/disclosure/testing/details-disclosures';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const BACKUPS_URL = '/api/admin/operations/backups';
 const REQUESTS_URL = '/api/admin/operations/backups/requests';
@@ -68,7 +69,7 @@ describe('Given an administrator on the backups page', () => {
   });
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -231,7 +232,9 @@ describe('Given an administrator on the backups page', () => {
     );
 
     expect(fixture.nativeElement.querySelector('.off-server')).toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain('tlačítkem „Stáhnout“');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain(
+      'tlačítkem „Stáhnout“',
+    );
   });
 
   it('when a problem and a failed run carry technical details, then the card has one disclosure, at the failed run, under an aria-hidden chevron', async () => {
@@ -654,7 +657,9 @@ describe('Given an administrator on the backups page', () => {
     expect(text('dialog .backup-file')).toBe('nfnn-2026-10-23_0300.dump.age');
     expect(texts('dialog button.ui-button')).toEqual(['Stáhnout', 'Obnovit web z této zálohy…']);
     expect(
-      fixture.nativeElement.querySelector('dialog .ui-button--danger-outline')?.textContent?.trim(),
+      withOrdinarySpaces(
+        fixture.nativeElement.querySelector('dialog .ui-button--danger-outline')?.textContent,
+      )?.trim(),
     ).toBe('Obnovit web z této zálohy…');
   });
 
@@ -749,7 +754,7 @@ describe('Given an administrator who chose to restore a backup from the history 
     fixture.detectChanges();
 
     expect(
-      (fixture.nativeElement.querySelector('.restore-lead')?.textContent ?? '')
+      (withOrdinarySpaces(fixture.nativeElement.querySelector('.restore-lead')?.textContent) ?? '')
         .replace(/\s+/g, ' ')
         .trim(),
     ).toBe('Web se vrátí do stavu z 22. 10. 2026 3:00, ze zálohy nfnn-2026-10-22_0300.dump.age.');
@@ -766,7 +771,7 @@ describe('Given an administrator offline whose device keeps the administration c
 
     expect(page.querySelector('.ui-load-state--error')).toBeNull();
     const start = Array.from(page.querySelectorAll('button')).find((button) =>
-      (button.textContent ?? '').includes('Zálohovat'),
+      (withOrdinarySpaces(button.textContent) ?? '').includes('Zálohovat'),
     );
     expect(start?.getAttribute('aria-disabled')).toBe('true');
     http.verify();

@@ -36,6 +36,7 @@ import {
 import { ShownAnswers } from '../../../core/connectivity/shown-answers';
 import { newsArticle as heldArticle } from '../../content/testing/news-fixtures';
 import { person as heldPerson } from '../../content/testing/people-fixtures';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const NEWS_URL = '/api/admin/content/news';
 const MEDIA_URL = '/api/admin/content/media';
@@ -118,7 +119,7 @@ function element<T extends HTMLElement>(fixture: ComponentFixture<unknown>, sele
 }
 
 function text(fixture: ComponentFixture<unknown>, selector: string): string {
-  return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+  return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -340,7 +341,7 @@ describe('Given an administrator writing a new news article', () => {
     await type(fixture, '#news-publish-date', '2026-10-30');
     const select = element<HTMLSelectElement>(fixture, '#news-look-back-year');
     select.selectedIndex = Array.from(select.options).findIndex(
-      (option) => option.textContent?.trim() === '2025',
+      (option) => withOrdinarySpaces(option.textContent)?.trim() === '2025',
     );
     select.dispatchEvent(new Event('change'));
     await settle(fixture);
@@ -480,7 +481,9 @@ describe('Given an administrator writing a new news article', () => {
 
       expect(answer).toBeInstanceOf(Promise);
       expect(text(fixture, 'dialog h2')).toBe('Máte neuložené změny');
-      expect(document.activeElement?.textContent?.trim()).toBe('Zůstat a uložit');
+      expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe(
+        'Zůstat a uložit',
+      );
     });
 
     it('and the page goes away while it asks, then the question is answered with staying, so no navigation waits for ever', async () => {
@@ -797,7 +800,7 @@ describe('Given an administrator editing a published news article', () => {
     await loaded();
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('figure.preview figcaption')).map(
-        (caption) => (caption as HTMLElement).textContent?.trim(),
+        (caption) => withOrdinarySpaces((caption as HTMLElement).textContent)?.trim(),
       ),
     ).toEqual([
       'Velká zpráva, široká',
@@ -952,8 +955,10 @@ describe('Given an administrator editing a published news article', () => {
 
     it('then the sheet says their edits stay in the form, which still holds them', () => {
       const sheet = fixture.nativeElement.querySelector('app-changed-meanwhile-dialog dialog');
-      expect(sheet?.querySelector('h2')?.textContent?.trim()).toBe('Mezitím se to změnilo');
-      expect(sheet?.textContent).toContain('zůstávají ve formuláři');
+      expect(withOrdinarySpaces(sheet?.querySelector('h2')?.textContent)?.trim()).toBe(
+        'Mezitím se to změnilo',
+      );
+      expect(withOrdinarySpaces(sheet?.textContent)).toContain('zůstávají ve formuláři');
       expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe(
         'Zahrada pro všechny děti',
       );
@@ -1029,9 +1034,11 @@ describe('Given an administrator editing a published news article', () => {
     await settle(fixture);
 
     const sheet = element<HTMLDialogElement>(fixture, 'app-changed-meanwhile-dialog dialog');
-    expect(sheet.textContent).toContain('vaše úpravy zůstávají ve formuláři');
-    expect(sheet.textContent).toContain('Novější verze je z 5.\u00a011. 2026 16:20.');
-    expect(sheet.textContent).not.toContain('Uložit svou verzi místo novější');
+    expect(withOrdinarySpaces(sheet.textContent)).toContain('vaše úpravy zůstávají ve formuláři');
+    expect(withOrdinarySpaces(sheet.textContent)).toContain(
+      'Novější verze je z 5. 11. 2026 16:20.',
+    );
+    expect(withOrdinarySpaces(sheet.textContent)).not.toContain('Uložit svou verzi místo novější');
     button(fixture, 'Nechat úpravy ve formuláři').click();
     await settle(fixture);
 
@@ -1131,7 +1138,9 @@ describe('Given an administrator editing a published news article', () => {
     const link = element<HTMLAnchorElement>(fixture, '.public-link');
     expect(link.getAttribute('href')).toBe('/aktuality/zahrada-pro-deti');
     expect(link.target).toBe('_blank');
-    expect(link.textContent?.replace(/\s+/g, ' ').trim()).toBe('Otevřít na webu (v novém okně)');
+    expect(withOrdinarySpaces(link.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
+      'Otevřít na webu (v novém okně)',
+    );
   });
 
   it('when they edit the text and change the date, then the edit is saved first and the article is published with it', async () => {
@@ -1310,7 +1319,7 @@ describe('Given an administrator editing a published news article', () => {
   async function chooseLookBackYear(label: string): Promise<void> {
     const select = element<HTMLSelectElement>(fixture, '#news-look-back-year');
     const index = Array.from(select.options).findIndex(
-      (option) => option.textContent?.trim() === label,
+      (option) => withOrdinarySpaces(option.textContent)?.trim() === label,
     );
     expect(index).toBeGreaterThanOrEqual(0);
     select.selectedIndex = index;
@@ -1321,10 +1330,9 @@ describe('Given an administrator editing a published news article', () => {
   it('when they choose the year it looks back on and save, then the year goes to its own address with the version of the saved article', async () => {
     await loaded();
     expect(
-      element<HTMLSelectElement>(
-        fixture,
-        '#news-look-back-year',
-      ).selectedOptions[0].textContent?.trim(),
+      withOrdinarySpaces(
+        element<HTMLSelectElement>(fixture, '#news-look-back-year').selectedOptions[0].textContent,
+      )?.trim(),
     ).toBe('Není ohlédnutím');
 
     await chooseLookBackYear('2025');
@@ -1346,10 +1354,9 @@ describe('Given an administrator editing a published news article', () => {
       'Změny jsme uložili a na webu už jsou.',
     );
     expect(
-      element<HTMLSelectElement>(
-        fixture,
-        '#news-look-back-year',
-      ).selectedOptions[0].textContent?.trim(),
+      withOrdinarySpaces(
+        element<HTMLSelectElement>(fixture, '#news-look-back-year').selectedOptions[0].textContent,
+      )?.trim(),
     ).toBe('2025');
   });
 
@@ -1415,10 +1422,9 @@ describe('Given an administrator editing a published news article', () => {
       'Ostatní změny jsme uložili, rok ohlédnutí ale ne. Rok už má ohlédnutí. Za rokem 2025 se už ohlíží jiná aktualita.',
     );
     expect(
-      element<HTMLSelectElement>(
-        fixture,
-        '#news-look-back-year',
-      ).selectedOptions[0].textContent?.trim(),
+      withOrdinarySpaces(
+        element<HTMLSelectElement>(fixture, '#news-look-back-year').selectedOptions[0].textContent,
+      )?.trim(),
     ).toBe('2025');
 
     await submit(fixture);
@@ -1454,11 +1460,9 @@ describe('Given an administrator linked to a person of the foundation writing a 
     const signer = element<HTMLSelectElement>(fixture, '#news-signer');
 
     expect(signer.value).toBe(PERSON_ID);
-    expect(Array.from(signer.options).map((option) => option.textContent?.trim())).toEqual([
-      'Bez podpisu',
-      'Pavel Vzorový',
-      'Eva Vzorová',
-    ]);
+    expect(
+      Array.from(signer.options).map((option) => withOrdinarySpaces(option.textContent)?.trim()),
+    ).toEqual(['Bez podpisu', 'Pavel Vzorový', 'Eva Vzorová']);
 
     await write();
     await submit(fixture);
@@ -1631,7 +1635,7 @@ describe('Given an administrator editing a published news article on a device th
 
     const select = element<HTMLSelectElement>(fixture, '#news-look-back-year');
     select.selectedIndex = Array.from(select.options).findIndex(
-      (option) => option.textContent?.trim() === '2025',
+      (option) => withOrdinarySpaces(option.textContent)?.trim() === '2025',
     );
     select.dispatchEvent(new Event('change'));
     await drafted();
@@ -1649,10 +1653,9 @@ describe('Given an administrator editing a published news article on a device th
     await drafted();
 
     expect(
-      element<HTMLSelectElement>(
-        fixture,
-        '#news-look-back-year',
-      ).selectedOptions[0].textContent?.trim(),
+      withOrdinarySpaces(
+        element<HTMLSelectElement>(fixture, '#news-look-back-year').selectedOptions[0].textContent,
+      )?.trim(),
     ).toBe('2024');
   });
 
@@ -1666,10 +1669,9 @@ describe('Given an administrator editing a published news article on a device th
     await drafted();
 
     expect(
-      element<HTMLSelectElement>(
-        fixture,
-        '#news-look-back-year',
-      ).selectedOptions[0].textContent?.trim(),
+      withOrdinarySpaces(
+        element<HTMLSelectElement>(fixture, '#news-look-back-year').selectedOptions[0].textContent,
+      )?.trim(),
     ).toBe('2023');
   });
 
@@ -1821,7 +1823,7 @@ describe('Given an administrator editing a published news article on a device th
       await settle(fixture);
 
       const sheet = element(fixture, 'app-changed-meanwhile-dialog dialog');
-      expect(sheet.textContent).toContain(
+      expect(withOrdinarySpaces(sheet.textContent)).toContain(
         'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
       );
       expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe(

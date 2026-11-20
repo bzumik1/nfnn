@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Skeleton } from './skeleton';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given a skeleton in place of content that is loading', () => {
   let fixture: ComponentFixture<Skeleton>;
@@ -15,7 +16,7 @@ describe('Given a skeleton in place of content that is loading', () => {
 
   it('when it shows, then a screen reader hears nothing of it', () => {
     expect(host().getAttribute('aria-hidden')).toBe('true');
-    expect(host().textContent?.trim()).toBe('');
+    expect(withOrdinarySpaces(host().textContent)?.trim()).toBe('');
   });
 
   it('when it stands for a whole card, then it draws the card with a title and the rows asked for', () => {

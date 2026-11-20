@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AppInstall, InstallOutcome, InstallWay } from '../../../../core/install/app-install';
 import { InstallCard } from './install-card';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 describe('Given the install card in the donor overview', () => {
   let fixture: ComponentFixture<InstallCard>;
@@ -27,10 +28,12 @@ describe('Given the install card in the donor overview', () => {
   afterEach(() => fixture.nativeElement.remove());
 
   const text = () =>
-    (fixture.nativeElement as HTMLElement).textContent?.replace(/\s+/g, ' ').trim();
+    withOrdinarySpaces((fixture.nativeElement as HTMLElement).textContent)
+      ?.replace(/\s+/g, ' ')
+      .trim();
   const button = (name: string) =>
     Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
-      (candidate) => candidate.textContent?.trim() === name,
+      (candidate) => withOrdinarySpaces(candidate.textContent)?.trim() === name,
     );
 
   it('when the device can install nothing, then the card is not there', async () => {
@@ -42,7 +45,7 @@ describe('Given the install card in the donor overview', () => {
   it('when it appears on an iPhone, then it explains Share and Add to Home Screen, says the app asks to sign in again and takes no focus', async () => {
     await render('ios-share');
 
-    expect(fixture.nativeElement.querySelector('h2')?.textContent?.trim()).toBe(
+    expect(withOrdinarySpaces(fixture.nativeElement.querySelector('h2')?.textContent)?.trim()).toBe(
       'Nová naděje jako aplikace',
     );
     expect(text()).toContain(

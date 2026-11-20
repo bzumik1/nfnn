@@ -5,6 +5,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { Diagnostics, PreparedDiagnostics } from '../../../core/diagnostics/diagnostics';
 import type { DiagnosticSource } from '../../../core/diagnostics/diagnostics-schema';
 import { DiagnosticsDownload } from './diagnostics-download';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   imports: [DiagnosticsDownload],
@@ -49,7 +50,11 @@ describe('Given the offer of a diagnostic file', () => {
   });
 
   function text(): string {
-    return (fixture.nativeElement as HTMLElement).textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    return (
+      withOrdinarySpaces((fixture.nativeElement as HTMLElement).textContent)
+        ?.replace(/\s+/g, ' ')
+        .trim() ?? ''
+    );
   }
 
   function button(): HTMLButtonElement {
@@ -57,7 +62,11 @@ describe('Given the offer of a diagnostic file', () => {
   }
 
   function region(role: 'status' | 'alert'): string {
-    return fixture.nativeElement.querySelector(`[role="${role}"]`)?.textContent?.trim() ?? '';
+    return (
+      withOrdinarySpaces(
+        fixture.nativeElement.querySelector(`[role="${role}"]`)?.textContent,
+      )?.trim() ?? ''
+    );
   }
 
   async function under(source: DiagnosticSource): Promise<void> {
@@ -69,7 +78,7 @@ describe('Given the offer of a diagnostic file', () => {
     expect(text()).toContain(
       'Když nám píšete o potížích s webem, přiložte prosím diagnostický soubor. Je v něm jen stav webu v tomto zařízení, žádné vaše údaje ani hesla, a sám se nikam neodesílá.',
     );
-    expect(button().textContent?.trim()).toBe('Stáhnout diagnostický soubor');
+    expect(withOrdinarySpaces(button().textContent)?.trim()).toBe('Stáhnout diagnostický soubor');
     expect(button().type).toBe('button');
   });
 
@@ -82,7 +91,7 @@ describe('Given the offer of a diagnostic file', () => {
   it('when it is shown, then its e-mail link carries only the subject', () => {
     const link = fixture.nativeElement.querySelector('a') as HTMLAnchorElement;
 
-    expect(link.textContent?.trim()).toBe('info@nfnn.cz');
+    expect(withOrdinarySpaces(link.textContent)?.trim()).toBe('info@nfnn.cz');
     expect(link.getAttribute('href')).toBe(
       'mailto:info@nfnn.cz?subject=Diagnostick%C3%BD%20soubor',
     );
@@ -99,7 +108,7 @@ describe('Given the offer of a diagnostic file', () => {
     expect(diagnostics.prepare).toHaveBeenCalledWith('account-page');
     expect(button().disabled).toBe(false);
     expect(button().getAttribute('aria-disabled')).toBe('true');
-    expect(button().textContent?.trim()).toBe('Připravujeme soubor…');
+    expect(withOrdinarySpaces(button().textContent)?.trim()).toBe('Připravujeme soubor…');
     expect(document.activeElement).toBe(button());
     button().click();
     expect(diagnostics.prepare).toHaveBeenCalledTimes(1);
@@ -116,7 +125,7 @@ describe('Given the offer of a diagnostic file', () => {
       ),
     );
     expect(diagnostics.save).toHaveBeenCalledWith(PREPARED);
-    expect(button().textContent?.trim()).toBe('Stáhnout diagnostický soubor');
+    expect(withOrdinarySpaces(button().textContent)?.trim()).toBe('Stáhnout diagnostický soubor');
   });
 
   describe('when it stands under a receipt PDF failure, whose line already gives the address', () => {
@@ -160,7 +169,7 @@ describe('Given the offer of a diagnostic file', () => {
       button().focus();
       button().click();
       await vi.waitFor(() =>
-        expect(button().textContent?.trim()).toBe('Sdílet diagnostický soubor'),
+        expect(withOrdinarySpaces(button().textContent)?.trim()).toBe('Sdílet diagnostický soubor'),
       );
     });
 
@@ -176,7 +185,9 @@ describe('Given the offer of a diagnostic file', () => {
       button().click();
 
       await vi.waitFor(() =>
-        expect(button().textContent?.trim()).toBe('Stáhnout diagnostický soubor'),
+        expect(withOrdinarySpaces(button().textContent)?.trim()).toBe(
+          'Stáhnout diagnostický soubor',
+        ),
       );
       expect(diagnostics.share).toHaveBeenCalledWith(PREPARED);
       expect(region('status')).toBe('');
@@ -189,7 +200,7 @@ describe('Given the offer of a diagnostic file', () => {
       await fixture.whenStable();
       await Promise.resolve();
 
-      expect(button().textContent?.trim()).toBe('Sdílet diagnostický soubor');
+      expect(withOrdinarySpaces(button().textContent)?.trim()).toBe('Sdílet diagnostický soubor');
     });
 
     it('and sharing fails, then the file is saved instead and the status line says where', async () => {

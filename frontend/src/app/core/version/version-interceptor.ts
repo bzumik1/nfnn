@@ -71,7 +71,7 @@ function updateRequired(request: HttpRequest<unknown>): HttpErrorResponse {
       type: `https://nfnn.cz/problems/${UPDATE_REQUIRED}`,
       status: UPGRADE_REQUIRED,
       title: $localize`:@@layout.update.problem.title:Web mezitím dostal novou verzi`,
-      detail: $localize`:@@layout.update.problem.detail:Nic jsme neodeslali. Načtěte stránku znovu a zkuste to ještě jednou.`,
+      detail: $localize`:@@layout.update.problem.detail:Nic jsme neodeslali. Načtěte stránku znovu a\u00a0zkuste to ještě jednou.`,
     },
   });
 }

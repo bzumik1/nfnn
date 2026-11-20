@@ -16,13 +16,13 @@ export const BACKUP_DAYS: readonly BackupDay[] = [
 ];
 
 const ON_DAY: Record<number, string> = {
-  1: $localize`:@@admin.backups.schedule.on.1:v pondělí`,
-  2: $localize`:@@admin.backups.schedule.on.2:v úterý`,
+  1: $localize`:@@admin.backups.schedule.on.1:v\u00a0pondělí`,
+  2: $localize`:@@admin.backups.schedule.on.2:v\u00a0úterý`,
   3: $localize`:@@admin.backups.schedule.on.3:ve středu`,
   4: $localize`:@@admin.backups.schedule.on.4:ve čtvrtek`,
-  5: $localize`:@@admin.backups.schedule.on.5:v pátek`,
-  6: $localize`:@@admin.backups.schedule.on.6:v sobotu`,
-  7: $localize`:@@admin.backups.schedule.on.7:v neděli`,
+  5: $localize`:@@admin.backups.schedule.on.5:v\u00a0pátek`,
+  6: $localize`:@@admin.backups.schedule.on.6:v\u00a0sobotu`,
+  7: $localize`:@@admin.backups.schedule.on.7:v\u00a0neděli`,
 };
 
 export function formatPlanTime(time: string): string {

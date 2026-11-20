@@ -78,16 +78,16 @@
       </div>
       @if (current === 'offer' || current === 'failed') {
         <p class="ui-dialog__lead" i18n="@@admin.alerts.offer.lead">
-          Dostanete zprávu, když selže import plateb, záloha nebo odeslání e-mailu, a znovu, až to
-          zase funguje. Upozornění neříká jména ani částky.
+          Dostanete zprávu, když selže import plateb, záloha nebo odeslání e-mailu, a&nbsp;znovu, až
+          to zase funguje. Upozornění neříká jména ani částky.
         </p>
       }
       <div role="alert">
         @if (current === 'refused') {
           <p class="ui-dialog__lead" i18n="@@admin.alerts.offer.refusedLead">
-            Zařízení upozornění pro tuto aplikaci nepovolilo. Povolte jí oznámení v nastavení
+            Zařízení upozornění pro tuto aplikaci nepovolilo. Povolte jí oznámení v&nbsp;nastavení
             zařízení (na iPhonu Nastavení → Oznámení → Nová naděje, nebo jak jste ikonu na ploše
-            pojmenovali) a potom upozornění zapněte na stránce Upozornění.
+            pojmenovali) a&nbsp;potom upozornění zapněte na stránce Upozornění.
           </p>
         }
         @if (current === 'failed') {

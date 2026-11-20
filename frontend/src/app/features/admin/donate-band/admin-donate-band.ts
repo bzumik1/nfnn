@@ -50,7 +50,7 @@ interface ChosenPhoto {
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
-const SAVED = $localize`:@@admin.donateBand.saved:Uloženo. Fotka je na webu v pruhu Přispět.`;
+const SAVED = $localize`:@@admin.donateBand.saved:Uloženo. Fotka je na webu v\u00a0pruhu Přispět.`;
 const SAVE_FAILED = $localize`:@@admin.donateBand.save.failed:Fotku se nepodařilo uložit. Zkuste to prosím znovu.`;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -167,7 +167,7 @@ export class AdminDonateBand {
     }
     if (file.size > MAX_IMAGE_BYTES) {
       this.uploadError.set(
-        $localize`:@@admin.donateBand.photo.tooLarge:Fotka je větší než 10 MB. Zmenšete ji prosím a zkuste to znovu.`,
+        $localize`:@@admin.donateBand.photo.tooLarge:Fotka je větší než 10 MB. Zmenšete ji prosím a\u00a0zkuste to znovu.`,
       );
       return;
     }
@@ -245,7 +245,7 @@ export class AdminDonateBand {
           this.show(band.photo);
           this.notice.set({
             kind: 'status',
-            text: $localize`:@@admin.donateBand.removed:Fotku jsme z webu odebrali a smazali. Pruh Přispět ukazuje zase ilustrační fotku.`,
+            text: $localize`:@@admin.donateBand.removed:Fotku jsme z\u00a0webu odebrali a\u00a0smazali. Pruh Přispět ukazuje zase ilustrační fotku.`,
           });
           afterNextRender(
             () =>

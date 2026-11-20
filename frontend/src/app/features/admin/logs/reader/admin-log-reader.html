@@ -1,13 +1,13 @@
 <div class="ui-page ui-page--full container">
   <h1 #title class="ui-page-title file-title ui-mono" tabindex="-1">{{ file }}</h1>
   <p class="ui-page-intro" i18n="@@admin.logs.reader.intro">
-    Nejnovější záznamy jsou nahoře, časy jsou pražské. Vyberte záznam a zobrazí se celý.
+    Nejnovější záznamy jsou nahoře, časy jsou pražské. Vyberte záznam a&nbsp;zobrazí se celý.
   </p>
 
   <div class="toolbar">
     <form class="search-form" role="search" (ngSubmit)="find()" novalidate>
       <label class="search-label" for="log-search" i18n="@@admin.logs.reader.searchLabel"
-        >Hledat v souboru</label
+        >Hledat v&nbsp;souboru</label
       >
       <div class="search-row">
         <input
@@ -96,7 +96,7 @@
           (click)="findBrowserErrors()"
           i18n="@@admin.logs.search.browserErrors"
         >
-          Chyby z prohlížečů
+          Chyby z&nbsp;prohlížečů
         </button>
       }
     </div>
@@ -177,7 +177,9 @@
       } @else if (entries().length === 0 && searchError() === '') {
         <p class="empty">
           @if (searchMode()) {
-            <ng-container i18n="@@admin.logs.search.none">Nic takového v logu není.</ng-container>
+            <ng-container i18n="@@admin.logs.search.none"
+              >Nic takového v&nbsp;logu není.</ng-container
+            >
           } @else {
             <ng-container i18n="@@admin.logs.reader.empty">Soubor je prázdný.</ng-container>
           }

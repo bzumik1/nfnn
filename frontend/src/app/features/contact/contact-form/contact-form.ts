@@ -88,7 +88,7 @@ export class ContactForm {
     server: this.emailInvalid,
   };
   protected readonly messageMessages = {
-    required: $localize`:@@home.contact.form.message.required:Napište nám prosím, s čím vám můžeme pomoct.`,
+    required: $localize`:@@home.contact.form.message.required:Napište nám prosím, s\u00a0čím vám můžeme pomoct.`,
   };
 
   constructor() {

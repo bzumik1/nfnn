@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Meta } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { NotFound } from './not-found';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given an address the site does not know', () => {
   let fixture: ComponentFixture<NotFound>;
@@ -20,7 +21,9 @@ describe('Given an address the site does not know', () => {
   it('when the page opens, then it says the page does not exist and leads home', () => {
     const root = fixture.nativeElement as HTMLElement;
 
-    expect(root.querySelector('h1')?.textContent?.trim()).toBe('Tuhle stránku jsme nenašli');
+    expect(withOrdinarySpaces(root.querySelector('h1')?.textContent)?.trim()).toBe(
+      'Tuhle stránku jsme nenašli',
+    );
     expect(root.querySelector('a')?.getAttribute('href')).toBe('/');
   });
 
@@ -28,18 +31,18 @@ describe('Given an address the site does not know', () => {
     const root = fixture.nativeElement as HTMLElement;
     return Array.from(root.querySelectorAll(`${selector} a`)).map((link) => [
       link.getAttribute('href') ?? '',
-      link.textContent?.trim() ?? '',
+      withOrdinarySpaces(link.textContent)?.trim() ?? '',
     ]);
   }
 
   function lead(): string | undefined {
     const root = fixture.nativeElement as HTMLElement;
-    return root.querySelector('.ui-intro__lead')?.textContent?.trim();
+    return withOrdinarySpaces(root.querySelector('.ui-intro__lead')?.textContent)?.trim();
   }
 
   it('when the page opens for an unknown address, then it leads home and to the contact form, and quietly to the news and the projects', () => {
     expect(lead()).toBe(
-      'Odkaz je možná starý nebo v\u00a0adrese chybí písmenko. Zbytek webu je na\u00a0svém\u00a0místě.',
+      'Odkaz je možná starý nebo v adrese chybí písmenko. Zbytek webu je na svém místě.',
     );
     expect(links('.actions')).toEqual([
       ['/', 'Zpět na úvodní stránku'],

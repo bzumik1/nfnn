@@ -23,6 +23,7 @@ import {
   waitsForConnection,
 } from '../device-copy/testing/opened-copy';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const REPORT_URL = '/api/admin/donations/report';
 const SETTINGS_URL = '/api/admin/donations/report/settings';
@@ -83,7 +84,7 @@ describe('Given an administrator on the monthly report page', () => {
   }
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -146,9 +147,11 @@ describe('Given an administrator on the monthly report page', () => {
     await respond(reportView());
 
     expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('info@nfnn.cz');
-    expect(element<HTMLSelectElement>('#report-send-day').selectedOptions[0]?.textContent).toBe(
-      '1.',
-    );
+    expect(
+      withOrdinarySpaces(
+        element<HTMLSelectElement>('#report-send-day').selectedOptions[0]?.textContent,
+      ),
+    ).toBe('1.');
     expect(
       Array.from(
         fixture.nativeElement.querySelectorAll(
@@ -156,9 +159,11 @@ describe('Given an administrator on the monthly report page', () => {
         ) as NodeListOf<HTMLInputElement>,
       ).map((box) => box.checked),
     ).toEqual([true, true, true, true]);
-    expect(element<HTMLSelectElement>('#report-send-hour').selectedOptions[0]?.textContent).toBe(
-      '7:00',
-    );
+    expect(
+      withOrdinarySpaces(
+        element<HTMLSelectElement>('#report-send-hour').selectedOptions[0]?.textContent,
+      ),
+    ).toBe('7:00');
     expect(text('.next-report')).toBe('Příští přehled za září 2026 odejde 1. 10. 2026 v 7:00.');
     expect(text('.changed-at')).toBe('Nastavení jste zatím neměnili.');
     expect(text('[aria-labelledby="report-sent-title"]')).toContain(
@@ -168,7 +173,7 @@ describe('Given an administrator on the monthly report page', () => {
     const options = Array.from(element<HTMLSelectElement>('#report-month').options);
     expect(options).toHaveLength(24);
     expect(options[0]?.value).toBe('2026-09');
-    expect(options[0]?.textContent).toBe('září 2026 (zatím neodesláno)');
+    expect(withOrdinarySpaces(options[0]?.textContent)).toBe('září 2026 (zatím neodesláno)');
     expect(options[23]?.value).toBe('2024-10');
   });
 
@@ -215,12 +220,16 @@ describe('Given an administrator on the monthly report page', () => {
     expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe(
       'pavel@example.cz\njakub@example.cz',
     );
-    expect(element<HTMLSelectElement>('#report-send-day').selectedOptions[0]?.textContent).toBe(
-      '5.',
-    );
-    expect(element<HTMLSelectElement>('#report-send-hour').selectedOptions[0]?.textContent).toBe(
-      '9:00',
-    );
+    expect(
+      withOrdinarySpaces(
+        element<HTMLSelectElement>('#report-send-day').selectedOptions[0]?.textContent,
+      ),
+    ).toBe('5.');
+    expect(
+      withOrdinarySpaces(
+        element<HTMLSelectElement>('#report-send-hour').selectedOptions[0]?.textContent,
+      ),
+    ).toBe('9:00');
     expect(element<HTMLInputElement>('input[name="donors"]').checked).toBe(false);
     expect(element<HTMLInputElement>('input[name="donations"]').checked).toBe(true);
     expect(text('.changed-at')).toBe('Naposledy změněno 5. 10. 2026 9:00.');
@@ -233,25 +242,25 @@ describe('Given an administrator on the monthly report page', () => {
           '.sent-reports a.ui-list__row',
         ) as NodeListOf<HTMLAnchorElement>,
       ).map((row) => ({
-        month: row.querySelector('.ui-list__title')?.textContent?.trim(),
-        sentAt: row.querySelector('.ui-list__meta')?.textContent?.trim(),
+        month: withOrdinarySpaces(row.querySelector('.ui-list__title')?.textContent)?.trim(),
+        sentAt: withOrdinarySpaces(row.querySelector('.ui-list__meta')?.textContent)?.trim(),
         href: row.getAttribute('href'),
       })),
     ).toEqual([
       {
         month: 'září 2026',
-        sentAt: 'Odesláno 5.\u00a010. 2026 7:00',
+        sentAt: 'Odesláno 5. 10. 2026 7:00',
         href: '/sprava/prehledy/2026-09',
       },
       {
         month: 'srpen 2026',
-        sentAt: 'Odesláno 1.\u00a09. 2026 7:00',
+        sentAt: 'Odesláno 1. 9. 2026 7:00',
         href: '/sprava/prehledy/2026-08',
       },
     ]);
-    expect(element<HTMLSelectElement>('#report-month').options[0]?.textContent).toBe(
-      'září 2026 (odesláno 5.\u00a010. 2026)',
-    );
+    expect(
+      withOrdinarySpaces(element<HTMLSelectElement>('#report-month').options[0]?.textContent),
+    ).toBe('září 2026 (odesláno 5. 10. 2026)');
   });
 
   it('when the recipients, the day, the hour and the sections are changed and saved, then the settings are sent and the page confirms and reloads', async () => {
@@ -397,8 +406,10 @@ describe('Given an administrator on the monthly report page', () => {
     }
 
     it('then the sheet says the edits stay in the form and when the other version was saved', () => {
-      expect(sheet().textContent).toContain('zůstávají ve formuláři');
-      expect(sheet().textContent).toContain('Novější verze je z 5.\u00a011. 2026 16:21.');
+      expect(withOrdinarySpaces(sheet().textContent)).toContain('zůstávají ve formuláři');
+      expect(withOrdinarySpaces(sheet().textContent)).toContain(
+        'Novější verze je z 5. 11. 2026 16:21.',
+      );
       expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('pavel@example.cz');
     });
 
@@ -449,9 +460,9 @@ describe('Given an administrator on the monthly report page', () => {
     expect(text('.send-card .send-intro')).toBe(
       'Přehled za vybraný měsíc odejde hned, i když už jednou odešel. Poslat jde jen měsíc, který už skončil: přehled za říjen 2026 půjde poslat od 1. 11. 2026.',
     );
-    expect(element<HTMLSelectElement>('#report-month').options[0]?.textContent).toBe(
-      'září 2026 (zatím neodesláno)',
-    );
+    expect(
+      withOrdinarySpaces(element<HTMLSelectElement>('#report-month').options[0]?.textContent),
+    ).toBe('září 2026 (zatím neodesláno)');
   });
 
   it('when the sending is confirmed and the answer has not come yet, then the button is locked and keeps both labels under the sending name', async () => {
@@ -556,7 +567,7 @@ describe('Given an administrator on the monthly report page', () => {
     expect(fixture.nativeElement.querySelector('[role="group"]')).toBeNull();
     expect(document.activeElement).toBe(button('Poslat přehled'));
     const link = element<HTMLAnchorElement>('.mail-settings-link');
-    expect(link.textContent?.trim()).toBe('Otevřít nastavení e-mailů');
+    expect(withOrdinarySpaces(link.textContent)?.trim()).toBe('Otevřít nastavení e-mailů');
     expect(link.getAttribute('href')).toBe('/sprava/nastaveni#settings-MAIL');
   });
 
@@ -709,7 +720,9 @@ describe('Given an administrator changing the monthly report on a device that ke
   it('when the device kept settings of the version they open and they continue them, then the form takes them and saves under that version', async () => {
     keptDraft(`version:${version}`);
     await open();
-    expect(element('app-draft-offer').textContent).toContain('Máte tu rozepsané úpravy');
+    expect(withOrdinarySpaces(element('app-draft-offer').textContent)).toContain(
+      'Máte tu rozepsané úpravy',
+    );
 
     button('Pokračovat v rozepsaném').click();
     await settle();
@@ -730,7 +743,9 @@ describe('Given an administrator changing the monthly report on a device that ke
   it('when the device kept settings of an older version and they continue them, then the save names that version and the refusal says the draft was overtaken', async () => {
     keptDraft('version:0000000000000001');
     await open();
-    expect(element('app-draft-offer').textContent).toContain('Uložená verze se od té doby změnila');
+    expect(withOrdinarySpaces(element('app-draft-offer').textContent)).toContain(
+      'Uložená verze se od té doby změnila',
+    );
 
     button('Pokračovat v rozepsaném').click();
     await settle();
@@ -748,9 +763,9 @@ describe('Given an administrator changing the monthly report on a device that ke
       { status: 409, statusText: 'Conflict' },
     );
     await settle();
-    expect(element('app-changed-meanwhile-dialog dialog').textContent).toContain(
-      'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
-    );
+    expect(
+      withOrdinarySpaces(element('app-changed-meanwhile-dialog dialog').textContent),
+    ).toContain('Od chvíle, kdy jste na tomto zařízení začali s úpravami');
 
     button('Zahodit své úpravy a načíst novější verzi').click();
     await settle();

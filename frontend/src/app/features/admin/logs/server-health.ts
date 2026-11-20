@@ -49,7 +49,7 @@ function attentionOf({ jvm, database, disks }: DiagnosticsResponse): string[] {
   }
   if (database.reachable && database.waitingThreads > 0) {
     findings.push(
-      $localize`:@@admin.logs.health.databaseWaiting:Na spojení s databází čekají vlákna (${database.waitingThreads}:count:).`,
+      $localize`:@@admin.logs.health.databaseWaiting:Na spojení s\u00a0databází čekají vlákna (${database.waitingThreads}:count:).`,
     );
   }
   for (const disk of disks.filter((candidate) => candidate.mounted && candidate.totalBytes > 0)) {

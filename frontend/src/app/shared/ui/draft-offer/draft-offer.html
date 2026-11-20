@@ -9,8 +9,8 @@
     </h2>
   }
   <p class="draft-offer__text" i18n="@@ui.draftOffer.lead">
-    Na tomto zařízení zůstaly neuložené úpravy z {{ savedAt() }}. Než budete upravovat dál, vyberte,
-    jestli v nich chcete pokračovat, nebo je zahodit.
+    Na tomto zařízení zůstaly neuložené úpravy z&nbsp;{{ savedAt() }}. Než budete upravovat dál,
+    vyberte, jestli v&nbsp;nich chcete pokračovat, nebo je zahodit.
   </p>
   @if (stale()) {
     <p class="draft-offer__text" i18n="@@ui.draftOffer.stale">
@@ -20,14 +20,14 @@
   }
   @if (photo()) {
     <p class="draft-offer__text" i18n="@@ui.draftOffer.photo">
-      Rozepsané úpravy neuchovávají fotky. Pokud jste nahráli novou, vyberte ji prosím znovu a
-      napište k ní popis.
+      Rozepsané úpravy neuchovávají fotky. Pokud jste nahráli novou, vyberte ji prosím znovu
+      a&nbsp;napište k&nbsp;ní popis.
     </p>
   }
   @if (secrets()) {
     <p class="draft-offer__text" i18n="@@ui.draftOffer.secrets">
-      Hesla a tokeny se z bezpečnostních důvodů neuchovávají. Pokud jste nějaké měnili, zadejte je
-      prosím znovu.
+      Hesla a&nbsp;tokeny se z&nbsp;bezpečnostních důvodů neuchovávají. Pokud jste nějaké měnili,
+      zadejte je prosím znovu.
     </p>
   }
   <div class="draft-offer__actions">
@@ -37,7 +37,7 @@
       (click)="resumed.emit()"
       i18n="@@ui.draftOffer.resume"
     >
-      Pokračovat v rozepsaném
+      Pokračovat v&nbsp;rozepsaném
     </button>
     <button
       type="button"

@@ -527,7 +527,7 @@ test.describe('Given a visitor on a phone with the tab bar at the bottom', () =>
     expect(bar).not.toBeNull();
     const links = tabs(page).getByRole('link');
 
-    for (const name of ['O nás', 'Aktuality', 'Pomáháme', 'Přispět']) {
+    for (const name of ['O\u00a0nás', 'Aktuality', 'Pomáháme', 'Přispět']) {
       const tab = await links.filter({ hasText: name }).boundingBox();
       expect(tab).not.toBeNull();
       const x = tab!.x + tab!.width / 2;

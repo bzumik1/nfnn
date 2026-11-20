@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { SideNav, SideNavGroup } from './side-nav';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({ template: '<h1>Stránka</h1>' })
 class Page {}
@@ -75,7 +76,7 @@ describe('Given a side panel of an area', () => {
 
   function currentLinks(): string[] {
     return Array.from(nav().querySelectorAll('a[aria-current="page"]')).map((link) =>
-      clean(link.textContent),
+      clean(withOrdinarySpaces(link.textContent)),
     );
   }
 
@@ -84,10 +85,16 @@ describe('Given a side panel of an area', () => {
 
     expect(nav().getAttribute('aria-label')).toBe('Oblast');
     expect(nav().querySelectorAll('ul')[0].hasAttribute('aria-labelledby')).toBe(false);
-    expect(clean(document.getElementById(list.getAttribute('aria-labelledby')!)?.textContent)).toBe(
-      'Věci',
-    );
-    expect(clean(fixture.nativeElement.querySelector('.projected')?.textContent)).toBe('Obsah');
+    expect(
+      clean(
+        withOrdinarySpaces(
+          document.getElementById(list.getAttribute('aria-labelledby')!)?.textContent,
+        ),
+      ),
+    ).toBe('Věci');
+    expect(
+      clean(withOrdinarySpaces(fixture.nativeElement.querySelector('.projected')?.textContent)),
+    ).toBe('Obsah');
   });
 
   it('when the area asks for no panel, then only the content stays, in the same main landmark, and is not made again when the panel returns', async () => {
@@ -131,9 +138,9 @@ describe('Given a side panel of an area', () => {
 
     function badgeOf(container: Element): string[] {
       return [
-        clean(container.querySelector('.side-nav-badge')?.textContent),
+        clean(withOrdinarySpaces(container.querySelector('.side-nav-badge')?.textContent)),
         container.querySelector('.side-nav-badge')?.getAttribute('aria-hidden') ?? '',
-        clean(container.querySelector('.visually-hidden')?.textContent),
+        clean(withOrdinarySpaces(container.querySelector('.visually-hidden')?.textContent)),
       ];
     }
 

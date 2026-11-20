@@ -7,6 +7,7 @@ import { DialogHistory } from '../dialog/dialog-history';
 import { FakeDialogHistory } from '../dialog/testing/fake-dialog-history';
 import { ZoomContent } from './zoom-content';
 import { ZoomViewer } from './zoom-viewer';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const PHOTO: ZoomContent = {
   kind: 'photo',
@@ -45,11 +46,16 @@ describe('Given the zoom viewer', () => {
     Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
     ).find((candidate) =>
-      (candidate.getAttribute('aria-label') ?? candidate.textContent ?? '').includes(name),
+      (
+        candidate.getAttribute('aria-label') ??
+        withOrdinarySpaces(candidate.textContent) ??
+        ''
+      ).includes(name),
     ) as HTMLButtonElement;
-  const level = () => button('původní velikost').textContent?.trim();
+  const level = () => withOrdinarySpaces(button('původní velikost').textContent)?.trim();
   const unavailable = (name: string) => button(name).getAttribute('aria-disabled') === 'true';
-  const announced = () => dialog()?.querySelector('[role="status"]')?.textContent?.trim();
+  const announced = () =>
+    withOrdinarySpaces(dialog()?.querySelector('[role="status"]')?.textContent)?.trim();
 
   async function settle(): Promise<void> {
     fixture.detectChanges();
@@ -109,14 +115,14 @@ describe('Given the zoom viewer', () => {
     it('when it opens, then it is a modal dialog named as a zoomed photo that shows the photo with its description', () => {
       expect(dialog()?.open).toBe(true);
       const title = dialog()?.querySelector(`#${dialog()?.getAttribute('aria-labelledby')}`);
-      expect(title?.textContent?.trim()).toBe('Zvětšená fotka');
+      expect(withOrdinarySpaces(title?.textContent)?.trim()).toBe('Zvětšená fotka');
       const photo = stage().querySelector('img') as HTMLImageElement;
       expect(photo.getAttribute('src')).toBe(PHOTO.src);
       expect(photo.getAttribute('alt')).toBe('Děti sázejí stromek');
     });
 
     it('when it opens, then it shows the photo at its fitted size and offers only zooming in', () => {
-      expect(level()).toBe('100\u00a0%');
+      expect(level()).toBe('100 %');
       expect(unavailable('Oddálit')).toBe(true);
       expect(unavailable('Přiblížit')).toBe(false);
       expect(button('Oddálit').disabled).toBe(false);
@@ -125,7 +131,7 @@ describe('Given the zoom viewer', () => {
     it('when it opens, then the stage tells how to zoom without a pointer', () => {
       const hint = document.getElementById(stage().getAttribute('aria-describedby') ?? '');
       expect(stage().getAttribute('tabindex')).toBe('0');
-      expect(hint?.textContent).toContain('plus a minus');
+      expect(withOrdinarySpaces(hint?.textContent)).toContain('plus a minus');
     });
 
     describe('when the plus button is pressed', () => {
@@ -135,8 +141,8 @@ describe('Given the zoom viewer', () => {
       });
 
       it('then the photo grows by half and the new size is announced', () => {
-        expect(level()).toBe('150\u00a0%');
-        expect(announced()).toBe('Přiblíženo na 150\u00a0%');
+        expect(level()).toBe('150 %');
+        expect(announced()).toBe('Přiblíženo na 150 %');
         expect(unavailable('Oddálit')).toBe(false);
       });
 
@@ -144,7 +150,7 @@ describe('Given the zoom viewer', () => {
         button('původní velikost').click();
         await settle();
 
-        expect(level()).toBe('100\u00a0%');
+        expect(level()).toBe('100 %');
         expect(announced()).toBe('Původní velikost');
       });
 
@@ -152,8 +158,8 @@ describe('Given the zoom viewer', () => {
         button('Oddálit').click();
         await settle();
 
-        expect(level()).toBe('100\u00a0%');
-        expect(announced()).toBe('Oddáleno na 100\u00a0%');
+        expect(level()).toBe('100 %');
+        expect(announced()).toBe('Oddáleno na 100 %');
       });
 
       it('and the viewer closes, then its announcement is gone from the next dialog', async () => {
@@ -171,7 +177,7 @@ describe('Given the zoom viewer', () => {
         await settle();
       }
 
-      expect(level()).toBe('400\u00a0%');
+      expect(level()).toBe('400 %');
       expect(unavailable('Přiblížit')).toBe(true);
       expect(document.activeElement).toBe(button('Přiblížit'));
     });
@@ -181,7 +187,7 @@ describe('Given the zoom viewer', () => {
       button('Oddálit').click();
       await settle();
 
-      expect(level()).toBe('100\u00a0%');
+      expect(level()).toBe('100 %');
       expect(document.activeElement).toBe(button('Oddálit'));
     });
 
@@ -196,7 +202,7 @@ describe('Given the zoom viewer', () => {
       await tap(100, 300);
       await settle();
 
-      expect(level()).toBe('150\u00a0%');
+      expect(level()).toBe('150 %');
     });
 
     it('when two fingers spread apart on it, then the photo grows with them', async () => {
@@ -208,7 +214,7 @@ describe('Given the zoom viewer', () => {
       pointer('pointerup', 2, 250, 300);
       await settle();
 
-      expect(level()).toBe('200\u00a0%');
+      expect(level()).toBe('200 %');
     });
 
     describe('when it is tapped twice', () => {
@@ -219,12 +225,12 @@ describe('Given the zoom viewer', () => {
         vi.setSystemTime(Date.now() + 300);
         await tap(141, 321);
 
-        expect(level()).toBe('250\u00a0%');
+        expect(level()).toBe('250 %');
 
         await tap(120, 300);
         await tap(120, 300);
 
-        expect(level()).toBe('100\u00a0%');
+        expect(level()).toBe('100 %');
       });
 
       it('more than 300 ms apart, then nothing zooms', async () => {
@@ -232,14 +238,14 @@ describe('Given the zoom viewer', () => {
         vi.setSystemTime(Date.now() + 301);
         await tap(120, 300);
 
-        expect(level()).toBe('100\u00a0%');
+        expect(level()).toBe('100 %');
       });
 
       it('more than 30 px apart, then nothing zooms', async () => {
         await tap(120, 300);
         await tap(120, 331);
 
-        expect(level()).toBe('100\u00a0%');
+        expect(level()).toBe('100 %');
       });
 
       it('after the first press slid away, then nothing zooms', async () => {
@@ -248,7 +254,7 @@ describe('Given the zoom viewer', () => {
         pointer('pointerup', 1, 120, 311);
         await tap(120, 311);
 
-        expect(level()).toBe('100\u00a0%');
+        expect(level()).toBe('100 %');
       });
     });
 
@@ -257,28 +263,28 @@ describe('Given the zoom viewer', () => {
       stage().dispatchEvent(wheel);
       await settle();
 
-      expect(level()).toBe('200\u00a0%');
+      expect(level()).toBe('200 %');
       expect(wheel.defaultPrevented).toBe(true);
     });
 
     it('when plus and then zero are typed on the stage, then it zooms in and back', async () => {
       key('+');
       await settle();
-      expect(level()).toBe('150\u00a0%');
+      expect(level()).toBe('150 %');
 
       key('0');
       await settle();
-      expect(level()).toBe('100\u00a0%');
+      expect(level()).toBe('100 %');
     });
 
     it('when equals and then minus are typed on the stage, then it zooms in and out', async () => {
       key('=');
       await settle();
-      expect(level()).toBe('150\u00a0%');
+      expect(level()).toBe('150 %');
 
       key('-');
       await settle();
-      expect(level()).toBe('100\u00a0%');
+      expect(level()).toBe('100 %');
     });
 
     it('when plus is typed with Ctrl or Cmd, then the browser zooms the page as usual and the photo stays', async () => {
@@ -286,7 +292,7 @@ describe('Given the zoom viewer', () => {
       const withCmd = key('=', { metaKey: true });
       await settle();
 
-      expect(level()).toBe('100\u00a0%');
+      expect(level()).toBe('100 %');
       expect(withCtrl.defaultPrevented).toBe(false);
       expect(withCmd.defaultPrevented).toBe(false);
     });
@@ -297,7 +303,7 @@ describe('Given the zoom viewer', () => {
       );
       await settle();
 
-      expect(level()).toBe('200\u00a0%');
+      expect(level()).toBe('200 %');
     });
 
     describe('when one finger drags it at its fitted size', () => {
@@ -408,7 +414,7 @@ describe('Given the zoom viewer', () => {
 
     it('when it opens, then it is named as a zoomed QR code and shows the code under its label', () => {
       const title = dialog()?.querySelector(`#${dialog()?.getAttribute('aria-labelledby')}`);
-      expect(title?.textContent?.trim()).toBe('Zvětšený QR kód');
+      expect(withOrdinarySpaces(title?.textContent)?.trim()).toBe('Zvětšený QR kód');
       const code = stage().querySelector('svg[role="img"]');
       expect(code?.getAttribute('aria-label')).toBe(QR.label);
     });

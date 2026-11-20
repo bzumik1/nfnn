@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BackupKeyPanel, backupKeyFile } from './backup-key-panel';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const KEY = 'AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH';
 
@@ -22,15 +23,17 @@ describe('Given the backup key panel', () => {
   const root = () => fixture.nativeElement as HTMLElement;
 
   function text(selector: string): string {
-    return (root().querySelector(selector)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(root().querySelector(selector)?.textContent) ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   it('when it is shown, then the key is there as its 24 numbered words only', async () => {
     await render();
 
-    expect(root().textContent).not.toContain(KEY);
+    expect(withOrdinarySpaces(root().textContent)).not.toContain(withOrdinarySpaces(KEY));
     const words = Array.from(root().querySelectorAll('ol.backup-key-word-list li'));
-    expect(words.map((word) => word.textContent?.trim())).toEqual(
+    expect(words.map((word) => withOrdinarySpaces(word.textContent)?.trim())).toEqual(
       'divoch komora probudit najednou dekl komando nikl odebrat biograf bytovka dodnes mikrofon motivace naivita zdaleka ekonomie jeseter azyl atlas obyvatel glazura vytesat moudrost studna'.split(
         ' ',
       ),
@@ -55,7 +58,7 @@ describe('Given the backup key panel', () => {
     await render();
 
     const labels = Array.from(root().querySelectorAll('button')).map((button) =>
-      button.textContent?.replace(/\s+/g, ' ').trim(),
+      withOrdinarySpaces(button.textContent)?.replace(/\s+/g, ' ').trim(),
     );
     expect(labels).toEqual(['Kopírovat slova klíče k zálohám', 'Stáhnout jako soubor']);
   });

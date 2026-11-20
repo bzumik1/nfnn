@@ -14,6 +14,7 @@ import {
   openedCopyProviders,
 } from '../device-copy/testing/opened-copy';
 import { AdminNews } from './admin-news';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const LIST_URL = '/api/admin/content/news';
 
@@ -57,7 +58,7 @@ describe('Given an administrator on the news list', () => {
 
   function texts(selector: string): string[] {
     return Array.from(fixture.nativeElement.querySelectorAll(selector) as NodeListOf<Element>).map(
-      (element) => (element.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      (element) => (withOrdinarySpaces(element.textContent) ?? '').replace(/\s+/g, ' ').trim(),
     );
   }
 
@@ -66,7 +67,7 @@ describe('Given an administrator on the news list', () => {
       fixture.nativeElement.querySelectorAll('tbody tr') as NodeListOf<Element>,
     ).map((row) =>
       Array.from(row.querySelectorAll('td'))
-        .map((cell) => (cell.textContent ?? '').replace(/\s+/g, ' ').trim())
+        .map((cell) => (withOrdinarySpaces(cell.textContent) ?? '').replace(/\s+/g, ' ').trim())
         .join(' '),
     );
   }
@@ -183,7 +184,9 @@ describe('Given an administrator who has just deleted an article', () => {
 
     expect(
       (
-        fixture.nativeElement.querySelector('[role="status"]:not(:empty)')?.textContent ?? ''
+        withOrdinarySpaces(
+          fixture.nativeElement.querySelector('[role="status"]:not(:empty)')?.textContent,
+        ) ?? ''
       ).trim(),
     ).toBe('Aktualitu „Zahrada pro děti“ jsme smazali.');
     http.verify();
@@ -209,7 +212,9 @@ describe('Given an administrator offline whose device keeps the administration c
       await fixture.whenStable();
     }
 
-    expect(fixture.nativeElement.querySelector('tbody')?.textContent).toContain('Zahrada pro děti');
+    expect(withOrdinarySpaces(fixture.nativeElement.querySelector('tbody')?.textContent)).toContain(
+      'Zahrada pro děti',
+    );
     expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse(COPY_STORED_AT));
     http.verify();
   });

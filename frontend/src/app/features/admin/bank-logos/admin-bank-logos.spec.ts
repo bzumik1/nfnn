@@ -14,6 +14,7 @@ import { adminBankLogo } from '../testing/admin-fixtures';
 import { AdminBankLogos } from './admin-bank-logos';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const LIST_URL = '/api/admin/donations/bank-logos';
 const NEW_SOURCE = 'https://is2-ssl.mzstatic.com/image/thumb/Purple/csas-new/512x512bb.jpg';
@@ -101,7 +102,11 @@ describe('Given an administrator on the bank logos page', () => {
 
   function text(selector: string): string {
     return normalized(
-      (fixture.nativeElement as HTMLElement).querySelector(selector)?.textContent ?? '',
+      withOrdinarySpaces(
+        withOrdinarySpaces(
+          (fixture.nativeElement as HTMLElement).querySelector(selector)?.textContent,
+        ),
+      ) ?? '',
     );
   }
 
@@ -118,7 +123,9 @@ describe('Given an administrator on the bank logos page', () => {
       (candidate) => accessibleText(candidate) === name,
     );
     if (found === undefined) {
-      throw new Error(`No button "${name}" in "${normalized(within.textContent ?? '')}"`);
+      throw new Error(
+        `No button "${name}" in "${normalized(withOrdinarySpaces(within.textContent) ?? '')}"`,
+      );
     }
     return found;
   }
@@ -145,9 +152,9 @@ describe('Given an administrator on the bank logos page', () => {
     expect(text('.ui-page-intro:not(.intro-lead)')).toContain(
       'nebo obrázku z webu velkých bank (Česká spořitelna, ČSOB, KB, MONETA, Fio, Air Bank, Raiffeisenbank, UniCredit, mBank)',
     );
-    expect(normalized(row('0800').querySelector('.bank-title')!.textContent!)).toBe(
-      '0800 · Česká spořitelna',
-    );
+    expect(
+      normalized(withOrdinarySpaces(row('0800').querySelector('.bank-title')!.textContent)!),
+    ).toBe('0800 · Česká spořitelna');
     expect(row('0800').querySelector('app-bank-mark img')?.getAttribute('src')).toBe(
       `/api/donations/bank-logos/images/${csas.imageId}`,
     );
@@ -165,9 +172,9 @@ describe('Given an administrator on the bank logos page', () => {
       'Poslední stažení se nepovedlo: adresa přesměrovává jinam.',
     );
 
-    expect(normalized(row('4000').querySelector('.bank-title')!.textContent!)).toBe(
-      '4000 · Banka, kterou seznam ČNB nezná',
-    );
+    expect(
+      normalized(withOrdinarySpaces(row('4000').querySelector('.bank-title')!.textContent)!),
+    ).toBe('4000 · Banka, kterou seznam ČNB nezná');
     expect(text('[data-code="4000"] .bank-state')).toBe(
       'Staženo 11. 11. 2026 5:50, naposledy zkontrolováno 12. 11. 2026 5:50.',
     );
@@ -182,7 +189,7 @@ describe('Given an administrator on the bank logos page', () => {
     await listed();
 
     const title = element('#bank-title-0800');
-    expect(normalized(title.textContent!)).toBe('0800 · Česká spořitelna');
+    expect(normalized(withOrdinarySpaces(title.textContent)!)).toBe('0800 · Česká spořitelna');
     expect(element('#bank-logo-source-0800').getAttribute('aria-label')).toBe(
       'Adresa loga 0800 · Česká spořitelna',
     );
@@ -407,9 +414,9 @@ describe('Given an administrator on the bank logos page', () => {
     await settle();
 
     expect(text('.ui-notice--status')).toBe('Logo banky 0100 jsme stáhli a uložili.');
-    expect(normalized(row('0100').querySelector('.bank-title')!.textContent!)).toBe(
-      '0100 · Komerční banka',
-    );
+    expect(
+      normalized(withOrdinarySpaces(row('0100').querySelector('.bank-title')!.textContent)!),
+    ).toBe('0100 · Komerční banka');
     expect(element<HTMLInputElement>('#bank-logo-new-code').value).toBe('');
   });
 
@@ -436,7 +443,9 @@ describe('Given an administrator on the bank logos page', () => {
     }
 
     it('then a dialog asks first and cancelling sends nothing', async () => {
-      expect(normalized(dialog().textContent!)).toContain('Odebrat logo banky 0800?');
+      expect(normalized(withOrdinarySpaces(dialog().textContent)!)).toContain(
+        'Odebrat logo banky 0800?',
+      );
       button(dialog(), 'Zrušit').click();
       await settle();
 
@@ -525,7 +534,7 @@ describe('Given an administrator on the bank logos page', () => {
 
     it('then the sheet keeps the address in the form and saving it again sends the newer version', async () => {
       const sheet = element('app-changed-meanwhile-dialog dialog');
-      expect(sheet.textContent).toContain('zůstávají ve formuláři');
+      expect(withOrdinarySpaces(sheet.textContent)).toContain('zůstávají ve formuláři');
       expect(element<HTMLInputElement>('#bank-logo-source-0800').value).toBe(NEW_SOURCE);
 
       button(sheet, 'Uložit svou verzi místo novější').click();
@@ -609,7 +618,7 @@ describe('Given an administrator on the bank logos page', () => {
     await settle();
 
     const sheet = element('app-changed-meanwhile-dialog dialog');
-    expect(sheet.textContent).not.toContain('Uložit svou verzi');
+    expect(withOrdinarySpaces(sheet.textContent)).not.toContain('Uložit svou verzi');
     button(sheet, 'Načíst aktuální stav').click();
     await settle();
     await listed([{ ...csas, version: NEWER_VERSION }]);
@@ -648,9 +657,9 @@ describe('Given an administrator on the bank logos page', () => {
     request.flush({ ...kb, sourceUrl: NEW_SOURCE, version: '0f0f0f0f0f0f0f0f' });
     await settle();
 
-    expect(normalized(row('0100').querySelector('.bank-title')!.textContent!)).toBe(
-      '0100 · Komerční banka',
-    );
+    expect(
+      normalized(withOrdinarySpaces(row('0100').querySelector('.bank-title')!.textContent)!),
+    ).toBe('0100 · Komerční banka');
     expect(text('.ui-notice--status')).toBe('Logo banky 0100 jsme stáhli a uložili.');
   });
 
@@ -665,7 +674,7 @@ describe('Given an administrator on the bank logos page', () => {
     await settle();
 
     const sheet = element('app-changed-meanwhile-dialog dialog');
-    expect(sheet.textContent).not.toContain('Uložit svou verzi');
+    expect(withOrdinarySpaces(sheet.textContent)).not.toContain('Uložit svou verzi');
     button(sheet, 'Načíst aktuální stav').click();
     await settle();
     await listed([]);
@@ -688,7 +697,7 @@ describe('Given an administrator on the bank logos page', () => {
     });
 
     it('then the logos show at once, without the loading line, and are refreshed behind them', async () => {
-      expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
+      expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain('Načítáme');
       expect((fixture.nativeElement as HTMLElement).querySelectorAll('[data-code]')).toHaveLength(
         3,
       );

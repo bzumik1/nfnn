@@ -322,7 +322,7 @@ export class AdminDonorDetail {
       part === SECTIONS.accounts || part === SECTIONS.donations || part === SECTIONS.receipts;
     const state = fromDonations ? this.donationsState() : this.accountState();
     if (state === 'error') {
-      return $localize`:@@admin.donorDetail.rows.failed:Nepodařilo se načíst, otevřete a zkuste znovu`;
+      return $localize`:@@admin.donorDetail.rows.failed:Nepodařilo se načíst, otevřete a\u00a0zkuste znovu`;
     }
     if (fromDonations && state !== 'ready') {
       return null;
@@ -422,7 +422,7 @@ export class AdminDonorDetail {
       card: 'receipts',
       notice: {
         kind: 'alert',
-        text: $localize`:@@admin.donorDetail.receiptPdf.replaced:Potvrzení ${number}:number: mezitím nahradilo novější, a tak jsme jeho PDF nevytvořili. Seznam potvrzení jsme obnovili.`,
+        text: $localize`:@@admin.donorDetail.receiptPdf.replaced:Potvrzení ${number}:number: mezitím nahradilo novější, a\u00a0tak jsme jeho PDF nevytvořili. Seznam potvrzení jsme obnovili.`,
       },
     });
     this.refreshDonations();
@@ -555,7 +555,7 @@ export class AdminDonorDetail {
     }
     const day =
       receipt.donationReceivedOn === null ? '' : formatDonationDate(receipt.donationReceivedOn);
-    return $localize`:@@admin.donorDetail.receipts.single:Dar z ${day}:day:`;
+    return $localize`:@@admin.donorDetail.receipts.single:Dar z\u00a0${day}:day:`;
   }
 
   protected receiptPdfId(receipt: AdminReceiptResponse): string {
@@ -664,7 +664,7 @@ export class AdminDonorDetail {
     const name = this.name() ?? '';
     this.run(
       this.api.resetSecondFactor(this.donorId),
-      $localize`:@@admin.donorDetail.reset.done:Dvoufaktorové ověření u ${name}:name: je vypnuté a všechna přihlášení jsme ukončili. Dárce dostal e-mail; po přihlášení heslem si ho může zapnout znovu.`,
+      $localize`:@@admin.donorDetail.reset.done:Dvoufaktorové ověření u\u00a0${name}:name: je vypnuté a\u00a0všechna přihlášení jsme ukončili. Dárce dostal e-mail; po přihlášení heslem si ho může zapnout znovu.`,
       $localize`:@@admin.donorDetail.reset.failed:Dvoufaktorové ověření se nepodařilo vypnout. Zkuste to prosím znovu.`,
       (onLoaded) => this.refreshAccount(onLoaded),
       'signIn',
@@ -675,7 +675,7 @@ export class AdminDonorDetail {
     const name = this.name() ?? '';
     this.run(
       this.api.removePasskeys(this.donorId),
-      $localize`:@@admin.donorDetail.passkeys.done:Přístupové klíče u ${name}:name: jsme odebrali a všechna přihlášení ukončili. Dárce dostal e-mail; po přihlášení heslem si může přidat nový přístupový klíč.`,
+      $localize`:@@admin.donorDetail.passkeys.done:Přístupové klíče u\u00a0${name}:name: jsme odebrali a\u00a0všechna přihlášení ukončili. Dárce dostal e-mail; po přihlášení heslem si může přidat nový přístupový klíč.`,
       $localize`:@@admin.donorDetail.passkeys.failed:Přístupové klíče se nepodařilo odebrat. Zkuste to prosím znovu.`,
       (onLoaded) => this.refreshAccount(onLoaded),
       'signIn',
@@ -699,7 +699,7 @@ export class AdminDonorDetail {
             card: 'erasure',
             notice: {
               kind: 'status',
-              text: $localize`:@@admin.donorDetail.erase.done:Osobní údaje dárce jsme vymazali a na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít. Dary a vystavená potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají beze změny, i se jménem a adresou.`,
+              text: $localize`:@@admin.donorDetail.erase.done:Osobní údaje dárce jsme vymazali a\u00a0na jeho dosavadní e-mail poslali potvrzení. Účet už nejde použít. Dary a\u00a0vystavená potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají beze změny, i\u00a0se jménem a\u00a0adresou.`,
             },
           });
           this.refreshAccount();
@@ -760,7 +760,7 @@ export class AdminDonorDetail {
   protected disconnect(item: AdminBankAccountItem): void {
     this.run(
       this.api.disconnectDonorAccount(this.donorId, item.id, item.version),
-      $localize`:@@admin.donorDetail.disconnect.done:Párování z účtu ${item.accountNumber}:account: je vypnuté: platby bez symbolu z něj už dárci nepřiřadíme, dosavadní dary zůstávají.`,
+      $localize`:@@admin.donorDetail.disconnect.done:Párování z\u00a0účtu ${item.accountNumber}:account: je vypnuté: platby bez symbolu z\u00a0něj už dárci nepřiřadíme, dosavadní dary zůstávají.`,
       $localize`:@@admin.donorDetail.disconnect.failed:Párování se nepodařilo vypnout. Zkuste to prosím znovu.`,
       (onLoaded) => this.loadDonations(onLoaded),
       'accounts',
@@ -770,7 +770,7 @@ export class AdminDonorDetail {
   protected reconnect(item: AdminBankAccountItem): void {
     this.run(
       this.api.reconnectDonorAccount(this.donorId, item.id, item.version),
-      $localize`:@@admin.donorDetail.reconnect.done:Párování z účtu ${item.accountNumber}:account: zase zapneme, jakmile z něj přijde platba s variabilním symbolem dárce.`,
+      $localize`:@@admin.donorDetail.reconnect.done:Párování z\u00a0účtu ${item.accountNumber}:account: zase zapneme, jakmile z\u00a0něj přijde platba s\u00a0variabilním symbolem dárce.`,
       $localize`:@@admin.donorDetail.reconnect.failed:Párování se nepodařilo zapnout. Zkuste to prosím znovu.`,
       (onLoaded) => this.loadDonations(onLoaded),
       'accounts',
@@ -780,7 +780,7 @@ export class AdminDonorDetail {
   protected remove(item: AdminBankAccountItem): void {
     this.run(
       this.api.removeDonorAccount(this.donorId, item.id, item.version),
-      $localize`:@@admin.donorDetail.remove.done:Bankovní účet ${item.accountNumber}:account: jsme dárci odebrali: ${this.donationsCount(item.donationCount)}:donations: přiřazené přes něj jsme smazali a platby jsou zase nespárované.`,
+      $localize`:@@admin.donorDetail.remove.done:Bankovní účet ${item.accountNumber}:account: jsme dárci odebrali: ${this.donationsCount(item.donationCount)}:donations: přiřazené přes něj jsme smazali a\u00a0platby jsou zase nespárované.`,
       $localize`:@@admin.donorDetail.remove.failed:Bankovní účet se nepodařilo odebrat. Zkuste to prosím znovu.`,
       (onLoaded) => this.loadDonations(onLoaded),
       'accounts',
@@ -798,7 +798,7 @@ export class AdminDonorDetail {
         card: changed.card,
         notice: {
           kind: 'status',
-          text: $localize`:@@admin.donorDetail.reloaded:Načetli jsme aktuální stav účtů dárce. Zkontrolujte účet a rozhodněte znovu.`,
+          text: $localize`:@@admin.donorDetail.reloaded:Načetli jsme aktuální stav účtů dárce. Zkontrolujte účet a\u00a0rozhodněte znovu.`,
         },
       });
       this.focusAfterRender(() => this.noticeElement(changed.card));
@@ -897,7 +897,7 @@ function accountOpenerId(kind: AccountAction, linkId: string): string {
 function refusal(failure: unknown, failed: string): string {
   const described = describeProblem(failure, failed);
   return problemTypeEndsWith(failure, HAS_RECEIPT)
-    ? `${described} ${$localize`:@@admin.donorDetail.remove.receiptNextStep:Dary s potvrzením musí zůstat. Aby se dárci další platby z účtu nepřiřazovaly, vypněte u něj párování.`}`
+    ? `${described} ${$localize`:@@admin.donorDetail.remove.receiptNextStep:Dary s\u00a0potvrzením musí zůstat. Aby se dárci další platby z\u00a0účtu nepřiřazovaly, vypněte u\u00a0něj párování.`}`
     : described;
 }
 
@@ -921,7 +921,7 @@ function issueChoicesOf(detail: AdminDonorDetailResponse): IssueChoice[] {
     .filter((item) => item.receiptAvailable)
     .map((item) => ({
       key: `dar-${item.id}`,
-      label: $localize`:@@admin.donorDetail.issue.single:Dar z ${formatDonationDate(item.receivedAt)}:day:, ${formatMinorUnits(item.amountMinor)}:amount:\u00a0Kč`,
+      label: $localize`:@@admin.donorDetail.issue.single:Dar z\u00a0${formatDonationDate(item.receivedAt)}:day:, ${formatMinorUnits(item.amountMinor)}:amount:\u00a0Kč`,
       request: { donationId: item.id },
     }));
   return [...years, ...singles];
@@ -930,12 +930,12 @@ function issueChoicesOf(detail: AdminDonorDetailResponse): IssueChoice[] {
 function issuedText(issued: AdminIssuedReceiptResponse, alreadyIssued: boolean): string {
   const time = formatBankTime(issued.issuedAt);
   if (alreadyIssued) {
-    return $localize`:@@admin.donorDetail.issue.unchanged:Potvrzení ${issued.number}:number: z ${time}:time: dál platí: údaje se nezměnily, nové číslo jsme nevydali.`;
+    return $localize`:@@admin.donorDetail.issue.unchanged:Potvrzení ${issued.number}:number: z\u00a0${time}:time: dál platí: údaje se nezměnily, nové číslo jsme nevydali.`;
   }
   const replaced = issued.receipt.replaces;
   return replaced === null
-    ? $localize`:@@admin.donorDetail.issue.done:Vystavili jsme potvrzení ${issued.number}:number: z ${time}:time:. Je platné.`
-    : $localize`:@@admin.donorDetail.issue.replacing:Vystavili jsme potvrzení ${issued.number}:number: z ${time}:time:, které nahrazuje potvrzení ${replaced.number}:replaced:. Je platné.`;
+    ? $localize`:@@admin.donorDetail.issue.done:Vystavili jsme potvrzení ${issued.number}:number: z\u00a0${time}:time:. Je platné.`
+    : $localize`:@@admin.donorDetail.issue.replacing:Vystavili jsme potvrzení ${issued.number}:number: z\u00a0${time}:time:, které nahrazuje potvrzení ${replaced.number}:replaced:. Je platné.`;
 }
 
 function sectionOf(id: string | null): string | null {

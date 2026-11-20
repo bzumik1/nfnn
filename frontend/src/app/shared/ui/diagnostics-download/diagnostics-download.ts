@@ -7,14 +7,14 @@ import { Diagnostics, PreparedDiagnostics } from '../../../core/diagnostics/diag
 import type { DiagnosticSource } from '../../../core/diagnostics/diagnostics-schema';
 import { LiveNotice, type Notice } from '../live-notice/live-notice';
 
-const PREPARE_FAILED = $localize`:@@ui.diagnostics.failed:Soubor se nepodařilo připravit. Napište nám prosím i bez něj, v jakém prohlížeči a na které stránce potíže máte.`;
+const PREPARE_FAILED = $localize`:@@ui.diagnostics.failed:Soubor se nepodařilo připravit. Napište nám prosím i\u00a0bez něj, v\u00a0jakém prohlížeči a\u00a0na které stránce potíže máte.`;
 const READY_TO_SHARE = $localize`:@@ui.diagnostics.readyToShare:Soubor je připravený. Klepnutím na Sdílet diagnostický soubor ho pošlete e‑mailem na info@nfnn.cz.`;
 const READY_TO_SHARE_UNDER_RECEIPT = $localize`:@@ui.diagnostics.readyToShareUnderReceipt:Soubor je připravený. Klepnutím na Sdílet diagnostický soubor ho pošlete e‑mailem.`;
 
 function savedText(fileName: string, underReceipt: boolean): string {
   return underReceipt
-    ? $localize`:@@ui.diagnostics.savedUnderReceipt:Soubor ${fileName}:fileName: je ve stažených souborech. Přiložte ho prosím k e‑mailu.`
-    : $localize`:@@ui.diagnostics.saved:Soubor ${fileName}:fileName: je ve stažených souborech. Přiložte ho prosím k e‑mailu na info@nfnn.cz.`;
+    ? $localize`:@@ui.diagnostics.savedUnderReceipt:Soubor ${fileName}:fileName: je ve stažených souborech. Přiložte ho prosím k\u00a0e‑mailu.`
+    : $localize`:@@ui.diagnostics.saved:Soubor ${fileName}:fileName: je ve stažených souborech. Přiložte ho prosím k\u00a0e‑mailu na info@nfnn.cz.`;
 }
 
 @Component({

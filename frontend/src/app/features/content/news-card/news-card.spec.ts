@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { IMAGE_ID, newsArticle } from '../testing/news-fixtures';
 import { NewsCard } from './news-card';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 async function setUp(): Promise<ComponentFixture<NewsCard>> {
   await TestBed.configureTestingModule({
@@ -19,7 +20,7 @@ describe('Given the card of a news article', () => {
     await fixture.whenStable();
 
     const link = fixture.nativeElement.querySelector('.news-title a') as HTMLAnchorElement;
-    expect(link.textContent?.trim()).toBe('Zahrada pro děti');
+    expect(withOrdinarySpaces(link.textContent)?.trim()).toBe('Zahrada pro děti');
     expect(link.getAttribute('href')).toBe('/aktuality/zahrada-pro-deti');
   });
 
@@ -29,12 +30,12 @@ describe('Given the card of a news article', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('a')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.news-title')?.textContent?.trim()).toBe(
-      'Zahrada pro děti',
-    );
-    expect(fixture.nativeElement.querySelector('.news-date')?.textContent?.trim()).toBe(
-      '20.\u00a010. 2026',
-    );
+    expect(
+      withOrdinarySpaces(fixture.nativeElement.querySelector('.news-title')?.textContent)?.trim(),
+    ).toBe('Zahrada pro děti');
+    expect(
+      withOrdinarySpaces(fixture.nativeElement.querySelector('.news-date')?.textContent)?.trim(),
+    ).toBe('20. 10. 2026');
   });
 
   it('when it is shown, then the tag, the date and the perex stand beside a decorative photo that waits until it is near', async () => {
@@ -42,9 +43,11 @@ describe('Given the card of a news article', () => {
     await fixture.whenStable();
     const card = fixture.nativeElement as HTMLElement;
 
-    expect(card.querySelector('.news-tag')?.textContent).toBe('Projekt');
-    expect(card.querySelector('.news-date')?.textContent).toBe('20.\u00a010. 2026');
-    expect(card.querySelector('.news-perex')?.textContent).toBe(newsArticle().perex);
+    expect(withOrdinarySpaces(card.querySelector('.news-tag')?.textContent)).toBe('Projekt');
+    expect(withOrdinarySpaces(card.querySelector('.news-date')?.textContent)).toBe('20. 10. 2026');
+    expect(withOrdinarySpaces(card.querySelector('.news-perex')?.textContent)).toBe(
+      newsArticle().perex,
+    );
     const image = card.querySelector('img') as HTMLImageElement;
     expect(image.getAttribute('src')).toBe(`/api/content/media/${IMAGE_ID}?w=480`);
     expect(image.getAttribute('srcset')).toContain(`/api/content/media/${IMAGE_ID}?w=960 960w`);
@@ -89,11 +92,15 @@ describe('Given the card of a signed news article', () => {
     await fixture.whenStable();
     const card = fixture.nativeElement as HTMLElement;
 
-    expect(card.querySelector('.signer-name')?.textContent?.trim()).toBe('Pavel Vzorový');
-    expect(card.querySelector('.signer-role')?.textContent?.trim()).toBe('Předseda správní rady');
+    expect(withOrdinarySpaces(card.querySelector('.signer-name')?.textContent)?.trim()).toBe(
+      'Pavel Vzorový',
+    );
+    expect(withOrdinarySpaces(card.querySelector('.signer-role')?.textContent)?.trim()).toBe(
+      'Předseda správní rady',
+    );
     expect(
       [...card.querySelectorAll('button')].map((button) =>
-        button.textContent?.replace(/\s+/g, ' ').trim(),
+        withOrdinarySpaces(button.textContent)?.replace(/\s+/g, ' ').trim(),
       ),
     ).toEqual(['Sdílet Zahrada pro děti']);
   });
@@ -105,7 +112,9 @@ describe('Given the card of a signed news article', () => {
     await fixture.whenStable();
     const card = fixture.nativeElement as HTMLElement;
 
-    expect(card.querySelector('.signer-name')?.textContent?.trim()).toBe('Pavel Vzorový');
+    expect(withOrdinarySpaces(card.querySelector('.signer-name')?.textContent)?.trim()).toBe(
+      'Pavel Vzorový',
+    );
     expect(card.querySelector('button')).toBeNull();
   });
 });

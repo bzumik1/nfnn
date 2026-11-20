@@ -106,7 +106,7 @@ test.describe('Given an administrator on the alerts page of a device with a serv
     ).toBeFocused();
     const watched = page.getByRole('region', { name: 'Co se hlídá' });
     await expect(watched.getByRole('link')).toHaveText([
-      /Import plateb z banky\s*Bez poruchy/,
+      /Import plateb z\sbanky\s*Bez poruchy/,
       /Zálohy\s*Bez poruchy/,
       /Odesílání e-mailů\s*Nefunguje od 4\.\s11\. 2026 6:15/,
     ]);
@@ -141,11 +141,13 @@ test.describe('Given an administrator on the alerts page of a device with a serv
 
     const test = page.getByRole('region', { name: 'Zkušební upozornění' });
     const sendTest = test.getByRole('button', { name: 'Poslat zkušební upozornění' });
-    await expect(sendTest).toHaveAccessibleDescription(/povolená oznámení a není v režimu Nerušit/);
+    await expect(sendTest).toHaveAccessibleDescription(
+      /povolená oznámení a\snení v\srežimu Nerušit/,
+    );
     await sendTest.click();
 
     await expect(test.getByRole('status')).toHaveText(
-      /^Zkušební upozornění jsme předali k doručení na 1 zařízení\./,
+      /^Zkušební upozornění jsme předali k\sdoručení na 1\szařízení\./,
     );
 
     await device.getByRole('button', { name: 'Vypnout na tomto zařízení' }).click();

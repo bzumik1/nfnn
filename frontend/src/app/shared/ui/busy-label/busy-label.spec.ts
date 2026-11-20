@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BusyAnnouncement } from './busy-announcement';
 import { BusyLabel } from './busy-label';
 import { accessibleText } from './testing/accessible-text';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   imports: [BusyLabel],
@@ -42,9 +43,10 @@ describe('Given a button whose label says when it saves, inside a card with a st
   const root = () => fixture.nativeElement as HTMLElement;
   const button = () => root().querySelector('button') as HTMLElement;
   const faces = () => Array.from(button().querySelectorAll<HTMLElement>('.busy-label__face'));
-  const shownFace = () => button().querySelector('.busy-label__face--shown')?.textContent?.trim();
+  const shownFace = () =>
+    withOrdinarySpaces(button().querySelector('.busy-label__face--shown')?.textContent)?.trim();
   const status = () => root().querySelector('.card-status') as HTMLElement;
-  const statusText = () => (status().textContent ?? '').trim();
+  const statusText = () => (withOrdinarySpaces(status().textContent) ?? '').trim();
 
   async function setSaving(saving: boolean): Promise<void> {
     fixture.componentInstance.saving.set(saving);
@@ -63,7 +65,7 @@ describe('Given a button whose label says when it saves, inside a card with a st
   });
 
   it('when nothing runs, then both labels stand in the button, so it keeps the width of the longer one, and the busy one is hidden from screen readers', () => {
-    expect(faces().map((face) => face.textContent?.trim())).toEqual([
+    expect(faces().map((face) => withOrdinarySpaces(face.textContent)?.trim())).toEqual([
       'Uložit nastavení',
       'Ukládáme…',
     ]);
@@ -84,7 +86,9 @@ describe('Given a button whose label says when it saves, inside a card with a st
 
     it("then the card's status line says the saving label for screen readers only", () => {
       expect(statusText()).toBe('Ukládáme…');
-      expect(status().querySelector('.visually-hidden')?.textContent?.trim()).toBe('Ukládáme…');
+      expect(
+        withOrdinarySpaces(status().querySelector('.visually-hidden')?.textContent)?.trim(),
+      ).toBe('Ukládáme…');
     });
 
     it('then nothing on the button announces itself', () => {

@@ -16,6 +16,7 @@ import {
 import { donateBandPhoto as heldPhoto } from '../../content/testing/donate-band-fixtures';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const BAND_URL = '/api/admin/content/donate-band';
 const MEDIA_URL = '/api/admin/content/media';
@@ -63,7 +64,7 @@ function element<T extends HTMLElement>(fixture: ComponentFixture<unknown>, sele
 }
 
 function text(fixture: ComponentFixture<unknown>, selector: string): string {
-  return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+  return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -153,7 +154,7 @@ describe('Given an administrator and a Přispět band without a photo', () => {
     );
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('figure.preview figcaption')).map(
-        (caption) => (caption as HTMLElement).textContent?.trim(),
+        (caption) => withOrdinarySpaces((caption as HTMLElement).textContent)?.trim(),
       ),
     ).toEqual(['Na počítači', 'Na telefonu']);
     expect(text(fixture, '[role="status"]:not(:empty)')).toBe(

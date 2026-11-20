@@ -19,6 +19,7 @@ import {
   PAGE_TRANSITION_LONGEST_MS,
   PageTransitions,
 } from './page-transitions';
+import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
 @Component({ template: '' })
 class Blank {}
@@ -417,9 +418,9 @@ describe('Given the app on the home screen of a phone, where the news led to the
 
     swipeBack();
 
-    expect(under().querySelector('h1')?.textContent).toBe('Aktuality');
+    expect(withOrdinarySpaces(under().querySelector('h1')?.textContent)).toBe('Aktuality');
     expect(under().querySelector('dialog')).toBeNull();
-    expect(over().querySelector('h1')?.textContent).toBe('Přehled');
+    expect(withOrdinarySpaces(over().querySelector('h1')?.textContent)).toBe('Přehled');
   });
 
   it('when the overview was opened from the account sheet, which comes back on the way back, then the news lies under the finger with the account sheet standing over it', async () => {
@@ -427,8 +428,8 @@ describe('Given the app on the home screen of a phone, where the news led to the
 
     swipeBack();
 
-    expect(under().querySelector('h1')?.textContent).toBe('Aktuality');
-    expect(under().querySelector('dialog')?.textContent).toBe('Účet');
+    expect(withOrdinarySpaces(under().querySelector('h1')?.textContent)).toBe('Aktuality');
+    expect(withOrdinarySpaces(under().querySelector('dialog')?.textContent)).toBe('Účet');
     expect(over().querySelector('dialog')).toBeNull();
   });
 
@@ -512,7 +513,10 @@ describe('Given the app on the home screen of a phone, where the news led to the
     swipeBack().follow(195);
 
     const heads = barItems('app-sheet-head');
-    expect(heads.map((head) => head.textContent)).toEqual(['Dárci', 'Jana Nováková']);
+    expect(heads.map((head) => withOrdinarySpaces(head.textContent))).toEqual([
+      'Dárci',
+      'Jana Nováková',
+    ]);
     expect(heads[1].style.opacity).toBe('0.5');
     expect(heads[0].style.opacity).toBe('');
     expect(overlay().classList).toContain(`${PAGE_TRANSITION_CLASS}--heads-held`);
@@ -993,7 +997,9 @@ describe('Given the app on the home screen of a phone opened straight on the don
     TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' });
     await vi.dynamicImportSettled();
     const under = () =>
-      document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under h1`)?.textContent ?? null;
+      withOrdinarySpaces(
+        document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under h1`)?.textContent,
+      ) ?? null;
 
     expect(visits).toEqual(['/']);
     expect(under()).toBeNull();
@@ -1104,9 +1110,11 @@ describe('Given the app on a wide screen, where the header and the side navigati
 
     expect(swipe).not.toBeNull();
     expect(overlay()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--content`);
-    expect(overlay()?.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under h1`)?.textContent).toBe(
-      'Aktuality',
-    );
+    expect(
+      withOrdinarySpaces(
+        overlay()?.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under h1`)?.textContent,
+      ),
+    ).toBe('Aktuality');
     expect(overlay()?.querySelector(`.${PAGE_TRANSITION_CLASS}__bar`)).toBeNull();
   });
 

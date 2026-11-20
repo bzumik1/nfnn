@@ -1,11 +1,11 @@
 <div class="ui-page ui-page--form container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.about.heading">
-    Fotka v sekci O nás
+    Fotka v&nbsp;sekci O&nbsp;nás
   </h1>
   <p class="ui-page-intro" i18n="@@admin.about.intro">
-    Fotka se ukáže na úvodní stránce v sekci O nás vedle textu o vzniku fondu, na telefonu pod ním.
-    Dokud žádnou neuložíte, je tam ilustrační fotka. Fotka je jen v databázi webu, ne ve veřejném
-    kódu, a odebrat ji můžete kdykoli.
+    Fotka se ukáže na úvodní stránce v&nbsp;sekci O&nbsp;nás vedle textu o&nbsp;vzniku fondu, na
+    telefonu pod ním. Dokud žádnou neuložíte, je tam ilustrační fotka. Fotka je jen v&nbsp;databázi
+    webu, ne ve veřejném kódu, a&nbsp;odebrat ji můžete kdykoli.
   </p>
 
   @switch (state()) {
@@ -65,8 +65,8 @@
             </app-file-button>
           </div>
           <p id="about-photo-hint" class="field-hint" i18n="@@admin.about.photo.squareHint">
-            JPEG, PNG nebo WebP do 10 MB. Web fotku ukáže jako čtverec oříznutý kolem bodu výřezu a
-            vyrobí si z ní zmenšené kopie.
+            JPEG, PNG nebo WebP do 10 MB. Web fotku ukáže jako čtverec oříznutý kolem bodu výřezu
+            a&nbsp;vyrobí si z&nbsp;ní zmenšené kopie.
           </p>
           <div role="status">
             @if (uploading()) {
@@ -86,7 +86,7 @@
               <app-form-field
                 label="Popis pro čtečky (nepovinné)"
                 i18n-label="@@admin.about.alt"
-                hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a ukáže se, když se fotka nenačte."
+                hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a&nbsp;ukáže se, když se fotka nenačte."
                 i18n-hint="@@admin.about.alt.hint"
                 [messages]="altMessages"
               >
@@ -103,7 +103,7 @@
               <app-form-field
                 label="Popisek pod fotkou (nepovinné)"
                 i18n-label="@@admin.about.caption"
-                hint="Ukáže se pod fotkou všem návštěvníkům, například kdy a kde vznikla. Jméno uveďte jen se souhlasem toho, kdo je na fotce, u dítěte jeho zákonných zástupců."
+                hint="Ukáže se pod fotkou všem návštěvníkům, například kdy a&nbsp;kde vznikla. Jméno uveďte jen se souhlasem toho, kdo je na fotce, u&nbsp;dítěte jeho zákonných zástupců."
                 i18n-hint="@@admin.about.caption.hint"
                 [messages]="captionMessages"
               >
@@ -126,7 +126,7 @@
                 [disabled]="busy()"
               >
                 <app-busy-label [busy]="saving()">
-                  <span when-idle i18n="@@admin.about.save">Uložit a ukázat na webu</span>
+                  <span when-idle i18n="@@admin.about.save">Uložit a&nbsp;ukázat na webu</span>
                   <span when-busy i18n="@@admin.about.saving">Ukládáme…</span>
                 </app-busy-label>
               </button>
@@ -143,8 +143,9 @@
           </h2>
           <div class="ui-card__body">
             <p class="ui-card__intro" i18n="@@admin.about.remove.intro">
-              Fotka hned zmizí z webu a smaže se z databáze; ze záloh zmizí do 30 dnů. Obnova ze
-              starší zálohy by ji vrátila. Sekce O nás pak ukáže zase ilustrační fotku.
+              Fotka hned zmizí z&nbsp;webu a&nbsp;smaže se z&nbsp;databáze; ze záloh zmizí do 30
+              dnů. Obnova ze starší zálohy by ji vrátila. Sekce O&nbsp;nás pak ukáže zase ilustrační
+              fotku.
             </p>
             @if (confirmingRemoval()) {
               <span
@@ -154,7 +155,7 @@
                 i18n-aria-label="@@admin.about.remove.confirm.label"
               >
                 <span i18n="@@admin.about.remove.confirm.question"
-                  >Opravdu fotku odebrat z webu a smazat?</span
+                  >Opravdu fotku odebrat z&nbsp;webu a&nbsp;smazat?</span
                 >
                 <button
                   appNeedsConnection
@@ -164,7 +165,7 @@
                   (click)="remove()"
                 >
                   <app-busy-label [busy]="removing()">
-                    <span when-idle i18n="@@admin.about.remove.yes">Odebrat a smazat</span>
+                    <span when-idle i18n="@@admin.about.remove.yes">Odebrat a&nbsp;smazat</span>
                     <span when-busy i18n="@@admin.about.removing">Odebíráme…</span>
                   </app-busy-label>
                 </button>
@@ -188,7 +189,7 @@
                 (click)="askRemoval()"
                 i18n="@@admin.about.remove.open"
               >
-                Odebrat fotku z webu
+                Odebrat fotku z&nbsp;webu
               </button>
             }
             <app-live-notice class="card-notice" [notice]="removeNotice()" />

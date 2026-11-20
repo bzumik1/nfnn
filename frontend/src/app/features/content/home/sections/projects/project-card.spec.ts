@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { IMAGE_ID, project } from '../../../testing/project-fixtures';
 import { ProjectCard } from './project-card';
+import { withOrdinarySpaces } from '../../../../../../testing/ordinary-spaces';
 
 async function setUp(): Promise<ComponentFixture<ProjectCard>> {
   await TestBed.configureTestingModule({
@@ -28,10 +29,12 @@ describe('Given the card of a project', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('a')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.card-title')?.textContent?.trim()).toBe(
-      'Zahrada pro děti',
-    );
-    expect(fixture.nativeElement.querySelector('.card-year')?.textContent?.trim()).toBe('2024');
+    expect(
+      withOrdinarySpaces(fixture.nativeElement.querySelector('.card-title')?.textContent)?.trim(),
+    ).toBe('Zahrada pro děti');
+    expect(
+      withOrdinarySpaces(fixture.nativeElement.querySelector('.card-year')?.textContent)?.trim(),
+    ).toBe('2024');
   });
 
   it('when it is shown, then the tag, the year and the perex stand beside a decorative photo that waits until it is near', async () => {
@@ -39,16 +42,16 @@ describe('Given the card of a project', () => {
     await fixture.whenStable();
     const card = fixture.nativeElement as HTMLElement;
 
-    expect(card.querySelector('.card-tag')?.textContent).toBe('Projekt');
-    expect(card.querySelector('.card-year')?.textContent).toBe('2024');
-    expect(card.querySelector('.card-desc')?.textContent).toBe(project().perex);
+    expect(withOrdinarySpaces(card.querySelector('.card-tag')?.textContent)).toBe('Projekt');
+    expect(withOrdinarySpaces(card.querySelector('.card-year')?.textContent)).toBe('2024');
+    expect(withOrdinarySpaces(card.querySelector('.card-desc')?.textContent)).toBe(project().perex);
     const image = card.querySelector('img') as HTMLImageElement;
     expect(image.getAttribute('src')).toBe(`/api/content/media/${IMAGE_ID}?w=480`);
     expect(image.getAttribute('srcset')).toContain(`/api/content/media/${IMAGE_ID}?w=960 960w`);
     expect(image.getAttribute('loading')).toBe('lazy');
     expect(image.getAttribute('alt')).toBe('');
     const more = card.querySelector('.card-more');
-    expect(more?.textContent?.trim()).toBe('Celý příběh →');
+    expect(withOrdinarySpaces(more?.textContent)?.trim()).toBe('Celý příběh →');
     expect(more?.getAttribute('aria-hidden')).toBe('true');
   });
 

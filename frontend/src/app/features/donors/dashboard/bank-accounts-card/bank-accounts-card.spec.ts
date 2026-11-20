@@ -12,6 +12,7 @@ import { drawsText } from '../../../../shared/ui/qr-code/testing/branded-qr';
 import { BankAccountsCard } from './bank-accounts-card';
 import { LiveUpdates } from '../../../../core/live/live-updates';
 import { FakeLiveUpdates } from '../../../../core/live/testing/live-fixtures';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const LIST_URL = '/api/donations/me/bank-accounts';
 const BANK_CHECK_URL = '/api/donations/me/bank-check';
@@ -83,7 +84,7 @@ describe('Given the bank accounts card in the overview', () => {
   }
 
   function text(selector: string): string {
-    return normalized(element(selector)?.textContent ?? '');
+    return normalized(withOrdinarySpaces(element(selector)?.textContent) ?? '');
   }
 
   function texts(selector: string): string[] {
@@ -91,7 +92,7 @@ describe('Given the bank accounts card in the overview', () => {
       ...((fixture.nativeElement as HTMLElement).querySelectorAll(
         selector,
       ) as NodeListOf<HTMLElement>),
-    ].map((node) => normalized(node.textContent ?? ''));
+    ].map((node) => normalized(withOrdinarySpaces(node.textContent) ?? ''));
   }
 
   function normalized(value: string): string {
@@ -405,7 +406,9 @@ describe('Given the bank accounts card in the overview', () => {
     const rows = [...(element('ul:has(> li.account)')?.children ?? [])];
     expect(rows.map((row) => row.tagName)).toEqual(['LI', 'LI', 'LI']);
     expect(rows.at(-1)?.querySelector('button')).toBe(element('.accounts-add'));
-    expect(normalized(rows.at(-1)?.textContent ?? '')).toBe('Přidat bankovní účet');
+    expect(normalized(withOrdinarySpaces(rows.at(-1)?.textContent) ?? '')).toBe(
+      'Přidat bankovní účet',
+    );
   });
 
   it('when accounts arrive, then the card holds its title and lists the accounts as plain rows edge to edge, with no group title or group note around them', async () => {
@@ -444,7 +447,7 @@ describe('Given the bank accounts card in the overview', () => {
     expect(text('.account-line')).toBe('2900233333/2010 Ověřený');
     const wbr = element('.account-number wbr');
     expect(wbr).not.toBeNull();
-    expect(normalized(wbr?.nextSibling?.textContent ?? '')).toBe('2010');
+    expect(normalized(withOrdinarySpaces(wbr?.nextSibling?.textContent) ?? '')).toBe('2010');
   });
 
   it('when a verified account arrives, then its verification day reads as one inline line with a space after ověřeno', async () => {
@@ -454,11 +457,11 @@ describe('Given the bank accounts card in the overview', () => {
       ...((fixture.nativeElement as HTMLElement).querySelectorAll(
         '.account-meta > li',
       ) as NodeListOf<HTMLElement>),
-    ].find((item) => normalized(item.textContent ?? '').startsWith('ověřeno'));
+    ].find((item) => normalized(withOrdinarySpaces(item.textContent) ?? '').startsWith('ověřeno'));
     expect(verified?.childNodes).toHaveLength(1);
     const line = verified?.firstElementChild;
     expect(line?.tagName).toBe('SPAN');
-    expect(line?.textContent).toBe('ověřeno 12.\u00a03. 2026');
+    expect(withOrdinarySpaces(line?.textContent)).toBe('ověřeno 12. 3. 2026');
   });
 
   it('when two accounts can be disconnected, then each Nepřiřazovat platby z tohoto účtu is named by its label and its own account number, as the VoiceOver rotor lists names', async () => {
@@ -476,7 +479,9 @@ describe('Given the bank accounts card in the overview', () => {
       ) as NodeListOf<HTMLButtonElement>),
     ].map((button) => {
       const ids = (button.getAttribute('aria-labelledby') ?? '').split(' ').filter(Boolean);
-      return ids.map((id) => normalized(document.getElementById(id)?.textContent ?? '')).join(' ');
+      return ids
+        .map((id) => normalized(withOrdinarySpaces(document.getElementById(id)?.textContent) ?? ''))
+        .join(' ');
     });
     expect(names).toEqual([
       'Nepřiřazovat platby z tohoto účtu 2900233333/2010',
@@ -672,7 +677,10 @@ describe('Given the bank accounts card in the overview', () => {
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
       expect(
-        normalized(button.querySelector(':scope > :not([aria-hidden])')?.textContent ?? ''),
+        normalized(
+          withOrdinarySpaces(button.querySelector(':scope > :not([aria-hidden])')?.textContent) ??
+            '',
+        ),
       ).toBe('Jak přiřazujeme platby?');
       expect(button.hasAttribute('aria-label')).toBe(false);
       expect(button.getAttribute('aria-expanded')).toBe('false');
@@ -1572,7 +1580,7 @@ describe('Given the bank accounts card in the overview', () => {
         expect(element('app-symbol-claim')).toBeNull();
         const answer = element('dialog .add-account-answer') as HTMLElement;
         expect(answer.getAttribute('role')).toBe('status');
-        expect(normalized(answer.textContent ?? '')).toBe(
+        expect(normalized(withOrdinarySpaces(answer.textContent) ?? '')).toBe(
           'Přiřadili jsme vám 1 platbu se symbolem 6123456789 z účtu 1234567890/0800.',
         );
         expect(document.activeElement).toBe(answer);

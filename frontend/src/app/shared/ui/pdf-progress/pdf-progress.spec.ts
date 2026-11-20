@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PdfProgress, PdfProgressState } from './pdf-progress';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given the line under a PDF button', () => {
   let fixture: ComponentFixture<PdfProgress>;
@@ -18,7 +19,7 @@ describe('Given the line under a PDF button', () => {
 
   const element = (selector: string) =>
     fixture.nativeElement.querySelector(selector) as HTMLElement | null;
-  const status = () => element('[role="status"]')?.textContent?.trim();
+  const status = () => withOrdinarySpaces(element('[role="status"]')?.textContent)?.trim();
 
   async function show(progress: PdfProgressState | null): Promise<void> {
     fixture.componentRef.setInput('progress', progress);
@@ -97,7 +98,7 @@ describe('Given the line under a PDF button', () => {
       await wait(8000);
 
       const cancel = element('.pdf-progress__cancel') as HTMLButtonElement;
-      expect(cancel.textContent?.trim()).toBe('Zrušit');
+      expect(withOrdinarySpaces(cancel.textContent)?.trim()).toBe('Zrušit');
       expect(element('[role="status"] .pdf-progress__cancel')).toBeNull();
       cancel.click();
       expect(cancelled).toBe(1);
@@ -117,17 +118,17 @@ describe('Given the line under a PDF button', () => {
       const visible = [...cancel.childNodes]
         .filter((node) => node.nodeType !== Node.COMMENT_NODE)
         .filter((node) => !(node instanceof HTMLElement && node.matches('.visually-hidden')))
-        .map((node) => node.textContent)
+        .map((node) => withOrdinarySpaces(node.textContent))
         .join('');
       expect(visible.trim()).toBe('Zrušit');
-      expect(cancel.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      expect(withOrdinarySpaces(cancel.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
         'Zrušit přípravu potvrzení za rok 2025',
       );
 
       await show({ kind: 'running', text: 'Vytváříme PDF… · strana 1' });
       await wait(400);
       expect(cancel.isConnected).toBe(true);
-      expect(cancel.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      expect(withOrdinarySpaces(cancel.textContent)?.replace(/\s+/g, ' ').trim()).toBe(
         'Zrušit přípravu potvrzení za rok 2025',
       );
     });

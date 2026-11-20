@@ -20,6 +20,7 @@ import {
 import { sharedCases } from '../../../../../testing/shared-cases';
 import { decodePlainQr, drawnRows } from '../../../../shared/ui/qr-code/testing/plain-qr-decoder';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 import { AccountCard } from './account-card';
 
 const PASSKEYS_URL = '/api/donors/me/passkeys';
@@ -40,7 +41,7 @@ function expectLockedInPlace(button: HTMLButtonElement): void {
 
 function labels(button: Element | null): string[] {
   return Array.from(button?.querySelectorAll('.busy-label__face') ?? []).map((face) =>
-    (face.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    (withOrdinarySpaces(face.textContent) ?? '').replace(/\s+/g, ' ').trim(),
   );
 }
 
@@ -72,7 +73,7 @@ class CardDriver {
 
   row(label: string): HTMLElement {
     return Array.from(this.root().querySelectorAll<HTMLElement>('.account-row')).find(
-      (row) => normalized(row.querySelector('dt')?.textContent) === label,
+      (row) => normalized(withOrdinarySpaces(row.querySelector('dt')?.textContent)) === label,
     )!;
   }
 
@@ -169,7 +170,9 @@ describe('Given the sign-in and security card of the details page', () => {
     beforeEach(() => render());
 
     it('then one row per sign-in item shows its state and its action', () => {
-      expect(card.element('h2').textContent).toContain('Přihlášení a\u00a0zabezpečení');
+      expect(withOrdinarySpaces(card.element('h2').textContent)).toContain(
+        'Přihlášení a zabezpečení',
+      );
       expect(card.texts('.account-row dt')).toEqual([
         'E-mail',
         'Heslo',
@@ -245,7 +248,7 @@ describe('Given the sign-in and security card of the details page', () => {
       const region = panel.querySelector<HTMLElement>('section')!;
       expect(region.getAttribute('aria-labelledby')).toBe('account-passkeys-label');
       expect(document.activeElement).toBe(region);
-      expect(panel.textContent).toContain('Přihlaste se otiskem prstu');
+      expect(withOrdinarySpaces(panel.textContent)).toContain('Přihlaste se otiskem prstu');
       expect(card.button('Spravovat přístupové klíče')!.getAttribute('aria-expanded')).toBe('true');
     });
   });
@@ -268,18 +271,20 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(
         card.row('Dvoufaktorové ověření').querySelector('#account-second-factor-password'),
       ).not.toBeNull();
-      expect(card.element('.account-form-intro').textContent).toContain('Google Authenticator');
+      expect(withOrdinarySpaces(card.element('.account-form-intro').textContent)).toContain(
+        'Google Authenticator',
+      );
       http.expectNone('/api/donors/me/second-factor/setup');
     });
 
     it('then the form says the authenticator app may run on a phone or a tablet', () => {
-      expect(normalized(card.element('.account-form-intro').textContent)).toContain(
-        'kód z ověřovací aplikace v telefonu nebo tabletu',
-      );
+      expect(
+        normalized(withOrdinarySpaces(card.element('.account-form-intro').textContent)),
+      ).toContain('kód z ověřovací aplikace v telefonu nebo tabletu');
     });
 
     it('then before continuing the form says how access comes back when the phone is lost', () => {
-      expect(normalized(card.element('.account-lost-phone').textContent)).toBe(
+      expect(normalized(withOrdinarySpaces(card.element('.account-lost-phone').textContent))).toBe(
         'Když telefon nebo tablet s aplikací ztratíte, přístup obnovíte platbou 1 Kč z bankovního účtu na vaše jméno, který u nás máte ověřený aspoň týden. Dřív to nejde; do té doby nám napište a kód z aplikace vám vypneme.',
       );
       const actions = card.element('.account-form-actions');
@@ -303,10 +308,12 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(qr.getAttribute('aria-label')).toBe('QR kód s nastavením pro ověřovací aplikaci');
       expect(qr.querySelector('.qr-plain')).not.toBeNull();
       expect(qr.querySelector('.qr-star')).toBeNull();
-      expect(card.element('.account-secret-value').textContent?.trim()).toBe(
+      expect(withOrdinarySpaces(card.element('.account-secret-value').textContent)?.trim()).toBe(
         'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
       );
-      expect(card.element('app-copy-button button').textContent).toContain('klíč');
+      expect(withOrdinarySpaces(card.element('app-copy-button button').textContent)).toContain(
+        'klíč',
+      );
       expect(card.element('#account-second-factor-code').getAttribute('autocomplete')).toBe(
         'one-time-code',
       );
@@ -314,8 +321,8 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(card.element<HTMLAnchorElement>('.account-otpauth').getAttribute('href')).toBe(
         secondFactorEnrolment()['otpauthUri'],
       );
-      expect(card.element('.account-otpauth').textContent?.trim()).toBe(
-        'Přidat do ověřovací aplikace v\u00a0tomto telefonu nebo tabletu',
+      expect(withOrdinarySpaces(card.element('.account-otpauth').textContent)?.trim()).toBe(
+        'Přidat do ověřovací aplikace v tomto telefonu nebo tabletu',
       );
     });
 
@@ -346,10 +353,12 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.settle();
 
       expect(card.element('.account-qr')).toBeNull();
-      expect(normalized(card.element('.account-enrolment [role="alert"]').textContent)).toBe(
-        'QR kód se nepodařilo vykreslit. Opište prosím klíč níže do ověřovací aplikace.',
-      );
-      expect(card.element('.account-secret-value').textContent?.trim()).toBe(
+      expect(
+        normalized(
+          withOrdinarySpaces(card.element('.account-enrolment [role="alert"]').textContent),
+        ),
+      ).toBe('QR kód se nepodařilo vykreslit. Opište prosím klíč níže do ověřovací aplikace.');
+      expect(withOrdinarySpaces(card.element('.account-secret-value').textContent)?.trim()).toBe(
         'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
       );
       expect(card.element('#account-second-factor-code')).not.toBeNull();
@@ -368,9 +377,9 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.settle();
 
       expect(card.element('#account-second-factor-password')).not.toBeNull();
-      expect(card.element('.account-form .ui-field-error').textContent).toContain(
-        'Nesprávné současné heslo',
-      );
+      expect(
+        withOrdinarySpaces(card.element('.account-form .ui-field-error').textContent),
+      ).toContain('Nesprávné současné heslo');
     });
 
     describe('and has the key in the app', () => {
@@ -400,8 +409,8 @@ describe('Given the sign-in and security card of the details page', () => {
         await card.settle();
 
         expect(card.element('.account-form')).toBeNull();
-        expect(card.element('.account-status').textContent).toContain(
-          'Kód z\u00a0aplikace je zapnutý.',
+        expect(withOrdinarySpaces(card.element('.account-status').textContent)).toContain(
+          'Kód z aplikace je zapnutý.',
         );
         expect(card.values()).toEqual([
           'jana@example.cz',
@@ -409,7 +418,7 @@ describe('Given the sign-in and security card of the details page', () => {
           'Zapnuté, kód z ověřovací aplikace',
           'Žádný',
         ]);
-        expect(normalized(document.activeElement?.textContent)).toBe(
+        expect(normalized(withOrdinarySpaces(document.activeElement?.textContent))).toBe(
           'Vypnout dvoufaktorové ověření',
         );
         store.updateProfile({}, '00000000000000d1', null).subscribe();
@@ -435,9 +444,9 @@ describe('Given the sign-in and security card of the details page', () => {
         await card.settle();
 
         expect(card.element('.account-qr')).not.toBeNull();
-        expect(card.element('.account-form .ui-field-error').textContent).toContain(
-          'Nesprávný kód.',
-        );
+        expect(
+          withOrdinarySpaces(card.element('.account-form .ui-field-error').textContent),
+        ).toContain('Nesprávný kód.');
       });
 
       it('and sends a wrong code and then edits it, then the reason from the server goes away', async () => {
@@ -472,9 +481,9 @@ describe('Given the sign-in and security card of the details page', () => {
 
         http.expectNone('/api/donors/me/second-factor/confirm');
         expect(card.element('.account-form p.ui-field-error[role="alert"]')).toBeNull();
-        expect(card.element('#account-second-factor-code-error').textContent).toContain(
-          'Kód má přesně šest číslic.',
-        );
+        expect(
+          withOrdinarySpaces(card.element('#account-second-factor-code-error').textContent),
+        ).toContain('Kód má přesně šest číslic.');
       });
 
       it('and sends five digits, then nothing goes out and the field says the code has six', async () => {
@@ -483,9 +492,9 @@ describe('Given the sign-in and security card of the details page', () => {
         await card.submit();
 
         http.expectNone('/api/donors/me/second-factor/confirm');
-        expect(card.element('#account-second-factor-code-error').textContent).toContain(
-          'Kód má přesně šest číslic.',
-        );
+        expect(
+          withOrdinarySpaces(card.element('#account-second-factor-code-error').textContent),
+        ).toContain('Kód má přesně šest číslic.');
       });
 
       it('and cancels, then the QR code is gone and the focus returns to the row action', async () => {
@@ -493,7 +502,7 @@ describe('Given the sign-in and security card of the details page', () => {
 
         expect(card.element('.account-form')).toBeNull();
         expect(card.element('.account-qr')).toBeNull();
-        expect(normalized(document.activeElement?.textContent)).toBe(
+        expect(normalized(withOrdinarySpaces(document.activeElement?.textContent))).toBe(
           'Zapnout dvoufaktorové ověření',
         );
       });
@@ -513,9 +522,13 @@ describe('Given the sign-in and security card of the details page', () => {
 
     it('then the second factor row says the administration waits for it', () => {
       expect(
-        card.row('Dvoufaktorové ověření').querySelector('.account-hint')?.textContent,
+        withOrdinarySpaces(
+          withOrdinarySpaces(
+            card.row('Dvoufaktorové ověření').querySelector('.account-hint')?.textContent,
+          ),
+        ),
       ).toContain(
-        'Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete kód z\u00a0aplikace a',
+        'Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete kód z aplikace a',
       );
     });
   });
@@ -535,8 +548,8 @@ describe('Given the sign-in and security card of the details page', () => {
 
     it('then the password field has the focus and the form says the password will do', () => {
       expect(document.activeElement).toBe(card.element('#account-second-factor-off-password'));
-      expect(card.element('.account-form-intro').textContent).toContain(
-        'K\u00a0přihlášení pak bude stačit heslo.',
+      expect(withOrdinarySpaces(card.element('.account-form-intro').textContent)).toContain(
+        'K přihlášení pak bude stačit heslo.',
       );
     });
 
@@ -555,8 +568,8 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.settle();
 
       expect(card.element('.account-form')).toBeNull();
-      expect(card.element('.account-status').textContent).toContain(
-        'Kód z\u00a0aplikace jsme vypnuli.',
+      expect(withOrdinarySpaces(card.element('.account-status').textContent)).toContain(
+        'Kód z aplikace jsme vypnuli.',
       );
       expect(card.actions()).toEqual([
         'Změnit e-mail',
@@ -564,7 +577,9 @@ describe('Given the sign-in and security card of the details page', () => {
         'Zapnout dvoufaktorové ověření',
         'Spravovat přístupové klíče',
       ]);
-      expect(normalized(document.activeElement?.textContent)).toBe('Zapnout dvoufaktorové ověření');
+      expect(normalized(withOrdinarySpaces(document.activeElement?.textContent))).toBe(
+        'Zapnout dvoufaktorové ověření',
+      );
     });
 
     it('and the code was already used, then the form stays and shows the reason', async () => {
@@ -581,7 +596,9 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.settle();
 
       expect(card.element('#account-second-factor-off-code')).not.toBeNull();
-      expect(card.element('.account-form .ui-field-error').textContent).toContain('Nesprávný kód');
+      expect(
+        withOrdinarySpaces(card.element('.account-form .ui-field-error').textContent),
+      ).toContain('Nesprávný kód');
     });
   });
 
@@ -593,7 +610,7 @@ describe('Given the sign-in and security card of the details page', () => {
 
     it('then the new address field has the focus and the form explains the link', () => {
       expect(document.activeElement).toBe(card.element('#account-new-email'));
-      expect(card.element('.account-form-intro').textContent).toContain(
+      expect(withOrdinarySpaces(card.element('.account-form-intro').textContent)).toContain(
         'Na novou adresu pošleme odkaz.',
       );
     });
@@ -616,14 +633,18 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.settle();
 
       expect(card.element('.account-form')).toBeNull();
-      expect(card.element('.account-status').textContent).toContain(
+      expect(withOrdinarySpaces(card.element('.account-status').textContent)).toContain(
         'Odkaz jsme poslali na Jana.Nova@example.cz.',
       );
-      expect(card.element('.account-email').textContent?.trim()).toBe('jana@example.cz');
-      expect(normalized(card.element('.account-pending-address').textContent)).toBe(
-        'Čeká na potvrzení: jana.nova@example.cz',
+      expect(withOrdinarySpaces(card.element('.account-email').textContent)?.trim()).toBe(
+        'jana@example.cz',
       );
-      expect(normalized(document.activeElement?.textContent)).toBe('Změnit e-mail');
+      expect(
+        normalized(withOrdinarySpaces(card.element('.account-pending-address').textContent)),
+      ).toBe('Čeká na potvrzení: jana.nova@example.cz');
+      expect(normalized(withOrdinarySpaces(document.activeElement?.textContent))).toBe(
+        'Změnit e-mail',
+      );
     });
 
     it('and leaves the address malformed, then nothing is sent and the field says so', async () => {
@@ -633,7 +654,7 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.submit();
 
       http.expectNone(EMAIL_CHANGE_URL);
-      expect(card.element('#account-new-email-error').textContent).toContain(
+      expect(withOrdinarySpaces(card.element('#account-new-email-error').textContent)).toContain(
         'Zadejte prosím platnou e-mailovou adresu.',
       );
       expect(document.activeElement).toBe(card.element('#account-new-email'));
@@ -656,9 +677,9 @@ describe('Given the sign-in and security card of the details page', () => {
         );
       await card.settle();
 
-      expect(card.element('.account-form .ui-field-error').textContent).toContain(
-        'Nesprávné současné heslo. Zadejte prosím heslo, kterým se teď přihlašujete.',
-      );
+      expect(
+        withOrdinarySpaces(card.element('.account-form .ui-field-error').textContent),
+      ).toContain('Nesprávné současné heslo. Zadejte prosím heslo, kterým se teď přihlašujete.');
       expect(card.element('.account-save').hasAttribute('aria-disabled')).toBe(false);
     });
 
@@ -669,7 +690,9 @@ describe('Given the sign-in and security card of the details page', () => {
 
       http.expectNone(EMAIL_CHANGE_URL);
       expect(card.element('.account-form')).toBeNull();
-      expect(normalized(document.activeElement?.textContent)).toBe('Změnit e-mail');
+      expect(normalized(withOrdinarySpaces(document.activeElement?.textContent))).toBe(
+        'Změnit e-mail',
+      );
     });
 
     it('and the session has ended, then the details page is told to send the donor to sign in', async () => {
@@ -695,13 +718,17 @@ describe('Given the sign-in and security card of the details page', () => {
 
     it('then the e-mail row shows the current address, the pending one with the expiry of its link and both actions', () => {
       const row = card.row('E-mail');
-      expect(normalized(row.querySelector('.account-email')?.textContent)).toBe('jana@example.cz');
-      expect(normalized(row.querySelector('.account-pending-address')?.textContent)).toBe(
-        'Čeká na potvrzení: jana.nova@example.cz',
+      expect(normalized(withOrdinarySpaces(row.querySelector('.account-email')?.textContent))).toBe(
+        'jana@example.cz',
       );
-      expect(normalized(row.querySelector('.account-pending .account-row-note')?.textContent)).toBe(
-        'Potvrzovací odkaz platí do 19. 10. 2026 12:00.',
-      );
+      expect(
+        normalized(withOrdinarySpaces(row.querySelector('.account-pending-address')?.textContent)),
+      ).toBe('Čeká na potvrzení: jana.nova@example.cz');
+      expect(
+        normalized(
+          withOrdinarySpaces(row.querySelector('.account-pending .account-row-note')?.textContent),
+        ),
+      ).toBe('Potvrzovací odkaz platí do 19. 10. 2026 12:00.');
       expect(card.button('Poslat znovu potvrzovací odkaz')).toBeDefined();
       expect(card.button('Zrušit změnu e-mailu')).toBeDefined();
       expect(card.button('Změnit e-mail')).toBeDefined();
@@ -714,7 +741,9 @@ describe('Given the sign-in and security card of the details page', () => {
         'Poslat znovu potvrzovací odkaz',
       );
       expect(card.element('.account-resend').getAttribute('aria-busy')).toBe('true');
-      expect(normalized(card.element('.account-status').textContent)).toBe('Posíláme…');
+      expect(normalized(withOrdinarySpaces(card.element('.account-status').textContent))).toBe(
+        'Posíláme…',
+      );
       expect(labels(card.element('.account-resend'))).toEqual([
         'Poslat znovu potvrzovací odkaz',
         'Posíláme…',
@@ -730,10 +759,12 @@ describe('Given the sign-in and security card of the details page', () => {
         );
       await card.settle();
 
-      expect(card.element('.account-status').textContent).toContain(
+      expect(withOrdinarySpaces(card.element('.account-status').textContent)).toContain(
         'Nový potvrzovací odkaz je na cestě. Předchozí odkaz už neplatí.',
       );
-      expect(card.element('.account-pending').textContent).toContain('19.\u00a010. 2026 13:00');
+      expect(withOrdinarySpaces(card.element('.account-pending').textContent)).toContain(
+        '19. 10. 2026 13:00',
+      );
       expect(card.element('.account-resend').hasAttribute('aria-disabled')).toBe(false);
     });
 
@@ -780,7 +811,7 @@ describe('Given the sign-in and security card of the details page', () => {
       http.expectOne('/api/donors/me/password').flush(authResponse('token-2'));
       await card.settle();
       await card.showDonor(sampleDonor({ pendingEmailChange: PENDING }));
-      expect(normalized(card.element('.account-status').textContent)).toContain(
+      expect(normalized(withOrdinarySpaces(card.element('.account-status').textContent))).toContain(
         'Heslo jsme změnili.',
       );
 
@@ -793,7 +824,7 @@ describe('Given the sign-in and security card of the details page', () => {
         });
       await card.settle();
 
-      expect(normalized(card.element('.account-status').textContent)).toBe('');
+      expect(normalized(withOrdinarySpaces(card.element('.account-status').textContent))).toBe('');
     });
 
     it('and the server refuses to send it again, then the row shows the reason and nothing else changes', async () => {
@@ -806,9 +837,9 @@ describe('Given the sign-in and security card of the details page', () => {
         });
       await card.settle();
 
-      expect(card.row('E-mail').querySelector('[role="alert"]')?.textContent).toContain(
-        'Příliš mnoho požadavků',
-      );
+      expect(
+        withOrdinarySpaces(card.row('E-mail').querySelector('[role="alert"]')?.textContent),
+      ).toContain('Příliš mnoho požadavků');
       expect(card.element('.account-pending-address')).not.toBeNull();
       expect(card.texts('.account-status span')).toEqual([]);
     });
@@ -818,7 +849,9 @@ describe('Given the sign-in and security card of the details page', () => {
 
       expect(accessibleText(card.element('.account-cancel-change'))).toBe('Zrušit změnu e-mailu');
       expect(card.element('.account-cancel-change').getAttribute('aria-busy')).toBe('true');
-      expect(normalized(card.element('.account-status').textContent)).toBe('Rušíme…');
+      expect(normalized(withOrdinarySpaces(card.element('.account-status').textContent))).toBe(
+        'Rušíme…',
+      );
       expect(labels(card.element('.account-cancel-change'))).toEqual([
         'Zrušit změnu e-mailu',
         'Rušíme…',
@@ -830,10 +863,12 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.settle();
 
       expect(card.element('.account-pending')).toBeNull();
-      expect(card.element('.account-status').textContent).toContain(
+      expect(withOrdinarySpaces(card.element('.account-status').textContent)).toContain(
         'Změnu e\u2011mailu jsme zrušili.',
       );
-      expect(normalized(document.activeElement?.textContent)).toBe('Změnit e-mail');
+      expect(normalized(withOrdinarySpaces(document.activeElement?.textContent))).toBe(
+        'Změnit e-mail',
+      );
     });
 
     it('and the session has ended while cancelling, then the details page is told to send the donor to sign in', async () => {
@@ -871,7 +906,9 @@ describe('Given the sign-in and security card of the details page', () => {
       request.flush(authResponse('token-2', sampleDonor({ hasPassword: false })));
       await card.settle();
 
-      expect(card.element('.account-status').textContent).toContain('Heslo jsme odebrali.');
+      expect(withOrdinarySpaces(card.element('.account-status').textContent)).toContain(
+        'Heslo jsme odebrali.',
+      );
       expect(card.values()).toEqual([
         'jana@example.cz',
         'Bez hesla, jen přístupové klíče',
@@ -901,8 +938,8 @@ describe('Given the sign-in and security card of the details page', () => {
 
     it('then the current password field has the focus and the new one carries the hint', () => {
       expect(document.activeElement).toBe(card.element('#account-current-password'));
-      expect(card.element('#account-new-password-hint').textContent).toContain(
-        'Alespoň 12\u00a0znaků.',
+      expect(withOrdinarySpaces(card.element('#account-new-password-hint').textContent)).toContain(
+        'Alespoň 12 znaků.',
       );
     });
 
@@ -914,9 +951,9 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.submit();
 
       http.expectNone('/api/donors/me/password');
-      expect(card.element('.account-form .ui-field-error').textContent).toContain(
-        'Nová hesla se neshodují.',
-      );
+      expect(
+        withOrdinarySpaces(card.element('.account-form .ui-field-error').textContent),
+      ).toContain('Nová hesla se neshodují.');
     });
 
     it('and the new password is short, then nothing is sent and the field says so', async () => {
@@ -927,8 +964,8 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.submit();
 
       http.expectNone('/api/donors/me/password');
-      expect(card.element('#account-new-password-error').textContent).toContain(
-        'Heslo musí mít alespoň 12\u00a0znaků.',
+      expect(withOrdinarySpaces(card.element('#account-new-password-error').textContent)).toContain(
+        'Heslo musí mít alespoň 12 znaků.',
       );
     });
 
@@ -948,10 +985,12 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.settle();
 
       expect(card.element('.account-form')).toBeNull();
-      expect(card.element('.account-status').textContent).toContain(
+      expect(withOrdinarySpaces(card.element('.account-status').textContent)).toContain(
         'Heslo jsme změnili. Ostatní přihlášení jsme ukončili, tohle zůstává.',
       );
-      expect(normalized(document.activeElement?.textContent)).toBe('Změnit heslo');
+      expect(normalized(withOrdinarySpaces(document.activeElement?.textContent))).toBe(
+        'Změnit heslo',
+      );
       store.updateProfile({}, '00000000000000d1', null).subscribe();
       expect(http.expectOne(PROFILE_URL).request.headers.get('Authorization')).toBe(
         'Bearer token-2',
@@ -972,9 +1011,9 @@ describe('Given the sign-in and security card of the details page', () => {
         });
       await card.settle();
 
-      expect(card.element('.account-form .ui-field-error').textContent).toContain(
-        'Nesprávné současné heslo',
-      );
+      expect(
+        withOrdinarySpaces(card.element('.account-form .ui-field-error').textContent),
+      ).toContain('Nesprávné současné heslo');
     });
   });
 });
@@ -1038,7 +1077,7 @@ describe('Given the sign-in and security card of a donor without a password', ()
     it('then the card offers no change that a passkey must confirm and asks for a passkey first', () => {
       expect(card.actions()).toEqual(['Spravovat přístupové klíče']);
       expect(card.values()).toEqual(['jana@example.cz', 'Bez hesla', 'Vypnuté', 'Žádný']);
-      expect(card.element('.account-no-method').textContent).toContain(
+      expect(withOrdinarySpaces(card.element('.account-no-method').textContent)).toContain(
         'Nejdřív si vytvořte přístupový klíč',
       );
     });
@@ -1083,18 +1122,20 @@ describe('Given the sign-in and security card of a donor without a password', ()
 
     await card.clickButton('Vypnout dvoufaktorové ověření');
 
-    expect(card.element('.account-form-intro').textContent).toContain(
-      'Při obnově přístupu odkazem z\u00a0e\u2011mailu pak kód z\u00a0aplikace chtít nebudeme.',
+    expect(withOrdinarySpaces(card.element('.account-form-intro').textContent)).toContain(
+      'Při obnově přístupu odkazem z e\u2011mailu pak kód z aplikace chtít nebudeme.',
     );
-    expect(card.element('.account-form').textContent).not.toContain('bude stačit heslo');
+    expect(withOrdinarySpaces(card.element('.account-form').textContent)).not.toContain(
+      'bude stačit heslo',
+    );
   });
 
   it('when the e-mail changes, then a passkey confirms it instead of the password', async () => {
     await render();
     await card.clickButton('Změnit e-mail');
     expect(card.element('#account-email-password')).toBeNull();
-    expect(card.element('.account-form').textContent).toContain(
-      'jedním z\u00a0vašich přístupových klíčů',
+    expect(withOrdinarySpaces(card.element('.account-form').textContent)).toContain(
+      'jedním z vašich přístupových klíčů',
     );
     await card.fillIn('#account-new-email', 'jana.nova@example.cz');
 
@@ -1111,13 +1152,17 @@ describe('Given the sign-in and security card of a donor without a password', ()
       .flush(sampleDonor({ hasPassword: false, pendingEmailChange: PENDING }));
     await card.settle();
 
-    expect(card.element('.account-status').textContent).toContain('jana.nova@example.cz');
+    expect(withOrdinarySpaces(card.element('.account-status').textContent)).toContain(
+      'jana.nova@example.cz',
+    );
   });
 
   it('when a password is set, then only the new one is asked for and a passkey confirms it', async () => {
     await render();
     await card.clickButton('Nastavit heslo');
-    expect(card.element('.account-form h3').textContent).toContain('Nastavení hesla');
+    expect(withOrdinarySpaces(card.element('.account-form h3').textContent)).toContain(
+      'Nastavení hesla',
+    );
     expect(card.element('#account-current-password')).toBeNull();
     expect(document.activeElement).toBe(card.element('#account-new-password'));
     await card.fillIn('#account-new-password', 'a brand new passphrase');
@@ -1133,7 +1178,9 @@ describe('Given the sign-in and security card of a donor without a password', ()
     request.flush(authResponse('token-2'));
     await card.settle();
 
-    expect(card.element('.account-status').textContent).toContain('Heslo je nastavené.');
+    expect(withOrdinarySpaces(card.element('.account-status').textContent)).toContain(
+      'Heslo je nastavené.',
+    );
     expect(card.actions()).toContain('Odebrat heslo');
   });
 
@@ -1141,14 +1188,16 @@ describe('Given the sign-in and security card of a donor without a password', ()
     await render();
     passkeys.failure = 'cancelled';
     await card.clickButton('Zapnout dvoufaktorové ověření');
-    expect(card.element('.account-form-intro').textContent).toContain('obnovovat přístup');
+    expect(withOrdinarySpaces(card.element('.account-form-intro').textContent)).toContain(
+      'obnovovat přístup',
+    );
 
     await card.submit();
     http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
     await vi.waitFor(() => expect(card.element('.account-form .ui-field-error')).not.toBeNull());
     await card.settle();
 
-    expect(card.element('.account-form .ui-field-error').textContent).toContain(
+    expect(withOrdinarySpaces(card.element('.account-form .ui-field-error').textContent)).toContain(
       'Změnu se nepodařilo potvrdit přístupovým klíčem',
     );
     http.expectNone('/api/donors/me/second-factor/setup');
@@ -1187,13 +1236,13 @@ describe('Given the sign-in and security card of a donor without a password in a
 
   it('when it opens, then it asks for a passkey first without a button that could not create one', () => {
     const root = fixture.nativeElement as HTMLElement;
-    expect(root.querySelector('.account-no-method')?.textContent).toContain(
+    expect(withOrdinarySpaces(root.querySelector('.account-no-method')?.textContent)).toContain(
       'Nejdřív si vytvořte přístupový klíč',
     );
     expect(root.querySelector('.account-create-passkey')).toBeNull();
     expect(
       Array.from(root.querySelectorAll('.account-action')).map((node) =>
-        normalized(node.textContent),
+        normalized(withOrdinarySpaces(node.textContent)),
       ),
     ).toEqual(['Spravovat přístupové klíče']);
   });

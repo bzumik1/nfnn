@@ -9,6 +9,7 @@ import { authResponse, FakePasskeyAuthenticator } from '../../../core/auth/testi
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
 import { FakeDialogHistory } from '../../../shared/ui/dialog/testing/fake-dialog-history';
 import { LoginDialog } from './login-dialog';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given the sign-in dialog in the installed app', () => {
   let http: HttpTestingController;
@@ -39,7 +40,7 @@ describe('Given the sign-in dialog in the installed app', () => {
     const host = fixture.nativeElement as HTMLElement;
 
     expect(host.querySelector('.session-choice')).toBeNull();
-    expect(host.textContent).not.toContain('Zapamatovat si mě');
+    expect(withOrdinarySpaces(host.textContent)).not.toContain('Zapamatovat si mě');
 
     for (const [selector, value] of [
       ['#login-email', 'jana@example.cz'],

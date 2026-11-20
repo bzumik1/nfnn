@@ -158,7 +158,7 @@ export class FirstSetup {
   );
 
   protected readonly codeMessages = {
-    required: $localize`:@@operations.setup.code.required:Opište prosím kód z logu.`,
+    required: $localize`:@@operations.setup.code.required:Opište prosím kód z\u00a0logu.`,
   };
   protected readonly urlMessages = {
     required: $localize`:@@operations.setup.publicUrl.required:Vyplňte prosím adresu webu.`,
@@ -173,14 +173,14 @@ export class FirstSetup {
     max: PORT_INVALID,
   };
   protected readonly usernameMessages = {
-    required: $localize`:@@operations.setup.mailUsername.required:Vyplňte prosím přihlašovací jméno ze stránky SMTP v Brevo.`,
+    required: $localize`:@@operations.setup.mailUsername.required:Vyplňte prosím přihlašovací jméno ze stránky SMTP v\u00a0Brevo.`,
   };
   protected readonly passwordMessages = {
     required: $localize`:@@operations.setup.mailPassword.required:Vyplňte prosím heslo nebo klíč SMTP.`,
   };
   protected readonly restoreKeyMessages = {
-    required: $localize`:@@operations.setup.restoreKey.required:Vložte prosím klíč k zálohám, se kterým záloha vznikla.`,
-    backupKey: $localize`:@@operations.setup.restoreKey.invalid:Klíč začíná AGE-SECRET-KEY-1 a má 74 znaků, nebo je to 24 slov. Zkontrolujte, že jste ho vložili celý a bez překlepu.`,
+    required: $localize`:@@operations.setup.restoreKey.required:Vložte prosím klíč k\u00a0zálohám, se kterým záloha vznikla.`,
+    backupKey: $localize`:@@operations.setup.restoreKey.invalid:Klíč začíná AGE-SECRET-KEY-1 a\u00a0má 74\u00a0znaků, nebo je to 24 slov. Zkontrolujte, že jste ho vložili celý a\u00a0bez překlepu.`,
   };
   protected readonly fioTokenLabel = $localize`:@@operations.setup.fioToken.label:Token Fio API (jen pro čtení, nepovinné)`;
   protected readonly emailMessages = {
@@ -256,7 +256,7 @@ export class FirstSetup {
           }
           this.codeError.set(
             problemTypeEndsWith(failure, SETUP_LOCKED)
-              ? $localize`:@@operations.setup.code.wrong:Kód nesedí. Opište prosím ten z posledního startu webu, kód se při každém startu mění.`
+              ? $localize`:@@operations.setup.code.wrong:Kód nesedí. Opište prosím ten z\u00a0posledního startu webu, kód se při každém startu mění.`
               : describeProblem(
                   failure,
                   $localize`:@@operations.setup.code.failed:Kód se nepodařilo ověřit. Zkuste to prosím znovu.`,
@@ -452,7 +452,7 @@ export class FirstSetup {
     this.backupFileError.set(
       file === null || BACKUP_EXTENSIONS.some((extension) => name.endsWith(extension))
         ? ''
-        : $localize`:@@operations.setup.restore.wrongFile:Tohle není soubor zálohy. Vyberte prosím soubor s příponou .dump.age (nebo starší .dump).`,
+        : $localize`:@@operations.setup.restore.wrongFile:Tohle není soubor zálohy. Vyberte prosím soubor s\u00a0příponou .dump.age (nebo starší .dump).`,
     );
   }
 
@@ -557,7 +557,7 @@ export class FirstSetup {
     this.restoreError.set(
       ours
         ? $localize`:@@operations.setup.restore.failed:Obnova se nepovedla: ${run.error ?? ''}:error:. Web zůstal prázdný; zkuste prosím jiný soubor zálohy.`
-        : $localize`:@@operations.setup.restore.notPickedUp:Kontejner záloh si obnovu do pěti minut nevzal. Zkuste to prosím znovu; když se to opakuje, podívejte se do logu kontejneru nfnn-backup v ZimaOS.`,
+        : $localize`:@@operations.setup.restore.notPickedUp:Kontejner záloh si obnovu do pěti minut nevzal. Zkuste to prosím znovu; když se to opakuje, podívejte se do logu kontejneru nfnn-backup v\u00a0ZimaOS.`,
     );
     this.show(status.codeRequired ? 'locked' : 'restore');
   }

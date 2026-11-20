@@ -231,7 +231,7 @@ export class AdminBackups {
     const at = formatBankTime(file.changedAt);
     switch (file.state) {
       case 'PENDING':
-        return $localize`:@@admin.backups.restore.pending:${file.fileName}:file: čeká a obnoví se, až se na serveru příště spustí zálohování.`;
+        return $localize`:@@admin.backups.restore.pending:${file.fileName}:file: čeká a\u00a0obnoví se, až se na serveru příště spustí zálohování.`;
       case 'DONE':
         return $localize`:@@admin.backups.restore.done:${file.fileName}:file: byl obnoven ${at}:time:.`;
       case 'FAILED':
@@ -378,7 +378,7 @@ export class AdminBackups {
           }
         : {
             kind: 'alert',
-            text: $localize`:@@admin.backups.backup.failed:Záloha se nepovedla. Technické podrobnosti najdete níže u Poslední záloha.`,
+            text: $localize`:@@admin.backups.backup.failed:Záloha se nepovedla. Technické podrobnosti najdete níže u\u00a0Poslední záloha.`,
           };
     }
     return run.outcome === 'OK'
@@ -388,7 +388,7 @@ export class AdminBackups {
         }
       : {
           kind: 'alert',
-          text: $localize`:@@admin.backups.testRestore.failed:Zkušební obnova se nepovedla. Technické podrobnosti najdete níže u Poslední zkušební obnova.`,
+          text: $localize`:@@admin.backups.testRestore.failed:Zkušební obnova se nepovedla. Technické podrobnosti najdete níže u\u00a0Poslední zkušební obnova.`,
         };
   }
 
@@ -410,7 +410,7 @@ export class AdminBackups {
     if (run === null || run.requestId !== requested.requestId) {
       this.notice.set({
         kind: 'alert',
-        text: $localize`:@@admin.backups.restore.notPickedUp:Zálohování na serveru na obnovu do pěti minut neodpovědělo, takže web běží s daty, jaká měl. Zkuste to prosím znovu; když se to opakuje, pošlete tuto stránku správci serveru (služba záloh nfnn-backup asi neběží).`,
+        text: $localize`:@@admin.backups.restore.notPickedUp:Zálohování na serveru na obnovu do pěti minut neodpovědělo, takže web běží s\u00a0daty, jaká měl. Zkuste to prosím znovu; když se to opakuje, pošlete tuto stránku správci serveru (služba záloh nfnn-backup asi neběží).`,
       });
       return;
     }
@@ -422,7 +422,7 @@ export class AdminBackups {
           }
         : {
             kind: 'alert',
-            text: $localize`:@@admin.backups.restore.failedNow:Obnova ze zálohy ${requested.fileName}:file: se nepovedla. Web běží dál s daty, jaká měl před obnovou; technické podrobnosti najdete níže u Poslední obnova.`,
+            text: $localize`:@@admin.backups.restore.failedNow:Obnova ze zálohy ${requested.fileName}:file: se nepovedla. Web běží dál s\u00a0daty, jaká měl před obnovou; technické podrobnosti najdete níže u\u00a0Poslední obnova.`,
           },
     );
   }

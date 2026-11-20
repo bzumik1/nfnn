@@ -10,6 +10,7 @@ import { historyImport, importState } from '../../testing/admin-fixtures';
 import { HistoryImport } from './history-import';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const HISTORY_URL = '/api/admin/donations/import/history';
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
@@ -66,7 +67,7 @@ describe('Given the part for older bank payments on the import card', () => {
   }
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -143,7 +144,7 @@ describe('Given the part for older bank payments on the import card', () => {
       );
       const steps = Array.from(
         fixture.nativeElement.querySelectorAll('ol li') as NodeListOf<HTMLElement>,
-      ).map((item) => (item.textContent ?? '').replace(/\s+/g, ' ').trim());
+      ).map((item) => (withOrdinarySpaces(item.textContent) ?? '').replace(/\s+/g, ' ').trim());
       expect(steps).toEqual([
         'Níže zvolte den, od kterého platby chcete.',
         'V internetovém bankovnictví Fio otevřete Nastavení → API.',
@@ -163,7 +164,7 @@ describe('Given the part for older bank payments on the import card', () => {
       const hint = fixture.nativeElement.querySelector(
         `#${dateField().getAttribute('aria-describedby')?.split(' ')[0]}`,
       );
-      expect((hint?.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+      expect((withOrdinarySpaces(hint?.textContent) ?? '').replace(/\s+/g, ' ').trim()).toBe(
         'Vybraný den: 1. 1. 2026. Platby za posledních 89 dní web stáhne i bez odemčení. Načíst je můžete i opakovaně: platby, které web už má, se nezdvojí.',
       );
       expect(accessibleText(button())).toBe('Načíst starší platby');
@@ -180,7 +181,7 @@ describe('Given the part for older bank payments on the import card', () => {
       const hint = fixture.nativeElement.querySelector(
         `#${dateField().getAttribute('aria-describedby')?.split(' ')[0]}`,
       );
-      expect(hint?.textContent).toContain('Vybraný den: 1.\u00a06. 2025.');
+      expect(withOrdinarySpaces(hint?.textContent)).toContain('Vybraný den: 1. 6. 2025.');
     });
 
     it('and they choose another day on a phone, then the hint only explains repeats, as the phone shows the date in its own words', async () => {
@@ -190,7 +191,7 @@ describe('Given the part for older bank payments on the import card', () => {
       const hint = fixture.nativeElement.querySelector(
         `#${dateField().getAttribute('aria-describedby')?.split(' ')[0]}`,
       );
-      expect((hint?.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+      expect((withOrdinarySpaces(hint?.textContent) ?? '').replace(/\s+/g, ' ').trim()).toBe(
         'Platby za posledních 89 dní web stáhne i bez odemčení. Načíst je můžete i opakovaně: platby, které web už má, se nezdvojí.',
       );
     });
@@ -262,9 +263,9 @@ describe('Given the part for older bank payments on the import card', () => {
       http.expectNone(HISTORY_URL);
       expect(dateField().getAttribute('aria-invalid')).toBe('true');
       expect(fieldError()).toBe('Zvolte prosím den nejdříve 1. 1. 2000.');
-      expect(fixture.nativeElement.querySelector('.field-error')?.textContent).toContain(
-        'nejdříve 1.\u00a01. 2000.',
-      );
+      expect(
+        withOrdinarySpaces(fixture.nativeElement.querySelector('.field-error')?.textContent),
+      ).toContain('nejdříve 1. 1. 2000.');
       expect(document.activeElement).toBe(dateField());
     });
 
@@ -508,7 +509,7 @@ describe('Given the part for older bank payments on the import card', () => {
         expect(status()).toBe(
           'Stahování ještě běží. Výsledek zjistíte tlačítkem níže nebo po obnovení stránky.',
         );
-        expect(checkAgain()?.textContent?.trim()).toBe('Zjistit výsledek');
+        expect(withOrdinarySpaces(checkAgain()?.textContent)?.trim()).toBe('Zjistit výsledek');
         expect(busy()).toBe(true);
       });
 
@@ -622,7 +623,9 @@ describe('Given the part for older bank payments on the import card', () => {
       await settle();
 
       expect(button().getAttribute('aria-disabled')).toBe('true');
-      expect(button().nextElementSibling?.textContent).toBe('Potřebuje připojení');
+      expect(withOrdinarySpaces(button().nextElementSibling?.textContent)).toBe(
+        'Potřebuje připojení',
+      );
 
       await submit();
 

@@ -13,6 +13,6 @@ export function unpublishedKeyIds(answer: ReceiptSigningKeysResponse): string[] 
 export function unpublishedKeysSentence(keyIds: readonly string[]): string {
   const keys = keyIds.join(', ');
   return pluralCategory(keyIds.length) === 'one'
-    ? $localize`:@@admin.signingKey.unpublished.one:Klíč ${keys}:keys: není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru.`
-    : $localize`:@@admin.signingKey.unpublished.other:Klíče ${keys}:keys: nejsou zveřejněné, proto se QR kódy jimi podepsané neověří. Jejich záznamy v databázi chybí nebo neprošly kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru.`;
+    ? $localize`:@@admin.signingKey.unpublished.one:Klíč ${keys}:keys: není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v\u00a0databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru.`
+    : $localize`:@@admin.signingKey.unpublished.other:Klíče ${keys}:keys: nejsou zveřejněné, proto se QR kódy jimi podepsané neověří. Jejich záznamy v\u00a0databázi chybí nebo neprošly kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru.`;
 }

@@ -3,33 +3,33 @@
     Obnovit databázi ze zálohy?
   </h2>
   <p class="ui-dialog__lead restore-lead" i18n="@@admin.backups.restoreDialog.lead">
-    Web se vrátí do stavu z {{ createdAt() }}, ze zálohy
+    Web se vrátí do stavu z&nbsp;{{ createdAt() }}, ze zálohy
     <span class="file-name">{{ backup().fileName }}</span
     >.
   </p>
   <ul class="ui-dialog__points restore-points">
     <li i18n="@@admin.backups.restoreDialog.lost">
       Co přibylo nebo se změnilo po vytvoření zálohy (registrace, aktuality, nastavení, přiřazené
-      platby), se ztratí. Platby z banky za posledních 90 dní se při dalším stažení z Fio doplní
-      znovu.
+      platby), se ztratí. Platby z&nbsp;banky za posledních 90&nbsp;dní se při dalším stažení
+      z&nbsp;Fio doplní znovu.
     </li>
     <li i18n="@@admin.backups.restoreDialog.kept">
       Co se po vytvoření zálohy změnilo kvůli bezpečnosti nebo ochraně údajů, zůstane: vymazaní
-      dárci zůstanou vymazaní, hesla, přístupové klíče, druhé ověření a role správců zůstanou, jak
-      jsou teď, a historie správy se nezkrátí.
+      dárci zůstanou vymazaní, hesla, přístupové klíče, druhé ověření a&nbsp;role správců zůstanou,
+      jak jsou teď, a&nbsp;historie správy se nezkrátí.
     </li>
     <li i18n="@@admin.backups.restoreDialog.receipts">
-      Potvrzení o daru vystavená po vytvoření zálohy z databáze zmizí. Jejich čísla se už nikomu
-      nepřidělí: kdo si potvrzení stáhne znovu, dostane ho s novým číslem.
+      Potvrzení o&nbsp;daru vystavená po vytvoření zálohy z&nbsp;databáze zmizí. Jejich čísla se už
+      nikomu nepřidělí: kdo si potvrzení stáhne znovu, dostane ho s&nbsp;novým číslem.
     </li>
     <li i18n="@@admin.backups.restoreDialog.safety">
-      Současný stav se před obnovou sám uloží jako záloha „Před obnovou“, takže se k němu můžete
-      vrátit stejným tlačítkem.
+      Současný stav se před obnovou sám uloží jako záloha „Před obnovou“, takže se k&nbsp;němu
+      můžete vrátit stejným tlačítkem.
     </li>
     <li i18n="@@admin.backups.restoreDialog.downtime">
-      Web bude několik minut nedostupný. Obnova ukončí každé přihlášení: všichni, vy i dárci, se
-      přihlásí znovu a konektor v claude.ai je potřeba připojit znovu. Když se obnova nepovede, web
-      poběží dál s dnešními daty.
+      Web bude několik minut nedostupný. Obnova ukončí každé přihlášení: všichni, vy i&nbsp;dárci,
+      se přihlásí znovu a&nbsp;konektor v&nbsp;claude.ai je potřeba připojit znovu. Když se obnova
+      nepovede, web poběží dál s&nbsp;dnešními daty.
     </li>
   </ul>
   @if (error(); as error) {
@@ -39,7 +39,7 @@
     <button type="button" class="restore-confirm" [disabled]="busy()" (click)="confirm()">
       <app-busy-label [busy]="busy()">
         <span when-idle i18n="@@admin.backups.restoreDialog.confirm"
-          >Obnovit a restartovat web</span
+          >Obnovit a&nbsp;restartovat web</span
         >
         <span when-busy i18n="@@admin.backups.restoreDialog.busy">Předáváme obnovu…</span>
       </app-busy-label>

@@ -12,6 +12,7 @@ import { AdministrationLockPanel } from './administration-lock-panel';
 import { AdministrationLockService } from './administration-lock-service';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given the panel of the locked administration', () => {
   let fixture: ComponentFixture<AdministrationLockPanel>;
@@ -103,8 +104,10 @@ describe('Given the panel of the locked administration', () => {
     beforeEach(() => render({ passkey: true }));
 
     it('then it says the administration is locked, why, and offers the passkey first, with the password beside it', () => {
-      expect(element('h1')?.textContent?.trim()).toBe('Správa je zamčená');
-      expect(element('.lock-lead')?.textContent).toContain('Zamykají se po 5 minutách');
+      expect(withOrdinarySpaces(element('h1')?.textContent)?.trim()).toBe('Správa je zamčená');
+      expect(withOrdinarySpaces(element('.lock-lead')?.textContent)).toContain(
+        'Zamykají se po 5 minutách',
+      );
       expect(buttons()).toEqual([
         'Odemknout přístupovým klíčem',
         'Použít heslo',
@@ -152,7 +155,9 @@ describe('Given the panel of the locked administration', () => {
       element('button.lock-passkey')!.click();
       await settle();
 
-      expect(element('[role="alert"]')?.textContent).toContain('Přístupový klíč správu neodemkl');
+      expect(withOrdinarySpaces(element('[role="alert"]')?.textContent)).toContain(
+        'Přístupový klíč správu neodemkl',
+      );
     });
 
     it('and the device is offline, then it says that only the passkey works without a connection', async () => {
@@ -160,8 +165,8 @@ describe('Given the panel of the locked administration', () => {
       window.dispatchEvent(new Event('offline'));
       await settle();
 
-      expect(element('.lock-lead')?.textContent).toContain('Jste offline');
-      expect(element('.lock-lead')?.textContent).toContain(
+      expect(withOrdinarySpaces(element('.lock-lead')?.textContent)).toContain('Jste offline');
+      expect(withOrdinarySpaces(element('.lock-lead')?.textContent)).toContain(
         'Přístupový klíč funguje i bez připojení.',
       );
       expect((element('button.lock-use-password') as HTMLButtonElement).disabled).toBe(true);
@@ -183,7 +188,7 @@ describe('Given the panel of the locked administration', () => {
       element('button.lock-passkey')!.click();
       await settle();
 
-      const alert = element('[role="alert"]')?.textContent ?? '';
+      const alert = withOrdinarySpaces(element('[role="alert"]')?.textContent) ?? '';
       expect(alert).toContain('Přístupový klíč správu neodemkl');
       expect(alert).not.toContain('heslo');
     });
@@ -231,7 +236,9 @@ describe('Given the panel of the locked administration', () => {
       element('button.lock-passkey')!.click();
       await settle();
 
-      expect(element('[role="alert"]')?.textContent).toContain('Přístupový klíč správu neodemkl');
+      expect(withOrdinarySpaces(element('[role="alert"]')?.textContent)).toContain(
+        'Přístupový klíč správu neodemkl',
+      );
     });
 
     it('and the server refuses the passkey, then its reason is shown', async () => {
@@ -249,7 +256,9 @@ describe('Given the panel of the locked administration', () => {
       element('button.lock-passkey')!.click();
       await settle();
 
-      expect(element('[role="alert"]')?.textContent).toContain('Přístupový klíč nesouhlasí');
+      expect(withOrdinarySpaces(element('[role="alert"]')?.textContent)).toContain(
+        'Přístupový klíč nesouhlasí',
+      );
     });
 
     it('and the device is offline, then the passkey waits for a connection like the password, and no offline passkey is promised', async () => {
@@ -258,7 +267,7 @@ describe('Given the panel of the locked administration', () => {
       await settle();
 
       expect((element('button.lock-passkey') as HTMLButtonElement).disabled).toBe(true);
-      expect(element('.lock-lead')?.textContent).not.toContain('bez připojení');
+      expect(withOrdinarySpaces(element('.lock-lead')?.textContent)).not.toContain('bez připojení');
       TestBed.inject(HttpTestingController).match('/api/operations/setup');
     });
   });
@@ -276,8 +285,10 @@ describe('Given the panel of the locked administration', () => {
       window.dispatchEvent(new Event('offline'));
       await settle();
 
-      expect(element('.lock-lead')?.textContent).toContain('Jste offline');
-      expect(element('.lock-lead')?.textContent).not.toContain('Přístupový klíč');
+      expect(withOrdinarySpaces(element('.lock-lead')?.textContent)).toContain('Jste offline');
+      expect(withOrdinarySpaces(element('.lock-lead')?.textContent)).not.toContain(
+        'Přístupový klíč',
+      );
     });
 
     describe('and the password is chosen', () => {
@@ -291,7 +302,7 @@ describe('Given the panel of the locked administration', () => {
       });
 
       it('then the password and the code from the app are asked, with the account name for the password manager', () => {
-        expect(element('h1')?.textContent?.trim()).toBe('Odemknout heslem');
+        expect(withOrdinarySpaces(element('h1')?.textContent)?.trim()).toBe('Odemknout heslem');
         expect(element('#zamek-heslo')?.getAttribute('autocomplete')).toBe('current-password');
         expect(element('#zamek-kod')?.getAttribute('autocomplete')).toBe('one-time-code');
         expect((element('input[autocomplete="username"]') as HTMLInputElement).value).toBe(
@@ -334,7 +345,9 @@ describe('Given the panel of the locked administration', () => {
         await settle();
 
         expect(lock.unlockWithPassword).not.toHaveBeenCalled();
-        expect(fixture.nativeElement.textContent).toContain('Kód má přesně šest číslic.');
+        expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
+          'Kód má přesně šest číslic.',
+        );
       });
 
       it('and the server refuses them, then its reason is shown', async () => {
@@ -357,14 +370,16 @@ describe('Given the panel of the locked administration', () => {
         element('form')!.dispatchEvent(new Event('submit'));
         await settle();
 
-        expect(element('[role="alert"]')?.textContent).toContain('Kód nesouhlasí');
+        expect(withOrdinarySpaces(element('[role="alert"]')?.textContent)).toContain(
+          'Kód nesouhlasí',
+        );
       });
 
       it('and Zpět is pressed, then the first view comes back with the focus on its heading', async () => {
         element('button.lock-back')!.click();
         await settle();
 
-        expect(element('h1')?.textContent?.trim()).toBe('Správa je zamčená');
+        expect(withOrdinarySpaces(element('h1')?.textContent)?.trim()).toBe('Správa je zamčená');
         expect(document.activeElement).toBe(element('h1'));
       });
     });
@@ -382,7 +397,9 @@ describe('Given the panel of the locked administration', () => {
     );
 
     it('then it says to sign out and sign in again, and offers only signing out', async () => {
-      expect(element('.lock-panel')?.textContent).toContain('Odhlaste se a přihlaste se znovu.');
+      expect(withOrdinarySpaces(element('.lock-panel')?.textContent)).toContain(
+        'Odhlaste se a přihlaste se znovu.',
+      );
       expect(buttons()).toEqual(['Odhlásit se z tohoto zařízení']);
 
       element('button.lock-sign-out')!.click();

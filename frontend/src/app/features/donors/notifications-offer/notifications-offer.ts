@@ -217,7 +217,7 @@ export class NotificationsOffer {
             .then((held) => (held ? undefined : this.push.unsubscribe()));
           this.failure.set(
             problemTypeEndsWith(failure, SUBSCRIPTION_LIMIT)
-              ? $localize`:@@donor.notifications.offer.limit:Upozornění můžete mít zapnutá nejvýš na 10 zařízeních. V Údajích a zabezpečení odhlaste zařízení, které už nepoužíváte, a zkuste to znovu.`
+              ? $localize`:@@donor.notifications.offer.limit:Upozornění můžete mít zapnutá nejvýš na 10\u00a0zařízeních. V\u00a0Údajích a\u00a0zabezpečení odhlaste zařízení, které už nepoužíváte, a\u00a0zkuste to znovu.`
               : describeProblem(
                   failure,
                   $localize`:@@donor.notifications.offer.failed:Upozornění se nepodařilo zapnout. Zkuste to prosím znovu.`,

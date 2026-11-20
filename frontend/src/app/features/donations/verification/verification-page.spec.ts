@@ -14,6 +14,7 @@ import {
 import { ProofInput } from './proof-input';
 import { VERIFICATION_CONTEXT } from './verification-context';
 import { VerificationPage } from './verification-page';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const SINGLE: SignedReceipt = {
   kind: 'single',
@@ -104,7 +105,11 @@ describe('Given the verification page', () => {
   }
 
   function text(selector: string): string {
-    return root().querySelector(selector)?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    return (
+      withOrdinarySpaces(root().querySelector(selector)?.textContent)
+        ?.replace(/\s+/g, ' ')
+        .trim() ?? ''
+    );
   }
 
   function pageTitle(): HTMLElement {
@@ -125,7 +130,7 @@ describe('Given the verification page', () => {
 
   function button(name: string): HTMLButtonElement | undefined {
     return Array.from(root().querySelectorAll('button')).find(
-      (candidate) => candidate.textContent?.trim() === name,
+      (candidate) => withOrdinarySpaces(candidate.textContent)?.trim() === name,
     );
   }
 
@@ -133,8 +138,8 @@ describe('Given the verification page', () => {
     const terms = Array.from(root().querySelectorAll('dt'));
     return Object.fromEntries(
       terms.map((term) => [
-        term.textContent?.trim() ?? '',
-        term.nextElementSibling?.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+        withOrdinarySpaces(term.textContent)?.trim() ?? '',
+        withOrdinarySpaces(term.nextElementSibling?.textContent)?.replace(/\s+/g, ' ').trim() ?? '',
       ]),
     );
   }
@@ -142,7 +147,7 @@ describe('Given the verification page', () => {
   it('when it opens without a code, then it explains how verification works and verifies nothing', async () => {
     await open('/overit');
 
-    expect(heading().textContent?.trim()).toBe('Ověření potvrzení o daru');
+    expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe('Ověření potvrzení o daru');
     expect(lead()).toBe(
       'Každé potvrzení od fondu nese QR kód. Načtěte ho a uvidíte, co v něm fond podepsal, a porovnejte to s papírem. Kód čteme jen ve vašem zařízení.',
     );
@@ -179,7 +184,9 @@ describe('Given the verification page', () => {
 
     it('then it verifies that code in the page, focuses the verdict and leaves the address alone', () => {
       expect(verifier.calls).toEqual([null, FRAGMENT]);
-      expect(heading().textContent?.trim()).toBe('Podepsáno fondem Nová naděje');
+      expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe(
+        'Podepsáno fondem Nová naděje',
+      );
       expect(document.activeElement).toBe(heading());
       expect(TestBed.inject(Location).path(true)).toBe('/overit');
     });
@@ -188,7 +195,7 @@ describe('Given the verification page', () => {
       button('Ověřit další potvrzení')?.click();
       await settle();
 
-      expect(heading().textContent?.trim()).toBe('Ověření potvrzení o daru');
+      expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe('Ověření potvrzení o daru');
       expect(document.activeElement).toBe(heading());
       expect(root().querySelector('#proof-link')).not.toBeNull();
       expect(verifier.calls).toEqual([null, FRAGMENT]);
@@ -198,9 +205,11 @@ describe('Given the verification page', () => {
   it('when it opens without a code, then it offers the ways to read one in the page', async () => {
     await open('/overit');
 
-    expect(Array.from(root().querySelectorAll('h2'), (title) => title.textContent?.trim())).toEqual(
-      ['Nahrát soubor', 'Vložit odkaz'],
-    );
+    expect(
+      Array.from(root().querySelectorAll('h2'), (title) =>
+        withOrdinarySpaces(title.textContent)?.trim(),
+      ),
+    ).toEqual(['Nahrát soubor', 'Vložit odkaz']);
     expect(button('Ověřit další potvrzení')).toBeUndefined();
   });
 
@@ -240,14 +249,14 @@ describe('Given the verification page', () => {
     });
 
     it('then the page keeps its title and names the check under way in a second-level heading', () => {
-      expect(pageTitle().textContent?.trim()).toBe('Ověření potvrzení o daru');
+      expect(withOrdinarySpaces(pageTitle().textContent)?.trim()).toBe('Ověření potvrzení o daru');
       expect(heading().tagName).toBe('H2');
-      expect(heading().textContent?.trim()).toBe('Ověřujeme potvrzení…');
+      expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe('Ověřujeme potvrzení…');
     });
 
     it('then it says so in a status line', () => {
-      expect(heading().textContent?.trim()).toBe('Ověřujeme potvrzení…');
-      expect(root().querySelector('[role="status"]')?.textContent?.trim()).toBe(
+      expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe('Ověřujeme potvrzení…');
+      expect(withOrdinarySpaces(root().querySelector('[role="status"]')?.textContent)?.trim()).toBe(
         'Kontrolujeme podpis fondu v kódu z potvrzení.',
       );
     });
@@ -259,7 +268,9 @@ describe('Given the verification page', () => {
       await settle();
 
       expect(root().querySelector('[role="status"]')).toBe(line);
-      expect(line?.textContent?.trim()).toBe('Podpis sedí, ptáme se fondu na stav potvrzení…');
+      expect(withOrdinarySpaces(line?.textContent)?.trim()).toBe(
+        'Podpis sedí, ptáme se fondu na stav potvrzení…',
+      );
     });
   });
 
@@ -270,19 +281,27 @@ describe('Given the verification page', () => {
 
     it('then the page keeps its title as the only first-level heading and names the verdict in a second-level heading', () => {
       expect(
-        Array.from(root().querySelectorAll('h1'), (title) => title.textContent?.trim()),
+        Array.from(root().querySelectorAll('h1'), (title) =>
+          withOrdinarySpaces(title.textContent)?.trim(),
+        ),
       ).toEqual(['Ověření potvrzení o daru']);
       expect(heading().tagName).toBe('H2');
-      expect(heading().textContent?.trim()).toBe('Podepsáno fondem Nová naděje');
+      expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe(
+        'Podepsáno fondem Nová naděje',
+      );
     });
 
     it('then the heading says the fund signed it, takes the focus and the status line follows', () => {
-      expect(heading().textContent?.trim()).toBe('Podepsáno fondem Nová naděje');
+      expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe(
+        'Podepsáno fondem Nová naděje',
+      );
       expect(document.activeElement).toBe(heading());
       expect(lead()).toBe(
         'Údaje v tomto kódu podepsal fond Nová naděje ke dni vystavení. Porovnejte je s papírem.',
       );
-      expect(root().textContent).toContain('Fond toto potvrzení vede jako platné.');
+      expect(withOrdinarySpaces(root().textContent)).toContain(
+        'Fond toto potvrzení vede jako platné.',
+      );
       expect(tone()).toBe(GREEN);
     });
 
@@ -299,13 +318,13 @@ describe('Given the verification page', () => {
     });
 
     it('then it says what left the device for the status check', () => {
-      expect(root().textContent?.replace(/\s+/g, ' ')).toContain(
+      expect(withOrdinarySpaces(root().textContent)?.replace(/\s+/g, ' ')).toContain(
         'Podpis jsme ověřili ve vašem zařízení. Fondu jsme poslali jen otisk podepsaných údajů, aby nám sdělil stav potvrzení; jméno, adresa ani částky se nikam neposílají.',
       );
     });
 
     it('then the word "pravé" stands nowhere on the page', () => {
-      expect(root().textContent).not.toMatch(/pravé/i);
+      expect(withOrdinarySpaces(root().textContent)).not.toMatch(/pravé/i);
     });
   });
 
@@ -323,10 +342,12 @@ describe('Given the verification page', () => {
       Celkem: '1 750,50 Kč',
     });
     const gifts = root().querySelector('[aria-labelledby="verify-gifts-title"]');
-    expect(gifts?.querySelector('h3')?.textContent?.trim()).toBe('Jednotlivé dary (2)');
+    expect(withOrdinarySpaces(gifts?.querySelector('h3')?.textContent)?.trim()).toBe(
+      'Jednotlivé dary (2)',
+    );
     expect(
       Array.from(gifts?.querySelectorAll('li') ?? [], (row) =>
-        row.textContent?.replace(/\s+/g, ' ').trim(),
+        withOrdinarySpaces(row.textContent)?.replace(/\s+/g, ' ').trim(),
       ),
     ).toEqual(['15. 3. 2026 500 Kč', '3. 11. 2026 1 250,50 Kč']);
   });
@@ -350,9 +371,9 @@ describe('Given the verification page', () => {
   it('when the receipt is signed but checked offline, then it stays signed and says a replacement cannot be seen', async () => {
     await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status: 'offline' });
 
-    expect(heading().textContent?.trim()).toBe('Podepsáno fondem Nová naděje');
+    expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe('Podepsáno fondem Nová naděje');
     expect(tone()).toBe(GREEN);
-    const page = root().textContent?.replace(/\s+/g, ' ');
+    const page = withOrdinarySpaces(root().textContent)?.replace(/\s+/g, ' ');
     expect(page).toContain(
       'Bez připojení nelze zjistit, zda fond potvrzení později nenahradil novějším nebo nezrušil.',
     );
@@ -366,7 +387,7 @@ describe('Given the verification page', () => {
     it(`when the signature holds but the fund gave no usable answer (${status}), then the result is not green, the heading says the fund did not answer and the data are listed`, async () => {
       await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status });
 
-      expect(heading().textContent?.trim()).toBe(
+      expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe(
         'Podpis sedí, ale fond teď neodpověděl, zda potvrzení vede',
       );
       expect(tone()).toBe(AMBER);
@@ -381,7 +402,7 @@ describe('Given the verification page', () => {
   it('when the key list gave no usable answer and the kept keys verified the code, then the page says nothing left the device', async () => {
     await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status: 'no-answer' });
 
-    const page = root().textContent?.replace(/\s+/g, ' ');
+    const page = withOrdinarySpaces(root().textContent)?.replace(/\s+/g, ' ');
     expect(page).not.toContain('Fondu jsme poslali');
     expect(page).toContain(
       'Ověření proběhlo jen ve vašem zařízení; údaje z kódu se nikam neposílají.',
@@ -391,7 +412,7 @@ describe('Given the verification page', () => {
   it('when the status was asked and the fund did not answer, then the page says only the fingerprint was sent and the fund did not answer', async () => {
     await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status: 'unanswered' });
 
-    const page = root().textContent?.replace(/\s+/g, ' ');
+    const page = withOrdinarySpaces(root().textContent)?.replace(/\s+/g, ' ');
     expect(page).toContain(
       'Podpis jsme ověřili ve vašem zařízení. Fondu jsme poslali jen otisk podepsaných údajů, abychom zjistili stav potvrzení, ale neodpověděl; jméno, adresa ani částky se nikam neposílají.',
     );
@@ -401,7 +422,7 @@ describe('Given the verification page', () => {
   it('when the fund answers outdated, then the page says the receipt held on the day it was issued and only a newer one holds since the gifts changed', async () => {
     await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status: 'outdated' });
 
-    const page = root().textContent?.replace(/\s+/g, ' ');
+    const page = withOrdinarySpaces(root().textContent)?.replace(/\s+/g, ' ');
     expect(page).toContain(
       'Fond ho vystavil podle darů, které v tu chvíli evidoval. Od té doby se dary dárce změnily, proto platí jen novější potvrzení. Pokud ho nemáte, napište na info@nfnn.cz s číslem tohoto potvrzení.',
     );
@@ -417,7 +438,7 @@ describe('Given the verification page', () => {
     it(`when the fund answers ${status}, then the result is not green and the heading says so`, async () => {
       await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status });
 
-      expect(heading().textContent?.trim()).toBe(title);
+      expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe(withOrdinarySpaces(title));
       expect(tone()).toBe(glyph);
       expect(data()['Číslo potvrzení']).toBe('2026-000042');
     });
@@ -505,7 +526,7 @@ describe('Given the verification page', () => {
     it(`when the outcome is ${outcome.state}${'reach' in outcome ? ` (${outcome.reach})` : ''}, then the heading reads "${title}", takes the focus, says what to do and lists no data`, async () => {
       await open(`/overit#${FRAGMENT}`, outcome);
 
-      expect(heading().textContent?.trim()).toBe(title);
+      expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe(withOrdinarySpaces(title));
       expect(document.activeElement).toBe(heading());
       expect(lead()).toBe(copy);
       expect(tone()).toBe(glyph);
@@ -525,7 +546,7 @@ describe('Given the verification page', () => {
     it(`when the outcome is ${state}, then the page does not claim that a verification took place`, async () => {
       await open(`/overit#${FRAGMENT}`, { state });
 
-      expect(root().textContent).not.toContain('ve vašem zařízení');
+      expect(withOrdinarySpaces(root().textContent)).not.toContain('ve vašem zařízení');
     });
   }
 
@@ -537,14 +558,14 @@ describe('Given the verification page', () => {
     button('Zkusit znovu')?.click();
     await settle();
 
-    expect(heading().textContent?.trim()).toBe('Ověřujeme potvrzení…');
+    expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe('Ověřujeme potvrzení…');
     expect(document.activeElement).toBe(heading());
 
     answer({ state: 'signed', receipt: SINGLE, status: 'active' });
     await settle();
 
     expect(verifier.calls).toEqual([FRAGMENT, FRAGMENT]);
-    expect(heading().textContent?.trim()).toBe('Podepsáno fondem Nová naděje');
+    expect(withOrdinarySpaces(heading().textContent)?.trim()).toBe('Podepsáno fondem Nová naděje');
     expect(document.activeElement).toBe(heading());
   });
 
@@ -593,7 +614,7 @@ describe('Given the verification page', () => {
     answer({ state: 'empty' });
     await settle();
 
-    expect(heading().textContent).toContain('Ověření potvrzení o daru');
+    expect(withOrdinarySpaces(heading().textContent)).toContain('Ověření potvrzení o daru');
     expect(document.activeElement).toBe(heading());
   });
 });
@@ -648,7 +669,9 @@ describe('Given the verification page in another context, as the administration 
 
     expect(verifier.calls).toEqual([FRAGMENT]);
     expect(TestBed.inject(Location).path(true)).toBe('/sprava/overit');
-    expect(root.querySelector('.test-register')?.textContent).toBe('2027-000007 replaced');
+    expect(withOrdinarySpaces(root.querySelector('.test-register')?.textContent)).toBe(
+      '2027-000007 replaced',
+    );
     expect(
       root.querySelector('.test-register')?.compareDocumentPosition(root.querySelector('dl')!),
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
@@ -662,7 +685,7 @@ describe('Given the verification page in another context, as the administration 
       status: 'replaced',
     });
 
-    expect(root.querySelector('.verify-lead')?.textContent).toContain(
+    expect(withOrdinarySpaces(root.querySelector('.verify-lead')?.textContent)).toContain(
       'Platí to novější; najdete ho na kartě dárce.',
     );
     expect(root.querySelector('a[href^="mailto:"]')).toBeNull();
@@ -671,7 +694,7 @@ describe('Given the verification page in another context, as the administration 
   it('when the signature is invalid, then the verdict tells the administrator to send its number to the technician', async () => {
     const root = await open(`/sprava/overit#${FRAGMENT}`, { state: 'invalid' });
 
-    expect(root.querySelector('.verify-lead')?.textContent).toContain(
+    expect(withOrdinarySpaces(root.querySelector('.verify-lead')?.textContent)).toContain(
       'Nepovažujte ho za platné a pošlete jeho číslo technikovi.',
     );
     expect(root.querySelector('a[href^="mailto:"]')).toBeNull();
@@ -686,11 +709,17 @@ describe('Given the verification page in another context, as the administration 
         status,
       });
 
-      expect(root.querySelector('.verify-lead')?.textContent?.replace(/\s+/g, ' ')).toContain(
+      expect(
+        withOrdinarySpaces(root.querySelector('.verify-lead')?.textContent)?.replace(/\s+/g, ' '),
+      ).toContain(
         'Jak ho vedou údaje správy v tomto zařízení, uvádíme hned pod tím; odpověď fondu dostanete, když to za chvíli zkusíte znovu.',
       );
-      expect(root.querySelector('.verify-lead')?.textContent).not.toContain('nevíte');
-      expect(root.querySelector('.test-register')?.textContent).toBe(`2027-000007 ${status}`);
+      expect(withOrdinarySpaces(root.querySelector('.verify-lead')?.textContent)).not.toContain(
+        'nevíte',
+      );
+      expect(withOrdinarySpaces(root.querySelector('.test-register')?.textContent)).toBe(
+        `2027-000007 ${status}`,
+      );
     },
   );
 
@@ -715,7 +744,9 @@ describe('Given the verification page in another context, as the administration 
     async (outcome, next) => {
       const root = await open(`/sprava/overit#${FRAGMENT}`, outcome as VerificationOutcome);
 
-      expect(root.querySelector('.verify-lead')?.textContent?.replace(/\s+/g, ' ')).toContain(next);
+      expect(
+        withOrdinarySpaces(root.querySelector('.verify-lead')?.textContent)?.replace(/\s+/g, ' '),
+      ).toContain(withOrdinarySpaces(next));
       expect(root.querySelector('a[href^="mailto:"]')).toBeNull();
     },
   );
@@ -727,7 +758,7 @@ describe('Given the verification page in another context, as the administration 
       status: 'offline',
     });
 
-    expect(root.querySelector('.verify-status')?.textContent).toContain(
+    expect(withOrdinarySpaces(root.querySelector('.verify-status')?.textContent)).toContain(
       'Bez připojení se fondu nezeptáme.',
     );
   });
@@ -741,11 +772,15 @@ describe('Given the verification page in another context, as the administration 
   it('when it opens without a code, then it names the page as the navigation does, keeps to reading here and shows no note about the public address', async () => {
     const root = await open('/sprava/overit', { state: 'empty' });
 
-    expect(root.querySelector('h1')?.textContent?.trim()).toBe('Ověřit potvrzení');
-    expect(root.querySelector('.verify-intro')?.textContent).toContain(
+    expect(withOrdinarySpaces(root.querySelector('h1')?.textContent)?.trim()).toBe(
+      'Ověřit potvrzení',
+    );
+    expect(withOrdinarySpaces(root.querySelector('.verify-intro')?.textContent)).toContain(
       'Načtěte QR kód z potvrzení o daru tady na stránce.',
     );
-    expect(root.querySelector('.verify-intro')?.textContent).not.toContain('fotoaparátem telefonu');
+    expect(withOrdinarySpaces(root.querySelector('.verify-intro')?.textContent)).not.toContain(
+      'fotoaparátem telefonu',
+    );
     expect(root.querySelector('.verify-domain')).toBeNull();
   });
 });

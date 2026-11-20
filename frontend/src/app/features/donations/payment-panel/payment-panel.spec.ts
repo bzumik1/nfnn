@@ -16,6 +16,7 @@ import { foundationPaymentDetails, paymentQrCase } from '../testing/payment-deta
 import { LocalPaymentRoute } from './local-payment-route';
 import { PaymentHandOffs } from './payment-hand-offs';
 import { PaymentPanel } from './payment-panel';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
 const REDRAW_MS = 400;
@@ -143,7 +144,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
   }
 
   function squashed(selector: string): string {
-    return (element(selector)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(element(selector)?.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function buttons(): HTMLButtonElement[] {
@@ -154,7 +155,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
     const match = buttons().find((candidate) => {
       const copy = candidate.cloneNode(true) as Element;
       copy.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => hidden.remove());
-      return copy.textContent?.replace(/\s+/g, ' ').trim() === label;
+      return withOrdinarySpaces(copy.textContent)?.replace(/\s+/g, ' ').trim() === label;
     });
     if (!match) {
       throw new Error(`No button labelled "${label}"`);
@@ -218,9 +219,9 @@ describe('Given the payment panel on a phone or a tablet', () => {
 
     const label = Array.from(
       panel().nativeElement.querySelectorAll('.bank p') as NodeListOf<HTMLElement>,
-    ).find((candidate) => candidate.textContent?.trim() === 'Bankovní spojení');
+    ).find((candidate) => withOrdinarySpaces(candidate.textContent)?.trim() === 'Bankovní spojení');
     expect(label?.getAttribute('tabindex')).toBe('-1');
-    expect(label?.nextElementSibling?.textContent).toContain('Číslo účtu');
+    expect(withOrdinarySpaces(label?.nextElementSibling?.textContent)).toContain('Číslo účtu');
   });
 
   it('when it opens, then Platíte z jiného zařízení? stays with the bank app buttons', async () => {
@@ -254,7 +255,9 @@ describe('Given the payment panel on a phone or a tablet', () => {
 
     expect(otherDevice().getAttribute('aria-controls')).toBe('gift-qr');
     expect(qrRegion().id).toBe('gift-qr');
-    expect(element('#gift-other-device')?.textContent?.trim()).toBe('Platíte z jiného zařízení?');
+    expect(withOrdinarySpaces(element('#gift-other-device')?.textContent)?.trim()).toBe(
+      'Platíte z jiného zařízení?',
+    );
   });
 
   it('when the visitor unfolds Platíte z jiného zařízení?, then the QR of the chosen amount shows with a line naming the amount, and folding hides it again', async () => {
@@ -693,7 +696,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
       .flush(null, { status: 503, statusText: 'Service Unavailable' });
     await settle();
 
-    expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
+    expect(squashed('.bank [role="alert"]')).toBe(withOrdinarySpaces(DETAILS_FAILED));
     expect(element('.qr-error')).toBeNull();
     const actions = element('.pay-actions');
     const folded = actions.querySelector('.fold') as HTMLElement;
@@ -740,7 +743,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
       const group = element('[role="radiogroup"]');
       expect(squashed(`#${group.getAttribute('aria-labelledby')}`)).toBe('Zvolte částku');
       const radios = Array.from(group.querySelectorAll('[role="radio"]')) as HTMLElement[];
-      expect(radios.map((option) => option.textContent?.trim())).toEqual([
+      expect(radios.map((option) => withOrdinarySpaces(option.textContent)?.trim())).toEqual([
         '1 000 Kč',
         '500 Kč',
         '100 Kč',
@@ -813,8 +816,12 @@ describe('Given the payment panel on a computer', () => {
     const panel = fixture.nativeElement as HTMLElement;
     expect(panel.querySelector('.qr')?.hasAttribute('hidden')).toBe(false);
     expect(panel.querySelector('.qr-code svg[role="img"]')).not.toBeNull();
-    expect(panel.querySelector('.qr-title')?.textContent?.trim()).toBe('Naskenujte a přispějte');
-    expect(panel.querySelector('.qr-save')?.textContent?.trim()).toBe('Uložit QR kód');
+    expect(withOrdinarySpaces(panel.querySelector('.qr-title')?.textContent)?.trim()).toBe(
+      'Naskenujte a přispějte',
+    );
+    expect(withOrdinarySpaces(panel.querySelector('.qr-save')?.textContent)?.trim()).toBe(
+      'Uložit QR kód',
+    );
     expect(panel.querySelector('.bank-app-open')).toBeNull();
     expect(panel.querySelector('.bank-app-second')).toBeNull();
     expect(panel.querySelector('.other-device')).toBeNull();
@@ -871,7 +878,9 @@ describe('Given the payment panel split into two columns on a computer', () => {
     const bank = panel.querySelector('.bank')!;
     const qr = bank.querySelector('.qr');
     expect(qr?.querySelector('.qr-code svg[role="img"]')).not.toBeNull();
-    expect(qr?.querySelector('.qr-title')?.textContent?.trim()).toBe('Naskenujte a přispějte');
+    expect(withOrdinarySpaces(qr?.querySelector('.qr-title')?.textContent)?.trim()).toBe(
+      'Naskenujte a přispějte',
+    );
     expect(
       bank.querySelector('.bank-rows')!.compareDocumentPosition(qr!) &
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -942,14 +951,17 @@ describe('Given the payment panel of a signed-in donor whose gift is on its way'
   }
 
   function thanks(): string {
-    return (panel().querySelector('.gift-arrival [role="status"]')?.textContent ?? '')
+    return (
+      withOrdinarySpaces(panel().querySelector('.gift-arrival [role="status"]')?.textContent) ?? ''
+    )
       .replace(/\s+/g, ' ')
       .trim();
   }
 
   function buttonNamed(name: string): HTMLButtonElement | undefined {
     return Array.from(panel().querySelectorAll('button')).find(
-      (candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name,
+      (candidate) =>
+        withOrdinarySpaces(candidate.textContent)?.replace(/\s+/g, ' ').trim() === name,
     );
   }
 
@@ -984,7 +996,7 @@ describe('Given the payment panel of a signed-in donor whose gift is on its way'
 
     expect(thanks()).toBe('Váš dar 500 Kč dorazil. Děkujeme!');
     const link = panel().querySelector<HTMLAnchorElement>('.gift-arrival a');
-    expect(link?.textContent?.trim()).toBe('Zobrazit v přehledu');
+    expect(withOrdinarySpaces(link?.textContent)?.trim()).toBe('Zobrazit v přehledu');
     expect(link?.getAttribute('href')).toBe('/darce/prehled');
   });
 

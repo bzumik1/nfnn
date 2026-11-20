@@ -5,9 +5,10 @@ import { PORTRAIT_ID, publicPeople, SIGNATURE_ID } from '../../../testing/people
 import { DialogHistory } from '../../../../../shared/ui/dialog/dialog-history';
 import { FakeDialogHistory } from '../../../../../shared/ui/dialog/testing/fake-dialog-history';
 import { About } from './about';
+import { withOrdinarySpaces } from '../../../../../../testing/ordinary-spaces';
 
 function text(element: Element | null): string {
-  return element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+  return withOrdinarySpaces(element?.textContent)?.replace(/\s+/g, ' ').trim() ?? '';
 }
 
 describe('Given the about section', () => {
@@ -33,9 +34,11 @@ describe('Given the about section', () => {
   it('when it renders, then it opens with what the foundation does, then the work with FOD with the figures under it', () => {
     expect(text(root().querySelector('.ui-intro h1.ui-intro__title'))).toBe('Vznik a poslání');
     expect(text(root().querySelector('.ui-intro__lead'))).toMatch(/^Nejsme velká organizace/);
-    expect(root().querySelector('.ui-intro__lead')?.textContent).toContain('přímou a\u00a0účinnou');
-    expect(root().querySelector('.ui-intro__lead')?.textContent).toContain(
-      'a\u00a0kompenzační pomůcky, přístroje, které jim umožňují další rozvoj v\u00a0běžném životě a\u00a0posun',
+    expect(withOrdinarySpaces(root().querySelector('.ui-intro__lead')?.textContent)).toContain(
+      'přímou a účinnou',
+    );
+    expect(withOrdinarySpaces(root().querySelector('.ui-intro__lead')?.textContent)).toContain(
+      'a kompenzační pomůcky, přístroje, které jim umožňují další rozvoj v běžném životě a posun',
     );
     expect(root().querySelector('.ui-intro .ui-eyebrow')).toBeNull();
     const rest = root().querySelector('.intro-rest')!;
@@ -146,7 +149,9 @@ describe('Given the about section', () => {
     it('then the badge about the work with FOD stays on the photo, outside its caption and outside the button', () => {
       const figure = root().querySelector('figure')!;
 
-      expect(figure.querySelector('.about-badge')?.textContent).toContain('FOD');
+      expect(withOrdinarySpaces(figure.querySelector('.about-badge')?.textContent)).toContain(
+        'FOD',
+      );
       expect(figure.querySelector('figcaption .about-badge')).toBeNull();
       expect(figure.querySelector('button .about-badge')).toBeNull();
     });
@@ -206,8 +211,8 @@ describe('Given the about section', () => {
       const line = founders().querySelector('.board-members')!;
       const footnote = founders().querySelector('.board-footnote')!;
 
-      expect(line.textContent).toBe(
-        'Správní rada: Eva Vzorová (předsedkyně), Adam Vzor, Hana Vzorová.',
+      expect(withOrdinarySpaces(line.textContent)).toBe(
+        'Správní rada: Eva Vzorová (předsedkyně), Adam Vzor, Hana Vzorová.',
       );
       expect(text(footnote)).toBe('Web zajišťuje bez nároku na odměnu Petr Vzor.');
       expect(

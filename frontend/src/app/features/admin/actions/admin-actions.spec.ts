@@ -18,6 +18,7 @@ import {
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { readDetailsDisclosures } from '../../../shared/ui/disclosure/testing/details-disclosures';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const LIST_URL = '/api/admin/donors/actions';
 
@@ -90,7 +91,7 @@ describe('Given an administrator on the history page', () => {
   }
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -100,7 +101,7 @@ describe('Given an administrator on the history page', () => {
   }
 
   function rowText(row: HTMLElement): string {
-    return (row.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(row.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function firstPage(items = [paired, granted, byFormer], hasMore = false): void {
@@ -127,7 +128,9 @@ describe('Given an administrator on the history page', () => {
     );
     const details = first.querySelector('details') as HTMLDetailsElement;
     expect(details.open).toBe(false);
-    expect(details.querySelector('summary')?.textContent?.trim()).toBe('Technické podrobnosti');
+    expect(withOrdinarySpaces(details.querySelector('summary')?.textContent)?.trim()).toBe(
+      'Technické podrobnosti',
+    );
     expect(rowText(details)).toContain('Money[amountMinor=50000, currency=CZK]');
     expect(first.querySelector('.details')?.closest('[lang]')?.getAttribute('lang')).not.toBe('en');
     expect(rowText(second)).toContain('Přidání správce');
@@ -222,7 +225,7 @@ describe('Given an administrator on the history page', () => {
       '/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369',
     );
     const link = donor.querySelector('a') as HTMLAnchorElement;
-    expect(link.textContent?.trim()).toBe('Otevřít kartu dárce');
+    expect(withOrdinarySpaces(link.textContent)?.trim()).toBe('Otevřít kartu dárce');
     expect(link.getAttribute('href')).toBe('/sprava/darci/019a1c00-0000-7000-8000-00000000a002');
     expect(other.querySelector('a')).toBeNull();
   });
@@ -512,7 +515,7 @@ describe('Given an administrator on the history page where lists show as rows', 
 
   function spaced(node: Node): string {
     if (node.nodeType === Node.TEXT_NODE) {
-      return node.textContent ?? '';
+      return withOrdinarySpaces(node.textContent) ?? '';
     }
     return Array.from(node.childNodes).map(spaced).join(' ');
   }
@@ -632,7 +635,7 @@ describe('Given an administrator offline whose device keeps the administration c
 
     expect(textOf(page)).toContain('Přiřazení platby dárci');
     expect(page.querySelector('.summary')).toBeNull();
-    expect(page.textContent?.match(/ukážeme/g)).toHaveLength(1);
+    expect(withOrdinarySpaces(page.textContent)?.match(/ukážeme/g)).toHaveLength(1);
     http.verify();
   });
 

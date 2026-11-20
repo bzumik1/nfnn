@@ -146,7 +146,7 @@ function releaseRows({ release }: AttentionSources): AttentionRow[] {
       tone: 'task',
       icon: 'release',
       title: $localize`:@@admin.home.attention.release.title:Nové vydání ${latest.version}:version:`,
-      meta: $localize`:@@admin.home.attention.release.meta:Běží ${release.running}:running:. V ZimaOS otevřete nastavení aplikace „Nová naděje“ a klikněte na Uložit.`,
+      meta: $localize`:@@admin.home.attention.release.meta:Běží ${release.running}:running:. V\u00a0ZimaOS otevřete nastavení aplikace „Nová naděje“ a\u00a0klikněte na Uložit.`,
       link: RELEASE,
     }),
   ];
@@ -159,7 +159,7 @@ function signatoryMissingRows({ signatory }: AttentionSources): AttentionRow[] {
           key: 'signatory',
           tone: 'danger',
           icon: 'signature',
-          title: $localize`:@@admin.home.attention.signatory.title:Nikdo nepodepisuje potvrzení o daru`,
+          title: $localize`:@@admin.home.attention.signatory.title:Nikdo nepodepisuje potvrzení o\u00a0daru`,
           meta: $localize`:@@admin.home.attention.signatory.meta:Web je proto dárcům nevystaví.`,
           link: PEOPLE,
         }),
@@ -173,7 +173,7 @@ function importRows({ importLoad, importState }: AttentionSources): AttentionRow
       failed(
         'import',
         'bank',
-        $localize`:@@admin.home.attention.import.failed:Stav stahování plateb se nepodařilo zjistit; zkuste to znovu v kartě níže.`,
+        $localize`:@@admin.home.attention.import.failed:Stav stahování plateb se nepodařilo zjistit; zkuste to znovu v\u00a0kartě níže.`,
         null,
       ),
     ];
@@ -190,8 +190,8 @@ function importRows({ importLoad, importState }: AttentionSources): AttentionRow
       key: 'import',
       tone: 'warning',
       icon: 'bank',
-      title: $localize`:@@admin.home.attention.import.outage.title:Platby z banky se nestahují`,
-      meta: $localize`:@@admin.home.attention.import.outage.meta:${failures}:failures:× za sebou, fond o tom dostal e-mail. Důvod: ${reason}:reason:.`,
+      title: $localize`:@@admin.home.attention.import.outage.title:Platby z\u00a0banky se nestahují`,
+      meta: $localize`:@@admin.home.attention.import.outage.meta:${failures}:failures:× za sebou, fond o\u00a0tom dostal e-mail. Důvod: ${reason}:reason:.`,
       step: `${NEXT_STEP_LABEL} ${step.text}`,
     });
     if (step.link === null) {
@@ -215,7 +215,7 @@ function importRows({ importLoad, importState }: AttentionSources): AttentionRow
         tone: 'warning',
         icon: 'bank',
         title: $localize`:@@admin.home.attention.import.neverAttempted.title:Stahování plateb ještě neproběhlo`,
-        meta: $localize`:@@admin.home.attention.import.neverAttempted.meta:Pokud to trvá déle než hodinu, zkontrolujte v Nastavení token Fio API.`,
+        meta: $localize`:@@admin.home.attention.import.neverAttempted.meta:Pokud to trvá déle než hodinu, zkontrolujte v\u00a0Nastavení token Fio API.`,
         link: { path: '/sprava/nastaveni', fragment: undefined },
       }),
     ];
@@ -236,7 +236,7 @@ function mailRows({ openAlerts }: AttentionSources): AttentionRow[] {
       icon: 'mail',
       title: $localize`:@@admin.home.attention.mail.title:E-maily se neodesílají`,
       meta: $localize`:@@admin.home.attention.mail.meta:Poštovní server od ${formatBankTime(mail.since)}:since: odmítá zprávy.`,
-      step: `${NEXT_STEP_LABEL} ${$localize`:@@admin.home.attention.mail.step:Zkontrolujte nastavení pošty a pošlete zkušební e-mail.`}`,
+      step: `${NEXT_STEP_LABEL} ${$localize`:@@admin.home.attention.mail.step:Zkontrolujte nastavení pošty a\u00a0pošlete zkušební e-mail.`}`,
     }),
     row({
       key: 'mail-next',
@@ -279,7 +279,7 @@ function backupRows({ backupsLoad, backups }: AttentionSources): AttentionRow[] 
       failed(
         'backups',
         'backup',
-        $localize`:@@admin.home.attention.backups.failed:Stav záloh se nepodařilo zjistit; zkuste to znovu v kartě níže.`,
+        $localize`:@@admin.home.attention.backups.failed:Stav záloh se nepodařilo zjistit; zkuste to znovu v\u00a0kartě níže.`,
         null,
       ),
     ];
@@ -319,7 +319,7 @@ function backupKeyRows({ backups }: AttentionSources): AttentionRow[] {
           key: 'backup-key',
           tone: 'warning',
           icon: 'key',
-          title: $localize`:@@admin.home.attention.backupKey.title:Klíč k zálohám si zatím nikdo neuložil`,
+          title: $localize`:@@admin.home.attention.backupKey.title:Klíč k\u00a0zálohám si zatím nikdo neuložil`,
           meta: $localize`:@@admin.home.attention.backupKey.meta:Bez něj žádnou zálohu neobnovíte. Uložit ho má někdo ze správní rady, ne technik.`,
           link: { path: '/sprava/zalohy', fragment: 'klic-k-zaloham' },
         }),
@@ -337,7 +337,7 @@ function signingKeyRows({
       failed(
         'signing-key',
         'key',
-        $localize`:@@admin.home.attention.signingKey.failed:Klíč k ověřovacím QR kódům se nepodařilo zkontrolovat.`,
+        $localize`:@@admin.home.attention.signingKey.failed:Klíč k\u00a0ověřovacím QR kódům se nepodařilo zkontrolovat.`,
         'signingKeys',
       ),
     ];
@@ -354,8 +354,8 @@ function signingKeyRows({
         icon: 'key',
         title:
           pluralCategory(unpublishedSigningKeys.length) === 'one'
-            ? $localize`:@@admin.home.attention.signingKey.unpublished.one:Klíč k ověřovacím QR kódům není zveřejněný`
-            : $localize`:@@admin.home.attention.signingKey.unpublished.other:Klíče k ověřovacím QR kódům nejsou zveřejněné`,
+            ? $localize`:@@admin.home.attention.signingKey.unpublished.one:Klíč k\u00a0ověřovacím QR kódům není zveřejněný`
+            : $localize`:@@admin.home.attention.signingKey.unpublished.other:Klíče k\u00a0ověřovacím QR kódům nejsou zveřejněné`,
         meta: unpublishedKeysSentence(unpublishedSigningKeys),
         link: SIGNING_KEY_SETTINGS,
       }),
@@ -367,7 +367,7 @@ function signingKeyRows({
         key: 'signing-key-warnings',
         tone: 'danger',
         icon: 'key',
-        title: $localize`:@@admin.home.attention.signingKey.warnings.title:Klíč k ověřovacím QR kódům potřebuje kontrolu`,
+        title: $localize`:@@admin.home.attention.signingKey.warnings.title:Klíč k\u00a0ověřovacím QR kódům potřebuje kontrolu`,
         meta: signingKeyWarnings.join(' '),
         link: SIGNING_KEY_SETTINGS,
       }),
@@ -415,7 +415,7 @@ function signatoryRows({ signatory }: AttentionSources): AttentionRow[] {
         failed(
           'signatory',
           'signature',
-          $localize`:@@admin.home.attention.signatory.failed:Nepodařilo se zkontrolovat, kdo podepisuje potvrzení o daru.`,
+          $localize`:@@admin.home.attention.signatory.failed:Nepodařilo se zkontrolovat, kdo podepisuje potvrzení o\u00a0daru.`,
           'signatory',
         ),
       ];
@@ -426,7 +426,7 @@ function signatoryRows({ signatory }: AttentionSources): AttentionRow[] {
           tone: 'task',
           icon: 'signature',
           title: $localize`:@@admin.home.attention.signature.title:Osoba, která podepisuje potvrzení, nemá nahraný podpis`,
-          meta: $localize`:@@admin.home.attention.signature.meta:Potvrzení o daru mají zatím jen čáru se jménem.`,
+          meta: $localize`:@@admin.home.attention.signature.meta:Potvrzení o\u00a0daru mají zatím jen čáru se jménem.`,
           link: PEOPLE,
         }),
       ];
@@ -438,10 +438,10 @@ function signatoryRows({ signatory }: AttentionSources): AttentionRow[] {
 export function unpairedCount(count: number): string {
   switch (pluralCategory(count)) {
     case 'one':
-      return $localize`:@@admin.home.sections.unpaired.one:${count}:count: platba čeká na přiřazení`;
+      return $localize`:@@admin.home.sections.unpaired.one:${count}:count:\u00a0platba čeká na přiřazení`;
     case 'few':
-      return $localize`:@@admin.home.sections.unpaired.few:${count}:count: platby čekají na přiřazení`;
+      return $localize`:@@admin.home.sections.unpaired.few:${count}:count:\u00a0platby čekají na přiřazení`;
     default:
-      return $localize`:@@admin.home.sections.unpaired.many:${count}:count: plateb čeká na přiřazení`;
+      return $localize`:@@admin.home.sections.unpaired.many:${count}:count:\u00a0plateb čeká na přiřazení`;
   }
 }

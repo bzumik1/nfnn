@@ -52,6 +52,7 @@ import { CompactLayout } from '../../../core/layout/compact-layout';
 import { DonorArea } from './donor-area';
 import { DonorDonations } from './donor-donations';
 import { PHASE_SHOWN_AFTER_MS } from '../../../shared/ui/pdf-progress/pdf-progress';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const OBJECT_URL = 'blob:http://localhost/receipt';
 const RECEIPTS_URL = '/api/donations/me/receipts';
@@ -208,12 +209,12 @@ describe('Given a signed-in donor in the donor area', () => {
   }
 
   function text(selector: string): string {
-    return normalized(element(selector)?.textContent ?? '');
+    return normalized(withOrdinarySpaces(element(selector)?.textContent) ?? '');
   }
 
   function texts(selector: string): string[] {
     return [...root().querySelectorAll<HTMLElement>(selector)].map((node) =>
-      normalized(node.textContent ?? ''),
+      normalized(withOrdinarySpaces(node.textContent) ?? ''),
     );
   }
 
@@ -246,13 +247,15 @@ describe('Given a signed-in donor in the donor area', () => {
 
   function yearRow(year: number): HTMLElement {
     return [...root().querySelectorAll<HTMLElement>('.year-row')].find(
-      (row) => normalized(row.querySelector('.year')?.textContent ?? '') === String(year),
+      (row) =>
+        normalized(withOrdinarySpaces(row.querySelector('.year')?.textContent) ?? '') ===
+        String(year),
     )!;
   }
 
   function yearRows(): string[][] {
     return [...root().querySelectorAll<HTMLElement>('.year-row')].map((row) =>
-      [...row.children].map((cell) => normalized(cell.textContent ?? '')),
+      [...row.children].map((cell) => normalized(withOrdinarySpaces(cell.textContent) ?? '')),
     );
   }
 
@@ -315,7 +318,7 @@ describe('Given a signed-in donor in the donor area', () => {
         'Ověřte bankovní účet, ze kterého jste platili, platbou 1 Kč a dřívější dary z něj vám obvykle přiřadíme také.',
     );
     const link = element(`${block} a`) as HTMLAnchorElement;
-    expect(normalized(link.textContent ?? '')).toBe(
+    expect(normalized(withOrdinarySpaces(link.textContent) ?? '')).toBe(
       'Přidat bankovní účet, ze kterého jste platili',
     );
     expect(link.getAttribute('href')).toBe('/darce/ucty?pridat=ucet');
@@ -334,11 +337,15 @@ describe('Given a signed-in donor in the donor area', () => {
     }
 
     function badge(container: Element | null): string {
-      return normalized(container?.querySelector('.side-nav-badge')?.textContent ?? '');
+      return normalized(
+        withOrdinarySpaces(container?.querySelector('.side-nav-badge')?.textContent) ?? '',
+      );
     }
 
     function hidden(container: Element | null): string {
-      return normalized(container?.querySelector('.visually-hidden')?.textContent ?? '');
+      return normalized(
+        withOrdinarySpaces(container?.querySelector('.visually-hidden')?.textContent) ?? '',
+      );
     }
 
     function bankAccountsLink(): HTMLAnchorElement | null {
@@ -361,8 +368,12 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       const account = element('header button.account-button');
-      expect(normalized(account?.querySelector('.account-badge')?.textContent ?? '')).toBe('1');
-      expect(normalized(account?.textContent ?? '')).toContain('Účet JN 1 otázka čeká na odpověď');
+      expect(
+        normalized(withOrdinarySpaces(account?.querySelector('.account-badge')?.textContent) ?? ''),
+      ).toBe('1');
+      expect(normalized(withOrdinarySpaces(account?.textContent) ?? '')).toContain(
+        'Účet JN 1 otázka čeká na odpověď',
+      );
 
       harness.fixture.destroy();
 
@@ -655,8 +666,12 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       const account = element('header button.account-button') as HTMLButtonElement;
-      expect(normalized(account.querySelector('.visually-hidden')?.textContent ?? '')).toBe('Účet');
-      expect(normalized(account.textContent ?? '')).toBe('Účet JN');
+      expect(
+        normalized(
+          withOrdinarySpaces(account.querySelector('.visually-hidden')?.textContent) ?? '',
+        ),
+      ).toBe('Účet');
+      expect(normalized(withOrdinarySpaces(account.textContent) ?? '')).toBe('Účet JN');
       expect(element('header a.brand')?.getAttribute('href')).toBe('/');
     });
 
@@ -758,7 +773,10 @@ describe('Given a signed-in donor in the donor area', () => {
       const nav = element('nav[aria-label="Můj účet"]')!;
       const links = [...nav.querySelectorAll<HTMLAnchorElement>('a')];
       expect(
-        links.map((link) => [normalized(link.textContent ?? ''), link.getAttribute('href')]),
+        links.map((link) => [
+          normalized(withOrdinarySpaces(link.textContent) ?? ''),
+          link.getAttribute('href'),
+        ]),
       ).toEqual([
         ['Můj přehled', '/darce/prehled'],
         ['Moje dary', '/darce/dary'],
@@ -766,7 +784,7 @@ describe('Given a signed-in donor in the donor area', () => {
         ['Bankovní účty', '/darce/ucty'],
         ['Údaje a zabezpečení', '/darce/udaje'],
       ]);
-      expect(links[4].textContent?.trim()).toBe('Údaje a\u00a0zabezpečení');
+      expect(withOrdinarySpaces(links[4].textContent)?.trim()).toBe('Údaje a zabezpečení');
       expect(links.map((link) => link.getAttribute('aria-current'))).toEqual([
         'page',
         null,
@@ -805,7 +823,9 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(document.activeElement).toBe(element('h1'));
         headings.push(text('h1'));
         if (url === '/darce/udaje') {
-          expect(element('h1')?.textContent?.trim()).toBe('Údaje a\u00a0zabezpečení');
+          expect(withOrdinarySpaces(element('h1')?.textContent)?.trim()).toBe(
+            'Údaje a zabezpečení',
+          );
         }
       }
       await go('/darce/ucty');
@@ -930,7 +950,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       await go('/darce/dary');
 
-      expect(root().textContent).not.toContain('Načítáme');
+      expect(withOrdinarySpaces(root().textContent)).not.toContain('Načítáme');
       expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
       expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
       http.expectNone({ method: 'POST', url: BANK_CHECK_URL });
@@ -1207,12 +1227,14 @@ describe('Given a signed-in donor in the donor area', () => {
       const title = element('#last-gift-title')!;
       expect(title.tagName).toBe('H2');
       expect(title.closest('.ui-card')).toBe(card);
-      expect(normalized(title.textContent ?? '')).toBe('Poslední dar');
-      expect(normalized(card.querySelector('.last-gift-main')?.textContent ?? '')).toBe(
-        '500 Kč 15. 3. 2026 Přijato',
-      );
+      expect(normalized(withOrdinarySpaces(title.textContent) ?? '')).toBe('Poslední dar');
+      expect(
+        normalized(withOrdinarySpaces(card.querySelector('.last-gift-main')?.textContent) ?? ''),
+      ).toBe('500 Kč 15. 3. 2026 Přijato');
       const check = card.querySelector<HTMLButtonElement>('button.bank-check-btn')!;
-      expect(normalized(check.textContent ?? '')).toBe('Zkontrolovat nové platby');
+      expect(normalized(withOrdinarySpaces(check.textContent) ?? '')).toBe(
+        'Zkontrolovat nové platby',
+      );
       expect(check.classList).toContain('ui-button');
       expect(card.querySelector('.ui-list--inset, .ui-group-title, .ui-group-note')).toBeNull();
     });
@@ -1306,11 +1328,13 @@ describe('Given a signed-in donor in the donor area', () => {
       const sentence = document.getElementById(
         element('.overview-question a')?.getAttribute('aria-describedby') ?? '',
       );
-      expect(normalized(sentence?.textContent ?? '')).toBe(
+      expect(normalized(withOrdinarySpaces(sentence?.textContent) ?? '')).toBe(
         'Máme na vás otázku k platbám z účtu 19-2000145399/0800.',
       );
       expect(
-        element('.overview-question .overview-account wbr')?.previousSibling?.textContent,
+        withOrdinarySpaces(
+          element('.overview-question .overview-account wbr')?.previousSibling?.textContent,
+        ),
       ).toBe('19-2000145399/');
     });
 
@@ -1452,7 +1476,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(texts('.recent-card th')).toEqual(['Datum', 'Částka', 'Účel', 'Stav']);
       expect(element('.recent-card .download-btn')).toBeNull();
       const all = element('.recent-card a.recent-all') as HTMLAnchorElement;
-      expect(normalized(all.textContent ?? '')).toBe('Všechny dary');
+      expect(normalized(withOrdinarySpaces(all.textContent) ?? '')).toBe('Všechny dary');
       expect(all.getAttribute('href')).toBe('/darce/dary');
     });
 
@@ -1466,10 +1490,10 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(card.classList).toContain('ui-card');
         const title = element('#recent-title')!;
         expect(title.tagName).toBe('H2');
-        expect(normalized(title.textContent ?? '')).toBe('Poslední dary');
+        expect(normalized(withOrdinarySpaces(title.textContent) ?? '')).toBe('Poslední dary');
         expect(title.closest('.ui-card')).toBe(card);
         const all = card.querySelector('a[href="/darce/dary"]')!;
-        expect(normalized(all.textContent ?? '')).toBe('Všechny dary');
+        expect(normalized(withOrdinarySpaces(all.textContent) ?? '')).toBe('Všechny dary');
         expect(card.querySelector('app-donations-table')?.closest('.ui-card')).toBe(card);
         expect(
           card.querySelector('.ui-list--inset, .ui-group-title, .ui-card .ui-card'),
@@ -1520,11 +1544,11 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(card.classList).toContain('ui-card');
       const title = element('#first-gift-title')!;
       expect(title.tagName).toBe('H2');
-      expect(normalized(title.textContent ?? '')).toBe('Jak poslat první dar');
+      expect(normalized(withOrdinarySpaces(title.textContent) ?? '')).toBe('Jak poslat první dar');
       expect(title.closest('.ui-card')).toBe(card);
-      expect(normalized(card.querySelector('.bank-check-btn')?.textContent ?? '')).toBe(
-        'Zkontrolovat nové platby',
-      );
+      expect(
+        normalized(withOrdinarySpaces(card.querySelector('.bank-check-btn')?.textContent) ?? ''),
+      ).toBe('Zkontrolovat nové platby');
       expect(card.querySelector('.recent-hint')).not.toBeNull();
       expect(card.querySelector('.ui-list--inset, .ui-group-title, .ui-group-note')).toBeNull();
     });
@@ -1567,7 +1591,7 @@ describe('Given a signed-in donor in the donor area', () => {
       const rows = [...root().querySelectorAll<HTMLElement>('.payments-card tbody tr')].map((row) =>
         [...row.querySelectorAll('td')]
           .slice(0, 4)
-          .map((cell) => normalized(cell.textContent ?? '')),
+          .map((cell) => normalized(withOrdinarySpaces(cell.textContent) ?? '')),
       );
       expect(rows).toEqual([
         ['15. 3. 2026', '500 Kč', 'Obecný příspěvek', 'Přijato'],
@@ -1581,7 +1605,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
-      expect(element('.gift-year-sum')?.textContent).toMatch(/dary\u00a0· 1/);
+      expect(withOrdinarySpaces(element('.gift-year-sum')?.textContent)).toMatch(/dary · 1/);
     });
 
     it('then the donations are grouped by year, newest first, each under a heading with the count and the sum from the summary', async () => {
@@ -1840,7 +1864,7 @@ describe('Given a signed-in donor in the donor area', () => {
         [...root().querySelectorAll<HTMLElement>(`${yearSection(year)} .donation-rows > li`)].map(
           (row) =>
             [...row.querySelectorAll<HTMLElement>('.ui-list__row > *')]
-              .map((part) => normalized(part.textContent ?? ''))
+              .map((part) => normalized(withOrdinarySpaces(part.textContent) ?? ''))
               .filter((part) => part !== ''),
         );
       expect(rowsOf(2026).map((row) => row.slice(0, 3))).toEqual([
@@ -1867,7 +1891,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       const row = element(`${yearSection(2025)} .donation-rows > li:nth-child(2) .ui-list__row`);
-      expect(normalized(row?.textContent ?? '')).toMatch(
+      expect(normalized(withOrdinarySpaces(row?.textContent) ?? '')).toMatch(
         /^20\. 8\. 2025 Obecný příspěvek 2 000 Kč Vráceno/,
       );
     });
@@ -1879,12 +1903,9 @@ describe('Given a signed-in donor in the donor area', () => {
       const badges = [
         ...root().querySelectorAll<HTMLElement>('.payments-card td[data-label="Stav"] > *'),
       ];
-      expect(badges.map((badge) => normalized(badge.textContent ?? ''))).toEqual([
-        'Přijato',
-        'Přijato',
-        'Přijato',
-        'Vráceno',
-      ]);
+      expect(
+        badges.map((badge) => normalized(withOrdinarySpaces(badge.textContent) ?? '')),
+      ).toEqual(['Přijato', 'Přijato', 'Přijato', 'Vráceno']);
       expect(badges.map((badge) => badge.className)).toEqual([
         'ui-badge ui-badge--success',
         'ui-badge ui-badge--success',
@@ -1901,7 +1922,7 @@ describe('Given a signed-in donor in the donor area', () => {
       const badge = element(
         `${yearSection(2025)} .donation-rows > li:nth-child(2) .ui-list__state > *`,
       );
-      expect(normalized(badge?.textContent ?? '')).toBe('Vráceno');
+      expect(normalized(withOrdinarySpaces(badge?.textContent) ?? '')).toBe('Vráceno');
       expect(badge?.className).toBe('ui-badge ui-badge--neutral');
     });
 
@@ -1910,7 +1931,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       const title = element('#payments-title')!;
-      expect(normalized(title.textContent ?? '')).toBe('Všechny dary');
+      expect(normalized(withOrdinarySpaces(title.textContent) ?? '')).toBe('Všechny dary');
       expect(title.tagName).toBe('H2');
       expect(title.closest('.ui-card')).toBe(element('.payments-card'));
     });
@@ -1921,9 +1942,9 @@ describe('Given a signed-in donor in the donor area', () => {
 
       const bar = element('.payments-card > .ui-card__bar')!;
       const check = bar.querySelector('app-bank-check')!;
-      expect(normalized(check.querySelector('.bank-check-btn')?.textContent ?? '')).toBe(
-        'Zkontrolovat nové platby',
-      );
+      expect(
+        normalized(withOrdinarySpaces(check.querySelector('.bank-check-btn')?.textContent) ?? ''),
+      ).toBe('Zkontrolovat nové platby');
       expect(check.querySelector('[role="status"]')).not.toBeNull();
       expect(check.querySelector('.ui-list, .ui-group-note')).toBeNull();
       expect(
@@ -1939,7 +1960,9 @@ describe('Given a signed-in donor in the donor area', () => {
         await respond(twoYearSummary(), twoYearDonations());
 
         const yearly = element(`${yearSection(2025)} .gift-year-head .yearly-pdf`)!;
-        expect(normalized(yearly.textContent ?? '')).toBe('Stáhnout potvrzení za rok 2025 (PDF)');
+        expect(normalized(withOrdinarySpaces(yearly.textContent) ?? '')).toBe(
+          'Stáhnout potvrzení za rok 2025 (PDF)',
+        );
         const gifts = element(`${yearSection(2025)} app-donations-table`)!;
         expect(
           yearly.compareDocumentPosition(gifts) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -1957,7 +1980,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await click(`${yearSection(2025)} .yearly-pdf`);
 
       const yearly = button(`${yearSection(2025)} .yearly-pdf`);
-      expect(normalized(yearly.textContent ?? '')).toBe('Připravujeme PDF…');
+      expect(normalized(withOrdinarySpaces(yearly.textContent) ?? '')).toBe('Připravujeme PDF…');
       expect(yearly.getAttribute('aria-busy')).toBe('true');
       expect(yearly.getAttribute('aria-disabled')).toBe('true');
       receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
@@ -1969,7 +1992,9 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       const note = element(`${yearSection(2026)} .gift-year-head .gift-year-note`)!;
-      expect(normalized(note.textContent ?? '')).toBe('Ke stažení od 1. ledna 2027');
+      expect(normalized(withOrdinarySpaces(note.textContent) ?? '')).toBe(
+        'Ke stažení od 1. ledna 2027',
+      );
       const table = element(`${yearSection(2026)} table`)!;
       expect(note.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
@@ -1981,7 +2006,9 @@ describe('Given a signed-in donor in the donor area', () => {
       const footer = element('.payments-card > .ui-card__footer')!;
       expect(footer.querySelector('.bank-hint')).not.toBeNull();
       const toggle = footer.querySelector<HTMLElement>('app-standing-order button[aria-expanded]')!;
-      expect(normalized(toggle.textContent ?? '')).toBe('Jak nastavit trvalý příkaz');
+      expect(normalized(withOrdinarySpaces(toggle.textContent) ?? '')).toBe(
+        'Jak nastavit trvalý příkaz',
+      );
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
       const lastYear = element(yearSection(2025))!;
       expect(
@@ -2015,12 +2042,14 @@ describe('Given a signed-in donor in the donor area', () => {
 
       const tag = element('.payments-card tbody tr:first-child .pairing-tag');
       expect(tag?.hasAttribute('title')).toBe(false);
-      expect(normalized(tag?.querySelector('[aria-hidden="true"]')?.textContent ?? '')).toBe(
-        'bez symbolu · účet …3333/2010',
-      );
-      expect(normalized(tag?.querySelector('.visually-hidden')?.textContent ?? '')).toBe(
-        'Přiřazeno podle účtu 2900233333/2010, platba přišla bez variabilního symbolu',
-      );
+      expect(
+        normalized(
+          withOrdinarySpaces(tag?.querySelector('[aria-hidden="true"]')?.textContent) ?? '',
+        ),
+      ).toBe('bez symbolu · účet …3333/2010');
+      expect(
+        normalized(withOrdinarySpaces(tag?.querySelector('.visually-hidden')?.textContent) ?? ''),
+      ).toBe('Přiřazeno podle účtu 2900233333/2010, platba přišla bez variabilního symbolu');
       expect(text('.payments-card tbody tr:nth-child(2) .pairing-tag [aria-hidden="true"]')).toBe(
         'bez symbolu · účet …5399/0800',
       );
@@ -2041,10 +2070,14 @@ describe('Given a signed-in donor in the donor area', () => {
       const sentence =
         'Přiřazeno podle účtu 19-2000145399/0800 a variabilního symbolu 6123456789, který jste u účtu potvrdili jako svůj';
       expect(tag?.hasAttribute('title')).toBe(false);
-      expect(normalized(tag?.querySelector('[aria-hidden="true"]')?.textContent ?? '')).toBe(
-        'symbol 6123456789 · účet …5399/0800',
-      );
-      expect(normalized(tag?.querySelector('.visually-hidden')?.textContent ?? '')).toBe(sentence);
+      expect(
+        normalized(
+          withOrdinarySpaces(tag?.querySelector('[aria-hidden="true"]')?.textContent) ?? '',
+        ),
+      ).toBe('symbol 6123456789 · účet …5399/0800');
+      expect(
+        normalized(withOrdinarySpaces(tag?.querySelector('.visually-hidden')?.textContent) ?? ''),
+      ).toBe(withOrdinarySpaces(sentence));
       expect(texts('.pairing-tag')).toHaveLength(1);
     });
 
@@ -2073,7 +2106,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('.payments-card table')).toBeNull();
       expect(text('.payments-empty')).toBe('Zatím tu není žádný dar.');
       const send = element('.payments-empty-state a.payments-send') as HTMLAnchorElement;
-      expect(normalized(send.textContent ?? '')).toBe('Poslat dar');
+      expect(normalized(withOrdinarySpaces(send.textContent) ?? '')).toBe('Poslat dar');
       expect(send.getAttribute('href')).toBe('/darce/prehled#poslat-dar');
       expectMissingGiftIn('.payments-card');
       expect(text('.payments-card app-standing-order .standing-toggle')).toBe(
@@ -2403,7 +2436,9 @@ describe('Given a signed-in donor in the donor area', () => {
 
       const first = element(`${yearSection(2026)} tbody tr:nth-child(1)`)!;
       expect(
-        [...first.querySelectorAll('td')].map((cell) => normalized(cell.textContent ?? '')),
+        [...first.querySelectorAll('td')].map((cell) =>
+          normalized(withOrdinarySpaces(cell.textContent) ?? ''),
+        ),
       ).toEqual([
         '20. 3. 2026 Ověření účtu',
         '1 Kč',
@@ -2640,7 +2675,7 @@ describe('Given a signed-in donor in the donor area', () => {
         'Ověřte svoje potvrzení nebo potvrzení, které vám někdo ukázal: naskenujete jeho QR kód, nahrajete PDF nebo vložíte odkaz z kódu. Ukážeme, jaké údaje v něm fond podepsal.',
       );
       const link = element('.verify-card a');
-      expect(link?.textContent?.trim()).toBe('Ověřit potvrzení');
+      expect(withOrdinarySpaces(link?.textContent)?.trim()).toBe('Ověřit potvrzení');
       expect(link?.getAttribute('href')).toBe('/overit');
     });
 
@@ -2649,9 +2684,9 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       const titles = [...document.querySelectorAll<HTMLElement>('.ui-card > h2')];
-      expect(titles.map((title) => title.textContent?.trim())).toEqual([
-        'Roční potvrzení o\u00a0darech',
-        'Potvrzení k\u00a0jednotlivému daru',
+      expect(titles.map((title) => withOrdinarySpaces(title.textContent)?.trim())).toEqual([
+        'Roční potvrzení o darech',
+        'Potvrzení k jednotlivému daru',
         'Ověřit potvrzení',
       ]);
       for (const title of titles) {
@@ -2752,17 +2787,25 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
       expect(yearRow(2025).querySelector('.receipt-saved [role="status"]')).not.toBeNull();
-      expect(normalized(yearRow(2025).querySelector('.receipt-saved')?.textContent ?? '')).toBe(
+      expect(
+        normalized(
+          withOrdinarySpaces(yearRow(2025).querySelector('.receipt-saved')?.textContent) ?? '',
+        ),
+      ).toBe(
         'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
       );
     });
 
     describe('and the receipt is drawn in the browser', () => {
       const line = (year: number): string =>
-        normalized(yearRow(year).querySelector('.receipt-saved')?.textContent ?? '');
+        normalized(
+          withOrdinarySpaces(yearRow(year).querySelector('.receipt-saved')?.textContent) ?? '',
+        );
       const status = (year: number): string =>
         normalized(
-          yearRow(year).querySelector('.receipt-saved [role="status"]')?.textContent ?? '',
+          withOrdinarySpaces(
+            yearRow(year).querySelector('.receipt-saved [role="status"]')?.textContent,
+          ) ?? '',
         );
       const pdfButton = (year: number): HTMLButtonElement =>
         yearRow(year).querySelector('.yearly-pdf') as HTMLButtonElement;
@@ -2822,7 +2865,10 @@ describe('Given a signed-in donor in the donor area', () => {
         await vi.advanceTimersByTimeAsync(8000);
         await settle();
         expect(
-          normalized(yearRow(2025).querySelector('.pdf-progress__cancel')?.textContent ?? ''),
+          normalized(
+            withOrdinarySpaces(yearRow(2025).querySelector('.pdf-progress__cancel')?.textContent) ??
+              '',
+          ),
         ).toBe('Zrušit přípravu potvrzení za rok 2025');
         (yearRow(2025).querySelector('.pdf-progress__cancel') as HTMLButtonElement).click();
         await settle();
@@ -2864,8 +2910,8 @@ describe('Given a signed-in donor in the donor area', () => {
         receiptEnvironment.last().say({ kind: 'failed', reason: 'drawing', name: 'Other' });
         await settleBlobFailure();
 
-        expect(element('.yearly-card [role="alert"]')?.textContent).toContain(
-          'PDF se v\u00a0prohlížeči',
+        expect(withOrdinarySpaces(element('.yearly-card [role="alert"]')?.textContent)).toContain(
+          'PDF se v prohlížeči',
         );
         expect(pdfButton(2025).disabled).toBe(false);
         expect(pdfButton(2025).getAttribute('aria-disabled')).toBeNull();
@@ -2883,7 +2929,7 @@ describe('Given a signed-in donor in the donor area', () => {
         receiptEnvironment.last().drawAll();
         await settleBlobFailure();
 
-        expect(normalized(pdfButton(2025).textContent ?? '')).toBe(
+        expect(normalized(withOrdinarySpaces(pdfButton(2025).textContent) ?? '')).toBe(
           'Otevřít potvrzení za rok 2025 (PDF)',
         );
         expect(document.activeElement).toBe(elsewhere);
@@ -2949,7 +2995,9 @@ describe('Given a signed-in donor in the donor area', () => {
         await settle();
 
         expect(restart).toHaveBeenCalledWith('rok-2025');
-        expect(element('.yearly-card [role="alert"]')?.textContent?.trim() ?? '').toBe('');
+        expect(
+          withOrdinarySpaces(element('.yearly-card [role="alert"]')?.textContent)?.trim() ?? '',
+        ).toBe('');
         expect(element('app-diagnostics-download')).toBeNull();
       });
 
@@ -3000,7 +3048,9 @@ describe('Given a signed-in donor in the donor area', () => {
             'Potvrzení potvrzeni-o-darech-2025.pdf je připravené. Otevřete ho tlačítkem „Otevřít potvrzení“.',
           );
           const open = yearRow(2025).querySelector('.yearly-pdf') as HTMLButtonElement;
-          expect(normalized(open.textContent ?? '')).toBe('Otevřít potvrzení za rok 2025 (PDF)');
+          expect(normalized(withOrdinarySpaces(open.textContent) ?? '')).toBe(
+            'Otevřít potvrzení za rok 2025 (PDF)',
+          );
           expect(open.disabled).toBe(false);
           expect(document.activeElement).toBe(open);
           expect(yearRow(2025).querySelectorAll('button')).toHaveLength(1);
@@ -3019,9 +3069,11 @@ describe('Given a signed-in donor in the donor area', () => {
           expect(line(2025)).toBe(
             'Potvrzení potvrzeni-o-darech-2025.pdf jste předali z nabídky sdílení.',
           );
-          expect(normalized(yearRow(2025).querySelector('.yearly-pdf')?.textContent ?? '')).toBe(
-            'Stáhnout potvrzení za rok 2025 (PDF)',
-          );
+          expect(
+            normalized(
+              withOrdinarySpaces(yearRow(2025).querySelector('.yearly-pdf')?.textContent) ?? '',
+            ),
+          ).toBe('Stáhnout potvrzení za rok 2025 (PDF)');
         });
 
         it('then a share sheet the browser cannot open saves the file and says it is saved', async () => {
@@ -3053,9 +3105,11 @@ describe('Given a signed-in donor in the donor area', () => {
             .flush({ ...donor, address: { ...donor.address, street: 'Krátká 3' } });
           await settle();
 
-          expect(normalized(yearRow(2025).querySelector('.yearly-pdf')?.textContent ?? '')).toBe(
-            'Stáhnout potvrzení za rok 2025 (PDF)',
-          );
+          expect(
+            normalized(
+              withOrdinarySpaces(yearRow(2025).querySelector('.yearly-pdf')?.textContent) ?? '',
+            ),
+          ).toBe('Stáhnout potvrzení za rok 2025 (PDF)');
           expect(line(2025)).toBe('');
           await downloadYear(2025);
           receiptRequest({ year: 2025 });
@@ -3076,9 +3130,11 @@ describe('Given a signed-in donor in the donor area', () => {
             .flush({ ...donor, preferredLocale: 'en' });
           await settle();
 
-          expect(normalized(yearRow(2025).querySelector('.yearly-pdf')?.textContent ?? '')).toBe(
-            'Otevřít potvrzení za rok 2025 (PDF)',
-          );
+          expect(
+            normalized(
+              withOrdinarySpaces(yearRow(2025).querySelector('.yearly-pdf')?.textContent) ?? '',
+            ),
+          ).toBe('Otevřít potvrzení za rok 2025 (PDF)');
         });
 
         it('then a share sheet the donor closes keeps the file ready for another tap', async () => {
@@ -3087,9 +3143,11 @@ describe('Given a signed-in donor in the donor area', () => {
           await downloadYear(2025);
           await settleBlobFailure();
 
-          expect(normalized(yearRow(2025).querySelector('.yearly-pdf')?.textContent ?? '')).toBe(
-            'Otevřít potvrzení za rok 2025 (PDF)',
-          );
+          expect(
+            normalized(
+              withOrdinarySpaces(yearRow(2025).querySelector('.yearly-pdf')?.textContent) ?? '',
+            ),
+          ).toBe('Otevřít potvrzení za rok 2025 (PDF)');
         });
       });
     });
@@ -3178,7 +3236,11 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
 
       expect(yearRow(2025).querySelector('.yearly-pdf')).toBeNull();
-      expect(normalized(yearRow(2025).querySelector('.year-note')?.textContent ?? '')).toBe(
+      expect(
+        normalized(
+          withOrdinarySpaces(yearRow(2025).querySelector('.year-note')?.textContent) ?? '',
+        ),
+      ).toBe(
         'Za tento rok potvrzení na webu nevystavujeme. Potřebujete ho? Napište nám na info@nfnn.cz.',
       );
       expect(yearRow(2025).querySelector('.year-note a')?.getAttribute('href')).toBe(
@@ -3471,12 +3533,15 @@ describe('Given a signed-in donor in the donor area', () => {
       await respond(twoYearSummary(), twoYearDonations());
 
       const rows = [...root().querySelectorAll<HTMLElement>('.single-card tbody tr')];
-      expect(rows.map((row) => normalized(row.querySelector('.date')?.textContent ?? ''))).toEqual([
-        '15. 3. 2026',
-        '10. 1. 2026',
-      ]);
       expect(
-        rows.map((row) => normalized(row.querySelector('.download-btn')?.textContent ?? '')),
+        rows.map((row) =>
+          normalized(withOrdinarySpaces(row.querySelector('.date')?.textContent) ?? ''),
+        ),
+      ).toEqual(['15. 3. 2026', '10. 1. 2026']);
+      expect(
+        rows.map((row) =>
+          normalized(withOrdinarySpaces(row.querySelector('.download-btn')?.textContent) ?? ''),
+        ),
       ).toEqual([
         'Stáhnout PDF, dar z 15. 3. 2026, 500 Kč',
         'Stáhnout PDF, dar z 10. 1. 2026, 1 000 Kč',
@@ -3499,7 +3564,9 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(savedFiles).toEqual([
         { fileName: 'potvrzeni-o-daru-2026-000017.pdf', href: OBJECT_URL },
       ]);
-      expect(normalized(row.querySelector('.receipt-saved')?.textContent ?? '')).toBe(
+      expect(
+        normalized(withOrdinarySpaces(row.querySelector('.receipt-saved')?.textContent) ?? ''),
+      ).toBe(
         'Potvrzení potvrzeni-o-daru-2026-000017.pdf je stažené. Najdete ho ve stažených souborech.',
       );
     });
@@ -3518,9 +3585,11 @@ describe('Given a signed-in donor in the donor area', () => {
       await vi.advanceTimersByTimeAsync(8000);
       await settle();
 
-      expect(normalized(row.querySelector('.pdf-progress__cancel')?.textContent ?? '')).toBe(
-        'Zrušit přípravu potvrzení, dar z 10. 1. 2026, 1 000 Kč',
-      );
+      expect(
+        normalized(
+          withOrdinarySpaces(row.querySelector('.pdf-progress__cancel')?.textContent) ?? '',
+        ),
+      ).toBe('Zrušit přípravu potvrzení, dar z 10. 1. 2026, 1 000 Kč');
     });
 
     it('then a failed download of a gift receipt is told in the card of single gifts', async () => {
@@ -3801,7 +3870,7 @@ describe('Given a signed-in donor in the donor area', () => {
         'mailto:info@nfnn.cz?subject=Smaz%C3%A1n%C3%AD%20%C3%BA%C4%8Dtu',
       );
       expect(new URL(mail.href).searchParams.get('subject')).toBe('Smazání účtu');
-      expect(normalized(mail.textContent ?? '')).toBe('info@nfnn.cz');
+      expect(normalized(withOrdinarySpaces(mail.textContent) ?? '')).toBe('info@nfnn.cz');
     });
 
     it('then the paragraphs of Smazání účtu and the explanation of Když web nefunguje take the one intro style of every card', async () => {

@@ -17,8 +17,8 @@ export interface BackupKeyWordEntry {
 }
 
 export const BACKUP_KEY_WORD_MESSAGES: FieldMessages = {
-  required: $localize`:@@operations.backupKey.word.required:Opište prosím toto slovo z uloženého klíče.`,
-  backupKeyWord: $localize`:@@operations.backupKey.word.mismatch:Slovo nesedí s klíčem. Zkontrolujte, že opisujete slovo se správným číslem.`,
+  required: $localize`:@@operations.backupKey.word.required:Opište prosím toto slovo z\u00a0uloženého klíče.`,
+  backupKeyWord: $localize`:@@operations.backupKey.word.mismatch:Slovo nesedí s\u00a0klíčem. Zkontrolujte, že opisujete slovo se správným číslem.`,
 };
 
 export function backupKeyWordLabel(position: number): string {

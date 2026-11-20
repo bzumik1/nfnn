@@ -14,6 +14,7 @@ import { NavigationPreview } from './navigation-preview';
 import { lendKeptPagesToThePreview } from './preview-lending';
 import { PreviewingReuse } from './previewing-reuse';
 import { TabMemory } from './tab-memory';
+import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
 const created: string[] = [];
 const destroyed: string[] = [];
@@ -86,7 +87,7 @@ describe('Given the pages of the tabs kept while another tab is shown', () => {
 
     expect(created).toEqual(['/o-nas', '/aktuality']);
     expect(destroyed).toEqual([]);
-    expect(harness.routeNativeElement?.textContent).toContain('/o-nas');
+    expect(withOrdinarySpaces(harness.routeNativeElement?.textContent)).toContain('/o-nas');
   });
 
   it('when the visitor returns to a tab, then its page hears that it is shown again, once', async () => {
@@ -233,7 +234,8 @@ describe('Given the app on the home screen with the news scrolled and left for t
 
   function onlyTheNewsIsLongEnoughToScroll(): void {
     Object.defineProperty(window, 'scrollY', {
-      get: () => (document.querySelector('p')?.textContent === '/aktuality' ? place : 0),
+      get: () =>
+        withOrdinarySpaces(document.querySelector('p')?.textContent) === '/aktuality' ? place : 0,
       configurable: true,
     });
   }
@@ -293,7 +295,7 @@ describe('Given the app on the home screen with the news scrolled and left for t
 
   it('when the article is dragged back, then the news under the finger is the page they left, where they left it', async () => {
     const seen = await preview.visit('/aktuality', () => ({
-      page: document.querySelector('p')?.textContent,
+      page: withOrdinarySpaces(document.querySelector('p')?.textContent),
       top: window.scrollY,
     }));
 
@@ -310,7 +312,7 @@ describe('Given the app on the home screen with the news scrolled and left for t
     TestBed.tick();
 
     expect(created).toEqual(['/aktuality', '/projekty', '/aktuality/ohlednuti']);
-    expect(harness.routeNativeElement?.textContent).toContain('/aktuality');
+    expect(withOrdinarySpaces(harness.routeNativeElement?.textContent)).toContain('/aktuality');
     expect(scrolledTo.at(-1)).toBe(420);
   });
 

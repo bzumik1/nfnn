@@ -131,7 +131,7 @@ test.describe('Given a visitor on the Pomáháme tab', () => {
     await expect(page.locator('section.year h2')).toHaveText([/2025/, /2024/]);
     await expect(page.locator('ul.strip')).toHaveCount(2);
 
-    await page.getByRole('link', { name: /Všechny 3 příběhy z roku 2025/ }).click();
+    await page.getByRole('link', { name: /Všechny 3 příběhy z\sroku 2025/ }).click();
     await expect(page).toHaveURL('/projekty?rok=2025');
     await expect(page.locator('section.year')).toHaveCount(1);
   });

@@ -14,6 +14,7 @@ import {
   textOf,
   waitsForConnection,
 } from '../../device-copy/testing/opened-copy';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const BACKUPS_URL = '/api/admin/operations/backups';
 
@@ -56,7 +57,7 @@ describe('Given an administrator on the history of backups', () => {
   afterEach(() => http.verify());
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }

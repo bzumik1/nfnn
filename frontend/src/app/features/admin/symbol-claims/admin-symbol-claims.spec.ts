@@ -10,6 +10,7 @@ import { symbolClaim } from '../testing/admin-fixtures';
 import { AdminSymbolClaims } from './admin-symbol-claims';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const LIST_URL = '/api/admin/donations/symbol-claims';
 const YES_ID = '019a1c00-0000-7000-8000-00000000c001';
@@ -74,7 +75,7 @@ describe('Given an administrator on the older symbols page', () => {
   }
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -84,7 +85,7 @@ describe('Given an administrator on the older symbols page', () => {
   }
 
   function rowText(row: HTMLElement): string {
-    return (row.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(row.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function button(row: HTMLElement, name: string): HTMLButtonElement {
@@ -114,7 +115,7 @@ describe('Given an administrator on the older symbols page', () => {
     expect(rowText(first)).toContain('1234567/0800 · Česká spořitelna');
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('thead th') as NodeListOf<HTMLElement>)
-        .map((cell) => cell.textContent?.trim())
+        .map((cell) => withOrdinarySpaces(cell.textContent)?.trim())
         .includes('Bankovní účet'),
     ).toBe(true);
     expect(
@@ -325,7 +326,9 @@ describe('Given an administrator on the older symbols page', () => {
     await fixture.whenStable();
 
     const sheet = document.querySelector('app-changed-meanwhile-dialog dialog');
-    expect(sheet?.textContent).toContain('Odpověď mezitím změnil jiný správce nebo sám dárce.');
+    expect(withOrdinarySpaces(sheet?.textContent)).toContain(
+      'Odpověď mezitím změnil jiný správce nebo sám dárce.',
+    );
     button(document.body, 'Načíst aktuální stav').click();
     fixture.detectChanges();
     await listed([{ ...yes, answer: 'DECLINED', donationCount: 0 }, no]);

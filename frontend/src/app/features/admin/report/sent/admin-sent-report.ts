@@ -157,7 +157,7 @@ function contentGroups(month: string, content: ReportContentResponse): ReportGro
       title: $localize`:@@admin.sentReport.donors:Dárci`,
       rows: [
         {
-          title: $localize`:@@admin.sentReport.donors.registered:Registrovaní dárci k ${formatDonationDate(lastDayOf(month))}:date:`,
+          title: $localize`:@@admin.sentReport.donors.registered:Registrovaní dárci k\u00a0${formatDonationDate(lastDayOf(month))}:date:`,
           meta: null,
           value: String(content.donors.registered),
         },
@@ -178,7 +178,7 @@ function contentGroups(month: string, content: ReportContentResponse): ReportGro
           content.donations.received,
         ),
         giftRow(
-          $localize`:@@admin.sentReport.donations.paired:Z toho spárované s registrovanými dárci`,
+          $localize`:@@admin.sentReport.donations.paired:Z\u00a0toho spárované s registrovanými dárci`,
           content.donations.paired,
         ),
         giftRow(
@@ -216,7 +216,7 @@ function giftRow(title: string, tally: TallyResponse): ReportRow {
 function bankRows(bank: ReportBankImportResponse): ReportRow[] {
   const rows: ReportRow[] = [
     {
-      title: $localize`:@@admin.sentReport.bank.lastSuccess:Poslední úspěšné stažení plateb z banky`,
+      title: $localize`:@@admin.sentReport.bank.lastSuccess:Poslední úspěšné stažení plateb z\u00a0banky`,
       meta: null,
       value:
         bank.lastSucceededAt === null
@@ -226,7 +226,7 @@ function bankRows(bank: ReportBankImportResponse): ReportRow[] {
   ];
   if (bank.lastFailure !== null) {
     rows.push({
-      title: $localize`:@@admin.sentReport.bank.lastFailure:Poslední pokus o stažení selhal`,
+      title: $localize`:@@admin.sentReport.bank.lastFailure:Poslední pokus o\u00a0stažení selhal`,
       meta: IMPORT_FAILURE_LABELS[bank.lastFailure.kind],
       value: formatBankTime(bank.lastFailure.attemptedAt),
     });
@@ -258,11 +258,11 @@ function giftsText(count: number): string {
 function paymentsText(count: number): string {
   switch (pluralCategory(count)) {
     case 'one':
-      return $localize`:@@admin.sentReport.payments.one:1 platba`;
+      return $localize`:@@admin.sentReport.payments.one:1\u00a0platba`;
     case 'few':
-      return $localize`:@@admin.sentReport.payments.few:${count}:count: platby`;
+      return $localize`:@@admin.sentReport.payments.few:${count}:count:\u00a0platby`;
     case 'other':
-      return $localize`:@@admin.sentReport.payments.many:${count}:count: plateb`;
+      return $localize`:@@admin.sentReport.payments.many:${count}:count:\u00a0plateb`;
   }
 }
 

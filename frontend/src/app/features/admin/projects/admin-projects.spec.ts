@@ -15,6 +15,7 @@ import {
   waitsForConnection,
 } from '../device-copy/testing/opened-copy';
 import { project as heldProject } from '../../content/testing/project-fixtures';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const LIST_URL = '/api/admin/content/projects';
 const ORDER_URL = '/api/admin/content/project-order';
@@ -60,7 +61,7 @@ describe('Given an administrator on the project list', () => {
 
   function texts(selector: string): string[] {
     return Array.from(fixture.nativeElement.querySelectorAll(selector) as NodeListOf<Element>).map(
-      (element) => (element.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      (element) => (withOrdinarySpaces(element.textContent) ?? '').replace(/\s+/g, ' ').trim(),
     );
   }
 
@@ -69,7 +70,7 @@ describe('Given an administrator on the project list', () => {
       fixture.nativeElement.querySelectorAll('tbody tr') as NodeListOf<Element>,
     ).map((row) =>
       Array.from(row.querySelectorAll('td'))
-        .map((cell) => (cell.textContent ?? '').replace(/\s+/g, ' ').trim())
+        .map((cell) => (withOrdinarySpaces(cell.textContent) ?? '').replace(/\s+/g, ' ').trim())
         .join(' '),
     );
   }
@@ -223,7 +224,9 @@ describe('Given an administrator who has just deleted a project', () => {
 
     expect(
       (
-        fixture.nativeElement.querySelector('[role="status"]:not(:empty)')?.textContent ?? ''
+        withOrdinarySpaces(
+          fixture.nativeElement.querySelector('[role="status"]:not(:empty)')?.textContent,
+        ) ?? ''
       ).trim(),
     ).toBe('Příběh „Zahrada pro děti“ jsme smazali.');
     http.verify();

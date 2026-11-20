@@ -217,7 +217,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     expect(await violations(page)).toEqual([]);
 
-    await page.getByRole('button', { name: /Platíte z jiného zařízení\?/ }).click();
+    await page.getByRole('button', { name: /Platíte z\sjiného zařízení\?/ }).click();
     await expect(page.locator('#prispet .qr-code svg')).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
@@ -1231,7 +1231,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await signIn(page);
     await openDonorSection(page, 'Bankovní účty');
     const question = page.getByRole('group', {
-      name: /Z tohoto účtu k nám chodí i platby s variabilním symbolem 6123456789/,
+      name: /Z\stohoto účtu k\snám chodí i\splatby s\svariabilním symbolem 6123456789/,
     });
     await expect(question).toBeVisible();
 
@@ -2251,7 +2251,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await context.setOffline(true);
     await nav.getByRole('link', { name: 'Nastavení', exact: true }).click();
     await expect(
-      page.getByRole('button', { name: /^Offline · údaje z \d{1,2}:\d{2}$/ }),
+      page.getByRole('button', { name: /^Offline · údaje z\s\d{1,2}:\d{2}$/ }),
     ).toBeVisible();
     await expect(page.getByText('Klíč ukážeme, až budete online.')).toBeVisible();
     await expect(
@@ -2544,7 +2544,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await page.getByRole('button', { name: 'Poslat zkušební upozornění' }).click();
     await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
-      /^Zkušební upozornění jsme předali k doručení na 2 zařízení\./,
+      /^Zkušební upozornění jsme předali k\sdoručení na 2\szařízení\./,
     );
     expect(await violations(page)).toEqual([]);
   });
@@ -3680,7 +3680,7 @@ test.describe('Given a visitor on a phone who relies on WCAG 2.2 AA', () => {
     await signIn(page);
     await openDonorSection(page, 'Bankovní účty');
     await page.setViewportSize({ width: 360, height: 800 });
-    const question = page.getByRole('group', { name: /Z tohoto účtu k nám chodí/ });
+    const question = page.getByRole('group', { name: /Z\stohoto účtu k\snám chodí/ });
     await expect(question).toBeVisible();
 
     await expect

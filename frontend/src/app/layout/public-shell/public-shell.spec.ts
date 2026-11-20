@@ -16,6 +16,7 @@ import { CompactLayout } from '../../core/layout/compact-layout';
 import { BackTarget } from '../../core/navigation/back-target';
 import { KeptTabPages } from '../../core/navigation/kept-tab-pages';
 import { PublicShell } from './public-shell';
+import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
 describe('Given the public shell', () => {
   beforeEach(async () => {
@@ -42,7 +43,7 @@ describe('Given the public shell', () => {
     const first = (fixture.nativeElement as HTMLElement).querySelector('a, button');
 
     expect(first?.classList).toContain('skip-link');
-    expect(first?.textContent?.trim()).toBe('Přeskočit na obsah');
+    expect(withOrdinarySpaces(first?.textContent)?.trim()).toBe('Přeskočit na obsah');
   });
 
   it('when the skip link is activated, then the main content takes the focus and the URL stays', () => {
@@ -133,7 +134,7 @@ describe('Given the public shell while the visitor moves around the site', () =>
     await go('/zasady');
 
     const heading = host.querySelector('main h1');
-    expect(heading?.textContent).toBe('Zásady');
+    expect(withOrdinarySpaces(heading?.textContent)).toBe('Zásady');
     expect(document.activeElement).toBe(heading);
     expect(heading?.getAttribute('tabindex')).toBe('-1');
   });
@@ -387,7 +388,7 @@ describe('Given the public shell around the pages of the tabs', () => {
 
     const links = Array.from(shell.querySelectorAll('a, button')).slice(0, 2);
 
-    expect(links.map((link) => link.textContent?.trim())).toEqual([
+    expect(links.map((link) => withOrdinarySpaces(link.textContent)?.trim())).toEqual([
       'Přeskočit na obsah',
       'Přeskočit na navigaci',
     ]);
@@ -398,7 +399,7 @@ describe('Given the public shell around the pages of the tabs', () => {
     const shell = await openAt('/aktuality');
     document.body.appendChild(shell);
     const link = Array.from(shell.querySelectorAll<HTMLAnchorElement>('.skip-link')).find(
-      (candidate) => candidate.textContent?.trim() === 'Přeskočit na navigaci',
+      (candidate) => withOrdinarySpaces(candidate.textContent)?.trim() === 'Přeskočit na navigaci',
     )!;
 
     const click = new MouseEvent('click', { bubbles: true, cancelable: true });
@@ -413,6 +414,6 @@ describe('Given the public shell around the pages of the tabs', () => {
   it('when a page asks for no tab bar, then there is no skip link to the navigation', async () => {
     const shell = await openAt('/pripojeni');
 
-    expect(shell.textContent).not.toContain('Přeskočit na navigaci');
+    expect(withOrdinarySpaces(shell.textContent)).not.toContain('Přeskočit na navigaci');
   });
 });

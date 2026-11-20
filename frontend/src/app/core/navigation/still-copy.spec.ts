@@ -1,4 +1,5 @@
 import { stillCopyOf } from './still-copy';
+import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
 function page(): HTMLElement {
   const shell = document.createElement('app-public-shell');
@@ -38,7 +39,7 @@ describe('Given the page a visitor leaves', () => {
 
     const copy = stillCopyOf(shell);
 
-    expect(copy.querySelector('h1')?.textContent).toBe('Článek');
+    expect(withOrdinarySpaces(copy.querySelector('h1')?.textContent)).toBe('Článek');
     expect(copy.querySelectorAll('main [id]:not(svg *), [name], [autofocus]')).toHaveLength(0);
     expect((copy.querySelector('input') as HTMLInputElement).value).toBe('500');
     expect((copy.querySelector('input[type=radio]') as HTMLInputElement).checked).toBe(true);
@@ -62,7 +63,7 @@ describe('Given the page a visitor leaves', () => {
     const copy = stillCopyOf(shell);
 
     expect(copy.querySelector('dialog')).toBeNull();
-    expect(copy.querySelector('h1')?.textContent).toBe('Článek');
+    expect(withOrdinarySpaces(copy.querySelector('h1')?.textContent)).toBe('Článek');
     expect(copy.querySelector('app-tab-bar')).not.toBeNull();
   });
 

@@ -7,6 +7,7 @@ import { BackupScheduleCard } from './backup-schedule-card';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { readDetailsDisclosures } from '../../../shared/ui/disclosure/testing/details-disclosures';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const SCHEDULE_URL = '/api/admin/operations/backups/schedule';
 
@@ -43,7 +44,7 @@ describe('Given the backup plan card', () => {
   }
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }

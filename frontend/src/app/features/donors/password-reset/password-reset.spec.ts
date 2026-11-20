@@ -17,6 +17,7 @@ import {
   samplePasskey,
 } from '../../../core/auth/testing/donor-fixtures';
 import { PasswordReset } from './password-reset';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 function normalized(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
@@ -94,11 +95,13 @@ describe('Given the page that sets a new password from the e-mail link', () => {
 
     it('then the token leaves the address bar and the form asks for the new password', () => {
       expect(TestBed.inject(Location).path(true)).toBe('/obnova-hesla');
-      expect(heading().textContent).toContain('Nastavte si nové heslo');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('Nastavte si nové heslo');
       expect(element('#reset-password').getAttribute('aria-describedby')).toBe(
         'reset-password-hint',
       );
-      expect(element('#reset-password-hint').textContent).toContain('Alespoň 12 znaků');
+      expect(withOrdinarySpaces(element('#reset-password-hint').textContent)).toContain(
+        'Alespoň 12 znaků',
+      );
     });
 
     it('and the donor enters the new password, then the token and the password are sent', async () => {
@@ -109,7 +112,7 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       expect(request.request.body).toEqual({ token: 'abc', password: 'correct horse battery' });
       await settle();
       expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(true);
-      expect(element('.ui-button--primary').textContent).toContain('Ukládáme…');
+      expect(withOrdinarySpaces(element('.ui-button--primary').textContent)).toContain('Ukládáme…');
       request.flush(null, { status: 204, statusText: 'No Content' });
     });
 
@@ -124,8 +127,8 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       await submitPasswords('short');
 
       http.expectNone('/api/donors/auth/password-reset/confirm');
-      expect(element('#reset-password-error').textContent).toContain(
-        'Heslo musí mít alespoň 12\u00a0znaků.',
+      expect(withOrdinarySpaces(element('#reset-password-error').textContent)).toContain(
+        'Heslo musí mít alespoň 12 znaků.',
       );
     });
 
@@ -135,8 +138,10 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       await submitPasswords('correct horse battery');
       await answerConfirm(null, 204, 'No Content');
 
-      expect(heading().textContent).toContain('Heslo je změněno');
-      expect(element('.ui-panel__lead').textContent).toContain('Přihlaste se prosím novým heslem.');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('Heslo je změněno');
+      expect(withOrdinarySpaces(element('.ui-panel__lead').textContent)).toContain(
+        'Přihlaste se prosím novým heslem.',
+      );
       expect(document.activeElement).toBe(heading());
       expect(logout).not.toHaveBeenCalled();
 
@@ -161,8 +166,8 @@ describe('Given the page that sets a new password from the e-mail link', () => {
         'Bad Request',
       );
 
-      expect(heading().textContent).toContain('Odkaz je neplatný nebo vypršel');
-      expect(element('.ui-panel__lead').textContent).toContain(
+      expect(withOrdinarySpaces(heading().textContent)).toContain('Odkaz je neplatný nebo vypršel');
+      expect(withOrdinarySpaces(element('.ui-panel__lead').textContent)).toContain(
         'Odkaz lze použít jen jednou a platí hodinu.',
       );
       expect(document.activeElement).toBe(heading());
@@ -181,10 +186,10 @@ describe('Given the page that sets a new password from the e-mail link', () => {
         'Bad Request',
       );
 
-      expect(element('.ui-field-error').textContent).toContain(
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
         'Heslo je příliš běžné. Zvolte prosím jiné heslo.',
       );
-      expect(heading().textContent).toContain('Nastavte si nové heslo');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('Nastavte si nové heslo');
       expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
     });
 
@@ -192,7 +197,7 @@ describe('Given the page that sets a new password from the e-mail link', () => {
       await submitPasswords('correct horse battery');
       await answerConfirm(null, 502, 'Bad Gateway');
 
-      expect(element('.ui-field-error').textContent).toContain(
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
         'Heslo se nepodařilo uložit. Zkuste to prosím znovu.',
       );
     });
@@ -229,7 +234,7 @@ describe('Given the page that sets a new password from the e-mail link', () => {
 
       expect(logout).toHaveBeenCalledOnce();
       expect(store.signedIn()).toBe(false);
-      expect(heading().textContent).toContain('Heslo je změněno');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('Heslo je změněno');
     });
   });
 
@@ -237,7 +242,7 @@ describe('Given the page that sets a new password from the e-mail link', () => {
     beforeEach(() => open('/obnova-hesla'));
 
     it('then the missing-link panel offers to ask for a new link in the dialog', async () => {
-      expect(heading().textContent).toContain('Odkaz je neúplný');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('Odkaz je neúplný');
       expect(element('form')).toBeNull();
 
       await click('.ui-button--primary');
@@ -302,7 +307,9 @@ describe('Given the reset link opened in a browser with passkeys', () => {
   }
 
   it('when it opens, then it offers a new password or a new passkey with the password chosen', () => {
-    expect(element('#password-reset-title').textContent).toContain('Obnovte si přístup');
+    expect(withOrdinarySpaces(element('#password-reset-title').textContent)).toContain(
+      'Obnovte si přístup',
+    );
     expect(element('.method-switch button:nth-child(1)').getAttribute('aria-checked')).toBe('true');
     expect(element('.method-switch > .ui-segmented__thumb').getAttribute('aria-hidden')).toBe(
       'true',
@@ -312,7 +319,7 @@ describe('Given the reset link opened in a browser with passkeys', () => {
 
   it('when a new passkey is created, then the link and the device register it and the page asks to sign in with it', async () => {
     await choosePasskey();
-    expect(normalized(element('form').textContent ?? '')).toContain(
+    expect(normalized(withOrdinarySpaces(element('form').textContent) ?? '')).toContain(
       'ty ztracené pak odeberete v části „Údaje a zabezpečení“.',
     );
     await fillIn('#reset-passkey-name', 'Nový telefon');
@@ -334,8 +341,10 @@ describe('Given the reset link opened in a browser with passkeys', () => {
     });
     await settle();
 
-    expect(element('#password-reset-title').textContent).toContain('Přístupový klíč je uložený');
-    expect(normalized(element('.ui-status').textContent ?? '')).toContain(
+    expect(withOrdinarySpaces(element('#password-reset-title').textContent)).toContain(
+      'Přístupový klíč je uložený',
+    );
+    expect(normalized(withOrdinarySpaces(element('.ui-status').textContent) ?? '')).toContain(
       'ztracené klíče pak odeberete v části „Údaje a zabezpečení“.',
     );
     element<HTMLButtonElement>('.ui-button--primary').click();
@@ -355,7 +364,7 @@ describe('Given the reset link opened in a browser with passkeys', () => {
     await settle();
 
     expect(element('.ui-field-error')).toBeNull();
-    expect(element('#reset-passkey-code-hint').textContent).toContain(
+    expect(withOrdinarySpaces(element('#reset-passkey-code-hint').textContent)).toContain(
       'zapnuté dvoufaktorové ověření',
     );
     expect(document.activeElement).toBe(element('#reset-passkey-code'));
@@ -388,7 +397,9 @@ describe('Given the reset link opened in a browser with passkeys', () => {
       );
     await settle();
 
-    expect(element('.ui-field-error').textContent).toContain('Účet správce se takto neobnovuje');
+    expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
+      'Účet správce se takto neobnovuje',
+    );
     expect(passkeys.created).toHaveLength(0);
   });
 });

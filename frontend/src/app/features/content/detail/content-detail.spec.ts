@@ -22,6 +22,7 @@ import { keptAnswerRefreshInterceptor } from '../../../core/connectivity/kept-an
 import { serviceWorkerBypassInterceptor } from '../../../core/updates/service-worker-bypass';
 import { KeptTabPages } from '../../../core/navigation/kept-tab-pages';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({ template: '' })
 class OtherTab {}
@@ -61,7 +62,7 @@ async function setUp(
 }
 
 function text(fixture: ComponentFixture<unknown>, selector: string): string {
-  return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+  return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -93,13 +94,13 @@ function onward(fixture: ComponentFixture<unknown>): HTMLElement | null {
 
 function onwardTitles(fixture: ComponentFixture<unknown>): string[] {
   return Array.from((onward(fixture)?.querySelectorAll('h3') ?? []) as NodeListOf<Element>).map(
-    (title) => title.textContent?.trim() ?? '',
+    (title) => withOrdinarySpaces(title.textContent)?.trim() ?? '',
   );
 }
 
 function headingOf(region: HTMLElement): string {
   const id = region.getAttribute('aria-labelledby') ?? '';
-  return region.ownerDocument.getElementById(id)?.textContent?.trim() ?? '';
+  return withOrdinarySpaces(region.ownerDocument.getElementById(id)?.textContent)?.trim() ?? '';
 }
 
 function follows(earlier: Element, later: Element): boolean {
@@ -128,7 +129,7 @@ describe('Given a visitor opening a news article', () => {
     expect(text(fixture, '.ui-intro__lead')).toBe(newsArticle().perex);
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('.prose p') as NodeListOf<Element>).map(
-        (paragraph) => paragraph.textContent,
+        (paragraph) => withOrdinarySpaces(paragraph.textContent),
       ),
     ).toEqual(['První odstavec textu.', 'Druhý odstavec textu.']);
     const image = fixture.nativeElement.querySelector('.photo img') as HTMLImageElement;
@@ -259,9 +260,11 @@ describe('Given a visitor opening a news article', () => {
     await settle(fixture);
 
     const notice = fixture.nativeElement.querySelector('.ui-notice[role="alert"]');
-    expect(notice?.textContent?.trim()).toBe('Aktualitu se nepodařilo načíst. Zkuste to znovu.');
+    expect(withOrdinarySpaces(notice?.textContent)?.trim()).toBe(
+      'Aktualitu se nepodařilo načíst. Zkuste to znovu.',
+    );
     const retry = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
-    expect(retry.textContent?.trim()).toBe('Zkusit znovu');
+    expect(withOrdinarySpaces(retry.textContent)?.trim()).toBe('Zkusit znovu');
     retry.click();
     await settle(fixture);
     http.expectOne('/api/content/news/zahrada-pro-deti').flush(newsArticle());
@@ -293,7 +296,7 @@ describe('Given a visitor opening a project', () => {
     expect(fixture.nativeElement.querySelector('.crumbs')).toBeNull();
     expect(
       Array.from(fixture.nativeElement.querySelectorAll('.actions a') as NodeListOf<Element>).map(
-        (link) => [link.getAttribute('href'), link.textContent?.trim()],
+        (link) => [link.getAttribute('href'), withOrdinarySpaces(link.textContent)?.trim()],
       ),
     ).toEqual([
       ['/prispet', 'Přispět'],
@@ -334,7 +337,9 @@ describe('Given a visitor opening a project', () => {
     await settle(fixture);
 
     const notice = fixture.nativeElement.querySelector('.ui-notice[role="alert"]');
-    expect(notice?.textContent?.trim()).toBe('Příběh se nepodařilo načíst. Zkuste to znovu.');
+    expect(withOrdinarySpaces(notice?.textContent)?.trim()).toBe(
+      'Příběh se nepodařilo načíst. Zkuste to znovu.',
+    );
     (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();
     await settle(fixture);
     http.expectOne('/api/content/projects/zahrada-pro-deti').flush(project());
@@ -490,10 +495,12 @@ describe('Given an article kept while the visitor is on another tab', () => {
     const asked = http.expectOne(ARTICLE);
 
     expect(TestBed.inject(Title).getTitle()).toBe('Zahrada pro děti | Nová naděje – nadační fond');
-    expect((await shown()).querySelector('h1')?.textContent?.trim()).toBe('Zahrada pro děti');
+    expect(withOrdinarySpaces((await shown()).querySelector('h1')?.textContent)?.trim()).toBe(
+      'Zahrada pro děti',
+    );
 
     asked.flush(newsArticle({ title: 'Zahrada pro děti je hotová' }));
-    expect((await shown()).querySelector('h1')?.textContent?.trim()).toBe(
+    expect(withOrdinarySpaces((await shown()).querySelector('h1')?.textContent)?.trim()).toBe(
       'Zahrada pro děti je hotová',
     );
   });
@@ -505,7 +512,9 @@ describe('Given an article kept while the visitor is on another tab', () => {
     http.expectOne(ARTICLE).flush(null, { status: 0, statusText: 'Unknown Error' });
 
     const page = await shown();
-    expect(page.querySelector('h1')?.textContent?.trim()).toBe('Zahrada pro děti');
+    expect(withOrdinarySpaces(page.querySelector('h1')?.textContent)?.trim()).toBe(
+      'Zahrada pro děti',
+    );
     expect(page.querySelector('[role="alert"]')).toBeNull();
   });
 
@@ -538,6 +547,8 @@ describe('Given an article kept while the visitor is on another tab', () => {
 
     await harness.navigateByUrl('/aktuality/zahrada-pro-deti');
     http.expectOne(ARTICLE).flush(newsArticle());
-    expect((await shown()).querySelector('h1')?.textContent?.trim()).toBe('Zahrada pro děti');
+    expect(withOrdinarySpaces((await shown()).querySelector('h1')?.textContent)?.trim()).toBe(
+      'Zahrada pro děti',
+    );
   });
 });

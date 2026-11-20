@@ -1,9 +1,10 @@
 <div class="ui-page ui-page--full container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.people.heading">Lidé fondu</h1>
   <p class="ui-page-intro" i18n="@@admin.people.intro">
-    Lidé fondu se ukážou na úvodní stránce v sekci O nás v bloku „Kdo fond vede“: lidé s kartou s
-    portrétem a rolí, pod nimi slovo zakladatelů s jejich podpisy, řádek správní rady a pod ním
-    volitelný řádek. Dokud tu nikdo není, web ukazuje svůj vlastní blok.
+    Lidé fondu se ukážou na úvodní stránce v&nbsp;sekci O&nbsp;nás v&nbsp;bloku „Kdo fond vede“:
+    lidé s&nbsp;kartou s&nbsp;portrétem a&nbsp;rolí, pod nimi slovo zakladatelů s&nbsp;jejich
+    podpisy, řádek správní rady a&nbsp;pod ním volitelný řádek. Dokud tu nikdo není, web ukazuje
+    svůj vlastní blok.
   </p>
 
   @switch (state()) {
@@ -27,7 +28,7 @@
     @case ('ready') {
       <section class="ui-card" aria-labelledby="people-list-title">
         <h2 id="people-list-title" class="ui-card__title" i18n="@@admin.people.list.title">
-          Lidé v pořadí na webu
+          Lidé v&nbsp;pořadí na webu
         </h2>
         <div class="ui-card__body">
           @if (members().length === 0) {
@@ -52,7 +53,7 @@
                     <ul class="ui-person-row__badges person-badges">
                       @if (member.featured) {
                         <li class="ui-badge ui-badge--accent" i18n="@@admin.people.badge.featured">
-                          Karta s portrétem
+                          Karta s&nbsp;portrétem
                         </li>
                       }
                       @if (member.onBoard) {
@@ -65,7 +66,7 @@
                       }
                       @if (member.linkedToAccount) {
                         <li class="ui-badge ui-badge--success" i18n="@@admin.people.badge.linked">
-                          Propojeno s účtem na webu
+                          Propojeno s&nbsp;účtem na webu
                         </li>
                       }
                     </ul>
@@ -172,7 +173,7 @@
             >
               <div class="fields">
                 <app-form-field
-                  label="Jméno a příjmení"
+                  label="Jméno a&nbsp;příjmení"
                   i18n-label="@@admin.people.name"
                   hint="Tak, jak se má ukázat na webu, bez titulů navíc."
                   i18n-hint="@@admin.people.name.hint"
@@ -192,7 +193,7 @@
                 <app-form-field
                   label="Role pod jménem (nepovinné)"
                   i18n-label="@@admin.people.role"
-                  hint="Ukáže se na kartě pod jménem, například Zakladatelka a členka správní rady."
+                  hint="Ukáže se na kartě pod jménem, například Zakladatelka a&nbsp;členka správní rady."
                   i18n-hint="@@admin.people.role.hint"
                   [messages]="roleMessages"
                 >
@@ -213,20 +214,20 @@
                 <label class="choice">
                   <input type="checkbox" name="featured" [(ngModel)]="draft.featured" />
                   <span i18n="@@admin.people.featured"
-                    >Karta s portrétem a rolí v bloku „Kdo fond vede“</span
+                    >Karta s&nbsp;portrétem a&nbsp;rolí v&nbsp;bloku „Kdo fond vede“</span
                   >
                 </label>
                 <label class="choice">
                   <input type="checkbox" name="onBoard" [(ngModel)]="draft.onBoard" />
-                  <span i18n="@@admin.people.onBoard">V řádku „Správní rada“</span>
+                  <span i18n="@@admin.people.onBoard">V&nbsp;řádku „Správní rada“</span>
                 </label>
               </fieldset>
               @if (draft.onBoard) {
                 <div class="fields">
                   <app-form-field
-                    label="Poznámka v řádku správní rady (nepovinné)"
+                    label="Poznámka v&nbsp;řádku správní rady (nepovinné)"
                     i18n-label="@@admin.people.boardNote"
-                    hint="Ukáže se v závorce za jménem, například předseda."
+                    hint="Ukáže se v&nbsp;závorce za jménem, například předseda."
                     i18n-hint="@@admin.people.boardNote.hint"
                     [messages]="boardNoteMessages"
                   >
@@ -246,9 +247,10 @@
               <fieldset class="choices emails">
                 <legend i18n="@@admin.people.emails">E-maily jen pro správu</legend>
                 <p class="field-hint" i18n="@@admin.people.emails.hint">
-                  Web je neukazuje; vidí je jen administrátoři tady a v připojené aplikaci. Účet na
-                  webu s potvrzeným e-mailem, který se shoduje s jedním z nich, se s osobou propojí:
-                  správce pak má u svého jména její portrét. Propojení nedává žádná práva.
+                  Web je neukazuje; vidí je jen administrátoři tady a&nbsp;v&nbsp;připojené
+                  aplikaci. Účet na webu s&nbsp;potvrzeným e-mailem, který se shoduje s&nbsp;jedním
+                  z&nbsp;nich, se s&nbsp;osobou propojí: správce pak má u&nbsp;svého jména její
+                  portrét. Propojení nedává žádná práva.
                 </p>
                 <div class="fields">
                   <app-form-field
@@ -329,9 +331,9 @@
                   }
                 </div>
                 <p id="person-portrait-hint" class="field-hint" i18n="@@admin.people.portrait.hint">
-                  JPEG, PNG nebo WebP do 10 MB, nejlépe čtvercový. Web ho ukáže v kruhu a okraje
-                  ořízne. Nahrajte ho jen se souhlasem toho, kdo je na něm. Na web se dostane, až
-                  osobu uložíte.
+                  JPEG, PNG nebo WebP do 10 MB, nejlépe čtvercový. Web ho ukáže v&nbsp;kruhu
+                  a&nbsp;okraje ořízne. Nahrajte ho jen se souhlasem toho, kdo je na něm. Na web se
+                  dostane, až osobu uložíte.
                 </p>
                 <div role="status">
                   @if (uploadingPortrait()) {
@@ -356,11 +358,11 @@
                     <span when-idle>
                       @if (adding()) {
                         <ng-container i18n="@@admin.people.save.add"
-                          >Přidat a ukázat na webu</ng-container
+                          >Přidat a&nbsp;ukázat na webu</ng-container
                         >
                       } @else {
                         <ng-container i18n="@@admin.people.save.edit"
-                          >Uložit a ukázat na webu</ng-container
+                          >Uložit a&nbsp;ukázat na webu</ng-container
                         >
                       }
                     </span>
@@ -388,10 +390,10 @@
                   id="person-signature-hint"
                   i18n="@@admin.people.signature.hint"
                 >
-                  Obrázek ručního podpisu. Ukáže se pod slovem zakladatelů, má-li osoba kartu, a
-                  vytiskne se na potvrzeních o daru, která osoba podepisuje; už vystavená potvrzení
-                  se nemění. Nejlépe PNG s průhledným pozadím, tmavý inkoust, ořízlý těsně kolem
-                  podpisu. Uloží se hned po nahrání.
+                  Obrázek ručního podpisu. Ukáže se pod slovem zakladatelů, má-li osoba kartu,
+                  a&nbsp;vytiskne se na potvrzeních o&nbsp;daru, která osoba podepisuje; už
+                  vystavená potvrzení se nemění. Nejlépe PNG s&nbsp;průhledným pozadím, tmavý
+                  inkoust, ořízlý těsně kolem podpisu. Uloží se hned po nahrání.
                 </p>
                 @if (signatureUrl(); as url) {
                   <img
@@ -450,7 +452,7 @@
                   tabindex="-1"
                   i18n="@@admin.people.receipt.title"
                 >
-                  Na potvrzení o daru
+                  Na potvrzení o&nbsp;daru
                 </h3>
                 @switch (signatoryState()) {
                   @case ('loading') {
@@ -484,8 +486,8 @@
                     >
                       @if (signs(member)) {
                         <p class="field-hint" i18n="@@admin.people.receipt.signs">
-                          Tato osoba podepisuje potvrzení o daru. Potvrzení vždy podepisuje jen
-                          jedna osoba; jinou vyberete u ní.
+                          Tato osoba podepisuje potvrzení o&nbsp;daru. Potvrzení vždy podepisuje jen
+                          jedna osoba; jinou vyberete u&nbsp;ní.
                         </p>
                       } @else {
                         <label class="choice">
@@ -506,7 +508,7 @@
                             >
                           } @else {
                             <ng-container i18n="@@admin.people.receipt.nobody"
-                              >Potvrzení teď nikdo nepodepisuje, a tak je web dárcům
+                              >Potvrzení teď nikdo nepodepisuje, a&nbsp;tak je web dárcům
                               nevystaví.</ng-container
                             >
                           }
@@ -569,14 +571,14 @@
               <div class="ui-card__body remove-part">
                 <h3 class="part-title" i18n="@@admin.people.remove.title">Odebrání osoby</h3>
                 <p class="ui-card__intro" i18n="@@admin.people.remove.intro">
-                  Osoba hned zmizí z webu a její portrét a podpis se smažou z databáze; ze záloh
-                  zmizí do 30 dnů. Podpis a portrét na už vystavených potvrzeních o daru zůstávají s
-                  nimi.
+                  Osoba hned zmizí z&nbsp;webu a&nbsp;její portrét a&nbsp;podpis se smažou
+                  z&nbsp;databáze; ze záloh zmizí do 30 dnů. Podpis a&nbsp;portrét na už vystavených
+                  potvrzeních o&nbsp;daru zůstávají s&nbsp;nimi.
                 </p>
                 @if (signs(member)) {
                   <p class="ui-callout ui-callout--warning" i18n="@@admin.people.remove.signs">
-                    Osoba podepisuje potvrzení o daru, a tak ji nejde odebrat. Nejdřív vyberte jinou
-                    osobu, která je bude podepisovat.
+                    Osoba podepisuje potvrzení o&nbsp;daru, a&nbsp;tak ji nejde odebrat. Nejdřív
+                    vyberte jinou osobu, která je bude podepisovat.
                   </p>
                 } @else {
                   @if (confirmingRemoval()) {
@@ -587,7 +589,7 @@
                       i18n-aria-label="@@admin.people.remove.confirm.label"
                     >
                       <span i18n="@@admin.people.remove.confirm.question"
-                        >Opravdu odebrat z webu osobu {{ member.name }}?</span
+                        >Opravdu odebrat z&nbsp;webu osobu {{ member.name }}?</span
                       >
                       <button
                         appNeedsConnection
@@ -597,7 +599,9 @@
                         (click)="remove()"
                       >
                         <app-busy-label [busy]="removing()">
-                          <span when-idle i18n="@@admin.people.remove.yes">Odebrat a smazat</span>
+                          <span when-idle i18n="@@admin.people.remove.yes"
+                            >Odebrat a&nbsp;smazat</span
+                          >
                           <span when-busy i18n="@@admin.people.removing">Odebíráme…</span>
                         </app-busy-label>
                       </button>
@@ -621,7 +625,7 @@
                       (click)="askRemoval()"
                       i18n="@@admin.people.remove.open"
                     >
-                      Odebrat osobu z webu
+                      Odebrat osobu z&nbsp;webu
                     </button>
                   }
                 }
@@ -655,7 +659,7 @@
             <app-form-field
               label="Text pod kartami (nepovinné)"
               i18n-label="@@admin.people.note.label"
-              hint="Krátký text bez formátování, nejvíc 600 znaků; odstavce oddělte prázdným řádkem. Pod ním se ukážou podpisy lidí s kartou, kteří mají podpis. Prázdný text slovo zakladatelů z webu odebere."
+              hint="Krátký text bez formátování, nejvíc 600&nbsp;znaků; odstavce oddělte prázdným řádkem. Pod ním se ukážou podpisy lidí s&nbsp;kartou, kteří mají podpis. Prázdný text slovo zakladatelů z&nbsp;webu odebere."
               i18n-hint="@@admin.people.note.hint"
               [messages]="noteMessages"
             >
@@ -710,7 +714,7 @@
             <app-form-field
               label="Text řádku (nepovinné)"
               i18n-label="@@admin.people.footnote.label"
-              hint="Jedna věta pod výčtem správní rady, například kdo se stará o web. Nejvíc 200 znaků bez formátování a bez odstavců. Prázdný text řádek z webu odebere."
+              hint="Jedna věta pod výčtem správní rady, například kdo se stará o&nbsp;web. Nejvíc 200&nbsp;znaků bez formátování a&nbsp;bez odstavců. Prázdný text řádek z&nbsp;webu odebere."
               i18n-hint="@@admin.people.footnote.hint"
               [messages]="footnoteMessages"
             >

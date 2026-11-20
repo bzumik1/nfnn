@@ -20,6 +20,7 @@ import { ReceiptSigningKeysResponse } from '../../admin-api';
 import { ReceiptSigningKey } from './receipt-signing-key';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const WITHDRAW_OWN_URL = '/api/admin/donations/receipt-signing-keys/21fe31df/withdrawal';
@@ -65,7 +66,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
   const root = () => fixture.nativeElement as HTMLElement;
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -76,8 +77,10 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     );
     return Object.fromEntries(
       terms.map((term) => [
-        (term.textContent ?? '').trim(),
-        (term.nextElementSibling?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        (withOrdinarySpaces(term.textContent) ?? '').trim(),
+        (withOrdinarySpaces(term.nextElementSibling?.textContent) ?? '')
+          .replace(/\s+/g, ' ')
+          .trim(),
       ]),
     );
   }
@@ -404,11 +407,11 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
       expect(root().querySelector('dialog')).toBeNull();
       expect(rows()['Stav']).toBe('Zneplatněný');
-      expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+      expect(text('[role="status"]:not(:empty)')).toBe(withOrdinarySpaces(restartingLine));
       expect(text('[role="alert"]')).toBe('');
 
       await poll(stillWithdrawnKeys());
-      expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+      expect(text('[role="status"]:not(:empty)')).toBe(withOrdinarySpaces(restartingLine));
       await poll(null);
       await poll(renewedKeys());
 
@@ -439,7 +442,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
         }
 
         expect(rows()['Klíč serveru']).toBe('21fe31df');
-        expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+        expect(text('[role="status"]:not(:empty)')).toBe(withOrdinarySpaces(restartingLine));
         expect(text('[role="alert"]')).toBe('');
         expect(root().querySelector('.signing-key-slow')).toBeNull();
       });
@@ -467,7 +470,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       await poll(stillWithdrawnKeys());
 
       expect(rows()['Klíč serveru']).toBe('21fe31df');
-      expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+      expect(text('[role="status"]:not(:empty)')).toBe(withOrdinarySpaces(restartingLine));
       expect(text('[role="alert"]')).toBe('');
 
       await poll(null);
@@ -487,7 +490,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       await poll(stillWithdrawnKeys());
 
       expect(rows()['Klíč serveru']).toBe('21fe31df');
-      expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+      expect(text('[role="status"]:not(:empty)')).toBe(withOrdinarySpaces(restartingLine));
       expect(text('[role="alert"]')).toBe('');
     });
 
@@ -519,7 +522,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       expect(text('[role="status"]:not(:empty)')).toBe('');
       await click('Zkusit znovu');
       expect(root().querySelector('.signing-key-slow')).toBeNull();
-      expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+      expect(text('[role="status"]:not(:empty)')).toBe(withOrdinarySpaces(restartingLine));
       await poll(null);
       await poll(renewedKeys());
       expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
@@ -569,7 +572,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
       expect(text('[role="status"]:not(:empty)')).toBe('');
       await click('Zkusit znovu');
       expect(root().querySelector('.signing-key-slow')).toBeNull();
-      expect(text('[role="status"]:not(:empty)')).toBe(restartingLine);
+      expect(text('[role="status"]:not(:empty)')).toBe(withOrdinarySpaces(restartingLine));
       await poll(renewedKeys());
       expect(rows()['Klíč serveru']).toBe('b7e1c2d4');
     });
@@ -591,7 +594,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     });
 
     it('then the keys show at once, without the loading line, and are refreshed behind them', async () => {
-      expect(root().textContent).not.toContain('Načítáme');
+      expect(withOrdinarySpaces(root().textContent)).not.toContain('Načítáme');
       expect(rows()['Klíč serveru']).toBe('21fe31df');
 
       await load(receiptSigningKeys([earlierKey(), receiptSigningKey()]));
@@ -635,7 +638,7 @@ describe('Given the receipt signing key section of the receipt settings', () => 
 
     it('then the passkey is offered first, its answer goes with the request and the web keeps running', async () => {
       expect(root().querySelector('#withdrawal-code')).toBeNull();
-      expect(document.activeElement?.textContent?.trim()).toBe('Zrušit');
+      expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe('Zrušit');
       expect(text('dialog .withdrawal-points')).toContain(
         'Tímto klíčem server už nepodepisuje, takže web poběží dál beze změny.',
       );

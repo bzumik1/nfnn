@@ -150,7 +150,7 @@
               <app-form-field
                 label="Krátký souhrn"
                 i18n-label="@@admin.newsEditor.perex"
-                hint="Ukáže se na kartě v seznamu aktualit, nejvíc 300 znaků."
+                hint="Ukáže se na kartě v&nbsp;seznamu aktualit, nejvíc 300&nbsp;znaků."
                 i18n-hint="@@admin.newsEditor.perex.hint"
                 [messages]="perexMessages"
               >
@@ -168,7 +168,7 @@
               <app-form-field
                 label="Text"
                 i18n-label="@@admin.newsEditor.body"
-                hint="Odstavce oddělte prázdným řádkem; formát přidáte tlačítky nad polem a vzhled ověříte přepínačem Náhled nahoře."
+                hint="Odstavce oddělte prázdným řádkem; formát přidáte tlačítky nad polem a&nbsp;vzhled ověříte přepínačem Náhled nahoře."
                 i18n-hint="@@admin.newsEditor.body.hint"
                 [messages]="bodyMessages"
               >
@@ -188,7 +188,7 @@
               <app-form-field
                 label="Podepsáno"
                 i18n-label="@@admin.newsEditor.signer"
-                hint="Pod článkem se ukáže portrét, jméno a role toho, kdo aktualitu podepisuje. U nové aktuality je předvybraný člen fondu propojený s vaším účtem."
+                hint="Pod článkem se ukáže portrét, jméno a&nbsp;role toho, kdo aktualitu podepisuje. U&nbsp;nové aktuality je předvybraný člen fondu propojený s&nbsp;vaším účtem."
                 i18n-hint="@@admin.newsEditor.signer.hint"
               >
                 <select appFormControl id="news-signer" name="signer" [(ngModel)]="signerId">
@@ -202,7 +202,7 @@
               <app-form-field
                 label="Ohlédnutí za rokem (nepovinné)"
                 i18n-label="@@admin.newsEditor.lookBackYear"
-                hint="Je-li aktualita ohlédnutím za rokem, stránka Pomáháme na ni odkáže u příběhů toho roku. Každý rok může mít jen jedno ohlédnutí."
+                hint="Je-li aktualita ohlédnutím za rokem, stránka Pomáháme na ni odkáže u&nbsp;příběhů toho roku. Každý rok může mít jen jedno ohlédnutí."
                 i18n-hint="@@admin.newsEditor.lookBackYear.hint"
               >
                 <select
@@ -262,8 +262,8 @@
                   }
                 </div>
                 <p id="news-image-hint" class="field-hint" i18n="@@admin.newsEditor.image.hint">
-                  Ukáže se na kartě v seznamu a nahoře v článku. JPEG, PNG nebo WebP do 10 MB; web
-                  si z fotky vyrobí zmenšené kopie.
+                  Ukáže se na kartě v&nbsp;seznamu a&nbsp;nahoře v&nbsp;článku. JPEG, PNG nebo WebP
+                  do 10 MB; web si z&nbsp;fotky vyrobí zmenšené kopie.
                 </p>
                 <div role="status">
                   @if (uploading()) {
@@ -272,7 +272,7 @@
                     </p>
                   } @else if (coverUnsaved() && coverImage()) {
                     <p class="field-status" i18n="@@admin.newsEditor.image.uploaded">
-                      Fotka je nahraná. K aktualitě se připojí, až ji uložíte.
+                      Fotka je nahraná. K&nbsp;aktualitě se připojí, až ji uložíte.
                     </p>
                   }
                 </div>
@@ -284,7 +284,7 @@
                     class="alt-field"
                     label="Popis fotky (nepovinné)"
                     i18n-label="@@admin.newsEditor.imageAlt"
-                    hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a ukáže se, když se fotka nenačte."
+                    hint="Jednou větou, co je na fotce. Přečte ho nevidomým čtečka obrazovky a&nbsp;ukáže se, když se fotka nenačte."
                     i18n-hint="@@admin.newsEditor.imageAlt.hint"
                     [messages]="altMessages"
                   >
@@ -374,7 +374,7 @@
                     <span when-idle>
                       @if (publishState() === 'live') {
                         <span i18n="@@admin.newsEditor.save.published"
-                          >Uložit a ukázat na webu</span
+                          >Uložit a&nbsp;ukázat na webu</span
                         >
                       } @else {
                         <span i18n="@@admin.newsEditor.save.scheduled">Uložit změny</span>
@@ -394,7 +394,7 @@
                     <span when-idle>
                       @if (publishState() === 'live') {
                         <ng-container i18n="@@admin.newsEditor.unpublish"
-                          >Stáhnout z webu</ng-container
+                          >Stáhnout z&nbsp;webu</ng-container
                         >
                       } @else {
                         <ng-container i18n="@@admin.newsEditor.unpublish.scheduled"
@@ -437,7 +437,7 @@
                 >
                   <app-busy-label [busy]="saving() === 'publish'">
                     <span when-idle i18n="@@admin.newsEditor.publish.saveAndPublish"
-                      >Uložit a zveřejnit</span
+                      >Uložit a&nbsp;zveřejnit</span
                     >
                     <span when-busy i18n="@@admin.newsEditor.publishing">Zveřejňujeme…</span>
                   </app-busy-label>
@@ -456,8 +456,8 @@
           </h2>
           <div class="ui-card__body">
             <p class="ui-card__intro" i18n="@@admin.newsEditor.delete.intro">
-              Smazaná aktualita zmizí z webu i ze správy spolu s fotkou a nejde vrátit. Chcete-li ji
-              jen schovat, stáhněte ji z webu.
+              Smazaná aktualita zmizí z&nbsp;webu i&nbsp;ze správy spolu s&nbsp;fotkou a&nbsp;nejde
+              vrátit. Chcete-li ji jen schovat, stáhněte ji z&nbsp;webu.
             </p>
             @if (confirmingDelete()) {
               <span

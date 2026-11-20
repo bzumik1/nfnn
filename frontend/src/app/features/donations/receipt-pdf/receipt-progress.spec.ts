@@ -47,7 +47,7 @@ describe('Given the progress of a receipt PDF', () => {
   it('when the PDF is shared, then the brief says it was handed on', () => {
     expect(sharedReceiptProgress('x.pdf')).toEqual({
       kind: 'done',
-      text: 'Potvrzení x.pdf jste předali z nabídky sdílení.',
+      text: 'Potvrzení x.pdf jste předali z\u00a0nabídky sdílení.',
       brief: 'PDF jste předali',
     });
   });

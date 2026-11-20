@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { Markdown } from './markdown';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given a Markdown body', () => {
   let fixture: ComponentFixture<Markdown>;
@@ -31,22 +32,22 @@ describe('Given a Markdown body', () => {
       ].join('\n\n'),
     );
 
-    expect(element.querySelector('h2')?.textContent).toBe('Co jsme koupili');
+    expect(withOrdinarySpaces(element.querySelector('h2')?.textContent)).toBe('Co jsme koupili');
     const paragraph = element.querySelector('p');
-    expect(paragraph?.querySelector('strong')?.textContent).toBe('nový vozík');
-    expect(paragraph?.querySelector('em')?.textContent).toBe('polohovací');
+    expect(withOrdinarySpaces(paragraph?.querySelector('strong')?.textContent)).toBe('nový vozík');
+    expect(withOrdinarySpaces(paragraph?.querySelector('em')?.textContent)).toBe('polohovací');
     expect(paragraph?.querySelectorAll('br')).toHaveLength(1);
-    expect([...element.querySelectorAll('ul li')].map((item) => item.textContent)).toEqual([
-      'vozík',
-      'lůžko',
-    ]);
-    expect([...element.querySelectorAll('ol li')].map((item) => item.textContent)).toEqual([
-      'žádost',
-      'schválení',
-    ]);
-    expect(element.querySelector('blockquote')?.textContent?.trim()).toBe('Děkujeme.');
+    expect(
+      [...element.querySelectorAll('ul li')].map((item) => withOrdinarySpaces(item.textContent)),
+    ).toEqual(['vozík', 'lůžko']);
+    expect(
+      [...element.querySelectorAll('ol li')].map((item) => withOrdinarySpaces(item.textContent)),
+    ).toEqual(['žádost', 'schválení']);
+    expect(withOrdinarySpaces(element.querySelector('blockquote')?.textContent)?.trim()).toBe(
+      'Děkujeme.',
+    );
     const link = element.querySelector('a');
-    expect(link?.textContent).toBe('webu');
+    expect(withOrdinarySpaces(link?.textContent)).toBe('webu');
     expect(link?.getAttribute('href')).toBe('https://nfnn.cz/projekty');
   });
 
@@ -55,7 +56,7 @@ describe('Given a Markdown body', () => {
 
     expect(element.querySelector('img')).toBeNull();
     expect(element.querySelector('script')).toBeNull();
-    expect(element.querySelector('p')?.textContent).toBe(
+    expect(withOrdinarySpaces(element.querySelector('p')?.textContent)).toBe(
       '<img src=x onerror="alert(1)"> <script>alert(1)</script>',
     );
   });

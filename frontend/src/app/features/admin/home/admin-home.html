@@ -14,7 +14,7 @@
   <div class="admin-status">
     <section class="ui-card ui-card--padded" aria-labelledby="admin-import-title">
       <h2 id="admin-import-title" class="ui-card__title" i18n="@@admin.home.import.title">
-        Stav stahování plateb z banky
+        Stav stahování plateb z&nbsp;banky
       </h2>
       @switch (state()) {
         @case ('loading') {
@@ -54,7 +54,7 @@
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
                 <span i18n="@@admin.home.import.healthy"
-                  >Stahování plateb je v pořádku, naposledy {{ at }}.</span
+                  >Stahování plateb je v&nbsp;pořádku, naposledy {{ at }}.</span
                 >
               </p>
             }
@@ -67,7 +67,7 @@
                   {{ balance.amount }}
                   <span class="balance-read-at">
                     <ng-container i18n="@@admin.home.import.balance.readAt"
-                      >k <span class="ui-date">{{ balance.readAt }}</span></ng-container
+                      >k&nbsp;<span class="ui-date">{{ balance.readAt }}</span></ng-container
                     >
                     @if (balanceMayBeOutdated()) {
                       &ngsp;<ng-container i18n="@@admin.home.import.balance.outdated"
@@ -184,7 +184,7 @@
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              <span i18n="@@admin.backups.status.healthy">Zálohování je v pořádku.</span>
+              <span i18n="@@admin.backups.status.healthy">Zálohování je v&nbsp;pořádku.</span>
             </p>
           }
           <dl class="ui-data-list admin-data">
@@ -214,7 +214,7 @@
   <section class="ui-card ui-card--padded admin-overview" aria-labelledby="admin-overview-title">
     <div class="admin-card-head">
       <h2 id="admin-overview-title" class="ui-card__title" i18n="@@admin.home.overview.title">
-        Dary a dárci
+        Dary a&nbsp;dárci
       </h2>
       @if (overview(); as data) {
         <label class="year-select">
@@ -250,13 +250,13 @@
       @case ('ready') {
         @if (overview(); as data) {
           <p class="admin-summary" i18n="@@admin.home.overview.summary">
-            Registrovaní dárci: {{ data.donorsRegistered }}, z toho nových v roce {{ data.year }}:
-            {{ data.newDonors }}.
+            Registrovaní dárci: {{ data.donorsRegistered }}, z&nbsp;toho nových v&nbsp;roce
+            {{ data.year }}: {{ data.newDonors }}.
           </p>
           @if (data.months.length > 0) {
             <p id="admin-overview-hint" class="overview-hint" i18n="@@admin.home.overview.hint">
-              Dárci: kolik různých dárců v měsíci poslalo dar; platby bez dárce se nepočítají. Noví
-              dárci: kolik dárců se v měsíci zaregistrovalo.
+              Dárci: kolik různých dárců v&nbsp;měsíci poslalo dar; platby bez dárce se nepočítají.
+              Noví dárci: kolik dárců se v&nbsp;měsíci zaregistrovalo.
             </p>
           }
           @if (data.months.length === 0) {
@@ -420,8 +420,9 @@
               </tfoot>
             </table>
             <p class="overview-hint overview-columns" i18n="@@admin.home.overview.columns">
-              Noví dárci jsou nové registrace, i bez daru, takže jich může být víc než dárců. Celkem
-              zahrnuje i platby, které ještě nemají dárce (Celkem = Přiřazené + Bez dárce).
+              Noví dárci jsou nové registrace, i&nbsp;bez daru, takže jich může být víc než dárců.
+              Celkem zahrnuje i&nbsp;platby, které ještě nemají dárce (Celkem = Přiřazené + Bez
+              dárce).
             </p>
           }
         }
@@ -525,10 +526,10 @@
               </svg>
             </span>
             <span class="ui-list__title" i18n="@@admin.home.attention.allFine.title"
-              >Vše je v pořádku</span
+              >Vše je v&nbsp;pořádku</span
             >&ngsp;
             <span class="ui-list__meta" i18n="@@admin.home.attention.allFine.meta"
-              >Platby z banky naposledy stažené {{ lastSuccess() ?? '—' }}, poslední záloha
+              >Platby z&nbsp;banky naposledy stažené {{ lastSuccess() ?? '—' }}, poslední záloha
               {{ lastBackupTime() ?? '—' }}.</span
             >
           </div>

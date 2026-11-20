@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { CompactLayout } from '../../../../../core/layout/compact-layout';
 import { ShortViewport } from '../../../../../core/layout/short-viewport';
 import { Hero } from './hero';
+import { withOrdinarySpaces } from '../../../../../../testing/ordinary-spaces';
 
 describe('Given the hero', () => {
   let fixture: ComponentFixture<Hero>;
@@ -40,14 +41,14 @@ describe('Given the hero', () => {
   it('when it renders, then its main action says Přispět and leads to the donate section', () => {
     const action = (fixture.nativeElement as HTMLElement).querySelector('.hero-btns a')!;
 
-    expect(action.textContent?.trim()).toBe('Přispět');
+    expect(withOrdinarySpaces(action.textContent)?.trim()).toBe('Přispět');
     expect(action.getAttribute('href')).toBe('/prispet');
   });
 
   it('when it renders, then its second action says where the foundation helps and leads to the projects', () => {
     const action = (fixture.nativeElement as HTMLElement).querySelectorAll('.hero-btns a')[1];
 
-    expect(action.textContent?.trim()).toBe('Kde pomáháme');
+    expect(withOrdinarySpaces(action.textContent)?.trim()).toBe('Kde pomáháme');
     expect(action.getAttribute('href')).toBe('/projekty');
   });
 
@@ -57,7 +58,7 @@ describe('Given the hero', () => {
     const links = (fixture.nativeElement as HTMLElement).querySelectorAll('a');
 
     expect(links).toHaveLength(1);
-    expect(links[0].textContent?.trim()).toBe('Přispět');
+    expect(withOrdinarySpaces(links[0].textContent)?.trim()).toBe('Přispět');
     expect(links[0].getAttribute('href')).toBe('/prispet');
   });
 
@@ -67,14 +68,14 @@ describe('Given the hero', () => {
     const host = fixture.nativeElement as HTMLElement;
 
     expect(host.querySelectorAll('a')).toHaveLength(0);
-    expect(host.querySelector('h1')?.textContent?.trim()).toBe('Nová naděje');
+    expect(withOrdinarySpaces(host.querySelector('h1')?.textContent)?.trim()).toBe('Nová naděje');
   });
 
   it('when the window is short, then the lead stays in the page for screen readers', async () => {
     short.set(true);
     await fixture.whenStable();
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+    expect(withOrdinarySpaces((fixture.nativeElement as HTMLElement).textContent)).toContain(
       'Pomáháme zdravotně postiženým dětem',
     );
   });
@@ -82,7 +83,7 @@ describe('Given the hero', () => {
   it('when its lead wraps, then the preposition „k“ stays with the next word instead of ending a line alone', () => {
     const lead = (fixture.nativeElement as HTMLElement).querySelector('.hero-lead')!;
 
-    expect(lead.textContent).toContain('k\u00a0lepšímu');
+    expect(withOrdinarySpaces(lead.textContent)).toContain('k lepšímu');
   });
   it('when the layout is wide, then the figures of O nás stand under its actions, read with their final values', () => {
     const host = fixture.nativeElement as HTMLElement;
@@ -92,8 +93,8 @@ describe('Given the hero', () => {
     expect(
       [...figures!.querySelectorAll('.stat')].map((stat) =>
         [
-          stat.querySelector('.visually-hidden')?.textContent?.trim(),
-          stat.querySelector('.stat-label')?.textContent?.trim(),
+          withOrdinarySpaces(stat.querySelector('.visually-hidden')?.textContent)?.trim(),
+          withOrdinarySpaces(stat.querySelector('.stat-label')?.textContent)?.trim(),
         ].join(' '),
       ),
     ).toEqual(
@@ -120,8 +121,14 @@ describe('Given the hero', () => {
       await again.whenStable();
       const stats = [...(again.nativeElement as HTMLElement).querySelectorAll('.stat')];
 
-      expect(stats.map((stat) => stat.querySelector('[aria-hidden="true"]')?.textContent)).toEqual(
-        stats.map((stat) => stat.querySelector('.visually-hidden')?.textContent),
+      expect(
+        stats.map((stat) =>
+          withOrdinarySpaces(stat.querySelector('[aria-hidden="true"]')?.textContent),
+        ),
+      ).toEqual(
+        stats.map((stat) =>
+          withOrdinarySpaces(stat.querySelector('.visually-hidden')?.textContent),
+        ),
       );
       expect(stats.some((stat) => stat.classList.contains('is-waiting'))).toBe(false);
     } finally {

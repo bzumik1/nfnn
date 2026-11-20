@@ -40,17 +40,17 @@
             </p>
           } @else {
             <p i18n="@@home.donate.payingWithSymbol">
-              Platíte s variabilním symbolem <strong>{{ symbol }}</strong
+              Platíte s&nbsp;variabilním symbolem <strong>{{ symbol }}</strong
               >.
             </p>
           }
         } @else {
           <p i18n="@@home.donate.receiptHint">
-            Chcete potvrzení o daru pro daňové přiznání? Přihlaste se nebo si založte účet ještě
-            před platbou: QR kód pak ponese váš variabilní symbol.
+            Chcete potvrzení o&nbsp;daru pro daňové přiznání? Přihlaste se nebo si založte účet
+            ještě před platbou: QR kód pak ponese váš variabilní symbol.
           </p>
           <p class="company-hint" i18n="@@home.donate.companyHint">
-            Potvrzení vystavíme i na firmu: při registraci zvolte „Firma“ a vyplňte IČO.
+            Potvrzení vystavíme i&nbsp;na firmu: při registraci zvolte „Firma“ a&nbsp;vyplňte IČO.
           </p>
           <div class="account-actions">
             <button
@@ -86,7 +86,7 @@
       @if (!variableSymbol()) {
         <p afterBankDetails class="ui-callout ui-callout--warning bank-receipt-note">
           <span i18n="@@home.donate.bank.receiptNote.before"
-            >Potvrzení o daru k platbě bez přihlášení vystavíme, až si</span
+            >Potvrzení o&nbsp;daru k&nbsp;platbě bez přihlášení vystavíme, až si</span
           >&ngsp;<button
             type="button"
             class="bank-receipt-register"
@@ -95,7 +95,7 @@
           >
             založíte účet</button
           >&ngsp;<span i18n="@@home.donate.bank.receiptNote.after"
-            >a ověříte v něm bankovní účet, ze kterého jste platili.</span
+            >a&nbsp;ověříte v&nbsp;něm bankovní účet, ze kterého jste platili.</span
           >
         </p>
       }
@@ -109,27 +109,28 @@
         <ul class="next-list">
           @if (variableSymbol()) {
             <li i18n="@@home.donate.bank.noteSignedIn">
-              Dar se ve vašem přehledu objeví do hodiny poté, co ho banka připíše. Převod z jiné
-              banky k nám obvykle dorazí do následujícího pracovního dne.
+              Dar se ve vašem přehledu objeví do hodiny poté, co ho banka připíše. Převod
+              z&nbsp;jiné banky k&nbsp;nám obvykle dorazí do následujícího pracovního dne.
             </li>
             <li i18n="@@home.donate.next.receiptSignedIn">
-              Po skončení roku si ve svém účtu dárce stáhnete roční potvrzení o daru. Dar si můžete
-              odečíst od základu daně podle zákona o daních z příjmů.
+              Po skončení roku si ve svém účtu dárce stáhnete roční potvrzení o&nbsp;daru. Dar si
+              můžete odečíst od základu daně podle zákona o&nbsp;daních z&nbsp;příjmů.
             </li>
           } @else {
             <li i18n="@@home.donate.bank.noteLater">
-              Platili jste bez přihlášení? Po registraci si v sekci „Bankovní účty“ přidejte svůj
-              účet ověřovací platbou 1 Kč a dřívější dary z něj se vám přiřadí také.
+              Platili jste bez přihlášení? Po registraci si v&nbsp;sekci „Bankovní účty“ přidejte
+              svůj účet ověřovací platbou 1&nbsp;Kč a&nbsp;dřívější dary z&nbsp;něj se vám přiřadí
+              také.
             </li>
             <li i18n="@@home.donate.next.receiptAnonymous">
-              S účtem dárce si po skončení roku stáhnete roční potvrzení o daru. Dar si můžete
-              odečíst od základu daně podle zákona o daních z příjmů.
+              S&nbsp;účtem dárce si po skončení roku stáhnete roční potvrzení o&nbsp;daru. Dar si
+              můžete odečíst od základu daně podle zákona o&nbsp;daních z&nbsp;příjmů.
             </li>
           }
         </ul>
         <p class="donate-privacy ui-footnote" i18n="@@home.donate.privacy">
-          S platbou nám banka předá vaše jméno, číslo účtu a&nbsp;zprávu pro příjemce. Jak s nimi
-          naložíme, popisují
+          S&nbsp;platbou nám banka předá vaše jméno, číslo účtu a&nbsp;zprávu pro příjemce. Jak
+          s&nbsp;nimi naložíme, popisují
           <a routerLink="/zasady-ochrany-osobnich-udaju" fragment="udaje"
             >zásady ochrany osobních údajů</a
           >.

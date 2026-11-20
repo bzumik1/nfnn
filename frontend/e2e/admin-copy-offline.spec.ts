@@ -456,7 +456,7 @@ test.describe('Given an administrator whose device keeps the administration copy
     );
     await context.setOffline(true);
     await expect(
-      page.getByRole('button', { name: /^Offline · údaje z \d{1,2}:\d{2}$/ }),
+      page.getByRole('button', { name: /^Offline · údaje z\s\d{1,2}:\d{2}$/ }),
     ).toBeVisible();
     await visit(true);
     expect(serverReads).toEqual([]);
@@ -496,7 +496,7 @@ test.describe('Given an administrator whose device keeps the administration copy
     );
     await context.setOffline(true);
     await expect(
-      page.getByRole('button', { name: /^Offline · údaje z \d{1,2}:\d{2}$/ }),
+      page.getByRole('button', { name: /^Offline · údaje z\s\d{1,2}:\d{2}$/ }),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Přiřadit dárci' }).click();
     const dialog = page.getByRole('dialog');

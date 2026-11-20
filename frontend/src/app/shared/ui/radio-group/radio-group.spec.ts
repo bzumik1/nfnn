@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RadioGroup } from './radio-group';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   imports: [RadioGroup],
@@ -58,7 +59,7 @@ describe('Given a group of choices that behave as radio buttons', () => {
     const event = await press('ArrowRight');
 
     expect(event.defaultPrevented).toBe(true);
-    expect(checked()?.textContent?.trim()).toBe('Klíčem');
+    expect(withOrdinarySpaces(checked()?.textContent)?.trim()).toBe('Klíčem');
     expect(document.activeElement).toBe(checked());
     expect(radios().map((radio) => radio.tabIndex)).toEqual([-1, 0, -1]);
   });
@@ -68,16 +69,16 @@ describe('Given a group of choices that behave as radio buttons', () => {
 
     await press('ArrowDown');
 
-    expect(checked()?.textContent?.trim()).toBe('Heslem');
+    expect(withOrdinarySpaces(checked()?.textContent)?.trim()).toBe('Heslem');
     expect(document.activeElement).toBe(checked());
   });
 
   it('when the left or up arrow is pressed on the first option, then the last one is chosen', async () => {
     await press('ArrowLeft');
-    expect(checked()?.textContent?.trim()).toBe('Kódem');
+    expect(withOrdinarySpaces(checked()?.textContent)?.trim()).toBe('Kódem');
 
     await press('ArrowUp');
-    expect(checked()?.textContent?.trim()).toBe('Klíčem');
+    expect(withOrdinarySpaces(checked()?.textContent)?.trim()).toBe('Klíčem');
   });
 
   it('when Home is pressed, then the first option is chosen', async () => {
@@ -85,13 +86,13 @@ describe('Given a group of choices that behave as radio buttons', () => {
 
     await press('Home');
 
-    expect(checked()?.textContent?.trim()).toBe('Heslem');
+    expect(withOrdinarySpaces(checked()?.textContent)?.trim()).toBe('Heslem');
   });
 
   it('when another key is pressed, then nothing changes and the key keeps its usual meaning', async () => {
     const event = await press('Tab');
 
     expect(event.defaultPrevented).toBe(false);
-    expect(checked()?.textContent?.trim()).toBe('Heslem');
+    expect(withOrdinarySpaces(checked()?.textContent)?.trim()).toBe('Heslem');
   });
 });

@@ -11,6 +11,7 @@ import { donateBandPhoto, DONATE_BAND_PHOTO_ID } from '../testing/donate-band-fi
 import { newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
 import { ProjectsPage } from './projects-page';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({ template: '<h1>Jinde</h1>' })
 class Elsewhere {}
@@ -97,13 +98,13 @@ describe('Given the Pomáháme tab', () => {
 
   function chips(page: HTMLElement): string[][] {
     return [...page.querySelectorAll<HTMLAnchorElement>('nav[aria-label="Roky"] a')].map((chip) => [
-      chip.textContent!.trim(),
+      withOrdinarySpaces(chip.textContent)!.trim(),
       chip.getAttribute('aria-current') ?? '',
     ]);
   }
 
   function text(element: Element | null): string {
-    return (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(element?.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   it('when it opens, then it names whom the foundation helped and sums every published story by kind, as plain figures', async () => {
@@ -167,11 +168,11 @@ describe('Given the Pomáháme tab', () => {
   it('when a link ends with its arrow, then the arrow never wraps to a line of its own', async () => {
     const page = await open('/projekty?rok=vse');
 
-    const arrows = [...page.querySelectorAll('.year-look-back, .year-all')].map(
-      (link) => link.querySelector('span[aria-hidden="true"]:last-child')?.textContent,
+    const arrows = [...page.querySelectorAll('.year-look-back, .year-all')].map((link) =>
+      withOrdinarySpaces(link.querySelector('span[aria-hidden="true"]:last-child')?.textContent),
     );
     expect(arrows.length).toBeGreaterThan(0);
-    expect(new Set(arrows)).toEqual(new Set(['\u00a0→']));
+    expect(new Set(arrows)).toEqual(new Set([' →']));
   });
 
   it('when a link asks for a year, then that chip is chosen, which the Aktuality tab relies on', async () => {
@@ -222,7 +223,7 @@ describe('Given the Pomáháme tab', () => {
     const every = page.querySelector<HTMLAnchorElement>('.grid + .year-all');
     expect(text(every)).toBe('Všechny roky: všechny příběhy →');
     expect(every?.getAttribute('href')).toBe('/projekty?rok=vse');
-    expect(page.querySelector('.year-title')?.textContent).toContain('2025');
+    expect(withOrdinarySpaces(page.querySelector('.year-title')?.textContent)).toContain('2025');
   });
 
   it('when every year is shown, then no link to every year is offered again', async () => {
@@ -338,7 +339,7 @@ describe('Given the Pomáháme tab', () => {
 
     const band = page.querySelector('app-donate-band')!;
     expect(text(band.querySelector('h2'))).toBe('Pomozte s dalším příběhem');
-    expect(band.querySelector('h2')?.textContent).toContain('s\u00a0dalším');
+    expect(withOrdinarySpaces(band.querySelector('h2')?.textContent)).toContain('s dalším');
     expect([...band.querySelectorAll('a')].map(text)).toEqual(['Přispět']);
     expect(band.querySelector('.ui-container')?.classList).toContain('band-container--wide');
     expect(band.querySelector('img')?.getAttribute('src')).toBe(
@@ -449,9 +450,9 @@ describe('Given the Pomáháme tab', () => {
   it('when it shows at any width, then the shared header names it with no label above the title, as the tab bar names the tab', async () => {
     const page = await open('/projekty');
 
-    expect(page.querySelector('.ui-intro h1.ui-intro__title')?.textContent?.trim()).toBe(
-      'Komu jsme pomohli',
-    );
+    expect(
+      withOrdinarySpaces(page.querySelector('.ui-intro h1.ui-intro__title')?.textContent)?.trim(),
+    ).toBe('Komu jsme pomohli');
     expect(page.querySelector('.ui-intro .ui-eyebrow')).toBeNull();
   });
 });
@@ -498,7 +499,7 @@ describe('Given Pomáháme kept while the visitor is on another tab', () => {
     await harness.fixture.whenStable();
     harness.detectChanges();
     return [...harness.routeNativeElement!.querySelectorAll('.tile-title')].map((title) =>
-      (title.textContent ?? '').trim(),
+      (withOrdinarySpaces(title.textContent) ?? '').trim(),
     );
   }
 
@@ -506,7 +507,7 @@ describe('Given Pomáháme kept while the visitor is on another tab', () => {
     await harness.navigateByUrl('/projekty');
 
     expect(await titles()).toEqual(['Děti s rakovinou']);
-    expect(harness.routeNativeElement!.textContent).not.toContain('Načítáme');
+    expect(withOrdinarySpaces(harness.routeNativeElement!.textContent)).not.toContain('Načítáme');
 
     answerStories([STORIES[1], STORIES[0]]);
     expect(await titles()).toEqual(['Sofinka', 'Děti s rakovinou']);

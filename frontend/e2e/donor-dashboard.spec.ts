@@ -659,7 +659,7 @@ test.describe('Given a signed-in donor on a computer', () => {
     await expect(card.locator('thead').first()).toHaveCSS('position', 'absolute');
     const row = card.locator('tbody tr').first();
     await expect(
-      row.getByRole('button', { name: /^Stáhnout PDF\s*, dar z 15\. 3\. 2026, 500\sKč$/ }),
+      row.getByRole('button', { name: /^Stáhnout PDF\s*, dar z\s15\. 3\. 2026, 500\sKč$/ }),
     ).toBeVisible();
     await expect(row.getByRole('cell', { name: 'Obecný příspěvek', exact: true })).toBeVisible();
     await expect(row.getByRole('cell', { name: 'Přijato', exact: true })).toBeVisible();

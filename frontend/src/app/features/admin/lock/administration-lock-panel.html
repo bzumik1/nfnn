@@ -18,17 +18,17 @@
     </h1>
     @if (online()) {
       <p class="lock-lead" i18n="@@admin.lock.lead">
-        Údaje správy jsou v tomto zařízení zašifrované. Zamykají se po 5 minutách mimo aplikaci a
-        při každém spuštění.
+        Údaje správy jsou v&nbsp;tomto zařízení zašifrované. Zamykají se po 5&nbsp;minutách mimo
+        aplikaci a&nbsp;při každém spuštění.
       </p>
     } @else if (passkeyUnlocks()) {
       <p class="lock-lead" i18n="@@admin.lock.offline">
-        Jste offline. Heslem a kódem odemknete správu, až budete připojeni. Přístupový klíč funguje
-        i bez připojení.
+        Jste offline. Heslem a&nbsp;kódem odemknete správu, až budete připojeni. Přístupový klíč
+        funguje i&nbsp;bez připojení.
       </p>
     } @else {
       <p class="lock-lead" i18n="@@admin.lock.offlineWithoutPasskey">
-        Jste offline. Heslem a kódem odemknete správu, až budete připojeni.
+        Jste offline. Heslem a&nbsp;kódem odemknete správu, až budete připojeni.
       </p>
     }
     <div class="lock-actions">
@@ -78,7 +78,7 @@
     }
     @if (nothingUnlocks()) {
       <p class="lock-note" i18n="@@admin.lock.nothing">
-        Na tomto zařízení správu odemknout nejde. Odhlaste se a přihlaste se znovu.
+        Na tomto zařízení správu odemknout nejde. Odhlaste se a&nbsp;přihlaste se znovu.
       </p>
     }
   } @else {
@@ -113,9 +113,9 @@
         </app-password-reveal>
       </app-form-field>
       <app-form-field
-        label="Kód z aplikace"
+        label="Kód z&nbsp;aplikace"
         i18n-label="@@admin.lock.code"
-        hint="Šest číslic z aplikace pro ověření"
+        hint="Šest číslic z&nbsp;aplikace pro ověření"
         i18n-hint="@@admin.lock.codeHint"
         [messages]="codeMessages"
       >
@@ -135,7 +135,7 @@
       </app-form-field>
       @if (!online()) {
         <p class="lock-note" i18n="@@admin.lock.password.offline">
-          Heslo a kód ověří server, takže je zadáte, až budete připojeni.
+          Heslo a&nbsp;kód ověří server, takže je zadáte, až budete připojeni.
         </p>
       }
       <button
@@ -170,6 +170,6 @@
     (click)="signOut()"
     i18n="@@admin.lock.signOut"
   >
-    Odhlásit se z tohoto zařízení
+    Odhlásit se z&nbsp;tohoto zařízení
   </button>
 </section>

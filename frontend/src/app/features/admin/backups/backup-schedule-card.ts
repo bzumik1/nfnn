@@ -58,7 +58,7 @@ export class BackupScheduleCard {
     if (schedule.applied === null) {
       return {
         text: $localize`:@@admin.backups.schedule.applied.unknownText:Plán se na serveru zatím neprojevil; obvykle to trvá do minuty. Když tato zpráva po obnovení stránky nezmizí, pošlete ji správci serveru.`,
-        tech: $localize`:@@admin.backups.schedule.applied.unknown:Kontejner záloh zatím nepotvrdil, že plán převzal; obvykle to trvá do minuty. Když hláška po obnovení stránky nezmizí, běží starší verze kontejneru: aktualizujte aplikaci v ZimaOS (Uložit v jejím nastavení).`,
+        tech: $localize`:@@admin.backups.schedule.applied.unknown:Kontejner záloh zatím nepotvrdil, že plán převzal; obvykle to trvá do minuty. Když hláška po obnovení stránky nezmizí, běží starší verze kontejneru: aktualizujte aplikaci v\u00a0ZimaOS (Uložit v\u00a0jejím nastavení).`,
       };
     }
     if (!samePlan(schedule, schedule.applied)) {

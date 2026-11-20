@@ -10,6 +10,7 @@ import { spayd } from '../../donations/spayd';
 import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
 import { drawsText } from '../../../shared/ui/qr-code/testing/branded-qr';
 import { DonatePage } from './donate-page';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given the Přispět page', () => {
   const donor = signal<Donor | null>(null);
@@ -67,7 +68,7 @@ describe('Given the Přispět page', () => {
 
     expect(
       Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('h1')).map((h) =>
-        h.textContent?.trim(),
+        withOrdinarySpaces(h.textContent)?.trim(),
       ),
     ).toEqual(['Přispějte na pomůcky pro děti']);
   });
@@ -87,9 +88,10 @@ describe('Given the Přispět page', () => {
       await open();
 
       expect(
-        (fixture.nativeElement as HTMLElement)
-          .querySelector('.before-pay')
-          ?.textContent?.replace(/\s+/g, ' ')
+        withOrdinarySpaces(
+          (fixture.nativeElement as HTMLElement).querySelector('.before-pay')?.textContent,
+        )
+          ?.replace(/\s+/g, ' ')
           .trim(),
       ).toBe('Platíte jako Jana Nováková, variabilní symbol 4242424242.');
     });

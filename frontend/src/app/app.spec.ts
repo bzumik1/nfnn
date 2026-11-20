@@ -8,6 +8,7 @@ import { LOGIN_DIALOG_LOADER, LoginDialogLoader } from './login-dialog-loader';
 import { ExternalNavigation } from './core/navigation/external-navigation';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { ReloadGuard } from './core/reload/reload-guard';
+import { withOrdinarySpaces } from '../testing/ordinary-spaces';
 
 describe('Given the App component', () => {
   beforeEach(async () => {
@@ -42,9 +43,9 @@ describe('Given the App component when no automatic reload is left', () => {
     );
     await fixture.whenStable();
 
-    expect((fixture.nativeElement.querySelector('main') as HTMLElement).textContent).toContain(
-      'Načíst znovu',
-    );
+    expect(
+      withOrdinarySpaces((fixture.nativeElement.querySelector('main') as HTMLElement).textContent),
+    ).toContain('Načíst znovu');
   });
 });
 
@@ -117,7 +118,9 @@ describe('Given the App component with the sign-in dialog not loaded yet', () =>
     expect(dialog.isOpen()).toBe(false);
     expect(report).toHaveBeenCalledWith('chunk-load', 'global', expect.any(TypeError));
     expect(
-      (fixture.nativeElement.querySelector('.chunk-load-bar') as HTMLElement).textContent,
+      withOrdinarySpaces(
+        (fixture.nativeElement.querySelector('.chunk-load-bar') as HTMLElement).textContent,
+      ),
     ).toContain('Načíst znovu');
   });
 

@@ -62,14 +62,14 @@
                 role="status"
                 i18n="@@donor.emailVerification.confirmed.passkeyText"
               >
-                Účet je připravený a jste přihlášeni. Teď si vytvořte přístupový klíč, kterým se
-                budete přihlašovat: zařízení vás požádá o otisk prstu, obličej nebo PIN.
+                Účet je připravený a&nbsp;jste přihlášeni. Teď si vytvořte přístupový klíč, kterým
+                se budete přihlašovat: zařízení vás požádá o&nbsp;otisk prstu, obličej nebo PIN.
               </p>
               @if (!passkeysSupported) {
                 <p class="ui-panel__lead" i18n="@@donor.emailVerification.passkey.unsupported">
-                  Tento prohlížeč přístupové klíče neumí. Klíč vytvoříte v části „Údaje a
-                  zabezpečení“ v aktuálním Safari, Chromu, Edgi nebo Firefoxu, nebo si tam nastavíte
-                  heslo.
+                  Tento prohlížeč přístupové klíče neumí. Klíč vytvoříte v&nbsp;části „Údaje
+                  a&nbsp;zabezpečení“ v&nbsp;aktuálním Safari, Chromu, Edgi nebo Firefoxu, nebo si
+                  tam nastavíte heslo.
                 </p>
               } @else {
                 @if (error()) {
@@ -94,7 +94,7 @@
               <button type="button" class="link-action" (click)="enterPortal()">
                 @if (returnsToDonation) {
                   <ng-container i18n="@@donor.emailVerification.passkey.laterDonate"
-                    >Pokračovat k příspěvku bez klíče</ng-container
+                    >Pokračovat k&nbsp;příspěvku bez klíče</ng-container
                   >
                 } @else {
                   <ng-container i18n="@@donor.emailVerification.passkey.later"
@@ -109,8 +109,8 @@
                   role="status"
                   i18n="@@donor.emailVerification.passkey.created"
                 >
-                  Přístupový klíč je uložený a příště se jím přihlásíte. Doporučujeme přidat v části
-                  „Údaje a zabezpečení“ ještě klíč v dalším zařízení.
+                  Přístupový klíč je uložený a&nbsp;příště se jím přihlásíte. Doporučujeme přidat
+                  v&nbsp;části „Údaje a&nbsp;zabezpečení“ ještě klíč v&nbsp;dalším zařízení.
                 </p>
               } @else if (returnsToDonation) {
                 <p
@@ -118,8 +118,8 @@
                   role="status"
                   i18n="@@donor.emailVerification.confirmed.donateText"
                 >
-                  Účet je připravený a jste přihlášeni. QR kód pro platbu už ponese váš variabilní
-                  symbol, takže dar uvedeme na potvrzení o daru.
+                  Účet je připravený a&nbsp;jste přihlášeni. QR kód pro platbu už ponese váš
+                  variabilní symbol, takže dar uvedeme na potvrzení o&nbsp;daru.
                 </p>
               } @else {
                 <p
@@ -127,8 +127,8 @@
                   role="status"
                   i18n="@@donor.emailVerification.confirmed.text"
                 >
-                  Účet je připravený a jste přihlášeni. Na přehledu najdete svůj variabilní symbol
-                  pro příspěvky.
+                  Účet je připravený a&nbsp;jste přihlášeni. Na přehledu najdete svůj variabilní
+                  symbol pro příspěvky.
                 </p>
               }
               <button
@@ -138,7 +138,7 @@
               >
                 @if (returnsToDonation) {
                   <ng-container i18n="@@donor.emailVerification.confirmed.donateAction"
-                    >Pokračovat k příspěvku</ng-container
+                    >Pokračovat k&nbsp;příspěvku</ng-container
                   >
                 } @else {
                   <ng-container i18n="@@donor.emailVerification.confirmed.action"
@@ -195,8 +195,8 @@
             <span class="ui-word">E-mail</span> odeslán
           </h1>
           <p class="ui-panel__lead" role="status" i18n="@@donor.emailVerification.requested.text">
-            Pokud účet s touto adresou čeká na potvrzení, poslali jsme na ni nový odkaz. Platí 24
-            hodin.
+            Pokud účet s&nbsp;touto adresou čeká na potvrzení, poslali jsme na ni nový odkaz. Platí
+            24&nbsp;hodin.
           </p>
           <p class="requested-hint" i18n="@@donor.emailVerification.requested.hint">
             E&#8209;mail nedorazil? Podívejte se do nevyžádané pošty.
@@ -223,8 +223,8 @@
               Odkaz je neplatný nebo vypršel
             </h1>
             <p class="ui-panel__lead" i18n="@@donor.emailVerification.invalid.text">
-              Odkaz lze použít jen jednou a platí 24 hodin. Zadejte e&#8209;mail z registrace a
-              pošleme vám nový.
+              Odkaz lze použít jen jednou a&nbsp;platí 24&nbsp;hodin. Zadejte e&#8209;mail
+              z&nbsp;registrace a&nbsp;pošleme vám nový.
             </p>
           } @else {
             <h1
@@ -237,8 +237,8 @@
               Odkaz je neúplný
             </h1>
             <p class="ui-panel__lead" i18n="@@donor.emailVerification.missingLink.text">
-              Otevřete prosím odkaz z e&#8209;mailu znovu, nebo zadejte e&#8209;mail z registrace a
-              pošleme vám nový.
+              Otevřete prosím odkaz z&nbsp;e&#8209;mailu znovu, nebo zadejte e&#8209;mail
+              z&nbsp;registrace a&nbsp;pošleme vám nový.
             </p>
           }
         </div>

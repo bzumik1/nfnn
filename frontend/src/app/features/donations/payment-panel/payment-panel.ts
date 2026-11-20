@@ -153,9 +153,9 @@ export class PaymentPanel {
   readonly layout = input<'stacked' | 'split'>('stacked');
 
   protected readonly presets: readonly AmountPreset[] = [
-    { amount: 1000, label: $localize`:@@home.donate.amount.preset1000:1 000 Kč` },
-    { amount: 500, label: $localize`:@@home.donate.amount.preset500:500 Kč` },
-    { amount: 100, label: $localize`:@@home.donate.amount.preset100:100 Kč` },
+    { amount: 1000, label: $localize`:@@home.donate.amount.preset1000:1 000\u00a0Kč` },
+    { amount: 500, label: $localize`:@@home.donate.amount.preset500:500\u00a0Kč` },
+    { amount: 100, label: $localize`:@@home.donate.amount.preset100:100\u00a0Kč` },
   ];
   protected readonly crowns = formatCrowns;
   protected readonly accountParts = splitBeforeBankCode;

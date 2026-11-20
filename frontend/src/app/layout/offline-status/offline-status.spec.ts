@@ -11,6 +11,7 @@ import { OFFLINE_AFTER_MS, PROBE_PATH } from '../../core/connectivity/connectivi
 import { connectivityInterceptor } from '../../core/connectivity/connectivity-interceptor';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { OfflineStatus } from './offline-status';
+import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
 const NOW = Date.parse('2026-11-05T11:30:00Z');
 const HOME_WRITTEN = new Date('2026-11-05T09:05:00Z');
@@ -53,14 +54,16 @@ describe('Given the offline status of the app', () => {
 
   const element = () => fixture.nativeElement as HTMLElement;
   const announced = () =>
-    element().querySelector('[aria-live="polite"]')?.textContent?.replace(/\s+/g, ' ').trim();
+    withOrdinarySpaces(element().querySelector('[aria-live="polite"]')?.textContent)
+      ?.replace(/\s+/g, ' ')
+      .trim();
   const pill = () =>
     Array.from(element().querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('Offline'),
+      withOrdinarySpaces(button.textContent)?.includes('Offline'),
     );
   const sheet = () => document.querySelector('dialog[open]') as HTMLDialogElement | null;
   const textOf = (node: Element | null | undefined) =>
-    node?.textContent?.replace(/\s+/g, ' ').trim();
+    withOrdinarySpaces(node?.textContent)?.replace(/\s+/g, ' ').trim();
   const sheetButton = (text: string) =>
     Array.from(sheet()?.querySelectorAll('button') ?? []).find(
       (button) => textOf(button) === text,

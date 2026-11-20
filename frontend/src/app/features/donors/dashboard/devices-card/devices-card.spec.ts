@@ -9,6 +9,7 @@ import { DonorNotifiedDevices } from '../../../operations/donor-notified-devices
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { deviceNameInSentence } from './device-labels';
 import { DevicesCard } from './devices-card';
+import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 function expectLockedInPlace(button: HTMLButtonElement): void {
   expect(button.disabled).toBe(false);
@@ -114,7 +115,7 @@ describe("Given a donor's signed-in devices card", () => {
   }
 
   function text(node: Element | null): string {
-    return (node?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(node?.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   async function settle(): Promise<void> {
@@ -176,8 +177,8 @@ describe("Given a donor's signed-in devices card", () => {
     });
 
     it('then the dot before the kind of sign-in is bound to the date before it, so a wrapped line never starts with it', () => {
-      expect(rows()[0].querySelector('.device-sign-in')?.textContent).toMatch(
-        /2026\u00a0· zapamatované přihlášení/,
+      expect(withOrdinarySpaces(rows()[0].querySelector('.device-sign-in')?.textContent)).toMatch(
+        /2026 · zapamatované přihlášení/,
       );
     });
 
@@ -327,7 +328,9 @@ describe("Given a donor's signed-in devices card", () => {
       expect(announcers(yes)).toEqual([]);
       expect(element('.devices-status')).toBe(status);
       expect(text(status)).toBe('Odhlašujeme…');
-      expect(status.querySelector('.visually-hidden')?.textContent?.trim()).toBe('Odhlašujeme…');
+      expect(
+        withOrdinarySpaces(status.querySelector('.visually-hidden')?.textContent)?.trim(),
+      ).toBe('Odhlašujeme…');
       http
         .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
         .flush(null, { status: 204, statusText: 'No Content' });

@@ -4,7 +4,7 @@ describe('Given a backup plan', () => {
   const plan = { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:30' };
 
   it('when it is described, then the times lose the leading zero and the day reads in Czech', () => {
-    expect(describePlan(plan)).toBe('denní záloha 3:00, zkušební obnova v neděli 4:30');
+    expect(describePlan(plan)).toBe('denní záloha 3:00, zkušební obnova v\u00a0neděli 4:30');
     expect(describePlan({ backupTime: '23:15', testRestoreDay: 3, testRestoreTime: '00:05' })).toBe(
       'denní záloha 23:15, zkušební obnova ve středu 0:05',
     );

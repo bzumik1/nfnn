@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { PaymentDetailsStore } from '../../donations/payment-details-store';
 import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
 import { AccountingDetails } from './accounting-details';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 describe('Given the details an accountant needs in the contact section', () => {
   let fixture: ComponentFixture<AccountingDetails>;
@@ -35,7 +36,11 @@ describe('Given the details an accountant needs in the contact section', () => {
   }
 
   function text(element: Element | null): string {
-    return element?.textContent?.replace(/[^\S\u00a0]+/g, ' ').trim() ?? '';
+    return (
+      withOrdinarySpaces(element?.textContent)
+        ?.replace(/[^\S\u00a0]+/g, ' ')
+        .trim() ?? ''
+    );
   }
 
   function root(): HTMLElement {
@@ -68,11 +73,8 @@ describe('Given the details an accountant needs in the contact section', () => {
       expect(rows()).toEqual([
         ['Název', 'Nová naděje - nadační fond'],
         ['IČO', '27278794'],
-        ['Sídlo', 'Jiráskova 436, 473\u00a001 Nový\u00a0Bor'],
-        [
-          'Zápis',
-          'nadační rejstřík vedený Krajským soudem v\u00a0Ústí\u00a0nad\u00a0Labem, oddíl\u00a0N, vložka\u00a078',
-        ],
+        ['Sídlo', 'Jiráskova 436, 473 01 Nový Bor'],
+        ['Zápis', 'nadační rejstřík vedený Krajským soudem v Ústí nad Labem, oddíl N, vložka 78'],
         ['Číslo účtu', '5544332217/2010'],
         ['IBAN', 'CZ26 2010 0000 0055 4433 2217'],
       ]);
@@ -94,7 +96,7 @@ describe('Given the details an accountant needs in the contact section', () => {
 
     it('then a line under the details says how a company gets its receipt', () => {
       expect(text(root().querySelector('.accounting-note'))).toBe(
-        'Potvrzení o\u00a0daru na firmu získáte, když si při registraci zvolíte „Firma“ a\u00a0vyplníte\u00a0IČO.',
+        'Potvrzení o daru na firmu získáte, když si při registraci zvolíte „Firma“ a vyplníte IČO.',
       );
     });
   });

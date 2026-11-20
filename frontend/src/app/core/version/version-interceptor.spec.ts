@@ -143,7 +143,7 @@ describe('Given the version interceptor', () => {
         expect(failure).toBeInstanceOf(HttpErrorResponse);
         expect(problemTypeEndsWith(failure, UPDATE_REQUIRED)).toBe(true);
         expect(describeProblem(failure, 'Obecná chyba.')).toBe(
-          'Web mezitím dostal novou verzi. Nic jsme neodeslali. Načtěte stránku znovu a zkuste to ještě jednou.',
+          'Web mezitím dostal novou verzi. Nic jsme neodeslali. Načtěte stránku znovu a\u00a0zkuste to ještě jednou.',
         );
       });
     }

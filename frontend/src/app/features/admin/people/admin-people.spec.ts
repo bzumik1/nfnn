@@ -32,6 +32,7 @@ import {
 } from '../device-copy/testing/opened-copy';
 import { person as heldPerson } from '../../content/testing/people-fixtures';
 import { KeptAdministrationAnswers } from '../kept-administration-answers';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const PEOPLE_URL = '/api/admin/content/people';
 const NOTE_VERSION = '00000000000000a1';
@@ -90,7 +91,7 @@ function element<T extends HTMLElement>(fixture: ComponentFixture<unknown>, sele
 }
 
 function text(fixture: ComponentFixture<unknown>, selector: string): string {
-  return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+  return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -165,13 +166,13 @@ function badges(fixture: ComponentFixture<unknown>): string[] {
     fixture.nativeElement.querySelectorAll(
       '.person-row:first-child .person-badges li',
     ) as NodeListOf<HTMLElement>,
-  ).map((badge) => badge.textContent?.trim() ?? '');
+  ).map((badge) => withOrdinarySpaces(badge.textContent)?.trim() ?? '');
 }
 
 function rows(fixture: ComponentFixture<unknown>): string[] {
   return Array.from(
     fixture.nativeElement.querySelectorAll('.person-name') as NodeListOf<HTMLElement>,
-  ).map((name) => name.textContent?.trim() ?? '');
+  ).map((name) => withOrdinarySpaces(name.textContent)?.trim() ?? '');
 }
 
 const ADAM = person({
@@ -261,7 +262,9 @@ describe('Given an administrator and no people of the foundation yet', () => {
     await submit(fixture, '#person-editor form');
 
     expect(element(fixture, '#person-fund-email').getAttribute('aria-invalid')).toBe('true');
-    expect(fixture.nativeElement.textContent).toContain('Zadejte e-mail ve tvaru jana@example.cz.');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
+      'Zadejte e-mail ve tvaru jana@example.cz.',
+    );
     http.expectNone(PEOPLE_URL);
   });
 
@@ -270,7 +273,9 @@ describe('Given an administrator and no people of the foundation yet', () => {
     await submit(fixture, '#person-editor form');
 
     expect(element(fixture, '#person-name').getAttribute('aria-invalid')).toBe('true');
-    expect(fixture.nativeElement.textContent).toContain('Vyplňte prosím jméno.');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
+      'Vyplňte prosím jméno.',
+    );
     http.expectNone(PEOPLE_URL);
   });
 
@@ -415,7 +420,7 @@ describe('Given an administrator and two people of the foundation', () => {
     expect(thumbs[0].querySelector('img')?.getAttribute('src')).toBe(
       `/api/content/media/${PORTRAIT_ID}?w=480`,
     );
-    expect(thumbs[1].textContent?.trim()).toBe('AV');
+    expect(withOrdinarySpaces(thumbs[1].textContent)?.trim()).toBe('AV');
     expect(thumbs[1].getAttribute('aria-hidden')).toBe('true');
   });
 
@@ -886,7 +891,9 @@ describe('Given an administrator whose check of who signs the receipts fails', (
     expect(text(fixture, '.receipt-part [role="alert"]:not(:empty)')).toContain(
       'Nepodařilo se zjistit, kdo podepisuje potvrzení.',
     );
-    expect(fixture.nativeElement.textContent).not.toContain('nikdo nepodepisuje');
+    expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain(
+      'nikdo nepodepisuje',
+    );
     expect(fixture.nativeElement.querySelector('#person-signs-receipts')).toBeNull();
     expect(findButton(fixture, 'Odebrat osobu z webu')?.disabled ?? true).toBe(true);
   });
@@ -895,7 +902,9 @@ describe('Given an administrator whose check of who signs the receipts fails', (
     await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
 
     await press(fixture, 'Zjistit znovu');
-    expect(document.activeElement?.textContent?.trim()).toBe('Na potvrzení o daru');
+    expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe(
+      'Na potvrzení o daru',
+    );
     http.expectOne(SIGNATORY_URL).flush(receiptSignatory({ personId: PERSON_ID }));
     await settle(fixture);
 
@@ -978,8 +987,12 @@ describe('Given an administrator and people of the foundation with signatures', 
 
     expect(ink.getAttribute('src')).toBe(`/api/content/media/${SIGNATURE_ID}?w=480`);
     expect(ink.getAttribute('alt')).toBe('Podpis: Eva Vzorová');
-    expect(eva.querySelector('.person-signatures figcaption')?.textContent?.trim()).toBe('Podpis');
-    expect(eva.querySelector('.person-badges')?.textContent).not.toContain('Podpis');
+    expect(
+      withOrdinarySpaces(eva.querySelector('.person-signatures figcaption')?.textContent)?.trim(),
+    ).toBe('Podpis');
+    expect(withOrdinarySpaces(eva.querySelector('.person-badges')?.textContent)).not.toContain(
+      'Podpis',
+    );
     expect(eva.querySelector('.person-signature--receipt')).toBeNull();
     expect(adam.querySelector('.person-signatures')).toBeNull();
   });
@@ -1067,8 +1080,10 @@ describe('Given an administrator and the texts of the people page saved by someo
     await settle(fixture);
 
     const dialog = element(fixture, 'app-changed-meanwhile-dialog dialog');
-    expect(dialog.textContent).toContain('Zatímco jste měli formulář otevřený');
-    expect(dialog.textContent).toContain('Novější verze je z 12.\u00a011. 2026 9:05.');
+    expect(withOrdinarySpaces(dialog.textContent)).toContain('Zatímco jste měli formulář otevřený');
+    expect(withOrdinarySpaces(dialog.textContent)).toContain(
+      'Novější verze je z 12. 11. 2026 9:05.',
+    );
     expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe(
       'Děkujeme všem dárcům.',
     );
@@ -1244,9 +1259,9 @@ describe('Given an administrator writing the texts of the people page on a devic
     it('then the offer said so, and saving asks first instead of overwriting silently', async () => {
       await submit(fixture, 'form:has(#founders-note)');
       http.expectNone(`${PEOPLE_URL}/note`);
-      expect(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent).toContain(
-        'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
-      );
+      expect(
+        withOrdinarySpaces(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent),
+      ).toContain('Od chvíle, kdy jste na tomto zařízení začali s úpravami');
 
       button(fixture, 'Uložit svou verzi místo novější').click();
       await settle(fixture);
@@ -1350,9 +1365,9 @@ describe('Given an administrator writing the texts of the people page on a devic
     await submit(fixture, 'form:has(#people-footnote)');
 
     http.expectNone(`${PEOPLE_URL}/footnote`);
-    expect(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent).toContain(
-      'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
-    );
+    expect(
+      withOrdinarySpaces(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent),
+    ).toContain('Od chvíle, kdy jste na tomto zařízení začali s úpravami');
   });
 });
 

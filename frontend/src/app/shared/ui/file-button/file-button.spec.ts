@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FileButton } from './file-button';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
   imports: [FileButton],
@@ -39,7 +40,7 @@ describe('Given a file button', () => {
   it('when it shows, then the file field is named by the visible button text and keeps its hint', () => {
     const label = fixture.nativeElement.querySelector(`label[for="photo"]`) as HTMLLabelElement;
 
-    expect(label.textContent?.trim()).toBe('Nahrát fotku');
+    expect(withOrdinarySpaces(label.textContent)?.trim()).toBe('Nahrát fotku');
     expect(input().id).toBe('photo');
     expect(input().accept).toBe('image/png');
     expect(input().getAttribute('aria-describedby')).toBe('photo-hint');
@@ -69,7 +70,7 @@ describe('Given a file button', () => {
     await fixture.whenStable();
     const label = fixture.nativeElement.querySelector(`label[for="photo"]`) as HTMLLabelElement;
 
-    expect(label.textContent?.trim()).toBe('Nahrát fotku');
+    expect(withOrdinarySpaces(label.textContent)?.trim()).toBe('Nahrát fotku');
     expect(label.classList).toContain('ui-list__row');
     expect(label.classList).not.toContain('ui-button');
   });

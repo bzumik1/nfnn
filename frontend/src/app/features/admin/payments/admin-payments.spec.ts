@@ -26,6 +26,7 @@ import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-
 import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
 import { FORCED_REFRESH_GAP_MS } from '../device-copy/administration-reads';
 import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const PAYMENTS_URL = '/api/admin/donations/payments';
 const DONORS_URL = '/api/admin/donations/donors';
@@ -92,14 +93,14 @@ describe('Given an administrator on the bank payments page', () => {
   }
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
 
   function joinedText(node: Node): string {
     if (node.nodeType === Node.TEXT_NODE) {
-      return node.textContent ?? '';
+      return withOrdinarySpaces(node.textContent) ?? '';
     }
     if (node instanceof Element && node.classList.contains('visually-hidden')) {
       return '';
@@ -118,7 +119,7 @@ describe('Given an administrator on the bank payments page', () => {
   }
 
   function accessibleName(element: Element): string {
-    return (element.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(element.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function button(name: string): HTMLButtonElement {
@@ -127,7 +128,9 @@ describe('Given an administrator on the bank payments page', () => {
     );
     const found = buttons.find((candidate) => rowText(candidate) === name);
     if (!found) {
-      throw new Error(`No button "${name}" among ${buttons.map((b) => b.textContent?.trim())}`);
+      throw new Error(
+        `No button "${name}" among ${buttons.map((b) => withOrdinarySpaces(b.textContent)?.trim())}`,
+      );
     }
     return found;
   }
@@ -337,7 +340,9 @@ describe('Given an administrator on the bank payments page', () => {
       );
       expect(document.activeElement).toBe(element('#payments-title'));
       const donorLink = element<HTMLAnchorElement>('.donor-link a');
-      expect(donorLink.textContent?.trim()).toBe('Otevřít kartu dárce Jana Nováková');
+      expect(withOrdinarySpaces(donorLink.textContent)?.trim()).toBe(
+        'Otevřít kartu dárce Jana Nováková',
+      );
       expect(donorLink.getAttribute('href')).toBe(
         '/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369',
       );
@@ -403,7 +408,7 @@ describe('Given an administrator on the bank payments page', () => {
       );
       await settle();
 
-      expect(document.querySelector('dialog')?.textContent).toContain(
+      expect(withOrdinarySpaces(document.querySelector('dialog')?.textContent)).toContain(
         'automatické párování plateb z banky',
       );
       button('Načíst aktuální stav').click();
@@ -645,7 +650,9 @@ describe('Given an administrator on the bank payments page', () => {
       lateAnswers('Nováková');
       await settle();
 
-      expect(document.querySelector('dialog')?.textContent).toContain('Svoboda Petr');
+      expect(withOrdinarySpaces(document.querySelector('dialog')?.textContent)).toContain(
+        'Svoboda Petr',
+      );
       expect(document.querySelectorAll('dialog .pair-result')).toHaveLength(0);
     });
 
@@ -785,8 +792,8 @@ describe('Given an administrator on the bank payments page', () => {
     }
 
     it("then the dialog names the payment, searches by the first word of the sender's name at once and focuses the search", () => {
-      expect(dialog().textContent).toContain('500\u00a0Kč z 10.\u00a010. 2026');
-      expect(dialog().textContent).toContain('Nováková Jana');
+      expect(withOrdinarySpaces(dialog().textContent)).toContain('500 Kč z 10. 10. 2026');
+      expect(withOrdinarySpaces(dialog().textContent)).toContain('Nováková Jana');
       expect(rowText(dialog().querySelector('.pair-payment')!)).toContain(
         '2900233333/2010 · Fio banka',
       );
@@ -797,7 +804,7 @@ describe('Given an administrator on the bank payments page', () => {
         'Jana Nováková VS 4821937560 · jana@example.cz',
       ]);
       expect((button('Přiřadit') as HTMLButtonElement).disabled).toBe(true);
-      expect(dialog().textContent).not.toContain('Ověření účtu');
+      expect(withOrdinarySpaces(dialog().textContent)).not.toContain('Ověření účtu');
     });
 
     it('then typing searches once the typing pauses, a chosen donor enables the button and pairing reports success', async () => {
@@ -859,9 +866,11 @@ describe('Given an administrator on the bank payments page', () => {
       http.expectOne(`${DONORS_URL}?query=xyz`).flush({ items: [] });
       answerAccounts('xyz', []);
       await settle();
-      expect(dialog().querySelector('[role="status"]:not(:empty)')?.textContent?.trim()).toBe(
-        'Žádný dárce neodpovídá.',
-      );
+      expect(
+        withOrdinarySpaces(
+          dialog().querySelector('[role="status"]:not(:empty)')?.textContent,
+        )?.trim(),
+      ).toBe('Žádný dárce neodpovídá.');
 
       search('jana');
       http.expectOne(`${DONORS_URL}?query=jana`).flush({ items: [foundDonor()] });
@@ -883,9 +892,11 @@ describe('Given an administrator on the bank payments page', () => {
       await settle();
 
       expect(document.querySelector('dialog')).not.toBeNull();
-      expect(dialog().querySelector('[role="alert"]:not(:empty)')?.textContent?.trim()).toBe(
-        'Platba už je přiřazená. Obnovte prosím seznam.',
-      );
+      expect(
+        withOrdinarySpaces(
+          dialog().querySelector('[role="alert"]:not(:empty)')?.textContent,
+        )?.trim(),
+      ).toBe('Platba už je přiřazená. Obnovte prosím seznam.');
     });
 
     it('when someone else changed the payment meanwhile, then the pairing names the version read, the sheet says so and reloading reads the list again', async () => {
@@ -908,8 +919,10 @@ describe('Given an administrator on the bank payments page', () => {
       await settle();
 
       const sheet = document.querySelector('dialog');
-      expect(sheet?.querySelector('h2')?.textContent?.trim()).toBe('Mezitím se to změnilo');
-      expect(sheet?.textContent).toContain('Vaši změnu jsme proto neprovedli');
+      expect(withOrdinarySpaces(sheet?.querySelector('h2')?.textContent)?.trim()).toBe(
+        'Mezitím se to změnilo',
+      );
+      expect(withOrdinarySpaces(sheet?.textContent)).toContain('Vaši změnu jsme proto neprovedli');
       expect(sheet?.querySelector('.pair-result')).toBeNull();
 
       button('Načíst aktuální stav').click();
@@ -1074,14 +1087,16 @@ describe('Given an administrator on the bank payments page', () => {
       expect(element('#payments-from').getAttribute('aria-describedby')).toBe(
         'payments-from-chosen',
       );
-      expect(element('#payments-from-chosen').textContent?.trim()).toBe(
-        'Vybraný den: 1.\u00a01. 2026.',
+      expect(withOrdinarySpaces(element('#payments-from-chosen').textContent)?.trim()).toBe(
+        'Vybraný den: 1. 1. 2026.',
       );
       expect(element('#payments-to').getAttribute('aria-describedby')).toBe('payments-to-chosen');
-      expect(element('#payments-to-chosen').textContent?.trim()).toBe(
-        'Vybraný den: 31.\u00a03. 2026.',
+      expect(withOrdinarySpaces(element('#payments-to-chosen').textContent)?.trim()).toBe(
+        'Vybraný den: 31. 3. 2026.',
       );
-      expect(element('.admin-tab.is-active').textContent?.trim()).toBe('Přiřazené');
+      expect(withOrdinarySpaces(element('.admin-tab.is-active').textContent)?.trim()).toBe(
+        'Přiřazené',
+      );
       expect(text('.payments-count')).toBe('Nalezena 1 platba.');
     });
   });
@@ -1237,7 +1252,7 @@ describe('Given an administrator on the bank payments page where lists show as r
 
   function spaced(node: Node): string {
     if (node.nodeType === Node.TEXT_NODE) {
-      return node.textContent ?? '';
+      return withOrdinarySpaces(node.textContent) ?? '';
     }
     return Array.from(node.childNodes).map(spaced).join(' ');
   }
@@ -1599,7 +1614,7 @@ describe('Given an administrator on the bank payments page with the administrati
   afterEach(() => http.verify());
 
   function text(selector: string): string {
-    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+    return (withOrdinarySpaces(fixture.nativeElement.querySelector(selector)?.textContent) ?? '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -1607,7 +1622,7 @@ describe('Given an administrator on the bank payments page with the administrati
   function visibleWords(element: Element): string {
     const copy = element.cloneNode(true) as Element;
     copy.querySelectorAll('.visually-hidden').forEach((hidden) => hidden.remove());
-    return (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(copy.textContent) ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function button(name: string): HTMLButtonElement {
@@ -1635,7 +1650,9 @@ describe('Given an administrator on the bank payments page with the administrati
       fixture.detectChanges();
 
       const dialog = document.querySelector('dialog[open]') as HTMLDialogElement;
-      expect(dialog.querySelector('.pair-result')?.textContent).toContain('Jana Nováková');
+      expect(withOrdinarySpaces(dialog.querySelector('.pair-result')?.textContent)).toContain(
+        'Jana Nováková',
+      );
       (dialog.querySelector('input[type="radio"]') as HTMLInputElement).click();
       await fixture.whenStable();
       fixture.detectChanges();

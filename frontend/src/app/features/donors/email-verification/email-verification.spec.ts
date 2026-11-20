@@ -18,6 +18,7 @@ import {
   samplePasskey,
 } from '../../../core/auth/testing/donor-fixtures';
 import { EmailVerification } from './email-verification';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 function normalized(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
@@ -99,8 +100,10 @@ describe('Given the page that confirms the e-mail from the registration link', (
       const request = http.expectOne('/api/donors/auth/email-verification/confirm');
       expect(request.request.method).toBe('POST');
       expect(request.request.body).toEqual({ token: 'abc', session: 'BROWSER' });
-      expect(heading().textContent).toContain('Potvrzujeme váš e-mail');
-      expect(element('[role="status"]').textContent).toContain('Chvilku strpení');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('Potvrzujeme váš e-mail');
+      expect(withOrdinarySpaces(element('[role="status"]').textContent)).toContain(
+        'Chvilku strpení',
+      );
       request.flush(authResponse('token-1'));
     });
 
@@ -109,8 +112,10 @@ describe('Given the page that confirms the e-mail from the registration link', (
 
       expect(store.signedIn()).toBe(true);
       expect(store.donor()?.email).toBe('jana@example.cz');
-      expect(heading().textContent).toContain('E-mail je potvrzený');
-      expect(element('[role="status"]').textContent).toContain('jste přihlášeni');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('E-mail je potvrzený');
+      expect(withOrdinarySpaces(element('[role="status"]').textContent)).toContain(
+        'jste přihlášeni',
+      );
       expect(document.activeElement).toBe(heading());
 
       await click('.ui-button--primary');
@@ -130,8 +135,10 @@ describe('Given the page that confirms the e-mail from the registration link', (
       );
 
       expect(store.signedIn()).toBe(false);
-      expect(heading().textContent).toContain('Odkaz je neplatný nebo vypršel');
-      expect(element('.ui-panel__lead').textContent).toContain('platí 24 hodin');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('Odkaz je neplatný nebo vypršel');
+      expect(withOrdinarySpaces(element('.ui-panel__lead').textContent)).toContain(
+        'platí 24 hodin',
+      );
       expect(document.activeElement).toBe(heading());
 
       await fillIn('#verification-email', ' jana@example.cz ');
@@ -139,14 +146,18 @@ describe('Given the page that confirms the e-mail from the registration link', (
       const request = http.expectOne('/api/donors/auth/email-verification/request');
       expect(request.request.body).toEqual({ email: 'jana@example.cz' });
       expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(true);
-      expect(element('.ui-button--primary').textContent).toContain('Odesíláme…');
+      expect(withOrdinarySpaces(element('.ui-button--primary').textContent)).toContain(
+        'Odesíláme…',
+      );
       request.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(heading().textContent).toContain('E-mail odeslán');
-      expect(element('[role="status"]').textContent).toContain('poslali jsme na ni nový odkaz');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('E-mail odeslán');
+      expect(withOrdinarySpaces(element('[role="status"]').textContent)).toContain(
+        'poslali jsme na ni nový odkaz',
+      );
       expect(element('form')).toBeNull();
-      expect(element('.ui-status').textContent).toContain(
+      expect(withOrdinarySpaces(element('.ui-status').textContent)).toContain(
         'E\u2011mail nedorazil? Podívejte se do nevyžádané pošty.',
       );
       expect(element<HTMLAnchorElement>('a.ui-button--primary').getAttribute('href')).toBe('/');
@@ -159,7 +170,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
         'Bad Request',
       );
 
-      expect(element('.already-confirmed').textContent).toContain(
+      expect(withOrdinarySpaces(element('.already-confirmed').textContent)).toContain(
         'Už jste e\u2011mail potvrdili? Pak se stačí přihlásit.',
       );
       await click('.already-confirmed + .ui-button');
@@ -177,7 +188,9 @@ describe('Given the page that confirms the e-mail from the registration link', (
       await submitRequest();
 
       http.expectNone('/api/donors/auth/email-verification/request');
-      expect(element('#verification-email-error').textContent).toContain('Vyplňte prosím e-mail.');
+      expect(withOrdinarySpaces(element('#verification-email-error').textContent)).toContain(
+        'Vyplňte prosím e-mail.',
+      );
     });
 
     it('and too many links were asked for from this address, then the form says to wait an hour', async () => {
@@ -194,21 +207,25 @@ describe('Given the page that confirms the e-mail from the registration link', (
       await settle();
 
       expect(element('.ui-field-error').getAttribute('role')).toBe('alert');
-      expect(element('.ui-field-error').textContent).toContain('Zkuste to prosím za hodinu.');
+      expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
+        'Zkuste to prosím za hodinu.',
+      );
       expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(false);
     });
 
     it('and the server fails, then the failed panel shows a generic error and retries on request', async () => {
       await answerConfirm(null, 502, 'Bad Gateway');
 
-      expect(heading().textContent).toContain('E-mail se nepodařilo potvrdit');
-      expect(element('[role="alert"]').textContent).toContain('Spojení se serverem se nepodařilo.');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('E-mail se nepodařilo potvrdit');
+      expect(withOrdinarySpaces(element('[role="alert"]').textContent)).toContain(
+        'Spojení se serverem se nepodařilo.',
+      );
 
       await click('.ui-button--primary');
 
-      expect(heading().textContent).toContain('Potvrzujeme váš e-mail');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('Potvrzujeme váš e-mail');
       await answerConfirm(authResponse('token-1') as unknown as Record<string, unknown>, 200, 'OK');
-      expect(heading().textContent).toContain('E-mail je potvrzený');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('E-mail je potvrzený');
     });
 
     it('and the donor leaves the page before the answer arrives, then the late answer is dropped silently', async () => {
@@ -235,10 +252,12 @@ describe('Given the page that confirms the e-mail from the registration link', (
       await answerConfirm(authResponse('token-1') as unknown as Record<string, unknown>, 200, 'OK');
 
       expect(store.signedIn()).toBe(true);
-      expect(element('[role="status"]').textContent).toContain(
+      expect(withOrdinarySpaces(element('[role="status"]').textContent)).toContain(
         'QR kód pro platbu už ponese váš variabilní symbol',
       );
-      expect(element('.ui-button--primary').textContent?.trim()).toBe('Pokračovat k příspěvku');
+      expect(withOrdinarySpaces(element('.ui-button--primary').textContent)?.trim()).toBe(
+        'Pokračovat k příspěvku',
+      );
 
       await click('.ui-button--primary');
 
@@ -249,7 +268,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
       await answerConfirm(authResponse('token-1') as unknown as Record<string, unknown>, 200, 'OK');
 
       const overview = element<HTMLAnchorElement>('a.overview-link');
-      expect(overview.textContent?.trim()).toBe('Přejít na můj přehled');
+      expect(withOrdinarySpaces(overview.textContent)?.trim()).toBe('Přejít na můj přehled');
       expect(overview.getAttribute('href')).toBe('/darce/prehled');
       expect(overview.classList).not.toContain('ui-button--primary');
     });
@@ -302,14 +321,21 @@ describe('Given the page that confirms the e-mail from the registration link', (
       await settle();
 
       expect(store.signedIn()).toBe(false);
-      expect(heading().textContent).toContain('E-mail je změněný');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('E-mail je změněný');
       expect(document.activeElement).toBe(heading());
-      const status = element('[role="status"]').textContent?.replace(/\s+/g, ' ');
+      const status = withOrdinarySpaces(element('[role="status"]').textContent)?.replace(
+        /\s+/g,
+        ' ',
+      );
       expect(status).toContain('Nová adresa je potvrzená.');
       expect(status).toContain('Přihlaste se jí');
       expect(status).not.toContain('jste přihlášeni');
-      expect(harness.routeNativeElement!.textContent).not.toContain('přístupový klíč');
-      expect(element('.ui-button--primary').textContent?.trim()).toBe('Přihlásit se');
+      expect(withOrdinarySpaces(harness.routeNativeElement!.textContent)).not.toContain(
+        'přístupový klíč',
+      );
+      expect(withOrdinarySpaces(element('.ui-button--primary').textContent)?.trim()).toBe(
+        'Přihlásit se',
+      );
 
       await click('.ui-button--primary');
 
@@ -347,7 +373,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
       await settle();
 
       expect(store.signedIn()).toBe(false);
-      expect(heading().textContent).toContain('E-mail je změněný');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('E-mail je změněný');
     });
   });
 
@@ -368,7 +394,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
 
     it('then nothing is sent and the page says the link is incomplete and offers a new one', async () => {
       http.expectNone('/api/donors/auth/email-verification/confirm');
-      expect(heading().textContent).toContain('Odkaz je neúplný');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('Odkaz je neúplný');
 
       await fillIn('#verification-email', 'jana@example.cz');
       await submitRequest();
@@ -377,7 +403,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
         .flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 
-      expect(heading().textContent).toContain('E-mail odeslán');
+      expect(withOrdinarySpaces(heading().textContent)).toContain('E-mail odeslán');
     });
   });
 });
@@ -420,8 +446,12 @@ describe('Given the registration link of a donor who chose a passkey instead of 
   }
 
   it('when the e-mail is confirmed, then the page asks to create the first passkey right away', () => {
-    expect(element('[role="status"]').textContent).toContain('vytvořte přístupový klíč');
-    expect(element('.ui-button--primary').textContent).toContain('Vytvořit přístupový klíč');
+    expect(withOrdinarySpaces(element('[role="status"]').textContent)).toContain(
+      'vytvořte přístupový klíč',
+    );
+    expect(withOrdinarySpaces(element('.ui-button--primary').textContent)).toContain(
+      'Vytvořit přístupový klíč',
+    );
   });
 
   it('when the donor creates the passkey, then it is saved without any confirmation and the page leads on', async () => {
@@ -438,8 +468,10 @@ describe('Given the registration link of a donor who chose a passkey instead of 
     added.flush(samplePasskey());
     await settle();
 
-    expect(element('[role="status"]').textContent).toContain('Přístupový klíč je uložený');
-    expect(normalized(element('[role="status"]').textContent ?? '')).toContain(
+    expect(withOrdinarySpaces(element('[role="status"]').textContent)).toContain(
+      'Přístupový klíč je uložený',
+    );
+    expect(normalized(withOrdinarySpaces(element('[role="status"]').textContent) ?? '')).toContain(
       'Doporučujeme přidat v části „Údaje a zabezpečení“ ještě klíč v dalším zařízení.',
     );
     element<HTMLButtonElement>('.ui-button--primary').click();
@@ -453,7 +485,7 @@ describe('Given the registration link of a donor who chose a passkey instead of 
     http.expectOne('/api/donors/me/passkeys/options').flush(passkeyCreationOptions());
     await vi.waitFor(() => expect(element('.ui-field-error')).not.toBeNull());
 
-    expect(element('.ui-field-error').textContent).toContain(
+    expect(withOrdinarySpaces(element('.ui-field-error').textContent)).toContain(
       'jde to i později v části „Údaje a zabezpečení“.',
     );
     element<HTMLButtonElement>('.link-action').click();
@@ -492,7 +524,7 @@ describe('Given the registration link from the donate section of a donor who cho
 
   it('when the donor skips the key, then the page leads back to the donate section', () => {
     const later = harness.routeNativeElement!.querySelector('.link-action') as HTMLButtonElement;
-    expect(later.textContent?.trim()).toBe('Pokračovat k příspěvku bez klíče');
+    expect(withOrdinarySpaces(later.textContent)?.trim()).toBe('Pokračovat k příspěvku bez klíče');
 
     later.click();
 

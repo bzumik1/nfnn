@@ -43,7 +43,7 @@ export class BackupKeyPanel {
 
   protected readonly words = computed(() => backupKeyWords(this.key()));
   protected readonly copied = computed(() => this.words().join(' '));
-  protected readonly what = $localize`:@@operations.backupKey.copyWhat:slova klíče k zálohám`;
+  protected readonly what = $localize`:@@operations.backupKey.copyWhat:slova klíče k\u00a0zálohám`;
 
   protected download(): void {
     saveBlob({

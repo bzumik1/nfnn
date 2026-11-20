@@ -19,7 +19,7 @@
             Web zatím neodpovídá
           </h1>
           <p class="ui-panel__lead" role="alert" i18n="@@operations.setup.error.text">
-            Po instalaci se web chvíli spouští. Počkejte prosím minutu a zkuste to znovu.
+            Po instalaci se web chvíli spouští. Počkejte prosím minutu a&nbsp;zkuste to znovu.
           </p>
           <button
             appNeedsConnection
@@ -43,16 +43,17 @@
           První nastavení webu
         </h1>
         <p class="ui-panel__lead" i18n="@@operations.setup.locked.lead">
-          Nejjednodušší je otevřít tuto stránku z domácí sítě kliknutím na ikonu aplikace v ZimaOS,
-          pak se na nic neptáme. Odjinud zadejte kód, který web vypsal do svého logu: v ZimaOS u
-          aplikace NFNN v nabídce Terminál a logy, kontejner nfnn-backend.
+          Nejjednodušší je otevřít tuto stránku z&nbsp;domácí sítě kliknutím na ikonu aplikace
+          v&nbsp;ZimaOS, pak se na nic neptáme. Odjinud zadejte kód, který web vypsal do svého logu:
+          v&nbsp;ZimaOS u&nbsp;aplikace NFNN v&nbsp;nabídce Terminál a&nbsp;logy, kontejner
+          nfnn-backend.
         </p>
         @if (restoreError()) {
           <p class="ui-field-error" role="alert">{{ restoreError() }}</p>
         }
         <form #codeForm="ngForm" appFocusFirstInvalid (ngSubmit)="unlock(codeForm)" novalidate>
           <app-form-field
-            label="Kód z logu"
+            label="Kód z&nbsp;logu"
             i18n-label="@@operations.setup.code"
             hint="Dvanáct znaků ve tvaru K7QM-2XPA-9TRD. Při každém startu webu je jiný."
             i18n-hint="@@operations.setup.code.hint"
@@ -98,16 +99,18 @@
           První nastavení webu
         </h1>
         <p class="ui-panel__lead" i18n="@@operations.setup.form.lead">
-          Vyplňte, co web potřebuje ke svému chodu. Všechno se uloží do databáze a později to
+          Vyplňte, co web potřebuje ke svému chodu. Všechno se uloží do databáze a&nbsp;později to
           změníte ve správě webu. Tajné údaje se ukládají zašifrované.
         </p>
         <div class="needs">
           <p class="needs-title" i18n="@@operations.setup.needs.title">Budete potřebovat:</p>
           <ul>
             <li i18n="@@operations.setup.needs.smtp">
-              přihlašovací jméno a klíč SMTP z Brevo (Nastavení → SMTP a API),
+              přihlašovací jméno a&nbsp;klíč SMTP z&nbsp;Brevo (Nastavení → SMTP a&nbsp;API),
             </li>
-            <li i18n="@@operations.setup.needs.domain">ověřenou doménu odesílatele v Brevo,</li>
+            <li i18n="@@operations.setup.needs.domain">
+              ověřenou doménu odesílatele v&nbsp;Brevo,
+            </li>
             <li i18n="@@operations.setup.needs.admin">e-mail prvního správce,</li>
             <li i18n="@@operations.setup.needs.fio">
               nepovinně token Fio API jen pro čtení, aby se stahovaly platby.
@@ -116,13 +119,13 @@
         </div>
         @if (restoredBeforeSetup()) {
           <p class="restore-done" role="status" i18n="@@operations.setup.restore.beforeSetup">
-            Záloha je obnovená. Pochází z doby před prvním nastavením, proto ho prosím doplňte.
+            Záloha je obnovená. Pochází z&nbsp;doby před prvním nastavením, proto ho prosím doplňte.
           </p>
         } @else {
           <div class="restore-offer">
             <p i18n="@@operations.setup.restore.offer">
-              Stěhujete web z jiného serveru, nebo ho obnovujete po havárii? Pak nic nevyplňujte a
-              obnovte ho ze zálohy.
+              Stěhujete web z&nbsp;jiného serveru, nebo ho obnovujete po havárii? Pak nic
+              nevyplňujte a&nbsp;obnovte ho ze zálohy.
             </p>
             <button
               type="button"
@@ -146,7 +149,7 @@
             <legend i18n="@@operations.setup.group.site">1. Web</legend>
             <app-form-field
               [label]="labels.PUBLIC_URL"
-              hint="Adresa, kterou uvidí návštěvníci, třeba https://nfnn.cz. Podle ní se tvoří odkazy v e-mailech."
+              hint="Adresa, kterou uvidí návštěvníci, třeba https://nfnn.cz. Podle ní se tvoří odkazy v&nbsp;e-mailech."
               i18n-hint="@@operations.setup.publicUrl.hint"
               [messages]="urlMessages"
             >
@@ -169,7 +172,7 @@
             <legend i18n="@@operations.setup.group.administrator">2. Správce</legend>
             <app-form-field
               [label]="labels.ADMIN_EMAILS"
-              hint="Kdo se s touto adresou zaregistruje a potvrdí ji, stane se správcem. Pak si zapne dvoufaktorové ověření a další správce přidá ve správě."
+              hint="Kdo se s&nbsp;touto adresou zaregistruje a&nbsp;potvrdí ji, stane se správcem. Pak si zapne dvoufaktorové ověření a&nbsp;další správce přidá ve správě."
               i18n-hint="@@operations.setup.adminEmail.hint"
               [messages]="emailMessages"
             >
@@ -190,8 +193,8 @@
           <fieldset class="group">
             <legend i18n="@@operations.setup.group.mail">3. E-maily</legend>
             <p class="group-intro" i18n="@@operations.setup.mail.intro">
-              Web posílá e-maily přes Brevo. Údaje najdete v Brevo v Nastavení → SMTP a API: server,
-              port, přihlašovací jméno a klíč SMTP.
+              Web posílá e-maily přes Brevo. Údaje najdete v&nbsp;Brevo v&nbsp;Nastavení → SMTP
+              a&nbsp;API: server, port, přihlašovací jméno a&nbsp;klíč SMTP.
             </p>
             <div class="row">
               <app-form-field [label]="labels.MAIL_HOST" [messages]="hostMessages">
@@ -259,7 +262,7 @@
             </details>
             <app-form-field
               [label]="labels.MAIL_FROM"
-              hint="Adresa, ze které e-maily odcházejí. Doména musí být v Brevo ověřená."
+              hint="Adresa, ze které e-maily odcházejí. Doména musí být v&nbsp;Brevo ověřená."
               i18n-hint="@@operations.setup.mailFrom.hint"
               [messages]="emailMessages"
             >
@@ -293,8 +296,8 @@
               class="test-hint"
               i18n="@@operations.setup.testEmail.hint"
             >
-              Zkušební e-mail přijde na e-mail prvního správce z kroku 2. Odejde přes server výše z
-              adresy odesílatele, takže ověří přihlášení i odesílatele.
+              Zkušební e-mail přijde na e-mail prvního správce z&nbsp;kroku 2. Odejde přes server
+              výše z&nbsp;adresy odesílatele, takže ověří přihlášení i&nbsp;odesílatele.
             </p>
             <div class="test-row">
               <button
@@ -333,7 +336,7 @@
             <legend i18n="@@operations.setup.group.bank">4. Banka</legend>
             <app-form-field
               [label]="fioTokenLabel"
-              hint="Ve Fio internetovém bankovnictví: Nastavení → API → přidat token s právem jen pro čtení. Bez něj se platby nestahují."
+              hint="Ve Fio internetovém bankovnictví: Nastavení → API → přidat token s&nbsp;právem jen pro čtení. Bez něj se platby nestahují."
               i18n-hint="@@operations.setup.fioToken.hint"
             >
               <app-password-reveal>
@@ -351,11 +354,11 @@
           </fieldset>
 
           <fieldset class="group">
-            <legend i18n="@@operations.setup.group.backupKey">5. Klíč k zálohám</legend>
+            <legend i18n="@@operations.setup.group.backupKey">5. Klíč k&nbsp;zálohám</legend>
             <p class="group-intro" i18n="@@operations.setup.backupKey.intro">
-              Web se každý den zálohuje a zálohy šifruje tímto klíčem. Bez něj žádnou zálohu
-              neobnovíte, ani po havárii serveru. Uložte si teď jeho 24 slov mimo server a pak tři z
-              nich opište. Ve správě si ho později zobrazíte znovu.
+              Web se každý den zálohuje a&nbsp;zálohy šifruje tímto klíčem. Bez něj žádnou zálohu
+              neobnovíte, ani po havárii serveru. Uložte si teď jeho 24 slov mimo server a&nbsp;pak
+              tři z&nbsp;nich opište. Ve správě si ho později zobrazíte znovu.
             </p>
             @switch (backupKeyState()) {
               @case ('ready') {
@@ -377,19 +380,21 @@
                     <p id="setup-backup-key-unchecked" class="ui-field-error">
                       @if (backupKeyUnchecked()) {
                         <span role="alert" i18n="@@operations.setup.backupKey.unchecked"
-                          >Nejdřív si slova uložte a ověřte tlačítkem „Mám uloženo, ověřit“.</span
+                          >Nejdřív si slova uložte a&nbsp;ověřte tlačítkem „Mám uloženo,
+                          ověřit“.</span
                         >
                       }
                     </p>
                   </div>
                 } @else {
                   <p class="group-intro" i18n="@@operations.setup.backupKey.check">
-                    Slova jsme skryli. Opište z kopie, kterou jste si uložili, slova s těmito čísly.
+                    Slova jsme skryli. Opište z&nbsp;kopie, kterou jste si uložili, slova
+                    s&nbsp;těmito čísly.
                   </p>
                   @for (entry of backupKeyWords(); track entry.position) {
                     <app-form-field
                       [label]="backupKeyWordLabel(entry.position)"
-                      hint="Opište ho z uloženého klíče, tak si ověříte, že se uložil celý."
+                      hint="Opište ho z&nbsp;uloženého klíče, tak si ověříte, že se uložil celý."
                       i18n-hint="@@operations.setup.backupKeyWord.hint"
                       [messages]="backupKeyWordMessages"
                     >
@@ -424,14 +429,14 @@
                   class="ui-callout ui-callout--warning"
                   i18n="@@operations.setup.backupKey.unavailable"
                 >
-                  Klíč k zálohám se ještě nevytvořil, ukážeme ho ve správě na stránce Zálohy. Do té
-                  doby se zálohy nedělají.
+                  Klíč k&nbsp;zálohám se ještě nevytvořil, ukážeme ho ve správě na stránce Zálohy.
+                  Do té doby se zálohy nedělají.
                 </p>
               }
               @case ('error') {
                 <div class="ui-field-error" role="alert">
                   <p i18n="@@operations.setup.backupKey.failed">
-                    Klíč k zálohám se nepodařilo načíst.
+                    Klíč k&nbsp;zálohám se nepodařilo načíst.
                   </p>
                   <button
                     appNeedsConnection
@@ -446,7 +451,7 @@
               }
               @default {
                 <p class="restart-note" role="status" i18n="@@operations.setup.backupKey.loading">
-                  Načítáme klíč k zálohám…
+                  Načítáme klíč k&nbsp;zálohám…
                 </p>
               }
             }
@@ -468,7 +473,7 @@
           @if (mailUnverified()) {
             <div class="ui-callout ui-callout--warning mail-unverified" role="alert">
               <p i18n="@@operations.setup.mailUnverified">
-                Zkušební e-mail s těmito údaji zatím neodešel. Bez funkčních e-mailů se správce
+                Zkušební e-mail s&nbsp;těmito údaji zatím neodešel. Bez funkčních e-mailů se správce
                 nepřihlásí.
               </p>
               <div class="mail-unverified-actions">
@@ -489,7 +494,7 @@
                   (click)="save(setupForm, true)"
                   i18n="@@operations.setup.mailUnverified.saveAnyway"
                 >
-                  Uložit i tak
+                  Uložit i&nbsp;tak
                 </button>
               </div>
             </div>
@@ -507,7 +512,7 @@
             @if (saving()) {
               <span i18n="@@operations.setup.save.busy">Ukládáme…</span>
             } @else {
-              <span i18n="@@operations.setup.save">Uložit a spustit</span>
+              <span i18n="@@operations.setup.save">Uložit a&nbsp;spustit</span>
             }
           </button>
         </form>
@@ -546,16 +551,17 @@
           </p>
           <ol class="next-steps">
             <li i18n="@@operations.setup.done.step.register">
-              Zaregistrujte se s adresou {{ adminEmail.trim() }}.
+              Zaregistrujte se s&nbsp;adresou {{ adminEmail.trim() }}.
             </li>
             <li i18n="@@operations.setup.done.step.confirm">
-              Otevřete odkaz z e-mailu, který vám přijde.
+              Otevřete odkaz z&nbsp;e-mailu, který vám přijde.
             </li>
             <li i18n="@@operations.setup.done.step.secondFactor">
-              V části Údaje a zabezpečení zapněte dvoufaktorové ověření.
+              V&nbsp;části Údaje a&nbsp;zabezpečení zapněte dvoufaktorové ověření.
             </li>
             <li i18n="@@operations.setup.done.step.signIn">
-              Odhlaste se a přihlaste se znovu s kódem z aplikace: nahoře se objeví Správa.
+              Odhlaste se a&nbsp;přihlaste se znovu s&nbsp;kódem z&nbsp;aplikace: nahoře se objeví
+              Správa.
             </li>
           </ol>
           <button
@@ -582,7 +588,8 @@
           </h1>
           <p class="ui-panel__lead" role="alert" i18n="@@operations.setup.slow.text">
             Nastavení je uložené, ale web po restartu ještě neodpovídá. Zkuste to prosím za chvíli
-            znovu. Když se nespustí ani pak, podívejte se do logu kontejneru nfnn-backend v ZimaOS.
+            znovu. Když se nespustí ani pak, podívejte se do logu kontejneru nfnn-backend
+            v&nbsp;ZimaOS.
           </p>
           <button
             appNeedsConnection
@@ -606,9 +613,10 @@
           Obnovit web ze zálohy
         </h1>
         <p class="ui-panel__lead" i18n="@@operations.setup.restore.lead">
-          Vyberte soubor zálohy s příponou .dump.age: ten, který jste si stáhli ve správě na stránce
-          Zálohy, nebo kopii ze složky backups starého serveru, a vložte klíč k zálohám. Web se z ní
-          obnoví celý, i s dárci, dary, nastavením a účty správců.
+          Vyberte soubor zálohy s&nbsp;příponou .dump.age: ten, který jste si stáhli ve správě na
+          stránce Zálohy, nebo kopii ze složky backups starého serveru, a&nbsp;vložte klíč
+          k&nbsp;zálohám. Web se z&nbsp;ní obnoví celý, i&nbsp;s&nbsp;dárci, dary, nastavením
+          a&nbsp;účty správců.
         </p>
         @if (restoreError()) {
           <p class="ui-field-error" role="alert">{{ restoreError() }}</p>
@@ -660,9 +668,9 @@
           }
           @if (backupEncrypted()) {
             <app-form-field
-              label="Klíč k zálohám"
+              label="Klíč k&nbsp;zálohám"
               i18n-label="@@operations.setup.restoreKey"
-              hint="Ten, který jste si uložili ze správy nebo z prvního nastavení původního serveru: buď začíná AGE-SECRET-KEY-1, nebo je to 24 slov."
+              hint="Ten, který jste si uložili ze správy nebo z&nbsp;prvního nastavení původního serveru: buď začíná AGE-SECRET-KEY-1, nebo je to 24 slov."
               i18n-hint="@@operations.setup.restoreKey.hint"
               [messages]="restoreKeyMessages"
             >
@@ -701,7 +709,7 @@
               "
               i18n="@@operations.setup.restore.submit"
             >
-              Nahrát a obnovit
+              Nahrát a&nbsp;obnovit
             </button>
             <button
               type="button"
@@ -710,7 +718,7 @@
               (click)="closeRestore()"
               i18n="@@operations.setup.restore.back"
             >
-              Zpět k nastavení
+              Zpět k&nbsp;nastavení
             </button>
           </div>
         </form>
@@ -728,8 +736,8 @@
             Obnovujeme web ze zálohy
           </h1>
           <p class="ui-panel__lead" role="status" i18n="@@operations.setup.restoring.text">
-            Záloha je nahraná. Web se z ní teď obnovuje a pak se sám spustí; podle velikosti zálohy
-            to trvá několik minut. Stránku prosím nezavírejte.
+            Záloha je nahraná. Web se z&nbsp;ní teď obnovuje a&nbsp;pak se sám spustí; podle
+            velikosti zálohy to trvá několik minut. Stránku prosím nezavírejte.
           </p>
         </div>
       }
@@ -746,8 +754,8 @@
             Obnova ještě běží
           </h1>
           <p class="ui-panel__lead" role="alert" i18n="@@operations.setup.restoreSlow.text">
-            Web se zatím nevrátil. Velká záloha se může obnovovat i déle; zkuste to prosím za chvíli
-            znovu.
+            Web se zatím nevrátil. Velká záloha se může obnovovat i&nbsp;déle; zkuste to prosím za
+            chvíli znovu.
           </p>
           <button
             appNeedsConnection
@@ -773,9 +781,10 @@
             Web je obnovený ze zálohy
           </h1>
           <p class="ui-panel__lead" role="status" i18n="@@operations.setup.restored.text">
-            Přihlaste se svým dosavadním účtem správce. Heslo pro odesílání e-mailů a token Fio
-            přenesla záloha spolu s klíčem k zálohám. Jen pokud byla záloha z dřívější verze webu,
-            zadejte je znovu ve správě na stránce Nastavení; stránka vám ukáže, které chybí.
+            Přihlaste se svým dosavadním účtem správce. Heslo pro odesílání e-mailů a&nbsp;token Fio
+            přenesla záloha spolu s&nbsp;klíčem k&nbsp;zálohám. Jen pokud byla záloha
+            z&nbsp;dřívější verze webu, zadejte je znovu ve správě na stránce Nastavení; stránka vám
+            ukáže, které chybí.
           </p>
           <button
             type="button"

@@ -19,6 +19,7 @@ import { BackupKeyStatus } from '../admin-api';
 import { BackupKeyCard } from './backup-key-card';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
+import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const REVEAL_URL = '/api/admin/operations/backups/key/reveal';
 const CONFIRM_URL = '/api/admin/operations/backups/key/confirmation';
@@ -74,7 +75,9 @@ describe('Given the backup key card', () => {
   const root = () => fixture.nativeElement as HTMLElement;
 
   function text(selector: string): string {
-    return (root().querySelector(selector)?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return (withOrdinarySpaces(root().querySelector(selector)?.textContent) ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   async function click(name: string): Promise<void> {
@@ -120,7 +123,7 @@ describe('Given the backup key card', () => {
 
     it('then it asks to save the key and does not show it', () => {
       expect(text('.ui-callout--warning')).toContain('Klíč si zatím nikdo neuložil.');
-      expect(root().textContent).not.toContain(KEY);
+      expect(withOrdinarySpaces(root().textContent)).not.toContain(withOrdinarySpaces(KEY));
     });
 
     it('then it says saving the key is for the board, not for the technician', () => {
@@ -154,17 +157,17 @@ describe('Given the backup key card', () => {
       await settle();
 
       expect(text('[role="alert"]')).toContain('Opište prosím nový kód z aplikace.');
-      expect(root().textContent).not.toContain(KEY);
+      expect(withOrdinarySpaces(root().textContent)).not.toContain(withOrdinarySpaces(KEY));
     });
 
     it('and the right code is typed, then the key is shown as its 24 words with copy and download', async () => {
       await revealWithCode();
 
-      expect(root().textContent).not.toContain(KEY);
+      expect(withOrdinarySpaces(root().textContent)).not.toContain(withOrdinarySpaces(KEY));
       const words = Array.from(root().querySelectorAll('.backup-key-word-list li'));
       expect(words).toHaveLength(24);
-      expect(words[0].textContent?.trim()).toBe('divoch');
-      expect(words[23].textContent?.trim()).toBe('studna');
+      expect(withOrdinarySpaces(words[0].textContent)?.trim()).toBe('divoch');
+      expect(withOrdinarySpaces(words[23].textContent)?.trim()).toBe('studna');
       expect(root().querySelector('app-copy-button')).not.toBeNull();
       expect(root().querySelector('.backup-key-save')).toBeNull();
       expect(text('.backup-key-download')).toBe('Stáhnout jako soubor');
@@ -226,7 +229,7 @@ describe('Given the backup key card', () => {
       await settle();
 
       expect(changed).toEqual([CONFIRMED]);
-      expect(root().textContent).not.toContain(KEY);
+      expect(withOrdinarySpaces(root().textContent)).not.toContain(withOrdinarySpaces(KEY));
       expect(text('[role="status"]:not(:empty)')).toBe(
         'Děkujeme, uložení klíče jsme si poznamenali. Klíč jsme zase skryli.',
       );
@@ -279,9 +282,11 @@ describe('Given the backup key card', () => {
       );
       await settle();
 
-      expect(root().textContent).not.toContain(KEY);
+      expect(withOrdinarySpaces(root().textContent)).not.toContain(withOrdinarySpaces(KEY));
       expect(text('[role="alert"]:not(:empty)')).toContain('do půl hodiny od zobrazení');
-      expect(document.activeElement?.textContent?.trim()).toBe('Zobrazit klíč…');
+      expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe(
+        'Zobrazit klíč…',
+      );
     });
 
     it('and they go back to the words, then the words show again and focus returns to them', async () => {
@@ -298,8 +303,10 @@ describe('Given the backup key card', () => {
       await revealWithCode();
       await click('Skrýt klíč');
 
-      expect(root().textContent).not.toContain(KEY);
-      expect(document.activeElement?.textContent?.trim()).toBe('Zobrazit klíč…');
+      expect(withOrdinarySpaces(root().textContent)).not.toContain(withOrdinarySpaces(KEY));
+      expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe(
+        'Zobrazit klíč…',
+      );
     });
 
     it('and the passkey is used instead of the code, then its answer goes with the request', async () => {

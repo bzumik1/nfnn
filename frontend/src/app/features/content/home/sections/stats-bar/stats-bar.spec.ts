@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { StatsBar } from './stats-bar';
+import { withOrdinarySpaces } from '../../../../../../testing/ordinary-spaces';
 
 type Sighting = (
   entries: Pick<IntersectionObserverEntry, 'isIntersecting' | 'boundingClientRect'>[],
@@ -97,13 +98,19 @@ describe('Given the stats bar', () => {
 
   function shown(fixture: ComponentFixture<StatsBar>): string[] {
     return stats(fixture).map(
-      (stat) => stat.querySelector('.stat-value [aria-hidden="true"]')?.textContent?.trim() ?? '',
+      (stat) =>
+        withOrdinarySpaces(
+          stat.querySelector('.stat-value [aria-hidden="true"]')?.textContent,
+        )?.trim() ?? '',
     );
   }
 
   function read(fixture: ComponentFixture<StatsBar>): string[] {
     return stats(fixture).map(
-      (stat) => stat.querySelector('.stat-value .visually-hidden')?.textContent?.trim() ?? '',
+      (stat) =>
+        withOrdinarySpaces(
+          stat.querySelector('.stat-value .visually-hidden')?.textContent,
+        )?.trim() ?? '',
     );
   }
 
@@ -167,7 +174,7 @@ describe('Given the stats bar', () => {
   it('when the browser cannot watch the viewport, then every figure stands at its value at once', async () => {
     const fixture = await renderOn('2026-10-30T12:00:00Z');
 
-    expect(shown(fixture)).toEqual(FINAL);
+    expect(shown(fixture)).toEqual(FINAL.map((text) => withOrdinarySpaces(text)));
   });
 
   describe('when motion is allowed and the figures are on the screen from the start', () => {
@@ -180,7 +187,7 @@ describe('Given the stats bar', () => {
 
     it('then nothing hides them and the count starts at once from 70 % of each value', () => {
       expect(hidden(fixture)).toEqual([false, false, false, false]);
-      expect(shown(fixture)).toEqual(FROM_SEVENTY_PERCENT);
+      expect(shown(fixture)).toEqual(FROM_SEVENTY_PERCENT.map((text) => withOrdinarySpaces(text)));
       expect(counts.map((count) => count.options)).toEqual([
         { duration: 800, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)', fill: 'forwards' },
         { duration: 800, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)', fill: 'forwards' },
@@ -196,7 +203,7 @@ describe('Given the stats bar', () => {
       expect(children).toBeLessThan(200);
 
       await wait(fixture, COUNT_AND_A_FRAME - 400);
-      expect(shown(fixture)).toEqual(FINAL);
+      expect(shown(fixture)).toEqual(FINAL.map((text) => withOrdinarySpaces(text)));
     });
 
     it('then the share of 100% never counts and stays written without a space', async () => {
@@ -210,9 +217,9 @@ describe('Given the stats bar', () => {
     });
 
     it('then a screen reader hears the final figures all along', async () => {
-      expect(read(fixture)).toEqual(FINAL);
+      expect(read(fixture)).toEqual(FINAL.map((text) => withOrdinarySpaces(text)));
       await wait(fixture, 400);
-      expect(read(fixture)).toEqual(FINAL);
+      expect(read(fixture)).toEqual(FINAL.map((text) => withOrdinarySpaces(text)));
     });
 
     it('and the page is printed while they count, then every figure stands at its value', async () => {
@@ -221,7 +228,7 @@ describe('Given the stats bar', () => {
       window.dispatchEvent(new Event('beforeprint'));
       await wait(fixture, 100);
 
-      expect(shown(fixture)).toEqual(FINAL);
+      expect(shown(fixture)).toEqual(FINAL.map((text) => withOrdinarySpaces(text)));
       expect(counts.every((count) => count.cancelled)).toBe(true);
     });
 
@@ -239,7 +246,7 @@ describe('Given the stats bar', () => {
       again.detectChanges();
       await again.whenStable();
 
-      expect(shown(again)).toEqual(FINAL);
+      expect(shown(again)).toEqual(FINAL.map((text) => withOrdinarySpaces(text)));
       expect(counts).toHaveLength(2);
     });
   });
@@ -262,7 +269,7 @@ describe('Given the stats bar', () => {
         '1',
         '1',
       ]);
-      expect(shown(fixture)).toEqual(FROM_SEVENTY_PERCENT);
+      expect(shown(fixture)).toEqual(FROM_SEVENTY_PERCENT.map((text) => withOrdinarySpaces(text)));
       expect(counts).toEqual([]);
     });
 
@@ -271,18 +278,18 @@ describe('Given the stats bar', () => {
       await wait(fixture, 100);
 
       expect(hidden(fixture)).toEqual([false, false, false, false]);
-      expect(shown(fixture)).toEqual(FINAL);
+      expect(shown(fixture)).toEqual(FINAL.map((text) => withOrdinarySpaces(text)));
     });
 
     it('then a screen reader hears the final figures while they wait', () => {
-      expect(read(fixture)).toEqual(FINAL);
+      expect(read(fixture)).toEqual(FINAL.map((text) => withOrdinarySpaces(text)));
     });
 
     it('and they scroll in, then nothing counts while they are still moving in', async () => {
       await scrollIn(fixture);
       await wait(fixture, 300);
 
-      expect(shown(fixture)).toEqual(FROM_SEVENTY_PERCENT);
+      expect(shown(fixture)).toEqual(FROM_SEVENTY_PERCENT.map((text) => withOrdinarySpaces(text)));
       expect(counts).toEqual([]);
     });
 
@@ -292,7 +299,7 @@ describe('Given the stats bar', () => {
       await wait(fixture, COUNT_AND_A_FRAME);
 
       expect(counts).toHaveLength(2);
-      expect(shown(fixture)).toEqual(FINAL);
+      expect(shown(fixture)).toEqual(FINAL.map((text) => withOrdinarySpaces(text)));
     });
 
     it('and the page is left before they came into view, then they still count up the next time', async () => {
@@ -302,7 +309,7 @@ describe('Given the stats bar', () => {
       again.detectChanges();
       await again.whenStable();
 
-      expect(shown(again)).toEqual(FROM_SEVENTY_PERCENT);
+      expect(shown(again)).toEqual(FROM_SEVENTY_PERCENT.map((text) => withOrdinarySpaces(text)));
     });
   });
 
@@ -315,7 +322,7 @@ describe('Given the stats bar', () => {
     });
 
     it('then every figure stands at its value at once without watching the viewport', () => {
-      expect(shown(fixture)).toEqual(FINAL);
+      expect(shown(fixture)).toEqual(FINAL.map((text) => withOrdinarySpaces(text)));
       expect(stats(fixture).some((stat) => stat.classList.contains('motion-reveal'))).toBe(false);
       expect(FakeIntersectionObserver.all).toEqual([]);
       expect(counts).toEqual([]);
@@ -326,7 +333,7 @@ describe('Given the stats bar', () => {
       later.detectChanges();
       await later.whenStable();
 
-      expect(shown(later)).toEqual(FROM_SEVENTY_PERCENT);
+      expect(shown(later)).toEqual(FROM_SEVENTY_PERCENT.map((text) => withOrdinarySpaces(text)));
     });
   });
 
@@ -335,7 +342,7 @@ describe('Given the stats bar', () => {
       allowMotion({ reduced: true });
       const fixture = await renderOn('2026-10-30T12:00:00Z', { top: BELOW_THE_SCREEN });
 
-      expect(shown(fixture)).toEqual(FINAL);
+      expect(shown(fixture)).toEqual(FINAL.map((text) => withOrdinarySpaces(text)));
       expect(hidden(fixture)).toEqual([false, false, false, false]);
       expect(FakeIntersectionObserver.all).toEqual([]);
       expect(counts).toEqual([]);
