@@ -1774,6 +1774,118 @@ for (const rootPx of [34, 53]) {
   });
 }
 
+for (const textSize of ['100%', '200%']) {
+  test.describe(`Given an administrator on a computer 1280 px wide with the text at ${textSize}`, () => {
+    test.use({ viewport: { width: 1280, height: 900 } });
+
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript((size) => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = `html { font-size: ${size}; }`;
+          document.head.append(style);
+        });
+      }, textSize);
+      await mockDonorApi(page, donorWithDonations);
+      await mockAdministration(page);
+      await rememberedSession(page);
+    });
+
+    test('when they open /sprava/starsi-symboly, then every answer stays on one line within its cell and every donor name breaks only between words within its cell', async ({
+      page,
+    }) => {
+      await page.goto('/sprava/starsi-symboly');
+      const table = page.locator('main table');
+      const answers = table.locator('.answer-tag');
+      await expect(answers).toHaveCount(2);
+
+      for (const answer of await answers.all()) {
+        expect(await textLinesOf(answer)).toHaveLength(1);
+      }
+      const names = table.locator('.admin-name');
+      for (const name of await names.all()) {
+        expect(await wordsBrokenInside(name)).toEqual([]);
+      }
+      expect(await pastTheirCells(table, '.answer-tag, .admin-name, app-bank-account')).toEqual([]);
+    });
+  });
+}
+
+test.describe('Given an administrator on a computer 1280 px wide with the text at its default size', () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await mockAdministration(page);
+    await rememberedSession(page);
+  });
+
+  test('when they open /sprava/starsi-symboly, then the bank logo and the account number of every row share one line', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/starsi-symboly');
+    const accounts = page.locator('main table app-bank-account');
+    await expect(accounts).toHaveCount(2);
+    await page.evaluate(() => document.fonts.ready);
+
+    const apart = await accounts.evaluateAll((elements) =>
+      elements
+        .filter((account) => {
+          const logo = account.querySelector('app-bank-logo')!.getBoundingClientRect();
+          const number = account.querySelector('.ui-figures')!.getBoundingClientRect();
+          return logo.bottom <= number.top || logo.top >= number.bottom;
+        })
+        .map((account) => (account.textContent ?? '').trim()),
+    );
+    expect(apart).toEqual([]);
+  });
+
+  test('when they open /sprava/starsi-symboly, then the table stays within its card and its last cell keeps the space of the card title', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/starsi-symboly');
+    const card = page.locator('main section.ui-card');
+    await expect(card.locator('tbody tr')).toHaveCount(2);
+    await page.evaluate(() => document.fonts.ready);
+
+    const edges = await card.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const inner = box.right - element.clientLeft;
+      const title = element.querySelector('.ui-card__title')!;
+      const titleInset =
+        title.getBoundingClientRect().left +
+        parseFloat(getComputedStyle(title).paddingLeft) -
+        (box.left + element.clientLeft);
+      const table = element.querySelector('table')!.getBoundingClientRect();
+      const lastControls = Array.from(element.querySelectorAll('tbody td:last-child button')).map(
+        (button) => inner - button.getBoundingClientRect().right,
+      );
+      return {
+        tablePastCard: Math.max(0, Math.round(table.right - inner)),
+        narrowestEnd: Math.round(Math.min(...lastControls)),
+        titleInset: Math.round(titleInset),
+      };
+    });
+
+    expect(edges.tablePastCard).toBe(0);
+    expect(edges.narrowestEnd).toBeGreaterThanOrEqual(edges.titleInset - 1);
+  });
+});
+
+async function pastTheirCells(scope: Locator, selector: string): Promise<string[]> {
+  return scope.evaluate((element, wanted) => {
+    return Array.from(element.querySelectorAll<HTMLElement>(wanted))
+      .filter((item) => {
+        const cell = item.closest('td')!;
+        const left = cell.getBoundingClientRect().left + cell.clientLeft;
+        const right = left + cell.clientWidth;
+        const box = item.getBoundingClientRect();
+        return box.left < left - 1 || box.right > right + 1;
+      })
+      .map((item) => (item.textContent ?? '').trim());
+  }, selector);
+}
+
 async function textLinesOf(element: Locator): Promise<string[]> {
   await element.evaluate(() => document.fonts.ready);
   return element.evaluate((root) => {

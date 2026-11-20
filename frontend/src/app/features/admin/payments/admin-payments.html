@@ -186,7 +186,10 @@
       @case ('ready') {
         @if (items().length === 0) {
           @if (filtered()) {
-            <div class="ui-card__empty payments-empty">
+            <div
+              class="ui-card__empty payments-empty"
+              [class.payments-empty--after-rows]="rowLeft()"
+            >
               <p i18n="@@admin.payments.empty.filtered">Žádná platba neodpovídá hledání.</p>
               <button
                 type="button"
@@ -198,16 +201,25 @@
               </button>
             </div>
           } @else if (filter() === 'unpaired') {
-            <p class="ui-card__empty" i18n="@@admin.payments.empty.unpaired">
+            <p
+              class="ui-card__empty"
+              [class.payments-empty--after-rows]="rowLeft()"
+              i18n="@@admin.payments.empty.unpaired"
+            >
               Všechny platby z banky jsou přiřazené. Nová platba se tu objeví po dalším stažení z
               banky (každou hodinu).
             </p>
           } @else {
-            <p class="ui-card__empty" i18n="@@admin.payments.empty.paired">
+            <p
+              class="ui-card__empty"
+              [class.payments-empty--after-rows]="rowLeft()"
+              i18n="@@admin.payments.empty.paired"
+            >
               Zatím není přiřazena žádná platba.
             </p>
           }
-        } @else {
+        }
+        @if (items().length > 0 || rowsLeaving() > 0) {
           @if (rows()) {
             @for (month of months(); track month.key) {
               <div class="payments-month">
@@ -216,68 +228,71 @@
                 </h3>
                 <ul class="ui-list">
                   @for (item of month.items; track item.id) {
-                    <li>
-                      <button
-                        type="button"
-                        class="ui-list__row payment-row"
-                        data-payment-row
-                        aria-haspopup="dialog"
-                        (click)="openRow(item)"
-                      >
-                        <span class="ui-list__title">
-                          @if (item.counterpartyName) {
-                            {{ item.counterpartyName }}
-                          } @else {
-                            <ng-container i18n="@@admin.payments.row.noName"
-                              >Bez jména odesílatele</ng-container
-                            >
-                          }
-                        </span>
-                        <span class="ui-list__meta">
-                          <span class="ui-date">{{ date(item.bookedOn) }}</span> ·
-                          @if (item.variableSymbol) {
-                            <ng-container i18n="@@admin.payments.row.symbol"
-                              >VS {{ item.variableSymbol }}</ng-container
-                            >
-                          } @else {
-                            <ng-container i18n="@@admin.payments.noSymbol">bez VS</ng-container>
-                          }
-                          @if (item.donation; as donation) {
-                            ·
-                            @if (donation.donorName) {
-                              <ng-container i18n="@@admin.payments.row.donor"
-                                >dárce {{ donation.donorName }}</ng-container
-                              >
+                    <li [attr.data-month]="month.key" (animate.leave)="leaveRow($event)">
+                      <div>
+                        <button
+                          type="button"
+                          class="ui-list__row payment-row"
+                          [id]="paymentRowId(item)"
+                          data-payment-row
+                          aria-haspopup="dialog"
+                          (click)="openRow(item)"
+                        >
+                          <span class="ui-list__title">
+                            @if (item.counterpartyName) {
+                              {{ item.counterpartyName }}
                             } @else {
-                              <ng-container i18n="@@admin.payments.donor.unknown"
-                                >dárce bez záznamu</ng-container
+                              <ng-container i18n="@@admin.payments.row.noName"
+                                >Bez jména odesílatele</ng-container
                               >
                             }
-                          }
-                        </span>
-                        <span class="ui-list__value ui-figures"
-                          >{{ crowns(item.amountMinor) }}&nbsp;Kč</span
-                        >
-                        @if (rowState(item); as state) {
-                          <span class="ui-list__state">
-                            <span class="ui-badge" [class]="state.badge">{{ state.text }}</span>
                           </span>
-                        }
-                        <svg
-                          class="ui-list__chevron"
-                          aria-hidden="true"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <polyline points="9 18 15 12 9 6" />
-                        </svg>
-                      </button>
+                          <span class="ui-list__meta">
+                            <span class="ui-date">{{ date(item.bookedOn) }}</span> ·
+                            @if (item.variableSymbol) {
+                              <ng-container i18n="@@admin.payments.row.symbol"
+                                >VS {{ item.variableSymbol }}</ng-container
+                              >
+                            } @else {
+                              <ng-container i18n="@@admin.payments.noSymbol">bez VS</ng-container>
+                            }
+                            @if (item.donation; as donation) {
+                              ·
+                              @if (donation.donorName) {
+                                <ng-container i18n="@@admin.payments.row.donor"
+                                  >dárce {{ donation.donorName }}</ng-container
+                                >
+                              } @else {
+                                <ng-container i18n="@@admin.payments.donor.unknown"
+                                  >dárce bez záznamu</ng-container
+                                >
+                              }
+                            }
+                          </span>
+                          <span class="ui-list__value ui-figures"
+                            >{{ crowns(item.amountMinor) }}&nbsp;Kč</span
+                          >
+                          @if (rowState(item); as state) {
+                            <span class="ui-list__state">
+                              <span class="ui-badge" [class]="state.badge">{{ state.text }}</span>
+                            </span>
+                          }
+                          <svg
+                            class="ui-list__chevron"
+                            aria-hidden="true"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </button>
+                      </div>
                     </li>
                   }
                 </ul>
@@ -301,7 +316,12 @@
               </thead>
               <tbody>
                 @for (item of items(); track item.id) {
-                  <tr tabindex="-1" data-payment-row>
+                  <tr
+                    [id]="paymentRowId(item)"
+                    tabindex="-1"
+                    data-payment-row
+                    (animate.leave)="leaveRow($event)"
+                  >
                     <td data-label="Datum" i18n-data-label="@@admin.payments.col.date">
                       <span class="ui-date">{{ date(item.bookedOn) }}</span>
                       @if (item.unpairedByAdminAt) {
@@ -377,9 +397,14 @@
                           type="button"
                           class="ui-button ui-button--small"
                           (click)="openPairing(item)"
-                          i18n="@@admin.payments.pair.open"
                         >
-                          Přiřadit dárci
+                          <ng-container i18n="@@admin.payments.pair.open"
+                            >Přiřadit dárci</ng-container
+                          >
+                          <span class="visually-hidden" i18n="@@admin.payments.pair.openOf"
+                            >, {{ date(item.bookedOn) }},
+                            {{ crowns(item.amountMinor) }}&nbsp;Kč</span
+                          >
                         </button>
                       } @else if (item.donation?.receiptIssued) {
                         <span class="muted" i18n="@@admin.payments.unpair.blocked"
@@ -403,6 +428,10 @@
                               <ng-container i18n="@@admin.payments.unpair.yes"
                                 >Zrušit přiřazení</ng-container
                               >
+                              <span class="visually-hidden" i18n="@@admin.payments.unpair.yesOf"
+                                >, {{ date(item.bookedOn) }},
+                                {{ crowns(item.amountMinor) }}&nbsp;Kč</span
+                              >
                             }
                           </button>
                           <button
@@ -422,9 +451,14 @@
                           type="button"
                           class="ui-button ui-button--small ui-button--quiet"
                           (click)="askUnpair(item)"
-                          i18n="@@admin.payments.unpair.open"
                         >
-                          Zrušit přiřazení
+                          <ng-container i18n="@@admin.payments.unpair.open"
+                            >Zrušit přiřazení</ng-container
+                          >
+                          <span class="visually-hidden" i18n="@@admin.payments.unpair.openOf"
+                            >, {{ date(item.bookedOn) }},
+                            {{ crowns(item.amountMinor) }}&nbsp;Kč</span
+                          >
                         </button>
                       }
                     </td>
@@ -465,7 +499,7 @@
 </div>
 
 @if (pairing(); as payment) {
-  <app-dialog labelledBy="pair-title" (dismissed)="closePairing()">
+  <app-dialog #pairingDialog labelledBy="pair-title" (dismissed)="closePairing()">
     <h2 id="pair-title" class="pair-title" i18n="@@admin.payments.pair.title">
       Přiřadit platbu dárci
     </h2>
@@ -536,6 +570,7 @@
       autocomplete="off"
       [value]="query()"
       (input)="search($any($event.target).value)"
+      (keydown.escape)="escapeSearch($event, pairingDialog)"
       placeholder="např. Nováková nebo 4821"
       i18n-placeholder="@@admin.payments.pair.search.placeholder"
       aria-describedby="pair-search-hint"

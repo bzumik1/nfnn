@@ -74,6 +74,52 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     );
   });
 
+  test('when they open the payments on a computer, then every cell of the row and the pairing button stand on the first line of its text', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.route(
+      (url) => url.pathname === PAYMENTS,
+      (route) => route.fulfill({ json: { year: null, availableYears: [], items: [unpaired] } }),
+    );
+    await rememberedSession(page);
+    await page.goto('/sprava/platby');
+    const row = page.locator('tbody tr');
+    await expect(row).toHaveCount(1);
+    await page.evaluate(() => document.fonts.ready);
+
+    const offsets = await row.evaluate((element) => {
+      const firstLineCentre = (cell: Element): number => {
+        const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const start = (node.textContent ?? '').search(/\S/);
+          if (start < 0) {
+            continue;
+          }
+          const range = document.createRange();
+          range.setStart(node, start);
+          range.setEnd(node, start + 1);
+          const box = range.getBoundingClientRect();
+          return (box.top + box.bottom) / 2;
+        }
+        throw new Error('A cell without text');
+      };
+      const pill = element.querySelector('td.action button')!.getBoundingClientRect();
+      const pillCentre = (pill.top + pill.bottom) / 2;
+      return Array.from(element.querySelectorAll('td:not(.action)')).map(
+        (cell) =>
+          `${cell.getAttribute('data-label')} ${Math.round(Math.abs(firstLineCentre(cell) - pillCentre))}`,
+      );
+    });
+
+    expect(offsets.map((offset) => offset.replace(/ [0-2]$/, ' 0'))).toEqual([
+      'Datum 0',
+      'Částka 0',
+      'Odesílatel 0',
+      'VS a zpráva 0',
+    ]);
+  });
+
   test('when they open the payments from the administration, search a donor and pair, then the list reloads and the success names both', async ({
     page,
   }) => {
@@ -147,6 +193,9 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await expect(row).toContainText('500 Kč');
     await expect(row).toContainText('Nováková Jana');
     await expect(row).toContainText('1111111111');
+    await expect(row.getByRole('button')).toHaveAccessibleName(
+      /^Přiřadit\sdárci\s*,\s10\.\s10\.\s2026,\s500\sKč$/,
+    );
 
     await page.getByRole('button', { name: 'Přiřadit dárci' }).click();
     const dialog = page.getByRole('dialog');
@@ -237,6 +286,257 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     ).toBeFocused();
   });
 
+  test('when they pair one of two waiting payments, then its row is out of reach at once, leaves, and the pairing button of the row below takes the focus', async ({
+    page,
+  }) => {
+    const below = {
+      ...unpaired,
+      id: '019a1c00-0000-7000-8000-000000001002',
+      bankTransactionId: 1002,
+      bookedOn: '2026-10-12',
+      amountMinor: 25050,
+      counterpartyName: 'Svobodová Petra',
+    };
+    let pairedNow = false;
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.route(
+      (url) => url.pathname === PAYMENTS,
+      (route) =>
+        route.fulfill({
+          json: { year: null, availableYears: [], items: pairedNow ? [below] : [unpaired, below] },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === DONORS,
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                donorId: administrator.id,
+                name: 'Jana Nováková',
+                type: 'PERSON',
+                variableSymbol: '4821937560',
+                companyIdentifier: null,
+              },
+            ],
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/donors',
+      (route) => route.fulfill({ json: { items: [], hasMore: false } }),
+    );
+    await page.route(
+      (url) => url.pathname === `${PAYMENTS}/${PAYMENT_ID}/pair`,
+      (route) => {
+        pairedNow = true;
+        return route.fulfill({ json: { donationId: 'd1', changedYearlyReceipts: [] } });
+      },
+    );
+    await rememberedSession(page);
+    await page.goto('/sprava/platby');
+    const rows = page.locator('tbody tr');
+    await expect(rows).toHaveCount(2);
+    await page.evaluate(() => {
+      const inert: string[] = [];
+      (window as unknown as { inertRows: string[] }).inertRows = inert;
+      new MutationObserver((records) => {
+        for (const { target } of records) {
+          if (target instanceof HTMLElement && target.matches('tr[inert]')) {
+            inert.push(target.querySelector('.sender-name')?.textContent?.trim() ?? '');
+          }
+        }
+      }).observe(document.body, { attributes: true, attributeFilter: ['inert'], subtree: true });
+    });
+
+    await rows.first().getByRole('button').click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('radio', { name: /Jana Nováková/ }).check();
+    await dialog.getByRole('button', { name: 'Přiřadit dárci Jana Nováková' }).click();
+
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText('Svobodová Petra');
+    await expect(rows.first().getByRole('button')).toBeFocused();
+    expect(
+      await page.evaluate(() => (window as unknown as { inertRows: string[] }).inertRows),
+    ).toEqual(['Nováková Jana']);
+  });
+
+  test('when they unpair the only paired payment, then the empty state comes only after its row has left and the heading takes the focus', async ({
+    page,
+  }) => {
+    let unpairedNow = false;
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.route(
+      (url) => url.pathname === PAYMENTS,
+      (route) => {
+        const pairing = new URL(route.request().url()).searchParams.get('pairing');
+        return route.fulfill({
+          json:
+            pairing === 'paired'
+              ? { year: 2026, availableYears: [2026], items: unpairedNow ? [] : [paired] }
+              : { year: null, availableYears: [], items: [] },
+        });
+      },
+    );
+    await page.route(
+      (url) => url.pathname === `${PAYMENTS}/${PAYMENT_ID}/unpair`,
+      (route) => {
+        unpairedNow = true;
+        return route.fulfill({ json: { changedYearlyReceipts: [] } });
+      },
+    );
+    await rememberedSession(page);
+    await page.goto('/sprava/platby?stav=prirazene');
+    await expect(page.locator('tbody tr')).toHaveCount(1);
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as { emptyShown: string[] }).emptyShown = seen;
+      new MutationObserver(() => {
+        const empty = document.querySelector('.payments-card .ui-card__empty');
+        if (empty !== null && seen.length === 0) {
+          const leaving = document.querySelector('.payments-card tbody tr[inert]') !== null;
+          seen.push(
+            `${leaving ? 'row leaving' : 'row gone'}, opacity ${getComputedStyle(empty).opacity}`,
+          );
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    });
+
+    await page.getByRole('button', { name: 'Zrušit přiřazení' }).click();
+    await page
+      .getByRole('group', { name: /Zrušit přiřazení platby/ })
+      .getByRole('button', { name: /^Zrušit/ })
+      .click();
+
+    await expect(page.locator('.ui-card__empty')).toHaveText('Zatím není přiřazena žádná platba.');
+    await expect(page.locator('tbody tr')).toHaveCount(0);
+    await expect(page.getByRole('heading', { level: 2, name: 'Přiřazené platby' })).toBeFocused();
+    expect(
+      await page.evaluate(() => (window as unknown as { emptyShown: string[] }).emptyShown),
+    ).toEqual(['row leaving, opacity 0']);
+  });
+
+  for (const { motion, leave } of [
+    { motion: 'no-preference', leave: 'motion-row-leave' },
+    { motion: 'reduce', leave: 'motion-leave' },
+  ] as const) {
+    test(`when they unpair on a phone the only payment of its month, with ${motion} as the motion preference, then its row is out of reach at once, leaves with ${leave} while its month heading stays, and the row below takes the focus`, async ({
+      page,
+    }) => {
+      const september = {
+        ...paired,
+        id: '019a1c00-0000-7000-8000-000000001003',
+        bankTransactionId: 1003,
+        bookedOn: '2026-09-20',
+        counterpartyName: 'Svobodová Petra',
+        donation: { ...paired.donation, id: 'd3' },
+      };
+      let unpairedNow = false;
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.emulateMedia({ reducedMotion: motion });
+      await page.route(
+        (url) => url.pathname === PAYMENTS,
+        (route) => {
+          const pairing = new URL(route.request().url()).searchParams.get('pairing');
+          return route.fulfill({
+            json:
+              pairing === 'paired'
+                ? {
+                    year: 2026,
+                    availableYears: [2026],
+                    items: unpairedNow ? [september] : [paired, september],
+                  }
+                : { year: null, availableYears: [], items: [] },
+          });
+        },
+      );
+      await page.route(
+        (url) => url.pathname === `${PAYMENTS}/${PAYMENT_ID}/unpair`,
+        (route) => {
+          unpairedNow = true;
+          return route.fulfill({ json: { changedYearlyReceipts: [] } });
+        },
+      );
+      await rememberedSession(page);
+      await page.goto('/sprava/platby?stav=prirazene');
+      const rows = page.locator('button.payment-row');
+      await expect(rows).toHaveCount(2);
+      await page.evaluate(() => {
+        const seen: string[] = [];
+        (window as unknown as { seen: string[] }).seen = seen;
+        const october = document.getElementById('payments-month-2026-10');
+        const month = october?.closest('.payments-month');
+        if (!october || !month) {
+          seen.push('no month heading of October');
+          return;
+        }
+        new MutationObserver((records) => {
+          const removed = records.flatMap((record) => Array.from(record.removedNodes));
+          if (
+            records.some(
+              (record) =>
+                record.type === 'attributes' &&
+                record.target instanceof HTMLLIElement &&
+                record.target.hasAttribute('inert'),
+            )
+          ) {
+            seen.push('row out of reach');
+          }
+          const rowGone = removed.some(
+            (node) => node instanceof HTMLLIElement && node.hasAttribute('inert'),
+          );
+          const monthGone = removed.some((node) => node === month || node.contains(month));
+          if (rowGone && monthGone) {
+            seen.push('row and month heading gone in one batch');
+          } else if (rowGone) {
+            seen.push(`row gone, month heading ${october.isConnected ? 'there' : 'gone'}`);
+          } else if (monthGone) {
+            seen.push('month heading gone');
+          }
+        }).observe(document.body, {
+          attributes: true,
+          attributeFilter: ['inert'],
+          childList: true,
+          subtree: true,
+        });
+        document.addEventListener(
+          'animationstart',
+          (event) => {
+            if (event.target instanceof HTMLLIElement) {
+              seen.push(event.animationName);
+            }
+          },
+          true,
+        );
+      });
+
+      await rows.first().click();
+      const sheet = page.getByRole('dialog');
+      await sheet.getByRole('button', { name: 'Zrušit přiřazení' }).click();
+      await sheet
+        .getByRole('group', { name: /Zrušit přiřazení platby/ })
+        .getByRole('button', { name: 'Zrušit přiřazení' })
+        .click();
+
+      await expect(rows).toHaveCount(1);
+      await expect(rows.first()).toContainText('Svobodová Petra');
+      await expect(rows.first()).toBeFocused();
+      await expect(page.locator('.payments-month h3')).toHaveText(['Září 2026']);
+      await expect
+        .poll(() => page.evaluate(() => (window as unknown as { seen: string[] }).seen))
+        .toEqual([
+          'row out of reach',
+          leave,
+          'row gone, month heading there',
+          'month heading gone',
+        ]);
+    });
+  }
+
   test('when they unpair a paired payment, then a confirmation precedes the request and the payment is marked as held', async ({
     page,
   }) => {
@@ -271,9 +571,15 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await page.getByRole('button', { name: 'Přiřazené', exact: true }).click();
     await expect(page.locator('tbody tr')).toContainText('Jana Nováková');
     await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(page.locator('tbody tr').getByRole('button')).toHaveAccessibleName(
+      /^Zrušit\spřiřazení\s*,\s10\.\s10\.\s2026,\s500\sKč$/,
+    );
 
     await page.getByRole('button', { name: 'Zrušit přiřazení' }).click();
     const question = page.getByRole('group', { name: /Zrušit přiřazení platby/ });
+    await expect(question.getByRole('button', { name: /^Zrušit/ })).toHaveAccessibleName(
+      /^Zrušit\spřiřazení\s*,\s10\.\s10\.\s2026,\s500\sKč$/,
+    );
     await expect(question).toContainText('zmizí z přehledu dárce Jana Nováková');
     await expect(question.getByRole('button', { name: 'Ponechat' })).toBeFocused();
     await question.getByRole('button', { name: 'Ponechat' }).click();

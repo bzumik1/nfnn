@@ -2,6 +2,7 @@
 
 import {
   afterNextRender,
+  AnimationCallbackEvent,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -39,6 +40,10 @@ import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target'
 import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
+import {
+  markRowsLeaving,
+  neighbourAfterRowLeaves,
+} from '../../../shared/ui/leaving-row/leaving-row';
 import { BankAccount } from '../../donations/bank-account/bank-account';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
@@ -127,6 +132,11 @@ const METHOD_LABELS: Record<PairingMethod, string> = {
   MANUAL: $localize`:@@admin.payments.method.manual:ručně správcem`,
 };
 
+const ROW_LEAVING = 'payment-row--leaving';
+const ROW_LEAVE_GRACE_MS = 300;
+const ROW_CONTROLS =
+  'button[data-payment-row], [data-payment-row] td.action button, [data-payment-row] a[href]';
+
 @Component({
   selector: 'app-admin-payments',
   imports: [
@@ -176,6 +186,8 @@ export class AdminPayments {
   protected readonly state = signal<LoadState>('loading');
   protected readonly items = signal<AdminPaymentResponse[]>([]);
   protected readonly total = signal(0);
+  protected readonly rowsLeaving = signal(0);
+  protected readonly rowLeft = signal(false);
   protected readonly loadingMore = signal(false);
   protected readonly moreFailed = signal(false);
   protected readonly notice = signal<Notice | null>(null);
@@ -202,7 +214,10 @@ export class AdminPayments {
   protected readonly rows = this.layout.listsAsRows;
   protected readonly chosenFrom = computed(() => this.chosenOn(this.filters().from));
   protected readonly chosenTo = computed(() => this.chosenOn(this.filters().to));
-  protected readonly months = computed(() => byMonth(this.items()));
+  private readonly leavingMonths = signal<ReadonlySet<string>>(new Set());
+  protected readonly months = computed(() =>
+    withLeavingMonths(byMonth(this.items()), this.leavingMonths()),
+  );
   protected readonly changedMeanwhile = signal(false);
   private afterReload: (() => void) | null = null;
   private leftByStep: string | null = null;
@@ -400,6 +415,9 @@ export class AdminPayments {
   }
 
   protected load(): void {
+    this.rowLeft.set(false);
+    this.rowsLeaving.set(0);
+    this.leavingMonths.set(new Set());
     this.incoming.set(null);
     this.state.set('loading');
     this.moreFailed.set(false);
@@ -631,6 +649,17 @@ export class AdminPayments {
     this.refreshIfMissed();
   }
 
+  protected escapeSearch(event: Event, dialog: Dialog): void {
+    const field = event.target as HTMLInputElement;
+    if (field.value === '') {
+      dialog.dismiss();
+      return;
+    }
+    event.preventDefault();
+    field.value = '';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
   protected search(value: string): void {
     this.query.set(value);
     this.selectedDonor.set(null);
@@ -670,8 +699,7 @@ export class AdminPayments {
           });
           this.changedDonor.set({ id: donor.donorId, name: donor.name });
           this.reads.changed();
-          this.load();
-          this.focusAfterRender(() => this.noticeElement()?.nativeElement ?? null);
+          this.leaveList(payment);
         },
         error: (failure: unknown) => {
           this.busy.set(false);
@@ -751,8 +779,7 @@ export class AdminPayments {
           }
           this.unpairedCount.update((count) => (count === null ? null : count + 1));
           this.reads.changed();
-          this.load();
-          this.focusAfterRender(() => this.noticeElement()?.nativeElement ?? null);
+          this.leaveList(payment);
         },
         error: (failure: unknown) => {
           this.busy.set(false);
@@ -832,6 +859,79 @@ export class AdminPayments {
     );
   }
 
+  protected paymentRowId(payment: AdminPaymentResponse): string {
+    return `payment-row-${payment.id.replace(/[^A-Za-z0-9_-]/g, '_')}`;
+  }
+
+  protected leaveRow(event: AnimationCallbackEvent): void {
+    const row = event.target as HTMLElement;
+    if (!row.hasAttribute('inert')) {
+      event.animationComplete();
+      return;
+    }
+    row.classList.add(ROW_LEAVING);
+    const longest = Math.max(
+      0,
+      ...(row.getAnimations?.() ?? []).map((motion) =>
+        Number(motion.effect?.getComputedTiming().endTime ?? 0),
+      ),
+    );
+    const month = row.dataset['month'];
+    const released = (): void => {
+      this.rowsLeaving.update((count) => Math.max(0, count - 1));
+      if (month !== undefined) {
+        this.leavingMonths.update((months) => new Set([...months].filter((key) => key !== month)));
+      }
+    };
+    const left = (): void => {
+      afterRemoval(row, released);
+      event.animationComplete();
+    };
+    if (longest === 0) {
+      left();
+      return;
+    }
+    let done = false;
+    const leaves = (): void => {
+      if (!done) {
+        done = true;
+        clearTimeout(fallback);
+        left();
+      }
+    };
+    const fallback = setTimeout(leaves, longest + ROW_LEAVE_GRACE_MS);
+    for (const type of ['animationend', 'animationcancel']) {
+      row.addEventListener(type, (ended) => {
+        if (ended.target === row) {
+          leaves();
+        }
+      });
+    }
+  }
+
+  private leaveList(payment: AdminPaymentResponse): void {
+    const row = this.host.nativeElement.querySelector<HTMLElement>(
+      `#${this.paymentRowId(payment)}`,
+    );
+    const neighbour = neighbourAfterRowLeaves(
+      row,
+      this.host.nativeElement.querySelectorAll<HTMLElement>(ROW_CONTROLS),
+    );
+    const slot = row?.matches('tr') ? row : row?.closest('li[data-month]');
+    if (slot) {
+      markRowsLeaving([slot]);
+      this.rowsLeaving.update((count) => count + 1);
+      if (slot.matches('li')) {
+        this.leavingMonths.update((months) => new Set([...months, monthOf(payment)]));
+      }
+    }
+    this.rowLeft.set(true);
+    this.items.update((list) => list.filter((item) => item.id !== payment.id));
+    this.total.update((count) => Math.max(0, count - 1));
+    this.focusAfterRender(() => neighbour() ?? this.listTitle()?.nativeElement ?? null);
+    this.refreshQuietly();
+  }
+
   private unpairOpener(payment: AdminPaymentResponse): HTMLElement | null {
     return this.host.nativeElement.querySelector<HTMLElement>(`#${this.unpairOpenerId(payment)}`);
   }
@@ -849,16 +949,49 @@ export class AdminPayments {
   }
 }
 
+function afterRemoval(row: HTMLElement, released: () => void): void {
+  const parent = row.parentNode;
+  if (parent === null) {
+    released();
+    return;
+  }
+  const watch = new MutationObserver(() => {
+    if (!row.isConnected) {
+      watch.disconnect();
+      released();
+    }
+  });
+  watch.observe(parent, { childList: true });
+}
+
+function monthOf(item: AdminPaymentResponse): string {
+  return item.bookedOn.slice(0, 7);
+}
+
+function monthGroup(key: string, items: AdminPaymentResponse[]): MonthGroup {
+  const label = formatMonth(key);
+  return { key, label: label.charAt(0).toUpperCase() + label.slice(1), items };
+}
+
 function byMonth(items: AdminPaymentResponse[]): MonthGroup[] {
   const groups = new Map<string, AdminPaymentResponse[]>();
   for (const item of items) {
-    const key = item.bookedOn.slice(0, 7);
+    const key = monthOf(item);
     groups.set(key, [...(groups.get(key) ?? []), item]);
   }
-  return [...groups].map(([key, monthItems]) => {
-    const label = formatMonth(key);
-    return { key, label: label.charAt(0).toUpperCase() + label.slice(1), items: monthItems };
-  });
+  return [...groups].map(([key, monthItems]) => monthGroup(key, monthItems));
+}
+
+function withLeavingMonths(groups: MonthGroup[], leaving: ReadonlySet<string>): MonthGroup[] {
+  const shown = [...groups];
+  for (const key of leaving) {
+    if (shown.some((group) => group.key === key)) {
+      continue;
+    }
+    const later = shown.findIndex((group) => group.key < key);
+    shown.splice(later < 0 ? shown.length : later, 0, monthGroup(key, []));
+  }
+  return shown;
 }
 
 function incomingText(count: number): string {

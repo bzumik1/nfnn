@@ -385,11 +385,12 @@ async function pageUsableAgain(page: Page): Promise<void> {
   await openPairing(page);
 }
 
+function pairingOpener(page: Page): Locator {
+  return page.getByRole('button', { name: /^(Přiřadit dárci\s*, |Nováková Jana )/ }).first();
+}
+
 async function openPairing(page: Page): Promise<void> {
-  await page
-    .getByRole('button', { name: /^(Přiřadit dárci|Nováková Jana .*)$/ })
-    .first()
-    .click();
+  await pairingOpener(page).click();
   await expect(page.getByRole('dialog')).toBeVisible();
 }
 
@@ -451,8 +452,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
   });
 
   test.describe('when it floats on a computer that shows motion', () => {
-    const opener = (page: Page): Locator =>
-      page.getByRole('button', { name: /^(Přiřadit dárci|Nováková Jana .*)$/ }).first();
+    const opener = pairingOpener;
     const leaving = (page: Page): Locator => page.locator('dialog.dialog--leaving');
     const holdLeaving = (page: Page): Promise<void> =>
       page.locator('dialog').evaluate((dialog) => {
@@ -536,6 +536,53 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
         await expect(opener(page)).toBeFocused();
         await expect(page).toHaveURL(/\/sprava\/platby$/);
       });
+    });
+  });
+
+  test.describe('and it was opened with the keyboard', () => {
+    test.beforeEach(async ({ page }) => {
+      await stepBack(page);
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await pairingOpener(page).focus();
+      await page.keyboard.press('Enter');
+      await expect(page.getByRole('dialog')).toBeVisible();
+    });
+
+    test('when they press Esc in the search field with text, then the field is cleared with its results and the dialog stays, and a second Esc closes it as its button does', async ({
+      page,
+    }) => {
+      const dialog = page.getByRole('dialog');
+      const field = dialog.getByRole('searchbox');
+      await expect(field).toBeFocused();
+      await expect(field).toHaveValue('Nováková');
+      await expect(dialog.getByRole('radio', { name: /Jana Nováková/ })).toBeVisible();
+
+      await page.keyboard.press('Escape');
+
+      await expect(field).toHaveValue('');
+      await expect(field).toBeFocused();
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole('radio')).toHaveCount(0);
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(pairingOpener(page)).toBeFocused();
+      await entryTakenBack(page);
+    });
+
+    test('when they press Esc once in the empty search field, then the dialog closes as its button does', async ({
+      page,
+    }) => {
+      const field = page.getByRole('dialog').getByRole('searchbox');
+      await field.fill('');
+      await expect(field).toBeFocused();
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(pairingOpener(page)).toBeFocused();
+      await entryTakenBack(page);
     });
   });
 
