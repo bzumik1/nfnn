@@ -1452,6 +1452,41 @@ describe('Given an administrator on the bank payments page where lists show as r
       );
     });
 
+    it('then unpairing one of two rows of a month from the sheet takes its row out and gives the focus to the row below', async () => {
+      const below = unpairedPayment({
+        id: 'p2',
+        bankTransactionId: 1003,
+        bookedOn: '2026-10-05',
+        counterpartyName: 'Svobodová Petra',
+        donation: pairedDonation({ id: 'd2' }),
+      });
+      await listResponds(paymentList([unpairedPayment()]));
+      button('Přiřazené').click();
+      await settle();
+      await listResponds(
+        paymentList([unpairedPayment({ donation: pairedDonation() }), below], {
+          availableYears: [2026],
+        }),
+        PAIRED_PAGE,
+      );
+      paymentRows()[0].click();
+      await settle();
+
+      button('Zrušit přiřazení').click();
+      await settle();
+      sheet().querySelector<HTMLButtonElement>('.confirm .ui-button--danger')!.click();
+      await settle();
+      http
+        .expectOne(`/api/admin/donations/payments/${PAYMENT_ID}/unpair`)
+        .flush({ changedYearlyReceipts: [] });
+      await settle();
+
+      expect(document.querySelector('dialog[open]')).toBeNull();
+      expect(paymentRows().map(text)).toEqual([expect.stringContaining('Svobodová Petra')]);
+      expect(document.activeElement).toBe(paymentRows()[0]);
+      await listResponds(paymentList([below], { availableYears: [2026] }), PAIRED_PAGE);
+    });
+
     it('then a refused unpairing keeps the sheet open and says why inside it', async () => {
       await openPaired();
 

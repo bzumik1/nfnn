@@ -420,6 +420,108 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     ).toEqual(['row leaving, opacity 0']);
   });
 
+  for (const { motion, leave } of [
+    { motion: 'no-preference', leave: 'motion-row-leave' },
+    { motion: 'reduce', leave: 'motion-leave' },
+  ] as const) {
+    test(`when they unpair on a phone the only payment of its month, with ${motion} as the motion preference, then its row is out of reach at once, leaves with ${leave} while its month heading stays, and the row below takes the focus`, async ({
+      page,
+    }) => {
+      const september = {
+        ...paired,
+        id: '019a1c00-0000-7000-8000-000000001003',
+        bankTransactionId: 1003,
+        bookedOn: '2026-09-20',
+        counterpartyName: 'Svobodová Petra',
+        donation: { ...paired.donation, id: 'd3' },
+      };
+      let unpairedNow = false;
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.emulateMedia({ reducedMotion: motion });
+      await page.route(
+        (url) => url.pathname === PAYMENTS,
+        (route) => {
+          const pairing = new URL(route.request().url()).searchParams.get('pairing');
+          return route.fulfill({
+            json:
+              pairing === 'paired'
+                ? {
+                    year: 2026,
+                    availableYears: [2026],
+                    items: unpairedNow ? [september] : [paired, september],
+                  }
+                : { year: null, availableYears: [], items: [] },
+          });
+        },
+      );
+      await page.route(
+        (url) => url.pathname === `${PAYMENTS}/${PAYMENT_ID}/unpair`,
+        (route) => {
+          unpairedNow = true;
+          return route.fulfill({ json: { changedYearlyReceipts: [] } });
+        },
+      );
+      await rememberedSession(page);
+      await page.goto('/sprava/platby?stav=prirazene');
+      const rows = page.locator('button.payment-row');
+      await expect(rows).toHaveCount(2);
+      await page.evaluate(() => {
+        const seen: string[] = [];
+        (window as unknown as { seen: string[] }).seen = seen;
+        const october = () =>
+          Array.from(document.querySelectorAll('.payments-month h3')).some((heading) =>
+            /říjen 2026/i.test(heading.textContent ?? ''),
+          );
+        new MutationObserver((records) => {
+          for (const record of records) {
+            if (
+              record.type === 'attributes' &&
+              record.target instanceof HTMLLIElement &&
+              record.target.hasAttribute('inert')
+            ) {
+              seen.push('row out of reach');
+            }
+            for (const node of record.removedNodes) {
+              if (node instanceof HTMLLIElement && node.hasAttribute('inert')) {
+                seen.push(`row gone, month heading ${october() ? 'there' : 'gone'}`);
+              }
+            }
+          }
+        }).observe(document.body, {
+          attributes: true,
+          attributeFilter: ['inert'],
+          childList: true,
+          subtree: true,
+        });
+        document.addEventListener(
+          'animationstart',
+          (event) => {
+            if (event.target instanceof HTMLLIElement) {
+              seen.push(event.animationName);
+            }
+          },
+          true,
+        );
+      });
+
+      await rows.first().click();
+      const sheet = page.getByRole('dialog');
+      await sheet.getByRole('button', { name: 'Zrušit přiřazení' }).click();
+      await sheet
+        .getByRole('group', { name: /Zrušit přiřazení platby/ })
+        .getByRole('button', { name: 'Zrušit přiřazení' })
+        .click();
+
+      await expect(rows).toHaveCount(1);
+      await expect(rows.first()).toContainText('Svobodová Petra');
+      await expect(rows.first()).toBeFocused();
+      await expect(page.locator('.payments-month h3')).toHaveText(['Září 2026']);
+      await expect
+        .poll(() => page.evaluate(() => (window as unknown as { seen: string[] }).seen))
+        .toEqual(['row out of reach', leave, 'row gone, month heading there']);
+    });
+  }
+
   test('when they unpair a paired payment, then a confirmation precedes the request and the payment is marked as held', async ({
     page,
   }) => {
