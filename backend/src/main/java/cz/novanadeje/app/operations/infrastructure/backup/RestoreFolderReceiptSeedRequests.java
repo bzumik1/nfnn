@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
 import cz.novanadeje.app.operations.application.receiptseed.ReceiptSeedRequests;
+import cz.novanadeje.app.operations.application.receiptseed.ReceiptSeedRequestsAtStart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -12,9 +13,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 @Component
-class RestoreFolderReceiptSeedRequests implements ReceiptSeedRequests {
+class RestoreFolderReceiptSeedRequests implements ReceiptSeedRequests, ReceiptSeedRequestsAtStart {
 
     private static final String REQUEST_FILE = "receipt-signing-key.renew";
+    private static final String TRIED_AT_START_FILE = "receipt-signing-key.renew-at-start-";
     private static final Logger log = LoggerFactory.getLogger(RestoreFolderReceiptSeedRequests.class);
 
     private final Path restoreDirectory;
@@ -34,6 +36,39 @@ class RestoreFolderReceiptSeedRequests implements ReceiptSeedRequests {
             log.error("The request for a new receipt signing seed after the withdrawal of key {} could not be written ({}); "
                     + "the server signs no receipt until secrets/receipt-signing-key is replaced", keyId, failure.getClass().getSimpleName());
             return false;
+        }
+    }
+
+    @Override
+    public StartRequest requestNewSeedAtStartFor(String keyId) {
+        Path request = restoreDirectory.resolve(REQUEST_FILE);
+        Path triedAtStart = restoreDirectory.resolve(TRIED_AT_START_FILE + keyId);
+        try {
+            if (Files.isRegularFile(request) && Files.readString(request, StandardCharsets.US_ASCII).equals(keyId)) {
+                return StartRequest.ALREADY_WAITING;
+            }
+            if (Files.exists(triedAtStart)) {
+                return StartRequest.TRIED_AT_AN_EARLIER_START;
+            }
+            Files.writeString(triedAtStart, keyId, StandardCharsets.US_ASCII);
+        } catch (IOException | RuntimeException failure) {
+            log.error("Whether a new receipt signing seed was already asked for key {} could not be read or noted ({}); "
+                    + "the server signs no receipt until secrets/receipt-signing-key is replaced", keyId, failure.getClass().getSimpleName());
+            return StartRequest.NOT_WRITTEN;
+        }
+        if (requestNewSeedFor(keyId)) {
+            return StartRequest.REQUESTED;
+        }
+        forget(triedAtStart);
+        return StartRequest.NOT_WRITTEN;
+    }
+
+    private static void forget(Path triedAtStart) {
+        try {
+            Files.deleteIfExists(triedAtStart);
+        } catch (IOException | RuntimeException ignored) {
+            log.warn("The note that this start asked for a new receipt signing seed could not be removed ({}); the next start does not ask again",
+                    ignored.getClass().getSimpleName());
         }
     }
 }

@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import cz.novanadeje.app.operations.application.receiptseed.ReceiptSeedRequestsAtStart;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -81,5 +82,68 @@ class RestoreFolderReceiptSeedRequestsTest {
 
     private static Logger logger() {
         return (Logger) LoggerFactory.getLogger(RestoreFolderReceiptSeedRequests.class);
+    }
+
+    @Test
+    @DisplayName("Given no request and no earlier start that asked, when a new seed is requested at a start, then the request names the key and the start notes that it asked")
+    void should_request_and_note_when_requested_at_start_given_nothing_asked_before() {
+        assertThat(requests.requestNewSeedAtStartFor("21fe31df")).isEqualTo(ReceiptSeedRequestsAtStart.StartRequest.REQUESTED);
+
+        assertThat(restore.resolve("receipt-signing-key.renew")).hasContent("21fe31df");
+        assertThat(restore.resolve("receipt-signing-key.renew-at-start-21fe31df")).exists();
+    }
+
+    @Test
+    @DisplayName("Given a start that already asked for a new seed for the key, when one is requested at the next start, then nothing is requested again")
+    void should_not_request_again_when_requested_at_start_given_an_earlier_start_asked() {
+        requests.requestNewSeedAtStartFor("21fe31df");
+        requests.requestNewSeedAtStartFor("21fe31df");
+        assertThat(restore.resolve("receipt-signing-key.renew")).exists();
+        deleteRequest();
+
+        assertThat(requests.requestNewSeedAtStartFor("21fe31df")).isEqualTo(ReceiptSeedRequestsAtStart.StartRequest.TRIED_AT_AN_EARLIER_START);
+
+        assertThat(restore.resolve("receipt-signing-key.renew")).doesNotExist();
+    }
+
+    @Test
+    @DisplayName("Given a request for the key that still waits, when one is requested at a start, then it already waits and no start is noted")
+    void should_answer_waiting_when_requested_at_start_given_a_waiting_request() throws IOException {
+        Files.writeString(restore.resolve("receipt-signing-key.renew"), "21fe31df");
+
+        assertThat(requests.requestNewSeedAtStartFor("21fe31df")).isEqualTo(ReceiptSeedRequestsAtStart.StartRequest.ALREADY_WAITING);
+
+        assertThat(restore.resolve("receipt-signing-key.renew-at-start-21fe31df")).doesNotExist();
+    }
+
+    @Test
+    @DisplayName("Given no restore folder, when a new seed is requested at a start, then it is not written and an ERROR names the key and the exception class")
+    void should_not_write_and_log_error_when_requested_at_start_given_no_restore_folder() throws IOException {
+        Files.delete(restore);
+
+        assertThat(requests.requestNewSeedAtStartFor("21fe31df")).isEqualTo(ReceiptSeedRequestsAtStart.StartRequest.NOT_WRITTEN);
+
+        assertThat(lines.list).singleElement().satisfies(line -> {
+            assertThat(line.getLevel()).isEqualTo(Level.ERROR);
+            assertThat(line.getFormattedMessage()).startsWith("Whether a new receipt signing seed was already asked for key 21fe31df could not be read or noted (");
+        });
+    }
+
+    @Test
+    @DisplayName("Given a request that cannot be written although the note of the start was, when a new seed is requested at a start, then it is not written and the note goes, so the next start asks again")
+    void should_forget_the_start_when_requested_at_start_given_the_request_cannot_be_written() throws IOException {
+        Files.createDirectory(restore.resolve("receipt-signing-key.renew"));
+
+        assertThat(requests.requestNewSeedAtStartFor("21fe31df")).isEqualTo(ReceiptSeedRequestsAtStart.StartRequest.NOT_WRITTEN);
+
+        assertThat(restore.resolve("receipt-signing-key.renew-at-start-21fe31df")).doesNotExist();
+    }
+
+    private void deleteRequest() {
+        try {
+            Files.delete(restore.resolve("receipt-signing-key.renew"));
+        } catch (IOException failure) {
+            throw new IllegalStateException(failure);
+        }
     }
 }

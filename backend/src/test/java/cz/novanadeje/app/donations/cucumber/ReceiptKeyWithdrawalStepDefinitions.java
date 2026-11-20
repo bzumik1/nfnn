@@ -21,6 +21,8 @@ import io.cucumber.java.en.When;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -76,6 +78,19 @@ public class ReceiptKeyWithdrawalStepDefinitions {
     @Before
     public void forgetEarlierRestarts() {
         restarter.reset();
+    }
+
+    @Given("the request for a new receipt signing seed was lost")
+    public void theRequestWasLost() throws IOException {
+        Files.deleteIfExists(seedRequest);
+        restarter.reset();
+    }
+
+    @Then("the backend restarts once for a new seed of the receipt signing key {string}")
+    public void theBackendRestartsOnceForANewSeed(String keyId) {
+        assertThat(restarter.recorded()).singleElement()
+                .satisfies(restart -> assertThat(restart.kind()).isEqualTo(RecordingApplicationRestarter.Kind.ONCE_ASYNC_WORK_IS_DONE));
+        assertThat(seedRequest).hasContent(keyId);
     }
 
     @When("{string} withdraws the receipt signing key {string} with a fresh code")

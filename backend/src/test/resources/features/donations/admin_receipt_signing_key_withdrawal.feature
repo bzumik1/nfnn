@@ -231,3 +231,13 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     When the following requests come from another client address
     And "Petr" withdraws the receipt signing key "21fe31df" with a fresh code
     Then the response status is 200
+
+  Scenario: A start that finds the server's own key withdrawn without a request asks for a new seed once, and after a start that kept the seed it does not restart again
+    When "Jana" withdraws the receipt signing key "21fe31df" with a fresh code
+    Then the response status is 200
+    Given the request for a new receipt signing seed was lost
+    When the server starts again
+    Then the backend restarts once for a new seed of the receipt signing key "21fe31df"
+    Given the request for a new receipt signing seed was lost
+    When the server starts again
+    Then the backend is not restarted for a new receipt signing seed
