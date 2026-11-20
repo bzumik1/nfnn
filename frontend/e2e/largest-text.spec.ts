@@ -2776,16 +2776,36 @@ for (const width of [390, 1280]) {
   });
 }
 
-async function textPastTheSides(frame: Locator): Promise<string[]> {
+async function textPastTheSides(
+  frame: Locator,
+  { ellipsis }: { ellipsis: 'past' | 'within' } = { ellipsis: 'past' },
+): Promise<string[]> {
   await frame.evaluate(() => document.fonts.ready);
-  return frame.evaluate((element) => {
+  return frame.evaluate((element, ellipsizedTextStaysWithin) => {
     const box = element.getBoundingClientRect();
     const left = box.left + element.clientLeft;
     const right = left + element.clientWidth;
     const past: string[] = [];
+    const ellipsized = (text: Node): boolean => {
+      for (
+        let ancestor = text.parentElement;
+        ancestor && ancestor !== element;
+        ancestor = ancestor.parentElement
+      ) {
+        const style = getComputedStyle(ancestor);
+        if (style.textOverflow === 'ellipsis' && style.overflowX !== 'visible') {
+          return true;
+        }
+      }
+      return false;
+    };
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      if (!node.textContent?.trim() || node.parentElement?.closest('.visually-hidden')) {
+      if (
+        !node.textContent?.trim() ||
+        node.parentElement?.closest('.visually-hidden') ||
+        (ellipsizedTextStaysWithin && ellipsized(node))
+      ) {
         continue;
       }
       const range = document.createRange();
@@ -2800,7 +2820,91 @@ async function textPastTheSides(frame: Locator): Promise<string[]> {
       }
     }
     return past;
-  });
+  }, ellipsis === 'within');
+}
+
+async function rowTitlesNarrowerThanTheirLongestWord(rows: Locator): Promise<string[]> {
+  await rows.first().evaluate(() => document.fonts.ready);
+  return rows.evaluateAll((elements) =>
+    elements.flatMap((row) => {
+      const title = row.querySelector<HTMLElement>(':scope > .ui-list__title');
+      if (!title || title.getClientRects().length === 0) {
+        return [];
+      }
+      const rowStyle = getComputedStyle(row);
+      const beside = Array.from(
+        row.querySelectorAll<Element>(':scope > :is(.ui-list__lead, .ui-list__chevron)'),
+      ).reduce((sum, part) => {
+        const style = getComputedStyle(part);
+        return (
+          sum +
+          part.getBoundingClientRect().width +
+          parseFloat(style.marginInlineStart) +
+          parseFloat(style.marginInlineEnd)
+        );
+      }, 0);
+      const room =
+        row.clientWidth -
+        parseFloat(rowStyle.paddingInlineStart) -
+        parseFloat(rowStyle.paddingInlineEnd) -
+        beside;
+      const style = getComputedStyle(title);
+      const longest = Math.max(
+        ...(title.textContent ?? '')
+          .split(/\s+/)
+          .filter((word) => word.length > 0)
+          .map((word) => {
+            const probe = document.createElement('span');
+            probe.textContent = word;
+            probe.style.font = style.font;
+            probe.style.letterSpacing = style.letterSpacing;
+            probe.style.whiteSpace = 'nowrap';
+            probe.style.position = 'absolute';
+            document.body.append(probe);
+            const width = probe.getBoundingClientRect().width;
+            probe.remove();
+            return width;
+          }),
+      );
+      const width = title.getBoundingClientRect().width;
+      return width < Math.min(longest, room) - 1
+        ? [
+            `${(title.textContent ?? '').trim()} ${Math.round(width)} < ${Math.round(longest)} in ${Math.round(room)}`,
+          ]
+        : [];
+    }),
+  );
+}
+
+async function titlesOverTheirValues(rows: Locator): Promise<string[]> {
+  await rows.first().evaluate(() => document.fonts.ready);
+  return rows.evaluateAll((elements) =>
+    elements.flatMap((row) => {
+      const title = row.querySelector(':scope > .ui-list__title');
+      const value = row.querySelector(':scope > .ui-list__value');
+      if (!title || !value) {
+        return [];
+      }
+      const rectsOf = (part: Element): DOMRect[] => {
+        const range = document.createRange();
+        range.selectNodeContents(part);
+        return Array.from(range.getClientRects()).filter((rect) => rect.width > 0);
+      };
+      const valueRects = rectsOf(value);
+      const overlaps = rectsOf(title).some((text) =>
+        valueRects.some(
+          (other) =>
+            text.left < other.right - 1 &&
+            other.left < text.right - 1 &&
+            text.top < other.bottom - 1 &&
+            other.top < text.bottom - 1,
+        ),
+      );
+      return overlaps
+        ? [`${(title.textContent ?? '').trim()}: ${(value.textContent ?? '').trim()}`]
+        : [];
+    }),
+  );
 }
 
 async function wordsBrokenThatWouldFit(element: Locator): Promise<string[]> {
@@ -3096,6 +3200,28 @@ for (const { width, height } of [
       expect(await textPastTheSides(panel)).toEqual([]);
       expect(await contentPastTheSides(panel)).toEqual([]);
       expect(await numbersSplitAcrossLines(panel.locator('app-bank-account').first())).toEqual([]);
+    });
+
+    test('when they open the account sheet, then no row title is narrower than its longest word, jen správci stays clear of Správa, the name breaks only between words and no text reaches past its group', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await rememberedDonorSession(page, { user: administrator });
+      await page.goto('/darce/prehled');
+      const sheet = await showAccountList(page);
+      const administration = sheet.locator('.account-administration .ui-list__row');
+      await expect(administration.getByText('jen správci')).toBeVisible();
+      await expect(sheet.locator('.account-name')).toHaveText('Jana Nováková');
+      const rows = sheet.locator('.ui-list__row');
+
+      expect(await rowTitlesNarrowerThanTheirLongestWord(rows)).toEqual([]);
+      expect(await titlesOverTheirValues(rows)).toEqual([]);
+      expect(await wordsBrokenInside(sheet.locator('.account-name'))).toEqual([]);
+      expect(await wordsBrokenThatWouldFit(sheet.locator('.account-profile-detail'))).toEqual([]);
+      for (const group of await sheet.locator('.account-profile, .ui-list--grouped').all()) {
+        expect(await textPastTheSides(group, { ellipsis: 'within' })).toEqual([]);
+      }
+      await expect.poll(() => elementsPastTheScreen(page)).toEqual([]);
     });
   });
 
