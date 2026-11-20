@@ -34,7 +34,8 @@
 @keyframes motion-clipped {
   from,
   to {
-    overflow: hidden;
+    overflow: clip;
+    min-inline-size: 0;
   }
 }
 

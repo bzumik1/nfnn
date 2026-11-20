@@ -299,7 +299,7 @@ describe('Given the body of native details that opens through motion.expand-on-o
     assert.match(valueOf(plain, 'animation'), /motion-fade-in/);
     const child = plainOf(css, '.body > *');
     assert.match(child, /min-height:\s*0/);
-    assert.match(framesOf(animationNameOf(child)), /overflow:\s*hidden/);
+    assert.match(framesOf(animationNameOf(child)), /overflow:\s*clip/);
   });
 
   it('when the visitor asks for less motion, then the body only fades in and its child is never clipped', () => {
@@ -308,5 +308,38 @@ describe('Given the body of native details that opens through motion.expand-on-o
     assert.equal(animationNameOf(reduced), 'motion-fade-in');
     assert.doesNotMatch(valueOf(reduced, 'animation'), HEIGHT);
     assert.match(valueOf(reducedOf(css, '.body > *'), 'animation'), /none/);
+  });
+});
+
+describe('Given every fold that clips its child while its height changes', () => {
+  const css = compiled(
+    `.panel { @include motion.expand; }
+    .question { @include motion.expand($closes-by: class); }
+    .body { @include motion.expand-on-open; }
+    .row--leaving { @include motion.row-leave; }`,
+  );
+  const startingChild = (selector) =>
+    css.match(
+      new RegExp(`@starting-style \\{[^@]*?${escaped(`${selector} > *`)} \\{([^}]*)\\}`),
+    )?.[1] ?? '';
+  const clipping = [
+    startingChild('.panel'),
+    startingChild('.question'),
+    blocksOf(css, '.panel[hidden] > *')[0] ?? '',
+    blocksOf(css, '.question--closing > *')[0] ?? '',
+    framesOf(animationNameOf(plainOf(css, '.body > *'))),
+    blocksOf(css, '.row--leaving > *')[0] ?? '',
+  ];
+
+  it('when it opens, closes or leaves, then its child clips without becoming a scroll box, so a focus or a scroll into view inside it never moves its content', () => {
+    for (const declarations of clipping) {
+      assert.equal(valueOf(declarations, 'overflow'), 'clip');
+    }
+  });
+
+  it('when it clips, then its child may still grow narrower than its content, as a scroll box could, so a closed fold never widens its row', () => {
+    for (const declarations of clipping) {
+      assert.equal(valueOf(declarations, 'min-inline-size'), '0');
+    }
   });
 });

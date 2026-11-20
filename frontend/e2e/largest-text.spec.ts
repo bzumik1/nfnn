@@ -28,6 +28,7 @@ import {
   secondFactorRequired,
   showAccountList,
   signIn,
+  whenAdministrationCopied,
 } from './donor-session';
 import { expect, test } from './fixtures';
 import { serveReceiptKeys, serveReceiptStatus, YEARLY_RECEIPT } from './receipt-verification';
@@ -809,7 +810,9 @@ async function openPairedPayment(page: Page): Promise<OpenedTitle> {
   await mockDonorApi(page, donorWithDonations);
   await mockAdministration(page);
   await rememberedSession(page);
+  const copied = whenAdministrationCopied(page);
   await page.goto('/sprava/platby?stav=prirazene');
+  await copied();
   await page.locator('button.payment-row').first().click();
   const sheet = page.getByRole('dialog', { name: 'Přiřazená platba' });
   await expect(sheet).toBeVisible();
@@ -820,7 +823,9 @@ async function openErasure(page: Page): Promise<OpenedTitle> {
   await mockDonorApi(page, donorWithDonations);
   await mockAdministration(page);
   await rememberedSession(page);
+  const copied = whenAdministrationCopied(page);
   await page.goto(`${PETR_DETAIL_PATH}/vymaz`);
+  await copied();
   await page.getByRole('button', { name: 'Vymazat osobní údaje' }).click();
   const dialog = page.getByRole('dialog', { name: 'Vymazat osobní údaje: Petr Svoboda' });
   await expect(dialog).toBeVisible();
@@ -831,7 +836,9 @@ async function openOtherLoggerLevel(page: Page): Promise<OpenedTitle> {
   await mockDonorApi(page);
   await routeLogsApi(page);
   await rememberedSession(page);
+  const copied = whenAdministrationCopied(page);
   await page.goto('/sprava/logy/urovne');
+  await copied();
   await page.getByRole('button', { name: 'Jiný logger…' }).click();
   const sheet = page.getByRole('dialog', { name: 'Úroveň jiného loggeru' });
   await expect(sheet).toBeVisible();
@@ -2177,6 +2184,66 @@ for (const { pose, width, rootSize } of [
           `${await buttons[index].evaluate((control) => control.textContent?.trim())}: ${resting[index]} → ${height}`,
         ).toBeLessThanOrEqual(1);
       }
+    });
+
+    test('when they open the passkeys, then the panel opens in place under Spravovat and Odebrat never moves while it opens, so a press on it lands', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/passkeys',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                {
+                  id: '019a1b2c-3d4e-7f00-8000-000000000001',
+                  name: 'iPhone',
+                  createdAt: '2026-10-17T10:00:00Z',
+                  lastUsedAt: '2026-10-22T09:00:00Z',
+                },
+              ],
+            },
+          }),
+      );
+      await signIn(page, administrator);
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      const manage = page.getByRole('button', { name: 'Spravovat přístupové klíče' });
+      await expect(manage).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      const offsets = await manage.evaluate(
+        (button) =>
+          new Promise<number[]>((settled) => {
+            const panel = document.getElementById(button.getAttribute('aria-controls')!)!;
+            const seen: number[] = [];
+            const frame = () => {
+              const remove = Array.from(
+                panel.querySelectorAll<HTMLElement>('.passkey-actions button'),
+              ).find((candidate) => candidate.textContent?.trim() === 'Odebrat');
+              if (remove !== undefined && remove.getBoundingClientRect().height > 0) {
+                seen.push(
+                  Math.round(
+                    remove.getBoundingClientRect().top - button.getBoundingClientRect().bottom,
+                  ),
+                );
+              }
+              const opening = panel.getAnimations({ subtree: true }).length > 0;
+              if ((seen.length > 0 && !opening) || seen.length > 120) {
+                settled(seen);
+              } else {
+                requestAnimationFrame(frame);
+              }
+            };
+            button.click();
+            requestAnimationFrame(frame);
+          }),
+      );
+
+      expect(offsets.length).toBeGreaterThan(0);
+      expect(new Set(offsets)).toEqual(new Set([offsets.at(-1)]));
     });
   });
 }
