@@ -214,6 +214,28 @@ describe('Given the line about the first saving of the administration on this de
         expect(handedOn).toBe(0);
       });
 
+      it('then the button stays focused but busy while the saving runs, and a second press asks for nothing', () => {
+        after(FIRST_DOWNLOAD_ENDING_AFTER_MS / 2);
+
+        expect(retryButton().getAttribute('aria-disabled')).toBe('true');
+        expect(retryButton().disabled).toBe(false);
+        expect(document.activeElement).toBe(retryButton());
+
+        retryButton().click();
+        retryButton().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        expect(retries).toBe(1);
+      });
+
+      it('and it fails again, then the button is no longer busy and saving again is asked for once more', () => {
+        after(FIRST_DOWNLOAD_ENDING_AFTER_MS / 2);
+
+        ends('failed');
+
+        expect(retryButton().hasAttribute('aria-disabled')).toBe(false);
+        retryButton().click();
+        expect(retries).toBe(2);
+      });
+
       it('and it is stored within a second, then the failure folds away with its text in place, the focus is handed on at once and screen readers hear once that it is stored', () => {
         after(FIRST_DOWNLOAD_ENDING_AFTER_MS / 2);
         const line = live();

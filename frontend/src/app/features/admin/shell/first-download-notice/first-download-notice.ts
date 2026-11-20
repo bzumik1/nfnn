@@ -11,6 +11,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { BusyButton } from '../../../../shared/ui/busy-button/busy-button';
 import { Fold } from '../../../../shared/ui/fold/fold';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ADMINISTRATION_LOCK, type FirstDownloadProgress } from '../administration-lock';
@@ -22,7 +23,7 @@ type Shown = 'progress' | 'stored' | 'failed';
 
 @Component({
   selector: 'app-first-download-notice',
-  imports: [Fold, NeedsConnection],
+  imports: [BusyButton, Fold, NeedsConnection],
   templateUrl: './first-download-notice.html',
   styleUrl: './first-download-notice.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +35,7 @@ export class FirstDownloadNotice {
   private readonly running = computed(() => this.lock.firstDownload() !== null);
   private readonly shown = signal<Shown | null>(null);
   protected readonly saysStored = signal(false);
+  protected readonly retryRuns = computed(() => this.running() && this.shown() === 'failed');
   protected readonly view = computed(() => (this.lock.locked() ? null : this.shown()));
   protected readonly content = linkedSignal<Shown | null, Shown | null>({
     source: this.view,

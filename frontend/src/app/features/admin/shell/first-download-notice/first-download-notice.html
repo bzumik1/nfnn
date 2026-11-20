@@ -63,6 +63,7 @@
               type="button"
               class="ui-button ui-button--small"
               appNeedsConnection
+              [appBusy]="retryRuns()"
               (click)="retry()"
               i18n="@@admin.lock.firstDownload.retry"
             >
