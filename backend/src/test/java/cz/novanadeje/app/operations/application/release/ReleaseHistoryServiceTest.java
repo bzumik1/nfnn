@@ -77,8 +77,10 @@ class ReleaseHistoryServiceTest {
     @DisplayName("Given runs that ended before and after the year's edge, when the clean-up runs, then it deletes under the lock only what ended before the edge")
     void should_delete_what_ended_before_the_edge_when_cleaned_given_runs_around_it() {
         service.recordStart(OLDER);
-        clock.advance(Duration.ofDays(30));
+        clock.advance(Duration.ofDays(5));
         service.recordStart(NEWER);
+        clock.advance(Duration.ofDays(25));
+        service.recordStart(OLDER);
         clock.set(Instant.parse("2027-11-20T02:40:00Z"));
 
         ReleaseHistoryPurge purge = service.deleteEndedRuns();
@@ -86,6 +88,8 @@ class ReleaseHistoryServiceTest {
         assertThat(purge).isEqualTo(new ReleaseHistoryPurge(Instant.parse("2026-11-20T02:40:00Z"), 1));
         assertThat(runs.lockedBeforeEachWrite).isTrue();
         assertThat(runs.cutoffs).containsExactly(Instant.parse("2026-11-20T02:40:00Z"));
+        assertThat(service.history()).extracting(period -> period.run().startedAt())
+                .containsExactly(DEPLOYED.plus(Duration.ofDays(30)), DEPLOYED.plus(Duration.ofDays(5)));
     }
 
     private static RunningBuild build(String revision, String release) {
