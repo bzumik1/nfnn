@@ -877,12 +877,15 @@ export class AdminPayments {
       ),
     );
     const month = row.dataset['month'];
-    const left = (): void => {
-      event.animationComplete();
+    const released = (): void => {
       this.rowsLeaving.update((count) => Math.max(0, count - 1));
       if (month !== undefined) {
         this.leavingMonths.update((months) => new Set([...months].filter((key) => key !== month)));
       }
+    };
+    const left = (): void => {
+      afterRemoval(row, released);
+      event.animationComplete();
     };
     if (longest === 0) {
       left();
@@ -944,6 +947,21 @@ export class AdminPayments {
       this.loginDialog.open('login', { returnTo });
     });
   }
+}
+
+function afterRemoval(row: HTMLElement, released: () => void): void {
+  const parent = row.parentNode;
+  if (parent === null) {
+    released();
+    return;
+  }
+  const watch = new MutationObserver(() => {
+    if (!row.isConnected) {
+      watch.disconnect();
+      released();
+    }
+  });
+  watch.observe(parent, { childList: true });
 }
 
 function monthOf(item: AdminPaymentResponse): string {
