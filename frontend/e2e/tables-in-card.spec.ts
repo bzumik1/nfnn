@@ -281,16 +281,17 @@ async function linesOfEmail(page: Page, email: string): Promise<EmailLines> {
     .locator('main table .email')
     .filter({ hasText: email })
     .evaluate((element) => {
-      const linesOf = (node: Element) =>
-        new Set(
-          Array.from(node.getClientRects())
-            .filter(({ width }) => width > 0)
-            .map(({ top }) => Math.round(top)),
-        ).size;
+      const topsOfLines = (rects: DOMRectList) =>
+        Array.from(rects)
+          .filter(({ width }) => width > 0)
+          .map(({ top }) => Math.round(top));
+      const textOf = document.createRange();
+      textOf.selectNodeContents(element);
+      const segments = Array.from(element.querySelectorAll('.email-part'));
       return {
-        lines: linesOf(element),
-        segmentsOnMoreThanOneLine: Array.from(element.querySelectorAll('.email-part'))
-          .filter((segment) => linesOf(segment) > 1)
+        lines: new Set(topsOfLines(textOf.getClientRects())).size,
+        segmentsOnMoreThanOneLine: segments
+          .filter((segment) => new Set(topsOfLines(segment.getClientRects())).size > 1)
           .map((segment) => segment.textContent ?? ''),
       };
     });
