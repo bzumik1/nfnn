@@ -82,7 +82,7 @@ class LiveEndpointTest {
         assertThat(stream.getResponse().getHeader("X-Accel-Buffering")).isEqualTo("no");
         assertThat(stream.getResponse().getHeader(HttpHeaders.CACHE_CONTROL)).contains("no-store");
         assertThat(stream.getResponse().getHeader("Nfnn-Revision")).isEqualTo("f00ba12");
-        assertThat(stream.getResponse().getContentAsString()).startsWith("event:revision\ndata:{\"revision\":\"f00ba12\"}\n\n");
+        assertThat(stream.getResponse().getContentAsString()).startsWith("event:revision\ndata: {\"revision\":\"f00ba12\"}\n\n");
     }
 
     @Test
@@ -98,7 +98,7 @@ class LiveEndpointTest {
         transactions.executeWithoutResult(status -> events.publishEvent(StoredDataChanged.ofDonor(DonationLiveFeeds.DONATIONS, donor)));
 
         await().atMost(HINT_WITHIN).untilAsserted(() ->
-                assertThat(stream.getResponse().getContentAsString()).contains("event:changed\ndata:{\"feed\":\"donations\"}\n\n"));
+                assertThat(stream.getResponse().getContentAsString()).contains("event:changed\ndata: {\"feed\":\"donations\"}\n\n"));
         assertThat(stream.getResponse().getContentAsString()).doesNotContain("bank-accounts");
     }
 
@@ -112,8 +112,8 @@ class LiveEndpointTest {
         transactions.executeWithoutResult(status -> events.publishEvent(StoredDataChanged.of(DonationLiveFeeds.BANK_IMPORT)));
 
         await().atMost(HINT_WITHIN).untilAsserted(() -> assertThat(admin.getResponse().getContentAsString())
-                .contains("data:{\"feed\":\"payments\"}").contains("data:{\"feed\":\"bank-import\"}"));
-        await().atMost(HINT_WITHIN).untilAsserted(() -> assertThat(donor.getResponse().getContentAsString()).contains("data:{\"feed\":\"bank-import\"}"));
+                .contains("data: {\"feed\":\"payments\"}").contains("data: {\"feed\":\"bank-import\"}"));
+        await().atMost(HINT_WITHIN).untilAsserted(() -> assertThat(donor.getResponse().getContentAsString()).contains("data: {\"feed\":\"bank-import\"}"));
         assertThat(donor.getResponse().getContentAsString()).doesNotContain("payments");
     }
 
