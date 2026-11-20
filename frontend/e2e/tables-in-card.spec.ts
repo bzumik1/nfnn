@@ -62,6 +62,33 @@ const LONG_DONORS: readonly LongDonor[] = [
   },
 ];
 
+const DOTTED_EMAIL = 'marie.terezie.vojtiskova.zemanova@centrum.cz';
+const UNDOTTED_EMAIL = 'maximilianvojtechstastnyzlichtenstejnu@example.cz';
+
+const DONORS_WITH_LONG_EMAILS: readonly LongDonor[] = [
+  ...LONG_DONORS,
+  {
+    donorId: '01a18e56-bdb0-775a-bd0a-a6075683e003',
+    name: 'Marie Terezie Vojtíšková Zemanová',
+    type: 'PERSON',
+    email: DOTTED_EMAIL,
+    variableSymbol: '5550001113',
+    account: '2400123456/2010',
+    bookedOn: '2026-10-08',
+    amountMinor: 100000,
+  },
+  {
+    donorId: '01a18e56-bdb0-775a-bd0a-a6075683e004',
+    name: 'Maximilián Vojtěch Šťastný',
+    type: 'PERSON',
+    email: UNDOTTED_EMAIL,
+    variableSymbol: '5550001114',
+    account: '2400123457/2010',
+    bookedOn: '2026-10-07',
+    amountMinor: 200000,
+  },
+];
+
 const WAITING_PAYMENT = {
   id: '019a1c00-0000-7000-8000-00000000f100',
   bookedOn: '2026-10-26',
@@ -131,12 +158,12 @@ function accountOf(donor: LongDonor) {
   };
 }
 
-async function serveCopyOfLongDonors(page: Page): Promise<void> {
-  const payments = LONG_DONORS.map(paymentOf);
+async function serveCopyOf(page: Page, donors: readonly LongDonor[]): Promise<void> {
+  const payments = donors.map(paymentOf);
   await serveAdministrationCopy(page, {
     donations: {
       'payments:2026-10': [payment(WAITING_PAYMENT.id, WAITING_PAYMENT), ...payments],
-      'donations:2026-10': LONG_DONORS.map((donor, index) =>
+      'donations:2026-10': donors.map((donor, index) =>
         administrationCopyGift(
           payments[index].id,
           donor.donorId,
@@ -144,9 +171,9 @@ async function serveCopyOfLongDonors(page: Page): Promise<void> {
           donor.amountMinor,
         ),
       ),
-      'donor-records:2026-01': LONG_DONORS.map(recordOf),
+      'donor-records:2026-01': donors.map(recordOf),
     },
-    donors: { 'accounts:2026-01': LONG_DONORS.map(accountOf) },
+    donors: { 'accounts:2026-01': donors.map(accountOf) },
   });
 }
 
@@ -182,12 +209,16 @@ interface Overflow {
   readonly by: number;
 }
 
-async function openPage(page: Page, target: TablePage): Promise<void> {
+async function openPage(
+  page: Page,
+  target: TablePage,
+  donors: readonly LongDonor[] = LONG_DONORS,
+): Promise<void> {
   await mockDonorApi(page, donorWithDonations);
   await rememberedSession(page);
   if (target.administration) {
     await mockAdministration(page);
-    await serveCopyOfLongDonors(page);
+    await serveCopyOf(page, donors);
     const copied = whenAdministrationCopied(page);
     await page.goto(target.path);
     await expect(page.locator('h1').first()).not.toHaveText(ADMINISTRATION_LOCKED);
@@ -240,46 +271,66 @@ async function pansSideways(page: Page): Promise<boolean> {
   );
 }
 
-interface BrokenText {
-  readonly text: string;
+interface EmailLines {
   readonly lines: number;
+  readonly segmentsOnMoreThanOneLine: string[];
 }
 
-async function textsOnMoreThanOneLine(page: Page, selector: string): Promise<BrokenText[]> {
-  return page.locator('main table').evaluateAll(
-    (tables, wanted) =>
-      tables
-        .flatMap((table) => Array.from(table.querySelectorAll(wanted)))
-        .map((element) => ({
-          text: (element.textContent ?? '').trim(),
-          lines: new Set(
-            Array.from(element.getClientRects())
-              .filter(({ width }) => width > 0)
-              .map(({ top }) => Math.round(top)),
-          ).size,
-        }))
-        .filter(({ lines }) => lines > 1),
-    selector,
-  );
+async function linesOfEmail(page: Page, email: string): Promise<EmailLines> {
+  return page
+    .locator('main table .email')
+    .filter({ hasText: email })
+    .evaluate((element) => {
+      const linesOf = (node: Element) =>
+        new Set(
+          Array.from(node.getClientRects())
+            .filter(({ width }) => width > 0)
+            .map(({ top }) => Math.round(top)),
+        ).size;
+      return {
+        lines: linesOf(element),
+        segmentsOnMoreThanOneLine: Array.from(element.querySelectorAll('.email-part'))
+          .filter((segment) => linesOf(segment) > 1)
+          .map((segment) => segment.textContent ?? ''),
+      };
+    });
 }
 
 test.describe('Given the donors listed with long names and e-mails on a computer', () => {
   const donors = PAGES.find(({ path }) => path === '/sprava/darci')!;
 
   for (const width of [1280, 1920]) {
-    test(`when Dárci opens at ${width} px, then it stays a table inside its card and every e-mail breaks at most right after its @`, async ({
+    test(`when Dárci opens at ${width} px, then it stays a table inside its card and a long dotted e-mail breaks only after its @ and its dots`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: HEIGHT });
-      await openPage(page, donors);
+      await openPage(page, donors, DONORS_WITH_LONG_EMAILS);
 
       await expect(
         page.getByRole('main').getByRole('columnheader', { name: 'Variabilní symbol' }),
       ).toBeVisible();
       await expect(page.locator('main table thead')).not.toHaveCSS('position', 'absolute');
       await expect(page.locator('main table tbody tr').first()).toHaveCSS('display', 'table-row');
-      await expect(page.locator('main table .email').first()).toBeVisible();
-      expect(await textsOnMoreThanOneLine(page, '.email-part')).toEqual([]);
+      await expect(
+        page.locator('main table .email').filter({ hasText: DOTTED_EMAIL }),
+      ).toBeVisible();
+      const dotted = await linesOfEmail(page, DOTTED_EMAIL);
+      expect(dotted.lines).toBeGreaterThan(1);
+      expect(dotted.segmentsOnMoreThanOneLine).toEqual([]);
+      await expect.poll(() => overflowsOfTheirCards(page)).toEqual([]);
+      expect(await pansSideways(page)).toBe(false);
+    });
+
+    test(`when Dárci opens at ${width} px with an e-mail whose long name has no dot, then that e-mail wraps inside its cell and the table stays inside its card`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: HEIGHT });
+      await openPage(page, donors, DONORS_WITH_LONG_EMAILS);
+
+      await expect(
+        page.locator('main table .email').filter({ hasText: UNDOTTED_EMAIL }),
+      ).toBeVisible();
+      expect((await linesOfEmail(page, UNDOTTED_EMAIL)).lines).toBeGreaterThan(1);
       await expect.poll(() => overflowsOfTheirCards(page)).toEqual([]);
       expect(await pansSideways(page)).toBe(false);
     });

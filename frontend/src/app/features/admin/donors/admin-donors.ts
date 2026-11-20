@@ -156,9 +156,8 @@ export class AdminDonors {
     return formatDonationDate(gift.receivedAt);
   }
 
-  protected emailParts(email: string): { local: string; domain: string } {
-    const at = email.lastIndexOf('@') + 1;
-    return { local: email.slice(0, at), domain: email.slice(at) };
+  protected emailSegments(email: string): string[] {
+    return email.split(/(?<=[@.])/);
   }
 
   protected typeLabel(item: DonorAccountResponse): string {

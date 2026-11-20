@@ -63,6 +63,14 @@ function problem(status: number, type: string, title: string, detail: string) {
   };
 }
 
+function linesItMayBreakInto(email: HTMLElement): string[] {
+  return Array.from(email.childNodes)
+    .filter((node) => node.nodeType !== Node.COMMENT_NODE)
+    .map((node) => (node.nodeName === 'WBR' ? '\n' : (node.textContent ?? '')))
+    .join('')
+    .split('\n');
+}
+
 describe('Given an administrator on the donors page', () => {
   let fixture: ComponentFixture<AdminDonors>;
   let http: HttpTestingController;
@@ -248,15 +256,19 @@ describe('Given an administrator on the donors page', () => {
     expect(text('[role="status"]')).toBe('Nalezení dárci: 2');
   });
 
-  it('when donors are found, then each e-mail reads whole and may break only right after its @', async () => {
-    await searched('nov');
+  it('when donors are found, then each e-mail reads whole and may break only right after its @ and after each of its dots', async () => {
+    await searched('nov', [donorAccount({ email: 'jana.novakova@mail.example.cz' })]);
 
     const cell = rows()[0].querySelector('td[data-label="E-mail"]') as HTMLElement;
-    const breaks = Array.from(cell.querySelectorAll('wbr'));
-    expect(rowText(cell)).toBe('jana@example.cz');
-    expect(breaks).toHaveLength(1);
-    expect(breaks[0].previousSibling?.textContent).toBe('jana@');
-    expect(breaks[0].nextSibling?.textContent).toBe('example.cz');
+    expect(rowText(cell)).toBe('jana.novakova@mail.example.cz');
+    expect(cell.textContent).toBe('jana.novakova@mail.example.cz');
+    expect(linesItMayBreakInto(cell.querySelector('.email') as HTMLElement)).toEqual([
+      'jana.',
+      'novakova@',
+      'mail.',
+      'example.',
+      'cz',
+    ]);
   });
 
   it('when a found donor registered on an early morning of a single-digit day and month, then the registration reads as the Prague day without leading zeros and without the time', async () => {
@@ -418,6 +430,9 @@ describe('Given an administrator on the donors page where lists show as rows', (
     if (node instanceof Element && node.getAttribute('aria-hidden') === 'true') {
       return '';
     }
+    if (node instanceof Element && node.classList.contains('email')) {
+      return node.textContent ?? '';
+    }
     return Array.from(node.childNodes).map(spaced).join(' ');
   }
 
@@ -478,6 +493,23 @@ describe('Given an administrator on the donors page where lists show as rows', (
       'Stavby Novák s.r.o. VS 7310945528 · stavby@example.cz · IČO 45274649 Správce',
     ]);
     expect(rows[0].getAttribute('href')).toBe('/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369');
+  });
+
+  it('when a donor is found, then the e-mail under the name breaks at the same places as in the table and reads whole', async () => {
+    const input = fixture.nativeElement.querySelector('#donor-search') as HTMLInputElement;
+    input.value = 'nov';
+    input.dispatchEvent(new Event('input'));
+    await vi.advanceTimersByTimeAsync(300);
+    http
+      .expectOne((candidate) => candidate.url === SEARCH_URL)
+      .flush({ items: [donorAccount({ email: 'jana.novakova@example.cz' })], hasMore: false });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const email = fixture.nativeElement.querySelector('.donor-rows .email') as HTMLElement;
+    expect(email.textContent).toBe('jana.novakova@example.cz');
+    expect(linesItMayBreakInto(email)).toEqual(['jana.', 'novakova@', 'example.', 'cz']);
   });
 });
 

@@ -77,20 +77,28 @@
 }
 
 .ui-table .email {
+  --donor-email-max-inline-size: 16ch;
+
+  display: block;
+  inline-size: max-content;
+  max-inline-size: var(--donor-email-max-inline-size);
   overflow-wrap: normal;
 }
 
 .ui-table .email-part {
-  white-space: nowrap;
+  overflow-wrap: break-word;
 }
 
 @include bp.container-down(ui-table, ledger) {
   .ui-table .email {
+    display: inline;
+    inline-size: auto;
+    max-inline-size: none;
     overflow-wrap: anywhere;
   }
 
   .ui-table .email-part {
-    white-space: normal;
+    overflow-wrap: inherit;
   }
 }
 

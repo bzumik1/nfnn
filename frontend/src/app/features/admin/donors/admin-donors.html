@@ -105,7 +105,14 @@
                   @if (item.account.erasedAt) {
                     <ng-container i18n="@@admin.donors.email.erased">vymazán</ng-container>
                   } @else {
-                    <span class="email">{{ item.account.email }}</span>
+                    <span class="email">
+                      @for (segment of emailSegments(item.account.email); track $index) {
+                        @if (!$first) {
+                          <wbr />
+                        }
+                        <span class="email-part">{{ segment }}</span>
+                      }
+                    </span>
                   }
                   @if (item.account.companyIdentifier) {
                     ·
@@ -215,11 +222,14 @@
                     @if (item.account.erasedAt) {
                       <span class="muted" i18n="@@admin.donors.email.erased">vymazán</span>
                     } @else {
-                      @let email = emailParts(item.account.email);
-                      <span class="email"
-                        ><span class="email-part">{{ email.local }}</span
-                        ><wbr /><span class="email-part">{{ email.domain }}</span></span
-                      >
+                      <span class="email">
+                        @for (segment of emailSegments(item.account.email); track $index) {
+                          @if (!$first) {
+                            <wbr />
+                          }
+                          <span class="email-part">{{ segment }}</span>
+                        }
+                      </span>
                     }
                   </td>
                   <td
