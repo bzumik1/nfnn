@@ -133,7 +133,7 @@ class EventListenerRulesTest {
             Map.entry("operations.infrastructure.events.OperationalAlertPushListener.on(OperationalAlertChanged)",
                     "a push to administrators, retried in memory: lost on a restart, and the alert stays in /sprava (#621)"),
             Map.entry("operations.infrastructure.events.ReceiptSigningKeyWithdrawnListener.on(ReceiptSigningKeyWithdrawn)",
-                    "open: #1449; requests the seed renewal and the restart: lost, the renewal is never requested and signing stays paused, failing safe until an administrator acts (#621, T11)"),
+                    "requests the seed renewal and the restart: a lost request is made at the next start, which finds the own key withdrawn in the audit trail with no request waiting (#621, T11, #1450)"),
             Map.entry("shared.infrastructure.live.LiveHintListener.onDeviceSignedOut(DeviceSignedOut)",
                     "a live hint or stream close: lost, and the clients recover by their next read and the session check (#621)"),
             Map.entry("shared.infrastructure.live.LiveHintListener.onSessionsEnded(DonorSessionsEnded)",
