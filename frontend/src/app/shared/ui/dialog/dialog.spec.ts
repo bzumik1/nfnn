@@ -193,6 +193,80 @@ describe('Given a dialog opened from a button', () => {
     expect(document.activeElement?.id).toBe('opener');
   });
 
+  describe('when it goes away and the focus returns to the button that opened it', () => {
+    const header = 64;
+    const height = window.innerHeight;
+    let focusOptions: (FocusOptions | undefined)[];
+    let scrolls: (boolean | ScrollIntoViewOptions | undefined)[];
+
+    function openerAt(top: number): HTMLButtonElement {
+      const opener = fixture.nativeElement.querySelector('#opener') as HTMLButtonElement;
+      opener.getBoundingClientRect = () => new DOMRect(0, top, 44, 44);
+      const focus = opener.focus.bind(opener);
+      opener.focus = (options?: FocusOptions) => {
+        focusOptions.push(options);
+        focus(options);
+      };
+      opener.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+        scrolls.push(options);
+      };
+      return opener;
+    }
+
+    function closeDialog(): void {
+      host.open.set(false);
+      fixture.detectChanges();
+    }
+
+    beforeEach(() => {
+      focusOptions = [];
+      scrolls = [];
+      document.documentElement.style.scrollPaddingTop = `${header}px`;
+      document.documentElement.style.scrollPaddingBottom = '80px';
+    });
+
+    afterEach(() => {
+      document.documentElement.style.scrollPaddingTop = '';
+      document.documentElement.style.scrollPaddingBottom = '';
+    });
+
+    it('then the page stays where it is while the button shows', () => {
+      openerAt(300);
+
+      closeDialog();
+
+      expect(document.activeElement?.id).toBe('opener');
+      expect(focusOptions).toEqual([{ preventScroll: true }]);
+      expect(scrolls).toEqual([]);
+    });
+
+    it('then the page moves the least it can to show the button when it lies out of the window', () => {
+      openerAt(height + 200);
+
+      closeDialog();
+
+      expect(document.activeElement?.id).toBe('opener');
+      expect(focusOptions).toEqual([{ preventScroll: true }]);
+      expect(scrolls).toEqual([{ block: 'nearest', inline: 'nearest' }]);
+    });
+
+    it('then the page moves the least it can to show the button when it hides under the head', () => {
+      openerAt(header - 50);
+
+      closeDialog();
+
+      expect(scrolls).toEqual([{ block: 'nearest', inline: 'nearest' }]);
+    });
+
+    it('then the page moves the least it can to show the button when it hides under the bar at the bottom', () => {
+      openerAt(height - 60);
+
+      closeDialog();
+
+      expect(scrolls).toEqual([{ block: 'nearest', inline: 'nearest' }]);
+    });
+  });
+
   it('when it goes away after the button that opened it is gone, then the focus goes to the page content instead of being lost', () => {
     const main = document.createElement('main');
     main.id = 'obsah';

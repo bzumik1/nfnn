@@ -180,6 +180,17 @@ const DETAILS_LEFT_TO_THE_SIMULATOR: Record<string, string> = {
     'a sent monthly report opens from the report history, which this matrix does not seed; the simulator walks it',
 };
 
+const SCREENS_SHOWN_ONLY_WITH_THEIR_DATA: Record<string, string> = {
+  '/sprava/zalohy/historie':
+    'Zálohy link Všechny zálohy only beside a stored backup, which this matrix does not seed; the simulator walks it',
+  '/sprava/logy/soubory':
+    'Logy a diagnostika link Starší soubory only when older log files exist, which this matrix does not seed; the simulator walks it',
+  '/sprava/logy/soubor':
+    'a log file opens with its name in the query, which the walk leaves out like a detail; the simulator walks it',
+  '/sprava/logy/stav':
+    'Logy a diagnostika link the state of the server only once its health answer arrives, which this matrix does not seed; the simulator walks it',
+};
+
 function detailScreens(): string[] {
   const content = routePaths('content/content.routes.ts');
   const administration = routePaths('admin/admin.routes.ts');
@@ -826,9 +837,11 @@ async function walkRow(
   row: Row,
   way: Way,
   scrolled: boolean,
-  open: () => Promise<void>,
+  link: Locator,
+  open: () => Promise<void> = () => clickWithoutScrolling(link),
 ): Promise<void> {
   const top = await screens.scrollTo(scrolled ? SCROLLED_BY_PX : 0);
+  const shownBefore = (await placementOf(link)).shown;
   const groundBefore = onTheSheetGround(screens, row) ? await bandColour(page) : null;
   await watchTheStep(page);
   await open();
@@ -851,15 +864,83 @@ async function walkRow(
     return;
   }
   await screens.returned(row);
-  await expect.poll(() => screens.scrollTop(), { message: 'the scroll was not kept' }).toBe(top);
   await expect.poll(() => activeHref(page), { message: 'the focus did not return' }).toBe(row.href);
+  if (shownBefore) {
+    await expect.poll(() => screens.scrollTop(), { message: 'the scroll was not kept' }).toBe(top);
+  } else {
+    await expectBroughtIntoViewTheLeast(page);
+  }
   if (groundBefore !== null) {
     expectSameColour(await bandColour(page), groundBefore, 'after the step back');
   }
 }
 
+interface Placement {
+  readonly shown: boolean;
+  readonly atAnEdge: boolean;
+}
+
+function placementOf(target: Locator): Promise<Placement> {
+  return target.evaluate(placementInView);
+}
+
+function placementInView(element: Element): Placement {
+  const pixels = (value: string): number => Number.parseFloat(value) || 0;
+  let top = 0;
+  let bottom = window.innerHeight;
+  const narrow = (from: number, to: number): void => {
+    top = Math.max(top, from);
+    bottom = Math.min(bottom, to);
+  };
+  const header = element.closest('header');
+  const inBanner =
+    header !== null &&
+    header.parentElement?.closest('main, article, section, aside, nav, dialog') == null;
+  let scroller: Element | null = null;
+  if (element.closest('dialog') === null && !inBanner) {
+    const root = getComputedStyle(document.documentElement);
+    narrow(pixels(root.scrollPaddingTop), window.innerHeight - pixels(root.scrollPaddingBottom));
+  }
+  for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
+    if (parent === document.body || parent === document.documentElement) {
+      continue;
+    }
+    const style = getComputedStyle(parent);
+    if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+      scroller ??= parent;
+      const edges = parent.getBoundingClientRect();
+      narrow(
+        edges.top + pixels(style.scrollPaddingTop),
+        edges.bottom - pixels(style.scrollPaddingBottom),
+      );
+    }
+  }
+  const box = element.getBoundingClientRect();
+  const scrolling = scroller ?? document.documentElement;
+  const atAnEnd =
+    scrolling.scrollTop <= 0 ||
+    scrolling.scrollTop >= scrolling.scrollHeight - scrolling.clientHeight - 1;
+  return {
+    shown: box.bottom > top && box.top < bottom,
+    atAnEdge: atAnEnd || Math.abs(box.top - top) <= 1 || Math.abs(box.bottom - bottom) <= 1,
+  };
+}
+
+async function expectBroughtIntoViewTheLeast(page: Page): Promise<void> {
+  await expect
+    .poll(() => placementOf(page.locator(':focus')), {
+      message:
+        'the focus came back to a row the screen did not show, and the screen did not bring it to its nearest edge',
+    })
+    .toEqual({ shown: true, atAnEdge: true });
+}
+
 function livePageTitle(page: Page): Locator {
   return page.locator('app-root .admin-page h1');
+}
+
+function rowLink(page: Page, row: Row): Locator {
+  return page.locator(`.admin-frame a[href="${row.href}"]`).first();
 }
 
 function clickWithoutScrolling(link: Locator): Promise<void> {
@@ -1046,12 +1127,20 @@ for (const look of LOOKS) {
         for (const row of rows) {
           for (const scrolled of [false, true]) {
             await test.step(`${row.name}${scrolled ? ', scrolled' : ''}`, () =>
-              walkRow(page, screens, row, way, scrolled, () => {
-                screens.opening(row);
-                return clickWithoutScrolling(
-                  accountSheet(page).locator(`a[href="${row.href}"]`).first(),
-                );
-              }));
+              walkRow(
+                page,
+                screens,
+                row,
+                way,
+                scrolled,
+                accountSheet(page).locator(`a[href="${row.href}"]`).first(),
+                () => {
+                  screens.opening(row);
+                  return clickWithoutScrolling(
+                    accountSheet(page).locator(`a[href="${row.href}"]`).first(),
+                  );
+                },
+              ));
           }
         }
       });
@@ -1077,10 +1166,8 @@ for (const look of LOOKS) {
             for (const scrolled of [false, true]) {
               await openAdministrationAt(page, origin.trail);
               await test.step(`${row.href}${scrolled ? ', scrolled' : ''}`, () =>
-                walkRow(page, screens, row, way, scrolled, async () => {
-                  await clickWithoutScrolling(
-                    page.locator(`.admin-frame a[href="${row.href}"]`).first(),
-                  );
+                walkRow(page, screens, row, way, scrolled, rowLink(page, row), async () => {
+                  await clickWithoutScrolling(rowLink(page, row));
                   if (!scrolled && origin.trail.length < 3) {
                     await screens.shown(row);
                     const frame = page.locator('.admin-frame');
@@ -1100,7 +1187,10 @@ for (const look of LOOKS) {
             }
           }
         }
-        expect([...seen]).toEqual(expect.arrayContaining(administrationScreens()));
+        expect(
+          administrationScreens().filter((path) => !seen.has(path)),
+          'a screen of Správa the walk did not reach',
+        ).toEqual(Object.keys(SCREENS_SHOWN_ONLY_WITH_THEIR_DATA));
       });
 
       test(`when ${WAY_NAMES[way]} on Nastavení opened from Občas a pro technika, then it travels back over Občas a pro technika without a jump, one title of the head at a time, with the scroll and the focus kept`, async ({
@@ -1119,7 +1209,7 @@ for (const look of LOOKS) {
         for (const scrolled of [false, true]) {
           await openAdministrationAt(page, trail);
           await test.step(`${row.href} from ${row.from}${scrolled ? ', scrolled' : ''}`, () =>
-            walkRow(page, screens, row, way, scrolled, () => clickWithoutScrolling(link)));
+            walkRow(page, screens, row, way, scrolled, link));
         }
       });
 
@@ -1161,8 +1251,13 @@ for (const look of LOOKS) {
           };
           for (const scrolled of [false, true]) {
             await test.step(`${path}${scrolled ? ', scrolled' : ''}`, () =>
-              walkRow(page, screens, detail, way, scrolled, () =>
-                clickWithoutScrolling(within.locator(`a[href="${detail.href}"]`).first()),
+              walkRow(
+                page,
+                screens,
+                detail,
+                way,
+                scrolled,
+                within.locator(`a[href="${detail.href}"]`).first(),
               ));
           }
         }
@@ -1198,52 +1293,63 @@ for (const look of LOOKS) {
 
     test.beforeEach(({ page }) => onThePhone(page, look));
 
-    test('when the step back closes the sheet, then the sheet goes down without a jump over the news left where it was, and the focus returns to Účet', async ({
-      page,
-    }) => {
-      await page.goto('/aktuality');
-      await expect(page.getByRole('heading', { name: 'Zpráva 8' })).toBeVisible();
-      const top = await pageScroll(page).scrollTo(SCROLLED_BY_PX);
-      const account = page.getByRole('banner').getByRole('button', { name: 'Účet' });
-      await account.evaluate((button: HTMLElement) => button.focus({ preventScroll: true }));
-      expect(await pageScroll(page).scrollTop(), 'the news moved before the sheet opened').toBe(
-        top,
-      );
-      await page.keyboard.press('Enter');
-      await accountListShown(page);
-      await sheetSettled(page);
-      expect(await pageScroll(page).scrollTop(), 'the news moved as the sheet opened').toBe(top);
-      await page.evaluate(() => {
-        const seen: number[] = [];
-        (window as unknown as { nfnnSheetTops: number[] }).nfnnSheetTops = seen;
-        const look = (): void => {
-          const panel = document.querySelector('app-account-sheet .dialog-panel');
-          if (panel === null) {
-            return;
-          }
-          seen.push(panel.getBoundingClientRect().top);
+    for (const away of [false, true]) {
+      test(`when the step back closes the sheet ${away ? 'with Účet scrolled away with the news' : 'with Účet still on the screen'}, then the sheet goes down without a jump, the focus returns to Účet and ${away ? 'the news moves the least that brings Účet back on the screen' : 'the news stays where it was'}`, async ({
+        page,
+      }) => {
+        await page.goto('/aktuality');
+        await expect(page.getByRole('heading', { name: 'Zpráva 8' })).toBeVisible();
+        const account = page.getByRole('banner').getByRole('button', { name: 'Účet' });
+        const stillShown = await account.evaluate((button: HTMLElement) =>
+          Math.max(0, Math.floor(button.getBoundingClientRect().top + window.scrollY) - 1),
+        );
+        const top = await pageScroll(page).scrollTo(away ? SCROLLED_BY_PX : stillShown);
+        expect((await placementOf(account)).shown, 'Účet shows before the sheet opens').toBe(!away);
+        await account.evaluate((button: HTMLElement) => button.focus({ preventScroll: true }));
+        expect(await pageScroll(page).scrollTop(), 'the news moved before the sheet opened').toBe(
+          top,
+        );
+        await page.keyboard.press('Enter');
+        await accountListShown(page);
+        await sheetSettled(page);
+        expect(await pageScroll(page).scrollTop(), 'the news moved as the sheet opened').toBe(top);
+        await page.evaluate(() => {
+          const seen: number[] = [];
+          (window as unknown as { nfnnSheetTops: number[] }).nfnnSheetTops = seen;
+          const look = (): void => {
+            const panel = document.querySelector('app-account-sheet .dialog-panel');
+            if (panel === null) {
+              return;
+            }
+            seen.push(panel.getBoundingClientRect().top);
+            requestAnimationFrame(look);
+          };
           requestAnimationFrame(look);
-        };
-        requestAnimationFrame(look);
+        });
+
+        await stepBack(page);
+
+        await expect(accountSheet(page)).toHaveCount(0);
+        const tops = await page.evaluate(
+          () => (window as unknown as { nfnnSheetTops: number[] }).nfnnSheetTops,
+        );
+        if (measuresFrames(page)) {
+          expect(
+            tops.filter((at) => at > tops[0] + 1 && at < HEIGHT - 1).length,
+            'no frame showed the sheet on its way down',
+          ).toBeGreaterThan(0);
+        }
+        for (let at = 1; at < tops.length; at++) {
+          expect(tops[at]).toBeGreaterThanOrEqual(tops[at - 1] - 1);
+        }
+        await expect(account).toBeFocused();
+        if (away) {
+          await expectBroughtIntoViewTheLeast(page);
+          expect(await pageScroll(page).scrollTop()).toBeLessThan(top);
+        } else {
+          await expect.poll(() => pageScroll(page).scrollTop()).toBe(top);
+        }
       });
-
-      await stepBack(page);
-
-      await expect(accountSheet(page)).toHaveCount(0);
-      const tops = await page.evaluate(
-        () => (window as unknown as { nfnnSheetTops: number[] }).nfnnSheetTops,
-      );
-      if (measuresFrames(page)) {
-        expect(
-          tops.filter((at) => at > tops[0] + 1 && at < HEIGHT - 1).length,
-          'no frame showed the sheet on its way down',
-        ).toBeGreaterThan(0);
-      }
-      for (let at = 1; at < tops.length; at++) {
-        expect(tops[at]).toBeGreaterThanOrEqual(tops[at - 1] - 1);
-      }
-      await expect.poll(() => pageScroll(page).scrollTop()).toBe(top);
-      await expect(account).toBeFocused();
-    });
+    }
   });
 }

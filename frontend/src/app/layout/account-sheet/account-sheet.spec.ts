@@ -12,7 +12,7 @@ import { sampleDonor } from '../../core/auth/testing/donor-fixtures';
 import { SignedOutNotice } from '../../core/auth/signed-out-notice';
 import { CompactLayout } from '../../core/layout/compact-layout';
 import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
-import { APP_ACCOUNT_KEY } from './account-return';
+import { AccountReturn, APP_ACCOUNT_KEY, APP_ACCOUNT_SCROLL_KEY } from './account-return';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { FakeDialogHistory } from '../../shared/ui/dialog/testing/fake-dialog-history';
 import { AccountBadges } from '../../core/layout/account-badges';
@@ -269,6 +269,27 @@ describe('Given the account sheet of a signed-in donor', () => {
       expect(closed).toBe(0);
     });
 
+    it('and the visitor goes back, then the row they came from takes the focus without moving the list it shows in', async () => {
+      const focused: (FocusOptions | undefined)[] = [];
+      const focus = HTMLElement.prototype.focus;
+      const spy = vi.spyOn(HTMLElement.prototype, 'focus').mockImplementation(function (
+        this: HTMLElement,
+        options?: FocusOptions,
+      ) {
+        if (this.getAttribute('href') === '/darce/potvrzeni') {
+          focused.push(options);
+        }
+        focus.call(this, options);
+      });
+
+      history.listener?.stepBack();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      spy.mockRestore();
+
+      expect(focused).toEqual([{ preventScroll: true }]);
+    });
+
     it('and Zavřít is pressed, then the whole sheet closes over the page, as at its first step', async () => {
       sheet.querySelector<HTMLButtonElement>('button[aria-label="Zavřít"]')!.click();
       fixture.detectChanges();
@@ -494,8 +515,27 @@ describe('Given the account sheet of a signed-in donor', () => {
 
     expect(navigate).toHaveBeenCalledWith('/sprava', {
       replaceUrl: true,
-      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '' },
+      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '', [APP_ACCOUNT_SCROLL_KEY]: 0 },
     });
+  });
+
+  it('when a step back from the administration opens it again on its list scrolled before, then the list stands at that scroll again', async () => {
+    admin.set(true);
+    vi.spyOn(TestBed.inject(AccountReturn), 'takeScrollToReopen').mockReturnValue(92);
+    const placed: number[] = [];
+    const scrollTop = vi.spyOn(Element.prototype, 'scrollTop', 'set');
+    scrollTop.mockImplementation(function (this: Element, top: number) {
+      if (this.classList.contains('dialog-panel')) {
+        placed.push(top);
+      }
+    });
+    fixture = TestBed.createComponent(AccountSheet);
+    fixture.componentRef.setInput('reopenedOn', '');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    scrollTop.mockRestore();
+
+    expect(placed).toEqual([92]);
   });
 
   it('when a step back opens it again on a section, then it stands on that section with its step at once', async () => {

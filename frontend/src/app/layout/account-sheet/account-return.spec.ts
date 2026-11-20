@@ -3,7 +3,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
 import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
-import { AccountReturn, APP_ACCOUNT_KEY } from './account-return';
+import { AccountReturn, APP_ACCOUNT_KEY, APP_ACCOUNT_SCROLL_KEY } from './account-return';
 
 @Component({ template: '' })
 class Blank {}
@@ -37,12 +37,16 @@ describe('Given a page the account sheet handed its entry over to', () => {
     await started;
   });
 
-  async function openFromTheSheet(url: string, section: string): Promise<void> {
+  async function openFromTheSheet(url: string, section: string, scrolled = 0): Promise<void> {
     const location = TestBed.inject(Location);
     location.go(location.path(), '', { ...(location.getState() as object), nfnnDialogDepth: 1 });
     await router.navigateByUrl(url, {
       replaceUrl: true,
-      state: { [APP_DEPTH_KEY]: back.nextDepth(), [APP_ACCOUNT_KEY]: section },
+      state: {
+        [APP_DEPTH_KEY]: back.nextDepth(),
+        [APP_ACCOUNT_KEY]: section,
+        [APP_ACCOUNT_SCROLL_KEY]: scrolled,
+      },
     });
   }
 
@@ -65,6 +69,15 @@ describe('Given a page the account sheet handed its entry over to', () => {
 
     expect(router.url).toBe('/aktuality/clanek');
     expect(accountReturn.sectionToReopen()).toBe('');
+  });
+
+  it('when Zpět steps back from Správa opened from the scrolled list, then the sheet is asked to open at the scroll it was left at, and only once', async () => {
+    await openFromTheSheet('/sprava', '', 92);
+
+    await stepBack(() => back.back('/'));
+
+    expect(accountReturn.takeScrollToReopen()).toBe(92);
+    expect(accountReturn.takeScrollToReopen()).toBe(0);
   });
 
   it('when the page was opened from a section of the sheet and Zpět steps back, then the sheet is asked to open on that section', async () => {

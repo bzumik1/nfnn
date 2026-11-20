@@ -193,6 +193,65 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(held).toEqual([true]);
   });
 
+  it('when the hold of a step back ends, then every held motion starts at that moment, not only at a frame drawn after it', async () => {
+    interface HeldMotion {
+      pending: boolean;
+      startTime: number | null;
+      finished: Promise<unknown>;
+    }
+    const motions = new Map<Element, HeldMotion>();
+    const motionOf = (element: Element): HeldMotion => {
+      if (!motions.has(element)) {
+        motions.set(element, {
+          pending: true,
+          startTime: null,
+          finished: new Promise(() => undefined),
+        });
+      }
+      return motions.get(element)!;
+    };
+    const ownAnimations = Object.getOwnPropertyDescriptor(Element.prototype, 'getAnimations');
+    Object.defineProperty(Element.prototype, 'getAnimations', {
+      configurable: true,
+      value(this: Element, options?: GetAnimationsOptions) {
+        const elements = options?.subtree ? [this, ...this.querySelectorAll('*')] : [this];
+        return elements
+          .filter((element) => element.closest(`.${PAGE_TRANSITION_CLASS}`) !== null)
+          .map(motionOf);
+      },
+    });
+    let heldEndedAt: number | null = null;
+    const hold = new MutationObserver(() => {
+      const moving = document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
+      if (
+        moving !== null &&
+        heldEndedAt === null &&
+        !moving.classList.contains(`${PAGE_TRANSITION_CLASS}--held`)
+      ) {
+        heldEndedAt = performance.now();
+      }
+    });
+    hold.observe(document.body, { subtree: true, attributes: true, childList: true });
+    try {
+      await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+      await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
+    } finally {
+      hold.disconnect();
+      if (ownAnimations === undefined) {
+        delete (Element.prototype as { getAnimations?: unknown }).getAnimations;
+      } else {
+        Object.defineProperty(Element.prototype, 'getAnimations', ownAnimations);
+      }
+    }
+
+    const started = [...motions.values()].map((motion) => motion.startTime);
+    expect(heldEndedAt).not.toBeNull();
+    expect(started.length).toBeGreaterThan(0);
+    expect(new Set(started).size).toBe(1);
+    expect(started[0]).toBeTypeOf('number');
+    expect(started[0]!).toBeLessThanOrEqual(heldEndedAt!);
+  });
+
   it('when another article opens from this one, then its motion holds still at its start until the frame that shows both pages has been drawn', async () => {
     const held = await heldWhenTheMotionBegins(() => router.navigateByUrl('/aktuality/druhy'));
 

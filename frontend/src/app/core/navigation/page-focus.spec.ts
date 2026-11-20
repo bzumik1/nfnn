@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
 import { InputModality } from '../input/input-modality';
 import { PageFocus, RETURNING_FOCUS_LONGEST_MS } from './page-focus';
+import { PagePlacement } from './page-placement';
 
 @Component({ template: '' })
 class Blank {}
@@ -67,18 +68,79 @@ describe('Given a list of the administration that a step back returns to from th
     heading.focus();
   }
 
-  it('when the list shows the link to the card at once, then the link takes the focus from the heading and comes into view', async () => {
+  describe('when the list shows the link to the card at once', () => {
+    const header = 64;
+    let link: HTMLElement;
+    let focused: ReturnType<typeof vi.fn<(options?: FocusOptions) => void>>;
+    let shown: ReturnType<typeof vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>>;
+
+    async function returnWithTheLinkAt(top: number): Promise<void> {
+      link = row({ href: CARD });
+      link.getBoundingClientRect = () => new DOMRect(0, top, 300, 56);
+      scope.append(link);
+      await openTheCard(link);
+      await stepBack();
+      const focusLink = link.focus.bind(link);
+      focused = vi.fn<(options?: FocusOptions) => void>((options) => focusLink(options));
+      link.focus = focused;
+      shown = vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>();
+      link.scrollIntoView = shown;
+      focus.returnAfterStepBack(scope);
+    }
+
+    beforeEach(() => {
+      document.documentElement.style.scrollPaddingTop = `${header}px`;
+      document.documentElement.style.scrollPaddingBottom = '80px';
+    });
+
+    afterEach(() => {
+      document.documentElement.style.scrollPaddingTop = '';
+      document.documentElement.style.scrollPaddingBottom = '';
+    });
+
+    it('then the link takes the focus from the heading without moving the page while the row shows', async () => {
+      await returnWithTheLinkAt(300);
+
+      expect(document.activeElement).toBe(link);
+      expect(focused).toHaveBeenCalledWith(expect.objectContaining({ preventScroll: true }));
+      expect(shown).not.toHaveBeenCalled();
+    });
+
+    it('then the page moves the least it can to show the row when it hides under the head', async () => {
+      await returnWithTheLinkAt(header - 56);
+
+      expect(document.activeElement).toBe(link);
+      expect(shown).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+    });
+
+    it('then the page moves the least it can to show the row when it lies out of the window', async () => {
+      await returnWithTheLinkAt(window.innerHeight + 120);
+
+      expect(document.activeElement).toBe(link);
+      expect(shown).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+    });
+
+    it('then the row half under the head still counts as shown and the page stays', async () => {
+      await returnWithTheLinkAt(header - 20);
+
+      expect(shown).not.toHaveBeenCalled();
+    });
+  });
+
+  it('when the page is still being put back at its kept scroll, then the row takes the focus only once it is placed, so the focus never ends that placing', async () => {
     const link = row({ href: CARD });
     scope.append(link);
-    const shown = vi.fn();
-    link.scrollIntoView = shown;
     await openTheCard(link);
     await stepBack();
+    const placed = TestBed.inject(PagePlacement).pending();
 
     focus.returnAfterStepBack(scope);
+    await Promise.resolve();
+    expect(document.activeElement).toBe(heading);
+    placed();
+    await Promise.resolve();
 
     expect(document.activeElement).toBe(link);
-    expect(shown).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
   });
 
   it('when the list draws its rows only once its data arrive, then the link takes the focus as it appears', async () => {
