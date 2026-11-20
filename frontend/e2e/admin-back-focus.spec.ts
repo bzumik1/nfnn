@@ -25,8 +25,11 @@ const donorRow = {
   preferredLocale: 'cs',
 };
 
+const OTHER_DONOR_ID = '0199f3e0-0000-7000-8000-00000000d002';
+
 const pairedPayment = {
   id: '019a1c00-0000-7000-8000-000000001001',
+  version: '3f2a9c4e1b7d6085',
   bankTransactionId: 1001,
   bookedOn: '2026-10-10',
   amountMinor: 50000,
@@ -38,15 +41,6 @@ const pairedPayment = {
   importedAt: '2026-10-17T10:00:00Z',
   unpairedByAdminAt: null,
   accountVerification: false,
-  donation: {
-    id: 'd1',
-    donorId: administrator.id,
-    donorName: 'Jana Nováková',
-    pairedBy: 'MANUAL',
-    status: 'RECEIVED',
-    recordedAt: '2026-10-18T09:00:00Z',
-    receiptIssued: false,
-  },
 };
 
 const otherPayments = Array.from({ length: 12 }, (_, index) => ({
@@ -56,13 +50,28 @@ const otherPayments = Array.from({ length: 12 }, (_, index) => ({
   bookedOn: `2026-10-${String(30 - index).padStart(2, '0')}`,
   variableSymbol: '2222222222',
   counterpartyName: 'Dvořák Petr',
-  donation: {
-    ...pairedPayment.donation,
-    id: `d2${index}`,
-    donorId: '0199f3e0-0000-7000-8000-00000000d002',
-    donorName: 'Petr Dvořák',
-  },
 }));
+
+function donorRecord(donorId: string, name: string, variableSymbol: string) {
+  return {
+    donorId,
+    name,
+    type: 'PERSON',
+    variableSymbol,
+    companyIdentifier: null,
+    address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
+    preferredLocale: 'cs',
+    registeredAt: '2026-01-15T10:00:00Z',
+    erasedAt: null,
+  };
+}
+
+function pairedByHand(payment: typeof pairedPayment, donorId: string) {
+  return {
+    ...administrationCopyGift(payment.id, donorId, payment.bookedOn, payment.amountMinor),
+    pairedBy: 'MANUAL',
+  };
+}
 
 type Way = 'back-button' | 'swipe';
 
@@ -184,6 +193,7 @@ test.describe('Given an administrator in the app on the home screen of a phone',
     );
     await serveAdministrationCopy(page, {
       donations: {
+        'payments:2026-10': [...otherPayments, pairedPayment],
         'donations:2026-10': [
           administrationCopyGift(
             '0192f0f1-0000-7000-8000-0000000000b1',
@@ -191,6 +201,12 @@ test.describe('Given an administrator in the app on the home screen of a phone',
             '2026-10-25',
             50000,
           ),
+          ...otherPayments.map((payment) => pairedByHand(payment, OTHER_DONOR_ID)),
+          pairedByHand(pairedPayment, administrator.id),
+        ],
+        'donor-records:2026-01': [
+          donorRecord(administrator.id, 'Jana Nováková', '1111111111'),
+          donorRecord(OTHER_DONOR_ID, 'Petr Dvořák', '2222222222'),
         ],
       },
       donors: { 'accounts:2026-10': [donorRow] },
@@ -198,20 +214,6 @@ test.describe('Given an administrator in the app on the home screen of a phone',
     await page.route(
       (url) => url.pathname === `/api/admin/donors/${DONOR_ID}`,
       (route) => route.fulfill({ json: donorRow }),
-    );
-    await page.route(
-      (url) => url.pathname === '/api/admin/donations/payments',
-      (route) => {
-        const pairedOnly = new URL(route.request().url()).searchParams.get('pairing') === 'paired';
-        return route.fulfill({
-          json: {
-            year: null,
-            availableYears: pairedOnly ? [2026] : [],
-            items: pairedOnly ? [...otherPayments, pairedPayment] : [],
-            total: pairedOnly ? otherPayments.length + 1 : 0,
-          },
-        });
-      },
     );
     const copied = whenAdministrationCopied(page);
     await page.goto('/sprava');

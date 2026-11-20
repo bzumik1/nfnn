@@ -65,6 +65,7 @@ interface HeadTitle {
 interface StepProbe {
   frames: Frame[];
   under: string | null;
+  layered: boolean;
   done: boolean;
   tappedAt: number | null;
   busyFrameAt: number | null;
@@ -385,6 +386,7 @@ async function watchTheStep(page: Page): Promise<void> {
       const probe: StepProbe = {
         frames: [],
         under: null,
+        layered: false,
         done: false,
         tappedAt: null,
         busyFrameAt: null,
@@ -394,6 +396,19 @@ async function watchTheStep(page: Page): Promise<void> {
       };
       window.nfnnStepProbe = probe;
       const started = performance.now();
+      const seeLayers = (): void => {
+        const under = document.querySelector('.page-transition .page-transition__page--under');
+        probe.layered ||= document.querySelector('.page-transition') !== null;
+        if (under !== null && probe.under === null) {
+          probe.under = (under.textContent ?? '').replace(/\s+/g, ' ');
+        }
+        if (probe.layered && probe.under !== null) {
+          layers.disconnect();
+        }
+      };
+      const layers = new MutationObserver(seeLayers);
+      layers.observe(document.body, { childList: true, subtree: true });
+      seeLayers();
       window.addEventListener('click', () => (probe.tappedAt ??= performance.now()), {
         capture: true,
         once: true,
@@ -466,6 +481,7 @@ async function watchTheStep(page: Page): Promise<void> {
         }
         if (framesAfter > 2 || now - started > 5000) {
           placed.disconnect();
+          layers.disconnect();
           probe.done = true;
           return;
         }
@@ -490,13 +506,19 @@ async function stepSeen(page: Page): Promise<StepProbe> {
   return page.evaluate(() => window.nfnnStepProbe!);
 }
 
-function travelled(frames: readonly Frame[]): Frame[] {
+function travelled(probe: StepProbe): Frame[] {
+  const frames = probe.frames;
   const first = frames.findIndex((frame) => frame.overlay);
   let last = frames.length - 1;
   while (last > first && !frames[last].overlay) {
     last--;
   }
-  expect(first, 'the step back drew no moving page at all').toBeGreaterThanOrEqual(0);
+  expect(probe.layered, 'the step placed no moving page at all').toBe(true);
+  if (probe.paced) {
+    expect(first, 'the step drew no frame of its moving page').toBeGreaterThanOrEqual(0);
+  } else if (first < 0) {
+    return [];
+  }
   const shown = frames.slice(first, last + 1);
   expect(
     shown.every((frame) => frame.overlay),
@@ -563,7 +585,7 @@ function shownAfterTheBusyFrame(probe: StepProbe, moving: readonly Frame[]): Fra
 }
 
 function expectMovedSoonAfterTheTap(probe: StepProbe): void {
-  const moving = travelled(probe.frames);
+  const moving = travelled(probe);
   const tappedAt = probe.tappedAt;
   expect(tappedAt, 'the tap was not seen').not.toBeNull();
   const start = moving[0].offset!;
@@ -590,19 +612,20 @@ function expectShownOnItsWay(
 
 function expectFirstShownNear(
   probe: StepProbe,
-  offset: number,
+  moving: readonly Frame[],
   near: (offset: number) => void,
 ): void {
   if (probe.paced) {
-    near(offset);
+    expect(moving.length, 'no frame showed the moving page placed').toBeGreaterThan(0);
+    near(moving[0].offset!);
   }
 }
 
 function expectLeftAway(probe: StepProbe, width: number, from: number): void {
-  const moving = travelled(probe.frames);
+  const moving = travelled(probe);
   const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < width - 1);
   expectShownOnItsWay(probe, between, 2, 'no frame showed the leaving page on its way');
-  expectFirstShownNear(probe, moving[0].offset!, (offset) =>
+  expectFirstShownNear(probe, moving, (offset) =>
     expect(offset, 'px the leaving page had gone in its first frame').toBeLessThanOrEqual(
       from + width * FIRST_SHOWN_AT_MOST,
     ),
@@ -624,10 +647,10 @@ function expectLeftAway(probe: StepProbe, width: number, from: number): void {
 }
 
 function expectArrived(probe: StepProbe, width: number): void {
-  const moving = travelled(probe.frames);
+  const moving = travelled(probe);
   const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < width - 1);
   expectShownOnItsWay(probe, between, 2, 'no frame showed the arriving page on its way');
-  expectFirstShownNear(probe, moving[0].offset!, (offset) =>
+  expectFirstShownNear(probe, moving, (offset) =>
     expect(
       offset,
       'px the arriving page was from its place in its first frame',
@@ -650,8 +673,8 @@ function expectArrived(probe: StepProbe, width: number): void {
 }
 
 function expectSlidBack(probe: StepProbe, width: number, from: number): void {
-  const moving = travelled(probe.frames);
-  expectFirstShownNear(probe, moving[0].offset!, (offset) =>
+  const moving = travelled(probe);
+  expectFirstShownNear(probe, moving, (offset) =>
     expect(offset, 'px the page had come back in its first frame').toBeGreaterThanOrEqual(
       from * (1 - FIRST_SHOWN_AT_MOST),
     ),
@@ -918,7 +941,7 @@ function accountScreens(page: Page): Screens & { opening(row: Row): void } {
         await expect(livePageTitle(page)).toBeVisible();
       } else {
         await expect(
-          accountSheet(page).getByRole('heading', { level: 2, name: row.name }),
+          accountSheet(page).getByRole('heading', { level: 2, name: row.name, exact: true }),
         ).toBeVisible();
       }
       await expect(page.locator('.page-transition')).toHaveCount(0);
@@ -973,11 +996,11 @@ function administrationScreensOf(page: Page): Screens {
   };
 }
 
-async function linksOut(from: string, within: Locator): Promise<Row[]> {
+async function linksOut(under: string, within: Locator, from = under): Promise<Row[]> {
   const rows: Row[] = [];
-  for (const link of await within.locator(`a[href^="${from}/"]`).all()) {
+  for (const link of await within.locator(`a[href^="${under}/"]`).all()) {
     const href = (await link.getAttribute('href'))!;
-    const rest = href.slice(from.length + 1);
+    const rest = href.slice(under.length + 1);
     if (rest === '' || rest.includes('/') || rest.includes('?') || rest.includes('#')) {
       continue;
     }
@@ -1060,7 +1083,15 @@ for (const look of LOOKS) {
                   );
                   if (!scrolled && origin.trail.length < 3) {
                     await screens.shown(row);
-                    const deeper = await linksOut(row.href, page.locator('.admin-frame'));
+                    const frame = page.locator('.admin-frame');
+                    const known = (href: string): boolean =>
+                      origins.some((each) => each.rows.some((other) => other.href === href));
+                    const deeper = [
+                      ...(await linksOut(row.href, frame)),
+                      ...(await linksOut('/sprava', frame, row.href)).filter(
+                        (link) => !known(link.href),
+                      ),
+                    ];
                     if (deeper.length > 0) {
                       origins.push({ trail: [...origin.trail, row.href], rows: deeper });
                     }
@@ -1202,7 +1233,12 @@ for (const look of LOOKS) {
       const tops = await page.evaluate(
         () => (window as unknown as { nfnnSheetTops: number[] }).nfnnSheetTops,
       );
-      expect(tops.filter((at) => at > tops[0] + 1 && at < HEIGHT - 1).length).toBeGreaterThan(0);
+      if (measuresFrames(page)) {
+        expect(
+          tops.filter((at) => at > tops[0] + 1 && at < HEIGHT - 1).length,
+          'no frame showed the sheet on its way down',
+        ).toBeGreaterThan(0);
+      }
       for (let at = 1; at < tops.length; at++) {
         expect(tops[at]).toBeGreaterThanOrEqual(tops[at - 1] - 1);
       }
