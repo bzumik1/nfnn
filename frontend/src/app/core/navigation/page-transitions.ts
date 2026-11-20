@@ -385,15 +385,11 @@ export class PageTransitions {
     const shown = this.place(running.overlay, arriving, running.kind === 'push' ? 'over' : 'under');
     const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
     this.dressChrome(running.overlay, left, shown);
-    const startsOnceDrawn = running.kind === 'pop';
-    running.overlay.classList.toggle(HELD_CLASS, startsOnceDrawn);
-    running.overlay.classList.add(`${PAGE_TRANSITION_CLASS}--moving`);
+    running.overlay.classList.add(HELD_CLASS, `${PAGE_TRANSITION_CLASS}--moving`);
     this.finishWhenStill(running, shown.box, view);
-    if (startsOnceDrawn) {
-      void afterDrawn(view, this.durationOf('--duration-fast') / 2).then(() =>
-        running.overlay.classList.remove(HELD_CLASS),
-      );
-    }
+    void afterDrawn(view, this.durationOf('--duration-fast') / 2).then(() =>
+      running.overlay.classList.remove(HELD_CLASS),
+    );
   }
 
   private finishWhenStill(running: Running, page: HTMLElement, view: Window): void {
