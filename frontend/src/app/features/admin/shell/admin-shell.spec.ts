@@ -35,6 +35,7 @@ describe('Given an administrator anywhere in the administration', () => {
   const locked = signal(false);
   const keepsPage = signal(false);
   const firstDownload = signal<{ done: number; total: number } | null>(null);
+  const firstDownloadEnd = signal<'stored' | 'failed' | null>(null);
   let fixture: ComponentFixture<AdminShell>;
   let router: Router;
 
@@ -43,6 +44,7 @@ describe('Given an administrator anywhere in the administration', () => {
     locked.set(false);
     keepsPage.set(false);
     firstDownload.set(null);
+    firstDownloadEnd.set(null);
     await TestBed.configureTestingModule({
       imports: [AdminShell],
       providers: [
@@ -56,7 +58,7 @@ describe('Given an administrator anywhere in the administration', () => {
             panel: signal(LockPanel).asReadonly(),
             keepsPage: keepsPage.asReadonly(),
             firstDownload: firstDownload.asReadonly(),
-            firstDownloadEnd: signal(null).asReadonly(),
+            firstDownloadEnd: firstDownloadEnd.asReadonly(),
             retryFirstDownload: () => undefined,
           },
         },
@@ -402,13 +404,33 @@ describe('Given an administrator anywhere in the administration', () => {
       expect(count.closest('[aria-hidden="true"]')).toBeNull();
     });
 
+    it('and saving it again after a failure succeeds, then the focus moves from Uložit znovu to the heading of the page, never to the body', async () => {
+      document.body.appendChild(fixture.nativeElement);
+      firstDownloadEnd.set('failed');
+      await settle();
+      const retry = element('.first-download button') as HTMLButtonElement;
+      retry.focus();
+      retry.click();
+      firstDownload.set({ done: 0, total: 0 });
+      firstDownloadEnd.set(null);
+      await settle();
+      expect(document.activeElement).toBe(retry);
+
+      firstDownload.set(null);
+      firstDownloadEnd.set('stored');
+      await settle();
+
+      expect(document.activeElement).toBe(element('main#obsah h1'));
+      fixture.nativeElement.remove();
+    });
+
     it('and it is stored, then the bar goes', async () => {
       firstDownload.set({ done: 40, total: 40 });
       await settle();
       firstDownload.set(null);
       await settle();
 
-      expect(clean(element('.admin-first-download')?.textContent)).toBe('');
+      expect(clean(element('.admin-first-download app-fold:not([inert])')?.textContent)).toBe('');
     });
   });
 });

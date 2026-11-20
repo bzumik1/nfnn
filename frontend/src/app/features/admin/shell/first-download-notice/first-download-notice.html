@@ -3,62 +3,74 @@
     @if (!lock.locked()) {
       @if (lock.firstDownload()) {
         <span i18n="@@admin.lock.firstDownload.started">Ukládáme správu do zařízení.</span>
-      } @else if (stored()) {
+      } @else if (saysStored()) {
         <span i18n="@@admin.lock.firstDownload.stored">Správa je uložená v tomto zařízení.</span>
-      } @else if (lock.firstDownloadEnd() === 'failed') {
+      } @else if (view() === 'failed') {
         <span i18n="@@admin.lock.firstDownload.failed">
           Správu se do tohoto zařízení teď nepodařilo uložit. Online vše funguje dál.
         </span>
       }
     }
   </p>
-  @if (!lock.locked()) {
-    @if (lock.firstDownload(); as progress) {
-      <div class="ui-notice ui-notice--status first-download">
-        <p class="first-download__title" aria-hidden="true" i18n="@@admin.lock.firstDownload.title">
-          Ukládáme správu do zařízení
-        </p>
-        @if (progress.total > 0) {
-          <p class="first-download__count" i18n="@@admin.lock.firstDownload.count">
-            {{ progress.done }} z {{ progress.total }}
-          </p>
-          <progress
-            class="first-download__bar"
-            [value]="progress.done"
-            [max]="progress.total"
-            aria-hidden="true"
-          ></progress>
+  @if (content(); as shown) {
+    <app-fold [open]="view() !== null">
+      @switch (shown) {
+        @case ('progress') {
+          <div class="ui-notice ui-notice--status first-download">
+            <p
+              class="first-download__title"
+              aria-hidden="true"
+              i18n="@@admin.lock.firstDownload.title"
+            >
+              Ukládáme správu do zařízení
+            </p>
+            @if (progress(); as progress) {
+              @if (progress.total > 0) {
+                <p class="first-download__count" i18n="@@admin.lock.firstDownload.count">
+                  {{ progress.done }} z {{ progress.total }}
+                </p>
+                <progress
+                  class="first-download__bar"
+                  [value]="progress.done"
+                  [max]="progress.total"
+                  aria-hidden="true"
+                ></progress>
+              }
+            }
+          </div>
         }
-      </div>
-    } @else if (stored()) {
-      <div class="ui-notice ui-notice--status first-download">
-        <p
-          class="first-download__title"
-          aria-hidden="true"
-          i18n="@@admin.lock.firstDownload.stored"
-        >
-          Správa je uložená v tomto zařízení.
-        </p>
-      </div>
-    } @else if (lock.firstDownloadEnd() === 'failed') {
-      <div class="ui-notice ui-notice--warning first-download">
-        <p
-          class="first-download__title"
-          aria-hidden="true"
-          i18n="@@admin.lock.firstDownload.failed"
-        >
-          Správu se do tohoto zařízení teď nepodařilo uložit. Online vše funguje dál.
-        </p>
-        <button
-          type="button"
-          class="ui-button ui-button--small"
-          appNeedsConnection
-          (click)="retry()"
-          i18n="@@admin.lock.firstDownload.retry"
-        >
-          Uložit znovu
-        </button>
-      </div>
-    }
+        @case ('stored') {
+          <div class="ui-notice ui-notice--status first-download">
+            <p
+              class="first-download__title"
+              aria-hidden="true"
+              i18n="@@admin.lock.firstDownload.stored"
+            >
+              Správa je uložená v tomto zařízení.
+            </p>
+          </div>
+        }
+        @case ('failed') {
+          <div class="ui-notice ui-notice--warning first-download">
+            <p
+              class="first-download__title"
+              aria-hidden="true"
+              i18n="@@admin.lock.firstDownload.failed"
+            >
+              Správu se do tohoto zařízení teď nepodařilo uložit. Online vše funguje dál.
+            </p>
+            <button
+              type="button"
+              class="ui-button ui-button--small"
+              appNeedsConnection
+              (click)="retry()"
+              i18n="@@admin.lock.firstDownload.retry"
+            >
+              Uložit znovu
+            </button>
+          </div>
+        }
+      }
+    </app-fold>
   }
 </div>

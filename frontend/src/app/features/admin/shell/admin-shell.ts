@@ -175,7 +175,7 @@ export class AdminShell {
     afterNextRender(() => this.focusPage(remembered), { injector: this.injector });
   }
 
-  private focusPage(remembered: Element | null): void {
+  protected focusPage(remembered: Element | null): void {
     const page = this.page()?.nativeElement;
     if (page === undefined || this.document.querySelector('dialog[open]')) {
       return;

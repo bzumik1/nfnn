@@ -1,5 +1,12 @@
 import type { Page } from '@playwright/test';
 import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
+import {
+  donorWithDonations,
+  mockAdministration,
+  PETR_DETAIL_PATH,
+  rememberedSession,
+  serveAdministrationCopyOfAccounts,
+} from './baseline/screen-mocks';
 import { donations as twoGifts, ISSUING } from './receipt-donations';
 import { issuedReceipt } from './receipt-issuing';
 import {
@@ -225,5 +232,145 @@ test.describe('Given a donor whose copy on this device holds her gifts and her y
     await page.locator('.yearly-pdf').first().click();
 
     expect((await download).suggestedFilename()).toBe('potvrzeni-o-darech-2025.pdf');
+  });
+});
+
+const STORED = 'Správa je uložená v tomto zařízení.';
+
+interface NoticeFrame {
+  readonly at: number;
+  readonly card: number | null;
+  readonly fold: number | null;
+  readonly heard: string;
+  readonly onHeading: boolean;
+}
+
+async function openCardWithFailedCopy(page: Page): Promise<void> {
+  await mockDonorApi(page, donorWithDonations);
+  await mockAdministration(page);
+  await rememberedSession(page);
+  await page.goto(PETR_DETAIL_PATH);
+  await expect(
+    page.locator('.first-download').getByRole('button', { name: 'Uložit znovu' }),
+  ).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Shrnutí dárce' })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  await serveAdministrationCopyOfAccounts(page);
+}
+
+async function followNoticeFrames(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const frames: unknown[] = [];
+    Object.assign(window, { nfnnNoticeFrames: frames });
+    const sample = () => {
+      const card = document.querySelector('[aria-label="Shrnutí dárce"]');
+      const fold = document.querySelector('app-first-download-notice app-fold');
+      const live = document.querySelector('.admin-first-download [aria-live="polite"]');
+      frames.push({
+        at: performance.now(),
+        card: card?.getBoundingClientRect().top ?? null,
+        fold: fold?.getBoundingClientRect().height ?? null,
+        heard: (live?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        onHeading: document.activeElement?.tagName === 'H1',
+      });
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+}
+
+async function noticeFrames(page: Page): Promise<NoticeFrame[]> {
+  return page.evaluate(
+    () => (window as unknown as { nfnnNoticeFrames: NoticeFrame[] }).nfnnNoticeFrames,
+  );
+}
+
+async function settledNoticeFrames(page: Page): Promise<NoticeFrame[]> {
+  await expect
+    .poll(async () => {
+      const last = (await noticeFrames(page)).slice(-3);
+      return last.length === 3 && last.every((frame) => frame.fold === 0);
+    })
+    .toBe(true);
+  return noticeFrames(page);
+}
+
+async function durationOf(page: Page, token: string): Promise<number> {
+  return page.evaluate((name) => {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value.endsWith('ms') ? parseFloat(value) : parseFloat(value) * 1000;
+  }, token);
+}
+
+function timesSaid(frames: readonly NoticeFrame[], sentence: string): number {
+  return frames.filter(
+    (frame, index) => frame.heard === sentence && frames[index - 1]?.heard !== sentence,
+  ).length;
+}
+
+test.describe('Given an administrator on the card of a donor whose device could not store the administration', () => {
+  test.use({ reducedMotion: 'no-preference' });
+
+  test('when Uložit znovu stores it, then the notice folds its height away over several frames, the card rises by exactly the notice and its gaps, and at the start the focus is on the heading and screen readers hear once that it is stored', async ({
+    page,
+  }) => {
+    await openCardWithFailedCopy(page);
+    const fold = page.locator('app-first-download-notice app-fold');
+    const notice = (await fold.boundingBox())!;
+    const card = (await page.getByRole('region', { name: 'Shrnutí dárce' }).boundingBox())!;
+    await followNoticeFrames(page);
+
+    await page.locator('.first-download').getByRole('button', { name: 'Uložit znovu' }).click();
+
+    await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeFocused();
+    await expect(page.locator('.admin-first-download [aria-live="polite"]')).toHaveText(STORED);
+    const frames = await settledNoticeFrames(page);
+    const tops = frames.map((frame) => frame.card);
+    expect(tops.every((top) => top !== null)).toBe(true);
+    const start = tops[0]!;
+    const end = tops.at(-1)!;
+    expect(Math.abs(start - card.y)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(start - end - notice.height)).toBeLessThanOrEqual(0.5);
+    expect(notice.height).toBeGreaterThan(40);
+
+    const steps = tops.slice(1).map((top, index) => tops[index]! - top!);
+    expect(Math.min(...steps)).toBeGreaterThanOrEqual(-0.5);
+    expect(Math.max(...steps)).toBeLessThanOrEqual(notice.height / 2);
+    const between = frames.filter((frame) => frame.card! < start - 0.5 && frame.card! > end + 0.5);
+    expect(between.length).toBeGreaterThanOrEqual(2);
+
+    const first = frames.findIndex((frame) => frame.card! < start - 0.5);
+    const last = frames.findIndex((frame) => frame.card! <= end + 0.5);
+    expect(frames.slice(first).every((frame) => frame.onHeading)).toBe(true);
+    expect(frames[first].heard).toBe(STORED);
+    expect(frames[last].at - frames[first].at).toBeLessThanOrEqual(
+      (await durationOf(page, '--duration-base')) + 100,
+    );
+    expect(timesSaid(frames, STORED)).toBe(1);
+    await expect(page.locator('.first-download').getByText(STORED)).toHaveCount(0);
+  });
+});
+
+test.describe('Given an administrator who asks for less motion, on the card of a donor whose device could not store the administration', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('when Uložit znovu stores it, then the notice goes at once without folding its height, the card takes its place and the focus and the sentence come as with motion', async ({
+    page,
+  }) => {
+    await openCardWithFailedCopy(page);
+    const notice = (await page.locator('app-first-download-notice app-fold').boundingBox())!;
+    await followNoticeFrames(page);
+
+    await page.locator('.first-download').getByRole('button', { name: 'Uložit znovu' }).click();
+
+    await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeFocused();
+    await expect(page.locator('.admin-first-download [aria-live="polite"]')).toHaveText(STORED);
+    const frames = await settledNoticeFrames(page);
+    const tops = frames.map((frame) => frame.card!);
+    const start = tops[0];
+    const end = tops.at(-1)!;
+    expect(Math.abs(start - end - notice.height)).toBeLessThanOrEqual(0.5);
+    expect(tops.filter((top) => top < start - 0.5 && top > end + 0.5)).toEqual([]);
+    expect(timesSaid(frames, STORED)).toBe(1);
   });
 });
