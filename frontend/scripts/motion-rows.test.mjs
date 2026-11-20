@@ -299,6 +299,7 @@ describe('Given the body of native details that opens through motion.expand-on-o
     const plain = plainOf(css, '.body');
 
     assert.equal(valueOf(plain, 'display'), 'grid');
+    assert.equal(valueOf(plain, 'grid-template-rows'), '1fr');
     assert.match(framesOf(animationNameOf(plain)), /grid-template-rows:\s*0fr/);
     assert.match(valueOf(plain, 'animation'), /motion-fade-in/);
     const child = plainOf(css, '.body > *');

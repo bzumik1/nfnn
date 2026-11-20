@@ -128,6 +128,53 @@ test.describe('Given an administrator on a computer on the settings page', () =>
   });
 });
 
+test.describe('Given an administrator on a computer opening the technical settings', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' });
+
+  test('when the details open, then the height of their parts grows over several frames, not in one jump', async ({
+    page,
+  }) => {
+    await openSettings(page);
+    const summary = page.getByText(SUMMARY);
+    await expect(summary).toBeVisible();
+
+    const heights = await summary.evaluate(
+      (element) =>
+        new Promise<{ during: number[]; opened: number }>((resolve) => {
+          const details = element.closest('details') as HTMLDetailsElement;
+          const body = details.querySelector(':scope > .details-body') as HTMLElement;
+          const during: number[] = [];
+          const started = performance.now();
+          const sample = () => {
+            if (details.open) {
+              during.push(body.getBoundingClientRect().height);
+            }
+            const animations = body.getAnimations();
+            if (
+              performance.now() - started < 3000 &&
+              (during.length === 0 ||
+                animations.some((animation) => animation.playState === 'running'))
+            ) {
+              requestAnimationFrame(sample);
+            } else {
+              resolve({ during, opened: body.getBoundingClientRect().height });
+            }
+          };
+          (element as HTMLElement).click();
+          requestAnimationFrame(sample);
+        }),
+    );
+
+    const between = new Set(
+      heights.during
+        .filter((height) => height > 1 && height < heights.opened - 1)
+        .map((height) => Math.round(height)),
+    );
+    expect(heights.opened).toBeGreaterThan(100);
+    expect(between.size).toBeGreaterThanOrEqual(3);
+  });
+});
+
 test.describe('Given an administrator on a computer who asks for less motion, on the settings page', () => {
   test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
 
