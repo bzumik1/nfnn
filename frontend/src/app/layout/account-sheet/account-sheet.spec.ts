@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { APPEARANCE_STORAGE_KEY } from '../../core/appearance/appearance';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { Component, signal } from '@angular/core';
@@ -829,7 +830,7 @@ describe('Given a step of the account sheet that leaves', () => {
   }
 
   let step: HTMLElement;
-  let complete: ReturnType<typeof vi.fn>;
+  let complete: Mock<() => void>;
 
   beforeEach(() => {
     step = document.createElement('div');
@@ -839,7 +840,7 @@ describe('Given a step of the account sheet that leaves', () => {
       <div class="account-step-body"><div id="account-install-how"></div></div>
     `;
     document.body.append(step);
-    complete = vi.fn();
+    complete = vi.fn<() => void>();
   });
 
   afterEach(() => {
