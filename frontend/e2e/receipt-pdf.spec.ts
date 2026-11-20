@@ -79,7 +79,7 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
 
     const places = await buttons.evaluateAll((all) =>
       all.map((button) => {
-        const status = button.parentElement!.querySelector('.receipt-saved')!;
+        const status = button.parentElement!.querySelector('.receipt-status')!;
         const own = button.getBoundingClientRect();
         const line = status.getBoundingClientRect();
         return {
@@ -95,6 +95,66 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
       expect(place.besideButton, JSON.stringify(places)).toBe(true);
       expect(place.lineBottom, JSON.stringify(places)).toBeLessThanOrEqual(place.buttonBottom + 1);
     }
+  });
+
+  test('when they read the receipts on a phone, then nothing is reserved under any single receipt button and its status line stays in the accessibility tree', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openReceiptsAfterSignIn(page);
+    const single = page.locator('.single-gifts');
+    const buttons = single.locator('.download-btn');
+    await expect(buttons.first()).toBeVisible();
+
+    const rooms = await buttons.evaluateAll((all) =>
+      all.map((button) => {
+        const download = button.parentElement!;
+        const status = download.querySelector('.receipt-status')!;
+        return {
+          statusHeight: status.getBoundingClientRect().height,
+          belowButton:
+            download.getBoundingClientRect().bottom - button.getBoundingClientRect().bottom,
+        };
+      }),
+    );
+
+    expect(rooms.length).toBeGreaterThan(0);
+    for (const room of rooms) {
+      expect(room.statusHeight, JSON.stringify(rooms)).toBe(0);
+      expect(room.belowButton, JSON.stringify(rooms)).toBeLessThanOrEqual(1);
+    }
+    await expect(single.getByRole('status')).toHaveCount(rooms.length);
+  });
+
+  test('when a single receipt takes a while on a phone, then its status line opens only with its text after 300 ms', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await page.clock.install();
+    await page.route(
+      (url) => url.pathname === RECEIPT_ISSUING_URL,
+      () => new Promise<void>(() => undefined),
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openReceiptsAfterSignIn(page);
+    const button = page.locator('.single-gifts .download-btn').first();
+    await expect(button).toBeVisible();
+    const download = button.locator('xpath=..');
+    const statusRoom = download.locator('.receipt-status');
+    const status = download.getByRole('status');
+    const height = () => statusRoom.evaluate((element) => element.getBoundingClientRect().height);
+
+    await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000);
+    await button.click();
+    await expect(button).toHaveAttribute('aria-busy', 'true');
+    await page.clock.runFor(290);
+    expect(await height()).toBe(0);
+    await expect(status).toHaveText('');
+
+    await page.clock.resume();
+    await expect(status).toHaveText('Připravujeme údaje potvrzení…');
+    await expect.poll(height).toBeGreaterThan(0);
   });
 
   test('when the data takes a while, then a progress line names each step, the focused button keeps the focus, and the PDF drawn in the browser is saved and holds the receipt', async ({
