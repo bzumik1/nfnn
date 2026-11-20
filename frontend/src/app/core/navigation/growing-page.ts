@@ -34,6 +34,7 @@ export function placeOnceGrown(restored: Scroll, injector: Injector, placed: () 
   }
   let growth: ResizeObserver | null = null;
   let timer: number | undefined;
+  let waitForRelease = (): void => undefined;
   let restingAt = view.scrollY;
   const movedByOthers = (): void => {
     if (Math.abs(view.scrollY - restingAt) > 1) {
@@ -60,7 +61,7 @@ export function placeOnceGrown(restored: Scroll, injector: Injector, placed: () 
     }
   };
   stopWaiting = stop;
-  const waitForRelease = scrollHold.whenReleased(() => {
+  waitForRelease = scrollHold.whenReleased(() => {
     restingAt = view.scrollY;
     timer = view.setTimeout(stop, PLACE_WAIT_LONGEST_MS);
     VISITOR_MOVES.forEach((type) => view.addEventListener(type, stop, LISTENING));
