@@ -17,6 +17,10 @@ export class PagePlacement {
     };
   }
 
+  isSettled(): boolean {
+    return this.waiting.size === 0;
+  }
+
   placed(view: Window, longestMs: number): Promise<void> {
     if (this.waiting.size === 0) {
       return Promise.resolve();

@@ -1,9 +1,11 @@
 import { DestroyRef, DOCUMENT, inject, Injectable } from '@angular/core';
 import { NavigationStart, Router } from '@angular/router';
 import { InputModality } from '../input/input-modality';
+import { focusInView } from '../layout/focus-in-view';
 import { pathOf } from './app-tabs';
 import { BackTarget } from './back-target';
 import { NavigationPreview } from './navigation-preview';
+import { PagePlacement } from './page-placement';
 import { liveDialogs } from './page-transitions';
 
 export const RETURNING_FOCUS_LONGEST_MS = 3000;
@@ -28,6 +30,7 @@ export class PageFocus {
   private readonly back = inject(BackTarget);
   private readonly preview = inject(NavigationPreview);
   private readonly modality = inject(InputModality);
+  private readonly placement = inject(PagePlacement);
   private readonly document = inject(DOCUMENT);
   private readonly openers = new Map<string, string>();
   private pressed: Press | null = null;
@@ -115,7 +118,35 @@ export class PageFocus {
     this.stopReturning?.();
     const find = this.preview.drives() ? null : this.returnTarget(scope);
     const view = this.document.defaultView;
-    if (find === null || view === null || this.bringBack(scope, find)) {
+    if (find === null || view === null) {
+      return;
+    }
+    if (this.placement.isSettled()) {
+      this.returnWhenFound(scope, find, view);
+      return;
+    }
+    let waiting = true;
+    const stop = (): void => {
+      waiting = false;
+      if (this.stopReturning === stop) {
+        this.stopReturning = null;
+      }
+    };
+    this.stopReturning = stop;
+    void this.placement.placed(view, RETURNING_FOCUS_LONGEST_MS).then(() => {
+      if (waiting) {
+        stop();
+        this.returnWhenFound(scope, find, view);
+      }
+    });
+  }
+
+  private returnWhenFound(
+    scope: HTMLElement,
+    find: () => HTMLElement | null,
+    view: Window & typeof globalThis,
+  ): void {
+    if (this.bringBack(scope, find)) {
       return;
     }
     const observer = new view.MutationObserver(() => {
@@ -190,15 +221,7 @@ export class PageFocus {
     if (target === null || !this.atFallback(scope)) {
       return false;
     }
-    target.focus({
-      preventScroll: true,
-      ...(this.modality.lastPressByPointer() ? { focusVisible: false } : {}),
-    });
-    if (this.document.activeElement !== target) {
-      return false;
-    }
-    target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
-    return true;
+    return focusInView(target, this.modality.lastPressByPointer() ? { focusVisible: false } : {});
   }
 
   private atFallback(scope: HTMLElement): boolean {

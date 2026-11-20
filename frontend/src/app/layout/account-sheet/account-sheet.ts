@@ -31,13 +31,14 @@ import { pathOf } from '../../core/navigation/app-tabs';
 import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
 import { PageTransitions } from '../../core/navigation/page-transitions';
 import { SheetSteps, StepsInside } from '../../core/navigation/sheet-steps';
-import { APP_ACCOUNT_KEY } from './account-return';
+import { AccountReturn, APP_ACCOUNT_KEY, APP_ACCOUNT_SCROLL_KEY } from './account-return';
 import { Dialog } from '../../shared/ui/dialog/dialog';
 import { Appearance, AppearanceChoice } from '../../core/appearance/appearance';
 import { AccountSection } from './account-section';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { AccountBadges } from '../../core/layout/account-badges';
+import { focusInView } from '../../core/layout/focus-in-view';
 import { AppInstall } from '../../core/install/app-install';
 import { SheetHead } from '../../shared/ui/sheet-head/sheet-head';
 
@@ -95,6 +96,7 @@ export class AccountSheet {
   private readonly transitions = inject(PageTransitions);
   private readonly sheetSteps = inject(SheetSteps);
   private readonly scrolls = new Map<number, number>();
+  private readonly accountReturn = inject(AccountReturn);
   private readonly sectionSteps: StepsInside = {
     startSwipe: () =>
       this.sectionHasUnsavedInput() ? null : this.transitions.startSheetSwipe(this.depth()),
@@ -244,16 +246,21 @@ export class AccountSheet {
     this.stepTo('pop', this.trail().slice(0, -1));
     afterNextRender(
       () => {
-        if (left !== null) {
-          this.linkTo(left.path)?.focus();
+        const link = left === null ? null : this.linkTo(left.path);
+        if (link !== null) {
+          focusInView(link);
         }
       },
       { injector: this.injector },
     );
   }
 
+  private panel(): HTMLElement | null {
+    return this.host.querySelector<HTMLElement>('.dialog-panel');
+  }
+
   private stepTo(kind: 'push' | 'pop', trail: AccountItem[]): void {
-    const panel = this.host.querySelector<HTMLElement>('.dialog-panel');
+    const panel = this.panel();
     if (kind === 'push') {
       this.scrolls.set(this.depth(), panel?.scrollTop ?? 0);
     }
@@ -277,10 +284,14 @@ export class AccountSheet {
         .filter((motion) => motion.effect?.getComputedTiming().endTime !== Infinity)
         .forEach((motion) => motion.finish());
     }
+    const panel = this.panel();
+    if (panel !== null) {
+      panel.scrollTop = this.accountReturn.takeScrollToReopen();
+    }
     const left = this.backTarget.leftPath;
     const link = left === null ? null : this.linkTo(left);
     if (link !== null) {
-      link.focus();
+      focusInView(link);
     } else if (this.section() !== null) {
       this.host.querySelector<HTMLElement>('#account-section-title')?.focus();
     }
@@ -365,7 +376,12 @@ export class AccountSheet {
     }
     const depth = this.backTarget.nextDepth();
     const account =
-      returnsHere && this.compact() ? { [APP_ACCOUNT_KEY]: this.section()?.path ?? '' } : null;
+      returnsHere && this.compact()
+        ? {
+            [APP_ACCOUNT_KEY]: this.section()?.path ?? '',
+            [APP_ACCOUNT_SCROLL_KEY]: this.panel()?.scrollTop ?? 0,
+          }
+        : null;
     const handedOver = this.history.handOver(url);
     this.closed.emit();
     if (handedOver) {

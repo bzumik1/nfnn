@@ -434,7 +434,7 @@ export class PageTransitions {
     running.overlay.classList.add(HELD_CLASS, MOVING_CLASS);
     this.finishWhenStill(running, shown.box, view);
     void afterDrawn(view, this.durationOf('--duration-fast') / 2).then(() =>
-      running.overlay.classList.remove(HELD_CLASS),
+      startHeldMotions(running.overlay, view),
     );
   }
 
@@ -861,6 +861,18 @@ function fadingIn(progress: number, fadeAt: number): number {
     return progress >= 1 ? 1 : 0;
   }
   return Math.min(1, Math.max(0, (progress - fadeAt) / (1 - fadeAt)));
+}
+
+function startHeldMotions(overlay: HTMLElement, view: Window): void {
+  overlay.classList.remove(HELD_CLASS);
+  if (typeof overlay.getAnimations !== 'function') {
+    return;
+  }
+  const now = view.performance.now();
+  overlay
+    .getAnimations({ subtree: true })
+    .filter((motion) => motion.pending)
+    .forEach((motion) => (motion.startTime = now));
 }
 
 export function liveDialogs(document: Document, selector: string): HTMLDialogElement[] {
