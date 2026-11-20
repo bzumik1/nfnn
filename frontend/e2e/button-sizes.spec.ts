@@ -1,4 +1,5 @@
 import { Locator, Page } from '@playwright/test';
+import { donorWithDonations } from './baseline/screen-mocks';
 import { expect, test } from './fixtures';
 import {
   administrator,
@@ -6,6 +7,7 @@ import {
   donationItem,
   mockDonorApi,
   openDonorSection,
+  rememberedDonorSession,
   session,
   signIn,
 } from './donor-session';
@@ -77,6 +79,54 @@ const failedBackups = {
   problems: ['BACKUP_MISSING'],
 };
 
+function linesOfText(block: Locator): Promise<number> {
+  return block.evaluate((element) => {
+    const rects: DOMRect[] = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.textContent?.trim() || node.parentElement?.closest('.visually-hidden')) {
+        continue;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      rects.push(...[...range.getClientRects()].filter((rect) => rect.width > 0));
+    }
+    rects.sort((a, b) => a.top - b.top);
+    let lines = 0;
+    let lineBottom = -Infinity;
+    for (const rect of rects) {
+      if (rect.top >= lineBottom) {
+        lines += 1;
+        lineBottom = rect.bottom;
+      } else {
+        lineBottom = Math.max(lineBottom, rect.bottom);
+      }
+    }
+    return lines;
+  });
+}
+
+async function freshInstallWithBackupKey(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/content/home',
+    (route) => route.fulfill({ json: { news: [], projects: [] } }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/operations/setup',
+    (route) => route.fulfill({ json: { required: true, codeRequired: false } }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/operations/setup/backup-key',
+    (route) =>
+      route.fulfill({
+        json: {
+          key: 'AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH',
+          checkPositions: [2, 13, 24],
+        },
+      }),
+  );
+}
+
 async function rememberedAdministrator(page: Page): Promise<void> {
   await page.route('**/api/donors/auth/refresh', (route) =>
     route.fulfill(session(200, administrator)),
@@ -127,6 +177,34 @@ test.describe('Given a donor who has given in two years', () => {
   });
 });
 
+test.describe('Given a donor whose gift of 10. 1. 2026 was paired by their account without a symbol', () => {
+  for (const [section, path] of [
+    ['Moje dary', '/darce/dary'],
+    ['Potvrzení o daru', '/darce/potvrzeni'],
+  ]) {
+    test(`when they open ${section} at 1280 px, then the pairing label stays on the line of the gift's purpose beside the PDF button on one line`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, donorWithDonations);
+      await rememberedDonorSession(page);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto(path);
+
+      const row = page
+        .getByRole('main')
+        .getByRole('row')
+        .filter({ hasText: 'Přiřazeno podle účtu 2900233333/2010' });
+      const purpose = row.locator('.purpose');
+      const download = row.getByRole('button', { name: /^Stáhnout PDF\b/ });
+      await expect(purpose).toContainText('bez symbolu · účet');
+      await expect(download).toBeVisible();
+
+      expect(await linesOfText(purpose)).toBe(1);
+      expect(await linesOfText(download)).toBe(1);
+    });
+  }
+});
+
 test.describe('Given an administrator with Claude connected', () => {
   test('when they open Údaje a zabezpečení, then the dates of the devices and the connected app share one size and weight, and the state line of the device data keeps the size of a card intro at the same weight', async ({
     page,
@@ -173,6 +251,22 @@ test.describe('Given an administrator with Claude connected', () => {
     await expect(copy).toBeVisible();
 
     expect(await lookOf(retry)).toEqual(await lookOf(copy));
+  });
+});
+
+test.describe('Given a freshly installed site showing the backup key in the first setup', () => {
+  test('when the words of the key are shown, then Kopírovat looks the same as Stáhnout jako soubor beside it', async ({
+    page,
+  }) => {
+    await freshInstallWithBackupKey(page);
+    await page.goto('/prvni-nastaveni');
+
+    const copy = page.getByRole('button', { name: 'Kopírovat slova klíče k zálohám' });
+    const download = page.getByRole('button', { name: 'Stáhnout jako soubor' });
+    await expect(copy).toBeVisible();
+    await expect(download).toBeVisible();
+
+    expect(await lookOf(copy)).toEqual(await lookOf(download));
   });
 });
 
