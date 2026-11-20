@@ -52,31 +52,31 @@
             Zatím tu žádná aktualita není. Napište první tlačítkem Nová aktualita.
           </p>
         } @else {
-          <table class="ui-table">
-            <thead>
-              <tr>
-                <th i18n="@@admin.news.col.title">Titulek</th>
-                <th i18n="@@admin.news.col.tag">Štítek</th>
-                <th i18n="@@admin.news.col.state">Stav</th>
-                <th i18n="@@admin.news.col.updatedAt">Upraveno</th>
+          <table role="table" class="ui-table">
+            <thead role="rowgroup">
+              <tr role="row">
+                <th role="columnheader" i18n="@@admin.news.col.title">Titulek</th>
+                <th role="columnheader" i18n="@@admin.news.col.tag">Štítek</th>
+                <th role="columnheader" i18n="@@admin.news.col.state">Stav</th>
+                <th role="columnheader" i18n="@@admin.news.col.updatedAt">Upraveno</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               @for (item of items(); track item.id) {
-                <tr>
-                  <td data-label="Titulek" i18n-data-label="@@admin.news.col.title">
+                <tr role="row">
+                  <td role="cell" data-label="Titulek" i18n-data-label="@@admin.news.col.title">
                     <a class="admin-name" [routerLink]="['/sprava/aktuality', item.id]">{{
                       item.title
                     }}</a>
                   </td>
-                  <td data-label="Štítek" i18n-data-label="@@admin.news.col.tag">
+                  <td role="cell" data-label="Štítek" i18n-data-label="@@admin.news.col.tag">
                     @if (item.tag) {
                       {{ item.tag }}
                     } @else {
                       <span class="muted" i18n="@@admin.news.tag.none">bez štítku</span>
                     }
                   </td>
-                  <td data-label="Stav" i18n-data-label="@@admin.news.col.state">
+                  <td role="cell" data-label="Stav" i18n-data-label="@@admin.news.col.state">
                     @if (publishedOn(item); as date) {
                       @if (item.live) {
                         <span class="ui-badge ui-badge--success" i18n="@@admin.news.state.published"
@@ -93,7 +93,11 @@
                       >
                     }
                   </td>
-                  <td data-label="Upraveno" i18n-data-label="@@admin.news.col.updatedAt">
+                  <td
+                    role="cell"
+                    data-label="Upraveno"
+                    i18n-data-label="@@admin.news.col.updatedAt"
+                  >
                     {{ updatedAt(item) }}
                   </td>
                 </tr>

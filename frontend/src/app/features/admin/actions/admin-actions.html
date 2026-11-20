@@ -137,22 +137,23 @@
               }
             </ul>
           } @else {
-            <table class="ui-table" [class.ui-skeleton-reveal]="loadView.appears()">
-              <thead>
-                <tr>
-                  <th i18n="@@admin.actions.col.when">Kdy</th>
-                  <th i18n="@@admin.actions.col.admin">Správce</th>
-                  <th i18n="@@admin.actions.col.action">Zásah</th>
-                  <th i18n="@@admin.actions.col.details">Podrobnosti</th>
+            <table role="table" class="ui-table" [class.ui-skeleton-reveal]="loadView.appears()">
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th role="columnheader" i18n="@@admin.actions.col.when">Kdy</th>
+                  <th role="columnheader" i18n="@@admin.actions.col.admin">Správce</th>
+                  <th role="columnheader" i18n="@@admin.actions.col.action">Zásah</th>
+                  <th role="columnheader" i18n="@@admin.actions.col.details">Podrobnosti</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 @for (item of items(); track item.id) {
-                  <tr>
-                    <td data-label="Kdy" i18n-data-label="@@admin.actions.col.when">
+                  <tr role="row">
+                    <td role="cell" data-label="Kdy" i18n-data-label="@@admin.actions.col.when">
                       <span class="admin-time">{{ performedAt(item) }}</span>
                     </td>
                     <td
+                      role="cell"
                       class="admin-col"
                       data-label="Správce"
                       i18n-data-label="@@admin.actions.col.admin"
@@ -173,7 +174,7 @@
                         >
                       }
                     </td>
-                    <td data-label="Zásah" i18n-data-label="@@admin.actions.col.action">
+                    <td role="cell" data-label="Zásah" i18n-data-label="@@admin.actions.col.action">
                       <span class="admin-name">{{ actionName(item) }}</span>
                       @if (item.donorId; as donorId) {
                         <a
@@ -184,7 +185,11 @@
                         >
                       }
                     </td>
-                    <td data-label="Podrobnosti" i18n-data-label="@@admin.actions.col.details">
+                    <td
+                      role="cell"
+                      data-label="Podrobnosti"
+                      i18n-data-label="@@admin.actions.col.details"
+                    >
                       @if (item.summary) {
                         <span class="summary">{{ item.summary }}</span>
                       }

@@ -259,22 +259,45 @@
           >
             Dárci za rok {{ chosenYear() }}
           </h2>
-          <table class="ui-table donors-table">
-            <thead>
-              <tr>
-                <th scope="col" i18n="@@admin.yearlyReceipts.col.donor">Dárce</th>
-                <th scope="col" class="number" i18n="@@admin.yearlyReceipts.col.gifts">Dary</th>
-                <th scope="col" class="number" i18n="@@admin.yearlyReceipts.col.total">Celkem</th>
-                <th scope="col" i18n="@@admin.yearlyReceipts.col.receipt">Potvrzení</th>
+          <table role="table" class="ui-table donors-table">
+            <thead role="rowgroup">
+              <tr role="row">
+                <th role="columnheader" scope="col" i18n="@@admin.yearlyReceipts.col.donor">
+                  Dárce
+                </th>
+                <th
+                  role="columnheader"
+                  scope="col"
+                  class="number"
+                  i18n="@@admin.yearlyReceipts.col.gifts"
+                >
+                  Dary
+                </th>
+                <th
+                  role="columnheader"
+                  scope="col"
+                  class="number"
+                  i18n="@@admin.yearlyReceipts.col.total"
+                >
+                  Celkem
+                </th>
+                <th role="columnheader" scope="col" i18n="@@admin.yearlyReceipts.col.receipt">
+                  Potvrzení
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               @for (donor of donors(); track donor.donorId) {
-                <tr>
-                  <td data-label="Dárce" i18n-data-label="@@admin.yearlyReceipts.col.donor">
+                <tr role="row">
+                  <td
+                    role="cell"
+                    data-label="Dárce"
+                    i18n-data-label="@@admin.yearlyReceipts.col.donor"
+                  >
                     {{ donor.name }}
                   </td>
                   <td
+                    role="cell"
                     class="number"
                     data-label="Dary"
                     i18n-data-label="@@admin.yearlyReceipts.col.gifts"
@@ -282,13 +305,18 @@
                     {{ donor.giftCount }}
                   </td>
                   <td
+                    role="cell"
                     class="number ui-figures"
                     data-label="Celkem"
                     i18n-data-label="@@admin.yearlyReceipts.col.total"
                   >
                     {{ amount(donor) }}&nbsp;Kč
                   </td>
-                  <td data-label="Potvrzení" i18n-data-label="@@admin.yearlyReceipts.col.receipt">
+                  <td
+                    role="cell"
+                    data-label="Potvrzení"
+                    i18n-data-label="@@admin.yearlyReceipts.col.receipt"
+                  >
                     @if (donor.receipt; as receipt) {
                       <span class="ui-figures">{{ receipt.number }}</span>
                     } @else {

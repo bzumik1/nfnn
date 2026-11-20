@@ -53,39 +53,43 @@
             Zatím tu žádný příběh není. Napište první tlačítkem Nový příběh.
           </p>
         } @else {
-          <table class="ui-table">
-            <thead>
-              <tr>
-                <th i18n="@@admin.projects.col.title">Titulek</th>
-                <th i18n="@@admin.projects.col.year">Rok</th>
-                <th i18n="@@admin.projects.col.category">Kategorie</th>
-                <th i18n="@@admin.projects.col.tag">Štítek</th>
-                <th i18n="@@admin.projects.col.state">Stav</th>
-                <th i18n="@@admin.projects.col.updatedAt">Upraveno</th>
+          <table role="table" class="ui-table">
+            <thead role="rowgroup">
+              <tr role="row">
+                <th role="columnheader" i18n="@@admin.projects.col.title">Titulek</th>
+                <th role="columnheader" i18n="@@admin.projects.col.year">Rok</th>
+                <th role="columnheader" i18n="@@admin.projects.col.category">Kategorie</th>
+                <th role="columnheader" i18n="@@admin.projects.col.tag">Štítek</th>
+                <th role="columnheader" i18n="@@admin.projects.col.state">Stav</th>
+                <th role="columnheader" i18n="@@admin.projects.col.updatedAt">Upraveno</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               @for (item of items(); track item.id) {
-                <tr>
-                  <td data-label="Titulek" i18n-data-label="@@admin.projects.col.title">
+                <tr role="row">
+                  <td role="cell" data-label="Titulek" i18n-data-label="@@admin.projects.col.title">
                     <a class="admin-name" [routerLink]="['/sprava/projekty', item.id]">{{
                       item.title
                     }}</a>
                   </td>
-                  <td data-label="Rok" i18n-data-label="@@admin.projects.col.year">
+                  <td role="cell" data-label="Rok" i18n-data-label="@@admin.projects.col.year">
                     {{ item.year }}
                   </td>
-                  <td data-label="Kategorie" i18n-data-label="@@admin.projects.col.category">
+                  <td
+                    role="cell"
+                    data-label="Kategorie"
+                    i18n-data-label="@@admin.projects.col.category"
+                  >
                     {{ categoryLabel(item.category) }}
                   </td>
-                  <td data-label="Štítek" i18n-data-label="@@admin.projects.col.tag">
+                  <td role="cell" data-label="Štítek" i18n-data-label="@@admin.projects.col.tag">
                     @if (item.tag) {
                       {{ item.tag }}
                     } @else {
                       <span class="muted" i18n="@@admin.projects.tag.none">bez štítku</span>
                     }
                   </td>
-                  <td data-label="Stav" i18n-data-label="@@admin.projects.col.state">
+                  <td role="cell" data-label="Stav" i18n-data-label="@@admin.projects.col.state">
                     @if (publishedOn(item); as date) {
                       @if (item.live) {
                         <span
@@ -106,7 +110,11 @@
                       >
                     }
                   </td>
-                  <td data-label="Upraveno" i18n-data-label="@@admin.projects.col.updatedAt">
+                  <td
+                    role="cell"
+                    data-label="Upraveno"
+                    i18n-data-label="@@admin.projects.col.updatedAt"
+                  >
                     {{ updatedAt(item) }}
                   </td>
                 </tr>

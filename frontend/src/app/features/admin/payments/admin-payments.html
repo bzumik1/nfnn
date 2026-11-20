@@ -299,30 +299,33 @@
               </div>
             }
           } @else {
-            <table>
-              <thead>
-                <tr>
-                  <th i18n="@@admin.payments.col.date">Datum</th>
-                  <th class="amount" i18n="@@admin.payments.col.amount">Částka</th>
-                  <th i18n="@@admin.payments.col.sender">Odesílatel</th>
-                  <th i18n="@@admin.payments.col.symbol">VS a zpráva</th>
+            <table role="table">
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th role="columnheader" i18n="@@admin.payments.col.date">Datum</th>
+                  <th role="columnheader" class="amount" i18n="@@admin.payments.col.amount">
+                    Částka
+                  </th>
+                  <th role="columnheader" i18n="@@admin.payments.col.sender">Odesílatel</th>
+                  <th role="columnheader" i18n="@@admin.payments.col.symbol">VS a zpráva</th>
                   @if (filter() === 'paired') {
-                    <th i18n="@@admin.payments.col.donor">Dárce</th>
+                    <th role="columnheader" i18n="@@admin.payments.col.donor">Dárce</th>
                   }
-                  <th class="action">
+                  <th role="columnheader" class="action">
                     <span class="visually-hidden" i18n="@@admin.payments.col.action">Akce</span>
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 @for (item of items(); track item.id) {
                   <tr
+                    role="row"
                     [id]="paymentRowId(item)"
                     tabindex="-1"
                     data-payment-row
                     (animate.leave)="leaveRow($event)"
                   >
-                    <td data-label="Datum" i18n-data-label="@@admin.payments.col.date">
+                    <td role="cell" data-label="Datum" i18n-data-label="@@admin.payments.col.date">
                       <span class="ui-date">{{ date(item.bookedOn) }}</span>
                       @if (item.unpairedByAdminAt) {
                         &ngsp;<span class="held-tag" i18n="@@admin.payments.heldTag"
@@ -334,6 +337,7 @@
                       }
                     </td>
                     <td
+                      role="cell"
                       data-label="Částka"
                       i18n-data-label="@@admin.payments.col.amount"
                       class="amount ui-figures"
@@ -347,13 +351,21 @@
                         >
                       }
                     </td>
-                    <td data-label="Odesílatel" i18n-data-label="@@admin.payments.col.sender">
+                    <td
+                      role="cell"
+                      data-label="Odesílatel"
+                      i18n-data-label="@@admin.payments.col.sender"
+                    >
                       <span class="sender-name">{{ item.counterpartyName ?? '—' }}</span>
                       @if (item.counterpartyAccount; as account) {
                         <app-bank-account class="sender-account" [account]="account" />
                       }
                     </td>
-                    <td data-label="VS a zpráva" i18n-data-label="@@admin.payments.col.symbol">
+                    <td
+                      role="cell"
+                      data-label="VS a zpráva"
+                      i18n-data-label="@@admin.payments.col.symbol"
+                    >
                       @if (item.variableSymbol) {
                         <span class="symbol ui-figures">{{ item.variableSymbol }}</span>
                       } @else {
@@ -364,7 +376,11 @@
                       }
                     </td>
                     @if (filter() === 'paired') {
-                      <td data-label="Dárce" i18n-data-label="@@admin.payments.col.donor">
+                      <td
+                        role="cell"
+                        data-label="Dárce"
+                        i18n-data-label="@@admin.payments.col.donor"
+                      >
                         @if (item.donation; as donation) {
                           <span class="donor-name">
                             @if (donation.donorName) {
@@ -391,7 +407,7 @@
                         }
                       </td>
                     }
-                    <td class="action">
+                    <td role="cell" class="action">
                       @if (filter() === 'unpaired') {
                         <button
                           type="button"

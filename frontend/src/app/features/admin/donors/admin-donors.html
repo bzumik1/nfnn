@@ -165,24 +165,24 @@
           }
         </ul>
       } @else {
-        <table class="ui-table">
-          <thead>
-            <tr>
-              <th i18n="@@admin.donors.col.donor">Dárce</th>
-              <th i18n="@@admin.donors.col.email">E-mail</th>
-              <th i18n="@@admin.donors.col.symbol">Variabilní symbol</th>
+        <table role="table" class="ui-table">
+          <thead role="rowgroup">
+            <tr role="row">
+              <th role="columnheader" i18n="@@admin.donors.col.donor">Dárce</th>
+              <th role="columnheader" i18n="@@admin.donors.col.email">E-mail</th>
+              <th role="columnheader" i18n="@@admin.donors.col.symbol">Variabilní symbol</th>
               @if (listsRecent()) {
-                <th i18n="@@admin.donors.col.lastGift">Poslední dar</th>
+                <th role="columnheader" i18n="@@admin.donors.col.lastGift">Poslední dar</th>
               } @else {
-                <th i18n="@@admin.donors.col.registered">Registrace</th>
+                <th role="columnheader" i18n="@@admin.donors.col.registered">Registrace</th>
               }
-              <th i18n="@@admin.donors.col.account">Stav účtu</th>
+              <th role="columnheader" i18n="@@admin.donors.col.account">Stav účtu</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup">
             @for (item of listed(); track item.account.donorId) {
-              <tr>
-                <td data-label="Dárce" i18n-data-label="@@admin.donors.col.donor">
+              <tr role="row">
+                <td role="cell" data-label="Dárce" i18n-data-label="@@admin.donors.col.donor">
                   <span class="donor-cell">
                     <app-avatar
                       class="donor-avatar"
@@ -209,27 +209,39 @@
                     </span>
                   </span>
                 </td>
-                <td data-label="E-mail" i18n-data-label="@@admin.donors.col.email">
+                <td role="cell" data-label="E-mail" i18n-data-label="@@admin.donors.col.email">
                   @if (item.account.erasedAt) {
                     <span class="muted" i18n="@@admin.donors.email.erased">vymazán</span>
                   } @else {
                     <span class="email">{{ item.account.email }}</span>
                   }
                 </td>
-                <td data-label="Variabilní symbol" i18n-data-label="@@admin.donors.col.symbol">
+                <td
+                  role="cell"
+                  data-label="Variabilní symbol"
+                  i18n-data-label="@@admin.donors.col.symbol"
+                >
                   <span class="ui-figures">{{ item.account.variableSymbol }}</span>
                 </td>
                 @if (item.lastGift; as gift) {
-                  <td data-label="Poslední dar" i18n-data-label="@@admin.donors.col.lastGift">
+                  <td
+                    role="cell"
+                    data-label="Poslední dar"
+                    i18n-data-label="@@admin.donors.col.lastGift"
+                  >
                     <span class="ui-figures gift-amount">{{ giftAmount(gift) }}&nbsp;Kč</span>
                     <span class="muted">{{ giftDay(gift) }}</span>
                   </td>
                 } @else {
-                  <td data-label="Registrace" i18n-data-label="@@admin.donors.col.registered">
+                  <td
+                    role="cell"
+                    data-label="Registrace"
+                    i18n-data-label="@@admin.donors.col.registered"
+                  >
                     {{ registeredOn(item.account) }}
                   </td>
                 }
-                <td data-label="Stav účtu" i18n-data-label="@@admin.donors.col.account">
+                <td role="cell" data-label="Stav účtu" i18n-data-label="@@admin.donors.col.account">
                   <span class="tags">
                     @if (item.account.erasedAt) {
                       <span class="tag tag--off" i18n="@@admin.donors.tag.erased"
