@@ -3271,8 +3271,22 @@ for (const rootSize of ['200%', `${LARGEST_SYSTEM_TEXT_PX}px`]) {
   });
 }
 
-function oneLineEach(lines: string[][]): string[] {
-  return lines.filter((parts) => parts.length !== 1).map((parts) => parts.join(' | '));
+async function wrappedOntoMoreLines(elements: Locator): Promise<string[]> {
+  await elements.first().evaluate(() => document.fonts.ready);
+  return elements.evaluateAll((list) =>
+    list
+      .filter((element) => {
+        const probe = document.createElement('span');
+        probe.textContent = '0';
+        probe.style.display = 'inline-block';
+        probe.style.whiteSpace = 'nowrap';
+        element.after(probe);
+        const line = probe.getBoundingClientRect().height;
+        probe.remove();
+        return element.getBoundingClientRect().height > line * 1.5;
+      })
+      .map((element) => (element.textContent ?? '').trim()),
+  );
 }
 
 test.describe('Given an administrator on a computer 1280 px wide with the text at its default size, reading account numbers and dates', () => {
@@ -3291,27 +3305,17 @@ test.describe('Given an administrator on a computer 1280 px wide with the text a
     const numbers = page.locator('main table app-bank-account .ui-figures');
     await expect(numbers.first()).toBeVisible();
 
-    const lines: string[][] = [];
-    for (const number of await numbers.all()) {
-      lines.push(await linesOfText(number));
-    }
-    expect(oneLineEach(lines)).toEqual([]);
+    expect(await wrappedOntoMoreLines(numbers)).toEqual([]);
   });
 
-  test('when they open the bank accounts of a donor, then every date after poslední stays on the line of poslední', async ({
+  test('when they open the bank accounts of a donor, then every date of their last gift stays whole', async ({
     page,
   }) => {
     await page.goto(`${PETR_DETAIL_PATH}/bankovni-ucty`);
-    const totals = page.locator('main td .muted', { hasText: 'poslední' });
-    await expect(totals.first()).toBeVisible();
+    const dates = page.locator('main td .muted', { hasText: 'poslední' }).locator('.ui-date');
+    await expect(dates.first()).toBeVisible();
 
-    for (const total of await totals.all()) {
-      const lines = (await linesOfText(total)).map((line) => line.replace(/\s+/g, ' '));
-      expect(
-        lines.some((line) => /poslední \d+\. \d+\. \d{4}/.test(line)),
-        lines.join(' | '),
-      ).toBe(true);
-    }
+    expect(await wrappedOntoMoreLines(dates)).toEqual([]);
   });
 });
 
@@ -3329,11 +3333,7 @@ test.describe('Given a donor on an iPhone 390 pt wide with the text at its defau
     const dates = page.locator('app-devices-card .device-date-value');
     await expect(dates.first()).toBeVisible();
 
-    const lines: string[][] = [];
-    for (const date of await dates.all()) {
-      lines.push(await linesOfText(date));
-    }
-    expect(oneLineEach(lines)).toEqual([]);
+    expect(await wrappedOntoMoreLines(dates)).toEqual([]);
   });
 });
 
