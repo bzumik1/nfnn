@@ -130,3 +130,58 @@ test.describe('Given a donor whose account verification of 1 Kč arrived beside 
     });
   }
 });
+
+const newerGift = donationItem({
+  id: '0192f0f1-0000-7000-8000-000000000003',
+  receivedAt: '2026-03-25',
+  amountMinor: 20000,
+});
+
+const giftsAroundVerification = {
+  summary: {
+    ...giftAndVerification.summary,
+    totalAmountMinor: 70100,
+    count: 3,
+    lastReceivedAt: '2026-03-25',
+    byYear: [{ year: 2026, count: 3, totalAmountMinor: 70100 }],
+  },
+  list: {
+    ...giftAndVerification.list,
+    items: [newerGift, verification, gift],
+    totalAmountMinor: 70100,
+    count: 3,
+  },
+};
+
+test.describe('Given a donor whose account verification of 1 Kč stands between two gifts', () => {
+  test('when Moje dary shows them as rows on a phone, then the row with Stáhnout PDF and the row with its note end as far from the next row', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, giftsAroundVerification);
+    await signIn(page);
+    await page.setViewportSize({ width: 390, height: 900 });
+    await openDonorSection(page, 'Moje dary');
+    const rows = rowsOf(page, '.payments-card');
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(0).locator('.download-btn')).toBeVisible();
+    await expect(rows.nth(1).locator('.receipt-note')).toHaveText(
+      'Započítá se do ročního potvrzení',
+    );
+
+    const spaceBelow = (index: number) =>
+      rows.nth(index).evaluate((row) => {
+        const shownParts = row.querySelectorAll(
+          '.ui-list__title, .ui-list__meta, .ui-list__value, .ui-list__state, .download-btn, .receipt-note',
+        );
+        const lastBottom = Math.max(
+          ...Array.from(shownParts, (part) => part.getBoundingClientRect().bottom),
+        );
+        const nextTop = row.nextElementSibling?.getBoundingClientRect().top ?? Number.NaN;
+        return nextTop - lastBottom;
+      });
+
+    const belowGift = await spaceBelow(0);
+    const belowVerification = await spaceBelow(1);
+    expect(Math.abs(belowGift - belowVerification)).toBeLessThanOrEqual(1);
+  });
+});
