@@ -168,8 +168,11 @@ test.describe('Given a donor signed in on someone else’s computer', () => {
     await answerSignIn(page, 'PUBLIC');
     await openSignInDialog(page);
     await page.getByRole('button', { name: 'Cizí počítač?' }).click();
+    await expect(page.getByRole('checkbox', { name: 'Cizí počítač, nic neukládat' })).toBeFocused();
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
+    await expect(page.locator('#login-email')).toHaveValue('jana@example.cz');
+    await expect(page.locator('#login-password')).toHaveValue('correct horse battery');
     await page.getByRole('dialog').locator('.ui-button--block').click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await openAccountItem(page, 'Údaje a zabezpečení');
