@@ -2710,6 +2710,9 @@ test.describe(`Given the longest word a one-letter word keeps beside it, ${LONGE
         await page.goto(path);
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       }
+      if (path === PETR_DETAIL_PATH) {
+        await expect(page.locator('main td').first()).toBeVisible();
+      }
       await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
       await page.evaluate(() => document.fonts.ready);
 

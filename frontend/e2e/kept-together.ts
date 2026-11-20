@@ -295,6 +295,7 @@ export async function oneLetterGroupsPastTheirLine(page: Page): Promise<string[]
       if (
         !text.includes('\u00a0') ||
         !holder ||
+        holder.getBoundingClientRect().width <= 1 ||
         holder.closest('.visually-hidden, [hidden], [inert], [aria-hidden="true"]') ||
         getComputedStyle(holder).visibility === 'hidden'
       ) {
