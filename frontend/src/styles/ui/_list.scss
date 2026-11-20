@@ -154,7 +154,8 @@ div.ui-list__row {
 
 .ui-card > .ui-list,
 .ui-card__group {
-  container: list-card / inline-size;
+  container-name: ui-card list-card;
+  container-type: inline-size;
 }
 
 .ui-card {

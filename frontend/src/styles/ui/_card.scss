@@ -3,7 +3,8 @@
 @use 'touch-target';
 
 .ui-card {
-  container: ui-card / inline-size;
+  container-name: ui-card;
+  container-type: inline-size;
   background: var(--color-surface);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);

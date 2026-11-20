@@ -2,7 +2,11 @@
 
 :host {
   display: block;
-  container: profile-card / inline-size;
+}
+
+.profile-card {
+  container-name: ui-card profile-card;
+  container-type: inline-size;
 }
 
 .profile-head {
@@ -19,7 +23,7 @@
   gap: var(--space-4) var(--space-6);
 }
 
-@include bp.container-down(profile-card, pair) {
+@include bp.container-down(profile-card, tabs) {
   .profile-head {
     flex-direction: column;
     align-items: flex-start;
