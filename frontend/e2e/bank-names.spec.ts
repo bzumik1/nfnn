@@ -1,3 +1,4 @@
+import type { Locator } from '@playwright/test';
 import { bankAccountItem, mockDonorApi, openDonorSection, signIn } from './donor-session';
 import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
 import { expect, test } from './fixtures';
@@ -75,9 +76,13 @@ test.describe('Given a donor whose accounts are at a bank with a logo and at one
   });
 });
 
-test.describe('Given a donor whose verified account has gifts without a symbol and a hint', () => {
-  for (const width of [390, 1280]) {
-    test(`when the donor opens Bankovní účty ${width} px wide, then the logo centres on the number and the lines under it, not on the hint`, async ({
+const SYSTEM_DEFAULT_TEXT_PX = 17;
+const LARGEST_SYSTEM_TEXT_PX = 53;
+
+test.describe('Given a donor with one account that has gifts without a symbol and one that has none', () => {
+  for (const rootPx of [null, SYSTEM_DEFAULT_TEXT_PX, LARGEST_SYSTEM_TEXT_PX]) {
+    const textSize = rootPx ? `with a root of ${rootPx} px` : 'at the default text size';
+    test(`when the donor opens Bankovní účty 390 px wide ${textSize}, then both logos sit at the same place against the account number`, async ({
       page,
     }) => {
       await mockDonorApi(page);
@@ -89,45 +94,59 @@ test.describe('Given a donor whose verified account has gifts without a symbol a
               items: [
                 bankAccountItem({
                   id: 'a-1',
-                  accountNumber: '2000145399/0800',
-                  verifiedOn: '2026-10-17',
+                  accountNumber: '6020809023/0800',
+                  verifiedOn: '2026-10-18',
                   donationCount: 1,
-                  totalAmountMinor: 50000,
+                  totalAmountMinor: 200,
                 }),
                 bankAccountItem({
                   id: 'a-2',
-                  accountNumber: '2000145399/9999',
-                  status: 'AWAITING_PAYMENT',
-                  verifiedOn: null,
+                  accountNumber: '123-7092740277/0100',
+                  verifiedOn: '2026-10-18',
                 }),
               ],
             },
           }),
       );
-      await mockBankLogos(page, [{ code: '0800', imageId: LOGO_IMAGE_ID }]);
+      await mockBankLogos(page, [
+        { code: '0800', imageId: LOGO_IMAGE_ID },
+        { code: '0100', imageId: LOGO_IMAGE_ID },
+      ]);
       await page.setViewportSize({ width: 1280, height: 900 });
       await signIn(page);
       await openDonorSection(page, 'Bankovní účty');
-      await page.setViewportSize({ width, height: 900 });
+      await page.setViewportSize({ width: 390, height: 900 });
+      if (rootPx) {
+        await page.addStyleTag({ content: `html { font-size: ${rootPx}px; }` });
+      }
       await page.evaluate(() => document.fonts.ready);
 
-      const verified = page.locator('.account', { hasText: '2000145399/0800' });
-      await expect(verified.locator('.account-hint')).toBeVisible();
-      await expect(verified.locator('.account-meta > li')).toContainText(['1 dar bez symbolu']);
-      const line = (await verified.locator('.account-line').boundingBox())!;
-      const meta = (await verified.locator('.account-meta-wrap').boundingBox())!;
-      const logo = (await verified.locator('app-bank-logo').boundingBox())!;
-      const blockCentre = (line.y + meta.y + meta.height) / 2;
-      expect(Math.abs(logo.y + logo.height / 2 - blockCentre)).toBeLessThanOrEqual(1);
+      const withGifts = page.locator('.account', { hasText: '6020809023/0800' });
+      const withoutGifts = page.locator('.account', { hasText: '123-7092740277/0100' });
+      await expect(withGifts.locator('.account-meta > li')).toContainText(['1 dar bez symbolu']);
+      await expect(withoutGifts.locator('.account-meta > li')).toHaveCount(2);
 
-      const awaiting = page.locator('.account', { hasText: '2000145399/9999' });
-      await expect(awaiting.locator('.account-meta-wrap')).toHaveCount(0);
-      await expect(awaiting.locator('.account-hint')).toBeVisible();
-      const onlyLine = (await awaiting.locator('.account-line').boundingBox())!;
-      const mark = (await awaiting.locator('app-bank-logo').boundingBox())!;
-      expect(
-        Math.abs(mark.y + mark.height / 2 - (onlyLine.y + onlyLine.height / 2)),
-      ).toBeLessThanOrEqual(1);
+      const offsetOf = async (account: Locator) => {
+        const logo = (await account.locator('app-bank-logo').boundingBox())!;
+        const number = (await account.locator('.account-number').boundingBox())!;
+        const meta = (await account.locator('.account-meta-wrap').boundingBox())!;
+        const status = (await account.locator('.account-status').boundingBox())!;
+        return { logo, number, meta, status, offset: logo.y - number.y };
+      };
+      const first = await offsetOf(withGifts);
+      const second = await offsetOf(withoutGifts);
+
+      expect(first.meta.height).toBeGreaterThan(second.meta.height + 1);
+      if (rootPx === SYSTEM_DEFAULT_TEXT_PX) {
+        expect(first.status.y).toBeLessThan(first.number.y + first.number.height);
+        expect(second.status.y).toBeGreaterThanOrEqual(second.number.y + second.number.height);
+      }
+      expect(Math.abs(first.offset - second.offset)).toBeLessThanOrEqual(1);
+      for (const { logo, number } of [first, second]) {
+        const beside = logo.x + logo.width <= number.x;
+        const above = logo.y + logo.height <= number.y;
+        expect(beside || above).toBe(true);
+      }
     });
   }
 });

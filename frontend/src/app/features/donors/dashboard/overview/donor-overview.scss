@@ -298,7 +298,9 @@
 
     dd {
       margin: 0;
+      margin-inline-start: auto;
       font-size: var(--text-2xl);
+      text-align: end;
     }
   }
 }

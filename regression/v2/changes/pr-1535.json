@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/bank-names.spec.ts > Given a donor whose verified account has gifts without a symbol and a hint > when the donor opens Bankovní účty 390 px wide, then the logo centres on the number and the lines under it, not on the hint",
+    "replacement": "e2e/bank-names.spec.ts > Given a donor with one account that has gifts without a symbol and one that has none > when the donor opens Bankovní účty 390 px wide at the default text size, then both logos sit at the same place against the account number",
+    "reason": "Bank logos (#1532): the logo now lines up with the account number's first line instead of centring on the whole block, so the test that asserted centring is replaced by one that compares an account with a hint and one without at 390 px, at the default and the largest text size; the 1280 px wide layout is the same block and needs no separate case",
+    "contract": "docs/frontend-overview.md, donor dashboard"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/bank-names.spec.ts > Given a donor whose verified account has gifts without a symbol and a hint > when the donor opens Bankovní účty 1280 px wide, then the logo centres on the number and the lines under it, not on the hint",
+    "replacement": "e2e/bank-names.spec.ts > Given a donor with one account that has gifts without a symbol and one that has none > when the donor opens Bankovní účty 390 px wide at the default text size, then both logos sit at the same place against the account number",
+    "reason": "Bank logos (#1532): the logo now lines up with the account number's first line instead of centring on the whole block, so the test that asserted centring is replaced by one that compares an account with a hint and one without at 390 px, at the default and the largest text size; the 1280 px wide layout is the same block and needs no separate case",
+    "contract": "docs/frontend-overview.md, donor dashboard"
+  }
+]
