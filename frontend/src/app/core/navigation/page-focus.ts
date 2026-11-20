@@ -1,4 +1,12 @@
-import { DestroyRef, DOCUMENT, inject, Injectable } from '@angular/core';
+import {
+  afterNextRender,
+  type AfterRenderRef,
+  DestroyRef,
+  DOCUMENT,
+  inject,
+  Injectable,
+  Injector,
+} from '@angular/core';
 import { NavigationStart, Router } from '@angular/router';
 import { InputModality } from '../input/input-modality';
 import { focusInView } from '../layout/focus-in-view';
@@ -32,6 +40,7 @@ export class PageFocus {
   private readonly modality = inject(InputModality);
   private readonly placement = inject(PagePlacement);
   private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
   private readonly openers = new Map<string, string>();
   private pressed: Press | null = null;
   private stopReturning: (() => void) | null = null;
@@ -121,24 +130,39 @@ export class PageFocus {
     if (find === null || view === null) {
       return;
     }
-    if (this.placement.isSettled()) {
+    if (this.placement.isSettled() && this.placement.isAnswered()) {
       this.returnWhenFound(scope, find, view);
       return;
     }
     let waiting = true;
+    let drawing: AfterRenderRef | null = null;
     const stop = (): void => {
       waiting = false;
+      drawing?.destroy();
       if (this.stopReturning === stop) {
         this.stopReturning = null;
       }
     };
     this.stopReturning = stop;
-    void this.placement.placed(view, RETURNING_FOCUS_LONGEST_MS).then(() => {
-      if (waiting) {
-        stop();
-        this.returnWhenFound(scope, find, view);
-      }
-    });
+    const until = view.performance.now() + RETURNING_FOCUS_LONGEST_MS;
+    const left = (): number => Math.max(0, until - view.performance.now());
+    void this.placement
+      .placed(view, left())
+      .then(() => (waiting ? this.placement.answered(view, left()) : undefined))
+      .then(() => {
+        if (!waiting) {
+          return;
+        }
+        drawing = afterNextRender(
+          () => {
+            if (waiting) {
+              stop();
+              this.returnWhenFound(scope, find, view);
+            }
+          },
+          { injector: this.injector },
+        );
+      });
   }
 
   private returnWhenFound(
