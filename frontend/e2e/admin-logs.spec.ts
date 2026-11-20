@@ -1,5 +1,11 @@
 import { expect, test } from './fixtures';
-import { LOGGERS, rememberedAdministrator, routeLogsApi } from './admin-logs-api';
+import {
+  LOGGERS,
+  rememberedAdministrator,
+  RELEASE_HISTORY,
+  routeLogsApi,
+  routeReleaseApi,
+} from './admin-logs-api';
 import { stepBack } from './app-history';
 import { mockDonorApi } from './donor-session';
 
@@ -193,5 +199,36 @@ test.describe('Given an administrator on the logs hub', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Výpis vláken' })).toBeFocused();
     await expect(page.getByRole('main').locator('.states')).toContainText('Běží');
     await expect(page.getByRole('main').locator('.dump')).toContainText('"main" #1 state=RUNNABLE');
+  });
+
+  test('when they open Historie vydání on a phone, then the releases the server ran read newest first and closing it folds them away', async ({
+    page,
+  }) => {
+    await routeReleaseApi(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/sprava/logy/stav');
+    await expect(page.getByRole('heading', { level: 1, name: 'Stav serveru' })).toBeFocused();
+
+    const toggle = page.getByRole('button', { name: 'Historie vydání' });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    const asked = page.waitForRequest(
+      (request) => new URL(request.url()).pathname === RELEASE_HISTORY,
+    );
+    await toggle.click();
+    await asked;
+
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const history = page.locator('#historie-vydani');
+    await expect(history.locator('.ui-list__row')).toHaveCount(3);
+    await expect(history.locator('.ui-list__row').first()).toContainText('2026.11.109');
+    await expect(history.locator('.ui-list__row').first()).toContainText('běží od');
+    await expect(history.getByRole('link', { name: 'Co je nového v 2026.11.98' })).toHaveAttribute(
+      'href',
+      'https://github.com/bzumik1/nfnn/releases/tag/2026.11.98',
+    );
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(history).toHaveCount(0);
   });
 });

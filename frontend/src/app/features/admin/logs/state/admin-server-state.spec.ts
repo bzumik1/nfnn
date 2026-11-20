@@ -2,6 +2,8 @@ import {
   diagnostics,
   logOverride,
   newerReleaseView,
+  releaseHistoryView,
+  releaseRun,
   releaseView,
 } from '../../testing/admin-fixtures';
 import { DIAGNOSTICS_URL, LogPageHarness } from '../testing/log-page-harness';
@@ -10,6 +12,7 @@ import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessi
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 
 const RELEASE_URL = '/api/admin/operations/release';
+const HISTORY_URL = '/api/admin/operations/release/history';
 const GIGABYTE = 1024 ** 3;
 const STATE = diagnostics({
   jvm: {
@@ -202,6 +205,92 @@ describe('Given an administrator on the server state page', () => {
     await loaded(null);
 
     expect(page.has('#vydani')).toBe(false);
+    expect(page.hasButton('Historie vydání')).toBe(false);
     expect(rows('application')[0]).toContain('Paměť');
+  });
+
+  it('when the release loads, then Historie vydání follows it closed and asks for nothing', async () => {
+    await loaded(releaseView());
+
+    const toggle = page.button('Historie vydání');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.getAttribute('aria-controls')).toBeNull();
+    expect(page.has('#historie-vydani')).toBe(false);
+    page.http.expectNone(HISTORY_URL);
+  });
+
+  it('when they open Historie vydání, then it says it loads and then lists the runs newest first with when each ran, its revision and what is new on GitHub', async () => {
+    await loaded(releaseView());
+
+    await page.click('Historie vydání');
+
+    const toggle = page.button('Historie vydání');
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.getAttribute('aria-controls')).toBe('historie-vydani');
+    expect(page.text('#historie-vydani [role="status"]')).toBe('Načítáme historii vydání…');
+    page.http.expectOne(HISTORY_URL).flush(releaseHistoryView());
+    await page.settle();
+
+    expect(page.text('#historie-vydani [role="status"]')).toBe('');
+    expect(page.texts('#historie-vydani .ui-list__row')).toEqual([
+      '2026.11.109 běží od 19. 11. 2026 19:02 naposledy spuštěno 20. 11. 2026 8:40 2b79cb3 Co je nového v 2026.11.109',
+      'Bez čísla vydání od 15. 11. 2026 10:00 do 19. 11. 2026 19:02 dev',
+      '2026.11.98 od 12. 11. 2026 17:30 do 15. 11. 2026 10:00 d953749 Co je nového v 2026.11.98',
+    ]);
+    expect(page.links('#historie-vydani a')).toEqual([
+      {
+        text: 'Co je nového v 2026.11.109',
+        href: 'https://github.com/bzumik1/nfnn/releases/tag/2026.11.109',
+      },
+      {
+        text: 'Co je nového v 2026.11.98',
+        href: 'https://github.com/bzumik1/nfnn/releases/tag/2026.11.98',
+      },
+    ]);
+    const link = page.element<HTMLAnchorElement>('#historie-vydani a');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(link.getAttribute('target')).toBe('_blank');
+  });
+
+  it('when they close Historie vydání and open it again, then the toggle says so and the history is asked anew', async () => {
+    await loaded(releaseView());
+    await page.click('Historie vydání');
+    page.http.expectOne(HISTORY_URL).flush(releaseHistoryView());
+    await page.settle();
+
+    await page.click('Historie vydání');
+
+    expect(page.button('Historie vydání').getAttribute('aria-expanded')).toBe('false');
+    await page.click('Historie vydání');
+    page.http.expectOne(HISTORY_URL).flush({ entries: [releaseRun()] });
+    await page.settle();
+    expect(page.texts('#historie-vydani .ui-list__row')).toEqual([
+      '2026.11.109 běží od 19. 11. 2026 19:02 2b79cb3 Co je nového v 2026.11.109',
+    ]);
+  });
+
+  it('when the history is still empty, then it says no release is recorded yet', async () => {
+    await loaded(releaseView());
+    await page.click('Historie vydání');
+    page.http.expectOne(HISTORY_URL).flush({ entries: [] });
+    await page.settle();
+
+    expect(page.text('#historie-vydani')).toBe('Server zatím žádné vydání nezapsal.');
+  });
+
+  it('when the history cannot be read, then an alert offers to try again, which loads it', async () => {
+    await loaded(releaseView());
+    await page.click('Historie vydání');
+    page.http.expectOne(HISTORY_URL).flush(null, { status: 500, statusText: 'Error' });
+    await page.settle();
+
+    expect(page.text('#historie-vydani [role="alert"]')).toBe(
+      'Historii vydání se nepodařilo načíst. Zkusit znovu',
+    );
+
+    await page.click('Zkusit znovu');
+    page.http.expectOne(HISTORY_URL).flush(releaseHistoryView());
+    await page.settle();
+    expect(page.texts('#historie-vydani .ui-list__row')).toHaveLength(3);
   });
 });

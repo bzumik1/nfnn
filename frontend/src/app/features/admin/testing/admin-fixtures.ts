@@ -5,7 +5,9 @@ import {
   AdminBankAccountItem,
   AdminActionResponse,
   DiagnosticsResponse,
+  ReleaseHistoryResponse,
   ReleaseResponse,
+  ReleaseRunResponse,
   LogFileResponse,
   LoggerResponse,
   LogOverrideResponse,
@@ -829,4 +831,37 @@ export function newerReleaseView(overrides: Partial<ReleaseResponse> = {}): Rele
     updateAvailable: true,
     ...overrides,
   });
+}
+
+export function releaseRun(overrides: Partial<ReleaseRunResponse> = {}): ReleaseRunResponse {
+  return {
+    release: '2026.11.109',
+    revision: '2b79cb3',
+    startedAt: '2026-11-19T18:02:11Z',
+    lastStartedAt: '2026-11-19T18:02:11Z',
+    endedAt: null,
+    ...overrides,
+  };
+}
+
+export function releaseHistoryView(): ReleaseHistoryResponse {
+  return {
+    entries: [
+      releaseRun({ lastStartedAt: '2026-11-20T07:40:03Z' }),
+      releaseRun({
+        release: null,
+        revision: 'dev',
+        startedAt: '2026-11-15T09:00:00Z',
+        lastStartedAt: '2026-11-15T09:00:00Z',
+        endedAt: '2026-11-19T18:02:11Z',
+      }),
+      releaseRun({
+        release: '2026.11.98',
+        revision: 'd953749',
+        startedAt: '2026-11-12T16:30:00Z',
+        lastStartedAt: '2026-11-12T16:30:00Z',
+        endedAt: '2026-11-15T09:00:00Z',
+      }),
+    ],
+  };
 }

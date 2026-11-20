@@ -124,6 +124,45 @@
                     }
                   </div>
                 </li>
+                <li>
+                  <button
+                    type="button"
+                    class="ui-list__row release-history-toggle"
+                    [attr.aria-expanded]="historyShown()"
+                    [attr.aria-controls]="historyShown() ? 'historie-vydani' : null"
+                    (click)="toggleHistory()"
+                  >
+                    <span class="ui-list__title" i18n="@@admin.logs.state.history.toggle"
+                      >Historie vydání</span
+                    >
+                    <svg
+                      class="ui-list__chevron"
+                      [class.ui-list__chevron--open]="historyShown()"
+                      aria-hidden="true"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                </li>
+                @if (historyShown()) {
+                  <li
+                    class="release-history"
+                    appDisclosure
+                    animate.leave="release-history--closing"
+                  >
+                    <div>
+                      <app-release-history id="historie-vydani" />
+                    </div>
+                  </li>
+                }
               }
               <li>
                 <div class="ui-list__row">

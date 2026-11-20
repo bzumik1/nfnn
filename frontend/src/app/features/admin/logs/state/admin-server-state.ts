@@ -20,6 +20,8 @@ import { HealthIcon } from '../health-icon/health-icon';
 import { LogPageAccess } from '../log-page-access';
 import { formatShare, serverHealth, ServerHealthKind } from '../server-health';
 import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
+import { Disclosure } from '../../../../shared/ui/disclosure/disclosure';
+import { ReleaseHistory } from './release-history/release-history';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -28,7 +30,7 @@ const RELEASES = 'https://github.com/bzumik1/nfnn/releases/tag/';
 
 @Component({
   selector: 'app-admin-server-state',
-  imports: [BusyLabel, Skeleton, NeedsConnection, HealthIcon],
+  imports: [BusyLabel, Skeleton, NeedsConnection, HealthIcon, Disclosure, ReleaseHistory],
   templateUrl: './admin-server-state.html',
   styleUrl: './admin-server-state.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,6 +59,7 @@ export class AdminServerState {
     const release = this.release();
     return release === null ? '' : `${latestPart(release)}${checkPart(release)}`;
   });
+  protected readonly historyShown = signal(false);
 
   constructor() {
     this.load();
@@ -80,6 +83,10 @@ export class AdminServerState {
           }
         },
       });
+  }
+
+  protected toggleHistory(): void {
+    this.historyShown.update((shown) => !shown);
   }
 
   protected releaseLink(version: string): string {

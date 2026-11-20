@@ -13,6 +13,7 @@ import java.lang.annotation.Target;
 @Documented
 @TestPropertySource(properties = {"app.donations.fio.token=", "app.donations.report.cron=-", "app.donations.yearly-receipt-announcement.cron=-", "app.donations.bank-codes.cron=-", "app.donations.bank-logos.cron=-", "app.contact.retention.cron=-", "app.content.media-cleanup.cron=-",
         "app.operations.backups.check-cron=-", "app.donors.registration-reminder.cron=-",
-        "app.donors.session-cleanup.cron=-", "app.operations.releases.cron=-"})
+        "app.donors.session-cleanup.cron=-", "app.operations.releases.cron=-",
+        "app.operations.release-history.cleanup-cron=-"})
 public @interface ScheduledWorkOff {
 }

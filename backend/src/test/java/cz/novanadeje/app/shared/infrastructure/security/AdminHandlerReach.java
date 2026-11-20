@@ -137,6 +137,7 @@ enum AdminHandlerReach {
         table.put("GET /api/admin/operations/diagnostics", CONNECTOR);
         table.put("GET /api/admin/operations/diagnostics/threads", CONNECTOR);
         table.put("GET /api/admin/operations/release", CONNECTOR);
+        table.put("GET /api/admin/operations/release/history", CONNECTOR);
         table.put("GET /api/admin/operations/loggers", CONNECTOR);
         table.put("PUT /api/admin/operations/loggers/{logger}", CONNECTOR);
         table.put("DELETE /api/admin/operations/loggers/{logger}", CONNECTOR);
