@@ -115,3 +115,12 @@
 .devices-status {
   max-inline-size: var(--measure-prose);
 }
+
+@include bp.container-down(ui-card, tabs) {
+  .device-sign-out {
+    max-inline-size: 100%;
+    white-space: normal;
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
+}

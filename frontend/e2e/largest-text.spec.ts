@@ -2893,6 +2893,28 @@ async function controlsOverTheirLabels(rows: Locator): Promise<string[]> {
   );
 }
 
+async function elementsPastTheScreen(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const right = document.documentElement.clientWidth;
+    return Array.from(document.body.querySelectorAll<HTMLElement>('*'))
+      .filter((element) => !element.closest('.visually-hidden'))
+      .map((element) => ({ element, box: element.getBoundingClientRect() }))
+      .filter(({ box }) => box.width > 0 && box.right > right + 1)
+      .filter(
+        ({ element, box }) =>
+          !Array.from(element.children).some(
+            (child) => Math.round(child.getBoundingClientRect().right) === Math.round(box.right),
+          ),
+      )
+      .map(({ element, box }) => {
+        const name = (element.getAttribute('aria-label') ?? element.textContent ?? '')
+          .trim()
+          .slice(0, 30);
+        return `${element.tagName.toLowerCase()}.${String(element.className).trim().replace(/\s+/g, '.')} "${name}" ..${Math.round(box.right)} in 0..${right}`;
+      });
+  });
+}
+
 async function pageWiderThanTheScreen(page: Page): Promise<number> {
   return page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -2940,6 +2962,7 @@ for (const { width, height } of [
       await expect(page.locator('.device-last-use').first()).toBeVisible();
       const cards = page.locator('main .ui-card');
 
+      await expect.poll(() => elementsPastTheScreen(page)).toEqual([]);
       await expect.poll(() => pageWiderThanTheScreen(page)).toBeLessThanOrEqual(0);
       for (const card of await cards.all()) {
         expect(await textPastTheSides(card)).toEqual([]);
@@ -3034,6 +3057,7 @@ for (const { width, height } of [
             card.getByRole('heading', { level: 1, name: 'Odemknout heslem' }),
           ).toBeVisible();
         }
+        await expect.poll(() => elementsPastTheScreen(page), step).toEqual([]);
         await expect.poll(() => pageWiderThanTheScreen(page), step).toBeLessThanOrEqual(0);
         expect(await textPastTheSides(card), step).toEqual([]);
         expect(await contentPastTheSides(card), step).toEqual([]);

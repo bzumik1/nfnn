@@ -76,3 +76,10 @@
 .profile-status {
   max-inline-size: var(--measure-prose);
 }
+
+@include bp.container-down(ui-card, tabs) {
+  .profile-edit {
+    max-inline-size: 100%;
+    white-space: normal;
+  }
+}
