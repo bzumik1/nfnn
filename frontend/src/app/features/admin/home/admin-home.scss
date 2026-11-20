@@ -1,6 +1,5 @@
 @use 'breakpoints' as bp;
 @use 'motion';
-@use 'touch-target';
 
 :host {
   display: block;
@@ -281,10 +280,6 @@
 
 .attention-action {
   font-weight: var(--weight-regular);
-
-  .ui-button {
-    @include touch-target.reaches-finger-size;
-  }
 }
 
 @include bp.container-down(attention, tabs) {

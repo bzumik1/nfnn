@@ -171,21 +171,8 @@ td .receipt-diagnostics {
   color: var(--color-text-muted);
 }
 
-.download-btn {
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  border: none;
-  padding: var(--space-1-75) var(--space-3-5);
-  border-radius: var(--radius-pill);
-  font-weight: var(--weight-semibold);
-  font-size: var(--text-xs);
-  cursor: pointer;
-  font-family: var(--font-sans);
-  white-space: nowrap;
-
-  &[aria-disabled='true'] {
-    cursor: progress;
-  }
+.download-btn[aria-disabled='true'] {
+  opacity: 1;
 }
 
 @mixin table-as-cards {

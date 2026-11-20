@@ -8,6 +8,10 @@
   margin-bottom: var(--space-4);
 }
 
+.ui-notice .ui-cta {
+  line-height: normal;
+}
+
 .ui-notice--status {
   background: var(--color-success-bg);
   color: var(--color-success);
