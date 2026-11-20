@@ -1,8 +1,19 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, Injector, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router, RouteReuseStrategy, RouterOutlet } from '@angular/router';
+import {
+  provideRouter,
+  Router,
+  RouteReuseStrategy,
+  RouterOutlet,
+  withInMemoryScrolling,
+} from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { BACK_NAVIGATION } from './back-target';
 import { KEPT_PAGES_OWNER, KeptTabPages, whenLeft, whenShownAgain } from './kept-tab-pages';
+import { NavigationPreview } from './navigation-preview';
+import { lendKeptPagesToThePreview } from './preview-lending';
+import { PreviewingReuse } from './previewing-reuse';
+import { TabMemory } from './tab-memory';
 
 const created: string[] = [];
 const destroyed: string[] = [];
@@ -206,5 +217,113 @@ describe('Given the pages of the tabs kept while another tab is shown', () => {
 
     expect(destroyed).toEqual(['/o-nas']);
     expect(created).toEqual(['/o-nas', '/aktuality', '/o-nas']);
+  });
+});
+
+describe('Given the app on the home screen with the news scrolled and left for the Pomáháme tab, whose link opened an article of the news', () => {
+  let harness: RouterTestingHarness;
+  let router: Router;
+  let preview: NavigationPreview;
+  let scrolledTo: number[];
+  let place: number;
+
+  function scrolledBy(top: number): void {
+    place = top;
+  }
+
+  function onlyTheNewsIsLongEnoughToScroll(): void {
+    Object.defineProperty(window, 'scrollY', {
+      get: () => (document.querySelector('p')?.textContent === '/aktuality' ? place : 0),
+      configurable: true,
+    });
+  }
+
+  beforeEach(async () => {
+    created.length = 0;
+    destroyed.length = 0;
+    scrolledTo = [];
+    place = 0;
+    onlyTheNewsIsLongEnoughToScroll();
+    vi.spyOn(window, 'scrollTo').mockImplementation((options?: ScrollToOptions | number) => {
+      if (typeof options === 'object') {
+        scrolledTo.push(options.top ?? 0);
+        scrolledBy(options.top ?? 0);
+      }
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(
+          [
+            {
+              path: '',
+              component: Shell,
+              children: [
+                { path: 'aktuality', component: Page },
+                { path: 'aktuality/:slug', component: Page },
+                { path: 'projekty', component: Page },
+              ],
+            },
+          ],
+          withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
+        ),
+        { provide: RouteReuseStrategy, useExisting: PreviewingReuse },
+      ],
+    });
+    TestBed.inject(TabMemory);
+    harness = await RouterTestingHarness.create('/aktuality');
+    lendKeptPagesToThePreview(TestBed.inject(Injector));
+    router = TestBed.inject(Router);
+    preview = TestBed.inject(NavigationPreview);
+    scrolledBy(420);
+    await harness.navigateByUrl('/projekty');
+    scrolledBy(0);
+    await harness.navigateByUrl('/aktuality/ohlednuti');
+    scrolledBy(0);
+    scrolledTo = [];
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+  });
+
+  function stepBackToTheNews(): Promise<boolean> {
+    return router.navigateByUrl('/aktuality', { replaceUrl: true, info: BACK_NAVIGATION });
+  }
+
+  it('when the article is dragged back, then the news under the finger is the page they left, where they left it', async () => {
+    const seen = await preview.visit('/aktuality', () => ({
+      page: document.querySelector('p')?.textContent,
+      top: window.scrollY,
+    }));
+
+    expect(seen).toEqual({ page: '/aktuality', top: 420 });
+    expect(created).toEqual(['/aktuality', '/projekty', '/aktuality/ohlednuti']);
+    expect(router.url).toBe('/aktuality/ohlednuti');
+  });
+
+  it('when the finger lets go, then the news shown is the page they left, put back where they left it, as by Zpět', async () => {
+    await preview.visit('/aktuality', () => null);
+    scrolledTo = [];
+
+    await stepBackToTheNews();
+    TestBed.tick();
+
+    expect(created).toEqual(['/aktuality', '/projekty', '/aktuality/ohlednuti']);
+    expect(harness.routeNativeElement?.textContent).toContain('/aktuality');
+    expect(scrolledTo.at(-1)).toBe(420);
+  });
+
+  it('when the swipe is called off, then the news stays kept and Zpět still finds it where they left it', async () => {
+    await preview.visit('/aktuality', () => null);
+    preview.discard();
+    scrolledTo = [];
+
+    await stepBackToTheNews();
+    TestBed.tick();
+
+    expect(created).toEqual(['/aktuality', '/projekty', '/aktuality/ohlednuti']);
+    expect(destroyed).not.toContain('/aktuality');
+    expect(scrolledTo.at(-1)).toBe(420);
   });
 });

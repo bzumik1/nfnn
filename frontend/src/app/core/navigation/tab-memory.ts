@@ -13,6 +13,7 @@ import { AppTab, AppTabId, pathOf, tabOf } from './app-tabs';
 import { ReloadPlace } from '../reload/reload-place';
 import { KeptTabPages } from './kept-tab-pages';
 import { NavigationPreview } from './navigation-preview';
+import { PagePlacement } from './page-placement';
 import { ScrollHold } from './scroll-hold';
 
 @Injectable({ providedIn: 'root' })
@@ -85,7 +86,12 @@ export class TabMemory {
   private overRouterScrolling(event: Scroll): void {
     const kept = this.keptTop;
     if (kept === null || kept.navigation !== event.routerEvent.id) {
-      if (!event.position && event.anchor === null && event.scrollBehavior !== 'manual') {
+      if (event.position) {
+        const placed = this.injector.get(PagePlacement).pending();
+        void import('./growing-page').then((page) =>
+          page.placeOnceGrown(event, this.injector, placed),
+        );
+      } else if (event.anchor === null && event.scrollBehavior !== 'manual') {
         this.scrollTo(0);
       }
       return;
