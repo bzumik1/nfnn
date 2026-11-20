@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/payments/admin-payments.spec.ts > Given an administrator on the bank payments page where lists show as rows > when the administrator opens a paired payment > then a step back by the system from the donor card focuses the payment's row and brings it into view",
+    "replacement": "src/app/core/navigation/page-focus.spec.ts > Given a list of the administration that a step back returns to from the card it opened > when the card was opened from a row that leads to it without being a link, then that row takes the focus",
+    "reason": "Back gesture from every screen (#1531): the return of the focus after a step back moved from the payments page's own code to the shared PageFocus (one focus owner, plan B), so the payments' own test is replaced by the shared rule's test for a row that leads to the card (`data-leads-to`), which the payments' rows now carry; e2e/admin-back-focus.spec.ts covers Platby, Dárci and Nastavení end to end",
+    "contract": "docs/frontend-overview.md, navigation (focus after a step back)"
+  }
+]
