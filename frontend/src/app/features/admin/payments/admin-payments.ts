@@ -40,6 +40,8 @@ import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target'
 import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
+import { loadingView } from '../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import {
   markRowsLeaving,
   neighbourAfterRowLeaves,
@@ -147,6 +149,7 @@ const ROW_CONTROLS =
     ChangedMeanwhileDialog,
     BankAccount,
     SegmentThumb,
+    Skeleton,
   ],
   templateUrl: './admin-payments.html',
   styleUrl: './admin-payments.scss',
@@ -184,6 +187,7 @@ export class AdminPayments {
   protected readonly filtered = computed(() => isFiltered(this.filters()));
   protected readonly searchText = signal(this.filters().text);
   protected readonly state = signal<LoadState>('loading');
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly items = signal<AdminPaymentResponse[]>([]);
   protected readonly total = signal(0);
   protected readonly rowsLeaving = signal(0);

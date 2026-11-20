@@ -47,11 +47,7 @@ const RECENT_DONATIONS_SHOWN = 5;
 })
 export class DonorOverview {
   protected readonly donations = inject(DonorDonations);
-  protected readonly loadView = loadingView(
-    this.donations.state,
-    (state) => state === 'loading',
-    (state) => state !== 'ready',
-  );
+  protected readonly loadView = loadingView(this.donations.state, (state) => state === 'loading');
   protected readonly donor = inject(AuthStore).donor;
   private readonly refusal = inject(AdminAccessRefusal);
   protected readonly adminRefusal = this.refusal.reason;

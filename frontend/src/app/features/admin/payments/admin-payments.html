@@ -157,6 +157,7 @@
     class="ui-card payments-card"
     [class.payments-card--rows]="rows()"
     aria-labelledby="payments-title"
+    [attr.aria-busy]="loadView.busy() ? 'true' : null"
   >
     <h2 #listTitle id="payments-title" class="ui-card__title" tabindex="-1">
       @if (filter() === 'unpaired') {
@@ -167,14 +168,25 @@
         <ng-container i18n="@@admin.payments.list.pairedTitle">Přiřazené platby</ng-container>
       }
     </h2>
-    @switch (state()) {
+    @switch (loadView.state()) {
       @case ('loading') {
-        <p class="ui-load-state ui-load-state--inset" role="status" i18n="@@admin.payments.loading">
+        <p
+          class="ui-load-state visually-hidden ui-load-state--inset"
+          role="status"
+          i18n="@@admin.payments.loading"
+        >
           Načítáme platby…
         </p>
+        @if (loadView.skeleton()) {
+          <app-skeleton [rows]="5" [inset]="true" />
+        }
       }
       @case ('error') {
-        <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+        <div
+          class="ui-load-state ui-load-state--error ui-load-state--inset"
+          [class.ui-skeleton-reveal]="loadView.appears()"
+          role="alert"
+        >
           <p i18n="@@admin.payments.error.text">Platby se nepodařilo načíst.</p>
           <button
             type="button"

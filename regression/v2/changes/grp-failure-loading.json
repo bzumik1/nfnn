@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/skeleton/loading-view.spec.ts > Given a page that loads its data behind a skeleton > when a failure follows a shown skeleton, then the failure shows at once without the minimum",
+    "replacement": "src/app/shared/ui/skeleton/loading-view.spec.ts > Given a page that loads its data behind a skeleton > when a failure follows a shown skeleton, then the skeleton stands its minimum and the failure then appears like content",
+    "reason": "grp:failure-loading of the desktop polish (#1655): E2 applies the skeleton's minimum whenever it really showed, so a failure after a shown skeleton waits it out and appears instead of cutting it short; only the payment panel still names its failure to show at once",
+    "contract": "docs/frontend-overview.md, Shared UI (skeleton/)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/bank-accounts-card/bank-accounts-card.spec.ts > Given the bank accounts card in the overview > when the accounts cannot be loaded, then an alert offers to try again and a retry shows them",
+    "replacement": "src/app/features/donors/dashboard/bank-accounts-card/bank-accounts-card.spec.ts > Given the bank accounts card in the overview > when the accounts cannot be loaded, then an alert offers to try again and a retry keeps it with a busy button until the accounts show",
+    "reason": "grp:failure-loading of the desktop polish (#1590): the accounts' failure is the shared app-load-failure block, whose retry keeps the failure with a busy, focused button instead of a loading line",
+    "contract": "docs/frontend-overview.md, Shared UI (load-failure/)"
+  }
+]

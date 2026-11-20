@@ -38,7 +38,7 @@ type Phase = 'idle' | 'delaying' | 'shown' | 'holding';
 export function loadingView<T>(
   source: Signal<T>,
   isLoading: (value: T) => boolean,
-  showsAtOnce: (value: T) => boolean,
+  showsAtOnce: (value: T) => boolean = () => false,
 ): LoadingView<T> {
   const timings = inject(LOADING_TIMINGS);
   const connectivity = inject(Connectivity);

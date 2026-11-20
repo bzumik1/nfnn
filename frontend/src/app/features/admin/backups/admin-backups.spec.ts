@@ -722,9 +722,10 @@ describe('Given an administrator on the backups page', () => {
     http.expectOne(BACKUPS_URL).flush('down', { status: 500, statusText: 'Error' });
     await settle();
 
-    expect(text('.ui-load-state--error')).toContain('Stav záloh se nepodařilo načíst.');
+    expect(text('app-load-failure [role="alert"]')).toBe('Stav záloh se nepodařilo načíst.');
     button('Zkusit znovu').click();
     await settle();
+    expect(text('app-load-failure [role="alert"]')).toBe('Stav záloh se nepodařilo načíst.');
     await respond(backupsView());
 
     expect(text('.healthy')).toBe('Zálohování je v pořádku.');

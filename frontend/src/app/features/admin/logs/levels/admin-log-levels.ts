@@ -72,11 +72,7 @@ export class AdminLogLevels {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
-  protected readonly loadView = loadingView(
-    this.state,
-    (state) => state === 'loading',
-    (state) => state !== 'ready',
-  );
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly loggers = signal<LoggerResponse[]>([]);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly resetting = signal<string | null>(null);

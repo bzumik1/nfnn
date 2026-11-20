@@ -17,7 +17,11 @@
       }
     }
     @case ('not-found') {
-      <div class="ui-load-state ui-load-state--error" role="alert">
+      <div
+        class="ui-load-state ui-load-state--error"
+        [class.ui-skeleton-reveal]="loadView.appears()"
+        role="alert"
+      >
         <p>
           @if (known) {
             <ng-container i18n="@@admin.sentReport.notFound"
@@ -35,7 +39,11 @@
       </div>
     }
     @case ('error') {
-      <div class="ui-load-state ui-load-state--error" role="alert">
+      <div
+        class="ui-load-state ui-load-state--error"
+        [class.ui-skeleton-reveal]="loadView.appears()"
+        role="alert"
+      >
         <p i18n="@@admin.sentReport.error">Přehled se nepodařilo načíst.</p>
         <button
           appNeedsConnection

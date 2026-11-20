@@ -21,11 +21,15 @@
         Načítáme aktuality…
       </p>
       @if (loadView.skeleton()) {
-        <app-skeleton [rows]="5" />
+        <app-skeleton [rows]="5" title="Všechny aktuality" i18n-title="@@admin.news.list.title" />
       }
     }
     @case ('error') {
-      <div class="ui-load-state ui-load-state--error" role="alert">
+      <div
+        class="ui-load-state ui-load-state--error"
+        [class.ui-skeleton-reveal]="loadView.appears()"
+        role="alert"
+      >
         <p i18n="@@admin.news.error.text">Aktuality se nepodařilo načíst.</p>
         <button
           appNeedsConnection

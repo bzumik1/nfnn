@@ -43,25 +43,26 @@
           Načítáme stav záloh…
         </p>
         @if (loadView.skeleton()) {
-          <app-skeleton [rows]="4" />
-          <app-skeleton [rows]="3" />
-          <app-skeleton [rows]="2" />
-          <app-skeleton [rows]="2" />
+          <app-skeleton [rows]="4" title="Stav záloh" i18n-title="@@admin.backups.status.title" />
+          <app-skeleton
+            [rows]="3"
+            title="Zálohy na serveru"
+            i18n-title="@@admin.backups.list.title"
+          />
+          <app-skeleton [rows]="2" title="Klíč k zálohám" i18n-title="@@admin.backups.key.title" />
+          <app-skeleton [rows]="2" title="Plán záloh" i18n-title="@@admin.backups.schedule.title" />
         }
       }
       @case ('error') {
-        <div class="ui-load-state ui-load-state--error" role="alert">
-          <p i18n="@@admin.backups.error.text">Stav záloh se nepodařilo načíst.</p>
-          <button
-            appNeedsConnection
-            type="button"
-            class="ui-button"
-            (click)="load()"
-            i18n="@@admin.backups.error.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
+        <app-load-failure
+          [class.ui-skeleton-reveal]="loadView.appears()"
+          [compact]="true"
+          [retrying]="retrying()"
+          (retry)="retry()"
+          ><ng-container i18n="@@admin.backups.error.text"
+            >Stav záloh se nepodařilo načíst.</ng-container
+          ></app-load-failure
+        >
       }
       @case ('ready') {
         <section

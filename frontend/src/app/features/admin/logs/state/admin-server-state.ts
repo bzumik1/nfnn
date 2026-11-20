@@ -42,11 +42,7 @@ export class AdminServerState {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
-  protected readonly loadView = loadingView(
-    this.state,
-    (state) => state === 'loading',
-    (state) => state !== 'ready',
-  );
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly refreshing = signal(false);
   protected readonly refreshFailed = signal(false);
   protected readonly diagnostics = signal<DiagnosticsResponse | null>(null);

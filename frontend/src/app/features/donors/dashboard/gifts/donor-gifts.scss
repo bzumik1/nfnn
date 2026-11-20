@@ -64,7 +64,7 @@
 .payments-empty-state {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   padding: var(--space-6);
 
   app-missing-gift {
@@ -80,7 +80,6 @@
 
 .payments-empty {
   max-inline-size: var(--measure-prose);
-  text-align: center;
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
   color: var(--color-text-soft);

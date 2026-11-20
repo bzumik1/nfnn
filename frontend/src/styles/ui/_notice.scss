@@ -1,5 +1,22 @@
 @use 'motion';
 
+@mixin action-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-6);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-card);
+
+  > p,
+  > .ui-notice__text {
+    flex: 1 1 18rem;
+    margin: 0;
+    padding: 0;
+  }
+}
+
 .ui-notice {
   border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-4);
@@ -8,7 +25,8 @@
   margin-bottom: var(--space-4);
 }
 
-.ui-notice .ui-cta {
+.ui-notice .ui-cta,
+.ui-notice--action .ui-cta {
   line-height: normal;
 }
 
@@ -27,6 +45,10 @@
   color: var(--color-warning);
 }
 
+.ui-notice--action {
+  @include action-block;
+}
+
 .ui-load-state {
   display: flex;
   flex-wrap: wrap;
@@ -36,12 +58,20 @@
   font-size: var(--text-md);
 }
 
-.ui-load-state--error {
-  color: var(--color-danger);
-}
-
 .ui-load-state--inset {
   padding: 0 var(--space-6) var(--space-5);
+}
+
+.ui-load-state--error {
+  @include action-block;
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  line-height: var(--leading-normal);
+}
+
+.ui-load-state--error.ui-load-state--inset {
+  padding: var(--space-5) var(--space-6);
+  margin: 0 var(--space-6) var(--space-5);
 }
 
 .ui-badge {
@@ -119,7 +149,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3) var(--space-4);
-  max-width: var(--content-max);
+  max-width: var(--measure-prose);
   margin: 0 auto;
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-menu);

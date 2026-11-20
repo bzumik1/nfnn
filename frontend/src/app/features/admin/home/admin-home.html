@@ -227,14 +227,21 @@
         </label>
       }
     </div>
-    @switch (overviewState()) {
+    @switch (overviewView.state()) {
       @case ('loading') {
-        <p class="ui-load-state" role="status" i18n="@@admin.home.overview.loading">
+        <p class="ui-load-state visually-hidden" role="status" i18n="@@admin.home.overview.loading">
           Načítáme dary po měsících…
         </p>
+        @if (overviewView.skeleton()) {
+          <app-skeleton [rows]="4" [inset]="true" />
+        }
       }
       @case ('error') {
-        <div class="ui-load-state ui-load-state--error" role="alert">
+        <div
+          class="ui-load-state ui-load-state--error"
+          [class.ui-skeleton-reveal]="overviewView.appears()"
+          role="alert"
+        >
           <p i18n="@@admin.home.overview.error.text">Dary po měsících se nepodařilo načíst.</p>
           <button
             appNeedsConnection

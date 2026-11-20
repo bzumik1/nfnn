@@ -616,18 +616,19 @@ describe('Given the bank accounts card in the overview', () => {
     expect(document.activeElement).toBe(element('h2#bank-accounts-title'));
   });
 
-  it('when the accounts cannot be loaded, then an alert offers to try again and a retry shows them', async () => {
+  it('when the accounts cannot be loaded, then an alert offers to try again and a retry keeps it with a busy button until the accounts show', async () => {
     http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Server Error' });
     await settle();
 
-    expect(element('.accounts-load-error')?.getAttribute('role')).toBe('alert');
-    expect(text('.accounts-load-error p')).toBe(
+    expect(text('.accounts-load-error [role="alert"]')).toBe(
       'Bankovní účty se nepodařilo načíst. Zkuste to znovu.',
     );
-    expect(text('.accounts-retry')).toBe('Zkusit znovu');
+    expect(text('.accounts-load-error button .busy-label__face--shown')).toBe('Zkusit znovu');
 
-    await click('.accounts-retry');
-    expect(text('.accounts-loading')).toBe('Načítáme vaše účty…');
+    await click('.accounts-load-error button');
+    expect(element('.accounts-load-error button')?.getAttribute('aria-disabled')).toBe('true');
+    expect(text('.accounts-load-error button .busy-label__face--shown')).toBe('Načítáme…');
+    expect(element('.accounts-loading')).toBeNull();
     await respond([bankAccount()]);
 
     expect(element('.accounts-load-error')).toBeNull();
