@@ -1,8 +1,10 @@
 import { expect, test } from './fixtures';
 import {
+  DIAGNOSTICS,
   LOGGERS,
-  rememberedAdministrator,
+  logsApi,
   RELEASE_HISTORY,
+  rememberedAdministrator,
   routeLogsApi,
   routeReleaseApi,
 } from './admin-logs-api';
@@ -230,5 +232,117 @@ test.describe('Given an administrator on the logs hub', () => {
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await expect(history).toHaveCount(0);
+  });
+});
+
+test.describe('Given an administrator on the server state with a long Java version and a missing folder', () => {
+  const LONG_JAVA_VERSION =
+    '25.0.1+8-LTS (Eclipse Adoptium OpenJDK 64-Bit Server VM 25.0.1+8-LTS, mixed mode, sharing)';
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await routeLogsApi(page);
+    const diagnostics = logsApi()['diagnostics'] as {
+      jvm: Record<string, unknown>;
+      disks: Record<string, unknown>[];
+    };
+    await page.route(
+      (url) => url.pathname === DIAGNOSTICS,
+      (route) =>
+        route.fulfill({
+          json: {
+            ...diagnostics,
+            jvm: { ...diagnostics.jvm, javaVersion: LONG_JAVA_VERSION },
+            disks: [
+              ...diagnostics.disks,
+              { path: '/data', mounted: false, freeBytes: 0, totalBytes: 0 },
+            ],
+          },
+        }),
+    );
+    await rememberedAdministrator(page);
+  });
+
+  for (const width of [1280, 1000]) {
+    test(`when they read it at ${width} px with 200 % text, then the Java row keeps its title on one line and its version inside the card`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/sprava/logy/stav');
+      await page.addStyleTag({ content: 'html { font-size: 200% }' });
+      const card = page.getByRole('main').locator('.application');
+      const row = card.locator('.ui-list__row').filter({ hasText: 'Java' });
+      await expect(row).toContainText(LONG_JAVA_VERSION);
+
+      const box = await row.evaluate((element) => {
+        const title = element.querySelector('.ui-list__title') as HTMLElement;
+        const version = [...element.children].find((child) => child !== title) as HTMLElement;
+        const cardBox = element.closest('.ui-card')!.getBoundingClientRect();
+        const titleBox = title.getBoundingClientRect();
+        const versionBox = version.getBoundingClientRect();
+        return {
+          titleWidth: titleBox.width,
+          characterWidth: parseFloat(getComputedStyle(title).fontSize),
+          versionLeft: versionBox.left,
+          versionRight: versionBox.right,
+          versionOverflows: version.scrollWidth > version.clientWidth,
+          cardLeft: cardBox.left,
+          cardRight: cardBox.right,
+        };
+      });
+      expect(box.titleWidth).toBeGreaterThan(box.characterWidth);
+      expect(box.versionLeft).toBeGreaterThanOrEqual(box.cardLeft);
+      expect(box.versionRight).toBeLessThanOrEqual(box.cardRight);
+      expect(box.versionOverflows).toBe(false);
+    });
+  }
+
+  test('when they read the verdict, then its findings carry no list markers, it is inset alike at the top and bottom and only identifiers are monospace', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/sprava/logy/stav');
+    const verdict = page.getByRole('main').locator('.verdict');
+    await expect(verdict.locator('.findings li')).toHaveText(['Složka /data není připojená.']);
+
+    const markers = await verdict
+      .locator('.findings li')
+      .evaluateAll((items) => items.map((item) => getComputedStyle(item).listStyleType));
+    expect(markers).toEqual(['none']);
+
+    const insets = await verdict.evaluate((card) => {
+      const cardBox = card.getBoundingClientRect();
+      const row = card.querySelector('.ui-list__row') as HTMLElement;
+      const refresh = card.querySelector('.refresh') as HTMLElement;
+      const border = parseFloat(getComputedStyle(card).borderTopWidth);
+      return {
+        top:
+          row.getBoundingClientRect().top -
+          cardBox.top -
+          border +
+          parseFloat(getComputedStyle(row).paddingTop),
+        bottom:
+          cardBox.bottom -
+          refresh.getBoundingClientRect().bottom -
+          border +
+          parseFloat(getComputedStyle(refresh).paddingBottom),
+      };
+    });
+    expect(Math.abs(insets.top - insets.bottom)).toBeLessThanOrEqual(1);
+
+    const application = page.getByRole('main').locator('.application');
+    const faces = await application.evaluate((card) =>
+      Object.fromEntries(
+        [...card.querySelectorAll('.ui-list__row')].map((row) => [
+          row.querySelector('.ui-list__title')!.textContent!.trim(),
+          [...row.querySelectorAll('.ui-list__meta, .ui-list__value')].map((part) =>
+            getComputedStyle(part).fontFamily.includes('monospace'),
+          ),
+        ]),
+      ),
+    );
+    expect(faces['Paměť']).toEqual([false, false]);
+    expect(faces['Úklid paměti']).toEqual([false, false]);
+    expect(faces['Java']).toEqual([true]);
   });
 });

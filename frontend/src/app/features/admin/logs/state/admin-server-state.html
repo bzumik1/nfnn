@@ -47,7 +47,7 @@
                       >k <span class="ui-date">{{ time(diagnostics.now) }}</span></span
                     >
                     @if (health.findings.length > 0) {
-                      <ul class="ui-list__extra findings">
+                      <ul class="ui-list__extra findings" role="list">
                         @for (finding of health.findings; track finding) {
                           <li>{{ finding }}</li>
                         }
@@ -213,7 +213,7 @@
               <li>
                 <div class="ui-list__row">
                   <span class="ui-list__title" i18n="@@admin.logs.diagnostics.java">Java</span>
-                  <span class="ui-list__value ui-mono">{{ diagnostics.jvm.javaVersion }}</span>
+                  <span class="ui-list__meta ui-mono">{{ diagnostics.jvm.javaVersion }}</span>
                 </div>
               </li>
               <li>

@@ -14,10 +14,20 @@ h2.ui-list__title {
   font-weight: var(--weight-semibold);
 }
 
+.verdict > .ui-list > li > .ui-list__row {
+  padding-block-start: var(--space-5);
+}
+
 .findings {
+  list-style: none;
+  padding: 0;
   margin: var(--space-2) 0 0;
-  padding-inline-start: var(--space-4-5);
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
+
+  > li + li {
+    margin-block-start: var(--space-1);
+  }
 }
 
 .refresh {
@@ -26,6 +36,7 @@ h2.ui-list__title {
   align-items: center;
   gap: var(--space-3);
   margin-top: var(--space-3);
+  padding-block-end: var(--space-5);
 
   .ui-notice {
     margin: 0;
