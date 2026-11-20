@@ -2712,14 +2712,29 @@ test.describe(`Given the longest word a one-letter word keeps beside it, ${LONGE
       }
       if (path === PETR_DETAIL_PATH) {
         await expect(page.locator('main td').first()).toBeVisible();
+        await expect(
+          page.locator('main .receipts-table .pdf-button__layer--current .pdf-button__label'),
+        ).toBeVisible();
       }
       await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
       await page.evaluate(() => document.fonts.ready);
 
-      const longest = await longestKeptWord(page, pairs);
-      measured.set(`${path.split('?')[0]} @ ${width} px`, longest);
+      let previous: LongestKeptWord | undefined;
+      let longest: LongestKeptWord | undefined;
+      await expect
+        .poll(async () => {
+          previous = longest;
+          longest = await longestKeptWord(page, pairs);
+          return (
+            previous !== undefined &&
+            previous.letters === longest.letters &&
+            previous.binding === longest.binding
+          );
+        })
+        .toBe(true);
+      measured.set(`${path.split('?')[0]} @ ${width} px`, longest!);
 
-      expect(longest.places).toBeGreaterThanOrEqual(0);
+      expect(longest!.places).toBeGreaterThanOrEqual(0);
     });
   }
 
