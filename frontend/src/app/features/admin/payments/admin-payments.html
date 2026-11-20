@@ -1,8 +1,11 @@
 <div class="ui-page ui-page--full container" [class.payments-page--rows]="rows()">
-  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.payments.heading">Platby z banky</h1>
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.payments.heading">
+    Platby z&nbsp;banky
+  </h1>
   <p class="ui-page-intro" i18n="@@admin.payments.intro">
-    Platby, které web nedokázal přiřadit žádnému dárci, tu přiřadíte ručně. U přiřazených plateb
-    můžete přiřazení zrušit; web pak platbu sám znovu nepřiřadí a čeká na vaše rozhodnutí.
+    Platby, které web nedokázal přiřadit žádnému dárci, tu přiřadíte ručně. U&nbsp;přiřazených
+    plateb můžete přiřazení zrušit; web pak platbu sám znovu nepřiřadí a&nbsp;čeká na vaše
+    rozhodnutí.
   </p>
 
   <div class="admin-toolbar">
@@ -63,7 +66,7 @@
         aria-describedby="payments-search-hint"
       />
       <p id="payments-search-hint" class="payments-hint" i18n="@@admin.payments.search.hint">
-        Jméno odesílatele nebo dárce, účet, variabilní symbol, zpráva nebo částka v korunách.
+        Jméno odesílatele nebo dárce, účet, variabilní symbol, zpráva nebo částka v&nbsp;korunách.
       </p>
     </div>
     <div class="payments-field">
@@ -133,7 +136,7 @@
     @if (state() === 'ready' && filtered()) {
       <span i18n="@@admin.payments.found">{total(), plural,
         =0 {Nenalezena žádná platba.}
-        one {Nalezena 1 platba.}
+        one {Nalezena 1&nbsp;platba.}
         few {Nalezeny {{ total() }} platby.}
         other {Nalezeno {{ total() }} plateb.}
       }</span>
@@ -206,8 +209,8 @@
               [class.payments-empty--after-rows]="rowLeft()"
               i18n="@@admin.payments.empty.unpaired"
             >
-              Všechny platby z banky jsou přiřazené. Nová platba se tu objeví po dalším stažení z
-              banky (každou hodinu).
+              Všechny platby z&nbsp;banky jsou přiřazené. Nová platba se tu objeví po dalším stažení
+              z&nbsp;banky (každou hodinu).
             </p>
           } @else {
             <p
@@ -308,7 +311,7 @@
                       Částka
                     </th>
                     <th role="columnheader" i18n="@@admin.payments.col.sender">Odesílatel</th>
-                    <th role="columnheader" i18n="@@admin.payments.col.symbol">VS a zpráva</th>
+                    <th role="columnheader" i18n="@@admin.payments.col.symbol">VS a&nbsp;zpráva</th>
                     @if (filter() === 'paired') {
                       <th role="columnheader" i18n="@@admin.payments.col.donor">Dárce</th>
                     }
@@ -429,7 +432,7 @@
                           </button>
                         } @else if (item.donation?.receiptIssued) {
                           <span class="muted" i18n="@@admin.payments.unpair.blocked"
-                            >Nelze zrušit, k daru je vystavené potvrzení.</span
+                            >Nelze zrušit, k&nbsp;daru je vystavené potvrzení.</span
                           >
                         } @else if (unpairing() === item.id) {
                           <span class="confirm" role="group" [attr.aria-label]="unpairLabel(item)">
@@ -493,7 +496,7 @@
         <div class="payments-more">
           @if (hasMore()) {
             <span i18n="@@admin.payments.more.shown"
-              >Zobrazeno {{ items().length }} z {{ total() }}.</span
+              >Zobrazeno {{ items().length }} z&nbsp;{{ total() }}.</span
             >
             <button
               appNeedsConnection
@@ -558,7 +561,7 @@
         </dd>
       </div>
       <div>
-        <dt i18n="@@admin.payments.col.symbol">VS a zpráva</dt>
+        <dt i18n="@@admin.payments.col.symbol">VS a&nbsp;zpráva</dt>
         <dd>
           @if (payment.variableSymbol) {
             <span class="symbol ui-figures">{{ payment.variableSymbol }}</span>
@@ -577,7 +580,7 @@
         i18n="@@admin.payments.pair.verification"
       >
         Touto platbou si dárce ověřuje bankovní účet. Když ji přiřadíte ručně, dárci se započítá
-        1&nbsp;Kč, ale účet ověřený nebude; ten ověří až platba s jeho variabilním symbolem.
+        1&nbsp;Kč, ale účet ověřený nebude; ten ověří až platba s&nbsp;jeho variabilním symbolem.
       </p>
     }
 
@@ -717,7 +720,7 @@
         </dd>
       </div>
       <div>
-        <dt i18n="@@admin.payments.col.symbol">VS a zpráva</dt>
+        <dt i18n="@@admin.payments.col.symbol">VS a&nbsp;zpráva</dt>
         <dd>
           @if (payment.variableSymbol) {
             <span class="symbol ui-figures">{{ payment.variableSymbol }}</span>
@@ -763,7 +766,7 @@
       }
       @if (payment.donation?.receiptIssued) {
         <p class="muted" i18n="@@admin.payments.unpair.blocked">
-          Nelze zrušit, k daru je vystavené potvrzení.
+          Nelze zrušit, k&nbsp;daru je vystavené potvrzení.
         </p>
       } @else if (unpairing() === payment.id) {
         <div class="confirm" role="group" [attr.aria-label]="unpairLabel(payment)">

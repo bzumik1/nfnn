@@ -1,15 +1,16 @@
 <div class="ui-page ui-page--full container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.symbolClaims.heading">
-    Odpovědi o starších symbolech
+    Odpovědi o&nbsp;starších symbolech
   </h1>
   <p class="ui-page-intro intro-lead" i18n="@@admin.symbolClaims.intro">
-    Když dárce ověří bankovní účet a z toho účtu k nám chodily platby s jiným variabilním symbolem,
-    přehled dárce se ho zeptá, jestli jsou jeho. Tady vidíte odpovědi a opravíte omyl:
+    Když dárce ověří bankovní účet a&nbsp;z&nbsp;toho účtu k&nbsp;nám chodily platby s&nbsp;jiným
+    variabilním symbolem, přehled dárce se ho zeptá, jestli jsou jeho. Tady vidíte odpovědi
+    a&nbsp;opravíte omyl:
   </p>
   <ul class="ui-page-intro intro-list">
     <li i18n="@@admin.symbolClaims.intro.yes">
       Odpověděl Ano omylem? Vraťte přiřazení darů: dary smažeme, platby se vrátí mezi čekající na
-      přiřazení a dárce se už neptáme.
+      přiřazení a&nbsp;dárce se už neptáme.
     </li>
     <li i18n="@@admin.symbolClaims.intro.no">
       Odpověděl Ne omylem? Zeptejte se ho znovu: otázku uvidí znovu ve svém přehledu.
@@ -49,7 +50,7 @@
       @case ('ready') {
         @if (items().length === 0) {
           <p class="ui-card__empty" i18n="@@admin.symbolClaims.empty">
-            Zatím nikdo neodpověděl na otázku o starším variabilním symbolu.
+            Zatím nikdo neodpověděl na otázku o&nbsp;starším variabilním symbolu.
           </p>
         } @else {
           <div class="ui-table-frame">
@@ -138,7 +139,7 @@
                           >
                             <span i18n="@@admin.symbolClaims.reverse.confirm.question"
                               >Smažeme {{ donations(item.donationCount) }}, platby se vrátí mezi
-                              čekající na přiřazení a odpověď se změní na Ne. Vrátit?</span
+                              čekající na přiřazení a&nbsp;odpověď se změní na Ne. Vrátit?</span
                             >
                             <button
                               appNeedsConnection
@@ -175,7 +176,7 @@
                             i18n-aria-label="@@admin.symbolClaims.reset.confirm.label"
                           >
                             <span i18n="@@admin.symbolClaims.reset.confirm.question"
-                              >Odpověď Ne smažeme a dárce otázku uvidí znovu ve svém přehledu.
+                              >Odpověď Ne smažeme a&nbsp;dárce otázku uvidí znovu ve svém přehledu.
                               Zeptat se znovu?</span
                             >
                             <button

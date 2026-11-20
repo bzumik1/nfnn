@@ -23,9 +23,9 @@
   </h1>
   @if (erasedAt(); as erasedAt) {
     <p class="admin-erased" role="note" i18n="@@admin.donorDetail.erased">
-      Osobní údaje tohoto dárce jsme vymazali {{ time(erasedAt) }}. Účet už nejde použít. Dary a
-      vystavená potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají na serveru beze změny, i
-      se jménem a adresou dárce.
+      Osobní údaje tohoto dárce jsme vymazali {{ time(erasedAt) }}. Účet už nejde použít. Dary
+      a&nbsp;vystavená potvrzení zůstávají kvůli účetnictví; potvrzení zůstávají na serveru beze
+      změny, i&nbsp;se jménem a&nbsp;adresou dárce.
     </p>
   }
 
@@ -36,7 +36,7 @@
       </h2>
       <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
         <p i18n="@@admin.donorDetail.account.missing">
-          Takový dárce není. Vraťte se na seznam dárců a vyhledejte ho znovu.
+          Takový dárce není. Vraťte se na seznam dárců a&nbsp;vyhledejte ho znovu.
         </p>
         <a
           class="ui-button ui-button--small"
@@ -180,7 +180,7 @@
                 role="status"
                 i18n="@@admin.donorDetail.accounts.loading"
               >
-                Načítáme účty, dary a potvrzení…
+                Načítáme účty, dary a&nbsp;potvrzení…
               </p>
             }
             @case ('missing') {
@@ -189,26 +189,26 @@
                 role="alert"
                 i18n="@@admin.donorDetail.donations.missing"
               >
-                Dárce nemá záznam v evidenci darů, takže nemá žádné účty, dary ani potvrzení.
+                Dárce nemá záznam v&nbsp;evidenci darů, takže nemá žádné účty, dary ani potvrzení.
               </p>
             }
             @case ('error') {
               @if (donationsAwaitConnection()) {
                 @if (serverAway()) {
                   <p class="ui-card__empty" i18n="@@admin.donorDetail.donations.serverAway">
-                    Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až server
-                    zase odpoví.
+                    Účty, dary a&nbsp;potvrzení tohoto dárce v&nbsp;zařízení nejsou. Načteme je, až
+                    server zase odpoví.
                   </p>
                 } @else {
                   <p class="ui-card__empty" i18n="@@admin.donorDetail.donations.offline">
-                    Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až budete
-                    online.
+                    Účty, dary a&nbsp;potvrzení tohoto dárce v&nbsp;zařízení nejsou. Načteme je, až
+                    budete online.
                   </p>
                 }
               } @else {
                 <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
                   <p i18n="@@admin.donorDetail.donations.error.text">
-                    Účty, dary a potvrzení se nepodařilo načíst.
+                    Účty, dary a&nbsp;potvrzení se nepodařilo načíst.
                   </p>
                   <button
                     appNeedsConnection
@@ -430,8 +430,8 @@
                     i18n-aria-label="@@admin.donorDetail.reset.confirm.label"
                   >
                     <span i18n="@@admin.donorDetail.reset.confirm.question"
-                      >Ověřili jste, že žádá majitel účtu (například odpověděl z registrovaného
-                      e-mailu)? Dárce se pak přihlásí jen heslem a všechna jeho přihlášení
+                      >Ověřili jste, že žádá majitel účtu (například odpověděl z&nbsp;registrovaného
+                      e-mailu)? Dárce se pak přihlásí jen heslem a&nbsp;všechna jeho přihlášení
                       skončí.</span
                     >
                     <button
@@ -468,10 +468,10 @@
                     Vypnout dvoufaktorové ověření
                   </button>
                   <span class="admin-hint" i18n="@@admin.donorDetail.reset.hint"
-                    >Pro dárce, který přišel o telefon s ověřovací aplikací. Dárce to zvládne i sám:
-                    při přihlášení zvolí „Obnovit přístup platbou“ a pošle 1&nbsp;Kč z účtu vedeného
-                    na jeho jméno. Platba z účtu někoho jiného nic nevypne, takovému dárci ověření
-                    vypnete tímto tlačítkem.</span
+                    >Pro dárce, který přišel o&nbsp;telefon s&nbsp;ověřovací aplikací. Dárce to
+                    zvládne i&nbsp;sám: při přihlášení zvolí „Obnovit přístup platbou“ a&nbsp;pošle
+                    1&nbsp;Kč z&nbsp;účtu vedeného na jeho jméno. Platba z&nbsp;účtu někoho jiného
+                    nic nevypne, takovému dárci ověření vypnete tímto tlačítkem.</span
                   >
                 }
               </div>
@@ -486,7 +486,8 @@
                     i18n-aria-label="@@admin.donorDetail.passkeys.confirm.label"
                   >
                     <span i18n="@@admin.donorDetail.passkeys.confirm.question"
-                      >Dárce se jimi pak nepřihlásí a všechna jeho přihlášení skončí. Odebrat?</span
+                      >Dárce se jimi pak nepřihlásí a&nbsp;všechna jeho přihlášení skončí.
+                      Odebrat?</span
                     >
                     <button
                       appNeedsConnection
@@ -522,7 +523,7 @@
                     Odebrat přístupové klíče
                   </button>
                   <span class="admin-hint" i18n="@@admin.donorDetail.passkeys.hint"
-                    >Pro dárce, který přišel o zařízení s přístupovým klíčem.</span
+                    >Pro dárce, který přišel o&nbsp;zařízení s&nbsp;přístupovým klíčem.</span
                   >
                 }
               </div>
@@ -555,7 +556,7 @@
               role="status"
               i18n="@@admin.donorDetail.accounts.loading"
             >
-              Načítáme účty, dary a potvrzení…
+              Načítáme účty, dary a&nbsp;potvrzení…
             </p>
           }
           @case ('missing') {
@@ -564,26 +565,26 @@
               role="alert"
               i18n="@@admin.donorDetail.donations.missing"
             >
-              Dárce nemá záznam v evidenci darů, takže nemá žádné účty, dary ani potvrzení.
+              Dárce nemá záznam v&nbsp;evidenci darů, takže nemá žádné účty, dary ani potvrzení.
             </p>
           }
           @case ('error') {
             @if (donationsAwaitConnection()) {
               @if (serverAway()) {
                 <p class="ui-card__empty" i18n="@@admin.donorDetail.donations.serverAway">
-                  Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až server zase
-                  odpoví.
+                  Účty, dary a&nbsp;potvrzení tohoto dárce v&nbsp;zařízení nejsou. Načteme je, až
+                  server zase odpoví.
                 </p>
               } @else {
                 <p class="ui-card__empty" i18n="@@admin.donorDetail.donations.offline">
-                  Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až budete
-                  online.
+                  Účty, dary a&nbsp;potvrzení tohoto dárce v&nbsp;zařízení nejsou. Načteme je, až
+                  budete online.
                 </p>
               }
             } @else {
               <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
                 <p i18n="@@admin.donorDetail.donations.error.text">
-                  Účty, dary a potvrzení se nepodařilo načíst.
+                  Účty, dary a&nbsp;potvrzení se nepodařilo načíst.
                 </p>
                 <button
                   appNeedsConnection
@@ -600,7 +601,8 @@
           @case ('ready') {
             @if (erasedAt()) {
               <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.erased">
-                Bankovní účty jsme s osobními údaji dárce smazali; další platby se mu už nepřiřadí.
+                Bankovní účty jsme s&nbsp;osobními údaji dárce smazali; další platby se mu už
+                nepřiřadí.
               </p>
             } @else if (bankAccountsSource() === 'pending') {
               <p
@@ -647,24 +649,26 @@
               </div>
             } @else if (bankAccounts().length === 0) {
               <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.empty">
-                Z žádného účtu zatím nepřišla platba s variabilním symbolem dárce.
+                Z&nbsp;žádného účtu zatím nepřišla platba s&nbsp;variabilním symbolem dárce.
               </p>
             } @else {
               @if (drill()) {
                 <p class="ui-card__intro card-intro" i18n="@@admin.donorDetail.accounts.hintParts">
                   Údaj Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu, které
-                  se dárci přiřadily podle účtu; dary se symbolem najdete v části Dary na kartě
+                  se dárci přiřadily podle účtu; dary se symbolem najdete v&nbsp;části Dary na kartě
                   dárce. Jen nechcete, aby se dárci přiřazovaly další platby bez symbolu? Vypněte
                   párování, dosavadní dary zůstanou. Účet se dárci přiřadil omylem? Odeberte ho:
-                  smažeme i dary, které se přes něj přiřadily, a odpovědi o starších symbolech.
+                  smažeme i&nbsp;dary, které se přes něj přiřadily, a&nbsp;odpovědi o&nbsp;starších
+                  symbolech.
                 </p>
               } @else {
                 <p class="ui-card__intro card-intro" i18n="@@admin.donorDetail.accounts.hint">
                   Sloupec Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu,
-                  které se dárci přiřadily podle účtu; dary se symbolem najdete níže v části Dary.
-                  Jen nechcete, aby se dárci přiřazovaly další platby bez symbolu? Vypněte párování,
-                  dosavadní dary zůstanou. Účet se dárci přiřadil omylem? Odeberte ho: smažeme i
-                  dary, které se přes něj přiřadily, a odpovědi o starších symbolech.
+                  které se dárci přiřadily podle účtu; dary se symbolem najdete níže v&nbsp;části
+                  Dary. Jen nechcete, aby se dárci přiřazovaly další platby bez symbolu? Vypněte
+                  párování, dosavadní dary zůstanou. Účet se dárci přiřadil omylem? Odeberte ho:
+                  smažeme i&nbsp;dary, které se přes něj přiřadily, a&nbsp;odpovědi o&nbsp;starších
+                  symbolech.
                 </p>
               }
               <div class="ui-table-frame">
@@ -703,7 +707,7 @@
                           }
                           @if (item.pairingExcluded) {
                             <span class="tag tag--warn" i18n="@@admin.donorDetail.accounts.excluded"
-                              >jen s variabilním symbolem</span
+                              >jen s&nbsp;variabilním symbolem</span
                             >
                           }
                           @if (item.confirmedSymbols.length > 0) {
@@ -786,8 +790,8 @@
                                 i18n-aria-label="@@admin.donorDetail.disconnect.confirm.label"
                               >
                                 <span i18n="@@admin.donorDetail.disconnect.confirm.question"
-                                  >Dosavadní dary zůstanou, další platby bez symbolu z tohoto účtu
-                                  už nepřiřadíme. Vypnout?</span
+                                  >Dosavadní dary zůstanou, další platby bez symbolu z&nbsp;tohoto
+                                  účtu už nepřiřadíme. Vypnout?</span
                                 >
                                 <button
                                   appNeedsConnection
@@ -825,8 +829,8 @@
                                 i18n-aria-label="@@admin.donorDetail.reconnect.confirm.label"
                               >
                                 <span i18n="@@admin.donorDetail.reconnect.confirm.question"
-                                  >Párování začne znovu, až z účtu přijde platba s variabilním
-                                  symbolem dárce. Zapnout?</span
+                                  >Párování začne znovu, až z&nbsp;účtu přijde platba
+                                  s&nbsp;variabilním symbolem dárce. Zapnout?</span
                                 >
                                 <button
                                   appNeedsConnection
@@ -865,8 +869,8 @@
                               >
                                 <span i18n="@@admin.donorDetail.remove.confirm.question"
                                   >Smažeme {{ donationsCount(item.donationCount) }} přiřazené přes
-                                  tento účet i odpovědi o starších symbolech; platby zůstanou
-                                  nespárované. Odebrat?</span
+                                  tento účet i&nbsp;odpovědi o&nbsp;starších symbolech; platby
+                                  zůstanou nespárované. Odebrat?</span
                                 >
                                 <button
                                   appNeedsConnection
@@ -931,7 +935,8 @@
                                 }
                                 @if (removalBlocked(item)) {
                                   <span class="blocked" i18n="@@admin.donorDetail.remove.blocked"
-                                    >Nejde odebrat: k darům z účtu je vystavené potvrzení.</span
+                                    >Nejde odebrat: k&nbsp;darům z&nbsp;účtu je vystavené
+                                    potvrzení.</span
                                   >
                                 } @else {
                                   <button
@@ -1166,7 +1171,7 @@
               @if (issueChoices().length > 0) {
                 <form class="receipt-issue__form" appTrackedForm (ngSubmit)="issue()">
                   <app-form-field
-                    label="Potvrzení k vystavení"
+                    label="Potvrzení k&nbsp;vystavení"
                     i18n-label="@@admin.donorDetail.issue.label"
                     hint="Stejné údaje vrátí potvrzení, které už platí; nové číslo vznikne, jen když se údaje dárce nebo dary změnily."
                     i18n-hint="@@admin.donorDetail.issue.hint"
@@ -1401,7 +1406,7 @@
                   Vymazat osobní údaje
                 </button>
                 <span class="admin-hint" i18n="@@admin.donorDetail.erase.hint"
-                  >Pro dárce, který požádal o výmaz podle GDPR.</span
+                  >Pro dárce, který požádal o&nbsp;výmaz podle GDPR.</span
                 >
               }
             </div>
@@ -1418,18 +1423,18 @@
       Vymazat osobní údaje: {{ name() }}
     </h2>
     <p class="erase-lead" i18n="@@admin.donorDetail.erase.dialog.lead">
-      Nevratný krok. Účet už nepůjde použít a všechna přihlášení dárce skončí.
+      Nevratný krok. Účet už nepůjde použít a&nbsp;všechna přihlášení dárce skončí.
     </p>
     <div class="erase-lists">
       <div>
         <h3 i18n="@@admin.donorDetail.erase.dialog.deleted">Smažeme</h3>
         <ul>
           <li i18n="@@admin.donorDetail.erase.dialog.deleted.personal">
-            jméno, adresu, e-mail a heslo (nahradíme je zástupnými údaji)
+            jméno, adresu, e-mail a&nbsp;heslo (nahradíme je zástupnými údaji)
           </li>
           <li i18n="@@admin.donorDetail.erase.dialog.deleted.accounts">bankovní účty dárce</li>
           <li i18n="@@admin.donorDetail.erase.dialog.deleted.claims">
-            odpovědi o starších symbolech
+            odpovědi o&nbsp;starších symbolech
           </li>
         </ul>
       </div>
@@ -1437,18 +1442,18 @@
         <h3 i18n="@@admin.donorDetail.erase.dialog.kept">Zůstane</h3>
         <ul>
           <li i18n="@@admin.donorDetail.erase.dialog.kept.donations">
-            dary a vystavená potvrzení kvůli účetnictví; potvrzení na serveru beze změny, i se
-            jménem a adresou dárce
+            dary a&nbsp;vystavená potvrzení kvůli účetnictví; potvrzení na serveru beze změny,
+            i&nbsp;se jménem a&nbsp;adresou dárce
           </li>
           <li i18n="@@admin.donorDetail.erase.dialog.kept.payments">
-            platby z banky, jak je uvádí výpis (číslo účtu a jméno plátce), a záznamy v Historii
-            změn
+            platby z&nbsp;banky, jak je uvádí výpis (číslo účtu a&nbsp;jméno plátce), a&nbsp;záznamy
+            v&nbsp;Historii změn
           </li>
         </ul>
       </div>
     </div>
     <p class="erase-lead" i18n="@@admin.donorDetail.erase.dialog.mail">
-      Dárce dostane na dosavadní e-mail potvrzení o výmazu.
+      Dárce dostane na dosavadní e-mail potvrzení o&nbsp;výmazu.
     </p>
     <label class="erase-check">
       <input
@@ -1458,7 +1463,7 @@
         (change)="confirmErase($event)"
       />
       <span i18n="@@admin.donorDetail.erase.dialog.check"
-        >Dárce o výmaz požádal a ověřil(a) jsem, že jde o majitele účtu</span
+        >Dárce o&nbsp;výmaz požádal a&nbsp;ověřil(a) jsem, že jde o&nbsp;majitele účtu</span
       >
     </label>
     @if (eraseError(); as error) {
