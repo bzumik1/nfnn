@@ -5,5 +5,17 @@
     "scenario": "operations/release_history: *",
     "reason": "Jakub 2026-11-20 (#1539): the backend records at every start the revision and release it runs and keeps a year of them; administrators read the history under Vydání and the connector's nfnn_status the newest five; v2 kept no history",
     "contract": "docs/api-contract.md, Release history; MCP connector"
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.infrastructure.startup.ReleaseRunAtStart: Release history: <enum>",
+    "reason": "Jakub 2026-11-20 (#1539): at every start the backend records the release it runs and logs only whether that start began a new run or continued the running one; its one slot is a value of a closed list, so it needs only the standing approval of closed slots",
+    "contract": "docs/api-contract.md, Release history; docs/security-overview.md, Release check (GitHub Releases); .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<enum>": "ReleaseStart: NEW_RUN or ANOTHER_START, a closed list"
+      }
+    }
   }
 ]
