@@ -5,6 +5,7 @@ import { provideRouter, Router } from '@angular/router';
 import { Appearance } from '../../../core/appearance/appearance';
 import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { EDGE_SWIPE_DRAGGING_CLASS } from '../../../core/navigation/edge-swipe-back';
 import { Dialog } from './dialog';
 import { SuspendsDialogs } from './dialog-suspension';
 import { DialogAnnouncer } from './dialog-announcer';
@@ -848,6 +849,43 @@ describe('Given a sheet whose content the visitor pulls with a finger', () => {
 
     expect(fixture.componentInstance.dismissals).toBe(1);
     expect(question()).toBeNull();
+  });
+
+  describe('when a press on its text turned into a gesture and the focus later falls from the field onto the dialog', () => {
+    const field = () => fixture.nativeElement.querySelector('#pulled-field') as HTMLInputElement;
+    const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+    const pressText = (): void => {
+      text().dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    };
+    const focusFallsOntoDialogFromField = (): void => {
+      field().focus();
+      native().focus();
+    };
+
+    afterEach(() => document.documentElement.classList.remove(EDGE_SWIPE_DRAGGING_CLASS));
+
+    it('then after the sheet was pulled the focus goes back to the field', async () => {
+      pressText();
+      await pull(130);
+      await letGo();
+
+      focusFallsOntoDialogFromField();
+
+      expect(document.activeElement).toBe(field());
+    });
+
+    it('then after an edge swipe took the finger over the focus goes back to the field', () => {
+      pressText();
+      touch('touchstart', text(), [[4, 100]], 0);
+      document.documentElement.classList.add(EDGE_SWIPE_DRAGGING_CLASS);
+      touch('touchmove', text(), [[80, 100]], 40);
+      document.documentElement.classList.remove(EDGE_SWIPE_DRAGGING_CLASS);
+      touch('touchend', text(), [], 400);
+
+      focusFallsOntoDialogFromField();
+
+      expect(document.activeElement).toBe(field());
+    });
   });
 });
 

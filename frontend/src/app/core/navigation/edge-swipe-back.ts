@@ -14,8 +14,8 @@ const SCROLLS_SIDEWAYS = new Set(['auto', 'scroll']);
 const OPEN_DIALOG = 'dialog[open]';
 const LEAVING_DIALOG = 'dialog.dialog--leaving';
 const SHEET_SECTION_BACK = 'app-sheet-head .sheet-head-back';
-const DRAGGING_CLASS = 'edge-swipe-dragging';
-const PRESS_TAKEN_OVER = `.${DRAGGING_CLASS} :active {
+export const EDGE_SWIPE_DRAGGING_CLASS = 'edge-swipe-dragging';
+const PRESS_TAKEN_OVER = `.${EDGE_SWIPE_DRAGGING_CLASS} :active {
   --pressed-tint: 0% !important;
   --pressed-tint-amount: 0% !important;
   filter: none !important;
@@ -139,7 +139,7 @@ export class EdgeSwipeBack {
   }
 
   private takeOverPress(): void {
-    this.document.documentElement.classList.add(DRAGGING_CLASS);
+    this.document.documentElement.classList.add(EDGE_SWIPE_DRAGGING_CLASS);
     const adopted = this.document.adoptedStyleSheets;
     if (this.pressCancel === null && Array.isArray(adopted)) {
       this.pressCancel = new CSSStyleSheet();
@@ -155,7 +155,7 @@ export class EdgeSwipeBack {
 
   private letGo(): void {
     this.swipe = null;
-    this.document.documentElement.classList.remove(DRAGGING_CLASS);
+    this.document.documentElement.classList.remove(EDGE_SWIPE_DRAGGING_CLASS);
   }
 
   private moved(event: TouchEvent): void {
