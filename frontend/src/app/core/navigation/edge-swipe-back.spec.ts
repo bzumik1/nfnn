@@ -171,7 +171,7 @@ beforeEach(() => {
 afterEach(() => {
   TestBed.inject(EdgeSwipeBack).stop();
   page.remove();
-  document.querySelectorAll('dialog').forEach((dialog) => dialog.remove());
+  document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}, dialog`).forEach((node) => node.remove());
   delete (navigator as { standalone?: boolean }).standalone;
   delete (navigator as { maxTouchPoints?: number }).maxTouchPoints;
   Object.defineProperty(window, 'innerWidth', jsdomWidth!);
