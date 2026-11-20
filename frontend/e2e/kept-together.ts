@@ -205,25 +205,30 @@ export async function longestKeptWord(
       let widest = widestByFont.get(font);
       if (!widest) {
         widest = new Map();
-        const probe = document.createElement('span');
-        probe.style.cssText =
-          'position: absolute; visibility: hidden; white-space: nowrap; inline-size: max-content;';
-        probe.style.fontStyle = style.fontStyle;
-        probe.style.fontWeight = style.fontWeight;
-        probe.style.fontSize = style.fontSize;
-        probe.style.fontFamily = style.fontFamily;
-        probe.style.letterSpacing = style.letterSpacing;
-        probe.style.wordSpacing = style.wordSpacing;
-        document.body.append(probe);
-        for (const [pair, letters] of candidates) {
+        const probes = document.createElement('div');
+        probes.style.cssText =
+          'position: absolute; inset-block-start: 0; inset-inline-start: 0; visibility: hidden; inline-size: max-content;';
+        probes.style.fontStyle = style.fontStyle;
+        probes.style.fontWeight = style.fontWeight;
+        probes.style.fontSize = style.fontSize;
+        probes.style.fontFamily = style.fontFamily;
+        probes.style.letterSpacing = style.letterSpacing;
+        probes.style.wordSpacing = style.wordSpacing;
+        const measuredPairs = candidates.map(([pair, letters]) => {
+          const probe = document.createElement('span');
+          probe.style.cssText = 'display: block; white-space: nowrap; inline-size: max-content;';
           probe.textContent = pair;
+          probes.append(probe);
+          return { pair, length: Number(letters), probe };
+        });
+        document.body.append(probes);
+        for (const { pair, length, probe } of measuredPairs) {
           const width = probe.getBoundingClientRect().width;
-          const length = Number(letters);
           if (width > (widest.get(length)?.width ?? -1)) {
             widest.set(length, { pair, width });
           }
         }
-        probe.remove();
+        probes.remove();
         widestByFont.set(font, widest);
       }
       const lengths = [...widest.keys()].sort((a, b) => a - b);
