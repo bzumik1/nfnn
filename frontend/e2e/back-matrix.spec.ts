@@ -1,0 +1,813 @@
+import type { Locator, Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { stepBack } from './app-history';
+import {
+  administrationCopyGift,
+  administrator,
+  mockDonorApi,
+  serveAdministrationCopy,
+  session,
+  whenAdministrationCopied,
+} from './donor-session';
+import { expect, test } from './fixtures';
+
+const WIDTH = 390;
+const HEIGHT = 700;
+const FINGER_Y = 420;
+const EDGE = 20;
+const FLICK_REST_MS = 100;
+const SHEET_TOP_GAP_PX = 80;
+const BAND = { y: 4, height: 20 };
+const SAME_COLOUR = 3;
+const SCROLLED_BY_PX = 160;
+const PAGE_DURATION_MS = 350;
+const FASTEST_EASE = 3;
+const STEP_ENDS_WITHIN_MS = 6000;
+const FIRST_SHOWN_AT_MOST = 0.25;
+
+type Way = 'back-button' | 'swipe-completed' | 'swipe-cancelled';
+type Look = 'light' | 'dark';
+
+const WAYS: readonly Way[] = ['back-button', 'swipe-completed', 'swipe-cancelled'];
+const LOOKS: readonly Look[] = ['light', 'dark'];
+const WAY_NAMES: Record<Way, string> = {
+  'back-button': '‹ is pressed',
+  'swipe-completed': 'a finger takes it back past half and lets go',
+  'swipe-cancelled': 'a finger takes it a short way and lets go',
+};
+
+interface Row {
+  readonly name: string;
+  readonly href: string;
+  readonly from: string;
+}
+
+interface Frame {
+  readonly at: number;
+  readonly overlay: boolean;
+  readonly offset: number | null;
+}
+
+interface StepProbe {
+  frames: Frame[];
+  under: string | null;
+  done: boolean;
+}
+
+declare global {
+  interface Window {
+    nfnnStepProbe?: StepProbe;
+  }
+}
+
+const DONOR_ID = '019a1c00-0000-7000-8000-00000000b001';
+const donorRow = {
+  donorId: DONOR_ID,
+  type: 'PERSON',
+  name: 'Petr Svoboda',
+  companyIdentifier: null,
+  address: { street: 'Krátká 3', city: 'Děčín', postalCode: '405 02' },
+  email: 'petr@example.cz',
+  variableSymbol: '2234567890',
+  preferredLocale: 'cs',
+};
+
+function news(index: number): Record<string, unknown> {
+  return {
+    id: `0199f3e0-0000-7000-8000-00000000d4${String(index).padStart(2, '0')}`,
+    slug: `zprava-${index}`,
+    title: `Zpráva ${index}`,
+    tag: null,
+    perex: 'Krátce o tom, co se u nás stalo, aby bylo v seznamu co číst a co odrolovat.',
+    body: 'Text.',
+    coverImage: null,
+    publishedOn: `2026-10-${String(20 - index).padStart(2, '0')}`,
+    createdAt: '2026-10-01T09:00:00Z',
+    updatedAt: '2026-10-01T09:00:00Z',
+    signer: null,
+    lookBackYear: null,
+    live: true,
+  };
+}
+
+function story(index: number): Record<string, unknown> {
+  return {
+    id: `0199f3e0-0000-7000-8000-00000000d5${String(index).padStart(2, '0')}`,
+    slug: `pribeh-${index}`,
+    title: `Příběh ${index}`,
+    year: 2025,
+    category: 'CHILDREN',
+    tag: 'Pomůcky',
+    perex: 'Příběh, který se dá přečíst.',
+    body: 'Text příběhu.',
+    coverImage: null,
+    publishedOn: `2025-10-${String(20 - index).padStart(2, '0')}`,
+    createdAt: '2025-09-19T09:00:00Z',
+    updatedAt: '2025-10-01T07:30:00Z',
+    live: true,
+  };
+}
+
+const NEWS = [1, 2, 3, 4, 5, 6, 7, 8].map(news);
+const STORIES = [1, 2, 3, 4, 5, 6].map(story);
+
+const FEATURES = join(__dirname, '..', 'src', 'app', 'features');
+
+function routePaths(file: string): string[] {
+  const text = readFileSync(join(FEATURES, file), 'utf8');
+  return Array.from(text.matchAll(/path: '([^']*)'/g), (match) => match[1]);
+}
+
+function donorScreens(): string[] {
+  return routePaths('donors/donors.routes.ts')
+    .filter((path) => path !== '')
+    .map((path) => `/darce/${path}`);
+}
+
+function administrationScreens(): string[] {
+  return routePaths('admin/admin.routes.ts')
+    .filter((path) => path !== '' && !path.includes(':'))
+    .map((path) => `/sprava/${path}`);
+}
+
+const DETAIL_LISTS: Record<string, string> = {
+  'aktuality/:slug': '/aktuality',
+  'projekty/:slug': '/projekty',
+  'darci/:id': '/sprava/darci',
+};
+
+const DETAILS_LEFT_TO_THE_SIMULATOR: Record<string, string> = {
+  'darci/:id/:section':
+    'a section of the donor card opens from the card with data the card loads itself; the simulator walks it',
+  'aktuality/:id':
+    'the administration lists its news from the content copy, which this matrix does not seed; the simulator walks it',
+  'projekty/:id':
+    'the administration lists its stories from the content copy, which this matrix does not seed; the simulator walks it',
+  'prehledy/:month':
+    'a sent monthly report opens from the report history, which this matrix does not seed; the simulator walks it',
+};
+
+function detailScreens(): string[] {
+  const content = routePaths('content/content.routes.ts');
+  const administration = routePaths('admin/admin.routes.ts');
+  return [...content, ...administration].filter((path) => path.includes(':'));
+}
+
+async function onThePhone(page: Page, look: Look): Promise<void> {
+  await page.emulateMedia({ colorScheme: look, reducedMotion: 'no-preference' });
+  await page.addInitScript((gap) => {
+    Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+    Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
+    localStorage.setItem('nfnn.donor-session-app', '1');
+    document.documentElement.style.setProperty('--sheet-top-gap', `${gap}px`, 'important');
+  }, SHEET_TOP_GAP_PX);
+  await page.route('**/api/donors/auth/refresh', (route) =>
+    route.fulfill(session(200, administrator)),
+  );
+  await mockDonorApi(page);
+  await page.route(
+    (url) => url.pathname === '/api/content/news',
+    (route) =>
+      route.fulfill({
+        json: { items: NEWS, page: 0, size: 10, total: NEWS.length, hasMore: false },
+      }),
+  );
+  await page.route(
+    (url) => url.pathname.startsWith('/api/content/news/'),
+    (route) => {
+      const slug = new URL(route.request().url()).pathname.split('/').pop();
+      const found = NEWS.find((item) => item.slug === slug);
+      return found ? route.fulfill({ json: found }) : route.fallback();
+    },
+  );
+  await page.route(
+    (url) => url.pathname === '/api/content/projects',
+    (route) =>
+      route.fulfill({
+        json: { items: STORIES, page: 0, size: 50, total: STORIES.length, hasMore: false },
+      }),
+  );
+  await page.route(
+    (url) => url.pathname.startsWith('/api/content/projects/'),
+    (route) => {
+      const slug = new URL(route.request().url()).pathname.split('/').pop();
+      const found = STORIES.find((item) => item.slug === slug);
+      return found ? route.fulfill({ json: found }) : route.fallback();
+    },
+  );
+  await serveAdministrationCopy(page, {
+    donations: {
+      'donations:2026-10': [
+        administrationCopyGift(
+          '0192f0f1-0000-7000-8000-0000000000b1',
+          DONOR_ID,
+          '2026-10-25',
+          50000,
+        ),
+      ],
+    },
+    donors: { 'accounts:2026-10': [donorRow] },
+  });
+  await page.route(
+    (url) => url.pathname === `/api/admin/donors/${DONOR_ID}`,
+    (route) => route.fulfill({ json: donorRow }),
+  );
+}
+
+async function touchAt(page: Page, type: string, x: number): Promise<void> {
+  await page.evaluate(
+    ({ type, x, y }) => {
+      type LegacyTouchDocument = Document & {
+        createTouch?(
+          view: Window,
+          target: EventTarget,
+          identifier: number,
+          pageX: number,
+          pageY: number,
+          screenX: number,
+          screenY: number,
+        ): Touch;
+        createTouchList?(...touches: Touch[]): TouchList;
+      };
+      const probe = window as unknown as { fingerTarget: Element };
+      const document = window.document as LegacyTouchDocument;
+      if (type === 'touchstart') {
+        probe.fingerTarget = document.elementFromPoint(x, y) ?? document.body;
+      }
+      const target = probe.fingerTarget;
+      const touches = (
+        typeof document.createTouch === 'function' && typeof document.createTouchList === 'function'
+          ? document.createTouchList(
+              document.createTouch(window, target, 1, x + scrollX, y + scrollY, x, y),
+            )
+          : [new Touch({ identifier: 1, target, clientX: x, clientY: y })]
+      ) as Touch[];
+      const none = (
+        typeof document.createTouchList === 'function' ? document.createTouchList() : []
+      ) as Touch[];
+      const touching = type !== 'touchend';
+      target.dispatchEvent(
+        new TouchEvent(type, {
+          touches: touching ? touches : none,
+          targetTouches: touching ? touches : none,
+          changedTouches: touches,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    },
+    { type, x, y: FINGER_Y },
+  );
+}
+
+async function restLongerThanAFlick(page: Page): Promise<void> {
+  const restStartedAt = await page.evaluate(() => performance.now());
+  await expect
+    .poll(() => page.evaluate(() => performance.now()))
+    .toBeGreaterThan(restStartedAt + FLICK_REST_MS);
+}
+
+function leavingOffset(page: Page): Promise<number> {
+  return page
+    .locator('.page-transition--swipe .page-transition__page--over')
+    .evaluate((over) => Math.round(new DOMMatrixReadOnly(getComputedStyle(over).transform).m41));
+}
+
+async function watchTheStep(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const probe: StepProbe = { frames: [], under: null, done: false };
+    window.nfnnStepProbe = probe;
+    const started = performance.now();
+    let seen = false;
+    let framesAfter = 0;
+    const look = (now: number): void => {
+      const overlay = document.querySelector('.page-transition');
+      const over = overlay?.querySelector('.page-transition__page--over') ?? null;
+      const under = overlay?.querySelector('.page-transition__page--under') ?? null;
+      probe.frames.push({
+        at: now,
+        overlay: overlay !== null,
+        offset: over === null ? null : new DOMMatrixReadOnly(getComputedStyle(over).transform).m41,
+      });
+      if (under !== null && probe.under === null) {
+        probe.under = (under.textContent ?? '').replace(/\s+/g, ' ');
+      }
+      seen ||= overlay !== null;
+      if (seen && overlay === null) {
+        framesAfter++;
+      }
+      if (framesAfter > 2 || now - started > 5000) {
+        probe.done = true;
+        return;
+      }
+      requestAnimationFrame(look);
+    };
+    requestAnimationFrame(look);
+  });
+}
+
+async function stepSeen(page: Page): Promise<StepProbe> {
+  await expect
+    .poll(() => page.evaluate(() => window.nfnnStepProbe?.done ?? false), {
+      timeout: STEP_ENDS_WITHIN_MS,
+    })
+    .toBe(true);
+  return page.evaluate(() => window.nfnnStepProbe!);
+}
+
+function travelled(frames: readonly Frame[]): Frame[] {
+  const first = frames.findIndex((frame) => frame.overlay);
+  let last = frames.length - 1;
+  while (last > first && !frames[last].overlay) {
+    last--;
+  }
+  expect(first, 'the step back drew no moving page at all').toBeGreaterThanOrEqual(0);
+  const shown = frames.slice(first, last + 1);
+  expect(
+    shown.every((frame) => frame.overlay),
+    'the moving page vanished and came back while it travelled',
+  ).toBe(true);
+  return shown.filter((frame) => frame.offset !== null);
+}
+
+function expectNoJump(frames: readonly Frame[], width: number): void {
+  for (let at = 1; at < frames.length; at++) {
+    const gap = Math.abs(frames[at].offset! - frames[at - 1].offset!);
+    const elapsed = frames[at].at - frames[at - 1].at;
+    expect(
+      gap,
+      `the leaving page jumped ${Math.round(gap)} px in ${Math.round(elapsed)} ms`,
+    ).toBeLessThanOrEqual((width * FASTEST_EASE * elapsed) / PAGE_DURATION_MS + 2);
+  }
+}
+
+function expectLeftAway(probe: StepProbe, width: number, from: number): void {
+  const moving = travelled(probe.frames);
+  const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < width - 1);
+  expect(between.length, 'no frame showed the leaving page on its way').toBeGreaterThanOrEqual(2);
+  expect(moving[0].offset!).toBeLessThanOrEqual(from + width * FIRST_SHOWN_AT_MOST);
+  for (let at = 1; at < moving.length; at++) {
+    expect(moving[at].offset!, 'the leaving page went back on its way').toBeGreaterThanOrEqual(
+      moving[at - 1].offset! - 1,
+    );
+  }
+  expectNoJump(moving, width);
+}
+
+function expectSlidBack(probe: StepProbe, width: number, from: number): void {
+  const moving = travelled(probe.frames);
+  expect(moving[0].offset!).toBeGreaterThanOrEqual(from * (1 - FIRST_SHOWN_AT_MOST));
+  const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < from - 1);
+  expect(between.length, 'no frame showed the page on its way back').toBeGreaterThanOrEqual(1);
+  for (let at = 1; at < moving.length; at++) {
+    expect(moving[at].offset!, 'the page went away again on its way back').toBeLessThanOrEqual(
+      moving[at - 1].offset! + 1,
+    );
+  }
+  expectNoJump(moving, width);
+}
+
+interface Colour {
+  readonly red: number;
+  readonly green: number;
+  readonly blue: number;
+}
+
+async function bandColour(page: Page): Promise<Colour> {
+  const shot = await page.screenshot({
+    clip: { x: 0, y: BAND.y, width: WIDTH, height: BAND.height },
+    animations: 'allow',
+  });
+  const spread = await page.evaluate(async (bytes) => {
+    const bitmap = await createImageBitmap(
+      new Blob([new Uint8Array(bytes)], { type: 'image/png' }),
+    );
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const context = canvas.getContext('2d')!;
+    context.drawImage(bitmap, 0, 0);
+    const data = context.getImageData(0, 0, bitmap.width, bitmap.height).data;
+    const low = [255, 255, 255];
+    const high = [0, 0, 0];
+    for (let at = 0; at < data.length; at += 4) {
+      for (let channel = 0; channel < 3; channel++) {
+        low[channel] = Math.min(low[channel], data[at + channel]);
+        high[channel] = Math.max(high[channel], data[at + channel]);
+      }
+    }
+    return { low, high };
+  }, Array.from(shot));
+  for (let channel = 0; channel < 3; channel++) {
+    expect(
+      spread.high[channel] - spread.low[channel],
+      'the background above the sheets shows more than one colour',
+    ).toBeLessThanOrEqual(SAME_COLOUR);
+  }
+  return { red: spread.low[0], green: spread.low[1], blue: spread.low[2] };
+}
+
+function expectSameColour(seen: Colour, before: Colour, when: string): void {
+  expect(
+    Math.max(
+      Math.abs(seen.red - before.red),
+      Math.abs(seen.green - before.green),
+      Math.abs(seen.blue - before.blue),
+    ),
+    `the background above the sheets changed its colour ${when}`,
+  ).toBeLessThanOrEqual(SAME_COLOUR);
+}
+
+interface Screens {
+  readonly sheets: boolean;
+  shown(row: Row): Promise<void>;
+  backButton(): Locator;
+  returned(row: Row): Promise<void>;
+  scrollTop(): Promise<number>;
+  scrollTo(top: number): Promise<number>;
+}
+
+interface Swiped {
+  readonly probe: StepProbe;
+  readonly letGoAt: number;
+}
+
+async function swipeBack(
+  page: Page,
+  row: Row,
+  completes: boolean,
+  ground: Colour | null,
+): Promise<Swiped> {
+  const ways = completes ? [60, 120, 180, 240, 290] : [40, 70, 100, 120];
+  await touchAt(page, 'touchstart', EDGE);
+  for (const x of ways.slice(0, 2)) {
+    await touchAt(page, 'touchmove', x);
+  }
+  const under = page.locator('.page-transition--swipe .page-transition__page--under');
+  await expect(under, 'nothing lies under the page the finger takes').toContainText(row.name);
+  await expect.poll(() => leavingOffset(page)).toBe(ways[1] - EDGE);
+  if (ground !== null) {
+    expectSameColour(await bandColour(page), ground, 'under the finger');
+  }
+  for (const x of ways.slice(2)) {
+    await touchAt(page, 'touchmove', x);
+  }
+  const letGoAt = ways.at(-1)!;
+  await expect.poll(() => leavingOffset(page)).toBe(letGoAt - EDGE);
+  if (ground !== null) {
+    expectSameColour(await bandColour(page), ground, 'while the finger moved on');
+  }
+  await restLongerThanAFlick(page);
+  await watchTheStep(page);
+  await touchAt(page, 'touchend', letGoAt);
+  return { probe: await stepSeen(page), letGoAt: letGoAt - EDGE };
+}
+
+async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): Promise<void> {
+  const ground = screens.sheets ? await bandColour(page) : null;
+  if (way === 'back-button') {
+    await watchTheStep(page);
+    await screens.backButton().click();
+    const probe = await stepSeen(page);
+    expect(probe.under ?? '', 'the screen before was not under the leaving one').toContain(
+      row.name,
+    );
+    expectLeftAway(probe, WIDTH, 0);
+    return;
+  }
+  const completes = way === 'swipe-completed';
+  const { probe, letGoAt } = await swipeBack(page, row, completes, ground);
+  if (completes) {
+    expectLeftAway(probe, WIDTH, letGoAt);
+  } else {
+    expectSlidBack(probe, WIDTH, letGoAt);
+  }
+}
+
+async function activeHref(page: Page): Promise<string | null> {
+  return page.evaluate(() => document.activeElement?.getAttribute('href') ?? null);
+}
+
+async function walkRow(
+  page: Page,
+  screens: Screens,
+  row: Row,
+  way: Way,
+  scrolled: boolean,
+  open: () => Promise<void>,
+): Promise<void> {
+  const top = await screens.scrollTo(scrolled ? SCROLLED_BY_PX : 0);
+  const groundBefore = screens.sheets ? await bandColour(page) : null;
+  await open();
+  await screens.shown(row);
+  if (groundBefore !== null) {
+    expectSameColour(await bandColour(page), groundBefore, 'when the next screen opened');
+  }
+  await stepBackFrom(page, screens, row, way);
+  await expect(page.locator('.page-transition')).toHaveCount(0);
+  if (way === 'swipe-cancelled') {
+    await screens.shown(row);
+    await screens.backButton().click();
+    await screens.returned(row);
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    return;
+  }
+  await screens.returned(row);
+  await expect.poll(() => screens.scrollTop(), { message: 'the scroll was not kept' }).toBe(top);
+  await expect.poll(() => activeHref(page), { message: 'the focus did not return' }).toBe(row.href);
+  if (groundBefore !== null) {
+    expectSameColour(await bandColour(page), groundBefore, 'after the step back');
+  }
+}
+
+function clickWithoutScrolling(link: Locator): Promise<void> {
+  return link.evaluate((element: HTMLElement) => element.click());
+}
+
+function accountSheet(page: Page): Locator {
+  return page.locator('app-account-sheet').getByRole('dialog');
+}
+
+async function accountListShown(page: Page): Promise<void> {
+  await expect(accountSheet(page).getByRole('heading', { level: 2, name: 'Účet' })).toBeVisible();
+}
+
+async function openAccountSheetOverTheNews(page: Page): Promise<void> {
+  await page.goto('/aktuality');
+  await expect(page.getByRole('heading', { name: 'Zpráva 8' })).toBeVisible();
+  await page.getByRole('banner').getByRole('button', { name: 'Účet' }).dispatchEvent('click');
+  await accountListShown(page);
+  await expect(page.locator('.page-transition')).toHaveCount(0);
+}
+
+async function accountRows(page: Page): Promise<Row[]> {
+  const links = accountSheet(page).locator('a[href^="/darce/"], a[href="/sprava"]');
+  const rows: Row[] = [];
+  for (const link of await links.all()) {
+    const href = (await link.getAttribute('href'))!;
+    const name = (
+      await link.locator('.ui-list__title, .account-profile-detail').first().innerText()
+    ).trim();
+    if (!rows.some((row) => row.href === href)) {
+      rows.push({ name, href, from: 'Účet' });
+    }
+  }
+  return rows;
+}
+
+function sheetPanel(page: Page): Locator {
+  return accountSheet(page).locator('.dialog-panel');
+}
+
+function accountScreens(page: Page): Screens {
+  let administrationCopied: (() => Promise<void>) | null = whenAdministrationCopied(page);
+  return {
+    sheets: true,
+    shown: async (row) => {
+      if (row.href === '/sprava') {
+        await expect(page).toHaveURL(/\/sprava$/);
+        await administrationCopied?.();
+        administrationCopied = null;
+        await expect(page.locator('.admin-page h1')).toBeVisible();
+      } else {
+        await expect(
+          accountSheet(page).getByRole('heading', { level: 2, name: row.name }),
+        ).toBeVisible();
+      }
+      await expect(page.locator('.page-transition')).toHaveCount(0);
+    },
+    backButton: () =>
+      page.url().endsWith('/sprava')
+        ? page.getByRole('banner').getByRole('button', { name: 'Zpět' })
+        : accountSheet(page).getByRole('button', { name: 'Zpět', exact: true }),
+    returned: async () => {
+      await accountListShown(page);
+      await expect(page).toHaveURL(/\/aktuality$/);
+    },
+    scrollTop: () => sheetPanel(page).evaluate((panel) => Math.round(panel.scrollTop)),
+    scrollTo: (top) =>
+      sheetPanel(page).evaluate((panel, wanted) => {
+        panel.scrollTop = Math.min(wanted, panel.scrollHeight - panel.clientHeight);
+        return Math.round(panel.scrollTop);
+      }, top),
+  };
+}
+
+function pageScroll(page: Page): Pick<Screens, 'scrollTop' | 'scrollTo'> {
+  return {
+    scrollTop: () => page.evaluate(() => Math.round(window.scrollY)),
+    scrollTo: (top) =>
+      page.evaluate((wanted) => {
+        const most = document.documentElement.scrollHeight - window.innerHeight;
+        window.scrollTo({ top: Math.max(0, Math.min(wanted, most)), behavior: 'instant' });
+        return Math.round(window.scrollY);
+      }, top),
+  };
+}
+
+function pathOf(page: Page): string {
+  return new URL(page.url()).pathname;
+}
+
+function administrationScreensOf(page: Page): Screens {
+  return {
+    sheets: true,
+    ...pageScroll(page),
+    shown: async (row) => {
+      await expect(page).toHaveURL((url) => url.pathname === row.href);
+      await expect(page.locator('.admin-page h1')).toBeVisible();
+      await expect(page.locator('.page-transition')).toHaveCount(0);
+    },
+    backButton: () => page.getByRole('banner').getByRole('button', { name: 'Zpět' }),
+    returned: async (row) => {
+      await expect(page).toHaveURL((url) => url.pathname === row.from);
+      await expect(page.locator('.admin-page h1')).toBeVisible();
+    },
+  };
+}
+
+async function linksOut(from: string, within: Locator): Promise<Row[]> {
+  const rows: Row[] = [];
+  for (const link of await within.locator(`a[href^="${from}/"]`).all()) {
+    const href = (await link.getAttribute('href'))!;
+    const rest = href.slice(from.length + 1);
+    if (rest === '' || rest.includes('/') || rest.includes('?') || rest.includes('#')) {
+      continue;
+    }
+    if (!rows.some((row) => row.href === href)) {
+      const name = (await link.innerText()).split('\n')[0].trim();
+      rows.push({ name, href, from });
+    }
+  }
+  return rows;
+}
+
+async function openAdministrationAt(page: Page, trail: readonly string[]): Promise<void> {
+  if (pathOf(page) === trail.at(-1)) {
+    return;
+  }
+  const copied = whenAdministrationCopied(page);
+  await page.goto('/sprava');
+  await copied();
+  for (const href of trail.slice(1)) {
+    await clickWithoutScrolling(page.locator(`.admin-frame a[href="${href}"]`).first());
+    await expect(page).toHaveURL((url) => url.pathname === href);
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  }
+}
+
+for (const look of LOOKS) {
+  for (const way of WAYS) {
+    test.describe(`Given an administrator in the app on the home screen of a phone, in the ${look} appearance`, () => {
+      test.use({ viewport: { width: WIDTH, height: HEIGHT }, hasTouch: true });
+
+      test.beforeEach(({ page }) => onThePhone(page, look));
+
+      test(`when ${WAY_NAMES[way]} on every screen opened from the account sheet, then it travels back over the account sheet without a jump, over one still background, with the scroll and the focus kept`, async ({
+        page,
+      }) => {
+        test.setTimeout(240_000);
+        await openAccountSheetOverTheNews(page);
+        const rows = await accountRows(page);
+        expect(rows.map((row) => row.href)).toEqual(
+          expect.arrayContaining([...donorScreens(), '/sprava']),
+        );
+        const screens = accountScreens(page);
+        for (const row of rows) {
+          for (const scrolled of [false, true]) {
+            await test.step(`${row.name}${scrolled ? ', scrolled' : ''}`, () =>
+              walkRow(page, screens, row, way, scrolled, () =>
+                clickWithoutScrolling(accountSheet(page).locator(`a[href="${row.href}"]`).first()),
+              ));
+          }
+        }
+      });
+
+      test(`when ${WAY_NAMES[way]} on every section and subpage of Správa, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept`, async ({
+        page,
+      }) => {
+        test.setTimeout(480_000);
+        const screens = administrationScreensOf(page);
+        const seen = new Set<string>();
+        const origins: { trail: string[]; rows: Row[] }[] = [];
+        await openAdministrationAt(page, ['/sprava']);
+        origins.push({
+          trail: ['/sprava'],
+          rows: await linksOut('/sprava', page.locator('.admin-frame')),
+        });
+        for (const origin of origins) {
+          for (const row of origin.rows) {
+            if (seen.has(row.href)) {
+              continue;
+            }
+            seen.add(row.href);
+            for (const scrolled of [false, true]) {
+              await openAdministrationAt(page, origin.trail);
+              await test.step(`${row.href}${scrolled ? ', scrolled' : ''}`, () =>
+                walkRow(page, screens, row, way, scrolled, async () => {
+                  await clickWithoutScrolling(
+                    page.locator(`.admin-frame a[href="${row.href}"]`).first(),
+                  );
+                  if (!scrolled && origin.trail.length < 3) {
+                    await screens.shown(row);
+                    const deeper = await linksOut(row.href, page.locator('.admin-frame'));
+                    if (deeper.length > 0) {
+                      origins.push({ trail: [...origin.trail, row.href], rows: deeper });
+                    }
+                  }
+                }));
+            }
+          }
+        }
+        expect([...seen]).toEqual(expect.arrayContaining(administrationScreens()));
+      });
+
+      test(`when ${WAY_NAMES[way]} on every detail, then it travels back over its list without a jump, with the scroll and the focus kept`, async ({
+        page,
+      }) => {
+        test.setTimeout(240_000);
+        const details = detailScreens();
+        expect(
+          details.filter(
+            (path) => DETAIL_LISTS[path] === undefined && !DETAILS_LEFT_TO_THE_SIMULATOR[path],
+          ),
+          'a detail screen without a row in the matrix',
+        ).toEqual([]);
+        for (const [path, list] of Object.entries(DETAIL_LISTS)) {
+          const administration = list.startsWith('/sprava');
+          if (administration) {
+            await openAdministrationAt(page, ['/sprava', list]);
+          } else {
+            await page.goto(list);
+          }
+          await expect(page.locator('main h1, .admin-page h1').first()).toBeVisible();
+          const within = page.locator(administration ? '.admin-frame' : 'main').first();
+          const [detail] = await linksOut(list, within);
+          expect(detail, `${list} offers no ${path}`).toBeDefined();
+          const screens: Screens = {
+            sheets: administration,
+            ...pageScroll(page),
+            shown: async () => {
+              await expect(page).toHaveURL((url) => url.pathname === detail.href);
+              await expect(page.locator('main h1, .admin-page h1').first()).toBeVisible();
+              await expect(page.locator('.page-transition')).toHaveCount(0);
+            },
+            backButton: () => page.getByRole('banner').getByRole('button', { name: 'Zpět' }),
+            returned: async () => {
+              await expect(page).toHaveURL((url) => url.pathname === list);
+            },
+          };
+          for (const scrolled of [false, true]) {
+            await test.step(`${path}${scrolled ? ', scrolled' : ''}`, () =>
+              walkRow(page, screens, detail, way, scrolled, () =>
+                clickWithoutScrolling(within.locator(`a[href="${detail.href}"]`).first()),
+              ));
+          }
+        }
+      });
+    });
+  }
+
+  test.describe(`Given a donor in the app on the home screen of a phone with the account sheet open over the scrolled news, in the ${look} appearance`, () => {
+    test.use({ viewport: { width: WIDTH, height: HEIGHT }, hasTouch: true });
+
+    test.beforeEach(({ page }) => onThePhone(page, look));
+
+    test('when the step back closes the sheet, then the sheet goes down without a jump over the news left where it was, and the focus returns to Účet', async ({
+      page,
+    }) => {
+      await page.goto('/aktuality');
+      await expect(page.getByRole('heading', { name: 'Zpráva 8' })).toBeVisible();
+      const top = await pageScroll(page).scrollTo(SCROLLED_BY_PX);
+      const account = page.getByRole('banner').getByRole('button', { name: 'Účet' });
+      await account.focus();
+      await page.keyboard.press('Enter');
+      await accountListShown(page);
+      await page.evaluate(() => {
+        const seen: number[] = [];
+        (window as unknown as { nfnnSheetTops: number[] }).nfnnSheetTops = seen;
+        const look = (): void => {
+          const panel = document.querySelector('app-account-sheet .dialog-panel');
+          if (panel === null) {
+            return;
+          }
+          seen.push(panel.getBoundingClientRect().top);
+          requestAnimationFrame(look);
+        };
+        requestAnimationFrame(look);
+      });
+
+      await stepBack(page);
+
+      await expect(accountSheet(page)).toHaveCount(0);
+      const tops = await page.evaluate(
+        () => (window as unknown as { nfnnSheetTops: number[] }).nfnnSheetTops,
+      );
+      expect(tops.filter((at) => at > tops[0] + 1 && at < HEIGHT - 1).length).toBeGreaterThan(0);
+      for (let at = 1; at < tops.length; at++) {
+        expect(tops[at]).toBeGreaterThanOrEqual(tops[at - 1] - 1);
+      }
+      await expect.poll(() => pageScroll(page).scrollTop()).toBe(top);
+      await expect(account).toBeFocused();
+    });
+  });
+}
