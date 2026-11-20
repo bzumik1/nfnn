@@ -144,6 +144,18 @@ function donorScreens(): string[] {
     .map((path) => `/darce/${path}`);
 }
 
+function fullScreenAdministration(): string[] {
+  const text = readFileSync(join(FEATURES, 'admin/admin.routes.ts'), 'utf8');
+  return Array.from(
+    text.matchAll(/path: '([^']*)',\s*data: \{ adminFrame: 'full'/g),
+    (match) => `/sprava/${match[1]}`,
+  );
+}
+
+function onTheSheetGround(screens: Screens, row: Row): boolean {
+  return screens.sheets && !fullScreenAdministration().includes(row.href);
+}
+
 function administrationScreens(): string[] {
   return routePaths('admin/admin.routes.ts')
     .filter((path) => path !== '' && !path.includes(':'))
@@ -576,11 +588,25 @@ function expectShownOnItsWay(
   }
 }
 
+function expectFirstShownNear(
+  probe: StepProbe,
+  offset: number,
+  near: (offset: number) => void,
+): void {
+  if (probe.paced) {
+    near(offset);
+  }
+}
+
 function expectLeftAway(probe: StepProbe, width: number, from: number): void {
   const moving = travelled(probe.frames);
   const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < width - 1);
   expectShownOnItsWay(probe, between, 2, 'no frame showed the leaving page on its way');
-  expect(moving[0].offset!).toBeLessThanOrEqual(from + width * FIRST_SHOWN_AT_MOST);
+  expectFirstShownNear(probe, moving[0].offset!, (offset) =>
+    expect(offset, 'px the leaving page had gone in its first frame').toBeLessThanOrEqual(
+      from + width * FIRST_SHOWN_AT_MOST,
+    ),
+  );
   const afterBusy = shownAfterTheBusyFrame(probe, moving);
   if (afterBusy !== null) {
     expect(
@@ -601,7 +627,12 @@ function expectArrived(probe: StepProbe, width: number): void {
   const moving = travelled(probe.frames);
   const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < width - 1);
   expectShownOnItsWay(probe, between, 2, 'no frame showed the arriving page on its way');
-  expect(moving[0].offset!).toBeGreaterThanOrEqual(width * (1 - FIRST_SHOWN_AT_MOST));
+  expectFirstShownNear(probe, moving[0].offset!, (offset) =>
+    expect(
+      offset,
+      'px the arriving page was from its place in its first frame',
+    ).toBeGreaterThanOrEqual(width * (1 - FIRST_SHOWN_AT_MOST)),
+  );
   const afterBusy = shownAfterTheBusyFrame(probe, moving);
   if (afterBusy !== null) {
     expect(
@@ -620,7 +651,11 @@ function expectArrived(probe: StepProbe, width: number): void {
 
 function expectSlidBack(probe: StepProbe, width: number, from: number): void {
   const moving = travelled(probe.frames);
-  expect(moving[0].offset!).toBeGreaterThanOrEqual(from * (1 - FIRST_SHOWN_AT_MOST));
+  expectFirstShownNear(probe, moving[0].offset!, (offset) =>
+    expect(offset, 'px the page had come back in its first frame').toBeGreaterThanOrEqual(
+      from * (1 - FIRST_SHOWN_AT_MOST),
+    ),
+  );
   const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < from - 1);
   expectShownOnItsWay(probe, between, 1, 'no frame showed the page on its way back');
   for (let at = 1; at < moving.length; at++) {
@@ -731,7 +766,7 @@ async function swipeBack(
 }
 
 async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): Promise<void> {
-  const ground = screens.sheets ? await bandColour(page) : null;
+  const ground = onTheSheetGround(screens, row) ? await bandColour(page) : null;
   if (way === 'back-button') {
     await watchTheStep(page);
     await screens.backButton().click();
@@ -771,7 +806,7 @@ async function walkRow(
   open: () => Promise<void>,
 ): Promise<void> {
   const top = await screens.scrollTo(scrolled ? SCROLLED_BY_PX : 0);
-  const groundBefore = screens.sheets ? await bandColour(page) : null;
+  const groundBefore = onTheSheetGround(screens, row) ? await bandColour(page) : null;
   await watchTheStep(page);
   await open();
   await screens.shown(row);
@@ -864,10 +899,17 @@ function sheetPanel(page: Page): Locator {
   return accountSheet(page).locator('.dialog-panel');
 }
 
-function accountScreens(page: Page): Screens {
-  let administrationCopied: (() => Promise<void>) | null = whenAdministrationCopied(page);
+function accountScreens(page: Page): Screens & { opening(row: Row): void } {
+  let administrationCopied: (() => Promise<void>) | null = null;
+  let copiedOnce = false;
   return {
     sheets: true,
+    opening: (row) => {
+      if (row.href === '/sprava' && !copiedOnce) {
+        copiedOnce = true;
+        administrationCopied = whenAdministrationCopied(page);
+      }
+    },
     shown: async (row) => {
       if (row.href === '/sprava') {
         await expect(page).toHaveURL(/\/sprava$/);
@@ -981,9 +1023,12 @@ for (const look of LOOKS) {
         for (const row of rows) {
           for (const scrolled of [false, true]) {
             await test.step(`${row.name}${scrolled ? ', scrolled' : ''}`, () =>
-              walkRow(page, screens, row, way, scrolled, () =>
-                clickWithoutScrolling(accountSheet(page).locator(`a[href="${row.href}"]`).first()),
-              ));
+              walkRow(page, screens, row, way, scrolled, () => {
+                screens.opening(row);
+                return clickWithoutScrolling(
+                  accountSheet(page).locator(`a[href="${row.href}"]`).first(),
+                );
+              }));
           }
         }
       });
@@ -1135,6 +1180,7 @@ for (const look of LOOKS) {
       );
       await page.keyboard.press('Enter');
       await accountListShown(page);
+      await sheetSettled(page);
       expect(await pageScroll(page).scrollTop(), 'the news moved as the sheet opened').toBe(top);
       await page.evaluate(() => {
         const seen: number[] = [];
