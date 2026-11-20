@@ -653,6 +653,8 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
     { name: 'an iPad mini on its side', width: 1133, height: 744, root: '53px' },
     { name: 'an iPad on its side', width: 1180, height: 820, root: '34px' },
     { name: 'a computer', width: 1280, height: 748, root: '200%' },
+    { name: 'a computer', width: 1280, height: 900, root: '200%' },
+    { name: 'a computer', width: 900, height: 900, root: '200%' },
     { name: 'an iPhone SE', width: 375, height: 647, root: '53px' },
   ]) {
     test.describe(`when it opens on ${screen.name} of ${screen.width} × ${screen.height} with a root of ${screen.root} and rests at the top`, () => {
@@ -769,6 +771,7 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
     { name: 'an iPad mini on its side', width: 1133, height: 744 },
     { name: 'an iPad on its side', width: 1180, height: 820 },
     { name: 'a computer', width: 1280, height: 748 },
+    { name: 'a computer', width: 1280, height: 900 },
   ]) {
     for (const colorScheme of ['light', 'dark'] as const) {
       test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height}) with text at 200 % in the ${colorScheme} appearance, where the hero no longer fits one screen`, () => {
@@ -1121,4 +1124,107 @@ test.describe('Given the app opened from the home screen of an iPhone 18 Pro Max
       expect(height).toBeCloseTo(viewport.visible, 0);
     });
   }
+});
+
+const SAME_LINE_PX = 0.5;
+
+test.describe('Given the landing page on a computer', () => {
+  for (const screen of [
+    { width: 1280, height: 900 },
+    { width: 1920, height: 900 },
+    { width: 2560, height: 1080 },
+  ]) {
+    test.describe(`when it opens at ${screen.width} × ${screen.height}`, () => {
+      test.use({ viewport: screen });
+
+      test("then the hero's text and buttons start on the edge of the header's logo", async ({
+        page,
+      }) => {
+        await page.goto('/');
+        await heroLayout(page, FACE_IN_HERO_PHOTO);
+
+        const edges = await page.evaluate(() => ({
+          logo: document.querySelector('app-header .brand img')!.getBoundingClientRect().left,
+          hero: ['.hero-eyebrow', '.hero-title', '.hero-lead', '.hero-btns'].map((selector) => ({
+            selector,
+            left: document.querySelector(`#uvod ${selector}`)!.getBoundingClientRect().left,
+          })),
+        }));
+
+        for (const { selector, left } of edges.hero) {
+          expect(
+            Math.abs(left - edges.logo),
+            `${selector} starts at ${left}, the logo at ${edges.logo}`,
+          ).toBeLessThanOrEqual(SAME_LINE_PX);
+        }
+      });
+    });
+  }
+
+  for (const screen of [
+    { width: 900, height: 900 },
+    { width: 1000, height: 900 },
+    { width: 1280, height: 900 },
+    { width: 1920, height: 900 },
+  ]) {
+    test.describe(`when it opens at ${screen.width} × ${screen.height}`, () => {
+      test.use({ viewport: screen });
+
+      test('then its four figures stand in one row or two by two, never three and one', async ({
+        page,
+      }) => {
+        await page.goto('/');
+        await heroLayout(page, FACE_IN_HERO_PHOTO);
+
+        const rows = await page.locator('#uvod .stat').evaluateAll((figures) => {
+          const tops = new Map<number, number>();
+          for (const figure of figures) {
+            const top = Math.round(figure.getBoundingClientRect().top);
+            tops.set(top, (tops.get(top) ?? 0) + 1);
+          }
+          return [...tops.values()];
+        });
+
+        expect([[4], [2, 2]]).toContainEqual(rows);
+      });
+    });
+  }
+
+  test.describe('when it opens at 1280 × 900', () => {
+    test.use({ viewport: { width: 1280, height: 900 } });
+
+    test('then the labels of Přispět and Kde pomáháme share their baseline and their weight', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await heroLayout(page, FACE_IN_HERO_PHOTO);
+
+      const labels = await page.locator('#uvod .hero-btns a').evaluateAll((links) =>
+        links.map((link) => {
+          const range = document.createRange();
+          range.selectNodeContents(link);
+          const style = getComputedStyle(link);
+          return {
+            text: link.textContent?.trim() ?? '',
+            top: range.getBoundingClientRect().top,
+            size: style.fontSize,
+            family: style.fontFamily,
+            weight: style.fontWeight,
+          };
+        }),
+      );
+
+      expect(labels.map(({ text }) => text)).toEqual(['Přispět', 'Kde pomáháme']);
+      const [donate, whereWeHelp] = labels;
+      expect({ size: whereWeHelp.size, family: whereWeHelp.family }).toEqual({
+        size: donate.size,
+        family: donate.family,
+      });
+      expect(whereWeHelp.weight).toBe(donate.weight);
+      expect(
+        Math.abs(whereWeHelp.top - donate.top),
+        `the labels stand ${whereWeHelp.top - donate.top} px apart`,
+      ).toBeLessThanOrEqual(SAME_LINE_PX);
+    });
+  });
 });
