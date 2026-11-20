@@ -125,6 +125,7 @@ The test compares the Edges cell of each row with the derived edges of its event
 | `FoundationPersonRemoved` | `content/application/people/PeopleAdminService` | none since #612 removed its listener | none |
 | `ImportOutageChanged` | `donations/application/importing/BankStatementRecorder` | `operations/infrastructure/events/ImportOutageListener` (`BEFORE_COMMIT`) | donations → operations |
 | `MailDeliveryFailed`, `MailDeliverySucceeded` | `shared/infrastructure/mail/ObservedMailSender` (technical) | `operations/infrastructure/events/MailDeliveryListener` (plain listener) | shared → operations |
+| `OwnReceiptSigningKeyFoundWithdrawn` | `donations/application/signing/ReceiptSigningKeyRegistration` (at start, when the server's own key is withdrawn in the audit trail) | `operations/infrastructure/events/ReceiptSigningKeyWithdrawnListener` (`AFTER_COMMIT`) | donations → operations |
 | `ReceiptSigningKeyWithdrawn` | `donations/application/signing/ReceiptSigningKeyWithdrawal` | `donations/infrastructure/signing/ReceiptSigningKeyWithdrawnEmailSender`, `operations/infrastructure/events/ReceiptSigningKeyWithdrawnListener` | donations → operations |
 | `SecondFactorRecoveryPaid` | `donations/application/recovery/SecondFactorRecoveryPayments` | `donors/infrastructure/recovery/SecondFactorRecoveryPaymentListener` (plain listener, in the import's transaction) | donations → donors |
 | `SenderAccountLearned` | `donations/application/pairing/PaymentPairingService` | `donors/infrastructure/events/SenderAccountLearnedListener` | donations → donors |
