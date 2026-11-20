@@ -3330,6 +3330,7 @@ test.describe('Given a donor on an iPhone 390 pt wide with the text at its defau
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
     await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole('navigation', { name: 'Můj účet' })).toHaveCount(0);
     const dates = page.locator('app-devices-card .device-date-value');
     await expect(dates.first()).toBeVisible();
 
