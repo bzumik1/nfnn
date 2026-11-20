@@ -119,7 +119,7 @@ app-live-notice:has(p) {
   color: var(--color-text-muted);
 }
 
-@include bp.down(cards) {
+@include bp.container-down(ui-table, ledger) {
   .number {
     text-align: left;
   }

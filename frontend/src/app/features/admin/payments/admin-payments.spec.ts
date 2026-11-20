@@ -105,6 +105,9 @@ describe('Given an administrator on the bank payments page', () => {
     if (node instanceof Element && node.classList.contains('visually-hidden')) {
       return '';
     }
+    if (node instanceof Element && node.classList.contains('ui-figures')) {
+      return node.textContent ?? '';
+    }
     return Array.from(node.childNodes).map(joinedText).join(' ');
   }
 
@@ -1253,6 +1256,9 @@ describe('Given an administrator on the bank payments page where lists show as r
   function spaced(node: Node): string {
     if (node.nodeType === Node.TEXT_NODE) {
       return withOrdinarySpaces(node.textContent) ?? '';
+    }
+    if (node instanceof Element && node.classList.contains('ui-figures')) {
+      return node.textContent ?? '';
     }
     return Array.from(node.childNodes).map(spaced).join(' ');
   }

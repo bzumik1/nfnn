@@ -156,6 +156,10 @@ export class AdminDonors {
     return formatDonationDate(gift.receivedAt);
   }
 
+  protected emailSegments(email: string): string[] {
+    return email.split(/(?<=[@.])/);
+  }
+
   protected typeLabel(item: DonorAccountResponse): string {
     return item.type === 'COMPANY'
       ? $localize`:@@admin.donors.type.company:Firma`

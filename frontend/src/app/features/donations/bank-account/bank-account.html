@@ -3,7 +3,13 @@
     @if (czech()) {
       <app-bank-logo class="logo" [account]="account()" [size]="24" />
     }
-    <span class="ui-figures">{{ account() }}</span>
+    @if (split().bankCode) {
+      <span class="ui-figures breaks-before-bank-code"
+        >{{ split().head }}<wbr />{{ split().bankCode }}</span
+      >
+    } @else {
+      <span class="ui-figures">{{ account() }}</span>
+    }
   </span>
   @if (bank(); as bank) {
     &ngsp;<span class="bank ui-separated__item"

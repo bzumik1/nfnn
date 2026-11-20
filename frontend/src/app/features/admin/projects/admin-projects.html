@@ -53,74 +53,80 @@
             Zatím tu žádný příběh není. Napište první tlačítkem Nový příběh.
           </p>
         } @else {
-          <table role="table" class="ui-table">
-            <thead role="rowgroup">
-              <tr role="row">
-                <th role="columnheader" i18n="@@admin.projects.col.title">Titulek</th>
-                <th role="columnheader" i18n="@@admin.projects.col.year">Rok</th>
-                <th role="columnheader" i18n="@@admin.projects.col.category">Kategorie</th>
-                <th role="columnheader" i18n="@@admin.projects.col.tag">Štítek</th>
-                <th role="columnheader" i18n="@@admin.projects.col.state">Stav</th>
-                <th role="columnheader" i18n="@@admin.projects.col.updatedAt">Upraveno</th>
-              </tr>
-            </thead>
-            <tbody role="rowgroup">
-              @for (item of items(); track item.id) {
+          <div class="ui-table-frame">
+            <table role="table" class="ui-table">
+              <thead role="rowgroup">
                 <tr role="row">
-                  <td role="cell" data-label="Titulek" i18n-data-label="@@admin.projects.col.title">
-                    <a class="admin-name" [routerLink]="['/sprava/projekty', item.id]">{{
-                      item.title
-                    }}</a>
-                  </td>
-                  <td role="cell" data-label="Rok" i18n-data-label="@@admin.projects.col.year">
-                    {{ item.year }}
-                  </td>
-                  <td
-                    role="cell"
-                    data-label="Kategorie"
-                    i18n-data-label="@@admin.projects.col.category"
-                  >
-                    {{ categoryLabel(item.category) }}
-                  </td>
-                  <td role="cell" data-label="Štítek" i18n-data-label="@@admin.projects.col.tag">
-                    @if (item.tag) {
-                      {{ item.tag }}
-                    } @else {
-                      <span class="muted" i18n="@@admin.projects.tag.none">bez štítku</span>
-                    }
-                  </td>
-                  <td role="cell" data-label="Stav" i18n-data-label="@@admin.projects.col.state">
-                    @if (publishedOn(item); as date) {
-                      @if (item.live) {
-                        <span
-                          class="ui-badge ui-badge--success"
-                          i18n="@@admin.projects.state.published"
-                          >Na webu od {{ date }}</span
-                        >
+                  <th role="columnheader" i18n="@@admin.projects.col.title">Titulek</th>
+                  <th role="columnheader" i18n="@@admin.projects.col.year">Rok</th>
+                  <th role="columnheader" i18n="@@admin.projects.col.category">Kategorie</th>
+                  <th role="columnheader" i18n="@@admin.projects.col.tag">Štítek</th>
+                  <th role="columnheader" i18n="@@admin.projects.col.state">Stav</th>
+                  <th role="columnheader" i18n="@@admin.projects.col.updatedAt">Upraveno</th>
+                </tr>
+              </thead>
+              <tbody role="rowgroup">
+                @for (item of items(); track item.id) {
+                  <tr role="row">
+                    <td
+                      role="cell"
+                      data-label="Titulek"
+                      i18n-data-label="@@admin.projects.col.title"
+                    >
+                      <a class="admin-name" [routerLink]="['/sprava/projekty', item.id]">{{
+                        item.title
+                      }}</a>
+                    </td>
+                    <td role="cell" data-label="Rok" i18n-data-label="@@admin.projects.col.year">
+                      {{ item.year }}
+                    </td>
+                    <td
+                      role="cell"
+                      data-label="Kategorie"
+                      i18n-data-label="@@admin.projects.col.category"
+                    >
+                      {{ categoryLabel(item.category) }}
+                    </td>
+                    <td role="cell" data-label="Štítek" i18n-data-label="@@admin.projects.col.tag">
+                      @if (item.tag) {
+                        {{ item.tag }}
                       } @else {
-                        <span
-                          class="ui-badge ui-badge--accent"
-                          i18n="@@admin.projects.state.scheduled"
-                          >Zveřejní se {{ date }}</span
+                        <span class="muted" i18n="@@admin.projects.tag.none">bez štítku</span>
+                      }
+                    </td>
+                    <td role="cell" data-label="Stav" i18n-data-label="@@admin.projects.col.state">
+                      @if (publishedOn(item); as date) {
+                        @if (item.live) {
+                          <span
+                            class="ui-badge ui-badge--success"
+                            i18n="@@admin.projects.state.published"
+                            >Na webu od {{ date }}</span
+                          >
+                        } @else {
+                          <span
+                            class="ui-badge ui-badge--accent"
+                            i18n="@@admin.projects.state.scheduled"
+                            >Zveřejní se {{ date }}</span
+                          >
+                        }
+                      } @else {
+                        <span class="ui-badge ui-badge--warning" i18n="@@admin.projects.state.draft"
+                          >Koncept</span
                         >
                       }
-                    } @else {
-                      <span class="ui-badge ui-badge--warning" i18n="@@admin.projects.state.draft"
-                        >Koncept</span
-                      >
-                    }
-                  </td>
-                  <td
-                    role="cell"
-                    data-label="Upraveno"
-                    i18n-data-label="@@admin.projects.col.updatedAt"
-                  >
-                    {{ updatedAt(item) }}
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+                    </td>
+                    <td
+                      role="cell"
+                      data-label="Upraveno"
+                      i18n-data-label="@@admin.projects.col.updatedAt"
+                    >
+                      {{ updatedAt(item) }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         }
       </section>
     }

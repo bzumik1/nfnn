@@ -701,7 +701,11 @@ describe('Given an administrator on the administration home', () => {
     it('then a line under the table says new donors are registrations and the total includes payments without a donor', () => {
       const table = fixture.nativeElement.querySelector('.overview-table') as HTMLTableElement;
 
-      expect(table.nextElementSibling?.classList.contains('overview-columns')).toBe(true);
+      expect(
+        table
+          .closest('.ui-table-frame')
+          ?.nextElementSibling?.classList.contains('overview-columns'),
+      ).toBe(true);
       expect(text('.overview-columns')).toBe(
         'Noví dárci jsou nové registrace, i bez daru, takže jich může být víc než dárců. Celkem zahrnuje i platby, které ještě nemají dárce (Celkem = Přiřazené + Bez dárce).',
       );

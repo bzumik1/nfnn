@@ -291,7 +291,7 @@ td.receipt-pdf-cell {
   inline-size: 15rem;
 }
 
-@include bp.up(nav) {
+@include bp.container-up(ui-table, ledger) {
   .receipts-table:not(.ui-table--stacked) {
     th,
     td {
@@ -301,12 +301,12 @@ td.receipt-pdf-cell {
 
     th:first-child,
     td:first-child {
-      padding-inline-start: var(--space-5);
+      padding-inline-start: var(--card-inset);
     }
 
     th:last-child,
     td:last-child {
-      padding-inline-end: var(--space-5);
+      padding-inline-end: var(--card-inset);
     }
 
     td.receipt-pdf-cell {
@@ -314,6 +314,17 @@ td.receipt-pdf-cell {
     }
   }
 
+  .ui-table:not(.ui-table--stacked) .actions {
+    flex-wrap: nowrap;
+    align-items: stretch;
+
+    .ui-button {
+      white-space: nowrap;
+    }
+  }
+}
+
+@include bp.up(nav) {
   .receipt-download {
     display: flex;
     align-items: center;
@@ -331,15 +342,6 @@ td.receipt-pdf-cell {
     flex-wrap: nowrap;
     inline-size: 11rem;
     margin-top: 0;
-  }
-
-  .ui-table:not(.ui-table--stacked) .actions {
-    flex-wrap: nowrap;
-    align-items: stretch;
-
-    .ui-button {
-      white-space: nowrap;
-    }
   }
 }
 
@@ -456,7 +458,7 @@ td.amount {
   }
 }
 
-@include bp.down(cards) {
+@include bp.container-down(ui-table, ledger) {
   @include stacked-cells;
 }
 

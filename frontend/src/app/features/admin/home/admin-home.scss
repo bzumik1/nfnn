@@ -98,6 +98,10 @@
   border-collapse: collapse;
   margin-top: var(--space-1);
 
+  tbody tr {
+    border-top: 0;
+  }
+
   th {
     padding: var(--space-2-5) var(--space-3);
     text-align: left;
@@ -125,6 +129,20 @@
     color: var(--color-text);
     background: var(--color-surface-alt);
   }
+
+  th:first-child,
+  td:first-child {
+    padding-inline-start: var(--card-inset);
+  }
+
+  th:last-child,
+  td:last-child {
+    padding-inline-end: var(--card-inset);
+  }
+}
+
+.admin-overview .ui-table-frame {
+  margin-inline: calc(-1 * var(--card-inset));
 }
 
 .admin-month {
@@ -132,39 +150,23 @@
   font-weight: var(--weight-semibold);
 }
 
-.admin-overview {
-  container: admin-overview / inline-size;
-}
-
 @mixin overview-as-cards {
   .overview-table {
-    thead {
-      display: block;
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-    }
-
-    &,
-    tbody,
-    tfoot,
-    tr,
-    td {
+    tfoot {
       display: block;
     }
 
-    tr {
+    tbody tr,
+    tfoot tr {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--space-2) var(--space-3);
-      padding: var(--space-3) 0;
+      padding: var(--space-3) var(--card-inset);
       border-top: 1px solid var(--color-divider);
     }
 
     tfoot tr {
-      padding: var(--space-3);
+      padding: var(--space-3) var(--card-inset);
       background: var(--color-surface-alt);
     }
 
@@ -180,7 +182,9 @@
       }
     }
 
-    td {
+    td,
+    td:first-child,
+    td:last-child {
       padding: 0;
       border: none;
     }
@@ -193,42 +197,10 @@
     .num {
       text-align: left;
     }
-
-    td::before {
-      content: attr(data-label) / '';
-      display: block;
-      font-size: var(--text-md);
-      font-weight: var(--weight-regular);
-      color: var(--color-text-soft);
-      margin-bottom: var(--space-0-5);
-    }
   }
 }
 
-@include bp.up(nav) {
-  @include bp.container-up(admin-overview, phone) {
-    .overview-table {
-      width: calc(100% + 2 * var(--space-6));
-      margin-inline: calc(-1 * var(--space-6));
-
-      th:first-child,
-      td:first-child {
-        padding-inline-start: var(--space-6);
-      }
-
-      th:last-child,
-      td:last-child {
-        padding-inline-end: var(--space-6);
-      }
-    }
-  }
-}
-
-@include bp.down(cards) {
-  @include overview-as-cards;
-}
-
-@include bp.container-down(admin-overview, phone) {
+@include bp.container-down(ui-table, ledger) {
   @include overview-as-cards;
 }
 

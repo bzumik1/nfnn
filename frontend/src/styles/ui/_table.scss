@@ -1,5 +1,9 @@
 @use 'breakpoints' as bp;
 
+.ui-table-frame {
+  container: ui-table / inline-size;
+}
+
 .ui-table {
   width: 100%;
   border-collapse: collapse;
@@ -26,6 +30,33 @@
     color: var(--color-text-secondary);
     vertical-align: top;
   }
+
+  th:first-child,
+  td:first-child {
+    padding-inline-start: var(--card-inset);
+  }
+
+  th:last-child,
+  td:last-child {
+    padding-inline-end: var(--card-inset);
+  }
+
+  td .ui-button {
+    max-inline-size: 100%;
+    white-space: normal;
+  }
+
+  td a:not(.ui-button) {
+    color: var(--color-accent);
+    font-weight: var(--weight-semibold);
+    text-decoration: none;
+
+    @media (hover: hover) {
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
 }
 
 @mixin stacked {
@@ -48,11 +79,15 @@
   tbody tr {
     display: grid;
     gap: var(--space-2);
-    padding: var(--space-3-5) var(--space-5);
+    padding: var(--space-3-5) var(--card-inset);
   }
 
-  td {
+  td,
+  td:first-child,
+  td:last-child {
+    min-width: 0;
     padding: 0;
+    text-align: start;
   }
 
   td::before {
@@ -65,7 +100,7 @@
   }
 }
 
-@include bp.down(cards) {
+@include bp.container-down(ui-table, ledger) {
   .ui-table {
     @include stacked;
   }

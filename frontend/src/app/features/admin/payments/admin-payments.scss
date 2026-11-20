@@ -86,25 +86,8 @@
   line-height: var(--leading-normal);
 }
 
-.payments-card table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.payments-card thead tr {
-  background: var(--color-surface-alt);
-}
-
-.payments-card th {
-  padding: var(--space-3) var(--space-5);
-  text-align: left;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--color-text-secondary);
-}
-
 .payments-card tbody tr {
-  border-top: 1px solid var(--color-divider);
+  border-top-color: var(--color-divider);
 }
 
 .payments-card tbody tr.payment-row--leaving {
@@ -121,9 +104,6 @@
 }
 
 .payments-card td {
-  padding: var(--space-3-5) var(--space-5);
-  font-size: var(--text-md);
-  color: var(--color-text-secondary);
   vertical-align: baseline;
 }
 
@@ -151,17 +131,6 @@
   display: block;
   color: var(--color-text);
   font-weight: var(--weight-semibold);
-}
-
-.donor-name a {
-  color: var(--color-accent);
-  text-decoration: none;
-
-  @media (hover: hover) {
-    &:hover {
-      text-decoration: underline;
-    }
-  }
 }
 
 .sender-account,
@@ -429,41 +398,18 @@
   }
 }
 
-@include bp.down(cards) {
-  .payments-card thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-
-  .payments-card table,
-  .payments-card tbody,
-  .payments-card tr,
-  .payments-card td {
-    display: block;
-  }
-
+@include bp.container-down(ui-table, ledger) {
   .payments-card tbody tr {
-    display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--space-2) var(--space-3);
-    padding: var(--space-3-5) var(--space-5);
   }
 
-  .payments-card td {
-    padding: 0;
+  .payments-card td:first-child {
+    white-space: normal;
   }
 
   .payments-card td::before {
-    content: attr(data-label);
-    display: block;
     font-family: var(--font-sans);
-    font-size: var(--text-md);
-    font-weight: var(--weight-regular);
-    color: var(--color-text-soft);
-    margin-bottom: var(--space-0-5);
   }
 
   .payments-card td.amount {
@@ -472,7 +418,7 @@
 
   .payments-card td.action {
     grid-column: 1 / -1;
-    text-align: left;
+    text-align: start;
   }
 
   .confirm {
