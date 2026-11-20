@@ -108,14 +108,15 @@ describe('Given an administrator on the server state page', () => {
     }
   });
 
-  it('when the state loads, then the Java version reads under its title and the findings are a shared list', async () => {
+  it('when the state loads, then the Java version reads under its title and the findings are a plain list that keeps its role, in the verdict secondary text', async () => {
     page.http.expectOne(DIAGNOSTICS_URL).flush(STATE);
     await page.settle();
 
     const javaRow = page.cardTitled('Aplikace').querySelectorAll('.ui-list__row')[4];
     expect(javaRow.querySelector('.ui-list__meta')?.textContent?.trim()).toBe('25.0.1+8');
     expect(javaRow.querySelector('.ui-list__value')).toBeNull();
-    expect(page.has('.verdict ul.findings.ui-list')).toBe(true);
+    expect(page.has('.verdict ul.findings[role="list"]')).toBe(true);
+    expect(page.has('.verdict ul.findings.ui-list')).toBe(false);
   });
 
   it('when a level is raised for a while, then it is listed with its end', async () => {

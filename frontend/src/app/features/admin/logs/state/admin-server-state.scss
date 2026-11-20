@@ -19,11 +19,14 @@ h2.ui-list__title {
 }
 
 .findings {
-  margin-block-start: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
 
-  > li {
-    padding-block: var(--space-1-5);
+  > li + li {
+    margin-block-start: var(--space-1);
   }
 }
 

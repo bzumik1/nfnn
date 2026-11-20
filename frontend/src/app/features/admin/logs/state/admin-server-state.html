@@ -47,7 +47,7 @@
                       >k <span class="ui-date">{{ time(diagnostics.now) }}</span></span
                     >
                     @if (health.findings.length > 0) {
-                      <ul class="ui-list ui-list__extra findings">
+                      <ul class="ui-list__extra findings" role="list">
                         @for (finding of health.findings; track finding) {
                           <li>{{ finding }}</li>
                         }
