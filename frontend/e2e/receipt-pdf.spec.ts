@@ -147,8 +147,13 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
 
     await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000);
     await button.click();
-    await expect(button).toHaveAttribute('aria-busy', 'true');
-    await page.clock.runFor(290);
+    await expect
+      .poll(async () => {
+        await page.clock.runFor(1);
+        return button.getAttribute('aria-busy');
+      })
+      .toBe('true');
+    await page.clock.runFor(289);
     expect(await height()).toBe(0);
     await expect(status).toHaveText('');
 
