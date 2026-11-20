@@ -103,6 +103,8 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private touchOrigin: TouchOrigin | null = null;
   private touchIntent: PullIntent = 'content';
   private pressStartedOnBackdrop = false;
+  private pressTarget: EventTarget | null = null;
+  private focusingItself = false;
   private destroyed = false;
   private viewReady = false;
   private steppedAside = false;
@@ -211,6 +213,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
 
   protected onPointerDown(event: Event): void {
     this.pressStartedOnBackdrop = event.target === this.element().nativeElement;
+    this.pressTarget = event.target;
   }
 
   protected onClick(event: Event): void {
@@ -218,6 +221,31 @@ export class Dialog implements AfterViewInit, OnDestroy {
       this.dismiss();
     }
     this.pressStartedOnBackdrop = false;
+    this.pressTarget = null;
+  }
+
+  protected keepFocusOnPressedControl(event: FocusEvent): void {
+    const dialog = this.element().nativeElement;
+    const control = event.relatedTarget;
+    if (
+      event.target !== dialog ||
+      this.focusingItself ||
+      !(control instanceof HTMLElement) ||
+      control === dialog ||
+      !control.isConnected ||
+      !dialog.contains(control) ||
+      control.matches(':disabled') ||
+      control.closest('[inert]') !== null ||
+      this.pressLandedOutside(control)
+    ) {
+      return;
+    }
+    control.focus({ preventScroll: true });
+  }
+
+  private pressLandedOutside(control: HTMLElement): boolean {
+    const pressed = this.pressTarget;
+    return pressed instanceof Node && !control.contains(pressed);
   }
 
   protected startDrag(event: PointerEvent): void {
@@ -362,13 +390,22 @@ export class Dialog implements AfterViewInit, OnDestroy {
     const [titleId] = this.labelledBy().split(/\s+/);
     const title = this.document.getElementById(titleId);
     if (title === null || !dialog.contains(title)) {
-      dialog.focus({ preventScroll: true });
+      this.focusItself(dialog);
       return;
     }
     if (!title.hasAttribute('tabindex')) {
       title.setAttribute('tabindex', '-1');
     }
     title.focus({ preventScroll: true });
+  }
+
+  private focusItself(dialog: HTMLDialogElement): void {
+    this.focusingItself = true;
+    try {
+      dialog.focus({ preventScroll: true });
+    } finally {
+      this.focusingItself = false;
+    }
   }
 
   private follow(suspended: boolean): void {
@@ -434,7 +471,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
       this.sheetPull.set(1);
     }
     const dialog = this.element().nativeElement;
-    dialog.focus({ preventScroll: true });
+    this.focusItself(dialog);
     afterNextRender(
       () => {
         const panel = this.panel().nativeElement;

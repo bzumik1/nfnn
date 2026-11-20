@@ -16,6 +16,7 @@
   (close)="onClose()"
   (pointerdown)="onPointerDown($event)"
   (click)="onClick($event)"
+  (focusin)="keepFocusOnPressedControl($event)"
 >
   <div
     #panel
