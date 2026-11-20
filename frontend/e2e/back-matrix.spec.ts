@@ -25,6 +25,9 @@ const PAGE_DURATION_MS = 350;
 const FASTEST_EASE = 3;
 const STEP_ENDS_WITHIN_MS = 6000;
 const FIRST_SHOWN_AT_MOST = 0.25;
+const BUSY_AS_ON_THE_PHONE_MS = 140;
+const SHOWN_AFTER_THE_BUSY_FRAME_AT_MOST = 0.2;
+const MOVES_AFTER_THE_TAP_WITHIN_MS = 150;
 
 type Way = 'back-button' | 'swipe-completed' | 'swipe-cancelled';
 type Look = 'light' | 'dark';
@@ -55,6 +58,9 @@ interface StepProbe {
   frames: Frame[];
   under: string | null;
   done: boolean;
+  tappedAt: number | null;
+  busyFrameAt: number | null;
+  busyFor: number;
 }
 
 declare global {
@@ -276,56 +282,98 @@ function leavingOffset(page: Page): Promise<number> {
     .evaluate((over) => Math.round(new DOMMatrixReadOnly(getComputedStyle(over).transform).m41));
 }
 
+function measuresFrames(page: Page): boolean {
+  return page.context().browser()?.browserType().name() === 'chromium';
+}
+
 async function watchTheStep(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const probe: StepProbe = { frames: [], under: null, done: false };
-    window.nfnnStepProbe = probe;
-    const started = performance.now();
-    let seen = false;
-    let framesAfter = 0;
-    const look = (now: number): void => {
-      const overlay = document.querySelector('.page-transition');
-      const over = overlay?.querySelector('.page-transition__page--over') ?? null;
-      const under = overlay?.querySelector('.page-transition__page--under') ?? null;
-      const layerStyle = overlay === null ? null : getComputedStyle(overlay);
-      const filter =
-        layerStyle?.backdropFilter || layerStyle?.getPropertyValue('-webkit-backdrop-filter');
-      const corners = Array.from(
-        overlay?.querySelectorAll<HTMLElement>('.page-transition__page') ?? [],
-        (page) => {
-          const style = getComputedStyle(page);
-          return Math.max(
-            ...[
-              style.borderTopLeftRadius,
-              style.borderTopRightRadius,
-              style.borderBottomLeftRadius,
-              style.borderBottomRightRadius,
-            ].map((radius) => Number.parseFloat(radius) || 0),
-          );
-        },
-      );
-      probe.frames.push({
-        at: now,
-        overlay: overlay !== null,
-        offset: over === null ? null : new DOMMatrixReadOnly(getComputedStyle(over).transform).m41,
-        tinted: layerStyle !== null && (filter === undefined || filter === '' || filter === 'none'),
-        rounded: Math.max(0, ...corners),
+  await page.evaluate(
+    (busyMs) => {
+      const probe: StepProbe = {
+        frames: [],
+        under: null,
+        done: false,
+        tappedAt: null,
+        busyFrameAt: null,
+        busyFor: 0,
+      };
+      window.nfnnStepProbe = probe;
+      const started = performance.now();
+      window.addEventListener('click', () => (probe.tappedAt ??= performance.now()), {
+        capture: true,
+        once: true,
       });
-      if (under !== null && probe.under === null) {
-        probe.under = (under.textContent ?? '').replace(/\s+/g, ' ');
+      const bothPlaced = (): boolean =>
+        document.querySelector('.page-transition__page--over') !== null &&
+        document.querySelector('.page-transition__page--under') !== null;
+      const placed = new MutationObserver(() => {
+        if (!bothPlaced() || busyMs === 0) {
+          return;
+        }
+        placed.disconnect();
+        requestAnimationFrame((now) => {
+          probe.busyFrameAt = now;
+          const from = performance.now();
+          let at = from;
+          while (at < from + busyMs) {
+            at = performance.now();
+          }
+          probe.busyFor = at - from;
+        });
+      });
+      if (!bothPlaced()) {
+        placed.observe(document.body, { childList: true, subtree: true });
       }
-      seen ||= overlay !== null;
-      if (seen && overlay === null) {
-        framesAfter++;
-      }
-      if (framesAfter > 2 || now - started > 5000) {
-        probe.done = true;
-        return;
-      }
+      let seen = false;
+      let framesAfter = 0;
+      const look = (now: number): void => {
+        const overlay = document.querySelector('.page-transition');
+        const over = overlay?.querySelector('.page-transition__page--over') ?? null;
+        const under = overlay?.querySelector('.page-transition__page--under') ?? null;
+        const layerStyle = overlay === null ? null : getComputedStyle(overlay);
+        const filter =
+          layerStyle?.backdropFilter || layerStyle?.getPropertyValue('-webkit-backdrop-filter');
+        const corners = Array.from(
+          overlay?.querySelectorAll<HTMLElement>('.page-transition__page') ?? [],
+          (page) => {
+            const style = getComputedStyle(page);
+            return Math.max(
+              ...[
+                style.borderTopLeftRadius,
+                style.borderTopRightRadius,
+                style.borderBottomLeftRadius,
+                style.borderBottomRightRadius,
+              ].map((radius) => Number.parseFloat(radius) || 0),
+            );
+          },
+        );
+        probe.frames.push({
+          at: now,
+          overlay: overlay !== null,
+          offset:
+            over === null ? null : new DOMMatrixReadOnly(getComputedStyle(over).transform).m41,
+          tinted:
+            layerStyle !== null && (filter === undefined || filter === '' || filter === 'none'),
+          rounded: Math.max(0, ...corners),
+        });
+        if (under !== null && probe.under === null) {
+          probe.under = (under.textContent ?? '').replace(/\s+/g, ' ');
+        }
+        seen ||= overlay !== null;
+        if (seen && overlay === null) {
+          framesAfter++;
+        }
+        if (framesAfter > 2 || now - started > 5000) {
+          placed.disconnect();
+          probe.done = true;
+          return;
+        }
+        requestAnimationFrame(look);
+      };
       requestAnimationFrame(look);
-    };
-    requestAnimationFrame(look);
-  });
+    },
+    measuresFrames(page) ? BUSY_AS_ON_THE_PHONE_MS : 0,
+  );
 }
 
 async function stepSeen(page: Page): Promise<StepProbe> {
@@ -371,11 +419,43 @@ function expectNoJump(frames: readonly Frame[], width: number): void {
   }
 }
 
+function shownAfterTheBusyFrame(probe: StepProbe, moving: readonly Frame[]): Frame | null {
+  const busyFrameAt = probe.busyFrameAt;
+  if (busyFrameAt === null) {
+    return null;
+  }
+  const shown = moving.find((frame) => frame.at > busyFrameAt);
+  expect(shown, 'no frame of the motion was shown after the busy one').toBeDefined();
+  return shown!;
+}
+
+function expectMovedSoonAfterTheTap(probe: StepProbe): void {
+  const moving = travelled(probe.frames);
+  const tappedAt = probe.tappedAt;
+  expect(tappedAt, 'the tap was not seen').not.toBeNull();
+  const start = moving[0].offset!;
+  const moved = moving.find((frame) => Math.abs(frame.offset! - start) > 1);
+  expect(moved, 'the page never moved').toBeDefined();
+  const busy =
+    probe.busyFrameAt !== null && probe.busyFrameAt < moved!.at ? Math.round(probe.busyFor) : 0;
+  expect(
+    moved!.at - tappedAt! - busy,
+    `ms from the tap until the page began to move, not counting the ${busy} ms of the busy frame`,
+  ).toBeLessThanOrEqual(MOVES_AFTER_THE_TAP_WITHIN_MS);
+}
+
 function expectLeftAway(probe: StepProbe, width: number, from: number): void {
   const moving = travelled(probe.frames);
   const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < width - 1);
   expect(between.length, 'no frame showed the leaving page on its way').toBeGreaterThanOrEqual(2);
   expect(moving[0].offset!).toBeLessThanOrEqual(from + width * FIRST_SHOWN_AT_MOST);
+  const afterBusy = shownAfterTheBusyFrame(probe, moving);
+  if (afterBusy !== null) {
+    expect(
+      afterBusy.offset! - from,
+      'px the leaving page had already gone in the first frame after the busy one',
+    ).toBeLessThanOrEqual((width - from) * SHOWN_AFTER_THE_BUSY_FRAME_AT_MOST);
+  }
   for (let at = 1; at < moving.length; at++) {
     expect(moving[at].offset!, 'the leaving page went back on its way').toBeGreaterThanOrEqual(
       moving[at - 1].offset! - 1,
@@ -389,6 +469,13 @@ function expectArrived(probe: StepProbe, width: number): void {
   const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < width - 1);
   expect(between.length, 'no frame showed the arriving page on its way').toBeGreaterThanOrEqual(2);
   expect(moving[0].offset!).toBeGreaterThanOrEqual(width * (1 - FIRST_SHOWN_AT_MOST));
+  const afterBusy = shownAfterTheBusyFrame(probe, moving);
+  if (afterBusy !== null) {
+    expect(
+      width - afterBusy.offset!,
+      'px the arriving page had already come in the first frame after the busy one',
+    ).toBeLessThanOrEqual(width * SHOWN_AFTER_THE_BUSY_FRAME_AT_MOST);
+  }
   for (let at = 1; at < moving.length; at++) {
     expect(moving[at].offset!, 'the arriving page went back on its way').toBeLessThanOrEqual(
       moving[at - 1].offset! + 1,
@@ -514,6 +601,9 @@ async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): P
       row.name,
     );
     expectLeftAway(probe, WIDTH, 0);
+    if (measuresFrames(page)) {
+      expectMovedSoonAfterTheTap(probe);
+    }
     return;
   }
   const completes = way === 'swipe-completed';

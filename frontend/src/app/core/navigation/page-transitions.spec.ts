@@ -165,7 +165,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(moved).toBe(true);
   });
 
-  it('when the news moves in, then its motion holds still at its start until the frame that shows both pages has been drawn', async () => {
+  async function heldWhenTheMotionBegins(step: () => Promise<boolean>): Promise<boolean[]> {
     const heldWhenItBegins: boolean[] = [];
     const first = new MutationObserver(() => {
       const moving = document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
@@ -175,13 +175,26 @@ describe('Given a phone that animates, an article opened from the news, and the 
     });
     first.observe(document.body, { subtree: true, attributes: true, childList: true });
     try {
-      await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+      await step();
       await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
-
-      expect(heldWhenItBegins).toEqual([true]);
+      return heldWhenItBegins;
     } finally {
       first.disconnect();
     }
+  }
+
+  it('when the news moves in, then its motion holds still at its start until the frame that shows both pages has been drawn', async () => {
+    const held = await heldWhenTheMotionBegins(() =>
+      router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION }),
+    );
+
+    expect(held).toEqual([true]);
+  });
+
+  it('when another article opens from this one, then its motion holds still at its start until the frame that shows both pages has been drawn', async () => {
+    const held = await heldWhenTheMotionBegins(() => router.navigateByUrl('/aktuality/druhy'));
+
+    expect(held).toEqual([true]);
   });
 
   it('when the news is never placed, then the step back moves in after the duration of a page step all the same', async () => {
