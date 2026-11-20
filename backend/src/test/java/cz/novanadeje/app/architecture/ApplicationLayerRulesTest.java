@@ -1,6 +1,7 @@
 package cz.novanadeje.app.architecture;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
@@ -18,15 +19,18 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static cz.novanadeje.app.architecture.MethodAccesses.callsOrReferences;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noCodeUnits;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ApplicationLayerRulesTest {
 
     private static final String REPOSITORY_PARAMETER = "application_and_domain_code_takes_no_repository_parameter";
+    private static final String USED_INTERFACES = "application_interfaces_are_used_by_code_other_than_their_implementations";
 
     private static final Set<String> EXCEPTION_MESSAGES = Set.of("getMessage", "getLocalizedMessage");
 
@@ -68,6 +73,42 @@ class ApplicationLayerRulesTest {
             .should(takeARepository())
             .because("backend.md, Application: a method that reads or writes through a repository it is handed hides a dependency and keeps a rule "
                     + "outside the aggregate or a domain service; a rule over loaded data goes to the domain or the view, a read or write to an injected collaborator");
+
+    @ArchTest
+    static final ArchRule application_interfaces_are_used_by_code_other_than_their_implementations = classes()
+            .that().resideInAPackage("cz.novanadeje.app..application..")
+            .and().areInterfaces()
+            .and().areNotAnnotations()
+            .should(beUsedByCodeOtherThanTheirImplementations())
+            .because("backend.md, Application: a port exists for the use case that calls it; an interface only its adapters implement or a configuration provides, and only "
+                    + "tests call, is a model left behind by a change (the signature vector parser and image processor of donations, #1431), so it goes with that change");
+
+    private static ArchCondition<JavaClass> beUsedByCodeOtherThanTheirImplementations() {
+        return new ArchCondition<>("be used by main code other than their own implementations, classes nested in them and configuration classes") {
+            @Override
+            public void check(JavaClass port, ConditionEvents events) {
+                boolean used = port.getDirectDependenciesToSelf().stream()
+                        .map(Dependency::getOriginClass)
+                        .anyMatch(origin -> !belongsToAnImplementationOrWiringOf(origin, port));
+                if (!used) {
+                    events.add(SimpleConditionEvent.violated(port, port.getName() + " is used by no main code but its own implementations, classes nested in them and configuration classes in "
+                            + port.getSourceCodeLocation()));
+                }
+            }
+        };
+    }
+
+    private static boolean belongsToAnImplementationOrWiringOf(JavaClass origin, JavaClass port) {
+        Optional<JavaClass> type = Optional.of(origin);
+        while (type.isPresent()) {
+            if (type.get().isAssignableTo(port.getName()) || type.get().isMetaAnnotatedWith(Configuration.class)
+                    || type.get().isAnnotatedWith(Configuration.class)) {
+                return true;
+            }
+            type = type.get().getEnclosingClass();
+        }
+        return false;
+    }
 
     private static ArchCondition<JavaCodeUnit> takeARepository() {
         return new ArchCondition<>("take a repository as a parameter") {
@@ -188,7 +229,23 @@ class ApplicationLayerRulesTest {
                         "public interface PlantedHoldingPort { void hold(cz.novanadeje.app.donors.domain.DonorRepository donors); }"),
                 planted(REPOSITORY_PARAMETER, "shared.application.PlantedLockRead",
                         "public final class PlantedLockRead { static boolean held(cz.novanadeje.app.shared.application.PlantedLockPort lock) { "
-                                + "return false; } }"));
+                                + "return false; } }"),
+                planted(USED_INTERFACES, "donations.application.receipt.PlantedOnlyImplementedPort",
+                        "public interface PlantedOnlyImplementedPort { String parse(byte[] upload); }"),
+                planted(USED_INTERFACES, "donations.application.receipt.PlantedSelfReferringPort",
+                        "public interface PlantedSelfReferringPort { PlantedSelfReferringPort next(); "
+                                + "default PlantedSelfReferringPort twice() { return next().next(); } }"),
+                planted(USED_INTERFACES, "operations.application.PlantedPortItsAdapterWraps",
+                        "public interface PlantedPortItsAdapterWraps { void send(); }"),
+                planted(USED_INTERFACES, "donors.application.PlantedPortUsedInsideItself",
+                        "public interface PlantedPortUsedInsideItself { void run(); "
+                                + "record Pair(PlantedPortUsedInsideItself first, PlantedPortUsedInsideItself second) { void runBoth() { first.run(); second.run(); } } }"),
+                planted(USED_INTERFACES, "content.application.PlantedPortUsedInsideItsAdapter",
+                        "public interface PlantedPortUsedInsideItsAdapter { void publish(); }"),
+                planted(USED_INTERFACES, "donations.application.signing.PlantedPortOnlyABeanProvides",
+                        "public interface PlantedPortOnlyABeanProvides { byte[] sign(byte[] message); }"),
+                planted(USED_INTERFACES, "operations.application.PlantedPortOnlyExtended",
+                        "public interface PlantedPortOnlyExtended { void check(); }"));
     }
 
     static Stream<PlantedClass> allowedClasses() {
@@ -201,7 +258,11 @@ class ApplicationLayerRulesTest {
                                 + "boolean covers(java.util.List<String> ids) { return ids.stream().anyMatch(id -> receipts.equals(id)); } }"),
                 planted(REPOSITORY_PARAMETER, "donations.domain.PlantedStaticOnValues",
                         "public final class PlantedStaticOnValues { public static boolean covers(java.util.List<String> ids, java.time.Instant at) { "
-                                + "return ids.stream().anyMatch(id -> at != null); } }"));
+                                + "return ids.stream().anyMatch(id -> at != null); } }"),
+                planted(USED_INTERFACES, "donations.application.receipt.PlantedInjectedPort",
+                        "public interface PlantedInjectedPort { String parse(byte[] upload); }"),
+                planted(USED_INTERFACES, "shared.application.PlantedPortAnotherContextCalls",
+                        "public interface PlantedPortAnotherContextCalls { boolean holds(); }"));
     }
 
     static Stream<PlantedClass> supportingClasses() {
@@ -219,6 +280,40 @@ class ApplicationLayerRulesTest {
                                 + "public void hold(cz.novanadeje.app.donors.domain.DonorRepository donors) { } }"),
                 planted(REPOSITORY_PARAMETER, "shared.infrastructure.lock.PlantedPlainLock",
                         "class PlantedPlainLock implements cz.novanadeje.app.shared.application.PlantedLockPort { }"),
+                planted(USED_INTERFACES, "donations.infrastructure.signature.PlantedOnlyAdapter",
+                        "class PlantedOnlyAdapter implements cz.novanadeje.app.donations.application.receipt.PlantedOnlyImplementedPort { "
+                                + "public String parse(byte[] upload) { return \"\"; } }"),
+                planted(USED_INTERFACES, "operations.infrastructure.PlantedWrappingAdapter",
+                        "class PlantedWrappingAdapter implements cz.novanadeje.app.operations.application.PlantedPortItsAdapterWraps { "
+                                + "private final cz.novanadeje.app.operations.application.PlantedPortItsAdapterWraps inner; "
+                                + "PlantedWrappingAdapter(cz.novanadeje.app.operations.application.PlantedPortItsAdapterWraps inner) { this.inner = inner; } "
+                                + "public void send() { inner.send(); } }"),
+                planted(USED_INTERFACES, "content.infrastructure.PlantedAdapterWithHelper",
+                        "class PlantedAdapterWithHelper implements cz.novanadeje.app.content.application.PlantedPortUsedInsideItsAdapter { "
+                                + "public void publish() { } "
+                                + "static final class Helper { void call(cz.novanadeje.app.content.application.PlantedPortUsedInsideItsAdapter port) { port.publish(); } } }"),
+                planted(USED_INTERFACES, "donations.infrastructure.signing.PlantedSigningConfiguration",
+                        "@org.springframework.context.annotation.Configuration class PlantedSigningConfiguration { "
+                                + "@org.springframework.context.annotation.Bean "
+                                + "cz.novanadeje.app.donations.application.signing.PlantedPortOnlyABeanProvides signer() { return message -> message; } }"),
+                planted(USED_INTERFACES, "operations.application.PlantedExtendingPort",
+                        "public interface PlantedExtendingPort extends PlantedPortOnlyExtended { void report(); }"),
+                planted(USED_INTERFACES, "operations.application.PlantedExtendingPortCaller",
+                        "@org.springframework.stereotype.Service class PlantedExtendingPortCaller { "
+                                + "void run(PlantedExtendingPort port) { port.check(); port.report(); } }"),
+                planted(USED_INTERFACES, "donations.infrastructure.signature.PlantedInjectedAdapter",
+                        "class PlantedInjectedAdapter implements cz.novanadeje.app.donations.application.receipt.PlantedInjectedPort { "
+                                + "public String parse(byte[] upload) { return \"\"; } }"),
+                planted(USED_INTERFACES, "donations.application.receipt.PlantedUploadService",
+                        "@org.springframework.stereotype.Service class PlantedUploadService { "
+                                + "private final PlantedInjectedPort parser; PlantedUploadService(PlantedInjectedPort parser) { this.parser = parser; } "
+                                + "String upload(byte[] file) { return parser.parse(file); } }"),
+                planted(USED_INTERFACES, "donors.infrastructure.PlantedHoldingAdapter",
+                        "class PlantedHoldingAdapter implements cz.novanadeje.app.shared.application.PlantedPortAnotherContextCalls { "
+                                + "public boolean holds() { return true; } }"),
+                planted(USED_INTERFACES, "operations.application.PlantedCallerInAnotherContext",
+                        "@org.springframework.stereotype.Service class PlantedCallerInAnotherContext { "
+                                + "boolean ask(cz.novanadeje.app.shared.application.PlantedPortAnotherContextCalls holders) { return holders.holds(); } }"),
                 planted(REPOSITORY_PARAMETER, "shared.infrastructure.audit.PlantedJpaTrail",
                         "@org.springframework.stereotype.Component class PlantedJpaTrail implements cz.novanadeje.app.shared.application.PlantedTrail { "
                                 + "org.springframework.data.domain.Limit limit() { return org.springframework.data.domain.Limit.of(1); } }"));

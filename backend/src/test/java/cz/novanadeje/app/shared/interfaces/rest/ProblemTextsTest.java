@@ -80,10 +80,7 @@ class ProblemTextsTest {
     private static final String CLIENT_METHOD = "NFNN-CLIENT-VALUE";
     private static final String EXCEPTION_TEXT = "nfnn-exception-text";
     private static final List<String> LANGUAGES = List.of("cs", "en", "de");
-    private static final Map<String, String> TEXTS_KEPT_WITHOUT_A_READER = Map.of(
-            "problem.donations/unsupported-signature-vector.detail.",
-            "the reasons of the SVG signature parser, kept with the parser for the step that brings the vector to the one signature "
-                    + "(docs/api-contract.md, Vector signature); nothing answers them since API generation 5 removed the upload");
+    private static final Map<String, String> TEXTS_KEPT_WITHOUT_A_READER = Map.of();
 
     private static final List<Class<? extends Exception>> SPRING_ANSWERS_WITH_SITE_TEXTS = List.of(
             MethodArgumentNotValidException.class, NoResourceFoundException.class, NoHandlerFoundException.class,
