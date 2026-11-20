@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import jsQR from 'jsqr';
 import { expect, test } from './fixtures';
 import { waitWhileNothingMayHappen } from './fixed-waits';
@@ -185,6 +185,23 @@ async function heldPaymentDetails(page: Page): Promise<{ fail: () => void }> {
   return { fail };
 }
 
+async function edgeAgainstTokens(
+  button: Locator,
+): Promise<{ ground: string; surface: string; edge: string; border: string }> {
+  return button.evaluate((element) => {
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = 'var(--color-surface)';
+    probe.style.borderColor = 'var(--color-border)';
+    element.parentElement?.append(probe);
+    const probed = getComputedStyle(probe);
+    const surface = probed.backgroundColor;
+    const border = probed.borderTopColor;
+    probe.remove();
+    const style = getComputedStyle(element);
+    return { ground: style.backgroundColor, surface, edge: style.borderTopColor, border };
+  });
+}
+
 async function cardHeight(page: Page): Promise<number> {
   return (await page.locator('#prispet .bank').boundingBox())!.height;
 }
@@ -310,6 +327,32 @@ test.describe('Given a visitor on the Přispět page', () => {
     await expect(page.locator('#prispet .bank-row-amount .bank-value')).toHaveText('1 000\u00a0Kč');
     expect(Math.abs((await cardHeight(page)) - failedHeight)).toBeLessThanOrEqual(1);
   });
+
+  for (const look of [
+    { name: 'light', colorScheme: 'light', contrast: 'no-preference' },
+    { name: 'dark', colorScheme: 'dark', contrast: 'no-preference' },
+    { name: 'increased contrast', colorScheme: 'light', contrast: 'more' },
+  ] as const) {
+    test(`when the payment details fail in the ${look.name} look, then Zkusit znovu stands on the surface ground with the quiet outline`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: look.colorScheme, contrast: look.contrast });
+      await page.route(
+        (url) => url.pathname === PAYMENT_DETAILS_PATH,
+        (route) => route.fulfill({ status: 503, json: { title: 'Nedostupné' } }),
+      );
+      await page.goto('/prispet');
+      const retry = page.locator('#prispet').getByRole('button', { name: 'Zkusit znovu' });
+      await expect(retry).toBeVisible();
+
+      await expect
+        .poll(async () => {
+          const { ground, surface, edge, border } = await edgeAgainstTokens(retry);
+          return ground === surface && edge === border;
+        })
+        .toBe(true);
+    });
+  }
 
   test('when the payment details come slowly, then the card stands as its skeleton at the size of the finished card', async ({
     page,
