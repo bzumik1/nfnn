@@ -500,6 +500,21 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     expect(placed()).toBe(true);
   });
 
+  it('when the page is already tall enough, then the cover of the step back lifts at once, and so does the cover of the next step back', async () => {
+    pageHeight(3000);
+    await stepBack();
+    const first = placedYet();
+    await settledPromises();
+    expect(first()).toBe(true);
+
+    await untilScrolled(() => harness.navigateByUrl('/sprava'));
+    await stepBack();
+    const next = placedYet();
+    await settledPromises();
+
+    expect(next()).toBe(true);
+  });
+
   it('when the visitor moves before the page grows, then the cover of the step back waits no longer', async () => {
     await stepBack();
     const placed = placedYet();
