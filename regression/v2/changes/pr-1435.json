@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.persistence.JpaDonationReceiptRepositoryTest > Given a replaced and an active yearly receipt of a year, when asked whether a yearly receipt of that donor and year was issued since a time, then the replaced one counts too, and another year, donor or a later time does not",
+    "replacement": "donations.domain.pairing.UnpairingPolicyTest$LosingPairingSources > when a withdrawn yearly receipt of the gift's year was issued after the gift was recorded, then both are refused",
+    "reason": "Khononov DDD review #621 (S5, T5; #1432, #839): the receipt coverage of a symbol-claim reversal and an account removal is decided by the domain service UnpairingPolicy over the donor's receipts read in one query, so the per-donation query existsYearlyIssuedSince is gone with its repository test; the same rule (any yearly receipt of the year issued at or after the gift was recorded, whatever its status, another year or donor not) is proved by the policy's cases",
+    "contract": "docs/system-overview.md, donations (Administration, donor card); docs/api-contract.md, Symbol claims and Donor accounts"
+  }
+]

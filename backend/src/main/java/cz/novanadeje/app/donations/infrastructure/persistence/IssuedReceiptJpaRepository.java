@@ -25,10 +25,6 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     List<IssuedReceiptJpaEntity> findByDonationIdInAndStatus(Collection<UUID> donationIds, ReceiptStatus status);
 
-    boolean existsByDonationId(UUID donationId);
-
-    boolean existsByDonorIdAndKindAndReceiptYearAndIssuedAtGreaterThanEqual(UUID donorId, ReceiptKind kind, Integer receiptYear, Instant issuedAt);
-
     long countByDonorIdAndSupersedesIdIsNotNullAndIssuedAtAfter(UUID donorId, Instant issuedAt);
 
     long countByDonorIdAndSupersedesIdIsNotNullAndIssuedAtGreaterThanEqual(UUID donorId, Instant issuedAt);

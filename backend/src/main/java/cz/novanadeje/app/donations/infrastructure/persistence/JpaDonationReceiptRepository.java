@@ -93,16 +93,6 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
-    public boolean existsForDonation(DonationId donation) {
-        return jpa.existsByDonationId(donation.value());
-    }
-
-    @Override
-    public boolean existsYearlyIssuedSince(DonorReference donor, Year year, Instant since) {
-        return jpa.existsByDonorIdAndKindAndReceiptYearAndIssuedAtGreaterThanEqual(donor.value(), ReceiptKind.YEARLY, year.getValue(), since);
-    }
-
-    @Override
     public long countReplacementsIssuedAfter(DonorReference donor, Instant after) {
         return jpa.countByDonorIdAndSupersedesIdIsNotNullAndIssuedAtAfter(donor.value(), after);
     }

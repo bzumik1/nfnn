@@ -13,7 +13,6 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentNotFound;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentNotPaired;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.donation.Donation;
-import cz.novanadeje.app.donations.domain.donation.DonationHasReceipt;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
@@ -21,11 +20,10 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordNotFound;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
-import cz.novanadeje.app.donations.domain.donor.ErasedDonorUnpairingInBrowserOnly;
+import cz.novanadeje.app.donations.domain.pairing.UnpairingPolicy;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalInBrowserOnly;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
@@ -106,17 +104,9 @@ public class ManualPairingService {
         requireUnchanged(payment, expected);
         Donation donation = donations.findByBankPayment(paymentId).orElseThrow(() -> new BankPaymentNotPaired(paymentId));
         receipts.lockDonor(donation.donor());
-        if (channel.isConnectedApplication() && givenByErasedDonor(donation)) {
-            throw new ErasedDonorUnpairingInBrowserOnly(donation.donor());
-        }
-        if (receipts.existsForDonation(donation.id())) {
-            throw new DonationHasReceipt(donation.id());
-        }
-        Optional<DonationReceipt> withdrawn = receipts.findActiveForYear(donation.donor(), donation.receivedYear())
-                .filter(yearly -> yearly.lists(donation.id()));
-        if (withdrawn.isPresent() && channel.isConnectedApplication()) {
-            throw new ReceiptWithdrawalInBrowserOnly();
-        }
+        boolean erasedDonor = givenByErasedDonor(donation);
+        Optional<DonationReceipt> withdrawn = new UnpairingPolicy(donation.donor(), receipts.findByDonorNewestFirst(donation.donor()))
+                .decideUnpairing(donation, erasedDonor, channel.isConnectedApplication());
         withdrawn.ifPresent(yearly -> {
             yearly.withdrawBecauseDonationsChanged(now);
             receipts.save(yearly);

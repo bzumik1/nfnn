@@ -56,6 +56,7 @@ import java.util.UUID;
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.frozen;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.jana;
+import static cz.novanadeje.app.donations.domain.receipt.Receipts.singleDocument;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.yearlyDocument;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.yearlyReceiptOf;
 import static cz.novanadeje.app.shared.domain.Money.czk;
@@ -202,6 +203,7 @@ class ManualPairingServiceTest {
         InOrder order = inOrder(lock, receipts, donations, payments, events);
         order.verify(lock).acquire();
         order.verify(receipts).lockDonor(janaId);
+        order.verify(receipts).findByDonorNewestFirst(janaId);
         order.verify(donations).delete(paired.id());
         order.verify(payments).save(held.capture());
         order.verify(events).publishEvent(audited.capture());
@@ -219,7 +221,7 @@ class ManualPairingServiceTest {
     void should_withdraw_yearly_receipt_and_audit_when_unpaired_given_donation_listed_on_active_yearly_receipt() {
         DonationReceipt yearly = yearlyReceiptListing(paired);
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
-        when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearly));
+        when(receipts.findByDonorNewestFirst(janaId)).thenReturn(List.of(yearly));
 
         List<Year> changed = service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id(), ExpectedVersion.none());
 
@@ -228,6 +230,7 @@ class ManualPairingServiceTest {
         InOrder order = inOrder(lock, receipts, donations);
         order.verify(lock).acquire();
         order.verify(receipts).lockDonor(janaId);
+        order.verify(receipts).findByDonorNewestFirst(janaId);
         order.verify(receipts).save(saved.capture());
         order.verify(donations).delete(paired.id());
         verify(events, times(2)).publishEvent(audited.capture());
@@ -250,7 +253,7 @@ class ManualPairingServiceTest {
     void should_refuse_when_connected_application_unpairs_given_donation_listed_on_active_yearly_receipt() {
         DonationReceipt yearly = yearlyReceiptListing(paired);
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
-        when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearly));
+        when(receipts.findByDonorNewestFirst(janaId)).thenReturn(List.of(yearly));
 
         assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, unknownSymbol.id(), ExpectedVersion.none()))
                 .isInstanceOf(ReceiptWithdrawalInBrowserOnly.class);
@@ -295,7 +298,7 @@ class ManualPairingServiceTest {
     void should_unpair_when_connected_application_unpairs_given_active_yearly_receipt_not_listing_the_donation() {
         DonationReceipt yearly = yearlyReceiptOf(janaId, Year.of(2026));
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
-        when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearly));
+        when(receipts.findByDonorNewestFirst(janaId)).thenReturn(List.of(yearly));
 
         assertThat(service.unpair(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, unknownSymbol.id(), ExpectedVersion.none())).isEmpty();
 
@@ -307,7 +310,7 @@ class ManualPairingServiceTest {
     @DisplayName("Given a donor without an active yearly receipt of the year, when a connected application unpairs a donation, then it is unpaired as in the browser")
     void should_unpair_when_connected_application_unpairs_given_no_active_yearly_receipt() {
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
-        when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.empty());
+        when(receipts.findByDonorNewestFirst(janaId)).thenReturn(List.of());
 
         assertThat(service.unpair(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, unknownSymbol.id(), ExpectedVersion.none())).isEmpty();
 
@@ -320,7 +323,7 @@ class ManualPairingServiceTest {
     @DisplayName("Given the donor's active yearly receipt was issued before the donation was paired, when unpaired, then the receipt stays active, nothing is withdrawn and no year is reported")
     void should_keep_yearly_receipt_when_unpaired_given_active_yearly_receipt_without_the_donation() {
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
-        when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearlyReceiptOf(janaId, Year.of(2026))));
+        when(receipts.findByDonorNewestFirst(janaId)).thenReturn(List.of(yearlyReceiptOf(janaId, Year.of(2026))));
 
         List<Year> changed = service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id(), ExpectedVersion.none());
 
@@ -333,7 +336,7 @@ class ManualPairingServiceTest {
     @DisplayName("Given a donation with an issued single receipt, when unpaired, then the conflict is reported and nothing changes")
     void should_refuse_when_unpaired_given_donation_with_receipt() {
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
-        when(receipts.existsForDonation(paired.id())).thenReturn(true);
+        when(receipts.findByDonorNewestFirst(janaId)).thenReturn(List.of(singleReceiptFor(paired)));
 
         assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id(), ExpectedVersion.none())).isInstanceOf(DonationHasReceipt.class);
 
@@ -355,8 +358,7 @@ class ManualPairingServiceTest {
     void should_keep_yearly_receipt_when_unpair_refused_given_donation_with_single_receipt() {
         DonationReceipt yearly = yearlyReceiptListing(paired);
         when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
-        when(receipts.existsForDonation(paired.id())).thenReturn(true);
-        when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearly));
+        when(receipts.findByDonorNewestFirst(janaId)).thenReturn(List.of(yearly, singleReceiptFor(paired)));
 
         assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id(), ExpectedVersion.none())).isInstanceOf(DonationHasReceipt.class);
 
@@ -368,6 +370,11 @@ class ManualPairingServiceTest {
     @DisplayName("Given an unknown payment, when unpaired, then it is not found")
     void should_refuse_when_unpaired_given_unknown_payment() {
         assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.BROWSER, BankPaymentId.newId(NOW), ExpectedVersion.none())).isInstanceOf(BankPaymentNotFound.class);
+    }
+
+    private DonationReceipt singleReceiptFor(Donation donation) {
+        return DonationReceipt.issue(DonationReceiptId.newId(NOW), janaId, NOW, new ReceiptFingerprint("6".repeat(64)),
+                frozen(singleDocument(janaRecord, donation)), Optional.empty());
     }
 
     private DonationReceipt yearlyReceiptListing(Donation donation) {
