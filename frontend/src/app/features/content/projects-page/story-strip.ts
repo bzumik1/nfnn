@@ -47,11 +47,9 @@ export class StoryStrip {
         : items
             .reverse()
             .find((item) => item.getBoundingClientRect().left < frame.left - EDGE_TOLERANCE_PX);
-    next?.scrollIntoView({
-      behavior: this.view?.matchMedia(LESS_MOTION).matches ? 'instant' : 'smooth',
-      block: 'nearest',
-      inline: direction === 1 ? 'start' : 'end',
-    });
+    if (next) {
+      this.bring(next, direction === 1 ? 'start' : 'end', this.motion());
+    }
   }
 
   protected measure(): void {
@@ -62,14 +60,39 @@ export class StoryStrip {
   }
 
   protected reveal(event: FocusEvent): void {
-    const item = event.target instanceof Element ? event.target.closest('li') : null;
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target?.matches(':focus-visible')) {
+      return;
+    }
+    const item = target.closest('li');
     if (item?.parentElement !== this.strip) {
       return;
     }
     const frame = this.strip.getBoundingClientRect();
     const box = item.getBoundingClientRect();
     if (box.left < frame.left || box.right > frame.right) {
-      item.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'start' });
+      this.bring(item, 'start', 'instant');
     }
+  }
+
+  private bring(item: Element, edge: 'start' | 'end', behavior: ScrollBehavior): void {
+    const frame = this.strip.getBoundingClientRect();
+    const box = item.getBoundingClientRect();
+    const style = this.view?.getComputedStyle(this.strip);
+    const padding =
+      parseFloat(
+        edge === 'start'
+          ? (style?.scrollPaddingInlineStart ?? '')
+          : (style?.scrollPaddingInlineEnd ?? ''),
+      ) || 0;
+    const left =
+      edge === 'start'
+        ? this.strip.scrollLeft + box.left - frame.left - padding
+        : this.strip.scrollLeft + box.right - frame.right + padding;
+    this.strip.scrollTo({ left, behavior });
+  }
+
+  private motion(): ScrollBehavior {
+    return this.view?.matchMedia(LESS_MOTION).matches ? 'instant' : 'smooth';
   }
 }

@@ -111,12 +111,12 @@ test.describe('Given a visitor on the Pomáháme tab on a computer', () => {
       const strip = section.locator('ul.strip');
       const back = section.getByRole('button', { name: 'Předchozí příběhy' });
       const on = section.getByRole('button', { name: 'Další příběhy' });
-      await expect(back).toBeDisabled();
+      await expect(back).toHaveAttribute('aria-disabled', 'true');
 
       await on.click();
 
       await expect.poll(() => strip.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-      await expect(back).toBeEnabled();
+      await expect(back).not.toHaveAttribute('aria-disabled');
       await back.click();
       await expect.poll(() => strip.evaluate((element) => element.scrollLeft)).toBe(0);
       const axe = await new AxeBuilder({ page })
@@ -124,6 +124,46 @@ test.describe('Given a visitor on the Pomáháme tab on a computer', () => {
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
         .analyze();
       expect(axe.violations).toEqual([]);
+    });
+
+    test(`when the keyboard steps a strip to its end in a ${width} px window, then Další příběhy keeps the focus and only says it is unavailable`, async ({
+      page,
+    }) => {
+      await openStories(page, '/projekty?rok=vse', width);
+      const section = yearSection(page, 2023);
+      const on = section.getByRole('button', { name: 'Další příběhy' });
+      await on.focus();
+
+      await expect(async () => {
+        await page.keyboard.press('Enter');
+        await expect(on).toHaveAttribute('aria-disabled', 'true', { timeout: 1000 });
+      }).toPass();
+
+      await expect(on).toBeFocused();
+    });
+
+    test(`when a mouse clicks the visible part of a cut tile in a ${width} px window, then the tile stays under the pointer and its story opens`, async ({
+      page,
+    }) => {
+      await openStories(page, '/projekty?rok=vse', width);
+      const strip = yearSection(page, 2023).locator('ul.strip');
+      const frame = await boxOf(strip);
+      const links = strip.locator('.tile-link');
+      const cut = await links.evaluateAll(
+        (elements, { right, tolerance }) =>
+          elements.findIndex(
+            (element) => element.getBoundingClientRect().right > right + tolerance,
+          ),
+        { right: frame.right, tolerance: EDGE_TOLERANCE_PX },
+      );
+      expect(cut).toBeGreaterThan(-1);
+      const link = links.nth(cut);
+      const href = await link.getAttribute('href');
+      const box = await boxOf(link);
+
+      await page.mouse.click((box.left + frame.right) / 2, (box.top + box.bottom) / 2);
+
+      await expect(page).toHaveURL(new RegExp(`${href}$`));
     });
 
     test(`when the keyboard moves along a strip in a ${width} px window, then every focused tile shows whole`, async ({
