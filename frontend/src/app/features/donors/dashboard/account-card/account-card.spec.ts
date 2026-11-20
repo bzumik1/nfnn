@@ -33,6 +33,11 @@ function normalized(value: string | null | undefined): string {
   return (value ?? '').replace(/\s+/g, ' ').trim();
 }
 
+function expectLockedInPlace(button: HTMLButtonElement): void {
+  expect(button.disabled).toBe(false);
+  expect(button.getAttribute('aria-disabled')).toBe('true');
+}
+
 function labels(button: Element | null): string[] {
   return Array.from(button?.querySelectorAll('.busy-label__face') ?? []).map((face) =>
     (face.textContent ?? '').replace(/\s+/g, ' ').trim(),
@@ -288,6 +293,7 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.fillIn('#account-second-factor-password', 'correct horse battery');
 
       await card.submit();
+      expectLockedInPlace(card.element<HTMLButtonElement>('.account-save'));
       const request = http.expectOne({ method: 'POST', url: '/api/donors/me/second-factor/setup' });
       expect(request.request.body).toEqual({ password: 'correct horse battery' });
       request.flush(secondFactorEnrolment());
@@ -379,6 +385,7 @@ describe('Given the sign-in and security card of the details page', () => {
         await card.fillIn('#account-second-factor-code', '287082');
 
         await card.submit();
+        expectLockedInPlace(card.element<HTMLButtonElement>('.account-save'));
         const request = http.expectOne({
           method: 'POST',
           url: '/api/donors/me/second-factor/confirm',
@@ -538,6 +545,7 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.fillIn('#account-second-factor-off-code', '287082');
 
       await card.submit();
+      expectLockedInPlace(card.element<HTMLButtonElement>('.account-save'));
       const request = http.expectOne({
         method: 'POST',
         url: '/api/donors/me/second-factor/disable',
@@ -595,6 +603,7 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.fillIn('#account-email-password', 'correct horse battery');
 
       await card.submit();
+      expectLockedInPlace(card.element<HTMLButtonElement>('.account-save'));
       const request = http.expectOne({ method: 'POST', url: EMAIL_CHANGE_URL });
       expect(request.request.body).toEqual({
         newEmail: 'Jana.Nova@example.cz',
@@ -650,7 +659,7 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(card.element('.account-form .ui-field-error').textContent).toContain(
         'Nesprávné současné heslo. Zadejte prosím heslo, kterým se teď přihlašujete.',
       );
-      expect(card.element<HTMLButtonElement>('.account-save').disabled).toBe(false);
+      expect(card.element('.account-save').hasAttribute('aria-disabled')).toBe(false);
     });
 
     it('and cancels, then nothing is sent and the focus returns to the row action', async () => {
@@ -710,8 +719,8 @@ describe('Given the sign-in and security card of the details page', () => {
         'Poslat znovu potvrzovací odkaz',
         'Posíláme…',
       ]);
-      expect(card.element<HTMLButtonElement>('.account-resend').disabled).toBe(true);
-      expect(card.element<HTMLButtonElement>('.account-cancel-change').disabled).toBe(true);
+      expectLockedInPlace(card.element<HTMLButtonElement>('.account-resend'));
+      expectLockedInPlace(card.element<HTMLButtonElement>('.account-cancel-change'));
       const request = http.expectOne({ method: 'POST', url: `${EMAIL_CHANGE_URL}/resend` });
       request.flush(null, { status: 202, statusText: 'Accepted' });
       http
@@ -725,7 +734,41 @@ describe('Given the sign-in and security card of the details page', () => {
         'Nový potvrzovací odkaz je na cestě. Předchozí odkaz už neplatí.',
       );
       expect(card.element('.account-pending').textContent).toContain('19.\u00a010. 2026 13:00');
-      expect(card.element<HTMLButtonElement>('.account-resend').disabled).toBe(false);
+      expect(card.element('.account-resend').hasAttribute('aria-disabled')).toBe(false);
+    });
+
+    it('and the donor presses the focused Poslat znovu again while the link is on its way, then nothing more is sent and the focus stays on it', async () => {
+      const resend = card.element<HTMLButtonElement>('.account-resend');
+      resend.focus();
+      await card.click('.account-resend');
+
+      await card.click('.account-resend');
+
+      expect(document.activeElement).toBe(resend);
+      http
+        .expectOne({ method: 'POST', url: `${EMAIL_CHANGE_URL}/resend` })
+        .flush(null, { status: 202, statusText: 'Accepted' });
+      http
+        .expectOne({ method: 'GET', url: PROFILE_URL })
+        .flush(sampleDonor({ pendingEmailChange: PENDING }));
+      await card.settle();
+    });
+
+    it('and the donor presses Enter in the e-mail form while its link is on its way, then the form is not sent again', async () => {
+      await card.clickButton('Změnit e-mail');
+      await card.fillIn('#account-new-email', 'jana.nova@example.cz');
+      await card.fillIn('#account-email-password', 'correct horse battery');
+      await card.submit();
+
+      await card.submit();
+
+      http
+        .expectOne({ method: 'POST', url: EMAIL_CHANGE_URL })
+        .flush(null, { status: 202, statusText: 'Accepted' });
+      http
+        .expectOne({ method: 'GET', url: PROFILE_URL })
+        .flush(sampleDonor({ pendingEmailChange: PENDING }));
+      await card.settle();
     });
 
     it('and the password was changed before and sending the link again fails, then the status line does not say the earlier result again', async () => {
@@ -780,6 +823,7 @@ describe('Given the sign-in and security card of the details page', () => {
         'Zrušit změnu e-mailu',
         'Rušíme…',
       ]);
+      expectLockedInPlace(card.element<HTMLButtonElement>('.account-cancel-change'));
       const request = http.expectOne({ method: 'DELETE', url: EMAIL_CHANGE_URL });
       request.flush(null, { status: 204, statusText: 'No Content' });
       http.expectOne({ method: 'GET', url: PROFILE_URL }).flush(sampleDonor());
@@ -821,6 +865,7 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.fillIn('#account-remove-password', 'correct horse battery');
 
       await card.submit();
+      expectLockedInPlace(card.element<HTMLButtonElement>('.account-save'));
       const request = http.expectOne({ method: 'POST', url: '/api/donors/me/password/remove' });
       expect(request.request.body).toEqual({ password: 'correct horse battery' });
       request.flush(authResponse('token-2', sampleDonor({ hasPassword: false })));
@@ -893,6 +938,7 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.fillIn('#account-new-password-confirm', 'a brand new passphrase');
 
       await card.submit();
+      expectLockedInPlace(card.element<HTMLButtonElement>('.account-save'));
       const request = http.expectOne({ method: 'PUT', url: '/api/donors/me/password' });
       expect(request.request.body).toEqual({
         currentPassword: 'correct horse battery',

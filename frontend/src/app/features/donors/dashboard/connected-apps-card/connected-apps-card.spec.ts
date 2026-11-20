@@ -7,6 +7,11 @@ import { authResponse, problem, sampleDonor } from '../../../../core/auth/testin
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { ConnectedAppsCard } from './connected-apps-card';
 
+function expectLockedInPlace(button: HTMLButtonElement): void {
+  expect(button.disabled).toBe(false);
+  expect(button.getAttribute('aria-disabled')).toBe('true');
+}
+
 function announcers(element: Element): Element[] {
   return [element, ...Array.from(element.querySelectorAll('*'))].filter(
     (node) =>
@@ -137,6 +142,24 @@ describe("Given an administrator's connected applications card", () => {
     expect(status.textContent?.trim()).toMatch(/^Aplikace claude\.ai je odpojená/);
   });
 
+  it('when the administrator presses the focused Odpojit again while Claude is disconnected, then nothing more is sent and the focus stays on it', async () => {
+    http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
+    await settle();
+    const disconnect = element<HTMLButtonElement>('.connection-disconnect');
+    disconnect.focus();
+    disconnect.click();
+    await settle();
+
+    disconnect.click();
+    await settle();
+
+    expect(document.activeElement).toBe(disconnect);
+    http
+      .expectOne({ method: 'DELETE', url: `${CONNECTIONS_URL}/${CLAUDE_CONNECTION.id}` })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+  });
+
   it('when the administrator disconnects Claude, then the API is told, the row disappears and the status says so', async () => {
     http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
     await settle();
@@ -145,7 +168,7 @@ describe("Given an administrator's connected applications card", () => {
     await settle();
     expect(accessibleText(element('.connection-disconnect'))).toBe('Odpojit');
     expect(element('.connection-disconnect').getAttribute('aria-busy')).toBe('true');
-    expect(element<HTMLButtonElement>('.connection-disconnect').disabled).toBe(true);
+    expectLockedInPlace(element<HTMLButtonElement>('.connection-disconnect'));
     expect(labels(element('.connection-disconnect'))).toEqual(['Odpojit', 'Odpojujeme…']);
     http
       .expectOne({ method: 'DELETE', url: `${CONNECTIONS_URL}/${CLAUDE_CONNECTION.id}` })
