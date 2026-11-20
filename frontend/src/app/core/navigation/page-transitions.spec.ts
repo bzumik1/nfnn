@@ -323,7 +323,9 @@ describe('Given a phone that animates and an article opened from the news, which
   it('when the window has another width than when the news was kept, then the step back waits for the live news as before', async () => {
     const width = Object.getOwnPropertyDescriptor(window, 'innerWidth')!;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 420 });
-    onTestFinished(() => Object.defineProperty(window, 'innerWidth', width));
+    onTestFinished(() => {
+      Object.defineProperty(window, 'innerWidth', width);
+    });
     TestBed.inject(PagePlacement).pending();
 
     await stepsBack();
@@ -648,6 +650,20 @@ describe('Given the app on the home screen of a phone, where the news led to the
 
     expect(barItems('app-sheet-head')).toHaveLength(0);
     expect(overlay().classList).not.toContain(`${PAGE_TRANSITION_CLASS}--heads-held`);
+  });
+
+  it('when only the page being left is a sheet, then the title of its head is followed from the start of the step, so it fades by half the way as it rides with the page', async () => {
+    await openOverviewFromTheNews({ title: 'Aktuality' }, { title: 'Přehled', head: 'Přehled' });
+    const title = document.createElement('h2');
+    title.className = 'sheet-head-title';
+    title.textContent = 'Přehled';
+    layer.querySelector('app-sheet-head')!.replaceChildren(title);
+
+    swipeBack();
+
+    const riding = over().querySelector<HTMLElement>('.sheet-head-title');
+    expect(riding?.style.opacity).toBe('1');
+    expect(riding?.style.getPropertyValue('--page-title-travel')).toBe('');
   });
 
   function slidesWhenReleased(): () => void {

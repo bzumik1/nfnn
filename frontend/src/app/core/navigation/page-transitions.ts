@@ -76,6 +76,9 @@ export interface Running {
   readonly sheet: HTMLElement | null;
   revealed: boolean;
   stepped?: boolean;
+  ahead?: boolean;
+  arrived?: boolean;
+  still?: boolean;
 }
 
 export interface KeptPage {
@@ -84,6 +87,7 @@ export interface KeptPage {
   readonly ground: string;
   readonly width: number;
   readonly sheet?: HTMLElement | null;
+  readonly url?: string;
 }
 
 export interface PlacedPage {
@@ -108,6 +112,7 @@ interface FollowedTitle {
   readonly title: HTMLElement;
   readonly text: HTMLElement;
   readonly leaves: boolean;
+  readonly travels: boolean;
 }
 
 export type BarCurve = 'still' | 'out' | 'out-early' | 'in';
@@ -351,17 +356,21 @@ export class PageTransitions {
     const overlay = this.overlay(kind);
     const left = { ...this.shown(layer), sheet: kind === 'push' ? returningSheet : null };
     if (kind === 'push') {
-      this.keepBehind(this.backTarget.nextDepth() - 1, left);
+      this.keepBehind(this.backTarget.nextDepth() - 1, { ...left, url: this.router.url });
     }
     const placed = this.place(overlay, left, kind === 'push' ? 'under' : 'over');
     this.dressChrome(overlay, placed, null);
-    const sheet =
-      kind === 'pop' && this.restoredDepth !== null
-        ? (this.keptAt(this.restoredDepth, view)?.sheet ?? null)
-        : null;
-    this.running = { kind, overlay, swiping: false, sheet, revealed: false };
+    const behind =
+      kind === 'pop' && this.restoredDepth !== null ? this.keptAt(this.restoredDepth, view) : null;
+    const sheet = behind?.sheet ?? null;
+    const ahead = behind?.copy != null && behind.url === event.urlAfterRedirects;
+    const running: Running = { kind, overlay, swiping: false, sheet, revealed: false, ahead };
+    this.running = running;
     this.sheetUnder(sheet ?? left.sheet);
     this.finishing = view.setTimeout(() => this.finish(), PAGE_COVER_LONGEST_MS);
+    if (ahead) {
+      this.moveTo(running, view, behind);
+    }
   }
 
   private revealIfNoScrollFollows(): void {
@@ -392,8 +401,18 @@ export class PageTransitions {
       }
       void this.placement
         .placed(view, this.durationOf('--duration-page'))
-        .then(() => this.move(running, view));
+        .then(() => (running.ahead ? this.arrive(running) : this.move(running, view)));
     });
+  }
+
+  private arrive(running: Running): void {
+    if (this.running !== running) {
+      return;
+    }
+    running.arrived = true;
+    if (running.still) {
+      this.finish();
+    }
   }
 
   private move(running: Running, view: Window): void {
@@ -427,7 +446,11 @@ export class PageTransitions {
     view.getComputedStyle(page).getPropertyValue('animation-name');
     const motions = typeof page.getAnimations === 'function' ? page.getAnimations() : [];
     void Promise.allSettled(motions.map((motion) => motion.finished)).then(() => {
-      if (this.running === running) {
+      if (this.running !== running) {
+        return;
+      }
+      running.still = true;
+      if (!running.ahead || running.arrived) {
         this.finish();
       }
     });
@@ -577,6 +600,10 @@ export class PageTransitions {
     const held = leaving !== null && arriving !== null && out !== null && into !== null;
     overlay.classList.toggle(HEADS_HELD_CLASS, held);
     if (!held) {
+      if (arriving !== null) {
+        this.addTitle(titles, out?.querySelector<HTMLElement>(SHEET_TITLE), true, false);
+        this.addTitle(titles, into?.querySelector<HTMLElement>(SHEET_TITLE), false, false);
+      }
       return [];
     }
     const standing = this.standingCopy(bar, into, arriving.box);
@@ -598,8 +625,14 @@ export class PageTransitions {
     titles: FollowedTitle[],
     title: HTMLElement | null | undefined,
     leaves: boolean,
+    travels = true,
   ): void {
     if (title == null || !this.compact()) {
+      return;
+    }
+    if (!travels) {
+      title.classList.add(TITLE_CLASS);
+      titles.push({ title, text: title, leaves, travels });
       return;
     }
     let text = title.querySelector<HTMLElement>(EDGE_TITLE_TEXT);
@@ -610,7 +643,7 @@ export class PageTransitions {
     }
     title.classList.add(TITLE_CLASS);
     text.classList.add(TITLE_TEXT_CLASS);
-    titles.push({ title, text, leaves });
+    titles.push({ title, text, leaves, travels });
   }
 
   private followTitles(overlay: HTMLElement, titles: readonly FollowedTitle[]): void {
@@ -803,15 +836,17 @@ function stepProgress(overlay: HTMLElement, pushes: boolean, view: Window): numb
 }
 
 function showTitle(
-  { title, text, leaves }: FollowedTitle,
+  { title, text, leaves, travels }: FollowedTitle,
   progress: number,
   fadeAt: number,
   pushes: boolean,
 ): void {
   const opacity = leaves ? fadingOut(progress, fadeAt) : fadingIn(progress, fadeAt);
-  const travel = (pushes ? -1 : 1) * (leaves ? progress : progress - 1);
   title.style.opacity = String(opacity);
-  text.style.setProperty(TITLE_TRAVEL, String(travel));
+  if (travels) {
+    const travel = (pushes ? -1 : 1) * (leaves ? progress : progress - 1);
+    text.style.setProperty(TITLE_TRAVEL, String(travel));
+  }
 }
 
 function fadingOut(progress: number, fadeAt: number): number {
