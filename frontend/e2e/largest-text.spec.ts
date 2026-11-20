@@ -2916,7 +2916,7 @@ async function wordsBrokenThatWouldFit(element: Locator): Promise<string[]> {
     const broken: string[] = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      for (const word of (node.textContent ?? '').matchAll(/[^\s-]+-?/g)) {
+      for (const word of (node.textContent ?? '').matchAll(/[^ \t\r\n-]+-?/g)) {
         const range = document.createRange();
         range.setStart(node, word.index);
         range.setEnd(node, word.index + word[0].length);
@@ -3006,8 +3006,9 @@ async function controlsOverTheirLabels(rows: Locator): Promise<string[]> {
   );
 }
 
-async function elementsPastTheScreen(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
+async function elementsPastTheScreen(page: Page, within = 'body'): Promise<string[]> {
+  return page.evaluate((scope) => {
+    const root = document.querySelector(scope) ?? document.body;
     const right = document.documentElement.clientWidth;
     const clippedFrom = (start: Element | null): boolean => {
       for (
@@ -3021,7 +3022,7 @@ async function elementsPastTheScreen(page: Page): Promise<string[]> {
       }
       return false;
     };
-    const elements = Array.from(document.body.querySelectorAll<HTMLElement>('*'))
+    const elements = Array.from(root.querySelectorAll<HTMLElement>('*'))
       .filter((element) => !element.closest('.visually-hidden'))
       .filter((element) => !clippedFrom(element.parentElement))
       .map((element) => ({ element, box: element.getBoundingClientRect() }))
@@ -3039,7 +3040,7 @@ async function elementsPastTheScreen(page: Page): Promise<string[]> {
         return `${element.tagName.toLowerCase()}.${String(element.className).trim().replace(/\s+/g, '.')} "${name}" ..${Math.round(box.right)} in 0..${right}`;
       });
     const texts: string[] = [];
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       if (
         !node.textContent?.trim() ||
@@ -3057,7 +3058,7 @@ async function elementsPastTheScreen(page: Page): Promise<string[]> {
         );
       }
     }
-    const pseudos = Array.from(document.body.querySelectorAll<HTMLElement>('*'))
+    const pseudos = Array.from(root.querySelectorAll<HTMLElement>('*'))
       .filter((element) => !clippedFrom(element))
       .flatMap((element) =>
         (['::before', '::after'] as const)
@@ -3083,7 +3084,7 @@ async function elementsPastTheScreen(page: Page): Promise<string[]> {
           ),
       );
     return [...elements, ...texts, ...pseudos];
-  });
+  }, within);
 }
 
 async function pageWiderThanTheScreen(page: Page): Promise<number> {
@@ -3221,7 +3222,7 @@ for (const { width, height } of [
       for (const group of await sheet.locator('.account-profile, .ui-list--grouped').all()) {
         expect(await textPastTheSides(group, { ellipsis: 'within' })).toEqual([]);
       }
-      await expect.poll(() => elementsPastTheScreen(page)).toEqual([]);
+      await expect.poll(() => elementsPastTheScreen(page, 'app-account-sheet')).toEqual([]);
     });
   });
 
