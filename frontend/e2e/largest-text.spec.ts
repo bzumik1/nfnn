@@ -2904,8 +2904,21 @@ async function controlsOverTheirLabels(rows: Locator): Promise<string[]> {
 async function elementsPastTheScreen(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const right = document.documentElement.clientWidth;
+    const clippedFrom = (start: Element | null): boolean => {
+      for (
+        let ancestor = start;
+        ancestor && ancestor !== document.body;
+        ancestor = ancestor.parentElement
+      ) {
+        if (getComputedStyle(ancestor).overflowX !== 'visible') {
+          return true;
+        }
+      }
+      return false;
+    };
     const elements = Array.from(document.body.querySelectorAll<HTMLElement>('*'))
       .filter((element) => !element.closest('.visually-hidden'))
+      .filter((element) => !clippedFrom(element.parentElement))
       .map((element) => ({ element, box: element.getBoundingClientRect() }))
       .filter(({ box }) => box.width > 0 && box.right > right + 1)
       .filter(
@@ -2923,7 +2936,11 @@ async function elementsPastTheScreen(page: Page): Promise<string[]> {
     const texts: string[] = [];
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      if (!node.textContent?.trim() || node.parentElement?.closest('.visually-hidden')) {
+      if (
+        !node.textContent?.trim() ||
+        node.parentElement?.closest('.visually-hidden') ||
+        clippedFrom(node.parentElement)
+      ) {
         continue;
       }
       const range = document.createRange();
@@ -2935,8 +2952,9 @@ async function elementsPastTheScreen(page: Page): Promise<string[]> {
         );
       }
     }
-    const pseudos = Array.from(document.body.querySelectorAll<HTMLElement>('*')).flatMap(
-      (element) =>
+    const pseudos = Array.from(document.body.querySelectorAll<HTMLElement>('*'))
+      .filter((element) => !clippedFrom(element))
+      .flatMap((element) =>
         (['::before', '::after'] as const)
           .filter((pseudo) => {
             const style = getComputedStyle(element, pseudo);
@@ -2958,7 +2976,7 @@ async function elementsPastTheScreen(page: Page): Promise<string[]> {
             (pseudo) =>
               `${element.tagName.toLowerCase()}.${String(element.className).trim().replace(/\s+/g, '.')}${pseudo}`,
           ),
-    );
+      );
     return [...elements, ...texts, ...pseudos];
   });
 }
