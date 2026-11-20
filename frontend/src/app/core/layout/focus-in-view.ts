@@ -1,7 +1,4 @@
-const SCROLLING = new Set(['auto', 'scroll']);
-const SECTIONING = 'main, article, section, aside, nav, dialog';
-
-interface Band {
+export interface ViewBand {
   readonly top: number;
   readonly bottom: number;
 }
@@ -17,67 +14,63 @@ export function focusInView(target: HTMLElement, options: FocusOptions = {}): bo
   return true;
 }
 
-export function liesInView(target: HTMLElement): boolean {
-  const view = target.ownerDocument.defaultView;
-  if (view === null) {
-    return true;
-  }
-  let band: Band = underPageChrome(target, view)
-    ? paddedBy(view, target.ownerDocument.documentElement, { top: 0, bottom: view.innerHeight })
-    : { top: 0, bottom: view.innerHeight };
-  let scroller = scrollerAround(target, view);
-  while (scroller !== null) {
-    band = narrowed(band, paddedBy(view, scroller, scroller.getBoundingClientRect()));
-    scroller = scrollerAround(scroller, view);
-  }
+export function liesInView(target: Element): boolean {
+  const band = viewBand(target);
   const box = target.getBoundingClientRect();
   return box.bottom > band.top && box.top < band.bottom;
 }
 
-function underPageChrome(target: HTMLElement, view: Window): boolean {
-  return target.closest('dialog') === null && !inPageBanner(target) && !inFixedLayer(target, view);
-}
-
-function inPageBanner(target: HTMLElement): boolean {
-  const header = target.closest('header');
-  return header !== null && header.parentElement?.closest(SECTIONING) == null;
-}
-
-function inFixedLayer(target: HTMLElement, view: Window): boolean {
-  for (let element: HTMLElement | null = target; element; element = element.parentElement) {
-    const position = view.getComputedStyle(element).position;
-    if (position === 'fixed' || position === 'sticky') {
-      return true;
-    }
+export function viewBand(target: Element): ViewBand {
+  const view = target.ownerDocument.defaultView;
+  if (view === null) {
+    return { top: Number.NEGATIVE_INFINITY, bottom: Number.POSITIVE_INFINITY };
   }
-  return false;
-}
-
-function scrollerAround(element: HTMLElement, view: Window): HTMLElement | null {
-  const { body, documentElement } = element.ownerDocument;
-  let parent = element.parentElement;
-  while (parent !== null && parent !== documentElement) {
-    if (parent !== body && SCROLLING.has(view.getComputedStyle(parent).overflowY)) {
-      return parent;
-    }
-    parent = parent.parentElement;
-  }
-  return null;
-}
-
-function paddedBy(view: Window, scroller: HTMLElement, edges: Band): Band {
-  const style = view.getComputedStyle(scroller);
-  return {
-    top: edges.top + pixels(style.scrollPaddingTop),
-    bottom: edges.bottom - pixels(style.scrollPaddingBottom),
+  const { body, documentElement } = target.ownerDocument;
+  const pixels = (value: string): number => {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
   };
-}
-
-function narrowed(outer: Band, inner: Band): Band {
-  return { top: Math.max(outer.top, inner.top), bottom: Math.min(outer.bottom, inner.bottom) };
-}
-
-function pixels(value: string): number {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+  const paddedBy = (scroller: Element, edges: ViewBand): ViewBand => {
+    const style = view.getComputedStyle(scroller);
+    return {
+      top: edges.top + pixels(style.scrollPaddingTop),
+      bottom: edges.bottom - pixels(style.scrollPaddingBottom),
+    };
+  };
+  const scrollerAround = (element: Element): Element | null => {
+    for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
+      if (parent === documentElement) {
+        return null;
+      }
+      const overflow = view.getComputedStyle(parent).overflowY;
+      if (parent !== body && (overflow === 'auto' || overflow === 'scroll')) {
+        return parent;
+      }
+    }
+    return null;
+  };
+  const inPageBanner = (): boolean => {
+    const header = target.closest('header');
+    return (
+      header !== null &&
+      header.parentElement?.closest('main, article, section, aside, nav, dialog') == null
+    );
+  };
+  const inFixedLayer = (): boolean => {
+    for (let element: Element | null = target; element; element = element.parentElement) {
+      const position = view.getComputedStyle(element).position;
+      if (position === 'fixed' || position === 'sticky') {
+        return true;
+      }
+    }
+    return false;
+  };
+  const whole: ViewBand = { top: 0, bottom: view.innerHeight };
+  const underPageChrome = target.closest('dialog') === null && !inPageBanner() && !inFixedLayer();
+  let band = underPageChrome ? paddedBy(documentElement, whole) : whole;
+  for (let scroller = scrollerAround(target); scroller; scroller = scrollerAround(scroller)) {
+    const inner = paddedBy(scroller, scroller.getBoundingClientRect());
+    band = { top: Math.max(band.top, inner.top), bottom: Math.min(band.bottom, inner.bottom) };
+  }
+  return band;
 }

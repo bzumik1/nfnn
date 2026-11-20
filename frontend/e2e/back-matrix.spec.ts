@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { viewBand, type ViewBand } from '../src/app/core/layout/focus-in-view';
 import { stepBack } from './app-history';
 import {
   administrationCopyGift,
@@ -880,39 +881,21 @@ interface Placement {
   readonly atAnEdge: boolean;
 }
 
-function placementOf(target: Locator): Promise<Placement> {
-  return target.evaluate(placementInView);
+async function placementOf(target: Locator): Promise<Placement> {
+  const band = await target.evaluate(viewBand);
+  return target.evaluate(placementWithin, band);
 }
 
-function placementInView(element: Element): Placement {
-  const pixels = (value: string): number => Number.parseFloat(value) || 0;
-  let top = 0;
-  let bottom = window.innerHeight;
-  const narrow = (from: number, to: number): void => {
-    top = Math.max(top, from);
-    bottom = Math.min(bottom, to);
-  };
-  const header = element.closest('header');
-  const inBanner =
-    header !== null &&
-    header.parentElement?.closest('main, article, section, aside, nav, dialog') == null;
+function placementWithin(element: Element, band: ViewBand): Placement {
   let scroller: Element | null = null;
-  if (element.closest('dialog') === null && !inBanner) {
-    const root = getComputedStyle(document.documentElement);
-    narrow(pixels(root.scrollPaddingTop), window.innerHeight - pixels(root.scrollPaddingBottom));
-  }
   for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
     if (parent === document.body || parent === document.documentElement) {
       continue;
     }
-    const style = getComputedStyle(parent);
-    if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-      scroller ??= parent;
-      const edges = parent.getBoundingClientRect();
-      narrow(
-        edges.top + pixels(style.scrollPaddingTop),
-        edges.bottom - pixels(style.scrollPaddingBottom),
-      );
+    const overflow = getComputedStyle(parent).overflowY;
+    if (overflow === 'auto' || overflow === 'scroll') {
+      scroller = parent;
+      break;
     }
   }
   const box = element.getBoundingClientRect();
@@ -921,8 +904,9 @@ function placementInView(element: Element): Placement {
     scrolling.scrollTop <= 0 ||
     scrolling.scrollTop >= scrolling.scrollHeight - scrolling.clientHeight - 1;
   return {
-    shown: box.bottom > top && box.top < bottom,
-    atAnEdge: atAnEnd || Math.abs(box.top - top) <= 1 || Math.abs(box.bottom - bottom) <= 1,
+    shown: box.bottom > band.top && box.top < band.bottom,
+    atAnEdge:
+      atAnEnd || Math.abs(box.top - band.top) <= 1 || Math.abs(box.bottom - band.bottom) <= 1,
   };
 }
 

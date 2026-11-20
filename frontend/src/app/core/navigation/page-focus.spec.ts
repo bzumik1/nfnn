@@ -1,7 +1,14 @@
 import { Location } from '@angular/common';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { NavigationEnd, provideRouter, Router } from '@angular/router';
+import {
+  type Event as RouterEvent,
+  NavigationEnd,
+  provideRouter,
+  Router,
+  Scroll,
+} from '@angular/router';
+import { Subject } from 'rxjs';
 import { InputModality } from '../input/input-modality';
 import { PageFocus, RETURNING_FOCUS_LONGEST_MS } from './page-focus';
 import { PagePlacement } from './page-placement';
@@ -11,15 +18,19 @@ class Blank {}
 
 const CARD = '/sprava/darci/d1';
 
-function navigated(router: Router): Promise<void> {
+function navigated(router: Router): Promise<NavigationEnd> {
   return new Promise((resolve) => {
     const events = router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
         events.unsubscribe();
-        resolve();
+        resolve(event);
       }
     });
   });
+}
+
+function routerScrollsAfter(router: Router, arrived: NavigationEnd): void {
+  (router.events as Subject<RouterEvent>).next(new Scroll(arrived, [0, 0], null));
 }
 
 describe('Given a list of the administration that a step back returns to from the card it opened', () => {
@@ -56,8 +67,14 @@ describe('Given a list of the administration that a step back returns to from th
     return element;
   }
 
-  async function openTheCard(from?: HTMLElement): Promise<void> {
-    from?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  function from(opener: HTMLElement): void {
+    opener.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  }
+
+  async function openTheCard(opener?: HTMLElement): Promise<void> {
+    if (opener !== undefined) {
+      from(opener);
+    }
     await router.navigateByUrl(CARD);
   }
 
@@ -138,6 +155,28 @@ describe('Given a list of the administration that a step back returns to from th
     await Promise.resolve();
     expect(document.activeElement).toBe(heading);
     placed();
+    await Promise.resolve();
+
+    expect(document.activeElement).toBe(link);
+  });
+
+  it('when the router puts the page back a moment after the step back, then the row takes the focus only after that, so the router never scrolls it away again', async () => {
+    const link = row({ href: CARD });
+    scope.append(link);
+    from(link);
+    const opened = navigated(router);
+    await router.navigateByUrl(CARD);
+    routerScrollsAfter(router, await opened);
+    const returned = navigated(router);
+    TestBed.inject(Location).back();
+    const arrived = await returned;
+    heading.focus();
+
+    focus.returnAfterStepBack(scope);
+    await Promise.resolve();
+    expect(document.activeElement).toBe(heading);
+    routerScrollsAfter(router, arrived);
+    await Promise.resolve();
     await Promise.resolve();
 
     expect(document.activeElement).toBe(link);
