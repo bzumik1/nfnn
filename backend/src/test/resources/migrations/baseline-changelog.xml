@@ -17,6 +17,9 @@
     <include file="db/changelog/content/011_add_a_line_under_the_board.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/content/012_sign_news_by_a_person.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/content/013_keep_a_focal_point_on_photos.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/content/014_look_back_on_a_year_in_news.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/content/015_show_a_photo_in_the_donate_band.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/content/016_keep_former_slugs_apart_by_kind.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donors/001_create_donor.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donors/002_create_donor_refresh_token.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donors/003_create_donor_password_reset_token.xml" relativeToChangelogFile="false"/>
@@ -35,6 +38,11 @@
     <include file="db/changelog/donors/016_remember_administrator_sign_ins.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donors/017_remember_refresh_token_successor.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donors/018_add_donor_devices.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/019_name_session_kinds.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/020_count_wrong_second_factor_codes.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/021_drop_refresh_token_donor_index.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/022_add_device_status.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donors/023_clear_pending_second_factor_steps.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donations/001_create_donor_record.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donations/002_create_bank_payment.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donations/003_create_donation.xml" relativeToChangelogFile="false"/>
@@ -61,6 +69,14 @@
     <include file="db/changelog/donations/024_switch_receipts_to_the_browser.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donations/025_choose_receipt_signatory_among_people.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/donations/026_withdraw_receipts_when_donations_change.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/027_summarise_issued_receipts.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/028_enforce_donation_and_receipt_invariants.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/029_keep_czech_bank_codes.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/030_keep_monthly_report_deliveries.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/031_show_bank_logos.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/032_keep_account_balance.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/033_announce_yearly_receipts.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/donations/034_keep_receipt_image_media_types_closed.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/contact/001_create_contact_message.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/operations/001_track_backup_alerts.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/operations/002_store_settings.xml" relativeToChangelogFile="false"/>
@@ -69,8 +85,15 @@
     <include file="db/changelog/operations/005_confirm_backup_key.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/operations/006_carry_settings_key.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/operations/007_send_push_alerts.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/operations/008_track_operational_alerts.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/operations/009_subscribe_donors_to_push.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/shared/001_create_admin_action.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/shared/002_add_admin_action_client.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/shared/003_index_admin_action_action.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/shared/004_index_admin_action_performed_at_id.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/shared/005_count_report_recipients_in_admin_action.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/shared/007_keep_admin_action_append_only.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/shared/008_drop_unused_admin_action_indexes.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/shared/009_add_admin_action_facts.xml" relativeToChangelogFile="false"/>
 
 </databaseChangeLog>

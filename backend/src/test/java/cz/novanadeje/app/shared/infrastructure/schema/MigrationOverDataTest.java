@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MigrationOverDataTest {
 
-    static final String BASELINE_REVISION = "d953749";
+    static final String BASELINE_REVISION = "2b79cb3";
     static final List<ReviewedRowLoss> REVIEWED_ROW_LOSSES = List.of();
 
     @Test
