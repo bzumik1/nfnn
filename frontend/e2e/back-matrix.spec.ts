@@ -778,8 +778,18 @@ async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): P
   );
 }
 
-async function activeHref(page: Page): Promise<string | null> {
-  return page.evaluate(() => document.activeElement?.getAttribute('href') ?? null);
+async function focusedLink(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const focused = document.activeElement;
+    if (focused === null) {
+      return 'nothing';
+    }
+    const named = (focused.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 40);
+    return (
+      focused.getAttribute('href') ??
+      `${focused.tagName.toLowerCase()}${focused.id === '' ? '' : `#${focused.id}`} "${named}"`
+    );
+  });
 }
 
 async function walkRow(
@@ -814,7 +824,9 @@ async function walkRow(
   }
   await screens.returned(row);
   await expect.poll(() => screens.scrollTop(), { message: 'the scroll was not kept' }).toBe(top);
-  await expect.poll(() => activeHref(page), { message: 'the focus did not return' }).toBe(row.href);
+  await expect
+    .poll(() => focusedLink(page), { message: 'the focus did not return' })
+    .toBe(row.href);
   if (groundBefore !== null) {
     expectSameColour(await bandColour(page), groundBefore, 'after the step back');
   }
@@ -832,12 +844,24 @@ async function accountListShown(page: Page): Promise<void> {
   await expect(accountSheet(page).getByRole('heading', { level: 2, name: 'Účet' })).toBeVisible();
 }
 
+async function sheetStands(page: Page): Promise<void> {
+  await accountSheet(page).evaluate((dialog) =>
+    Promise.all(
+      dialog
+        .getAnimations({ subtree: true })
+        .filter((motion) => motion.effect?.getComputedTiming().endTime !== Infinity)
+        .map((motion) => motion.finished),
+    ).then(() => undefined),
+  );
+}
+
 async function openAccountSheetOverTheNews(page: Page): Promise<void> {
   await page.goto('/aktuality');
   await expect(page.getByRole('heading', { name: 'Zpráva 8' })).toBeVisible();
   await page.getByRole('banner').getByRole('button', { name: 'Účet' }).dispatchEvent('click');
   await accountListShown(page);
   await expect(page.locator('.page-transition')).toHaveCount(0);
+  await sheetStands(page);
 }
 
 async function accountRows(page: Page): Promise<Row[]> {
@@ -915,12 +939,13 @@ function administrationScreensOf(page: Page): Screens {
     ...pageScroll(page),
     shown: async (row) => {
       await expect(page).toHaveURL((url) => url.pathname === row.href);
-      await expect(page.locator('.admin-page h1')).toBeVisible();
       await expect(page.locator('.page-transition')).toHaveCount(0);
+      await expect(page.locator('.admin-page h1')).toBeVisible();
     },
     backButton: () => page.getByRole('banner').getByRole('button', { name: 'Zpět' }),
     returned: async (row) => {
       await expect(page).toHaveURL((url) => url.pathname === row.from);
+      await expect(page.locator('.page-transition')).toHaveCount(0);
       await expect(page.locator('.admin-page h1')).toBeVisible();
     },
   };
@@ -1084,6 +1109,7 @@ for (const look of LOOKS) {
       await account.focus();
       await page.keyboard.press('Enter');
       await accountListShown(page);
+      await sheetStands(page);
       await page.evaluate(() => {
         const watched = window as unknown as { nfnnSheetTops: number[]; nfnnSheetWentDown: number };
         const seen: number[] = [];
