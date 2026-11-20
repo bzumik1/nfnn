@@ -66,11 +66,7 @@
           <h2 id="founders-title" class="visually-hidden" i18n="@@home.about.note.title">
             Slovo zakladatelů
           </h2>
-          <svg class="quote-mark" viewBox="0 0 48 36" aria-hidden="true">
-            <path
-              d="M0 36V20C0 8 7 1 19 0l2 5C13 7 10 12 10 18h9v18zm27 0V20C27 8 34 1 46 0l2 5c-8 2-11 7-11 13h9v18z"
-            />
-          </svg>
+          <app-quote-mark class="quote-mark" />
           <blockquote class="quote-text">
             @for (paragraph of paragraphs(note.text); track $index) {
               <p>{{ paragraph }}</p>

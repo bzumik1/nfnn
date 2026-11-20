@@ -9,6 +9,7 @@ $lead-width: 34rem;
 
 :host {
   display: block;
+  container: donate-band / inline-size;
   padding: var(--space-16) 0;
 }
 
@@ -113,11 +114,7 @@ $lead-width: 34rem;
   }
 }
 
-@include bp.down(tablet) {
-  :host {
-    padding: var(--space-10) 0;
-  }
-
+@include bp.container-down(donate-band, laptop) {
   .band {
     grid-template-areas:
       'photo'
@@ -129,7 +126,8 @@ $lead-width: 34rem;
     position: relative;
     inset: auto;
     grid-area: photo;
-    aspect-ratio: 3 / 2;
+    width: auto;
+    aspect-ratio: 2 / 1;
 
     &::after {
       content: '';
@@ -153,6 +151,16 @@ $lead-width: 34rem;
     grid-area: text;
     padding: var(--space-2) var(--space-6) var(--space-7);
     background: var(--color-surface-inverse);
+  }
+}
+
+@include bp.down(tablet) {
+  :host {
+    padding: var(--space-10) 0;
+  }
+
+  .band-photo {
+    aspect-ratio: 3 / 2;
   }
 
   .band-lead {

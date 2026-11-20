@@ -3,10 +3,11 @@ import { RouterLink } from '@angular/router';
 import { DONATE_SECTION } from '../../../../../core/auth/confirmation-return';
 import { LoginDialogService } from '../../../../../core/auth/login-dialog.service';
 import { PaymentPanel } from '../../../../donations/payment-panel/payment-panel';
+import { QuoteMark } from '../../../../../shared/ui/quote-mark/quote-mark';
 
 @Component({
   selector: 'app-donate-cta',
-  imports: [PaymentPanel, RouterLink],
+  imports: [PaymentPanel, QuoteMark, RouterLink],
   templateUrl: './donate-cta.html',
   styleUrl: './donate-cta.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
