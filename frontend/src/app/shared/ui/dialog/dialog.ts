@@ -170,7 +170,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
       dialog.close();
     }
     if (this.opener instanceof HTMLElement && this.opener.isConnected) {
-      this.opener.focus();
+      this.opener.focus({ preventScroll: true });
     } else {
       this.document.querySelector<HTMLElement>('main#obsah')?.focus({ preventScroll: true });
     }

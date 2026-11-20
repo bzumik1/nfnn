@@ -26,13 +26,13 @@ export class PageFocus {
       this.focusQuietly(this.document.getElementById(fragment));
       return;
     }
-    if (main.contains(this.document.activeElement)) {
-      return;
-    }
     const link = this.linkToPageLeft(main);
     if (link !== null) {
       this.focusQuietly(link);
       link.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+      return;
+    }
+    if (main.contains(this.document.activeElement)) {
       return;
     }
     this.focusQuietly(main.querySelector<HTMLElement>('h1') ?? main);
