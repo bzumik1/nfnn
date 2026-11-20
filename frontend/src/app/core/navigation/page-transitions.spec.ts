@@ -1,4 +1,4 @@
-import { ApplicationRef, Component, signal } from '@angular/core';
+import { ApplicationRef, Component, signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   GuardsCheckEnd,
@@ -1269,6 +1269,28 @@ describe('Given the app on the home screen of a phone opened straight on the don
 describe('Given the app on a phone with a sheet open at its list', () => {
   let sheet: HTMLDialogElement;
   let transitions: PageTransitions;
+  let compact: WritableSignal<boolean>;
+
+  function headOf(title: string): HTMLElement {
+    const head = document.createElement('app-sheet-head');
+    const back = document.createElement('button');
+    back.className = 'sheet-head-button sheet-head-back';
+    const name = document.createElement('h2');
+    name.className = 'sheet-head-title';
+    name.textContent = title;
+    const close = document.createElement('button');
+    close.className = 'sheet-head-button sheet-head-close';
+    head.append(back, name, close);
+    return head;
+  }
+
+  function headTitles(): HTMLElement[] {
+    return Array.from(
+      document.querySelectorAll<HTMLElement>(
+        `.${PAGE_TRANSITION_CLASS}__bar .${PAGE_TRANSITION_CLASS}__title`,
+      ),
+    );
+  }
 
   function overlayPage(position: 'over' | 'under'): HTMLElement | null {
     return document.querySelector<HTMLElement>(
@@ -1285,10 +1307,11 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     sheet.setAttribute('open', '');
     sheet.textContent = 'Účet';
     document.body.append(sheet);
+    compact = signal(true);
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
-        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
       ],
     });
     transitions = TestBed.inject(PageTransitions);
@@ -1312,5 +1335,40 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     expect(overlayPage('under')?.textContent).toContain('Účet');
     expect(overlayPage('over')?.textContent).toContain('Moje dary');
     expect(overlayPage('over')?.textContent).not.toContain('Účet');
+  });
+
+  it('when a section opens inside the sheet under a head that stands, then only the title it leaves shows as the step starts', () => {
+    sheet.replaceChildren(headOf('Účet'));
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      change: () => sheet.replaceChildren(headOf('Moje dary')),
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(headTitles().map((title) => [title.textContent?.trim(), title.style.opacity])).toEqual(
+      expect.arrayContaining([
+        ['Účet', '1'],
+        ['Moje dary', '0'],
+      ]),
+    );
+    expect(headTitles()).toHaveLength(2);
+  });
+
+  it('when the window grows past the side navigation while a step moves, then the step ends at once', () => {
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      change: () => (sheet.textContent = 'Moje dary'),
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+
+    compact.set(false);
+    TestBed.tick();
+
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    expect(transitions.running).toBeNull();
   });
 });

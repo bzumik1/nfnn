@@ -26,6 +26,8 @@ const FIRST_SHOWN_AT_MOST = 0.25;
 const BUSY_AS_ON_THE_PHONE_MS = 140;
 const SHOWN_AFTER_THE_BUSY_FRAME_AT_MOST = 0.2;
 const MOVES_AFTER_THE_TAP_WITHIN_MS = 150;
+const HIDDEN_TITLE_AT_MOST = 0.1;
+const HALF_WAY_X = EDGE + WIDTH / 2;
 
 type Way = 'back-button' | 'swipe-completed' | 'swipe-cancelled';
 type Look = 'light' | 'dark';
@@ -50,6 +52,14 @@ interface Frame {
   readonly offset: number | null;
   readonly tinted: boolean;
   readonly rounded: number;
+  readonly titles: string[];
+}
+
+interface HeadTitle {
+  readonly text: string;
+  readonly opacity: number;
+  readonly left: number;
+  readonly right: number;
 }
 
 interface StepProbe {
@@ -65,6 +75,7 @@ interface StepProbe {
 declare global {
   interface Window {
     nfnnStepProbe?: StepProbe;
+    nfnnHeadTitles?: () => HeadTitle[];
   }
 }
 
@@ -163,6 +174,7 @@ function detailScreens(): string[] {
 
 async function onThePhone(page: Page, look: Look): Promise<void> {
   await page.emulateMedia({ colorScheme: look, reducedMotion: 'no-preference' });
+  await seeHeadTitles(page);
   await page.addInitScript((gap) => {
     Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
     Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
@@ -222,6 +234,41 @@ async function onThePhone(page: Page, look: Look): Promise<void> {
     (url) => url.pathname === `/api/admin/donors/${DONOR_ID}`,
     (route) => route.fulfill({ json: donorRow }),
   );
+}
+
+async function seeHeadTitles(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    window.nfnnHeadTitles = () => {
+      const overlay = document.querySelector('.page-transition');
+      if (overlay === null) {
+        return [];
+      }
+      return Array.from(
+        overlay.querySelectorAll<HTMLElement>('.sheet-head-title, .edge-title'),
+        (title) => {
+          const box = title.getBoundingClientRect();
+          const text = (title.textContent ?? '').replace(/\s+/g, ' ').trim();
+          const shown =
+            text !== '' &&
+            getComputedStyle(title).visibility !== 'hidden' &&
+            box.width > 0 &&
+            box.right > 0 &&
+            box.left < innerWidth &&
+            box.bottom > 0 &&
+            box.top < innerHeight;
+          let opacity = shown ? 1 : 0;
+          for (
+            let node: Element | null = title;
+            node !== null && node !== overlay.parentElement;
+            node = node.parentElement
+          ) {
+            opacity *= Number(getComputedStyle(node).opacity);
+          }
+          return { text, opacity, left: box.left, right: box.right };
+        },
+      ).filter((title) => title.opacity > 0);
+    };
+  });
 }
 
 async function touchAt(page: Page, type: string, x: number): Promise<void> {
@@ -289,7 +336,7 @@ function measuresFrames(page: Page): boolean {
 
 async function watchTheStep(page: Page): Promise<void> {
   await page.evaluate(
-    (busyMs) => {
+    ({ busyMs, hiddenAtMost }) => {
       const curves: Record<string, readonly number[]> = {
         linear: [0, 0, 1, 1],
         ease: [0.25, 0.1, 0.25, 1],
@@ -389,6 +436,12 @@ async function watchTheStep(page: Page): Promise<void> {
           tinted:
             layerStyle !== null && (filter === undefined || filter === '' || filter === 'none'),
           rounded: Math.max(0, ...corners),
+          titles: (window.nfnnHeadTitles?.() ?? [])
+            .filter((title) => title.opacity > hiddenAtMost)
+            .map(
+              (title) =>
+                `${title.text} ${title.opacity.toFixed(2)} ${Math.round(title.left)}..${Math.round(title.right)}`,
+            ),
         });
         if (under !== null && probe.under === null) {
           probe.under = (under.textContent ?? '').replace(/\s+/g, ' ');
@@ -406,7 +459,10 @@ async function watchTheStep(page: Page): Promise<void> {
       };
       requestAnimationFrame(look);
     },
-    measuresFrames(page) ? BUSY_AS_ON_THE_PHONE_MS : 0,
+    {
+      busyMs: measuresFrames(page) ? BUSY_AS_ON_THE_PHONE_MS : 0,
+      hiddenAtMost: HIDDEN_TITLE_AT_MOST,
+    },
   );
 }
 
@@ -457,6 +513,25 @@ function expectNoJump(probe: StepProbe, frames: readonly Frame[], width: number)
   }
 }
 
+function expectOneTitleAtATime(probe: StepProbe): void {
+  expect(
+    probe.frames
+      .filter((frame) => frame.titles.length > 1)
+      .map((frame) => frame.titles.join(' | ')),
+    'frames in which two titles of the head showed at once',
+  ).toEqual([]);
+}
+
+async function expectATitleHiddenHalfWay(page: Page): Promise<void> {
+  const titles = await page.evaluate(() => window.nfnnHeadTitles?.() ?? []);
+  if (titles.length > 0) {
+    expect(
+      Math.min(...titles.map((title) => title.opacity)),
+      `no title of the head was hidden half way: ${titles.map((title) => title.text).join(' | ')}`,
+    ).toBeLessThanOrEqual(HIDDEN_TITLE_AT_MOST);
+  }
+}
+
 function shownAfterTheBusyFrame(probe: StepProbe, moving: readonly Frame[]): Frame | null {
   const busyFrameAt = probe.busyFrameAt;
   if (busyFrameAt === null) {
@@ -500,6 +575,7 @@ function expectLeftAway(probe: StepProbe, width: number, from: number): void {
     );
   }
   expectNoJump(probe, moving, width);
+  expectOneTitleAtATime(probe);
 }
 
 function expectArrived(probe: StepProbe, width: number): void {
@@ -520,6 +596,7 @@ function expectArrived(probe: StepProbe, width: number): void {
     );
   }
   expectNoJump(probe, moving, width);
+  expectOneTitleAtATime(probe);
 }
 
 function expectSlidBack(probe: StepProbe, width: number, from: number): void {
@@ -533,6 +610,7 @@ function expectSlidBack(probe: StepProbe, width: number, from: number): void {
     );
   }
   expectNoJump(probe, moving, width);
+  expectOneTitleAtATime(probe);
 }
 
 interface Colour {
@@ -604,7 +682,7 @@ async function swipeBack(
   completes: boolean,
   ground: Colour | null,
 ): Promise<Swiped> {
-  const ways = completes ? [60, 120, 180, 240, 290] : [40, 70, 100, 120];
+  const ways = completes ? [60, 120, 180, HALF_WAY_X, 250, 290] : [40, 70, 100, 120];
   await touchAt(page, 'touchstart', EDGE);
   for (const x of ways.slice(0, 2)) {
     await touchAt(page, 'touchmove', x);
@@ -617,6 +695,10 @@ async function swipeBack(
   }
   for (const x of ways.slice(2)) {
     await touchAt(page, 'touchmove', x);
+    if (x === HALF_WAY_X) {
+      await expect.poll(() => leavingOffset(page)).toBe(x - EDGE);
+      await expectATitleHiddenHalfWay(page);
+    }
   }
   const letGoAt = ways.at(-1)!;
   await expect.poll(() => leavingOffset(page)).toBe(letGoAt - EDGE);
@@ -897,6 +979,26 @@ for (const look of LOOKS) {
         expect([...seen]).toEqual(expect.arrayContaining(administrationScreens()));
       });
 
+      test(`when ${WAY_NAMES[way]} on Nastavení opened from Občas a pro technika, then it travels back over Občas a pro technika without a jump, one title of the head at a time, with the scroll and the focus kept`, async ({
+        page,
+      }) => {
+        test.setTimeout(120_000);
+        const screens = administrationScreensOf(page);
+        const trail = ['/sprava', '/sprava/vice'];
+        await openAdministrationAt(page, trail);
+        const link = page.locator('.admin-frame a[href="/sprava/nastaveni"]').first();
+        const row: Row = {
+          name: (await link.innerText()).split('\n')[0].trim(),
+          href: '/sprava/nastaveni',
+          from: '/sprava/vice',
+        };
+        for (const scrolled of [false, true]) {
+          await openAdministrationAt(page, trail);
+          await test.step(`${row.href} from ${row.from}${scrolled ? ', scrolled' : ''}`, () =>
+            walkRow(page, screens, row, way, scrolled, () => clickWithoutScrolling(link)));
+        }
+      });
+
       test(`when ${WAY_NAMES[way]} on every detail, then it travels back over its list without a jump, with the scroll and the focus kept`, async ({
         page,
       }) => {
@@ -943,6 +1045,29 @@ for (const look of LOOKS) {
       });
     });
   }
+
+  test.describe(`Given a visitor on a wide screen, in the ${look} appearance`, () => {
+    test.use({ viewport: { width: 1280, height: 800 } });
+
+    test.beforeEach(({ page }) => onThePhone(page, look));
+
+    test('when an article opens from the news and the app steps back, then no layer moves the pages or their titles', async ({
+      page,
+    }) => {
+      await page.goto('/aktuality');
+      const article = page.locator('main a[href="/aktuality/zprava-1"]').first();
+      await expect(article).toBeVisible();
+      await watchTheStep(page);
+      await clickWithoutScrolling(article);
+      await expect(page).toHaveURL('/aktuality/zprava-1');
+      expect((await stepSeen(page)).frames.filter((frame) => frame.overlay)).toEqual([]);
+
+      await watchTheStep(page);
+      await stepBack(page);
+      await expect(page).toHaveURL('/aktuality');
+      expect((await stepSeen(page)).frames.filter((frame) => frame.overlay)).toEqual([]);
+    });
+  });
 
   test.describe(`Given a donor in the app on the home screen of a phone with the account sheet open over the scrolled news, in the ${look} appearance`, () => {
     test.use({ viewport: { width: WIDTH, height: HEIGHT }, hasTouch: true });
