@@ -1,5 +1,12 @@
 import type { Page } from '@playwright/test';
 import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
+import {
+  donorWithDonations,
+  mockAdministration,
+  PETR_DETAIL_PATH,
+  rememberedSession,
+  serveAdministrationCopyOfAccounts,
+} from './baseline/screen-mocks';
 import { donations as twoGifts, ISSUING } from './receipt-donations';
 import { issuedReceipt } from './receipt-issuing';
 import {
@@ -225,5 +232,435 @@ test.describe('Given a donor whose copy on this device holds her gifts and her y
     await page.locator('.yearly-pdf').first().click();
 
     expect((await download).suggestedFilename()).toBe('potvrzeni-o-darech-2025.pdf');
+  });
+});
+
+const STORED = 'Správa je uložená v tomto zařízení.';
+
+interface FoldTransition {
+  readonly property: string;
+  readonly running: boolean;
+  readonly duration: number;
+  readonly easing: string;
+}
+
+interface NoticeFrame {
+  readonly at: number;
+  readonly card: number | null;
+  readonly fold: number | null;
+  readonly heard: string;
+  readonly onHeading: boolean;
+  readonly onBody: boolean;
+  readonly transitions: readonly FoldTransition[];
+}
+
+async function openCardWithFailedCopy(page: Page): Promise<void> {
+  await mockDonorApi(page, donorWithDonations);
+  await mockAdministration(page);
+  await rememberedSession(page);
+  await page.goto(PETR_DETAIL_PATH);
+  await expect(
+    page.locator('.first-download').getByRole('button', { name: 'Uložit znovu' }),
+  ).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Shrnutí dárce' })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  await serveAdministrationCopyOfAccounts(page);
+}
+
+async function followNoticeFrames(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const frames: unknown[] = [];
+    Object.assign(window, { nfnnNoticeFrames: frames });
+    const sample = () => {
+      const card = document.querySelector('[aria-label="Shrnutí dárce"]');
+      const fold = document.querySelector('app-first-download-notice app-fold');
+      const live = document.querySelector('.admin-first-download [aria-live="polite"]');
+      const active = document.activeElement;
+      frames.push({
+        at: performance.now(),
+        card: card?.getBoundingClientRect().top ?? null,
+        fold: fold?.getBoundingClientRect().height ?? null,
+        heard: (live?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        onHeading: active?.tagName === 'H1',
+        onBody: active === null || active === document.body,
+        transitions: (fold?.getAnimations({ subtree: true }) ?? [])
+          .filter((animation) => animation instanceof CSSTransition)
+          .map((transition) => ({
+            property: transition.transitionProperty,
+            running: transition.playState === 'running',
+            duration: Number(transition.effect?.getComputedTiming().duration ?? 0),
+            easing: transition.effect?.getTiming().easing ?? '',
+          })),
+      });
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+}
+
+async function noticeFrames(page: Page): Promise<NoticeFrame[]> {
+  return page.evaluate(
+    () => (window as unknown as { nfnnNoticeFrames: NoticeFrame[] }).nfnnNoticeFrames,
+  );
+}
+
+async function settledNoticeFrames(page: Page): Promise<NoticeFrame[]> {
+  await expect
+    .poll(async () => {
+      const last = (await noticeFrames(page)).slice(-3);
+      return last.length === 3 && last.every((frame) => frame.fold === 0);
+    })
+    .toBe(true);
+  return noticeFrames(page);
+}
+
+async function durationOf(page: Page, token: string): Promise<number> {
+  return page.evaluate((name) => {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value.endsWith('ms') ? parseFloat(value) : parseFloat(value) * 1000;
+  }, token);
+}
+
+async function easingOf(page: Page, token: string): Promise<string> {
+  return page.evaluate((name) => {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const probe = document.createElement('div');
+    document.body.append(probe);
+    const easing = probe.animate([], { duration: 1, easing: value }).effect!.getTiming().easing!;
+    probe.remove();
+    return easing;
+  }, token);
+}
+
+async function expectFoldsOverFrames(
+  page: Page,
+  frames: readonly NoticeFrame[],
+  notice: { readonly height: number },
+): Promise<void> {
+  const tops = frames.map((frame) => frame.card!);
+  const start = tops[0];
+  const end = tops.at(-1)!;
+  const steps = tops.slice(1).map((top, index) => tops[index] - top);
+  expect(Math.min(...steps)).toBeGreaterThanOrEqual(-0.5);
+  expect(Math.max(...steps)).toBeLessThanOrEqual(notice.height / 2);
+  const between = frames.filter((frame) => frame.card! < start - 0.5 && frame.card! > end + 0.5);
+  expect(between.length).toBeGreaterThanOrEqual(2);
+
+  const first = frames.findIndex((frame) => frame.card! < start - 0.5);
+  const last = frames.findIndex((frame) => frame.card! <= end + 0.5);
+  expect(frames[last].at - frames[first].at).toBeLessThanOrEqual(
+    (await durationOf(page, '--duration-base')) + 100,
+  );
+}
+
+interface FoldSample {
+  readonly transition: number;
+  readonly at: number;
+  readonly duration: number;
+  readonly easing: string;
+  readonly keyframes: readonly string[];
+  readonly behavior: string;
+  readonly connected: boolean;
+  readonly foldDisplay: string;
+  readonly noticeDisplay: string;
+}
+
+interface FoldTransitionTrace {
+  readonly samples: readonly FoldSample[];
+  readonly clickedAt: number | null;
+  readonly endedAt: number | null;
+  readonly endedTransition: number | null;
+  readonly finished: readonly number[];
+  readonly cancelled: number;
+}
+
+async function followFoldTransition(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const trace: {
+      samples: unknown[];
+      clickedAt: number | null;
+      endedAt: number | null;
+      endedTransition: number | null;
+      finished: number[];
+      cancelled: number;
+    } = {
+      samples: [],
+      clickedAt: null,
+      endedAt: null,
+      endedTransition: null,
+      finished: [],
+      cancelled: 0,
+    };
+    Object.assign(window, { nfnnFoldTransition: trace });
+    const known = new Map<CSSTransition, number>();
+    const foldTransition = () =>
+      document
+        .querySelector('app-first-download-notice app-fold')
+        ?.getAnimations({ subtree: true })
+        .find(
+          (animation): animation is CSSTransition =>
+            animation instanceof CSSTransition &&
+            animation.transitionProperty === 'grid-template-rows',
+        );
+    const idOf = (transition: CSSTransition) => {
+      if (!known.has(transition)) {
+        const id = known.size;
+        known.set(transition, id);
+        transition.finished.then(
+          () => trace.finished.push(id),
+          () => undefined,
+        );
+      }
+      return known.get(transition)!;
+    };
+    document.addEventListener(
+      'click',
+      (event) => {
+        const button = (event.target as Element).closest('.first-download button');
+        if (button !== null) {
+          trace.clickedAt ??= performance.now();
+        }
+      },
+      true,
+    );
+    document.addEventListener(
+      'transitionend',
+      (event) => {
+        const target = event.target as Element;
+        if (
+          trace.endedAt === null &&
+          event.propertyName === 'grid-template-rows' &&
+          target.closest('app-first-download-notice app-fold') !== null
+        ) {
+          trace.endedAt = performance.now();
+          const ended = [...known].find(
+            ([transition]) => (transition.effect as KeyframeEffect).target === target,
+          );
+          trace.endedTransition = ended?.[1] ?? null;
+        }
+      },
+      true,
+    );
+    document.addEventListener(
+      'transitioncancel',
+      (event) => {
+        if (
+          event.propertyName === 'grid-template-rows' &&
+          (event.target as Element).closest('app-first-download-notice app-fold') !== null
+        ) {
+          trace.cancelled += 1;
+        }
+      },
+      true,
+    );
+    const sample = () => {
+      if (trace.endedAt !== null) {
+        return;
+      }
+      const transition = foldTransition();
+      const effect = transition?.effect as KeyframeEffect | undefined;
+      const target = effect?.target as HTMLElement | null | undefined;
+      if (transition && effect && target) {
+        const style = getComputedStyle(target);
+        const properties = style.transitionProperty.split(',').map((name) => name.trim());
+        const behaviors = style.transitionBehavior.split(',').map((name) => name.trim());
+        const notice = document.querySelector('app-first-download-notice .first-download');
+        trace.samples.push({
+          transition: idOf(transition),
+          at: performance.now(),
+          duration: Number(effect.getComputedTiming().duration ?? 0),
+          easing: effect.getTiming().easing ?? '',
+          keyframes: effect
+            .getKeyframes()
+            .map((keyframe) => String(keyframe['gridTemplateRows'] ?? '')),
+          behavior: behaviors[properties.indexOf('grid-template-rows') % behaviors.length] ?? '',
+          connected: target.isConnected && notice !== null && notice.isConnected,
+          foldDisplay: style.display,
+          noticeDisplay: notice === null ? 'none' : getComputedStyle(notice).display,
+        });
+      }
+      setTimeout(sample, 4);
+    };
+    sample();
+  });
+}
+
+async function foldTransitionTrace(page: Page): Promise<FoldTransitionTrace> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            (window as unknown as { nfnnFoldTransition: FoldTransitionTrace }).nfnnFoldTransition
+              .endedAt !== null,
+        ),
+      { message: 'the transitionend of the fold on grid-template-rows comes' },
+    )
+    .toBe(true);
+  return page.evaluate(
+    () => (window as unknown as { nfnnFoldTransition: FoldTransitionTrace }).nfnnFoldTransition,
+  );
+}
+
+async function expectFoldsByOneTransition(page: Page): Promise<void> {
+  const trace = await foldTransitionTrace(page);
+  const duration = await durationOf(page, '--duration-base');
+  expect(duration, 'the computed --duration-base').toBeGreaterThan(0);
+  const easing = await easingOf(page, '--ease-standard');
+
+  const samples = trace.samples;
+  expect(
+    samples.length,
+    'a sample of the grid-template-rows transition, pending or running',
+  ).toBeGreaterThanOrEqual(1);
+  const ids = [...new Set(samples.map((sample) => sample.transition))];
+  expect(ids, 'one and the same grid-template-rows transition').toHaveLength(1);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            (window as unknown as { nfnnFoldTransition: FoldTransitionTrace }).nfnnFoldTransition
+              .finished,
+        ),
+      { message: 'that same transition finishes' },
+    )
+    .toContain(ids[0]);
+  expect(
+    [trace.endedTransition, trace.cancelled],
+    'the transitionend the test waits for comes from that same transition, never cancelled',
+  ).toEqual([ids[0], 0]);
+  expect(
+    samples.map((sample) => sample.behavior),
+    'grid-template-rows does not move as a discrete step',
+  ).toEqual(samples.map(() => 'normal'));
+  expect(
+    samples.map((sample) => sample.keyframes),
+    'the transition interpolates from 1fr to 0fr',
+  ).toEqual(samples.map(() => ['1fr', '0fr']));
+  expect(
+    samples.map((sample) => sample.duration),
+    'the transition lasts the computed --duration-base',
+  ).toEqual(samples.map(() => duration));
+  expect(
+    samples.map((sample) => sample.easing),
+    'the transition eases as motion.expand',
+  ).toEqual(samples.map(() => easing));
+  expect(
+    samples.filter(
+      (sample) =>
+        !sample.connected || sample.foldDisplay === 'none' || sample.noticeDisplay === 'none',
+    ),
+    'the notice stays connected and rendered until that transitionend',
+  ).toEqual([]);
+  expect(trace.clickedAt, 'the click on Uložit znovu is seen').not.toBeNull();
+  expect(
+    trace.endedAt! - trace.clickedAt!,
+    'that transitionend comes at least 80 % of --duration-base after the click',
+  ).toBeGreaterThanOrEqual(duration * 0.8);
+}
+
+async function cardGapUnderHeader(page: Page): Promise<number> {
+  const header = (await page.getByRole('banner').boundingBox())!;
+  const cardTop = await page
+    .getByRole('region', { name: 'Shrnutí dárce' })
+    .evaluate((card) => card.getBoundingClientRect().top + window.scrollY);
+  return cardTop - (header.y + header.height);
+}
+
+function timesSaid(frames: readonly NoticeFrame[], sentence: string): number {
+  return frames.filter(
+    (frame, index) => frame.heard === sentence && frames[index - 1]?.heard !== sentence,
+  ).length;
+}
+
+test.describe('Given an administrator on the card of a donor whose device could not store the administration', () => {
+  test.use({ reducedMotion: 'no-preference' });
+
+  test('when Uložit znovu stores it, then it folds over the token duration, not in one cut (in Chromium frame by frame, in WebKit by one grid-template-rows transition from 1fr to 0fr, not discrete, lasting --duration-base with the motion.expand easing, whose transitionend comes at least 80 % of that duration after the click while the notice stays rendered), the card rises by exactly the notice and ends at the gap of the page without the notice, and from the start of the fold the focus is on the heading and screen readers hear once that it is stored', async ({
+    page,
+  }, testInfo) => {
+    await openCardWithFailedCopy(page);
+    const fold = page.locator('app-first-download-notice app-fold');
+    const notice = (await fold.boundingBox())!;
+    const card = (await page.getByRole('region', { name: 'Shrnutí dárce' }).boundingBox())!;
+    const webkit = testInfo.project.name === 'iphone';
+    await followNoticeFrames(page);
+    if (webkit) {
+      await followFoldTransition(page);
+    }
+
+    await page.locator('.first-download').getByRole('button', { name: 'Uložit znovu' }).click();
+
+    await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeFocused();
+    await expect(page.locator('.admin-first-download [aria-live="polite"]')).toHaveText(STORED);
+    const frames = await settledNoticeFrames(page);
+    const tops = frames.map((frame) => frame.card);
+    expect(tops.every((top) => top !== null)).toBe(true);
+    const start = tops[0]!;
+    const end = tops.at(-1)!;
+    expect(Math.abs(start - card.y)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(start - end - notice.height)).toBeLessThanOrEqual(0.5);
+    expect(notice.height).toBeGreaterThan(40);
+
+    if (webkit) {
+      await expectFoldsByOneTransition(page);
+    } else {
+      await expectFoldsOverFrames(page, frames, notice);
+    }
+
+    const first = frames.findIndex((frame) => frame.card! < start - 0.5);
+    expect(frames.slice(first).every((frame) => frame.onHeading)).toBe(true);
+    expect(frames[first].heard).toBe(STORED);
+    expect(timesSaid(frames, STORED)).toBe(1);
+    await expect(page.locator('.first-download').getByText(STORED)).toHaveCount(0);
+
+    const gap = await cardGapUnderHeader(page);
+    await page.reload();
+    await expect(page.getByRole('region', { name: 'Shrnutí dárce' })).toBeVisible();
+    await expect(page.locator('app-first-download-notice app-fold')).toHaveCount(0);
+    expect(Math.abs(gap - (await cardGapUnderHeader(page)))).toBeLessThanOrEqual(0.5);
+  });
+});
+
+test.describe('Given an administrator who asks for less motion, on the card of a donor whose device could not store the administration', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('when Uložit znovu stores it, then the notice goes at once or by a short fade without folding its height, the card takes its place, and while it goes the focus stays on the heading, never on the page body, and the sentence stays said once', async ({
+    page,
+  }) => {
+    await openCardWithFailedCopy(page);
+    const notice = (await page.locator('app-first-download-notice app-fold').boundingBox())!;
+    await followNoticeFrames(page);
+
+    await page.locator('.first-download').getByRole('button', { name: 'Uložit znovu' }).click();
+
+    await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeFocused();
+    await expect(page.locator('.admin-first-download [aria-live="polite"]')).toHaveText(STORED);
+    const frames = await settledNoticeFrames(page);
+    const tops = frames.map((frame) => frame.card!);
+    const start = tops[0];
+    const end = tops.at(-1)!;
+    expect(Math.abs(start - end - notice.height)).toBeLessThanOrEqual(0.5);
+    expect(tops.filter((top) => top < start - 0.5 && top > end + 0.5)).toEqual([]);
+    expect(frames.filter((frame) => frame.fold! > 0 && frame.fold! < notice.height - 0.5)).toEqual(
+      [],
+    );
+    const reduced = await durationOf(page, '--duration-reduced');
+    const moves = frames.flatMap((frame) => frame.transitions).filter((move) => move.running);
+    expect(
+      moves.filter((move) => move.property === 'grid-template-rows' || move.property === 'height'),
+    ).toEqual([]);
+    expect(moves.filter((move) => move.property === 'opacity' && move.duration > reduced)).toEqual(
+      [],
+    );
+
+    expect(frames.filter((frame) => frame.onBody)).toEqual([]);
+    const said = frames.findIndex((frame) => frame.heard === STORED);
+    expect(said).toBeGreaterThanOrEqual(0);
+    const after = frames.slice(said);
+    expect(after.every((frame) => frame.heard === STORED)).toBe(true);
+    expect(after.every((frame) => frame.onHeading)).toBe(true);
+    expect(timesSaid(frames, STORED)).toBe(1);
   });
 });

@@ -17,7 +17,7 @@
   }
   <app-side-nav navId="admin-nav" [groups]="groups" [label]="navLabel" [panel]="!compact()">
     <div class="admin-content" [class.ui-sheet-page]="sheet()">
-      <app-first-download-notice />
+      <app-first-download-notice (releasesFocus)="focusPage(null)" />
       @if (lock.locked()) {
         @if (lock.panel(); as panel) {
           <ng-container *ngComponentOutlet="panel" />
