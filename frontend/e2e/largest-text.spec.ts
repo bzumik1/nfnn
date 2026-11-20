@@ -2806,8 +2806,9 @@ async function textPastTheSides(frame: Locator): Promise<string[]> {
 async function wordsBrokenThatWouldFit(element: Locator): Promise<string[]> {
   await element.evaluate(() => document.fonts.ready);
   return element.evaluate((root) => {
-    const line = root.clientWidth;
     const style = getComputedStyle(root);
+    const line =
+      root.clientWidth - parseFloat(style.paddingInlineStart) - parseFloat(style.paddingInlineEnd);
     const broken: string[] = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
