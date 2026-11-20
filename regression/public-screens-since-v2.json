@@ -112,8 +112,8 @@
     },
     {
       "state": "about",
-      "since": "#1171, #1370",
-      "reason": "#1171 (Q5 of the desktop polish, both teams 12/12): from nav up html reserves the scrollbar's strip (scrollbar-gutter: stable), so on a runner with classic scrollbars the page is laid out 15 px narrower and its column sits 7.5 px further left, the QR and bank details too; the verification cards also take the card hairline --color-divider and the 65ch measure of ui-card__intro (Q2, Q22); and the closing Přispět band below 900 px keeps its shadow inside its surroundings and one space above it, and its photo fades into the band without a line or an edge (grp:donate part 1, #1285–#1287, #1370)"
+      "since": "#1171, #1370, #1511",
+      "reason": "#1171 (Q5 of the desktop polish, both teams 12/12): from nav up html reserves the scrollbar's strip (scrollbar-gutter: stable), so on a runner with classic scrollbars the page is laid out 15 px narrower and its column sits 7.5 px further left, the QR and bank details too; the verification cards also take the card hairline --color-divider and the 65ch measure of ui-card__intro (Q2, Q22); and the closing Přispět band below 900 px keeps its shadow inside its surroundings and one space above it, and its photo fades into the band without a line or an edge (grp:donate part 1, #1285–#1287, #1370); and the note under Údaje pro účetní in the contact takes the one style of card intros, --text-md, --leading-relaxed and --color-text-soft (Q21, both teams 12/12, #1215, #1511)"
     },
     {
       "state": "receipt-verification",

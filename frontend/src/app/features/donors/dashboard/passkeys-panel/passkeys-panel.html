@@ -1,5 +1,5 @@
 <section #region class="passkeys" tabindex="-1" [attr.aria-labelledby]="labelledBy()">
-  <p class="passkeys-intro" i18n="@@donor.passkeys.intro">
+  <p class="ui-card__intro passkeys-intro" i18n="@@donor.passkeys.intro">
     Přihlaste se otiskem prstu, obličejem nebo zámkem obrazovky místo hesla. Klíč uloží Hesla od
     Applu, Správce hesel Google nebo Windows Hello. Na podvodné stránce klíč nefunguje. Přihlášení
     klíčem je chráněné i&nbsp;bez kódu z&nbsp;aplikace.
@@ -221,19 +221,19 @@
       <h3 class="ui-card__subtitle" i18n="@@donor.passkeys.form.title">Nový přístupový klíč</h3>
       @switch (confirmation()) {
         @case ('password') {
-          <p class="passkeys-form-intro" i18n="@@donor.passkeys.form.intro">
+          <p class="ui-card__intro passkeys-form-intro" i18n="@@donor.passkeys.form.intro">
             Po potvrzení heslem vás zařízení požádá o&nbsp;otisk prstu, obličej nebo PIN a&nbsp;klíč
             uloží.
           </p>
         }
         @case ('passkey') {
-          <p class="passkeys-form-intro" i18n="@@donor.passkeys.form.introPasskey">
+          <p class="ui-card__intro passkeys-form-intro" i18n="@@donor.passkeys.form.introPasskey">
             Zařízení vás nejdřív požádá o&nbsp;potvrzení jedním z&nbsp;vašich klíčů a&nbsp;pak nový
             klíč uloží. Klíč v&nbsp;jiném zařízení potvrdíte naskenováním QR kódu telefonem.
           </p>
         }
         @default {
-          <p class="passkeys-form-intro" i18n="@@donor.passkeys.form.introFirst">
+          <p class="ui-card__intro passkeys-form-intro" i18n="@@donor.passkeys.form.introFirst">
             Zařízení vás požádá o&nbsp;otisk prstu, obličej nebo PIN a&nbsp;klíč uloží.
           </p>
         }

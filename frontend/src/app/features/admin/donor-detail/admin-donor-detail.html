@@ -651,10 +651,7 @@
               </p>
             } @else {
               @if (drill()) {
-                <p
-                  class="admin-hint admin-hint--card"
-                  i18n="@@admin.donorDetail.accounts.hintParts"
-                >
+                <p class="ui-card__intro card-intro" i18n="@@admin.donorDetail.accounts.hintParts">
                   Údaj Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu, které
                   se dárci přiřadily podle účtu; dary se symbolem najdete v části Dary na kartě
                   dárce. Jen nechcete, aby se dárci přiřazovaly další platby bez symbolu? Vypněte
@@ -662,7 +659,7 @@
                   smažeme i dary, které se přes něj přiřadily, a odpovědi o starších symbolech.
                 </p>
               } @else {
-                <p class="admin-hint admin-hint--card" i18n="@@admin.donorDetail.accounts.hint">
+                <p class="ui-card__intro card-intro" i18n="@@admin.donorDetail.accounts.hint">
                   Sloupec Dary přiřazené podle účtu počítá jen platby bez variabilního symbolu,
                   které se dárci přiřadily podle účtu; dary se symbolem najdete níže v části Dary.
                   Jen nechcete, aby se dárci přiřazovaly další platby bez symbolu? Vypněte párování,
@@ -670,25 +667,28 @@
                   dary, které se přes něj přiřadily, a odpovědi o starších symbolech.
                 </p>
               }
-              <table class="ui-table" [class.ui-table--stacked]="drill()">
-                <thead>
-                  <tr>
-                    <th i18n="@@admin.donorDetail.accounts.col.account">Bankovní účet</th>
-                    <th i18n="@@admin.donorDetail.accounts.col.status">Stav</th>
-                    <th i18n="@@admin.donorDetail.accounts.col.donations">
+              <table role="table" class="ui-table" [class.ui-table--stacked]="drill()">
+                <thead role="rowgroup">
+                  <tr role="row">
+                    <th role="columnheader" i18n="@@admin.donorDetail.accounts.col.account">
+                      Bankovní účet
+                    </th>
+                    <th role="columnheader" i18n="@@admin.donorDetail.accounts.col.status">Stav</th>
+                    <th role="columnheader" i18n="@@admin.donorDetail.accounts.col.donations">
                       Dary přiřazené podle účtu
                     </th>
-                    <th class="action">
+                    <th role="columnheader" class="action">
                       <span class="visually-hidden" i18n="@@admin.donorDetail.accounts.col.action"
                         >Akce</span
                       >
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody role="rowgroup">
                   @for (item of bankAccounts(); track item.id) {
-                    <tr>
+                    <tr role="row">
                       <td
+                        role="cell"
                         data-label="Bankovní účet"
                         i18n-data-label="@@admin.donorDetail.accounts.col.account"
                       >
@@ -719,6 +719,7 @@
                         }
                       </td>
                       <td
+                        role="cell"
                         data-label="Stav"
                         i18n-data-label="@@admin.donorDetail.accounts.col.status"
                       >
@@ -749,6 +750,7 @@
                         </span>
                       </td>
                       <td
+                        role="cell"
                         data-label="Dary přiřazené podle účtu"
                         i18n-data-label="@@admin.donorDetail.accounts.col.donations"
                       >
@@ -769,7 +771,7 @@
                           </span>
                         }
                       </td>
-                      <td class="action">
+                      <td role="cell" class="action">
                         @switch (pendingFor(item)) {
                           @case ('disconnect') {
                             <span
@@ -977,7 +979,7 @@
               Dárce zatím nemá žádný přiřazený dar.
             </p>
           } @else {
-            <p class="admin-hint admin-hint--card">
+            <p class="ui-card__intro card-intro">
               <ng-container i18n="@@admin.donorDetail.donations.summary"
                 >Celkem {{ donationsCount(receivedCount()) }} za
                 {{ total() }}&nbsp;Kč.</ng-container
@@ -1038,20 +1040,35 @@
                 </ul>
               }
             } @else {
-              <table class="ui-table">
-                <thead>
-                  <tr>
-                    <th i18n="@@admin.donorDetail.donations.col.date">Přijato</th>
-                    <th class="amount" i18n="@@admin.donorDetail.donations.col.amount">Částka</th>
-                    <th i18n="@@admin.donorDetail.donations.col.purpose">Účel</th>
-                    <th i18n="@@admin.donorDetail.donations.col.pairing">Přiřazení</th>
-                    <th i18n="@@admin.donorDetail.donations.col.receipt">Potvrzení</th>
+              <table role="table" class="ui-table">
+                <thead role="rowgroup">
+                  <tr role="row">
+                    <th role="columnheader" i18n="@@admin.donorDetail.donations.col.date">
+                      Přijato
+                    </th>
+                    <th
+                      role="columnheader"
+                      class="amount"
+                      i18n="@@admin.donorDetail.donations.col.amount"
+                    >
+                      Částka
+                    </th>
+                    <th role="columnheader" i18n="@@admin.donorDetail.donations.col.purpose">
+                      Účel
+                    </th>
+                    <th role="columnheader" i18n="@@admin.donorDetail.donations.col.pairing">
+                      Přiřazení
+                    </th>
+                    <th role="columnheader" i18n="@@admin.donorDetail.donations.col.receipt">
+                      Potvrzení
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody role="rowgroup">
                   @for (item of donations(); track item.id) {
-                    <tr>
+                    <tr role="row">
                       <td
+                        role="cell"
                         data-label="Přijato"
                         i18n-data-label="@@admin.donorDetail.donations.col.date"
                       >
@@ -1065,6 +1082,7 @@
                         }
                       </td>
                       <td
+                        role="cell"
                         class="amount"
                         data-label="Částka"
                         i18n-data-label="@@admin.donorDetail.donations.col.amount"
@@ -1072,12 +1090,14 @@
                         <span class="ui-figures">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
                       </td>
                       <td
+                        role="cell"
                         data-label="Účel"
                         i18n-data-label="@@admin.donorDetail.donations.col.purpose"
                       >
                         {{ item.purpose }}
                       </td>
                       <td
+                        role="cell"
                         data-label="Přiřazení"
                         i18n-data-label="@@admin.donorDetail.donations.col.pairing"
                       >
@@ -1094,6 +1114,7 @@
                         }
                       </td>
                       <td
+                        role="cell"
                         data-label="Potvrzení"
                         i18n-data-label="@@admin.donorDetail.donations.col.receipt"
                       >
@@ -1190,43 +1211,54 @@
               Dárci zatím nikdo žádné potvrzení nevystavil.
             </p>
           } @else {
-            <table class="ui-table receipts-table" [class.ui-table--stacked]="drill()">
-              <thead>
-                <tr>
-                  <th i18n="@@admin.donorDetail.receipts.col.number">Číslo</th>
-                  <th i18n="@@admin.donorDetail.receipts.col.subject">Potvrzuje</th>
-                  <th i18n="@@admin.donorDetail.receipts.col.issued">Vystaveno</th>
-                  <th i18n="@@admin.donorDetail.receipts.col.state">Stav</th>
-                  <th class="action">
+            <table role="table" class="ui-table receipts-table" [class.ui-table--stacked]="drill()">
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th role="columnheader" i18n="@@admin.donorDetail.receipts.col.number">Číslo</th>
+                  <th role="columnheader" i18n="@@admin.donorDetail.receipts.col.subject">
+                    Potvrzuje
+                  </th>
+                  <th role="columnheader" i18n="@@admin.donorDetail.receipts.col.issued">
+                    Vystaveno
+                  </th>
+                  <th role="columnheader" i18n="@@admin.donorDetail.receipts.col.state">Stav</th>
+                  <th role="columnheader" class="action">
                     <span class="visually-hidden" i18n="@@admin.donorDetail.receipts.col.pdf"
                       >PDF</span
                     >
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 @for (receipt of receipts(); track receipt.id) {
-                  <tr>
+                  <tr role="row">
                     <td
+                      role="cell"
                       data-label="Číslo"
                       i18n-data-label="@@admin.donorDetail.receipts.col.number"
                     >
                       <span class="ui-figures admin-name">{{ receipt.number }}</span>
                     </td>
                     <td
+                      role="cell"
                       data-label="Potvrzuje"
                       i18n-data-label="@@admin.donorDetail.receipts.col.subject"
                     >
                       {{ receiptSubject(receipt) }}
                     </td>
                     <td
+                      role="cell"
                       data-label="Vystaveno"
                       i18n-data-label="@@admin.donorDetail.receipts.col.issued"
                     >
                       <span class="ui-date">{{ time(receipt.issuedAt) }}</span
                       >&ngsp;<span class="muted">{{ receiptLocale(receipt) }}</span>
                     </td>
-                    <td data-label="Stav" i18n-data-label="@@admin.donorDetail.receipts.col.state">
+                    <td
+                      role="cell"
+                      data-label="Stav"
+                      i18n-data-label="@@admin.donorDetail.receipts.col.state"
+                    >
                       @if (receipt.active) {
                         <span class="tag tag--on" i18n="@@admin.donorDetail.receipts.active"
                           >platné</span
@@ -1241,7 +1273,7 @@
                         >
                       }
                     </td>
-                    <td class="action receipt-pdf-cell">
+                    <td role="cell" class="action receipt-pdf-cell">
                       @if (receipt.active) {
                         <div class="receipt-download">
                           @if (!compact()) {

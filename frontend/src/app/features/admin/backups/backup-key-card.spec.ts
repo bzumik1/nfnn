@@ -185,6 +185,13 @@ describe('Given the backup key card', () => {
       }
     });
 
+    it('and the words are asked for, then their explanation reads as the card intro', async () => {
+      await revealWithCode();
+      await click('Mám uloženo, ověřit');
+
+      expect(root().querySelector('.key-words-intro')?.classList).toContain('ui-card__intro');
+    });
+
     it('and a word from another position is typed, then the confirmation is refused at the field', async () => {
       await revealWithCode();
       await click('Mám uloženo, ověřit');
@@ -380,6 +387,14 @@ describe('Given the backup key card', () => {
       expect(text('[role="alert"]')).toBe(
         'Zařízení zobrazení nepotvrdilo. Zkuste to prosím znovu.',
       );
+    });
+  });
+
+  describe('when saving the key was confirmed', () => {
+    beforeEach(() => render(CONFIRMED, { enabled: false, neededForAdministration: true }));
+
+    it('then the line saying when reads as the card intro above it', () => {
+      expect(root().querySelector('.key-confirmed')?.classList).toContain('ui-card__intro');
     });
   });
 

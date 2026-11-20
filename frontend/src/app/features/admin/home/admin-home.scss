@@ -195,7 +195,7 @@
     }
 
     td::before {
-      content: attr(data-label);
+      content: attr(data-label) / '';
       display: block;
       font-size: var(--text-md);
       font-weight: var(--weight-regular);

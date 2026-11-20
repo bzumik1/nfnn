@@ -252,6 +252,13 @@ describe('Given an administrator on the administrators page', () => {
     expect(element<HTMLInputElement>('#grant-email').value).toBe('nikdo@example.cz');
   });
 
+  it('when the page opens, then the explanation of adding an administrator reads as the card intro', async () => {
+    peopleArrive();
+    await listed([jana]);
+
+    expect(element('.grant-intro').classList).toContain('ui-card__intro');
+  });
+
   it('when the donor holds no second factor yet, then the form says so beforehand and the refusal stays at the form with the backend title and detail', async () => {
     peopleArrive();
     await listed([jana]);

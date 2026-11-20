@@ -2,7 +2,10 @@
   display: block;
 }
 
-.ui-card__intro,
+.ui-card__intro {
+  margin-bottom: var(--space-3-5);
+}
+
 .changed-at {
   font-size: var(--text-sm);
   color: var(--color-text-muted);

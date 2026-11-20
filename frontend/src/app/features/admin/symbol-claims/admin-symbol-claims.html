@@ -52,23 +52,31 @@
             Zatím nikdo neodpověděl na otázku o starším variabilním symbolu.
           </p>
         } @else {
-          <table class="ui-table">
-            <thead>
-              <tr>
-                <th i18n="@@admin.symbolClaims.col.donor">Dárce</th>
-                <th i18n="@@admin.symbolClaims.col.account">Bankovní účet</th>
-                <th i18n="@@admin.symbolClaims.col.symbol">Variabilní symbol</th>
-                <th i18n="@@admin.symbolClaims.col.answer">Odpověď</th>
-                <th i18n="@@admin.symbolClaims.col.donations">Přiřazené dary</th>
-                <th class="action">
+          <table role="table" class="ui-table">
+            <thead role="rowgroup">
+              <tr role="row">
+                <th role="columnheader" i18n="@@admin.symbolClaims.col.donor">Dárce</th>
+                <th role="columnheader" i18n="@@admin.symbolClaims.col.account">Bankovní účet</th>
+                <th role="columnheader" i18n="@@admin.symbolClaims.col.symbol">
+                  Variabilní symbol
+                </th>
+                <th role="columnheader" i18n="@@admin.symbolClaims.col.answer">Odpověď</th>
+                <th role="columnheader" i18n="@@admin.symbolClaims.col.donations">
+                  Přiřazené dary
+                </th>
+                <th role="columnheader" class="action">
                   <span class="visually-hidden" i18n="@@admin.symbolClaims.col.action">Akce</span>
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               @for (item of items(); track item.id) {
-                <tr>
-                  <td data-label="Dárce" i18n-data-label="@@admin.symbolClaims.col.donor">
+                <tr role="row">
+                  <td
+                    role="cell"
+                    data-label="Dárce"
+                    i18n-data-label="@@admin.symbolClaims.col.donor"
+                  >
                     @if (item.donorName) {
                       <a class="admin-name" [routerLink]="['/sprava/darci', item.donorId]">{{
                         item.donorName
@@ -77,16 +85,25 @@
                       <span class="muted">{{ donorName(item) }}</span>
                     }
                   </td>
-                  <td data-label="Bankovní účet" i18n-data-label="@@admin.symbolClaims.col.account">
+                  <td
+                    role="cell"
+                    data-label="Bankovní účet"
+                    i18n-data-label="@@admin.symbolClaims.col.account"
+                  >
                     <app-bank-account [account]="item.account" />
                   </td>
                   <td
+                    role="cell"
                     data-label="Variabilní symbol"
                     i18n-data-label="@@admin.symbolClaims.col.symbol"
                   >
                     <span class="ui-figures">{{ item.variableSymbol }}</span>
                   </td>
-                  <td data-label="Odpověď" i18n-data-label="@@admin.symbolClaims.col.answer">
+                  <td
+                    role="cell"
+                    data-label="Odpověď"
+                    i18n-data-label="@@admin.symbolClaims.col.answer"
+                  >
                     @if (item.answer === 'CONFIRMED') {
                       <span
                         class="answer-tag answer-tag--yes"
@@ -101,12 +118,13 @@
                     <span class="answered-at">{{ answeredAt(item) }}</span>
                   </td>
                   <td
+                    role="cell"
                     data-label="Přiřazené dary"
                     i18n-data-label="@@admin.symbolClaims.col.donations"
                   >
                     {{ donations(item.donationCount) }}
                   </td>
-                  <td class="action">
+                  <td role="cell" class="action">
                     @if (isPending(item)) {
                       @if (item.answer === 'CONFIRMED') {
                         <span

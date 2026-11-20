@@ -264,25 +264,50 @@
               Rok {{ data.year }} ještě nezačal.
             </p>
           } @else {
-            <table class="overview-table" aria-describedby="admin-overview-hint">
-              <thead>
-                <tr>
-                  <th i18n="@@admin.home.overview.col.month">Měsíc</th>
-                  <th class="num" i18n="@@admin.home.overview.col.count">Dary</th>
-                  <th class="num" i18n="@@admin.home.overview.col.givingDonors">Dárci</th>
-                  <th class="num col-new" i18n="@@admin.home.overview.col.newDonors">Noví dárci</th>
-                  <th class="num" i18n="@@admin.home.overview.col.total">Celkem</th>
-                  <th class="num col-paired" i18n="@@admin.home.overview.col.paired">Přiřazené</th>
-                  <th class="num" i18n="@@admin.home.overview.col.unpaired">Bez dárce</th>
+            <table role="table" class="overview-table" aria-describedby="admin-overview-hint">
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th role="columnheader" i18n="@@admin.home.overview.col.month">Měsíc</th>
+                  <th role="columnheader" class="num" i18n="@@admin.home.overview.col.count">
+                    Dary
+                  </th>
+                  <th role="columnheader" class="num" i18n="@@admin.home.overview.col.givingDonors">
+                    Dárci
+                  </th>
+                  <th
+                    role="columnheader"
+                    class="num col-new"
+                    i18n="@@admin.home.overview.col.newDonors"
+                  >
+                    Noví dárci
+                  </th>
+                  <th role="columnheader" class="num" i18n="@@admin.home.overview.col.total">
+                    Celkem
+                  </th>
+                  <th
+                    role="columnheader"
+                    class="num col-paired"
+                    i18n="@@admin.home.overview.col.paired"
+                  >
+                    Přiřazené
+                  </th>
+                  <th role="columnheader" class="num" i18n="@@admin.home.overview.col.unpaired">
+                    Bez dárce
+                  </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 @for (item of data.months; track item.month) {
-                  <tr>
-                    <td data-label="Měsíc" i18n-data-label="@@admin.home.overview.col.month">
+                  <tr role="row">
+                    <td
+                      role="cell"
+                      data-label="Měsíc"
+                      i18n-data-label="@@admin.home.overview.col.month"
+                    >
                       <span class="admin-month">{{ monthLabel(item.month) }}</span>
                     </td>
                     <td
+                      role="cell"
                       class="num"
                       data-label="Dary"
                       i18n-data-label="@@admin.home.overview.col.count"
@@ -290,6 +315,7 @@
                       {{ item.received.count }}
                     </td>
                     <td
+                      role="cell"
                       class="num"
                       data-label="Dárci"
                       i18n-data-label="@@admin.home.overview.col.givingDonors"
@@ -297,6 +323,7 @@
                       {{ item.givingDonors }}
                     </td>
                     <td
+                      role="cell"
                       class="num col-new"
                       data-label="Noví dárci"
                       i18n-data-label="@@admin.home.overview.col.newDonors"
@@ -304,6 +331,7 @@
                       {{ item.newDonors }}
                     </td>
                     <td
+                      role="cell"
                       class="num ui-figures"
                       data-label="Celkem"
                       i18n-data-label="@@admin.home.overview.col.total"
@@ -311,6 +339,7 @@
                       {{ amount(item.received) }}
                     </td>
                     <td
+                      role="cell"
                       class="num col-paired ui-figures"
                       data-label="Přiřazené"
                       i18n-data-label="@@admin.home.overview.col.paired"
@@ -318,6 +347,7 @@
                       {{ amount(item.paired) }}
                     </td>
                     <td
+                      role="cell"
                       class="num ui-figures"
                       data-label="Bez dárce"
                       i18n-data-label="@@admin.home.overview.col.unpaired"
@@ -328,13 +358,18 @@
                 }
               </tbody>
               <tfoot>
-                <tr>
-                  <td data-label="Měsíc" i18n-data-label="@@admin.home.overview.col.month">
+                <tr role="row">
+                  <td
+                    role="cell"
+                    data-label="Měsíc"
+                    i18n-data-label="@@admin.home.overview.col.month"
+                  >
                     <span class="admin-month" i18n="@@admin.home.overview.total"
                       >Celkem {{ data.year }}</span
                     >
                   </td>
                   <td
+                    role="cell"
                     class="num"
                     data-label="Dary"
                     i18n-data-label="@@admin.home.overview.col.count"
@@ -342,6 +377,7 @@
                     {{ data.received.count }}
                   </td>
                   <td
+                    role="cell"
                     class="num"
                     data-label="Dárci"
                     i18n-data-label="@@admin.home.overview.col.givingDonors"
@@ -349,6 +385,7 @@
                     {{ data.givingDonors }}
                   </td>
                   <td
+                    role="cell"
                     class="num col-new"
                     data-label="Noví dárci"
                     i18n-data-label="@@admin.home.overview.col.newDonors"
@@ -356,6 +393,7 @@
                     {{ data.newDonors }}
                   </td>
                   <td
+                    role="cell"
                     class="num ui-figures"
                     data-label="Celkem"
                     i18n-data-label="@@admin.home.overview.col.total"
@@ -363,6 +401,7 @@
                     {{ amount(data.received) }}
                   </td>
                   <td
+                    role="cell"
                     class="num col-paired ui-figures"
                     data-label="Přiřazené"
                     i18n-data-label="@@admin.home.overview.col.paired"
@@ -370,6 +409,7 @@
                     {{ amount(data.paired) }}
                   </td>
                   <td
+                    role="cell"
                     class="num ui-figures"
                     data-label="Bez dárce"
                     i18n-data-label="@@admin.home.overview.col.unpaired"

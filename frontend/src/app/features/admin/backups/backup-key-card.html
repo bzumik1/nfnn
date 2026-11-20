@@ -14,7 +14,7 @@
       </p>
     } @else {
       @if (status().confirmed) {
-        <p class="key-confirmed" i18n="@@admin.backups.key.confirmedAt">
+        <p class="ui-card__intro key-confirmed" i18n="@@admin.backups.key.confirmedAt">
           Uložení klíče jste potvrdili {{ confirmedAt() }}.
         </p>
       } @else {
@@ -56,7 +56,7 @@
             (ngSubmit)="confirm(confirmForm)"
             novalidate
           >
-            <p class="key-words-intro" i18n="@@admin.backups.key.words.intro">
+            <p class="ui-card__intro key-words-intro" i18n="@@admin.backups.key.words.intro">
               Slova jsme skryli. Opište z kopie, kterou jste si uložili, slova s těmito čísly. Tak
               si ověříte, že se uložila celá.
             </p>

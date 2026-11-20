@@ -10,10 +10,13 @@
 }
 
 .passkeys-intro,
+.passkeys-form-intro {
+  margin-bottom: var(--space-3-5);
+}
+
 .passkeys-empty,
 .passkeys-unsupported,
-.passkeys-hint,
-.passkeys-form-intro {
+.passkeys-hint {
   max-inline-size: var(--measure-prose);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);

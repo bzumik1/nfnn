@@ -28,7 +28,7 @@
     }
   </ul>
 } @else {
-  <table [attr.aria-labelledby]="labelledBy()">
+  <table role="table" [attr.aria-labelledby]="labelledBy()">
     <colgroup>
       <col class="column-date" />
       <col class="column-amount" />
@@ -38,24 +38,34 @@
         <col class="column-receipt" />
       }
     </colgroup>
-    <thead>
-      <tr>
-        <th i18n="@@donor.dashboard.payments.col.date">Datum</th>
-        <th class="amount" i18n="@@donor.dashboard.payments.col.amount">Částka</th>
-        <th i18n="@@donor.dashboard.payments.col.purpose">Účel</th>
-        <th i18n="@@donor.dashboard.payments.col.status">Stav</th>
+    <thead role="rowgroup">
+      <tr role="row">
+        <th role="columnheader" i18n="@@donor.dashboard.payments.col.date">Datum</th>
+        <th role="columnheader" class="amount" i18n="@@donor.dashboard.payments.col.amount">
+          Částka
+        </th>
+        <th role="columnheader" i18n="@@donor.dashboard.payments.col.purpose">Účel</th>
+        <th role="columnheader" i18n="@@donor.dashboard.payments.col.status">Stav</th>
         @if (withReceipts()) {
-          <th class="receipt" i18n="@@donor.dashboard.payments.col.receipt">Potvrzení</th>
+          <th role="columnheader" class="receipt" i18n="@@donor.dashboard.payments.col.receipt">
+            Potvrzení
+          </th>
         }
       </tr>
     </thead>
-    <tbody>
+    <tbody role="rowgroup">
       @for (item of items(); track item.id) {
-        <tr [class.is-verification]="item.accountVerification">
-          <td class="date" data-label="Datum" i18n-data-label="@@donor.dashboard.payments.col.date">
+        <tr role="row" [class.is-verification]="item.accountVerification">
+          <td
+            role="cell"
+            class="date"
+            data-label="Datum"
+            i18n-data-label="@@donor.dashboard.payments.col.date"
+          >
             {{ formatDate(item.receivedAt) }}
           </td>
           <td
+            role="cell"
             data-label="Částka"
             i18n-data-label="@@donor.dashboard.payments.col.amount"
             class="amount ui-figures"
@@ -63,6 +73,7 @@
             {{ crowns(item.amountMinor) }}&nbsp;Kč
           </td>
           <td
+            role="cell"
             class="purpose-cell"
             data-label="Účel"
             i18n-data-label="@@donor.dashboard.payments.col.purpose"
@@ -73,6 +84,7 @@
             </div>
           </td>
           <td
+            role="cell"
             class="status"
             data-label="Stav"
             i18n-data-label="@@donor.dashboard.payments.col.status"
@@ -86,6 +98,7 @@
           </td>
           @if (withReceipts()) {
             <td
+              role="cell"
               class="receipt"
               [class.is-empty]="
                 !item.receiptAvailable && !missingReceipt(item) && !donations.singleError(item)
