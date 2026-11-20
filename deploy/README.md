@@ -126,7 +126,7 @@ Uložení bere compose z poslední instalace, takže změnu `compose.yml` nepře
 
 ## Nasazení fáze 2 (z d953749)
 
-Jednorázový postup pro první nasazení po fázi 2 plánu v3 (revize fáze 2, 15. 11. 2026). Server běží `d953749` (5. 11. 2026, `.github/deployed-revision`) a nová verze nese 382 commitů, 20 nových souborů změn databáze, generaci API 1 → 5, vlastní cookie nainstalované aplikace (2.10), databázi v zařízení verze 2 (2.20e) a změnu `compose.yml` (port jen na IPv4, #923), kvůli které tentokrát Uložit nestačí. Po nasazení tenhle oddíl platí jen jako záznam.
+Jednorázový postup pro první nasazení po fázi 2 plánu v3 (revize fáze 2, 15. 11. 2026). Server běží `d953749` (5. 11. 2026, `.github/deployed-revision`) a nová verze nese 382 commitů, 20 nových souborů změn databáze, generaci API 1 → 5, vlastní cookie nainstalované aplikace (2.10), databázi v zařízení verze 2 (2.20e) a změnu `compose.yml` (port jen na IPv4, #923), kvůli které tentokrát Uložit nestačí. Nasazeno 20. 11. 2026 jako vydání `2026.11.109` (commit `2b79cb3`); tenhle oddíl teď platí jen jako záznam.
 
 **Před nasazením**
 
@@ -163,7 +163,7 @@ Jednorázový postup pro první nasazení po fázi 2 plánu v3 (revize fáze 2, 
 
 **Po nasazení**
 
-10. V dalším PR nastav `.github/deployed-revision` na nasazený commit a s ním i výchozí revizi `MigrationOverDataTest`. Teprve potom smí přijít změna databáze, která smaže `donation_person_receipt_signature` a zbylé místo nginx pro nahrávání podpisů, protože až pak má i verze pro návrat sloučený podpis.
+10. V dalším PR nastav `.github/deployed-revision` na nasazený commit a s ním i výchozí revizi `MigrationOverDataTest` (hotovo: `2b79cb3`, #1525). Teprve potom smí přijít změna databáze, která smaže `donation_person_receipt_signature` a zbylé místo nginx pro nahrávání podpisů, protože až pak má i verze pro návrat sloučený podpis.
 
 **Co po nasazení čekat (nejde o chyby)**
 

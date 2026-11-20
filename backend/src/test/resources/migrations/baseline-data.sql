@@ -12,23 +12,25 @@ values ('0190a000-0000-7000-8000-000000000007', 'Testovací Osoba', 'předseda s
         '0190a000-0000-7000-8000-000000000005', '0190a000-0000-7000-8000-000000000006', 'osoba@example.cz', 'fond@example.cz',
         '2026-01-10T10:00:00Z', '2026-01-10T10:00:00Z');
 insert into content_news (id, slug, title, tag, perex, body, cover_media_id, published_on, created_at, updated_at, cover_image_alt,
-                          signer_person_id)
+                          signer_person_id, look_back_year)
 values ('0190a000-0000-7000-8000-000000000003', 'letni-tabor', 'Letní tábor', 'Akce', 'Perex', 'Text aktuality',
         '0190a000-0000-7000-8000-000000000001', '2026-01-11', '2026-01-10T10:00:00Z', '2026-01-10T10:00:00Z', 'Děti u ohně',
-        '0190a000-0000-7000-8000-000000000007');
+        '0190a000-0000-7000-8000-000000000007', 2025);
 insert into content_project (id, slug, title, year, tag, perex, body, cover_media_id, published_on, created_at, updated_at,
                              cover_image_alt, category)
 values ('0190a000-0000-7000-8000-000000000004', 'nova-strecha', 'Nová střecha', 2025, 'Stavba', 'Perex', 'Text projektu',
         '0190a000-0000-7000-8000-000000000001', '2026-01-12', '2026-01-10T10:00:00Z', '2026-01-10T10:00:00Z', 'Střecha domova',
         'ADULTS');
-insert into content_former_slug (slug, news_id, project_id, replaced_at)
-values ('tabor', '0190a000-0000-7000-8000-000000000003', null, '2026-01-11T10:00:00Z'),
-       ('strecha', null, '0190a000-0000-7000-8000-000000000004', '2026-01-12T10:00:00Z');
+insert into content_former_slug (id, slug, news_id, project_id, replaced_at)
+values ('0190a000-0000-7000-8000-00000000000a', 'tabor', '0190a000-0000-7000-8000-000000000003', null, '2026-01-11T10:00:00Z'),
+       ('0190a000-0000-7000-8000-00000000000b', 'strecha', null, '0190a000-0000-7000-8000-000000000004', '2026-01-12T10:00:00Z');
 insert into content_about (id, photo_media_id, photo_alt, photo_caption, updated_at)
 values (1, '0190a000-0000-7000-8000-000000000001', 'Děti u ohně', 'Letní tábor', '2026-01-10T10:00:00Z');
 insert into content_founders_note (id, text, updated_at) values (1, 'Slovo zakladatelů', '2026-01-10T10:00:00Z');
 insert into content_people_footnote (id, text, updated_at) values (1, 'Všichni pracují bez nároku na odměnu', '2026-01-10T10:00:00Z');
 insert into content_project_order (id, project_order, updated_at) values (1, 'CATEGORY_THEN_YEAR', '2026-01-10T10:00:00Z');
+insert into content_donate_band (id, photo_media_id, photo_alt, updated_at)
+values (1, '0190a000-0000-7000-8000-000000000001', 'Děti při hře', '2026-01-10T10:00:00Z');
 
 insert into donor (id, type, name, company_identifier, street, city, postal_code, email, password_hash, variable_symbol,
                    preferred_locale, registered_at, email_verified_at, erased_at, last_signed_in_at, previous_signed_in_at)
@@ -36,11 +38,13 @@ values ('0190a000-0000-7000-8000-000000000010', 'PERSON', 'Testovací Dárce', n
         'darce@example.cz', '$2a$12$abcdefghijklmnopqrstuuSq0kE0Wn0vNnU5o9bqv1x6r0b8eQm2C', '1000000001', 'cs',
         '2026-01-01T09:00:00Z', '2026-01-01T09:05:00Z', null, '2026-01-02T09:00:00Z', '2026-01-01T09:05:00Z');
 insert into donor_role (donor_id, role) values ('0190a000-0000-7000-8000-000000000010', 'ADMIN');
-insert into donor_device (id, donor_id, platform, browser, signed_in_at, last_used_at, ended_at, end_reason)
+insert into donor_device (id, donor_id, platform, browser, signed_in_at, last_used_at, ended_at, end_reason, session_kind,
+                          status_secret_hash, wipe)
 values ('0190a000-0000-7000-8000-000000000018', '0190a000-0000-7000-8000-000000000010', 'IPHONE', 'SAFARI',
-        '2026-01-02T09:00:00Z', '2026-01-02T09:30:00Z', null, null),
+        '2026-01-02T09:00:00Z', '2026-01-02T09:30:00Z', null, null, 'APP', repeat('1', 64), null),
        ('0190a000-0000-7000-8000-00000000001a', '0190a000-0000-7000-8000-000000000010', 'WINDOWS', 'EDGE',
-        '2026-01-01T09:05:00Z', '2026-01-01T09:10:00Z', '2026-01-01T09:20:00Z', 'SIGNED_OUT');
+        '2026-01-01T09:05:00Z', '2026-01-01T09:10:00Z', '2026-01-01T09:20:00Z', 'SIGNED_OUT', 'BROWSER', repeat('0', 64),
+        'ADMINISTRATION');
 insert into donor_refresh_token (id, donor_id, secret_hash, issued_at, expires_at, revoked_at, second_factor_verified,
                                  client_id, scope, granted_at, used_at, successor_id, superseded_at, device_id)
 values ('0190a000-0000-7000-8000-000000000011', '0190a000-0000-7000-8000-000000000010', repeat('a', 64),
@@ -80,6 +84,8 @@ values ('0190a000-0000-7000-8000-000000000010', '2026-01-02T09:00:00Z');
 insert into donor_second_factor_recovery (id, donor_id, code_hash, created_at, expires_at, used_at, code)
 values ('0190a000-0000-7000-8000-000000000019', '0190a000-0000-7000-8000-000000000010', repeat('h', 64),
         '2026-01-06T09:00:00Z', '2026-01-13T09:00:00Z', null, 'K7M2P9QX');
+insert into donor_second_factor_wrong_codes (donor_id, window_started_at, wrong_codes, paused_until)
+values ('0190a000-0000-7000-8000-000000000010', '2026-01-06T10:00:00Z', 2, null);
 
 insert into donor_record (donor_id, type, name, company_identifier, street, city, postal_code, variable_symbol,
                           preferred_locale, registered_at, updated_at, erased_at)
@@ -161,17 +167,33 @@ values ('0190a000-0000-7000-8000-000000000026', '0190a000-0000-7000-8000-0000000
         repeat('a', 64), 'WITHDRAWN', 1, '{"schemaVersion": 1, "kind": "YEARLY", "year": 2026, "gifts": [{"receivedOn": "2026-01-07", "amountMinor": 50000, "source": "BANK_TRANSFER"}, {"receivedOn": "2026-01-08", "amountMinor": 100, "source": "BANK_TRANSFER"}], "total": {"amountMinor": 50100, "currency": "CZK"}}', repeat('2', 64), '0a1b2c3d', decode(repeat('ab', 65), 'hex'), repeat('b', 64),
         null, null, repeat('3', 64), '2027-01-05T10:00:00Z', 'DONATIONS_CHANGED');
 insert into donation_monthly_report (report_month, sent_at) values ('2026-01-01', '2026-02-01T06:00:00Z');
+insert into donation_report_delivery (id, report_month, sent_at, by_hand, recipient_count, includes_donors, registered_donors,
+                                      new_donors, includes_donations, received_count, received_total_minor, paired_count,
+                                      paired_total_minor, received_in_year_count, received_in_year_total_minor,
+                                      includes_unpaired_payments, unpaired_count, unpaired_total_minor, includes_bank_import,
+                                      bank_last_succeeded_at, bank_last_failure_at, bank_last_failure_kind)
+values ('0190a000-0000-7000-8000-000000000029', '2026-01-01', '2026-02-01T06:00:00Z', false, 1, true, 3, 1, true, 3, 70100, 2,
+        50100, 3, 70100, false, null, null, true, '2026-01-31T10:00:00Z', '2026-01-30T10:00:00Z', 'TRANSPORT');
+insert into donation_yearly_receipt_announcement (receipt_year, announced_at) values (2026, '2027-01-04T09:00:00Z');
 insert into donation_report_settings (id, recipients, send_day, include_donors, include_donations,
                                       include_unpaired_payments, include_bank_import, updated_at, send_hour)
 values (1, 'info@example.cz', 1, true, true, true, true, '2026-01-09T10:00:00Z', 9);
 insert into bank_import_state (id, covered_from, covered_to, last_attempted_at, last_succeeded_at, last_failure_kind,
-                               last_failure_message, updated_at, consecutive_failures, reported_outage)
+                               last_failure_message, updated_at, consecutive_failures, reported_outage, balance_minor,
+                               balance_read_at)
 values (1, '2025-10-10', '2026-01-09', '2026-01-09T10:00:00Z', '2026-01-09T10:00:00Z', null, null,
-        '2026-01-09T10:00:00Z', 0, null);
+        '2026-01-09T10:00:00Z', 0, null, 70100, '2026-01-09T10:00:00Z');
 insert into donation_import_alert (id, kind, failure_kind, failures, last_succeeded_at, occurred_at, created_at, outcome,
                                    settled_at)
 values ('0190a000-0000-7000-8000-000000000025', 'OUTAGE', 'UNAVAILABLE', 3, '2026-01-08T10:00:00Z',
         '2026-01-09T09:00:00Z', '2026-01-09T09:00:00Z', 'SENT', '2026-01-09T09:01:00Z');
+insert into bank_code (code, name) values ('0100', 'Testovací banka, a.s.');
+insert into bank_code_list_state (id, fetched_at, source_last_modified, checked_at)
+values (1, '2026-01-05T08:00:00Z', 'Mon, 05 Jan 2026 07:00:00 GMT', '2026-01-09T08:00:00Z');
+insert into bank_logo_image (id, sha256, webp) values ('0190a000-0000-7000-8000-00000000002a', repeat('c', 64), '\x52494646');
+update bank_logo set image_id = '0190a000-0000-7000-8000-00000000002a', fetched_at = '2026-01-05T08:00:00Z',
+                     checked_at = '2026-01-09T08:00:00Z' where code = '0100';
+update bank_logo set checked_at = '2026-01-09T08:00:00Z', last_failure = 'timeout' where code = '0800';
 
 insert into contact_message (id, sender_name, sender_email, body, received_at)
 values ('0190a000-0000-7000-8000-000000000030', 'Odesílatel', 'odesilatel@example.cz', 'Zpráva', '2026-01-09T10:00:00Z');
@@ -191,7 +213,14 @@ insert into operations_push_subscription (id, administrator_id, device_id, endpo
                                           mail_alerts, created_at, last_delivered_at, failures_in_a_row)
 values ('0190a000-0000-7000-8000-000000000031', '0190a000-0000-7000-8000-000000000010', '0190a000-0000-7000-8000-000000000018',
         'https://web.push.apple.com/fictional', 'p256dh', 'auth', true, false, true, '2026-01-09T10:00:00Z', '2026-01-09T11:00:00Z', 1);
+insert into operations_donor_push_subscription (id, donor_id, device_id, endpoint, p256dh, auth, gift_notifications,
+                                                yearly_receipt_notifications, created_at, last_delivered_at, failures_in_a_row)
+values ('0190a000-0000-7000-8000-000000000032', '0190a000-0000-7000-8000-000000000010', '0190a000-0000-7000-8000-000000000018',
+        'https://fcm.googleapis.com/fcm/send/fictional', 'p256dh', 'auth', true, false, '2026-01-09T10:00:00Z', null, 0);
+insert into operations_alert (area, open_since, changes)
+values ('BANK_IMPORT', '2026-01-09T09:00:00Z', 1),
+       ('MAIL', null, 2);
 
-insert into admin_action (id, admin_id, action, subject_id, details, performed_at, client)
+insert into admin_action (id, admin_id, action, subject_id, details, performed_at, client, facts)
 values ('0190a000-0000-7000-8000-000000000040', '0190a000-0000-7000-8000-000000000010', 'REQUEST_BACKUP', null, '',
-        '2026-01-09T10:00:00Z', null);
+        '2026-01-09T10:00:00Z', null, '{"summaryKey": "REQUEST_BACKUP", "values": {}}');
