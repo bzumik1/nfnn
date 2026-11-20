@@ -130,4 +130,5 @@ tasks.test {
 		isFailOnNoMatchingTests = !runsCucumber
 	}
 	finalizedBy(acceptanceTest)
+	inputs.file("../docs/system-overview.md").withPropertyName("contextMap").withPathSensitivity(PathSensitivity.NONE)
 }
