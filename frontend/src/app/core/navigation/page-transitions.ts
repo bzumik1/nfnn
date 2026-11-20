@@ -1,9 +1,11 @@
 import { DOCUMENT } from '@angular/common';
 import {
+  afterNextRender,
   DestroyRef,
   EnvironmentProviders,
   inject,
   Injectable,
+  Injector,
   provideAppInitializer,
   untracked,
 } from '@angular/core';
@@ -51,6 +53,10 @@ const BACKDROP_LOOKS = [
 ];
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
 const HELD_CLASS = `${PAGE_TRANSITION_CLASS}--held`;
+const ON_GROUND_CLASS = `${PAGE_TRANSITION_CLASS}--on-ground`;
+const SHEET_LOOKS = '.dialog--sheet, app-sheet-head';
+const SHEET_PANEL = '.dialog-panel';
+const PANEL_SCROLL = 'panelScroll';
 
 export interface Running {
   readonly kind: PageTransitionKind;
@@ -73,6 +79,18 @@ export interface PlacedPage {
   readonly box: HTMLElement;
   readonly copy: HTMLElement | null;
   readonly scrollY: number;
+}
+
+export interface SheetStep {
+  readonly kind: PageTransitionKind;
+  readonly depth: number;
+  readonly change: () => void;
+  readonly placed: () => void;
+}
+
+interface KeptSheet {
+  readonly sheet: HTMLElement;
+  readonly width: number;
 }
 
 export type BarCurve = 'still' | 'out' | 'out-early' | 'in';
@@ -100,10 +118,13 @@ export class PageTransitions {
   readonly preview = inject(NavigationPreview);
   readonly dirtyForms = inject(DirtyForms);
   private readonly placement = inject(PagePlacement);
+  private readonly injector = inject(Injector);
   drawing: SwipeDrawing | null = null;
   private readonly lent: (() => void)[] = [];
   private readonly kept = new Map<number, KeptPage>();
+  private readonly keptSheets = new Map<number, KeptSheet>();
   handingOver = false;
+  sheetHandOver: Running | null = null;
   private trigger: NavigationFacts['trigger'] = 'imperative';
   private restoredDepth: number | null = null;
   private standingSheet: HTMLElement | null = null;
@@ -164,6 +185,86 @@ export class PageTransitions {
 
   startSwipe(destination: BackDestination): SwipePreview | null {
     return this.drawing?.startSwipe(this, destination) ?? null;
+  }
+
+  startSheetSwipe(depth: number): SwipePreview | null {
+    const view = this.document.defaultView;
+    const under = this.keptSheets.get(depth - 1);
+    if (view === null || under === undefined || under.width !== view.innerWidth) {
+      return null;
+    }
+    return this.drawing?.startSheetSwipe(this, under.sheet) ?? null;
+  }
+
+  stepInSheet(step: SheetStep): void {
+    const view = this.document.defaultView;
+    const handOver = this.sheetHandOver;
+    if (handOver !== null) {
+      this.sheetHandOver = null;
+      step.change();
+      this.afterRender(() => {
+        step.placed();
+        if (this.running === handOver) {
+          this.finish();
+        }
+      });
+      return;
+    }
+    const moves = view !== null && this.compact() && motionAllowed(view) && this.running === null;
+    const leaving = moves ? this.standingSheetCopy() : null;
+    if (view === null || leaving === null) {
+      step.change();
+      this.afterRender(step.placed);
+      return;
+    }
+    if (step.kind === 'push') {
+      this.keptSheets.set(step.depth - 1, { sheet: leaving, width: view.innerWidth });
+    }
+    const overlay = this.overlay(step.kind);
+    overlay.classList.add(ON_GROUND_CLASS);
+    const left = this.place(
+      overlay,
+      this.sheetOnly(leaving),
+      step.kind === 'push' ? 'under' : 'over',
+    );
+    this.dressChrome(overlay, left, null);
+    const running: Running = {
+      kind: step.kind,
+      overlay,
+      swiping: false,
+      sheet: leaving,
+      revealed: true,
+    };
+    this.running = running;
+    this.sheetUnder(leaving);
+    this.finishing = view.setTimeout(() => this.finish(), PAGE_COVER_LONGEST_MS);
+    step.change();
+    this.afterRender(() => {
+      step.placed();
+      if (this.running !== running) {
+        return;
+      }
+      const arriving = this.standingSheetCopy();
+      if (arriving === null) {
+        this.finish();
+        return;
+      }
+      this.moveTo(running, view, this.sheetOnly(arriving));
+    });
+  }
+
+  sheetOnly(sheet: HTMLElement): KeptPage {
+    return {
+      copy: null,
+      scrollY: 0,
+      ground: 'transparent',
+      width: this.document.defaultView?.innerWidth ?? 0,
+      sheet,
+    };
+  }
+
+  private afterRender(then: () => void): void {
+    afterNextRender(then, { injector: this.injector });
   }
 
   loadDrawing(): Promise<SwipeDrawing> {
@@ -275,11 +376,11 @@ export class PageTransitions {
       this.finish();
       return;
     }
-    const shown = this.place(
-      running.overlay,
-      { ...this.shown(layer), sheet: running.sheet },
-      running.kind === 'push' ? 'over' : 'under',
-    );
+    this.moveTo(running, view, { ...this.shown(layer), sheet: running.sheet });
+  }
+
+  private moveTo(running: Running, view: Window, arriving: KeptPage): void {
+    const shown = this.place(running.overlay, arriving, running.kind === 'push' ? 'over' : 'under');
     const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
     this.dressChrome(running.overlay, left, shown);
     const startsOnceDrawn = running.kind === 'pop';
@@ -363,8 +464,9 @@ export class PageTransitions {
       scroller.append(copy);
     }
     page.append(scroller);
-    if (kept.sheet != null) {
-      page.append(kept.sheet.cloneNode(true));
+    const sheet = kept.sheet == null ? null : (kept.sheet.cloneNode(true) as HTMLElement);
+    if (sheet !== null) {
+      page.append(sheet);
     }
     if (position === 'under') {
       const dim = this.document.createElement('div');
@@ -375,6 +477,10 @@ export class PageTransitions {
       overlay.append(page);
     }
     scroller.scrollTop = kept.scrollY;
+    const panel = sheet?.querySelector<HTMLElement>(SHEET_PANEL);
+    if (panel != null) {
+      panel.scrollTop = Number(sheet?.dataset[PANEL_SCROLL] ?? 0);
+    }
     return { box: page, copy, scrollY: kept.scrollY };
   }
 
@@ -403,6 +509,9 @@ export class PageTransitions {
       `${PAGE_TRANSITION_CLASS}--under-tab-bar`,
       leavingTabBar && arrivingTabBar,
     );
+    if (arriving !== null) {
+      overlay.classList.toggle(ON_GROUND_CLASS, this.isSheet(leaving) && this.isSheet(arriving));
+    }
     overlay.querySelector(`.${PAGE_TRANSITION_CLASS}__bar`)?.remove();
     const bar = this.document.createElement('div');
     bar.className = `${PAGE_TRANSITION_CLASS}__bar`;
@@ -469,7 +578,7 @@ export class PageTransitions {
     return kept;
   }
 
-  private standingSheetCopy(): HTMLElement | null {
+  standingSheetCopy(): HTMLElement | null {
     const dialogs = this.document.querySelectorAll<HTMLElement>(STANDING_DIALOG);
     const top = dialogs.item(dialogs.length - 1);
     const view = this.document.defaultView;
@@ -485,6 +594,8 @@ export class PageTransitions {
       backdrop.style.setProperty(property, look.getPropertyValue(property)),
     );
     layer.append(backdrop, stillCopyOf(top));
+    const panel = top.querySelector<HTMLElement>(SHEET_PANEL);
+    layer.dataset[PANEL_SCROLL] = String(panel?.scrollTop ?? 0);
     return layer;
   }
 
@@ -499,6 +610,10 @@ export class PageTransitions {
     part.append(header.cloneNode(true));
     bar.append(part);
     return part;
+  }
+
+  private isSheet(page: PlacedPage | null): boolean {
+    return page?.box.querySelector(SHEET_LOOKS) != null;
   }
 
   private sheetStandsOn(page: PlacedPage): boolean {
@@ -568,6 +683,7 @@ export class PageTransitions {
     this.running?.overlay.remove();
     this.running = null;
     this.handingOver = false;
+    this.sheetHandOver = null;
     const root = this.document.documentElement;
     if (root.classList.contains(SHEET_UNDER_CLASS)) {
       root.classList.remove(SHEET_UNDER_CLASS);

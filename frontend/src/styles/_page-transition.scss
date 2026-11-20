@@ -1,3 +1,5 @@
+@use 'sheet';
+
 .page-transition {
   position: fixed;
   inset: 0;
@@ -35,9 +37,36 @@
   visibility: hidden;
 }
 
+.page-transition--on-ground {
+  &::before {
+    @include sheet.ground;
+
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .page-transition__page {
+    background-color: transparent !important;
+    box-shadow: none;
+  }
+
+  .page-transition__dim,
+  .page-transition__sheet-backdrop,
+  .page-transition__scroller .admin-sheet-backdrop,
+  .page-transition__page:has(> .page-transition__sheet) > .page-transition__scroller {
+    visibility: hidden;
+  }
+
+  .page-transition__sheet > dialog {
+    background-color: transparent !important;
+  }
+}
+
 .page-transition-sheet-under :modal,
 .page-transition-sheet-under :modal::backdrop {
   opacity: 0 !important;
+  transition: none !important;
 }
 
 .page-transition--under-tab-bar .page-transition__scroller app-tab-bar {
