@@ -30,6 +30,15 @@
             <span class="year-action">
               @switch (row.receipt) {
                 @case ('available') {
+                  @if (!compact()) {
+                    <app-pdf-progress
+                      class="receipt-saved"
+                      [progress]="donations.yearlyProgress(row.year)"
+                      cancelOf="přípravu potvrzení za rok {{ row.year }}"
+                      i18n-cancelOf="@@donor.dashboard.receipt.cancelOfYear"
+                      (cancelled)="donations.cancelYearlyReceipt(row.year)"
+                    />
+                  }
                   <button
                     type="button"
                     class="ui-button ui-button--primary yearly-pdf"
@@ -48,13 +57,15 @@
                       i18n-openLabel="@@donor.dashboard.yearly.open"
                     />
                   </button>
-                  <app-pdf-progress
-                    class="receipt-saved"
-                    [progress]="donations.yearlyProgress(row.year)"
-                    cancelOf="přípravu potvrzení za rok {{ row.year }}"
-                    i18n-cancelOf="@@donor.dashboard.receipt.cancelOfYear"
-                    (cancelled)="donations.cancelYearlyReceipt(row.year)"
-                  />
+                  @if (compact()) {
+                    <app-pdf-progress
+                      class="receipt-saved"
+                      [progress]="donations.yearlyProgress(row.year)"
+                      cancelOf="přípravu potvrzení za rok {{ row.year }}"
+                      i18n-cancelOf="@@donor.dashboard.receipt.cancelOfYear"
+                      (cancelled)="donations.cancelYearlyReceipt(row.year)"
+                    />
+                  }
                 }
                 @case ('after-year-end') {
                   <span class="year-note" i18n="@@donor.receipts.year.afterYearEnd"

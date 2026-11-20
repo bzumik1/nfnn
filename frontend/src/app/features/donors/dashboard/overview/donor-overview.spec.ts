@@ -7,6 +7,7 @@ import { Connectivity } from '../../../../core/connectivity/connectivity';
 import { DonationItem, DonationSummaryResponse } from '../../../donations/donations-api';
 import { twoYearDonations, twoYearSummary } from '../../../donations/testing/donation-fixtures';
 import { LOADING_TIMINGS } from '../../../../shared/ui/skeleton/loading-view';
+import { PdfProgress } from '../../../../shared/ui/pdf-progress/pdf-progress';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { DonorDonations } from '../donor-donations';
 import { DonorOverview } from './donor-overview';
@@ -56,7 +57,10 @@ describe("Given the donor's overview while the gifts load", () => {
       ],
     });
     TestBed.overrideComponent(DonorOverview, {
-      set: { imports: [NgTemplateOutlet, RouterLink, Skeleton], schemas: [CUSTOM_ELEMENTS_SCHEMA] },
+      set: {
+        imports: [NgTemplateOutlet, RouterLink, Skeleton, PdfProgress],
+        schemas: [CUSTOM_ELEMENTS_SCHEMA],
+      },
     });
     vi.useFakeTimers();
   });

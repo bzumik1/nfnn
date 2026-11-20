@@ -26,6 +26,7 @@ export function donationStatusLabel(status: DonationStatus): string {
   templateUrl: './donations-table.html',
   styleUrl: './donations-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.with-receipts]': 'withReceipts()' },
 })
 export class DonationsTable {
   protected readonly donations = inject(DonorDonations);

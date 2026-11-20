@@ -8,6 +8,7 @@ export const BREAKPOINTS = {
   amounts: 520,
   cards: 640,
   tablet: 768,
+  ledger: 864,
   nav: 899,
   laptop: 1100,
   wide: 1599,
