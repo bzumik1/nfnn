@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="010-queue-backup-alerts" author="nfnn">
+        <createTable tableName="operations_backup_alert">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_operations_backup_alert" nullable="false"/>
+            </column>
+            <column name="kind" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="problems" type="varchar(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="occurred_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="outcome" type="varchar(16)"/>
+            <column name="settled_at" type="timestamp with time zone"/>
+        </createTable>
+        <sql>alter table operations_backup_alert add constraint ck_operations_backup_alert_kind check (kind in ('PROBLEMS', 'RECOVERY'))</sql>
+        <sql>alter table operations_backup_alert add constraint ck_operations_backup_alert_problems check (problems &lt;&gt; '')</sql>
+        <sql>alter table operations_backup_alert add constraint ck_operations_backup_alert_settled
+            check ((outcome is null and settled_at is null) or (outcome in ('SENT', 'DROPPED') and settled_at is not null))</sql>
+    </changeSet>
+
+</databaseChangeLog>

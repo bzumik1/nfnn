@@ -1,0 +1,46 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.backup.BackupWatchServiceTest > Given a reported problem that has ended, when the check runs, then the recovery is published once, the state cleared and the backup alert recorded as resolved",
+    "replacement": "operations.application.backup.BackupWatchServiceTest > Given a reported problem that has ended, when the check runs, then the recovery is queued once after any waiting alert is dropped, the state cleared and the backup alert recorded as resolved",
+    "reason": "Khononov DDD review #621 (T2, #1444): the recovery is no longer published as an event for an @Async mail listener but queued in the outbox operations_backup_alert, after a problem alert still waiting is dropped",
+    "contract": "docs/api-contract.md, Backups (Alerts); docs/system-overview.md, operations (backups)"
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.infrastructure.backup.BackupAlertEmailSender: The backup alert e-mail (problems [<enum>]) could not be sent: MailSendException",
+    "reason": "Khononov DDD review #621 (T2, #1444): a backup alert e-mail the mail server refused waits in the outbox operations_backup_alert and is sent at the next backup check; the refused send is logged as before and the delivery says the alert waits",
+    "contract": "docs/api-contract.md, Backups (Alerts); docs/system-overview.md, operations (backups)",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<enum>": "the backup problems, values of the closed enum BackupProblem"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.application.backup.BackupAlertDelivery: Backup alert <id> was not delivered; it is sent again after the next backup check",
+    "reason": "Khononov DDD review #621 (T2, #1444): a backup alert e-mail the mail server refused waits in the outbox operations_backup_alert and is sent at the next backup check; the refused send is logged as before and the delivery says the alert waits",
+    "contract": "docs/api-contract.md, Backups (Alerts); docs/system-overview.md, operations (backups)",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the id of the outbox row, a UUID the site generated"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "operations.infrastructure.backup.BackupAlertEmailSender: The backup alert e-mail (recovery from [<enum>]) could not be sent: MailSendException",
+    "reason": "Khononov DDD review #621 (T2, #1444): a backup alert e-mail the mail server refused waits in the outbox operations_backup_alert and is sent at the next backup check; the refused send is logged as before and the delivery says the alert waits",
+    "contract": "docs/api-contract.md, Backups (Alerts); docs/system-overview.md, operations (backups)",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<enum>": "the backup problems that ended, values of the closed enum BackupProblem"
+      }
+    }
+  }
+]
