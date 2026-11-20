@@ -46,6 +46,31 @@ describe('Given a navigation on a phone', () => {
     ).toBe('pop');
   });
 
+  it('when the account sheet hands its place over to Správa, then Správa slides in over the sheet, though the sheet was still open and the address replaced', () => {
+    expect(
+      pageTransitionFor({
+        ...ARTICLE_FROM_LIST,
+        dialogOpen: true,
+        replaceUrl: true,
+        fromSheet: true,
+        from: { url: '/aktuality', parent: null },
+        to: { url: '/sprava', parent: '/' },
+      }),
+    ).toBe('push');
+  });
+
+  it('when the account sheet hands its place over for less motion, then nothing slides', () => {
+    expect(
+      pageTransitionFor({
+        ...ARTICLE_FROM_LIST,
+        reducedMotion: true,
+        dialogOpen: true,
+        fromSheet: true,
+        to: { url: '/sprava', parent: '/' },
+      }),
+    ).toBeNull();
+  });
+
   it('when the account opens from a public page, then it slides in, as the account is no tab', () => {
     expect(
       pageTransitionFor({

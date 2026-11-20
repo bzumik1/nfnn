@@ -129,9 +129,6 @@ export function clipToContent(document: Document, overlay: HTMLElement): Content
           part.style.display = 'none';
         }
       });
-      overlay
-        .querySelectorAll<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`)
-        .forEach((page) => (page.style.borderRadius = '0'));
       return [];
     },
   };

@@ -6,6 +6,8 @@
   z-index: 160;
   overflow: hidden;
   pointer-events: auto;
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
 }
 
 .page-transition--under-tab-bar {
@@ -20,13 +22,6 @@
 
 .page-transition__page--over {
   box-shadow: var(--shadow-page-edge);
-}
-
-@media (display-mode: standalone) {
-  .page-transition__page--over {
-    border-start-start-radius: var(--radius-page-card);
-    border-end-start-radius: var(--radius-page-card);
-  }
 }
 
 .page-transition__scroller :is(.back-button, .account-button, .skip-link) {
