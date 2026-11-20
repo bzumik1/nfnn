@@ -2904,7 +2904,7 @@ async function controlsOverTheirLabels(rows: Locator): Promise<string[]> {
 async function elementsPastTheScreen(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const right = document.documentElement.clientWidth;
-    return Array.from(document.body.querySelectorAll<HTMLElement>('*'))
+    const elements = Array.from(document.body.querySelectorAll<HTMLElement>('*'))
       .filter((element) => !element.closest('.visually-hidden'))
       .map((element) => ({ element, box: element.getBoundingClientRect() }))
       .filter(({ box }) => box.width > 0 && box.right > right + 1)
@@ -2920,6 +2920,46 @@ async function elementsPastTheScreen(page: Page): Promise<string[]> {
           .slice(0, 30);
         return `${element.tagName.toLowerCase()}.${String(element.className).trim().replace(/\s+/g, '.')} "${name}" ..${Math.round(box.right)} in 0..${right}`;
       });
+    const texts: string[] = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.textContent?.trim() || node.parentElement?.closest('.visually-hidden')) {
+        continue;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const reach = Math.max(0, ...Array.from(range.getClientRects()).map((rect) => rect.right));
+      if (reach > right + 1) {
+        texts.push(
+          `text in ${node.parentElement!.tagName.toLowerCase()}.${String(node.parentElement!.className).trim().replace(/\s+/g, '.')} "${node.textContent.trim().slice(0, 30)}" ..${Math.round(reach)} in 0..${right}`,
+        );
+      }
+    }
+    const pseudos = Array.from(document.body.querySelectorAll<HTMLElement>('*')).flatMap(
+      (element) =>
+        (['::before', '::after'] as const)
+          .filter((pseudo) => {
+            const style = getComputedStyle(element, pseudo);
+            if (style.content === 'none' || style.content === 'normal') {
+              return false;
+            }
+            const box = element.getBoundingClientRect();
+            const width = parseFloat(style.width) || 0;
+            const fromRight = parseFloat(style.right);
+            const fromLeft = parseFloat(style.left);
+            const reach = !Number.isNaN(fromRight)
+              ? box.right - fromRight
+              : !Number.isNaN(fromLeft)
+                ? box.left + fromLeft + width
+                : box.right;
+            return style.position === 'absolute' && reach > right + 1;
+          })
+          .map(
+            (pseudo) =>
+              `${element.tagName.toLowerCase()}.${String(element.className).trim().replace(/\s+/g, '.')}${pseudo}`,
+          ),
+    );
+    return [...elements, ...texts, ...pseudos];
   });
 }
 

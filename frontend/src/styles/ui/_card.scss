@@ -1,3 +1,4 @@
+@use 'breakpoints' as bp;
 @use 'pressed';
 @use 'touch-target';
 
@@ -49,6 +50,13 @@
   max-inline-size: var(--measure-prose);
   color: var(--color-text-soft);
   line-height: var(--leading-relaxed);
+}
+
+@include bp.container-down(ui-card, tabs) {
+  .ui-card__intro {
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
 }
 
 .ui-card__empty {
