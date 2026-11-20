@@ -216,7 +216,7 @@ describe('Given an application sent the browser to the connection page', () => {
       await clickButton('Povolit');
 
       expect(element('#connect-app-code').getAttribute('aria-invalid')).toBe('true');
-      expect(root().textContent).toContain('Opište prosím kód z aplikace.');
+      expect(root().textContent).toContain('Opište prosím kód z\u00a0aplikace.');
       expect(document.activeElement).toBe(element('#connect-app-code'));
       http.expectNone('/api/donors/oauth/authorize');
     });

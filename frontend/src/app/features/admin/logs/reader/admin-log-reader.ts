@@ -23,6 +23,7 @@ import { RadioGroup } from '../../../../shared/ui/radio-group/radio-group';
 import { formatDonationDate, pragueDay, pragueTime } from '../../../donations/donation-date';
 import { AdminApi, LogSearchResponse, LogWindowResponse } from '../../admin-api';
 import { LogPageAccess } from '../log-page-access';
+import { CompactLayout } from '../../../../core/layout/compact-layout';
 import { LevelIcon } from './level-icon/level-icon';
 import { levelLabel } from './level-labels';
 import {
@@ -90,6 +91,7 @@ const FILTER_PARAMS: Readonly<Record<string, LevelFilter>> = {
 export class AdminLogReader {
   private readonly api = inject(AdminApi);
   private readonly access = inject(LogPageAccess);
+  protected readonly layout = inject(CompactLayout);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);

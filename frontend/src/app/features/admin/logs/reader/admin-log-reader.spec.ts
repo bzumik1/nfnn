@@ -1,7 +1,11 @@
 import { logWindow } from '../../testing/admin-fixtures';
 import { LOGS_URL, LogPageHarness, problem } from '../testing/log-page-harness';
+import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { CompactLayout } from '../../../../core/layout/compact-layout';
 import { AdminLogReader } from './admin-log-reader';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
+import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 
 const FIO =
   '2026-11-09T22:09:47.639+01:00  INFO 1 --- [nova-nadeje] [scheduling-1] c.n.a.d.i.fio.FioBankStatementSource     : Fio answered 2 movements';
@@ -178,6 +182,48 @@ describe('Given an administrator reading a log file', () => {
       'DataSourceUtils.getConnection',
       'JdbcTemplate.execute',
     ]);
+  });
+
+  it('when the reader opens, then its intro says how to open an entry in words that fit a mouse, a keyboard and a finger', async () => {
+    await openTail();
+
+    expect(page.text('.ui-page-intro')).toBe(
+      'Nejnovější záznamy jsou nahoře, časy jsou pražské. Vyberte záznam a zobrazí se celý.',
+    );
+  });
+
+  it('when the file holds older lines, then Načíst novější řádky and Načíst starší řádky stand side by side above the entries', async () => {
+    await openTail();
+
+    const top = page.element('.load-more-row');
+    expect(
+      Array.from(top.querySelectorAll('button')).map((button) => accessibleText(button)),
+    ).toEqual(['Načíst novější řádky', 'Načíst starší řádky']);
+    expect(
+      top.compareDocumentPosition(page.element('.entry')) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('when the file holds older lines on a phone or a tablet, then Načíst starší řádky stays only under the entries', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: CompactLayout,
+          useValue: {
+            isCompact: signal(true).asReadonly(),
+            listsAsRows: signal(true).asReadonly(),
+          },
+        },
+      ],
+    });
+    await openTail();
+
+    const loadButtons = Array.from(page.element('.ui-page').querySelectorAll('button'))
+      .map((button) => accessibleText(button))
+      .filter((name) => name.startsWith('Načíst'));
+    expect(loadButtons).toEqual(['Načíst novější řádky', 'Načíst starší řádky']);
+    expect(page.element('.list-end').textContent).toContain('Načíst starší řádky');
+    expect(page.element('.load-more').textContent).toContain('Načíst novější řádky');
   });
 
   it('when they load older lines, then the older entries join below and the first of them takes the focus', async () => {

@@ -9,6 +9,7 @@ describe('Given a document open at /aktuality?strana=2', () => {
   let replaceState: ReturnType<typeof vi.fn>;
   let pushState: ReturnType<typeof vi.fn>;
   let navigation: ExternalNavigation;
+  const siteHistory = { navigationId: 4, nfnnAppDepth: 2, nfnnAppBehind: '/darce/prehled' };
 
   beforeEach(() => {
     assign = vi.fn();
@@ -17,7 +18,7 @@ describe('Given a document open at /aktuality?strana=2', () => {
     pushState = vi.fn();
     const view = {
       location: { href: 'https://nfnn.cz/aktuality?strana=2', assign, reload },
-      history: { replaceState, pushState },
+      history: { replaceState, pushState, state: siteHistory },
     };
     TestBed.configureTestingModule({
       providers: [{ provide: DOCUMENT, useValue: { defaultView: view } }],
@@ -36,7 +37,11 @@ describe('Given a document open at /aktuality?strana=2', () => {
   it('when the same page with a fragment is loaded from the server, then the address takes the fragment and the document reloads', () => {
     navigation.loadFromServer('/aktuality?strana=2#clanky');
 
-    expect(replaceState).toHaveBeenCalledExactlyOnceWith(null, '', '/aktuality?strana=2#clanky');
+    expect(replaceState).toHaveBeenCalledExactlyOnceWith(
+      siteHistory,
+      '',
+      '/aktuality?strana=2#clanky',
+    );
     expect(reload).toHaveBeenCalledOnce();
     expect(pushState).not.toHaveBeenCalled();
     expect(assign).not.toHaveBeenCalled();
@@ -46,6 +51,7 @@ describe('Given a document open at /aktuality?strana=2', () => {
     navigation.loadFromServer('/aktuality?strana=2');
 
     expect(reload).toHaveBeenCalledOnce();
+    expect(replaceState).toHaveBeenCalledExactlyOnceWith(siteHistory, '', '/aktuality?strana=2');
     expect(assign).not.toHaveBeenCalled();
   });
 

@@ -12,6 +12,7 @@ export type FieldMessages = Readonly<Record<string, string>>;
 export class FormField {
   readonly label = input.required<string>();
   readonly hint = input('');
+  readonly wholeLabel = input(false);
   readonly messages = input<FieldMessages>({});
 
   protected readonly control = contentChild.required(FormControlDirective);

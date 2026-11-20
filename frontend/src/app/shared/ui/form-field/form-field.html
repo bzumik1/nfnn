@@ -1,4 +1,4 @@
-<label class="field-label" [for]="control().id">{{ label() }}</label>
+<label class="field-label" [class.ui-word]="wholeLabel()" [for]="control().id">{{ label() }}</label>
 <ng-content />
 @if (hint()) {
   <p class="field-hint" [id]="control().id + '-hint'">{{ hint() }}</p>

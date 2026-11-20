@@ -7,13 +7,15 @@ import {
 import { KeptTabPages } from './kept-tab-pages';
 import { NavigationPreview } from './navigation-preview';
 
+export type ReusedPreview = Pick<NavigationPreview, 'drives' | 'took' | 'holds' | 'handleFor'>;
+
 @Injectable({ providedIn: 'root' })
 export class PreviewingReuse extends BaseRouteReuseStrategy {
   private readonly kept = inject(KeptTabPages);
-  private readonly preview = inject(NavigationPreview);
+  preview: ReusedPreview = inject(NavigationPreview);
 
   override shouldDetach(route: ActivatedRouteSnapshot): boolean {
-    return this.preview.drives() || this.kept.shouldDetach(route);
+    return this.kept.shouldDetach(route) || this.preview.drives();
   }
 
   override store(route: ActivatedRouteSnapshot, handle: DetachedRouteHandle | null): void {

@@ -1,0 +1,31 @@
+@use 'motion';
+
+@mixin disclosure {
+  > summary {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-1-5);
+    list-style: none;
+    cursor: pointer;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  .details-chevron {
+    flex-shrink: 0;
+    width: var(--list-chevron-size);
+    height: var(--list-chevron-size);
+    margin-block-start: calc((1lh - var(--list-chevron-size)) / 2);
+    @include motion.move(transform);
+  }
+
+  &[open] > summary .details-chevron {
+    transform: rotate(90deg);
+  }
+
+  &[open] > .details-body {
+    @include motion.expand-on-open;
+  }
+}

@@ -152,6 +152,11 @@
 
 .account-install .ui-list__lead {
   margin-inline-end: var(--space-3-5);
+
+  svg {
+    width: var(--icon-beside-text-size);
+    height: var(--icon-beside-text-size);
+  }
 }
 
 .account-foundation {

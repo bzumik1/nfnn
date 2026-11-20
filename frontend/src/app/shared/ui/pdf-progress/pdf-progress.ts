@@ -15,7 +15,11 @@ export const PDF_CANCEL_OFFERED_AFTER_MS = 8000;
   selector: 'app-pdf-progress',
   templateUrl: './pdf-progress.html',
   styleUrl: './pdf-progress.scss',
-  host: { class: 'pdf-progress', '[class.pdf-progress--compact]': 'compact()' },
+  host: {
+    class: 'pdf-progress',
+    '[class.pdf-progress--compact]': 'compact()',
+    '[class.pdf-progress--idle]': 'idle()',
+  },
 })
 export class PdfProgress {
   readonly progress = input<PdfProgressState | null>(null);
@@ -25,6 +29,7 @@ export class PdfProgress {
 
   protected readonly shown = signal<PdfProgressState | null>(null);
   protected readonly slow = signal(false);
+  readonly idle = computed(() => !this.shown() && !this.slow());
   private readonly running = computed(() => this.progress()?.kind === 'running');
   private readonly phase = computed(() => {
     const progress = this.progress();

@@ -1,6 +1,14 @@
 import { Locator, Page } from '@playwright/test';
 import { stepBack } from './app-history';
-import { administrator, mockDonorApi, openAccountItem, session } from './donor-session';
+import { fingerAlong } from './finger';
+import { waitWhileNothingMayHappen } from './fixed-waits';
+import {
+  administrator,
+  mockDonorApi,
+  openAccountItem,
+  session,
+  whenAdministrationCopied,
+} from './donor-session';
 import { expect, test } from './fixtures';
 
 const article = {
@@ -15,6 +23,8 @@ const article = {
   createdAt: '2026-10-19T09:00:00Z',
   updatedAt: '2026-10-20T07:30:00Z',
 };
+
+const LIST_TITLE = 'Co je u nás nového';
 
 interface SeenTransition {
   readonly kind: 'push' | 'pop' | 'none';
@@ -540,3 +550,282 @@ for (const [screen, viewport] of [
     });
   });
 }
+
+async function fingerFromEdge(target: Locator, xs: readonly number[]): Promise<void> {
+  await fingerAlong(
+    target,
+    xs.map((x) => ({ x, y: 420 })),
+    true,
+  );
+}
+
+const DRAGGED_ACROSS = [30, 60, 90, 120, 150, 180, 210, 250];
+
+function accountSheet(page: Page) {
+  return page.getByRole('dialog', { name: 'Účet' });
+}
+
+test.describe('Given an administrator in the app on the home screen of a phone with the account sheet open over the news', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+      Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
+      localStorage.setItem('nfnn.donor-session-app', '1');
+    });
+    await mockDonorApi(page);
+    await publishedArticle(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeVisible();
+  });
+
+  async function openAdministration(page: Page): Promise<void> {
+    const copied = whenAdministrationCopied(page);
+    await openAccountItem(page, 'Správa');
+    await expect(page).toHaveURL(/\/sprava$/);
+    await copied();
+    await expect(overlays(page)).toHaveCount(0);
+  }
+
+  async function backInTheAccountSheet(page: Page): Promise<void> {
+    await expect(page).toHaveURL('/aktuality');
+    await expect(accountSheet(page).getByRole('link', { name: /^Správa/ })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeAttached();
+    await expect(overlays(page)).toHaveCount(0);
+  }
+
+  async function holdTheStepBackAtItsEnd(page: Page): Promise<void> {
+    await page.evaluate(() => {
+      const watch = new MutationObserver(() => {
+        const overlay = document.querySelector('.page-transition--moving');
+        const motions = overlay?.getAnimations({ subtree: true }) ?? [];
+        if (motions.length === 0) {
+          return;
+        }
+        watch.disconnect();
+        motions.forEach((motion) => {
+          motion.pause();
+          motion.currentTime = Number(motion.effect?.getComputedTiming().endTime ?? 0);
+        });
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => document.documentElement.classList.add('nfnn-held')),
+        );
+      });
+      watch.observe(document.body, { childList: true, subtree: true, attributes: true });
+    });
+  }
+
+  const WITHOUT_FOCUS_RINGS =
+    '*, *::before, *::after { outline-color: transparent !important; transition: none !important; }';
+
+  function shareOfPixelsThatDiffer(page: Page, one: Buffer, other: Buffer): Promise<number> {
+    return page.evaluate(
+      async ([first, second]) => {
+        const width = innerWidth;
+        const height = innerHeight;
+        const softened = async (base64: string): Promise<Float32Array> => {
+          const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+          const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+          const canvas = new OffscreenCanvas(width, height);
+          const context = canvas.getContext('2d')!;
+          context.imageSmoothingQuality = 'high';
+          context.drawImage(bitmap, 0, 0, width, height);
+          const data = context.getImageData(0, 0, width, height).data;
+          const soft = new Float32Array(width * height * 3);
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+              for (let channel = 0; channel < 3; channel++) {
+                let sum = 0;
+                let count = 0;
+                for (let dy = -1; dy <= 1; dy++) {
+                  for (let dx = -1; dx <= 1; dx++) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                      sum += data[(ny * width + nx) * 4 + channel];
+                      count++;
+                    }
+                  }
+                }
+                soft[(y * width + x) * 3 + channel] = sum / count;
+              }
+            }
+          }
+          return soft;
+        };
+        const [a, b] = await Promise.all([softened(first), softened(second)]);
+        const awayFromTheLeavingEdge = Math.floor(width * 0.95);
+        let differing = 0;
+        let compared = 0;
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < awayFromTheLeavingEdge; x++) {
+            const index = (y * width + x) * 3;
+            const distance =
+              Math.abs(a[index] - b[index]) +
+              Math.abs(a[index + 1] - b[index + 1]) +
+              Math.abs(a[index + 2] - b[index + 2]);
+            compared++;
+            if (distance > 48) {
+              differing++;
+            }
+          }
+        }
+        return differing / compared;
+      },
+      [one.toString('base64'), other.toString('base64')],
+    );
+  }
+
+  test('when they press Zpět in Správa, then what lies under the leaving page at the end of its way is the account sheet over the news as it then stands, nothing of the news drawn over it', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+    await holdTheStepBackAtItsEnd(page);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+    await expect(page.locator('html.nfnn-held')).toBeAttached();
+    const underTheLeavingPage = await page.screenshot({ style: WITHOUT_FOCUS_RINGS });
+    await page.evaluate(() =>
+      document
+        .querySelector('.page-transition')
+        ?.getAnimations({ subtree: true })
+        .forEach((motion) => motion.play()),
+    );
+    await backInTheAccountSheet(page);
+    const standing = await page.screenshot({ style: WITHOUT_FOCUS_RINGS });
+
+    expect(await shareOfPixelsThatDiffer(page, underTheLeavingPage, standing)).toBeLessThan(0.005);
+  });
+
+  test('when they open Správa and press Zpět, then the account sheet is open over the news again with Správa focused', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+
+    await backInTheAccountSheet(page);
+  });
+
+  test('when they open Správa and press Esc, then the account sheet is open over the news again with Správa focused', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+
+    await page.keyboard.press('Escape');
+
+    await backInTheAccountSheet(page);
+  });
+
+  test('when they open Správa and the app steps back by itself, then the account sheet is open over the news again with Správa focused', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+
+    await stepBack(page);
+
+    await backInTheAccountSheet(page);
+  });
+
+  test('when they open Správa, go a section deeper and step back twice, then the account sheet is open over the news again', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+    await page
+      .getByRole('navigation', { name: 'Sekce správy' })
+      .getByRole('link', { name: /Lidé fondu, správci, zálohy/ })
+      .click();
+    await expect(page).toHaveURL(/\/sprava\/vice$/);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+    await expect(page).toHaveURL(/\/sprava$/);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(overlays(page)).toHaveCount(0);
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+
+    await backInTheAccountSheet(page);
+  });
+
+  test.describe('on an iPad held upright with a keyboard', () => {
+    test.use({ viewport: { width: 820, height: 1180 } });
+
+    test('when they press Esc while typing a search for donors in Správa, then the field keeps it and the administration stays', async ({
+      page,
+    }) => {
+      await openAdministration(page);
+      await page
+        .getByRole('navigation', { name: 'Sekce správy' })
+        .getByRole('link', { name: /^Dárci/ })
+        .click();
+      await expect(page).toHaveURL(/\/sprava\/darci/);
+      const search = page.getByLabel('Jméno, e-mail nebo variabilní symbol');
+      await search.focus();
+      await page.keyboard.type('nov');
+
+      await page.keyboard.press('Escape');
+
+      await waitWhileNothingMayHappen(page, 500);
+      await expect(page).toHaveURL(/\/sprava\/darci/);
+      await expect(search).toBeFocused();
+      await expect(accountSheet(page)).toHaveCount(0);
+    });
+  });
+
+  test('when they open Správa and press Zavřít, then the news returns without the account sheet', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zavřít' }).click();
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeFocused();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('when a finger drags Správa back from the edge and lets go, then the account sheet is open over the news with Správa focused', async ({
+    page,
+  }) => {
+    await openAdministration(page);
+
+    await fingerFromEdge(page.getByRole('main'), [...DRAGGED_ACROSS, 300]);
+
+    await backInTheAccountSheet(page);
+  });
+
+  test('when they open Moje dary and press Zpět, then the account sheet shows its list again over the news with Moje dary focused', async ({
+    page,
+  }) => {
+    await openAccountItem(page, 'Moje dary');
+
+    await page
+      .getByRole('dialog', { name: 'Moje dary' })
+      .getByRole('button', { name: 'Zpět' })
+      .click();
+
+    await expect(accountSheet(page).getByRole('link', { name: /^Moje dary/ })).toBeFocused();
+    await expect(page).toHaveURL('/aktuality');
+  });
+
+  test('when they open Moje dary and a finger drags from the edge, then the account sheet shows its list again over the news with Moje dary focused', async ({
+    page,
+  }) => {
+    await openAccountItem(page, 'Moje dary');
+
+    await fingerFromEdge(
+      page.getByRole('dialog', { name: 'Moje dary' }).locator('.account-section-body'),
+      [...DRAGGED_ACROSS, 300],
+    );
+
+    await expect(accountSheet(page).getByRole('link', { name: /^Moje dary/ })).toBeFocused();
+    await expect(page).toHaveURL('/aktuality');
+  });
+});

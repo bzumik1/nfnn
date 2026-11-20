@@ -2,7 +2,7 @@ import { Location } from '@angular/common';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
-import { APP_DEPTH_KEY, BackTarget } from './back-target';
+import { APP_BEHIND_KEY, APP_DEPTH_KEY, BackTarget } from './back-target';
 
 @Component({ template: '' })
 class Blank {}
@@ -226,5 +226,27 @@ describe('Given the back target of the app', () => {
     await started;
 
     expect(restarted.canGoBack).toBe(true);
+  });
+
+  it('when the app starts again on an entry it made, then back still leads to the page that was behind it', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideRouter([{ path: '**', component: Blank }])],
+    });
+    TestBed.inject(Location).replaceState('/darce/udaje', '', {
+      [APP_DEPTH_KEY]: 1,
+      [APP_BEHIND_KEY]: '/darce/prehled',
+    });
+    const restarted = TestBed.inject(BackTarget);
+    const started = navigated(TestBed.inject(Router));
+
+    TestBed.inject(Router).initialNavigation();
+    await started;
+
+    expect(restarted.destination('/darce')).toEqual({
+      kind: 'step',
+      depth: 0,
+      path: '/darce/prehled',
+    });
   });
 });

@@ -46,21 +46,26 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
     const faces = page.locator('app-pdf-button-face');
     await expect(faces.nth(2)).toBeVisible();
 
-    const offsets = await faces.evaluateAll((all) =>
-      all.map((face) => {
-        const button = face.closest('button, a')!.getBoundingClientRect();
-        const text = document.createRange();
-        text.selectNodeContents(face.querySelector('.pdf-button__layer--current')!);
-        const lines = Array.from(text.getClientRects()).filter((line) => line.height > 0);
-        const top = Math.min(...lines.map((line) => line.top));
-        const bottom = Math.max(...lines.map((line) => line.bottom));
-        return (top + bottom) / 2 - (button.top + button.bottom) / 2;
-      }),
-    );
+    const labelsOffTheMiddle = () =>
+      faces.evaluateAll((all) =>
+        all
+          .map((face, index) => {
+            const button = face.closest('button, a')!.getBoundingClientRect();
+            const current = face.querySelector('.pdf-button__layer--current');
+            if (current === null) {
+              return { index, offset: Number.NaN };
+            }
+            const text = document.createRange();
+            text.selectNodeContents(current);
+            const lines = Array.from(text.getClientRects()).filter((line) => line.height > 0);
+            const top = Math.min(...lines.map((line) => line.top));
+            const bottom = Math.max(...lines.map((line) => line.bottom));
+            return { index, offset: (top + bottom) / 2 - (button.top + button.bottom) / 2 };
+          })
+          .filter(({ offset }) => !(Math.abs(offset) <= 2)),
+      );
 
-    for (const offset of offsets) {
-      expect(Math.abs(offset), JSON.stringify(offsets)).toBeLessThanOrEqual(2);
-    }
+    await expect.poll(labelsOffTheMiddle).toEqual([]);
   });
 
   test('when they read the receipts on an upright iPad, below the navigation, then the status of every single receipt stands beside its PDF button and no empty line stays under it', async ({

@@ -21,6 +21,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from '../../../core/navigation/back-target';
 import { RouteChrome } from '../../../core/navigation/route-chrome';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { AccountReturn } from '../../../layout/account-sheet/account-return';
 import { AppHeader } from '../../../layout/app-header/app-header';
 import { AlertsOffer } from '../alerts/offer/alerts-offer';
 import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
@@ -47,7 +48,10 @@ import { FirstDownloadNotice } from './first-download-notice/first-download-noti
   templateUrl: './admin-shell.html',
   styleUrl: './admin-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class.admin-shell--sheet]': 'sheet()' },
+  host: {
+    '[class.admin-shell--sheet]': 'sheet()',
+    '(document:keydown.escape)': 'escapePressed($event)',
+  },
 })
 export class AdminShell {
   protected readonly groups = ADMIN_SECTIONS;
@@ -60,6 +64,7 @@ export class AdminShell {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly backTarget = inject(BackTarget);
+  private readonly accountReturn = inject(AccountReturn);
   private readonly chrome = inject(RouteChrome).current;
   private readonly fullScreen = toSignal(
     this.router.events.pipe(
@@ -100,10 +105,25 @@ export class AdminShell {
     this.backTarget.back(this.chrome().parent ?? '/');
   }
 
+  protected escapePressed(event: Event): void {
+    if (
+      !this.sheet() ||
+      event.defaultPrevented ||
+      typesText(event.target) ||
+      this.lock.locked() ||
+      this.document.querySelector('dialog[open]') !== null
+    ) {
+      return;
+    }
+    event.preventDefault();
+    this.back();
+  }
+
   protected close(): void {
     const entry = this.keptEntry() ?? this.entryDepth ?? 0;
     const steps = depthOf(this.location.getState()) - entry + 1;
     if (entry > 0 && steps > 0) {
+      this.accountReturn.closeAdministration();
       this.backTarget.backBy(steps);
     } else {
       void this.router.navigateByUrl('/', { replaceUrl: true, info: BACK_NAVIGATION });
@@ -192,4 +212,8 @@ function framedFullScreen(root: ActivatedRouteSnapshot): boolean {
     route = route.firstChild;
   }
   return route?.data['adminFrame'] === 'full';
+}
+
+function typesText(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('input, textarea, [contenteditable]') !== null;
 }

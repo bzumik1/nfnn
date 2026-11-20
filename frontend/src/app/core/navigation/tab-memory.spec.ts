@@ -1,23 +1,31 @@
 import { Location } from '@angular/common';
 import { provideLocationMocks, SpyLocation } from '@angular/common/testing';
-import { Component } from '@angular/core';
+import { Component, ProviderToken } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
+  InMemoryScrollingFeature,
   NavigationEnd,
   provideRouter,
   Router,
   RouteReuseStrategy,
+  Scroll,
   withInMemoryScrolling,
 } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { APP_TABS, tabOf } from './app-tabs';
 import { KeptTabPages } from './kept-tab-pages';
+import { PagePlacement } from './page-placement';
 import { RELOAD_PLACE_KEY, ReloadPlace } from '../reload/reload-place';
 import { ScrollHold } from './scroll-hold';
 import { TabMemory } from './tab-memory';
 
 @Component({ template: '' })
 class Blank {}
+
+function routerScrollerOf(scrolling: InMemoryScrollingFeature): { init(): void } {
+  const [scroller] = scrolling.ɵproviders as { provide: ProviderToken<{ init(): void }> }[];
+  return TestBed.inject(scroller.provide);
+}
 
 const [about, news, projects, donate] = APP_TABS;
 
@@ -340,5 +348,232 @@ describe('Given a visitor who goes back through the history of the browser', () 
     TestBed.tick();
 
     expect(scrolledTo).toEqual([]);
+  });
+});
+
+describe('Given a visitor who steps back to a page drawn afresh, shorter at first than the place they left', () => {
+  let harness: RouterTestingHarness;
+  let scrolledTo: number[];
+  let grown: (() => void) | null;
+  let placed: HTMLElement[];
+
+  function scrolledBy(top: number): void {
+    Object.defineProperty(window, 'scrollY', { value: top, configurable: true });
+  }
+
+  function pageHeight(height: number): void {
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      value: height,
+      configurable: true,
+    });
+  }
+
+  function grows(height: number): void {
+    pageHeight(height);
+    grown?.();
+  }
+
+  function farthestPlace(): number {
+    return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  }
+
+  beforeEach(async () => {
+    scrolledTo = [];
+    grown = null;
+    placed = [];
+    vi.spyOn(window, 'scrollTo').mockImplementation((options?: ScrollToOptions | number) => {
+      if (typeof options === 'object') {
+        const top = Math.min(options.top ?? 0, farthestPlace());
+        scrolledBy(top);
+        scrolledTo.push(top);
+      }
+    });
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        readonly observe = vi.fn();
+
+        constructor(changed: () => void) {
+          grown = changed;
+        }
+
+        disconnect(): void {
+          grown = null;
+        }
+      },
+    );
+    const scrolling = withInMemoryScrolling({ scrollPositionRestoration: 'enabled' });
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(
+          [
+            ...APP_TABS.map((tab) => ({ path: tab.path.slice(1), component: Blank })),
+            { path: 'sprava', component: Blank },
+          ],
+          scrolling,
+        ),
+        provideLocationMocks(),
+      ],
+    });
+    TestBed.inject(TabMemory);
+    routerScrollerOf(scrolling).init();
+    harness = await RouterTestingHarness.create('/o-nas');
+    TestBed.inject(Router).setUpLocationChangeListener();
+    pageHeight(3000);
+    scrolledBy(900);
+    await untilScrolled(() => harness.navigateByUrl('/sprava'));
+    scrolledBy(0);
+    pageHeight(300);
+    scrolledTo = [];
+  });
+
+  afterEach(() => {
+    placed.forEach((element) => element.remove());
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    scrolledBy(0);
+    pageHeight(0);
+  });
+
+  async function untilScrolled(act: () => unknown): Promise<void> {
+    const router = TestBed.inject(Router);
+    const shown = router.lastSuccessfulNavigation()?.id ?? 0;
+    const scrolled = new Promise<void>((done) =>
+      router.events.subscribe((event) => {
+        if (event instanceof Scroll && event.routerEvent.id > shown) {
+          queueMicrotask(done);
+        }
+      }),
+    );
+    await act();
+    await scrolled;
+    await vi.dynamicImportSettled();
+  }
+
+  function stepBack(): Promise<void> {
+    return untilScrolled(() => TestBed.inject(Location).back());
+  }
+
+  function focusedHeadingAt(top: number): void {
+    const main = document.createElement('main');
+    const heading = document.createElement('h1');
+    heading.tabIndex = -1;
+    main.append(heading);
+    document.body.append(main);
+    placed.push(main);
+    vi.spyOn(heading, 'getBoundingClientRect').mockReturnValue(
+      DOMRect.fromRect({ x: 0, y: top - window.scrollY, width: 300, height: 40 }),
+    );
+    heading.focus();
+  }
+
+  it('when the page grows tall enough, then it is put where they left it', async () => {
+    await stepBack();
+    scrolledTo = [];
+    grows(3000);
+
+    expect(scrolledTo).toEqual([900]);
+  });
+
+  function placedYet(): () => boolean {
+    let placed = false;
+    void TestBed.inject(PagePlacement)
+      .placed(window, 60_000)
+      .then(() => (placed = true));
+    return () => placed;
+  }
+
+  async function settledPromises(): Promise<void> {
+    await new Promise<void>((done) => setTimeout(done));
+  }
+
+  it('when the page has not grown yet, then the cover of the step back waits, and lifts once the page is put where they left it', async () => {
+    await stepBack();
+    const placed = placedYet();
+    await settledPromises();
+    expect(placed()).toBe(false);
+
+    grows(3000);
+    await settledPromises();
+
+    expect(scrolledTo.at(-1)).toBe(900);
+    expect(placed()).toBe(true);
+  });
+
+  it('when the visitor moves before the page grows, then the cover of the step back waits no longer', async () => {
+    await stepBack();
+    const placed = placedYet();
+    window.dispatchEvent(new Event('touchstart'));
+    await settledPromises();
+
+    expect(placed()).toBe(true);
+  });
+
+  it('when the page grows in two steps, then it moves once, from where it opened straight to where they left it', async () => {
+    await stepBack();
+    grows(1200);
+    grows(3000);
+
+    expect([...new Set(scrolledTo)]).toEqual([0, 900]);
+  });
+
+  it('when the visitor touches the page before it grows, then the page is left where they put it', async () => {
+    await stepBack();
+    window.dispatchEvent(new Event('touchstart'));
+    scrolledTo = [];
+    grows(3000);
+
+    expect(scrolledTo).toEqual([]);
+  });
+
+  it('when the focus moves before it grows, as a screen reader moves it, then the page is left where the focus took it', async () => {
+    await stepBack();
+    document.body.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    scrolledTo = [];
+    grows(3000);
+
+    expect(scrolledTo).toEqual([]);
+  });
+
+  it('when the page is scrolled by something else than the app before it grows, as by a scroll bar or three fingers of VoiceOver, then it is left there', async () => {
+    await stepBack();
+    scrolledBy(120);
+    window.dispatchEvent(new Event('scroll'));
+    scrolledTo = [];
+    grows(3000);
+
+    expect(scrolledTo).toEqual([]);
+  });
+
+  it('when the heading holding the focus would leave the screen by the move, then the page stays where the heading is seen', async () => {
+    focusedHeadingAt(80);
+    await stepBack();
+    scrolledTo = [];
+    grows(3000);
+
+    expect(scrolledTo).toEqual([]);
+  });
+
+  it('when the content fades through on a computer, then the page waits for the fade to let the scroll go and is put where they left it only then', async () => {
+    const hold = TestBed.inject(ScrollHold);
+    hold.hold();
+    await stepBack();
+    scrolledTo = [];
+    grows(3000);
+    expect(scrolledTo).toEqual([]);
+
+    hold.release();
+
+    expect(scrolledTo).toEqual([900]);
+  });
+
+  it('when another page opens before it grows, then that page is not moved', async () => {
+    await stepBack();
+    scrolledTo = [];
+    await harness.navigateByUrl('/projekty');
+    scrolledTo = [];
+    grows(3000);
+
+    expect(scrolledTo).not.toContain(900);
   });
 });

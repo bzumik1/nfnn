@@ -1,3 +1,5 @@
+@use 'touch-target';
+
 :host {
   display: block;
 }
@@ -37,9 +39,10 @@
 }
 
 .notifications-state {
-  font-weight: var(--weight-semibold);
+  margin-top: var(--space-3-5);
 }
 
 .notifications-retry {
   margin-top: var(--space-3);
+  @include touch-target.reaches-finger-size;
 }

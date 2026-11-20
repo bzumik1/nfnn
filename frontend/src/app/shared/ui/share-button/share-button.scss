@@ -11,6 +11,10 @@
   gap: var(--space-1-5);
 }
 
+:host(.is-finger-size) .share-button {
+  min-height: var(--touch-target-size);
+}
+
 .share-icon {
   width: 1.15em;
   height: 1.15em;

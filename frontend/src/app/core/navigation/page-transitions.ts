@@ -43,6 +43,12 @@ const BAR_ITEMS = ['.back-button', '.account-button'];
 export const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
 const STANDING_DIALOG = 'dialog[open]:not(.dialog--leaving)';
 const SHEET_HEAD = 'app-sheet-head';
+const BACKDROP_LOOKS = [
+  'background-color',
+  'opacity',
+  'backdrop-filter',
+  '-webkit-backdrop-filter',
+];
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
 
 export interface Running {
@@ -348,10 +354,10 @@ export class PageTransitions {
     if (copy !== null) {
       scroller.append(copy);
     }
-    if (kept.sheet != null) {
-      scroller.append(kept.sheet.cloneNode(true));
-    }
     page.append(scroller);
+    if (kept.sheet != null) {
+      page.append(kept.sheet.cloneNode(true));
+    }
     if (position === 'under') {
       const dim = this.document.createElement('div');
       dim.className = `${PAGE_TRANSITION_CLASS}__dim`;
@@ -458,12 +464,25 @@ export class PageTransitions {
   private standingSheetCopy(): HTMLElement | null {
     const dialogs = this.document.querySelectorAll<HTMLElement>(STANDING_DIALOG);
     const top = dialogs.item(dialogs.length - 1);
-    return top === null ? null : stillCopyOf(top);
+    const view = this.document.defaultView;
+    if (top === null || view === null) {
+      return null;
+    }
+    const layer = this.document.createElement('div');
+    layer.className = `${PAGE_TRANSITION_CLASS}__sheet`;
+    const backdrop = this.document.createElement('div');
+    backdrop.className = `${PAGE_TRANSITION_CLASS}__sheet-backdrop`;
+    const look = view.getComputedStyle(top, '::backdrop');
+    BACKDROP_LOOKS.forEach((property) =>
+      backdrop.style.setProperty(property, look.getPropertyValue(property)),
+    );
+    layer.append(backdrop, stillCopyOf(top));
+    return layer;
   }
 
   private barPart(bar: HTMLElement, page: PlacedPage | null): HTMLElement | null {
     const header = page?.copy?.querySelector('app-header') ?? null;
-    if (page === null || header === null) {
+    if (page === null || header === null || this.sheetStandsOn(page)) {
       return null;
     }
     const part = this.document.createElement('div');
@@ -472,6 +491,10 @@ export class PageTransitions {
     part.append(header.cloneNode(true));
     bar.append(part);
     return part;
+  }
+
+  private sheetStandsOn(page: PlacedPage): boolean {
+    return page.box.querySelector(`.${PAGE_TRANSITION_CLASS}__sheet`) !== null;
   }
 
   private barItem(element: HTMLElement, curve: BarCurve): BarItem {

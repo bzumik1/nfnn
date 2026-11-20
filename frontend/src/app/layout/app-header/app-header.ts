@@ -31,6 +31,7 @@ import { followLargeTitle, LargeTitleWatch } from './large-title';
 import { initialsOf } from '../../core/auth/initials';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AccountPortrait } from '../account-sheet/account-portrait';
+import { AccountReturn } from '../account-sheet/account-return';
 import { AccountSheet } from '../account-sheet/account-sheet';
 
 @Component({
@@ -43,6 +44,7 @@ import { AccountSheet } from '../account-sheet/account-sheet';
 export class AppHeader {
   private readonly loginDialog = inject(LoginDialogService);
   private readonly backTarget = inject(BackTarget);
+  private readonly accountReturn = inject(AccountReturn);
   private readonly chrome = inject(RouteChrome).current;
   private readonly injector = inject(Injector);
   private readonly header = viewChild.required<ElementRef<HTMLElement>>('header');
@@ -82,6 +84,7 @@ export class AppHeader {
     source: () => this.auth.signedIn(),
     computation: () => false,
   });
+  protected readonly accountReopenedOn = signal<string | null>(null);
   protected readonly backLabel = $localize`:@@layout.header.back:Zpět`;
   protected readonly titleInEdge = computed(() => this.compact() && this.parent() !== null);
   protected readonly edgeTitle = signal('');
@@ -101,6 +104,11 @@ export class AppHeader {
     effect(() => {
       this.path();
       untracked(() => afterNextRender(() => largeTitle?.check(), { injector: this.injector }));
+    });
+    effect(() => {
+      if (this.accountReturn.sectionToReopen() !== null && this.auth.signedIn()) {
+        untracked(() => this.answerStepIntoAccount());
+      }
     });
     effect(() => {
       if (this.auth.donor() !== null && this.auth.isAdmin()) {
@@ -128,11 +136,21 @@ export class AppHeader {
   }
 
   protected openAccount(): void {
+    this.accountReopenedOn.set(null);
     this.accountOpen.set(true);
   }
 
   protected closeAccount(): void {
     this.accountOpen.set(false);
+    this.accountReopenedOn.set(null);
+  }
+
+  private answerStepIntoAccount(): void {
+    const section = this.accountReturn.takeSectionToReopen();
+    if (this.compact()) {
+      this.accountReopenedOn.set(section);
+      this.accountOpen.set(true);
+    }
   }
 
   private focusAccount(): void {

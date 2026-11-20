@@ -1,4 +1,4 @@
-import { Locator, Page, Route } from '@playwright/test';
+import { devices, Locator, Page, Route } from '@playwright/test';
 import { DIAGNOSTICS, logsApi, routeLogsApi } from './admin-logs-api';
 import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
 import {
@@ -23,7 +23,10 @@ import {
   mockDonorApi,
   noDonations,
   openDonorSection,
+  openSignInDialog,
   rememberedDonorSession,
+  secondFactorRequired,
+  showAccountList,
   signIn,
 } from './donor-session';
 import { expect, test } from './fixtures';
@@ -890,6 +893,68 @@ async function fontSizes(title: Locator, token: string): Promise<{ title: number
     return sizes;
   }, token);
 }
+
+interface IconBesideText {
+  readonly icon: number;
+  readonly text: number;
+  readonly cap: number;
+}
+
+async function iconsBesideTheirText(icons: Locator, row: string): Promise<IconBesideText[]> {
+  await expect(icons.first()).toBeVisible();
+  return icons.evaluateAll((elements, rowSelector) => {
+    const cap = 2 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+    return elements.map((element) => {
+      const box = element.getBoundingClientRect();
+      const owner = element.closest(rowSelector)!;
+      const label = owner.querySelector('.ui-list__title') ?? owner;
+      return {
+        icon: Math.round(Math.min(box.width, box.height)),
+        text: Math.round(parseFloat(getComputedStyle(label).fontSize)),
+        cap: Math.round(cap),
+      };
+    });
+  }, row);
+}
+
+test.describe('Given a donor in Safari on an iPhone 390 pt wide whose text is the largest accessibility size', () => {
+  test.use({ viewport: { width: 390, height: 844 }, userAgent: devices['iPhone 15'].userAgent });
+
+  test.beforeEach(async ({ page }) => {
+    await showLargestSystemText(page);
+  });
+
+  test('when they open Bankovní účty, Údaje a zabezpečení and the account sheet, then the icon of Jak přiřazujeme platby?, of every signed-in device and of Přidat na plochu grows at least as large as its text and stops at twice the root text', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => document.fonts.ready);
+    const measured = await iconsBesideTheirText(
+      page.locator('.accounts-help .accounts-help-icon'),
+      '.accounts-help',
+    );
+
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    measured.push(
+      ...(await iconsBesideTheirText(page.locator('.device-icon svg'), '.ui-list__row')),
+    );
+
+    const sheet = await showAccountList(page);
+    measured.push(
+      ...(await iconsBesideTheirText(
+        sheet.locator('.account-install .ui-list__lead svg'),
+        '.ui-list__row',
+      )),
+    );
+
+    expect(measured.length).toBeGreaterThanOrEqual(3);
+    expect(measured.filter(({ icon, text, cap }) => icon < text || icon > cap)).toEqual([]);
+  });
+});
 
 test.describe('Given every title of a sheet or a dialog in the templates', () => {
   test('when they are listed, then each one is measured at the largest text, has no static text or is for screen readers only', () => {
@@ -1964,6 +2029,12 @@ for (const { pose, width, rootSize } of [
           ),
         );
       const resting = await heights();
+      for (const button of buttons) {
+        expectHeldByTheTallerLabel(
+          await busyLayout(button),
+          await button.evaluate((control) => control.textContent?.trim() ?? ''),
+        );
+      }
       await page.evaluate(() =>
         document.documentElement.style.setProperty('--delay-loading', '10s'),
       );
@@ -1982,12 +2053,310 @@ for (const { pose, width, rootSize } of [
         await expect(button.locator('.busy-label__face--shown')).toHaveText(busyLabel);
       }
       const working = await heights();
+      for (const button of buttons) {
+        expectHeldByTheTallerLabel(
+          await busyLayout(button),
+          await button.evaluate((control) => control.textContent?.trim() ?? ''),
+        );
+      }
       for (const [index, height] of working.entries()) {
         expect(
           Math.abs(height - resting[index]),
           `${await buttons[index].evaluate((control) => control.textContent?.trim())}: ${resting[index]} → ${height}`,
         ).toBeLessThanOrEqual(1);
       }
+    });
+  });
+}
+
+test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows the largest accessibility text', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ page }) => {
+    await showLargestSystemText(page);
+  });
+
+  test('when they open Údaje a zabezpečení, then the label E-mail stays on one line and Změnit never covers it', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const label = page.locator('#account-email-label');
+    const change = page.locator('app-account-card').getByRole('button', { name: 'Změnit e-mail' });
+    await expect(label).toHaveText('E-mail');
+    await expect(change).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    expect(await linesOf(label)).toBe(1);
+    const text = await label.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const box = range.getBoundingClientRect();
+      return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
+    });
+    const button = (await change.boundingBox())!;
+    const apart =
+      text.right <= button.x ||
+      button.x + button.width <= text.left ||
+      text.bottom <= button.y ||
+      button.y + button.height <= text.top;
+    expect(apart, `E-mail ${JSON.stringify(text)} and Změnit ${JSON.stringify(button)}`).toBe(true);
+  });
+});
+
+interface BusyLayout {
+  height: number;
+  label: number;
+  tallerFace: number;
+  wordsBrokenInside: string[];
+}
+
+function busyLayout(button: Locator): Promise<BusyLayout> {
+  return button.evaluate((control) => {
+    const label = control.querySelector('app-busy-label') as HTMLElement;
+    const faces = Array.from(label.querySelectorAll<HTMLElement>('.busy-label__face'));
+    const wordsBrokenInside = faces.flatMap((face) => {
+      const broken: string[] = [];
+      const walker = document.createTreeWalker(face, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        for (const word of (node.textContent ?? '').matchAll(/\S+/g)) {
+          const range = document.createRange();
+          range.setStart(node, word.index);
+          range.setEnd(node, word.index + word[0].length);
+          const lines = Array.from(range.getClientRects()).filter((rect) => rect.width > 0);
+          const longerThanTheLine =
+            lines.reduce((sum, rect) => sum + rect.width, 0) > face.clientWidth + 1;
+          if (new Set(lines.map((rect) => Math.round(rect.top))).size > 1 && !longerThanTheLine) {
+            broken.push(word[0]);
+          }
+        }
+      }
+      return broken;
+    });
+    return {
+      height: Math.round(control.getBoundingClientRect().height),
+      label: Math.round(label.getBoundingClientRect().height),
+      tallerFace: Math.round(Math.max(...faces.map((face) => face.getBoundingClientRect().height))),
+      wordsBrokenInside,
+    };
+  });
+}
+
+function expectHeldByTheTallerLabel(layout: BusyLayout, name: string): void {
+  expect(layout.wordsBrokenInside, `${name}: words broken inside`).toEqual([]);
+  expect(
+    Math.abs(layout.label - layout.tallerFace),
+    `${name}: label ${layout.label}, taller face ${layout.tallerFace}`,
+  ).toBeLessThanOrEqual(1);
+}
+
+function expectSameHeight(resting: BusyLayout, working: BusyLayout, name: string): void {
+  expect(
+    Math.abs(working.height - resting.height),
+    `${name}: ${resting.height} → ${working.height}`,
+  ).toBeLessThanOrEqual(1);
+}
+
+for (const { pose, width, rootSize } of [
+  { pose: 'an iPhone SE 320 pt wide with the text at 200 %', width: 320, rootSize: '200%' },
+  {
+    pose: 'an iPhone Pro Max 430 pt wide with the largest accessibility text',
+    width: 430,
+    rootSize: `${LARGEST_SYSTEM_TEXT_PX}px`,
+  },
+]) {
+  test.describe(`Given a visitor in the sign-in dialog on ${pose}`, () => {
+    test('when they ask for the registration link again and the loading delay passes, then Poslat odkaz znovu keeps its height while Odesíláme… shows', async ({
+      page,
+    }) => {
+      await page.clock.install();
+      await mockDonorApi(page);
+      await page.route('**/api/donors/auth/register', (route) =>
+        route.fulfill({ status: 202, body: '' }),
+      );
+      const neverAnswered = new Promise<void>(() => undefined);
+      await page.route('**/api/donors/auth/email-verification/request', async () => neverAnswered);
+      await openSignInDialog(page);
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
+      const dialog = page.getByRole('dialog');
+      await dialog.getByRole('button', { name: 'Registrace' }).click();
+      await dialog.locator('#register-name').fill('Jana Nováková');
+      await dialog.locator('#register-street').fill('Dlouhá 12');
+      await dialog.locator('#register-postal-code').fill('400 01');
+      await dialog.locator('#register-city').fill('Ústí nad Labem');
+      await dialog.locator('#register-email').fill('jana@example.cz');
+      await dialog.locator('#register-password').fill('correct horse battery');
+      await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
+      const resend = dialog.locator('.registration-resend');
+      await expect(resend).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const resting = await busyLayout(resend);
+      expectHeldByTheTallerLabel(resting, 'Poslat odkaz znovu');
+
+      await resend.click();
+      await page.clock.fastForward(1_000);
+
+      await expect(resend.locator('.busy-label__face--shown')).toHaveText('Odesíláme…');
+      const working = await busyLayout(resend);
+      expectHeldByTheTallerLabel(working, 'Odesíláme…');
+      expectSameHeight(resting, working, 'Poslat odkaz znovu');
+    });
+
+    test('when they try the connection again while offline and the loading delay passes, then Zkusit znovu keeps its height while Zkoušíme se připojit… shows', async ({
+      page,
+    }) => {
+      await page.clock.install();
+      await page.goto('/darce/prehled');
+      const dialog = page.getByRole('dialog');
+      await expect(dialog.locator('#login-email')).toBeVisible();
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
+      const neverAnswered = new Promise<void>(() => undefined);
+      await page.route(
+        (url) => url.pathname === '/api/operations/setup',
+        async () => neverAnswered,
+      );
+      try {
+        const now = await page.evaluate(() => Date.now());
+        await page.clock.pauseAt(now + 1_000);
+        await page.evaluate(() => {
+          Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+          window.dispatchEvent(new Event('offline'));
+        });
+        await page.clock.runFor(200);
+        const retry = dialog.locator('.offline-entry-try-again');
+        await expect(retry).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+        const resting = await busyLayout(retry);
+        expectHeldByTheTallerLabel(resting, 'Zkusit znovu');
+
+        await retry.click();
+        await page.clock.runFor(1_000);
+
+        await expect(retry.locator('.busy-label__face--shown')).toHaveText('Zkoušíme se připojit…');
+        const working = await busyLayout(retry);
+        expectHeldByTheTallerLabel(working, 'Zkoušíme se připojit…');
+        expectSameHeight(resting, working, 'Zkusit znovu');
+      } finally {
+        await page.clock.resume();
+      }
+    });
+
+    test('when the unseen busy label holds a word longer than the line, then only that word breaks, the button stays within the dialog and holds the height of that label', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await openSignInDialog(page);
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
+      const submit = page.getByRole('dialog').locator('.login-form .ui-button--primary');
+      await expect(submit).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      await submit.evaluate((control) => {
+        const unseen = control.querySelector('.busy-label__face:not(.busy-label__face--shown)');
+        unseen!.textContent = 'Přihlašujeme'.repeat(4);
+      });
+
+      const layout = await busyLayout(submit);
+      expectHeldByTheTallerLabel(layout, 'Přihlásit se with a long unseen word');
+      const placed = await submit.evaluate((control) => {
+        const panel = control.closest('.dialog-panel')!.getBoundingClientRect();
+        const box = control.getBoundingClientRect();
+        const unseen = control.querySelector('.busy-label__face:not(.busy-label__face--shown)')!;
+        const range = document.createRange();
+        range.selectNodeContents(unseen);
+        const lines = new Set(
+          Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+        );
+        return {
+          withinTheDialog: box.left >= panel.left - 1 && box.right <= panel.right + 1,
+          nothingPastTheButton: control.scrollWidth <= control.clientWidth + 1,
+          longWordBroken: lines.size > 1,
+        };
+      });
+      expect(placed).toEqual({
+        withinTheDialog: true,
+        nothingPastTheButton: true,
+        longWordBroken: true,
+      });
+    });
+
+    test('when they reach the code from the app and type it, then the whole code fits its field, which starts at its label', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route('**/api/donors/auth/login', (route) =>
+        route.fulfill(secondFactorRequired()),
+      );
+      await openSignInDialog(page);
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
+      const dialog = page.getByRole('dialog');
+      await dialog.locator('#login-email').fill('jana@example.cz');
+      await dialog.locator('#login-password').fill('correct horse battery');
+      await dialog.getByRole('button', { name: 'Přihlásit se', exact: true }).click();
+      const code = dialog.locator('#login-code');
+
+      await code.fill('287082');
+
+      const placed = await code.evaluate((input) => {
+        const label = document.querySelector(`label[for="${input.id}"]`)!;
+        return {
+          fits: input.scrollWidth <= input.clientWidth,
+          startsAtLabel:
+            Math.round(input.getBoundingClientRect().left) ===
+            Math.round(label.getBoundingClientRect().left),
+        };
+      });
+      expect(placed).toEqual({ fits: true, startsAtLabel: true });
+    });
+  });
+}
+
+for (const { pose, width, rootSize } of [
+  { pose: 'an iPhone SE 320 pt wide with the text at 200 %', width: 320, rootSize: '200%' },
+  {
+    pose: 'an iPhone Pro Max 430 pt wide with the largest accessibility text',
+    width: 430,
+    rootSize: `${LARGEST_SYSTEM_TEXT_PX}px`,
+  },
+]) {
+  test.describe(`Given an administrator on ${pose} on Zálohy`, () => {
+    test('when they start a backup and the loading delay passes, then Zálohovat teď keeps its height while Zálohujeme… shows', async ({
+      page,
+    }) => {
+      await page.clock.install();
+      await mockDonorApi(page, donorWithDonations);
+      await mockAdministration(page);
+      await rememberedSession(page);
+      const neverAnswered = new Promise<void>(() => undefined);
+      await page.route(
+        (url) => url.pathname === '/api/admin/operations/backups/requests',
+        async () => neverAnswered,
+      );
+      await page.goto('/sprava/zalohy');
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
+      const backUp = page
+        .locator('button')
+        .filter({ has: page.locator('.busy-label__face', { hasText: 'Zálohovat teď' }) });
+      await expect(backUp).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const resting = await busyLayout(backUp);
+      expectHeldByTheTallerLabel(resting, 'Zálohovat teď');
+
+      await backUp.click();
+      await page.clock.fastForward(1_000);
+
+      await expect(backUp.locator('.busy-label__face--shown')).toHaveText('Zálohujeme…');
+      const working = await busyLayout(backUp);
+      expectHeldByTheTallerLabel(working, 'Zálohujeme…');
+      expectSameHeight(resting, working, 'Zálohovat teď');
     });
   });
 }

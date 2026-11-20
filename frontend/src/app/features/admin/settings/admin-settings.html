@@ -29,7 +29,21 @@
     }
     @case ('restarting') {
       <p class="ui-load-state" role="status">
-        <span class="spinner" aria-hidden="true"></span>
+        <span class="restart-wait" aria-hidden="true">
+          <span class="restart-spinner"><span class="spinner"></span></span>
+          <svg
+            class="restart-calm"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+        </span>
         <span i18n="@@admin.settings.restarting"
           >Nastavení je uložené a web se restartuje. Obvykle to trvá do minuty.</span
         >
@@ -42,10 +56,30 @@
           to znovu; když to nepomůže, napište správci serveru.
         </p>
         <details class="tech-details">
-          <summary i18n="@@admin.settings.techDetails">Technické podrobnosti</summary>
-          <p i18n="@@admin.settings.slow.tech">
-            Backend po restartu neodpovídá. Příčinu najdete v logu kontejneru nfnn-backend v ZimaOS.
-          </p>
+          <summary>
+            <svg
+              class="details-chevron"
+              aria-hidden="true"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m9 18 6-6-6-6" /></svg
+            ><span i18n="@@admin.settings.techDetails">Technické podrobnosti</span>
+          </summary>
+          <div class="details-body">
+            <div>
+              <p i18n="@@admin.settings.slow.tech">
+                Backend po restartu neodpovídá. Příčinu najdete v logu kontejneru nfnn-backend v
+                ZimaOS.
+              </p>
+            </div>
+          </div>
         </details>
         <button
           appNeedsConnection
@@ -66,8 +100,29 @@
             Ostatní nastavení uložit jde; s klíčem k šifrování vám pomůže správce serveru.
           </p>
           <details class="tech-details">
-            <summary i18n="@@admin.settings.techDetails">Technické podrobnosti</summary>
-            <p i18n="@@admin.settings.noKey.tech">Na serveru chybí soubor secrets/settings-key.</p>
+            <summary>
+              <svg
+                class="details-chevron"
+                aria-hidden="true"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="m9 18 6-6-6-6" /></svg
+              ><span i18n="@@admin.settings.techDetails">Technické podrobnosti</span>
+            </summary>
+            <div class="details-body">
+              <div>
+                <p i18n="@@admin.settings.noKey.tech">
+                  Na serveru chybí soubor secrets/settings-key.
+                </p>
+              </div>
+            </div>
           </details>
         </div>
       } @else if (unreadableSecrets()) {
@@ -135,6 +190,7 @@
                       [name]="field.name"
                       [disabled]="!secretsCanBeStored() || field.remove"
                       [(ngModel)]="field.value"
+                      (ngModelChange)="edited()"
                     />
                   </app-password-reveal>
                 </app-form-field>
@@ -145,6 +201,7 @@
                       [id]="'setting-' + field.name + '-remove'"
                       [name]="field.name + '-remove'"
                       [(ngModel)]="field.remove"
+                      (ngModelChange)="edited()"
                     />
                     <span i18n="@@admin.settings.secret.remove">Odebrat uloženou hodnotu</span>
                   </label>
@@ -166,6 +223,7 @@
                   [id]="'setting-' + field.name"
                   [name]="field.name"
                   [(ngModel)]="field.value"
+                  (ngModelChange)="edited()"
                 />
               </app-form-field>
             }
@@ -218,70 +276,89 @@
               [open]="technicalOpen()"
               (toggle)="technicalToggled($event)"
             >
-              <summary i18n="@@admin.settings.technical.summary">
-                Adresa webu, server pro odesílání e-mailů a napojení na banku
+              <summary>
+                <svg
+                  class="details-chevron"
+                  aria-hidden="true"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="m9 18 6-6-6-6" /></svg
+                ><span i18n="@@admin.settings.technical.summary"
+                  >Adresa webu, server pro odesílání e-mailů a napojení na banku</span
+                >
               </summary>
-              @for (section of technical(); track section.id) {
-                <section class="technical-part" [attr.aria-labelledby]="anchor(section)">
-                  <h3
-                    [id]="anchor(section)"
-                    class="ui-card__subtitle technical-title"
-                    tabindex="-1"
-                  >
-                    {{ section.title }}
-                  </h3>
-                  @for (field of section.fields; track field.name) {
-                    <ng-container
-                      [ngTemplateOutlet]="settingField"
-                      [ngTemplateOutletContext]="{ $implicit: field }"
-                    />
-                  }
-                  @if (section.id === mailPart) {
-                    <p
-                      id="settings-test-email-hint"
-                      class="test-hint"
-                      i18n="@@admin.settings.testEmail.hint"
-                    >
-                      Pošle e-mail na vaši adresu {{ ownEmail() }} s údaji z formuláře, i když ještě
-                      nejsou uložené, a s odesílatelem z části Odesílatel e-mailů. Ověří tak server,
-                      přihlášení i odesílatele.
-                    </p>
-                    <div class="test-row">
-                      <button
-                        appNeedsConnection
-                        type="button"
-                        class="ui-button"
-                        aria-describedby="settings-test-email-hint"
-                        [disabled]="testingMail()"
-                        (click)="sendTestEmail()"
+              <div class="details-body">
+                <div>
+                  @for (section of technical(); track section.id) {
+                    <section class="technical-part" [attr.aria-labelledby]="anchor(section)">
+                      <h3
+                        [id]="anchor(section)"
+                        class="ui-card__subtitle technical-title"
+                        tabindex="-1"
                       >
-                        <app-busy-label [busy]="testingMail()">
-                          <span when-idle i18n="@@admin.settings.testEmail"
-                            >Poslat zkušební e-mail na moji adresu</span
+                        {{ section.title }}
+                      </h3>
+                      @for (field of section.fields; track field.name) {
+                        <ng-container
+                          [ngTemplateOutlet]="settingField"
+                          [ngTemplateOutletContext]="{ $implicit: field }"
+                        />
+                      }
+                      @if (section.id === mailPart) {
+                        <p
+                          id="settings-test-email-hint"
+                          class="test-hint"
+                          i18n="@@admin.settings.testEmail.hint"
+                        >
+                          Pošle e-mail na vaši adresu {{ ownEmail() }} s údaji z formuláře, i když
+                          ještě nejsou uložené, a s odesílatelem z části Odesílatel e-mailů. Ověří
+                          tak server, přihlášení i odesílatele.
+                        </p>
+                        <div class="test-row">
+                          <button
+                            appNeedsConnection
+                            type="button"
+                            class="ui-button"
+                            aria-describedby="settings-test-email-hint"
+                            [disabled]="testingMail()"
+                            (click)="sendTestEmail()"
                           >
-                          <span when-busy i18n="@@admin.settings.testEmail.busy"
-                            >Posíláme zkušební e-mail…</span
-                          >
-                        </app-busy-label>
-                      </button>
-                      <div class="test-result-slot" role="status">
-                        @if (mailNotice(); as mailNotice) {
-                          @if (mailNotice.kind === 'status') {
-                            <p class="test-result test-result--ok">{{ mailNotice.text }}</p>
-                          }
-                        }
-                      </div>
-                      <div class="test-result-slot" role="alert">
-                        @if (mailNotice(); as mailNotice) {
-                          @if (mailNotice.kind === 'alert') {
-                            <p class="test-result test-result--failed">{{ mailNotice.text }}</p>
-                          }
-                        }
-                      </div>
-                    </div>
+                            <app-busy-label [busy]="testingMail()">
+                              <span when-idle i18n="@@admin.settings.testEmail"
+                                >Poslat zkušební e-mail na moji adresu</span
+                              >
+                              <span when-busy i18n="@@admin.settings.testEmail.busy"
+                                >Posíláme zkušební e-mail…</span
+                              >
+                            </app-busy-label>
+                          </button>
+                          <div class="test-result-slot" role="status">
+                            @if (mailNotice(); as mailNotice) {
+                              @if (mailNotice.kind === 'status') {
+                                <p class="test-result test-result--ok">{{ mailNotice.text }}</p>
+                              }
+                            }
+                          </div>
+                          <div class="test-result-slot" role="alert">
+                            @if (mailNotice(); as mailNotice) {
+                              @if (mailNotice.kind === 'alert') {
+                                <p class="test-result test-result--failed">{{ mailNotice.text }}</p>
+                              }
+                            }
+                          </div>
+                        </div>
+                      }
+                    </section>
                   }
-                </section>
-              }
+                </div>
+              </div>
             </details>
           </div>
         </section>
@@ -299,7 +376,15 @@
           </div>
         }
 
-        <div class="save-row">
+        <div
+          class="save-row"
+          appActionBar
+          [class.ui-action-bar]="saveBar() !== 'none'"
+          [class.save-row--entering]="saveBar() === 'entering'"
+          [class.save-row--leaving]="saveBar() === 'leaving'"
+          (animationend)="saveBarSettled($event)"
+          (animationcancel)="saveBarSettled($event)"
+        >
           @if (confirmation(); as confirmation) {
             <div
               class="confirm"
@@ -368,6 +453,7 @@
             }
           </p>
         </div>
+        <div #saveRowEnd class="save-row-end" aria-hidden="true"></div>
       </form>
     }
   }

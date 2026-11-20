@@ -26,7 +26,11 @@ test.describe('Given an administrator on the logs hub', () => {
     await expect(page.getByRole('main').locator('.entry').first()).toContainText('line 39');
     await expect(page.getByRole('main').locator('.entry')).toHaveCount(40);
 
-    await page.getByRole('button', { name: 'Načíst starší řádky' }).click();
+    await page
+      .getByRole('main')
+      .locator('.list-end')
+      .getByRole('button', { name: 'Načíst starší řádky' })
+      .click();
     await expect(page.getByRole('main').locator('.entry')).toHaveCount(80);
 
     await page.getByRole('radio', { name: 'Chyby', exact: true }).click();
@@ -47,6 +51,32 @@ test.describe('Given an administrator on the logs hub', () => {
 
     await stepBack(page);
     await expect(page).toHaveURL('/sprava/logy');
+  });
+
+  test('when they load older lines from the top of backend.log, then the same older window joins as from the bottom', async ({
+    page,
+  }) => {
+    const entries = page.getByRole('main').locator('.entry');
+    const loadOlderFrom = async (place: '.load-more-row' | '.list-end') => {
+      await page.goto('/sprava/logy/soubor?nazev=backend.log');
+      await expect(entries).toHaveCount(40);
+      const asked = page.waitForRequest((request) =>
+        new URL(request.url()).searchParams.has('from'),
+      );
+      await page
+        .getByRole('main')
+        .locator(place)
+        .getByRole('button', { name: 'Načíst starší řádky' })
+        .click();
+      const from = new URL((await asked).url()).searchParams.get('from');
+      await expect(entries).toHaveCount(80);
+      return { from, texts: await entries.allTextContents() };
+    };
+
+    const fromTop = await loadOlderFrom('.load-more-row');
+    const fromBottom = await loadOlderFrom('.list-end');
+
+    expect(fromTop).toEqual(fromBottom);
   });
 
   test('when errors were written today, then the hub counts them and a row opens the reader at that line', async ({

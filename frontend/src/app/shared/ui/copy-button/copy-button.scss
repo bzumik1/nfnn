@@ -8,6 +8,10 @@
   max-inline-size: 100%;
 }
 
+:host(.is-finger-size) .ui-pill-button {
+  min-height: var(--touch-target-size);
+}
+
 .copy-button__faces {
   display: inline-grid;
 }

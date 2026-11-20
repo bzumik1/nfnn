@@ -98,12 +98,12 @@ export class BackTarget {
     if (this.popped) {
       this.depth = this.restoredDepth;
       this.behind = this.restoredBehind;
-    } else if (handedOver > 0) {
-      this.depth = handedOver;
-      this.behind = this.path;
     } else if (!this.started) {
       this.depth = depthIn(this.location.getState());
       this.behind = behindIn(this.location.getState());
+    } else if (handedOver > 0) {
+      this.depth = handedOver;
+      this.behind = this.path;
     } else if (!extras.replaceUrl && !extras.skipLocationChange) {
       this.depth++;
       this.behind = this.path;

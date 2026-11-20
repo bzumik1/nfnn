@@ -25,6 +25,19 @@
   }
 }
 
+@keyframes motion-expand-rows {
+  from {
+    grid-template-rows: 0fr;
+  }
+}
+
+@keyframes motion-clipped {
+  from,
+  to {
+    overflow: hidden;
+  }
+}
+
 @keyframes motion-row-tint {
   from {
     background-color: var(--color-accent-soft);

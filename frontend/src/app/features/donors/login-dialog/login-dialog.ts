@@ -44,6 +44,7 @@ import {
   PasskeyAuthenticator,
   PasskeyCeremonyError,
 } from '../../../core/auth/passkey-authenticator';
+import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
@@ -129,6 +130,7 @@ const REGISTRATION_FIELDS: Readonly<Record<string, string>> = {
     PrintableOnReceiptValidator,
     NeedsConnection,
     SegmentThumb,
+    BusyLabel,
   ],
   templateUrl: './login-dialog.html',
   styleUrl: './login-dialog.scss',
@@ -226,13 +228,13 @@ export class LoginDialog {
   };
   protected readonly codeHint = $localize`:@@donor.login.secondFactor.codeHint:Šest číslic z\u00a0ověřovací aplikace; kód se mění každých 30 sekund.`;
   protected readonly codeMessages = {
-    required: $localize`:@@donor.form.code.required:Opište prosím kód z aplikace.`,
+    required: $localize`:@@donor.form.code.required:Opište prosím kód z\u00a0aplikace.`,
     pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
   };
   protected readonly newPasswordHint = $localize`:@@donor.register.passwordHint:Alespoň 12 znaků. Klidně celá věta, která se vám dobře pamatuje.`;
   protected readonly newPasswordMessages = {
     required: $localize`:@@donor.form.newPassword.required:Zvolte si prosím heslo.`,
-    minlength: $localize`:@@donor.form.newPassword.tooShort:Heslo musí mít alespoň 12 znaků.`,
+    minlength: $localize`:@@donor.form.newPassword.tooShort:Heslo musí mít alespoň 12\u00a0znaků.`,
   };
   protected readonly personNameMessages = PERSON_NAME_MESSAGES;
   protected readonly companyNameMessages = COMPANY_NAME_MESSAGES;

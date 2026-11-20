@@ -1,0 +1,34 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/login-dialog/login-dialog.spec.ts > Given the sign-in dialog > when the visitor sends a form and the answer is on its way > then signing in says Přihlašujeme…",
+    "replacement": "src/app/features/donors/login-dialog/login-dialog.spec.ts > Given the sign-in dialog > when the visitor sends a form and the answer is on its way > then signing in is locked and says Přihlašujeme…, keeping Přihlásit se for its width",
+    "reason": "#1280 (Mobil + PWA 6/6 and Web + desktop 6/6, A8, 2026-11-16): the sign-in's busy labels moved onto the shared busy label, so the test now checks the lock, both label faces kept for the width and the busy label as the button's name instead of the swapped text",
+    "contract": "docs/frontend-overview.md, Shared UI (busy-label)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/login-dialog/login-dialog.spec.ts > Given the sign-in dialog > when the visitor sends a form and the answer is on its way > then the code from the app says Ověřujeme kód…",
+    "replacement": "src/app/features/donors/login-dialog/login-dialog.spec.ts > Given the sign-in dialog > when the visitor sends a form and the answer is on its way > then the code from the app is locked and says Ověřujeme kód…, keeping Přihlásit se for its width",
+    "reason": "#1280 (Mobil + PWA 6/6 and Web + desktop 6/6, A8, 2026-11-16): the sign-in's busy labels moved onto the shared busy label, so the test now checks the lock, both label faces kept for the width and the busy label as the button's name instead of the swapped text",
+    "contract": "docs/frontend-overview.md, Shared UI (busy-label)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/login-dialog/login-dialog.spec.ts > Given the sign-in dialog > when the visitor sends a form and the answer is on its way > then the registration says Vytváříme účet… and sending the link again says Odesíláme…, with the link valid 24 hours on one line",
+    "replacement": "src/app/features/donors/login-dialog/login-dialog.spec.ts > Given the sign-in dialog > when the visitor sends a form and the answer is on its way > then the registration is locked and says Vytváříme účet… and sending the link again says Odesíláme…, with the link valid 24 hours on one line",
+    "reason": "#1280 (Mobil + PWA 6/6 and Web + desktop 6/6, A8, 2026-11-16): the sign-in's busy labels moved onto the shared busy label, so the test now checks the lock, both label faces kept for the width and the busy label as the button's name instead of the swapped text",
+    "contract": "docs/frontend-overview.md, Shared UI (busy-label)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/login-dialog/login-dialog.spec.ts > Given the sign-in dialog > when the visitor sends a form and the answer is on its way > then asking for a reset link says Odesíláme…",
+    "replacement": "src/app/features/donors/login-dialog/login-dialog.spec.ts > Given the sign-in dialog > when the visitor sends a form and the answer is on its way > then asking for a reset link is locked and says Odesíláme…, keeping Odeslat odkaz for its width",
+    "reason": "#1280 (Mobil + PWA 6/6 and Web + desktop 6/6, A8, 2026-11-16): the sign-in's busy labels moved onto the shared busy label, so the test now checks the lock, both label faces kept for the width and the busy label as the button's name instead of the swapped text",
+    "contract": "docs/frontend-overview.md, Shared UI (busy-label)"
+  }
+]

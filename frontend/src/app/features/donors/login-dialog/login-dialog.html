@@ -3,7 +3,7 @@
   [presentation]="presentation()"
   [tall]="true"
   [grouped]="true"
-  [wide]="step() === 'register'"
+  [wide]="true"
   [pushesHistory]="false"
   (dismissed)="closeDialog()"
 >
@@ -69,11 +69,10 @@
         [attr.aria-disabled]="offlineRetry() === 'trying' ? 'true' : null"
         (click)="tryConnectionAgain()"
       >
-        @if (offlineRetry() === 'trying') {
-          <span i18n="@@donor.login.offline.trying">Zkoušíme se připojit…</span>
-        } @else {
-          <span i18n="@@donor.login.offline.tryAgain">Zkusit znovu</span>
-        }
+        <app-busy-label [busy]="offlineRetry() === 'trying'">
+          <span when-idle i18n="@@donor.login.offline.tryAgain">Zkusit znovu</span>
+          <span when-busy i18n="@@donor.login.offline.trying">Zkoušíme se připojit…</span>
+        </app-busy-label>
       </button>
     </section>
   } @else {
@@ -220,7 +219,7 @@
           >
             <div class="ui-field-group">
               <app-form-field
-                label="Kód z aplikace"
+                label="Kód z&nbsp;aplikace"
                 i18n-label="@@donor.login.secondFactor.code"
                 [hint]="codeHint"
                 [messages]="codeMessages"
@@ -228,6 +227,8 @@
                 <input
                   appFormControl
                   id="login-code"
+                  class="form-control--code"
+                  size="12"
                   enterkeyhint="go"
                   autofocus
                   name="code"
@@ -252,11 +253,12 @@
               class="ui-button ui-button--primary ui-button--block ui-button--grouped"
               [disabled]="loading()"
             >
-              @if (loading()) {
-                <span i18n="@@donor.login.secondFactor.submitLoading">Ověřujeme kód…</span>
-              } @else {
-                <span i18n="@@donor.login.secondFactor.submit">Přihlásit se</span>
-              }
+              <app-busy-label [busy]="loading()">
+                <span when-idle i18n="@@donor.login.secondFactor.submit">Přihlásit se</span>
+                <span when-busy i18n="@@donor.login.secondFactor.submitLoading"
+                  >Ověřujeme kód…</span
+                >
+              </app-busy-label>
             </button>
           </form>
 
@@ -295,6 +297,7 @@
             <div class="ui-field-group">
               <app-form-field
                 label="E-mail"
+                [wholeLabel]="true"
                 i18n-label="@@donor.login.email"
                 [messages]="emailMessages"
               >
@@ -401,14 +404,14 @@
                   (click)="resendVerification()"
                   i18n="@@donor.login.resendVerification"
                 >
-                  Poslat ověřovací e-mail znovu
+                  Poslat ověřovací <span class="ui-word">e-mail</span> znovu
                 </button>
               </p>
             }
             <div role="status">
               @if (verificationResent()) {
                 <p class="form-status" i18n="@@donor.login.verificationResent">
-                  Ověřovací e-mail jsme poslali znovu. Otevřete odkaz v&nbsp;něm a&nbsp;pak se
+                  Ověřovací e&#8209;mail jsme poslali znovu. Otevřete odkaz v&nbsp;něm a&nbsp;pak se
                   přihlaste.
                 </p>
               }
@@ -420,11 +423,10 @@
               class="ui-button ui-button--primary ui-button--block ui-button--grouped"
               [disabled]="loading()"
             >
-              @if (loading()) {
-                <span i18n="@@donor.login.submit.login.loading">Přihlašujeme…</span>
-              } @else {
-                <span i18n="@@donor.login.submit.login">Přihlásit se</span>
-              }
+              <app-busy-label [busy]="loading()">
+                <span when-idle i18n="@@donor.login.submit.login">Přihlásit se</span>
+                <span when-busy i18n="@@donor.login.submit.login.loading">Přihlašujeme…</span>
+              </app-busy-label>
             </button>
           </form>
 
@@ -477,13 +479,15 @@
               <path d="m3 7 9 6 9-6" />
             </svg>
           </div>
-          <h3 tabindex="-1" autofocus i18n="@@donor.register.sentTitle">Zkontrolujte si e-mail</h3>
+          <h3 tabindex="-1" autofocus i18n="@@donor.register.sentTitle">
+            Zkontrolujte si <span class="ui-word">e-mail</span>
+          </h3>
           <p role="status" i18n="@@donor.register.sentText">
             Na adresu {{ registration.email.trim() }} jsme poslali odkaz pro potvrzení. Platí
             24&nbsp;hodin; po jeho otevření se účet otevře a&nbsp;budete přihlášeni.
           </p>
           <p class="reset-hint" i18n="@@donor.register.sentHint">
-            E-mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.
+            E&#8209;mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.
           </p>
           <div class="sent-actions">
             <button
@@ -493,11 +497,10 @@
               [disabled]="loading()"
               (click)="resendRegistrationLink()"
             >
-              @if (loading()) {
-                <span i18n="@@donor.register.resendLoading">Odesíláme…</span>
-              } @else {
-                <span i18n="@@donor.register.resend">Poslat odkaz znovu</span>
-              }
+              <app-busy-label [busy]="loading()">
+                <span when-idle i18n="@@donor.register.resend">Poslat odkaz znovu</span>
+                <span when-busy i18n="@@donor.register.resendLoading">Odesíláme…</span>
+              </app-busy-label>
             </button>
             <button
               type="button"
@@ -505,7 +508,7 @@
               (click)="editRegistration()"
               i18n="@@donor.register.editEmail"
             >
-              Opravit e-mail
+              Opravit <span class="ui-word">e-mail</span>
             </button>
           </div>
           <div role="status">
@@ -641,7 +644,7 @@
                 </app-form-field>
 
                 <app-form-field
-                  label="Sídlo – ulice a číslo"
+                  label="Sídlo&nbsp;– ulice a&nbsp;číslo"
                   i18n-label="@@donor.register.companyStreet"
                   [messages]="streetMessages"
                 >
@@ -660,7 +663,7 @@
                 </app-form-field>
               } @else {
                 <app-form-field
-                  label="Jméno a příjmení"
+                  label="Jméno a&nbsp;příjmení"
                   i18n-label="@@donor.login.name"
                   [messages]="personNameMessages"
                 >
@@ -680,7 +683,7 @@
                 </app-form-field>
 
                 <app-form-field
-                  label="Ulice a číslo"
+                  label="Ulice a&nbsp;číslo"
                   i18n-label="@@donor.register.street"
                   [messages]="streetMessages"
                 >
@@ -742,6 +745,7 @@
             <div class="ui-field-group">
               <app-form-field
                 label="E-mail"
+                [wholeLabel]="true"
                 i18n-label="@@donor.login.email"
                 [messages]="emailMessages"
               >
@@ -836,7 +840,7 @@
             } @else {
               <p class="register-hint passkey-later" i18n="@@donor.register.passkeyHint">
                 Klíč (otisk prstu, obličej nebo zámek obrazovky) vytvoříte hned po potvrzení
-                e-mailu. Účet pak heslo mít nebude; nastavit ho můžete kdykoli později.
+                e&#8209;mailu. Účet pak heslo mít nebude; nastavit ho můžete kdykoli později.
               </p>
             }
 
@@ -860,11 +864,10 @@
               class="ui-button ui-button--primary ui-button--block ui-button--grouped"
               [disabled]="loading()"
             >
-              @if (loading()) {
-                <span i18n="@@donor.login.submit.register.loading">Vytváříme účet…</span>
-              } @else {
-                <span i18n="@@donor.login.submit.register">Vytvořit účet</span>
-              }
+              <app-busy-label [busy]="loading()">
+                <span when-idle i18n="@@donor.login.submit.register">Vytvořit účet</span>
+                <span when-busy i18n="@@donor.login.submit.register.loading">Vytváříme účet…</span>
+              </app-busy-label>
             </button>
           </form>
         </div>
@@ -888,14 +891,14 @@
             </svg>
           </div>
           <h3 tabindex="-1" autofocus i18n="@@donor.login.reset.successTitle">
-            Zkontrolujte si e-mail
+            Zkontrolujte si <span class="ui-word">e-mail</span>
           </h3>
           <p i18n="@@donor.login.reset.successText">
             Pokud k&nbsp;adrese {{ resetEmail.trim() }} existuje účet, poslali jsme na ni odkaz pro
             nastavení nového hesla. Platí hodinu.
           </p>
           <p class="reset-hint" i18n="@@donor.login.reset.successHint">
-            E-mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.
+            E&#8209;mail nedorazil? Podívejte se do nevyžádané pošty nebo si ho nechte poslat znovu.
           </p>
           <button
             appNeedsConnection
@@ -904,11 +907,10 @@
             [disabled]="loading()"
             (click)="resendReset()"
           >
-            @if (loading()) {
-              <span i18n="@@donor.login.reset.submitLoading">Odesíláme…</span>
-            } @else {
-              <span i18n="@@donor.login.reset.resend">Poslat znovu</span>
-            }
+            <app-busy-label [busy]="loading()">
+              <span when-idle i18n="@@donor.login.reset.resend">Poslat znovu</span>
+              <span when-busy i18n="@@donor.login.reset.submitLoading">Odesíláme…</span>
+            </app-busy-label>
           </button>
           <div role="status">
             @if (resetResent()) {
@@ -942,7 +944,7 @@
           </button>
           <h3 class="step-title reset-title" i18n="@@donor.login.reset.title">Obnovení hesla</h3>
           <p class="step-lead" i18n="@@donor.login.reset.lead">
-            Zadejte svůj e-mail a&nbsp;pošleme vám odkaz pro obnovení hesla.
+            Zadejte svůj e&#8209;mail a&nbsp;pošleme vám odkaz pro obnovení hesla.
           </p>
           <form
             #reset="ngForm"
@@ -954,6 +956,7 @@
             <div class="ui-field-group">
               <app-form-field
                 label="E-mail"
+                [wholeLabel]="true"
                 i18n-label="@@donor.login.email"
                 [messages]="emailMessages"
               >
@@ -985,11 +988,10 @@
               class="ui-button ui-button--primary ui-button--block ui-button--grouped"
               [disabled]="loading()"
             >
-              @if (loading()) {
-                <span i18n="@@donor.login.reset.submitLoading">Odesíláme…</span>
-              } @else {
-                <span i18n="@@donor.login.reset.submit">Odeslat odkaz</span>
-              }
+              <app-busy-label [busy]="loading()">
+                <span when-idle i18n="@@donor.login.reset.submit">Odeslat odkaz</span>
+                <span when-busy i18n="@@donor.login.reset.submitLoading">Odesíláme…</span>
+              </app-busy-label>
             </button>
           </form>
         </div>
