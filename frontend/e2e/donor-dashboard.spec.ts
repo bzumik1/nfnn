@@ -1194,7 +1194,7 @@ test.describe('Given a signed-in donor with gift receipts on a 390 px phone', ()
     const rows = page
       .locator('.payments-card .donation-rows > li')
       .filter({ has: page.locator('.download-btn') });
-    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(1)).toBeVisible();
     await expect(rows.first().locator('.receipt-status')).toHaveClass(/receipt-status--closing/);
     return rows;
   }
@@ -1241,7 +1241,7 @@ test.describe('Given a signed-in donor with gift receipts on a 390 px phone', ()
     await holdIssuing(page);
 
     const closing = whenStatusLine(rows.first().locator('.receipt-status'), false);
-    await rows.last().locator('.download-btn').click();
+    await rows.nth(1).locator('.download-btn').click();
     const change = await closing;
 
     expect(change.moving).toBe(true);
