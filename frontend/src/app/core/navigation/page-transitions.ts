@@ -286,11 +286,16 @@ export class PageTransitions {
     const layer = this.layer();
     const extras = untracked(this.router.currentNavigation)?.extras ?? {};
     const destination = chromeOf(event.state.root);
+    const standingSheet = this.standingSheet;
+    this.standingSheet = null;
+    const returningSheet = sheetReturnsIn(extras.state) ? standingSheet : null;
     const kind = pageTransitionFor({
       first: event.id === 1 || !this.router.navigated,
       reducedMotion: view?.matchMedia?.(LESS_MOTION).matches !== false,
       compact: this.compact(),
       dialogOpen: this.document.querySelector(SHOWN_DIALOG) !== null,
+      fromSheet:
+        returningSheet !== null && this.trigger === 'imperative' && extras.info !== BACK_NAVIGATION,
       trigger: this.trigger,
       back: extras.info === BACK_NAVIGATION,
       replaceUrl: extras.replaceUrl === true,
@@ -298,8 +303,6 @@ export class PageTransitions {
       from: { url: this.router.url, parent: this.chrome().parent },
       to: { url: event.urlAfterRedirects, parent: destination.parent },
     });
-    const standingSheet = this.standingSheet;
-    this.standingSheet = null;
     if (layer === null || view === null || !motionAllowed(view)) {
       return;
     }
@@ -309,7 +312,6 @@ export class PageTransitions {
       this.trigger === 'imperative' &&
       extras.info !== BACK_NAVIGATION &&
       (!extras.replaceUrl || depthIn(extras.state) >= this.backTarget.nextDepth());
-    const returningSheet = sheetReturnsIn(extras.state) ? standingSheet : null;
     if (kind === null || !this.compact()) {
       if (deepens) {
         this.keepBehind(this.backTarget.nextDepth() - 1, {
@@ -320,9 +322,9 @@ export class PageTransitions {
       return;
     }
     const overlay = this.overlay(kind);
-    const left = this.shown(layer);
+    const left = { ...this.shown(layer), sheet: kind === 'push' ? returningSheet : null };
     if (kind === 'push') {
-      this.keepBehind(this.backTarget.nextDepth() - 1, { ...left, sheet: returningSheet });
+      this.keepBehind(this.backTarget.nextDepth() - 1, left);
     }
     const placed = this.place(overlay, left, kind === 'push' ? 'under' : 'over');
     this.dressChrome(overlay, placed, null);
@@ -331,7 +333,7 @@ export class PageTransitions {
         ? (this.keptAt(this.restoredDepth, view)?.sheet ?? null)
         : null;
     this.running = { kind, overlay, swiping: false, sheet, revealed: false };
-    this.sheetUnder(sheet);
+    this.sheetUnder(sheet ?? left.sheet);
     this.finishing = view.setTimeout(() => this.finish(), PAGE_COVER_LONGEST_MS);
   }
 

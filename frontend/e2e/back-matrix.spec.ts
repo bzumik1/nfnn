@@ -47,6 +47,8 @@ interface Frame {
   readonly at: number;
   readonly overlay: boolean;
   readonly offset: number | null;
+  readonly tinted: boolean;
+  readonly rounded: number;
 }
 
 interface StepProbe {
@@ -285,10 +287,29 @@ async function watchTheStep(page: Page): Promise<void> {
       const overlay = document.querySelector('.page-transition');
       const over = overlay?.querySelector('.page-transition__page--over') ?? null;
       const under = overlay?.querySelector('.page-transition__page--under') ?? null;
+      const layerStyle = overlay === null ? null : getComputedStyle(overlay);
+      const filter =
+        layerStyle?.backdropFilter || layerStyle?.getPropertyValue('-webkit-backdrop-filter');
+      const corners = Array.from(
+        overlay?.querySelectorAll<HTMLElement>('.page-transition__page') ?? [],
+        (page) => {
+          const style = getComputedStyle(page);
+          return Math.max(
+            ...[
+              style.borderTopLeftRadius,
+              style.borderTopRightRadius,
+              style.borderBottomLeftRadius,
+              style.borderBottomRightRadius,
+            ].map((radius) => Number.parseFloat(radius) || 0),
+          );
+        },
+      );
       probe.frames.push({
         at: now,
         overlay: overlay !== null,
         offset: over === null ? null : new DOMMatrixReadOnly(getComputedStyle(over).transform).m41,
+        tinted: layerStyle !== null && (filter === undefined || filter === '' || filter === 'none'),
+        rounded: Math.max(0, ...corners),
       });
       if (under !== null && probe.under === null) {
         probe.under = (under.textContent ?? '').replace(/\s+/g, ' ');
@@ -328,6 +349,14 @@ function travelled(frames: readonly Frame[]): Frame[] {
     shown.every((frame) => frame.overlay),
     'the moving page vanished and came back while it travelled',
   ).toBe(true);
+  expect(
+    shown.filter((frame) => frame.tinted).length,
+    'frames in which Safari would tint the band under the clock from the moving layer',
+  ).toBe(0);
+  expect(
+    Math.max(...shown.map((frame) => frame.rounded)),
+    'the moving page had rounded corners',
+  ).toBe(0);
   return shown.filter((frame) => frame.offset !== null);
 }
 
@@ -350,6 +379,19 @@ function expectLeftAway(probe: StepProbe, width: number, from: number): void {
   for (let at = 1; at < moving.length; at++) {
     expect(moving[at].offset!, 'the leaving page went back on its way').toBeGreaterThanOrEqual(
       moving[at - 1].offset! - 1,
+    );
+  }
+  expectNoJump(moving, width);
+}
+
+function expectArrived(probe: StepProbe, width: number): void {
+  const moving = travelled(probe.frames);
+  const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < width - 1);
+  expect(between.length, 'no frame showed the arriving page on its way').toBeGreaterThanOrEqual(2);
+  expect(moving[0].offset!).toBeGreaterThanOrEqual(width * (1 - FIRST_SHOWN_AT_MOST));
+  for (let at = 1; at < moving.length; at++) {
+    expect(moving[at].offset!, 'the arriving page went back on its way').toBeLessThanOrEqual(
+      moving[at - 1].offset! + 1,
     );
   }
   expectNoJump(moving, width);
@@ -497,8 +539,14 @@ async function walkRow(
 ): Promise<void> {
   const top = await screens.scrollTo(scrolled ? SCROLLED_BY_PX : 0);
   const groundBefore = screens.sheets ? await bandColour(page) : null;
+  await watchTheStep(page);
   await open();
   await screens.shown(row);
+  const opening = await stepSeen(page);
+  expect(opening.under ?? '', 'the screen before was not under the arriving one').toContain(
+    row.name,
+  );
+  expectArrived(opening, WIDTH);
   if (groundBefore !== null) {
     expectSameColour(await bandColour(page), groundBefore, 'when the next screen opened');
   }
