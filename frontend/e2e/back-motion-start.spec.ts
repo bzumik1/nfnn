@@ -199,6 +199,10 @@ function width(page: Page): number {
 }
 
 test.describe('Given the app on the home screen of a phone with an article opened from the news, whose next frame keeps the phone busy as long as drawing the placed pages does', () => {
+  test.skip(
+    ({ browserName }) => browserName === 'webkit',
+    'WebKit in CI gives the first frame after a change only after 250 to 900 ms and then about every 100 ms, the case without frames of condition 1 of decision R, where the held motion goes on the clock; the start of the motion in WebKit is checked by the frame-by-frame measurement on the simulator',
+  );
   test.use({
     viewport: { width: 390, height: 844 },
     hasTouch: true,
