@@ -114,14 +114,10 @@ td.amount {
   text-align: right;
 }
 
-tr.is-verification td {
-  color: var(--color-text-muted);
-}
-
-tr.is-verification td.amount {
-  font-size: var(--text-md);
-  font-weight: var(--weight-medium);
-  color: var(--color-text-muted);
+td.date .verification-tag {
+  display: block;
+  inline-size: fit-content;
+  margin-top: var(--space-1-5);
 }
 
 .pairing-tag {
@@ -254,7 +250,8 @@ td .receipt-diagnostics {
     margin-top: 0;
   }
 
-  td.receipt.is-empty {
+  td.receipt.is-empty,
+  td.purpose-cell.is-empty {
     display: none;
   }
 
@@ -327,14 +324,12 @@ td .receipt-diagnostics {
     font-weight: var(--weight-bold);
   }
 
-  .is-verification .donation-amount {
-    font-size: var(--text-md);
-    font-weight: var(--weight-medium);
-    color: var(--color-text-muted);
-  }
-
   .pairing-tag {
     margin: var(--space-1) 0 0;
+    white-space: normal;
+  }
+
+  .verification-tag {
     white-space: normal;
   }
 

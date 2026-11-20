@@ -1225,7 +1225,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(text('.last-gift-amount')).toBe('500 Kč');
       expect(text('.last-gift-date')).toBe('15. 3. 2026');
-      expect(texts('.recent-card tbody tr td:nth-child(3)')[0]).toBe('Ověření účtu');
+      expect(text('.recent-card tbody tr:first-child .ui-badge')).toBe('Ověření účtu');
     });
 
     it('then a donor whose only payment verified an account reads how to send the first gift', async () => {
@@ -2405,9 +2405,9 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(
         [...first.querySelectorAll('td')].map((cell) => normalized(cell.textContent ?? '')),
       ).toEqual([
-        '20. 3. 2026',
+        '20. 3. 2026 Ověření účtu',
         '1 Kč',
-        'Ověření účtu',
+        '',
         'Přijato',
         'Započítá se do ročního potvrzení',
       ]);

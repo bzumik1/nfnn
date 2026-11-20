@@ -51,6 +51,14 @@ export class DonationsTable {
     return bankCode === undefined ? `…${lastDigits}` : `…${lastDigits}/${bankCode}`;
   }
 
+  protected hasPairingTag(item: DonationItem): boolean {
+    return (
+      Boolean(item.senderAccount) &&
+      (item.pairedBy === 'SENDER_ACCOUNT' ||
+        (item.pairedBy === 'CONFIRMED_SYMBOL' && Boolean(item.confirmedSymbol)))
+    );
+  }
+
   protected missingReceipt(
     item: DonationItem,
   ): 'on-yearly-receipt' | 'refunded' | 'verification' | 'before-first-year' | null {

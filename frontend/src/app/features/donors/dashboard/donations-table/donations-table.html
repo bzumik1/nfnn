@@ -1,11 +1,15 @@
 @if (rows()) {
   <ul class="ui-list donation-rows" [attr.aria-labelledby]="labelledBy()">
     @for (item of items(); track item.id) {
-      <li [class.is-verification]="item.accountVerification">
+      <li>
         <div class="ui-list__row">
           <span class="ui-list__title">{{ formatDate(item.receivedAt) }}</span
-          >&ngsp;<span class="ui-list__meta"
-            >{{ item.purpose }}
+          >&ngsp;<span class="ui-list__meta">
+            @if (item.accountVerification) {
+              <ng-container *ngTemplateOutlet="verificationTag" />
+            } @else {
+              {{ item.purpose }}
+            }
             <ng-container *ngTemplateOutlet="pairingPart; context: { $implicit: item }" /></span
           >&ngsp;<span class="ui-list__value donation-amount ui-figures"
             >{{ crowns(item.amountMinor) }}&nbsp;Kč</span
@@ -55,7 +59,7 @@
     </thead>
     <tbody role="rowgroup">
       @for (item of items(); track item.id) {
-        <tr role="row" [class.is-verification]="item.accountVerification">
+        <tr role="row">
           <td
             role="cell"
             class="date"
@@ -63,6 +67,9 @@
             i18n-data-label="@@donor.dashboard.payments.col.date"
           >
             {{ formatDate(item.receivedAt) }}
+            @if (item.accountVerification) {
+              <ng-container *ngTemplateOutlet="verificationTag" />
+            }
           </td>
           <td
             role="cell"
@@ -75,11 +82,14 @@
           <td
             role="cell"
             class="purpose-cell"
+            [class.is-empty]="item.accountVerification && !hasPairingTag(item)"
             data-label="Účel"
             i18n-data-label="@@donor.dashboard.payments.col.purpose"
           >
             <div class="purpose">
-              <span>{{ item.purpose }}</span>
+              @if (!item.accountVerification) {
+                <span>{{ item.purpose }}</span>
+              }
               <ng-container *ngTemplateOutlet="pairingPart; context: { $implicit: item }" />
             </div>
           </td>
@@ -114,6 +124,14 @@
     </tbody>
   </table>
 }
+
+<ng-template #verificationTag>
+  <span
+    class="ui-badge ui-badge--neutral verification-tag"
+    i18n="@@donor.dashboard.payments.verificationTag"
+    >Ověření účtu</span
+  >
+</ng-template>
 
 <ng-template #pairingPart let-item>
   @if (item.pairedBy === 'SENDER_ACCOUNT' && item.senderAccount) {

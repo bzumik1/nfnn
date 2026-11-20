@@ -1145,3 +1145,129 @@ test.describe('Given a signed-in donor on a computer', () => {
     });
   }
 });
+
+interface StatusLineChange {
+  readonly moving: boolean;
+  readonly start: number;
+  readonly middle: number;
+  readonly end: number;
+}
+
+function whenStatusLine(wrapper: Locator, opens: boolean): Promise<StatusLineChange> {
+  return wrapper.evaluate(
+    (element, opening) =>
+      new Promise<StatusLineChange>((resolve) => {
+        const height = () => element.getBoundingClientRect().height;
+        const start = height();
+        new MutationObserver((_, observer) => {
+          if (element.classList.contains('receipt-status--closing') === opening) {
+            return;
+          }
+          observer.disconnect();
+          const rows = element
+            .getAnimations()
+            .find(
+              (animation) =>
+                (animation as CSSTransition).transitionProperty === 'grid-template-rows',
+            );
+          if (rows === undefined) {
+            resolve({ moving: false, start, middle: height(), end: height() });
+            return;
+          }
+          rows.pause();
+          rows.currentTime = Number(rows.effect!.getComputedTiming().duration) / 2;
+          const middle = height();
+          rows.finish();
+          resolve({ moving: true, start, middle, end: height() });
+        }).observe(element, { attributes: true, attributeFilter: ['class'] });
+      }),
+    opens,
+  );
+}
+
+test.describe('Given a signed-in donor with gift receipts on a 390 px phone', () => {
+  async function giftRowsOfMojeDary(page: Page): Promise<Locator> {
+    await mockDonorApi(page, withReceipts);
+    await signIn(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openDonorSection(page, 'Moje dary');
+    const rows = page
+      .locator('.payments-card .donation-rows > li')
+      .filter({ has: page.locator('.download-btn') });
+    await expect(rows.nth(1)).toBeVisible();
+    await expect(rows.first().locator('.receipt-status')).toHaveClass(/receipt-status--closing/);
+    return rows;
+  }
+
+  async function holdIssuing(page: Page): Promise<void> {
+    await page.route(
+      (url) => url.pathname === RECEIPT_ISSUING_URL,
+      () => new Promise<void>(() => undefined),
+    );
+  }
+
+  test('when the status of a gift appears under Stáhnout PDF, then its line grows to its text by the shared expand', async ({
+    page,
+  }) => {
+    await page.clock.install();
+    const rows = await giftRowsOfMojeDary(page);
+    await holdIssuing(page);
+
+    const opening = whenStatusLine(rows.first().locator('.receipt-status'), true);
+    await rows.first().locator('.download-btn').click();
+    await expect(rows.first().locator('.download-btn')).toHaveAttribute('aria-busy', 'true');
+    await page.clock.runFor(300);
+    const change = await opening;
+
+    await expect(rows.first().getByRole('status')).toHaveText('Připravujeme údaje potvrzení…');
+    expect(change.moving).toBe(true);
+    expect(change.start).toBe(0);
+    expect(change.middle).toBeGreaterThan(0);
+    expect(change.middle).toBeLessThan(change.end);
+  });
+
+  test('when another gift starts downloading after one finished, then the finished line closes by the shared expand and the button under it glides up', async ({
+    page,
+  }) => {
+    const rows = await giftRowsOfMojeDary(page);
+    await Promise.all([
+      page.waitForEvent('download'),
+      rows.first().locator('.download-btn').click(),
+    ]);
+    await expect(rows.first().getByRole('status')).toContainText('je stažené');
+    await expect(rows.first().locator('.receipt-status')).not.toHaveClass(
+      /receipt-status--closing/,
+    );
+    await holdIssuing(page);
+
+    const closing = whenStatusLine(rows.first().locator('.receipt-status'), false);
+    await rows.nth(1).locator('.download-btn').click();
+    const change = await closing;
+
+    expect(change.moving).toBe(true);
+    expect(change.start).toBeGreaterThan(0);
+    expect(change.middle).toBeGreaterThan(0);
+    expect(change.middle).toBeLessThan(change.start);
+    expect(change.end).toBe(0);
+  });
+
+  test('when the donor asked for reduced motion and the status of a gift appears, then its line opens at once', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.clock.install();
+    const rows = await giftRowsOfMojeDary(page);
+    await holdIssuing(page);
+
+    const opening = whenStatusLine(rows.first().locator('.receipt-status'), true);
+    await rows.first().locator('.download-btn').click();
+    await expect(rows.first().locator('.download-btn')).toHaveAttribute('aria-busy', 'true');
+    await page.clock.runFor(300);
+    const change = await opening;
+
+    expect(change.moving).toBe(false);
+    expect(change.start).toBe(0);
+    expect(change.end).toBeGreaterThan(0);
+    await expect(rows.first().getByRole('status')).toHaveText('Připravujeme údaje potvrzení…');
+  });
+});
