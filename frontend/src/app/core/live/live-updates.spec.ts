@@ -142,6 +142,16 @@ describe('Given the live updates of a signed-in browser', () => {
       expect(donations.count()).toBe(1);
     });
 
+    it('then a revision and a hint written with a space after the colon, as the server writes them, connect it and reach it once', () => {
+      send(
+        request,
+        'event:revision\ndata: {"revision":"f00ba12"}\n\nevent:changed\ndata: {"feed":"donations"}\n\n',
+      );
+
+      expect(live.connected()).toBe(true);
+      expect(donations.count()).toBe(1);
+    });
+
     it('then hints of other feeds, heartbeats and unknown or broken events do not reach it', () => {
       const payments = listen(['payments']);
       send(

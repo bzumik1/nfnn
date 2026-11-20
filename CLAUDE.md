@@ -10,7 +10,7 @@ Domain words follow `docs/glossary.md` (Czech UI word, English name in code, wor
 
 | Path | What |
 |---|---|
-| `backend/` | Spring Boot 4.1, Java 25, Gradle Kotlin DSL. Strict DDD: `cz.novanadeje.app.{content,donors,donations,contact,operations}` + `shared`, each `domain / application / infrastructure / interfaces/rest`, enforced by ArchUnit |
+| `backend/` | Spring Boot 4.2, Java 25, Gradle Kotlin DSL. Strict DDD: `cz.novanadeje.app.{content,donors,donations,contact,operations}` + `shared`, each `domain / application / infrastructure / interfaces/rest`, enforced by ArchUnit |
 | `frontend/` | Angular 22 standalone, zoneless, signals, SCSS design tokens, Vitest, Playwright + axe |
 | `mcp/` | MCP connector of the administration (Node 26, TypeScript, MCP SDK v2, Vitest), served by the frontend nginx at `/mcp`; contract in `docs/api-contract.md` "MCP connector" |
 | `regression/`, `shared-cases/`, `scripts/` | The v2 baseline (`regression/v2/`: transcripts of every scenario, the test inventory, the receipt corpus, the screens manifest, and `changes/` for each deliberate difference since), the cases backend and frontend both run (`shared-cases/<topic>/*.json` and their schemas), and the Node and shell scripts (the comparison with v2 and with `main`, the PR's "Srovnání s v2"; the T3 Code worktree setup and cleanup). `regression/v2/` is regenerated only from the commit in `regression/v2/BASELINE_COMMIT` and never edited by hand, except `regression/v2/changes/`, where each PR adds its declarations (`testing-regression.md`) |

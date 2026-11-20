@@ -128,7 +128,7 @@ flowchart LR
   backend --> mail
 ```
 
-- **Backend** ([`backend/`](backend)): Spring Boot 4.1 on Java 25 with strict domain-driven design. Five bounded contexts, `content`, `donors`, `donations`, `contact` and `operations`, plus a `shared` kernel, each split into `domain`, `application`, `infrastructure` and `interfaces/rest`. ArchUnit enforces the layers and keeps the contexts apart: they meet only through events or a port in `shared`. The schema changes only through Liquibase.
+- **Backend** ([`backend/`](backend)): Spring Boot 4.2 on Java 25 with strict domain-driven design. Five bounded contexts, `content`, `donors`, `donations`, `contact` and `operations`, plus a `shared` kernel, each split into `domain`, `application`, `infrastructure` and `interfaces/rest`. ArchUnit enforces the layers and keeps the contexts apart: they meet only through events or a port in `shared`. The schema changes only through Liquibase.
 - **Frontend** ([`frontend/`](frontend)): Angular 22, standalone, zoneless and built on signals, with the whole look in a swappable theme (light and dark follow the device) and Czech copy behind i18n ids.
 - **Connector** ([`mcp/`](mcp)): a Node and TypeScript MCP server that holds no secret and exchanges every token at the backend.
 - **Local first.** The browser draws payment QR codes and receipt PDFs, verifies receipts and keeps an encrypted copy of the data on the device. The server assigns receipt numbers, freezes what a receipt says and signs it.
