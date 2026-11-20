@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { Component, inject, signal } from '@angular/core';
+import { afterNextRender, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NavigationEnd, provideRouter, Router, RouterLink } from '@angular/router';
 import { filter, firstValueFrom } from 'rxjs';
@@ -33,11 +33,17 @@ class LockPanel {}
 
 @Component({
   imports: [RouterLink],
-  template: `<h1>Dárci</h1>
+  template: `<h1 #title tabindex="-1">Dárci</h1>
     <a routerLink="/sprava/darci/1">Petr Svoboda</a>
     <a routerLink="/sprava/darci/2">Jana Nováková</a>`,
 })
-class DonorList {}
+class DonorList {
+  private readonly title = viewChild.required<ElementRef<HTMLElement>>('title');
+
+  constructor() {
+    afterNextRender(() => this.title().nativeElement.focus());
+  }
+}
 
 describe('Given an administrator anywhere in the administration', () => {
   const compact = signal(false);
@@ -646,7 +652,7 @@ describe('Given an administrator on a phone who moves between the pages of the a
     expect(heading?.getAttribute('tabindex')).toBe('-1');
   });
 
-  it('when they return with Zpět to the list that opened the page, then the link to that page takes the focus', async () => {
+  it('when they return with Zpět to the list that opened the page, then the link to that page takes the focus, even though the list focuses its own heading as it is drawn', async () => {
     await go('/sprava/darci/2');
 
     const returned = firstValueFrom(router.events.pipe(filter((e) => e instanceof NavigationEnd)));

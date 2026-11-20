@@ -187,6 +187,16 @@ describe('Given a dialog opened from a button', () => {
     expect(document.activeElement?.id).toBe('opener');
   });
 
+  it('when it goes away after the page scrolled the button that opened it out of view, then the focus returns to it without scrolling the page back', () => {
+    const opener = fixture.nativeElement.querySelector('#opener') as HTMLButtonElement;
+    const focus = vi.spyOn(opener, 'focus');
+
+    host.open.set(false);
+    fixture.detectChanges();
+
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+  });
+
   it('when it goes away after the button that opened it is gone, then the focus goes to the page content instead of being lost', () => {
     const main = document.createElement('main');
     main.id = 'obsah';

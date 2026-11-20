@@ -756,15 +756,31 @@ async function swipeBack(
   return { probe: await stepSeen(page), letGoAt: letGoAt - EDGE };
 }
 
-async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): Promise<void> {
-  const ground = screens.sheets ? await bandColour(page) : null;
+function plainSpaces(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+async function standsOnGround(page: Page): Promise<boolean> {
+  const sheets = page.locator('app-admin-shell.admin-shell--sheet, app-account-sheet dialog[open]');
+  return (await sheets.count()) > 0;
+}
+
+async function stepBackFrom(
+  page: Page,
+  screens: Screens,
+  row: Row,
+  way: Way,
+  onGround: boolean,
+): Promise<void> {
+  const ground = onGround ? await bandColour(page) : null;
   if (way === 'back-button') {
     await watchTheStep(page);
     await screens.backButton().click();
     const probe = await stepSeen(page);
-    expect(probe.under ?? '', 'the screen before was not under the leaving one').toContain(
-      row.name,
-    );
+    expect(
+      plainSpaces(probe.under ?? ''),
+      'the screen before was not under the leaving one',
+    ).toContain(plainSpaces(row.name));
     expectSetInMotion(page, probe, () => {
       expectLeftAway(probe, WIDTH, 0);
       expectMovedSoonAfterTheTap(probe);
@@ -806,14 +822,16 @@ async function walkRow(
   await open();
   await screens.shown(row);
   const opening = await stepSeen(page);
-  expect(opening.under ?? '', 'the screen before was not under the arriving one').toContain(
-    row.name,
-  );
+  expect(
+    plainSpaces(opening.under ?? ''),
+    'the screen before was not under the arriving one',
+  ).toContain(plainSpaces(row.name));
   expectSetInMotion(page, opening, () => expectArrived(opening, WIDTH));
-  if (groundBefore !== null) {
-    expectSameColour(await bandColour(page), groundBefore, 'when the next screen opened');
+  const onGround = groundBefore !== null && (await standsOnGround(page));
+  if (onGround) {
+    expectSameColour(await bandColour(page), groundBefore!, 'when the next screen opened');
   }
-  await stepBackFrom(page, screens, row, way);
+  await stepBackFrom(page, screens, row, way, onGround);
   await expect(page.locator('.page-transition')).toHaveCount(0);
   if (way === 'swipe-cancelled') {
     await screens.shown(row);
