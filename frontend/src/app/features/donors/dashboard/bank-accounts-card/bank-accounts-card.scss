@@ -506,6 +506,15 @@
   color: var(--color-text-secondary);
 }
 
+@include bp.container-down(dialog-panel, tabs) {
+  .watch-title,
+  .watch-detail {
+    max-inline-size: min(var(--measure-prose), 100%);
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
+}
+
 .watch-again {
   margin-top: var(--space-2-5);
   background: var(--color-surface);

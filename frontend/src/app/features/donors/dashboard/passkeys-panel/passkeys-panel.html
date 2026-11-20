@@ -35,17 +35,19 @@
                 <div class="passkey-body">
                   <span class="passkey-name">{{ passkey.name }}</span>
                   <span class="passkey-dates">
-                    <span i18n="@@donor.passkeys.createdAt">přidáno</span>&ngsp;<span
-                      class="ui-date"
-                      >{{ formatDate(passkey.createdAt) }}</span
+                    <span class="passkey-date"
+                      ><span i18n="@@donor.passkeys.createdAt">přidáno</span>
+                      <span class="ui-date">{{ formatDate(passkey.createdAt) }}</span></span
                     >&nbsp;·&ngsp;
                     @if (passkey.lastUsedAt; as lastUsedAt) {
-                      <span i18n="@@donor.passkeys.lastUsedAt">naposledy použito</span>&ngsp;<span
-                        class="ui-date"
-                        >{{ formatDate(lastUsedAt) }}</span
+                      <span class="passkey-date"
+                        ><span i18n="@@donor.passkeys.lastUsedAt">naposledy použito</span>
+                        <span class="ui-date">{{ formatDate(lastUsedAt) }}</span></span
                       >
                     } @else {
-                      <span i18n="@@donor.passkeys.neverUsed">zatím nepoužito</span>
+                      <span class="passkey-date" i18n="@@donor.passkeys.neverUsed"
+                        >zatím nepoužito</span
+                      >
                     }
                   </span>
                 </div>

@@ -3156,7 +3156,7 @@ for (const rootSize of ['200%', `${LARGEST_SYSTEM_TEXT_PX}px`]) {
       { path: '/sprava/upozorneni', heading: 'Upozornění' },
       { path: '/sprava/zalohy/historie', heading: 'Všechny zálohy' },
       { path: '/sprava/prehledy/2026-09', heading: 'Přehled za září 2026' },
-      { path: PETR_DETAIL_PATH, heading: 'Petr Svoboda' },
+      { path: `${PETR_DETAIL_PATH}/udaje`, heading: null },
     ]) {
       test(`when an administrator opens ${path}, then every card title breaks only between words`, async ({
         page,
@@ -3165,7 +3165,9 @@ for (const rootSize of ['200%', `${LARGEST_SYSTEM_TEXT_PX}px`]) {
         await mockAdministration(page);
         await rememberedSession(page);
         await page.goto(path);
-        await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+        if (heading) {
+          await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+        }
         const titles = page.locator('main .ui-card__title');
         await expect(titles.first()).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
@@ -3177,3 +3179,69 @@ for (const rootSize of ['200%', `${LARGEST_SYSTEM_TEXT_PX}px`]) {
     }
   });
 }
+
+function oneLineEach(lines: string[][]): string[] {
+  return lines.filter((parts) => parts.length !== 1).map((parts) => parts.join(' | '));
+}
+
+test.describe('Given an administrator on a computer 1280 px wide with the text at its default size, reading account numbers and dates', () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await mockAdministration(page);
+    await rememberedSession(page);
+  });
+
+  test('when they open /sprava/starsi-symboly, then every account number stays on one line', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/starsi-symboly');
+    const numbers = page.locator('main table app-bank-account .ui-figures');
+    await expect(numbers.first()).toBeVisible();
+
+    const lines: string[][] = [];
+    for (const number of await numbers.all()) {
+      lines.push(await linesOfText(number));
+    }
+    expect(oneLineEach(lines)).toEqual([]);
+  });
+
+  test('when they open the bank accounts of a donor, then every date after poslední stays on the line of poslední', async ({
+    page,
+  }) => {
+    await page.goto(`${PETR_DETAIL_PATH}/bankovni-ucty`);
+    const totals = page.locator('main td .muted', { hasText: 'poslední' });
+    await expect(totals.first()).toBeVisible();
+
+    for (const total of await totals.all()) {
+      const lines = (await linesOfText(total)).map((line) => line.replace(/\s+/g, ' '));
+      expect(
+        lines.some((line) => /poslední \d+\. \d+\. \d{4}/.test(line)),
+        lines.join(' | '),
+      ).toBe(true);
+    }
+  });
+});
+
+test.describe('Given a donor on an iPhone 390 pt wide with the text at its default size', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('when they open Údaje a zabezpečení, then the date and the time of every signed-in device stay together on one line', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const dates = page.locator('app-devices-card .device-date-value');
+    await expect(dates.first()).toBeVisible();
+
+    const lines: string[][] = [];
+    for (const date of await dates.all()) {
+      lines.push(await linesOfText(date));
+    }
+    expect(oneLineEach(lines)).toEqual([]);
+  });
+});

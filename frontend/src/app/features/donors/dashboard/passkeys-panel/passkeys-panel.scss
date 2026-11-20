@@ -87,6 +87,11 @@
   color: var(--color-text-muted);
 }
 
+.passkey-date {
+  display: inline-block;
+  max-inline-size: 100%;
+}
+
 .passkey-actions {
   display: flex;
   flex-wrap: wrap;
@@ -131,4 +136,9 @@
 
 .ui-form-status {
   max-inline-size: var(--measure-prose);
+}
+
+.passkeys-action {
+  max-inline-size: 100%;
+  white-space: normal;
 }

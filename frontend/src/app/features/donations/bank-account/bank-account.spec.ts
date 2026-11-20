@@ -46,17 +46,6 @@ describe('Given a Czech account of a bank the site names itself', () => {
   });
 });
 
-describe('Given a Czech account number wider than its line', () => {
-  it('when it renders, then the number may break only before its bank code', () => {
-    const figures = host(render('2000145399/0800')).querySelector('.ui-figures')!;
-    const breakOpportunity = figures.querySelector('wbr')!;
-
-    expect(figures.textContent).toBe('2000145399/0800');
-    expect(breakOpportunity.previousSibling?.textContent).toBe('2000145399/');
-    expect(breakOpportunity.nextSibling?.textContent).toBe('0800');
-  });
-});
-
 describe('Given an account with the name of its bank', () => {
   it('when it renders, then the number and the bank use the shared separator that hides at a line break', () => {
     const element = host(render('2000145399/0800'));

@@ -57,6 +57,8 @@
 }
 
 @include bp.container-down(lock-panel, tabs) {
+  .lock-lead,
+  .lock-note,
   .lock-actions .ui-button,
   .lock-form .ui-button {
     hyphens: auto;
