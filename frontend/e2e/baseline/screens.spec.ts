@@ -32,6 +32,7 @@ import {
   serveEmptyAdministrationCopy,
   serveRecentDonors,
 } from './screen-mocks';
+import { routeReleaseApi } from '../admin-logs-api';
 import { openRequests, quietNetwork } from '../settled';
 import { serveReceiptKeys, serveReceiptStatus, YEARLY_RECEIPT } from '../receipt-verification';
 
@@ -477,6 +478,19 @@ const SCREENS_SINCE_V2: Screen[] = [
   adminPage('admin-log-file', '/sprava/logy/soubor?nazev=backend.log'),
   adminPage('admin-log-levels', '/sprava/logy/urovne'),
   adminPage('admin-server-state', '/sprava/logy/stav'),
+  {
+    name: 'admin-release-history',
+    open: async (page) => {
+      await mockDonorApi(page, donorWithDonations);
+      await mockAdministration(page);
+      await serveEmptyAdministrationCopy(page);
+      await routeReleaseApi(page);
+      await rememberedSession(page);
+      await openUnlocked(page, '/sprava/logy/stav');
+      await page.getByRole('button', { name: 'Historie vydání' }).click();
+    },
+    ready: (page) => expect(page.locator('#historie-vydani .ui-list__row')).toHaveCount(3),
+  },
   adminPage('admin-thread-dump', '/sprava/logy/vlakna'),
   {
     name: 'donor-overview-send-gift',

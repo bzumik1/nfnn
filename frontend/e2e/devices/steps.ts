@@ -18,6 +18,7 @@ import {
   SINGLE_RECEIPT,
   SINGLE_RECEIPT_ROW,
 } from '../receipt-verification';
+import { routeReleaseApi } from '../admin-logs-api';
 import { FOUR_DONORS, mockYearlyReceipts } from '../yearly-receipts';
 import type { Ui } from './ui';
 
@@ -542,6 +543,16 @@ export const STEPS: Step[] = [
       await newerRelease(ui);
       await adminPage(ui, '/sprava/logy/stav');
       await ui.waitVisible({ css: '.release-steps' });
+    },
+  },
+  {
+    id: 'admin-server-state-release-history',
+    title: 'the server state with the release history open',
+    open: async (ui) => {
+      await routeReleaseApi(ui.routes);
+      await adminPage(ui, '/sprava/logy/stav');
+      await ui.click({ css: 'button.release-history-toggle' });
+      await ui.waitVisible({ css: '#historie-vydani .release-history-list' });
     },
   },
   {

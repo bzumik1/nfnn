@@ -229,6 +229,8 @@ Staré adresy aktualit a příběhů: od změny databáze `content/016` si web p
 
 Upozornění dárců na telefon: od změny databáze `operations/009` si server pamatuje odběry dárců ve vlastní tabulce `operations_donor_push_subscription`. Starší verze s novou databází běží dál, jen tu tabulku nezná: když se během návratu někdo odhlásí, odhlásí zařízení na dálku nebo ho správce vymaže, jeho odběr zůstane. Od druhého řezu (#677) server takový odběr před odesláním upozornění „Váš dar dorazil“ sám smaže, takže na odhlášené zařízení nic nepřijde. Kdo chce mít pořádek hned, smaže odběry bez přihlášeného zařízení ručně: `sudo docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -c "delete from operations_donor_push_subscription s where not exists (select 1 from donor_device d where d.id = s.device_id and d.ended_at is null)"`. Dárci si upozornění na svém zařízení zapnou znovu.
 
+Historie vydání: od změny databáze `operations/011` si server při každém startu zapíše vydání do tabulky `operations_release_run`. Starší verze s novou databází běží dál a tabulky si nevšímá, jen během návratu nezapisuje své starty; po dalším nasazení nové verze se historie zase doplňuje (návrat sám v ní tedy chybí).
+
 ## Databáze
 
 Databázi (`nfnn-postgres`, PostgreSQL 17) nastaví kontejner sám při každém startu, takže se všechno níže dostane na server běžnou aktualizací (Uložit v ZimaOS); ručně se dělají jen dva volitelné kroky popsané dál.
@@ -305,7 +307,8 @@ Co hledat v `backend.log`:
 - `Push alert <druh> attempt <n>: <n> delivered, <n> failed, <n> removed` (INFO) po každém upozornění správcům, `Push alert … could not be sent` (WARN), `Push subscription <id> failed <n> times in a row` (WARN), u dárců `Push notification GIFT_ARRIVED gave up on <n> devices after <n> attempts` (WARN);
 - `Bank code list fetched: <n> codes` nebo `Bank code list unchanged at the source` (INFO), `Bank code list could not be fetched: …` (WARN, uložený číselník zůstává);
 - `Bank logo <kód> fetched` nebo `unchanged` (INFO), `Bank logo <kód> could not be fetched: …` (WARN, uložené logo zůstává);
-- `Release check: the latest release is …` (INFO), `Release check failed: …` (WARN, zůstává poslední známé vydání).
+- `Release check: the latest release is …` (INFO), `Release check failed: …` (WARN, zůstává poslední známé vydání);
+- `Release history: NEW_RUN` nebo `ANOTHER_START` (INFO) po každém startu, `Release history: recording this start failed: …` (WARN, web běží dál, jen se start nezapíše), `Deleted <n> release history entries that ended before …` (INFO, denní úklid záznamů starších než rok).
 
 ## MCP konektor
 
