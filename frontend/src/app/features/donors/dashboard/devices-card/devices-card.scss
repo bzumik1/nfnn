@@ -105,6 +105,13 @@
   }
 }
 
+@include bp.container-down(devices, tabs) {
+  .device-current {
+    max-inline-size: 100%;
+    white-space: normal;
+  }
+}
+
 .devices-status {
   max-inline-size: var(--measure-prose);
 }
