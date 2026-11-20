@@ -302,6 +302,14 @@ async function durationOf(page: Page, token: string): Promise<number> {
   }, token);
 }
 
+async function cardGapUnderHeader(page: Page): Promise<number> {
+  const header = (await page.getByRole('banner').boundingBox())!;
+  const cardTop = await page
+    .getByRole('region', { name: 'Shrnutí dárce' })
+    .evaluate((card) => card.getBoundingClientRect().top + window.scrollY);
+  return cardTop - (header.y + header.height);
+}
+
 function timesSaid(frames: readonly NoticeFrame[], sentence: string): number {
   return frames.filter(
     (frame, index) => frame.heard === sentence && frames[index - 1]?.heard !== sentence,
@@ -311,7 +319,7 @@ function timesSaid(frames: readonly NoticeFrame[], sentence: string): number {
 test.describe('Given an administrator on the card of a donor whose device could not store the administration', () => {
   test.use({ reducedMotion: 'no-preference' });
 
-  test('when Uložit znovu stores it, then the notice folds its height away over several frames, the card rises by exactly the notice and its gaps, and at the start the focus is on the heading and screen readers hear once that it is stored', async ({
+  test('when Uložit znovu stores it, then the notice folds its height away over several frames, the card rises by exactly the notice and its gaps to the gap of the page without the notice, and at the start the focus is on the heading and screen readers hear once that it is stored', async ({
     page,
   }) => {
     await openCardWithFailedCopy(page);
@@ -348,6 +356,12 @@ test.describe('Given an administrator on the card of a donor whose device could 
     );
     expect(timesSaid(frames, STORED)).toBe(1);
     await expect(page.locator('.first-download').getByText(STORED)).toHaveCount(0);
+
+    const gap = await cardGapUnderHeader(page);
+    await page.reload();
+    await expect(page.getByRole('region', { name: 'Shrnutí dárce' })).toBeVisible();
+    await expect(page.locator('app-first-download-notice app-fold')).toHaveCount(0);
+    expect(Math.abs(gap - (await cardGapUnderHeader(page)))).toBeLessThanOrEqual(0.5);
   });
 });
 
