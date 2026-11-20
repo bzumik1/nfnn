@@ -2,7 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, inject, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { NavigationEnd, provideRouter, Router, RouterLink } from '@angular/router';
+import { filter, firstValueFrom } from 'rxjs';
 import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
 import { AccountReturn } from '../../../layout/account-sheet/account-return';
 import { CompactLayout } from '../../../core/layout/compact-layout';
@@ -29,6 +30,14 @@ class NamedPage {
 
 @Component({ template: '<p class="lock-panel" tabindex="-1">Správa je zamčená</p>' })
 class LockPanel {}
+
+@Component({
+  imports: [RouterLink],
+  template: `<h1>Dárci</h1>
+    <a routerLink="/sprava/darci/1">Petr Svoboda</a>
+    <a routerLink="/sprava/darci/2">Jana Nováková</a>`,
+})
+class DonorList {}
 
 describe('Given an administrator anywhere in the administration', () => {
   const compact = signal(false);
@@ -572,5 +581,80 @@ describe('Given an administrator who opened the administration on a phone over a
     dialog.remove();
 
     expect(back).not.toHaveBeenCalled();
+  });
+});
+
+describe('Given an administrator on a phone who moves between the pages of the administration', () => {
+  let host: HTMLElement;
+  let router: Router;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [AdminShell],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+        {
+          provide: ADMINISTRATION_LOCK,
+          useValue: {
+            locked: signal(false).asReadonly(),
+            panel: signal(LockPanel).asReadonly(),
+            keepsPage: signal(false).asReadonly(),
+            firstDownload: signal(null).asReadonly(),
+            firstDownloadEnd: signal(null).asReadonly(),
+            retryFirstDownload: () => undefined,
+          },
+        },
+        provideRouter([
+          { path: 'sprava', component: Page },
+          { path: 'sprava/darci', component: DonorList, data: { parent: '/sprava' } },
+          { path: 'sprava/darci/:id', component: Page, data: { parent: '/sprava/darci' } },
+        ]),
+      ],
+    }).compileComponents();
+    router = TestBed.inject(Router);
+    router.setUpLocationChangeListener();
+    TestBed.inject(BackTarget);
+    const fixture = TestBed.createComponent(AdminShell);
+    host = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(host);
+    await go('/sprava');
+    await go('/sprava/darci');
+  });
+
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+    host.remove();
+  });
+
+  async function go(url: string): Promise<void> {
+    await router.navigateByUrl(url);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+
+  function page(): HTMLElement {
+    return host.querySelector('.admin-page')!;
+  }
+
+  it('when they open a page from a list, then its heading takes the focus quietly, so a screen reader reads the new page', async () => {
+    await go('/sprava/darci/2');
+
+    const heading = page().querySelector('h1');
+    expect(heading?.textContent).toBe('Stránka');
+    expect(document.activeElement).toBe(heading);
+    expect(heading?.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('when they return with Zpět to the list that opened the page, then the link to that page takes the focus', async () => {
+    await go('/sprava/darci/2');
+
+    const returned = firstValueFrom(router.events.pipe(filter((e) => e instanceof NavigationEnd)));
+    TestBed.inject(BackTarget).back('/sprava/darci');
+    await returned;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(router.url).toBe('/sprava/darci');
+    expect(document.activeElement).toBe(page().querySelector('a[href="/sprava/darci/2"]'));
   });
 });
