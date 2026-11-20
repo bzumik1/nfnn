@@ -19,6 +19,7 @@ import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterOutlet } from '@an
 import { filter, map } from 'rxjs';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from '../../../core/navigation/back-target';
+import { PageFocus } from '../../../core/navigation/page-focus';
 import { RouteChrome } from '../../../core/navigation/route-chrome';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AccountReturn } from '../../../layout/account-sheet/account-return';
@@ -66,6 +67,7 @@ export class AdminShell {
   private readonly backTarget = inject(BackTarget);
   private readonly accountReturn = inject(AccountReturn);
   private readonly chrome = inject(RouteChrome).current;
+  private readonly pageFocus = inject(PageFocus);
   private readonly fullScreen = toSignal(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
@@ -88,7 +90,13 @@ export class AdminShell {
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.keepEntry());
+      .subscribe((event) => {
+        this.keepEntry();
+        if (this.pageFocus.movesOnLastNavigation()) {
+          const fragment = this.router.parseUrl(event.urlAfterRedirects).fragment;
+          afterNextRender(() => this.followNavigation(fragment), { injector: this.injector });
+        }
+      });
     effect((onCleanup) => {
       const page = this.sheet() ? this.page()?.nativeElement : undefined;
       if (page !== undefined) {
@@ -157,6 +165,13 @@ export class AdminShell {
       });
     } else {
       this.entryDepth = kept;
+    }
+  }
+
+  private followNavigation(fragment: string | null): void {
+    const page = this.page()?.nativeElement;
+    if (page !== undefined && !this.lock.locked()) {
+      this.pageFocus.follow(page, fragment);
     }
   }
 
