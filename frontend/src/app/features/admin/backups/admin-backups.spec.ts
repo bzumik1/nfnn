@@ -175,10 +175,7 @@ describe('Given an administrator on the backups page', () => {
       'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste „Zálohovat teď“; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
       'Zatím se nevyzkoušelo, že jde zálohu obnovit. Zkuste „Spustit zkušební obnovu“.',
     ]);
-    expect(texts('.problems details li')).toEqual([
-      'Poslední záloha selhala.',
-      'Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden.',
-    ]);
+    expect(fixture.nativeElement.querySelector('.problems details')).toBeNull();
     expect(fixture.nativeElement.querySelector('.problems')?.getAttribute('role')).toBe('alert');
     expect(text('.run:nth-child(1) dd .run-text')).toBe('Nepovedla se 23. 10. 2026 3:00.');
     expect(text('.run:nth-child(1) dd details summary')).toBe('Technické podrobnosti');
@@ -214,7 +211,6 @@ describe('Given an administrator on the backups page', () => {
     expect(texts('.problems > ul li')[0]).toBe(
       'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
     );
-    expect(texts('.problems details li')[0]).toContain('Backend nevidí složku záloh.');
     expect(button('Zálohovat teď').disabled).toBe(true);
     expect(button('Spustit zkušební obnovu').disabled).toBe(true);
     expect(text('.actions-blocked')).toBe(
@@ -238,7 +234,7 @@ describe('Given an administrator on the backups page', () => {
     expect(fixture.nativeElement.textContent).not.toContain('tlačítkem „Stáhnout“');
   });
 
-  it('when a problem and a failed run carry technical details, then each opens as a disclosure under an aria-hidden chevron', async () => {
+  it('when a problem and a failed run carry technical details, then the card has one disclosure, at the failed run, under an aria-hidden chevron', async () => {
     await respond(
       backupsView({
         lastBackup: backupRun({
@@ -258,13 +254,21 @@ describe('Given an administrator on the backups page', () => {
         whileClosed: 'left to the native details',
         onceOpen: 'shown',
       },
-      {
-        summary: 'Technické podrobnosti',
-        chevron: 'hidden from assistive technology',
-        whileClosed: 'left to the native details',
-        onceOpen: 'shown',
-      },
     ]);
+    expect(
+      fixture.nativeElement.querySelector('.run:nth-child(1) dd details.tech-details'),
+    ).not.toBeNull();
+  });
+
+  it('when the backups have a problem and lie on the server, then the problem and the advice to keep a copy elsewhere share one notice look', async () => {
+    await respond(backupsView({ problems: ['BACKUP_STALE'] }));
+
+    const card = fixture.nativeElement.querySelector(
+      '[aria-labelledby="backups-status-title"]',
+    ) as HTMLElement;
+    expect(card.querySelector('.problems')?.classList).toContain('ui-notice');
+    expect(card.querySelector('.off-server')?.classList).toContain('ui-notice');
+    expect(card.querySelector('.ui-callout')).toBeNull();
   });
 
   it('when a problem needs the server administrator, then a button copies the message for the technician without the backup key', async () => {
