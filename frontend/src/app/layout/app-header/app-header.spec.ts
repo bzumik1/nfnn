@@ -69,7 +69,11 @@ describe('Given the header of the app', () => {
         { provide: BackTarget, useValue: { back } },
         {
           provide: AccountReturn,
-          useValue: { sectionToReopen: sectionToReopen.asReadonly(), takeSectionToReopen },
+          useValue: {
+            sectionToReopen: sectionToReopen.asReadonly(),
+            takeSectionToReopen,
+            takeScrollToReopen: () => 0,
+          },
         },
         {
           provide: AuthStore,
