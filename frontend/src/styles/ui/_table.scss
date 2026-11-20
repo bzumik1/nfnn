@@ -106,6 +106,12 @@
   }
 }
 
+@include bp.container-down(ui-table, laptop) {
+  .ui-table--wide {
+    @include stacked;
+  }
+}
+
 .ui-table--stacked {
   @include stacked;
 }

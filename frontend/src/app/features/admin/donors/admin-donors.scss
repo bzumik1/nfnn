@@ -1,9 +1,11 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
 
 .search {
-  padding: 0 var(--space-6) var(--space-4);
+  padding: 0 var(--card-inset) var(--space-4);
   max-width: 520px;
 }
 
@@ -72,6 +74,29 @@
 
 .email {
   overflow-wrap: anywhere;
+}
+
+.ui-table .email {
+  display: inline-block;
+  min-inline-size: 16ch;
+  overflow-wrap: normal;
+}
+
+.email-part,
+.symbol-heading {
+  white-space: nowrap;
+}
+
+@include bp.container-down(ui-table, laptop) {
+  .ui-table .email {
+    display: inline;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .email-part {
+    white-space: normal;
+  }
 }
 
 .tags {

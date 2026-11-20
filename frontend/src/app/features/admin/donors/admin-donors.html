@@ -167,12 +167,14 @@
         </ul>
       } @else {
         <div class="ui-table-frame">
-          <table role="table" class="ui-table">
+          <table role="table" class="ui-table ui-table--wide">
             <thead role="rowgroup">
               <tr role="row">
                 <th role="columnheader" i18n="@@admin.donors.col.donor">Dárce</th>
                 <th role="columnheader" i18n="@@admin.donors.col.email">E-mail</th>
-                <th role="columnheader" i18n="@@admin.donors.col.symbol">Variabilní symbol</th>
+                <th role="columnheader" class="symbol-heading" i18n="@@admin.donors.col.symbol">
+                  Variabilní symbol
+                </th>
                 @if (listsRecent()) {
                   <th role="columnheader" i18n="@@admin.donors.col.lastGift">Poslední dar</th>
                 } @else {
@@ -215,7 +217,11 @@
                     @if (item.account.erasedAt) {
                       <span class="muted" i18n="@@admin.donors.email.erased">vymazán</span>
                     } @else {
-                      <span class="email">{{ item.account.email }}</span>
+                      @let email = emailParts(item.account.email);
+                      <span class="email"
+                        ><span class="email-part">{{ email.local }}</span
+                        ><wbr /><span class="email-part">{{ email.domain }}</span></span
+                      >
                     }
                   </td>
                   <td

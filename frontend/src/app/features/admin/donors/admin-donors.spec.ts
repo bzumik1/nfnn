@@ -248,6 +248,17 @@ describe('Given an administrator on the donors page', () => {
     expect(text('[role="status"]')).toBe('Nalezení dárci: 2');
   });
 
+  it('when donors are found, then each e-mail reads whole and may break only right after its @', async () => {
+    await searched('nov');
+
+    const cell = rows()[0].querySelector('td[data-label="E-mail"]') as HTMLElement;
+    const breaks = Array.from(cell.querySelectorAll('wbr'));
+    expect(rowText(cell)).toBe('jana@example.cz');
+    expect(breaks).toHaveLength(1);
+    expect(breaks[0].previousSibling?.textContent).toBe('jana@');
+    expect(breaks[0].nextSibling?.textContent).toBe('example.cz');
+  });
+
   it('when a found donor registered on an early morning of a single-digit day and month, then the registration reads as the Prague day without leading zeros and without the time', async () => {
     await searched('nov', [donorAccount({ registeredAt: '2026-03-05T07:00:00Z' })]);
 
