@@ -6,14 +6,6 @@
 }
 
 .problems {
-  margin: 0 0 var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-md);
-  line-height: var(--leading-normal);
-
   ul {
     margin: 0;
     padding-left: var(--space-4);
@@ -22,15 +14,6 @@
   li + li {
     margin-top: var(--space-1-5);
   }
-}
-
-.healthy {
-  margin: 0 0 var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-success-bg);
-  color: var(--color-success);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-md);
 }
 
 .runs {

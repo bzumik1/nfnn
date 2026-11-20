@@ -74,39 +74,12 @@
           </h2>
           <div class="ui-card__body">
             @if (problems().length > 0) {
-              <div class="problems" role="alert">
+              <div class="ui-notice ui-notice--alert problems" role="alert">
                 <ul>
                   @for (problem of problems(); track problem) {
                     <li>{{ problem }}</li>
                   }
                 </ul>
-                <details class="tech-details">
-                  <summary>
-                    <svg
-                      class="details-chevron"
-                      aria-hidden="true"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="m9 18 6-6-6-6" /></svg
-                    ><span i18n="@@admin.backups.techDetails">Technické podrobnosti</span>
-                  </summary>
-                  <div class="details-body">
-                    <div>
-                      <ul>
-                        @for (detail of problemDetails(); track detail) {
-                          <li>{{ detail }}</li>
-                        }
-                      </ul>
-                    </div>
-                  </div>
-                </details>
               </div>
               @if (technicianMessage(); as message) {
                 <p class="tech-copy">
@@ -120,7 +93,9 @@
                 </p>
               }
             } @else {
-              <p class="healthy" i18n="@@admin.backups.status.healthy">Zálohování je v pořádku.</p>
+              <p class="ui-notice ui-notice--status healthy" i18n="@@admin.backups.status.healthy">
+                Zálohování je v pořádku.
+              </p>
             }
             <dl class="runs">
               <div class="run">
@@ -219,7 +194,7 @@
               Záloha trvá pár sekund, zkušební obnova do minuty; výsledek se ukáže tady.
             </p>
             @if (backups().length > 0) {
-              <p class="ui-callout ui-callout--warning off-server" i18n="@@admin.backups.offServer">
+              <p class="ui-notice ui-notice--warning off-server" i18n="@@admin.backups.offServer">
                 Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte
                 tlačítkem „Stáhnout“ a uložte jinam, třeba na flash disk nebo do cloudu. Jsou
                 zašifrované, takže je bez klíče k zálohám nikdo nepřečte.

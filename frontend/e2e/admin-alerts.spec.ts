@@ -190,7 +190,7 @@ test.describe('Given an administrator on the alerts page of a device with a serv
     const phoneRow = others.getByRole('button', { name: /^Apple, zapnuto 30\.\s10\. 2026/ });
     await expect(phoneRow).toContainText('Naposledy doručeno 3. 11. 2026 10:05.');
     await expect(phoneRow).toContainText('Nedoručeno 2× po sobě.');
-    await expect(phoneRow).toContainText('3 ze 3');
+    await expect(phoneRow).toContainText('3 ze 3 upozornění');
 
     await phoneRow.click();
     const sheet = page.getByRole('dialog', { name: 'Apple, zapnuto 30. 10. 2026' });

@@ -204,7 +204,14 @@ export class AdminAlerts {
   }
 
   protected since(item: PushSubscriptionResponse): string {
-    return formatDonationDate(item.createdAt);
+    const day = formatDonationDate(item.createdAt);
+    const sharesItsDay = (this.view()?.subscriptions ?? []).some(
+      (other) =>
+        other.id !== item.id &&
+        other.service === item.service &&
+        formatDonationDate(other.createdAt) === day,
+    );
+    return sharesItsDay ? formatBankTime(item.createdAt) : day;
   }
 
   protected removeLabel(item: PushSubscriptionResponse): string {
