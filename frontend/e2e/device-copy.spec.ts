@@ -353,40 +353,127 @@ async function expectFoldsOverFrames(
   );
 }
 
-async function expectFoldsOverTime(
-  page: Page,
-  frames: readonly NoticeFrame[],
-  notice: { readonly height: number },
-): Promise<void> {
-  const duration = await durationOf(page, '--duration-base');
-  expect(duration).toBeGreaterThan(0);
-  const rows = frames
-    .flatMap((frame) => frame.transitions)
-    .filter((transition) => transition.property === 'grid-template-rows' && transition.running);
-  expect(rows.length).toBeGreaterThan(0);
-  expect(rows.map((transition) => transition.duration)).toEqual(rows.map(() => duration));
-  const easing = await easingOf(page, '--ease-standard');
-  expect(rows.every((transition) => transition.easing === easing)).toBe(true);
+interface FoldSample {
+  readonly running: boolean;
+  readonly progress: number | null;
+  readonly duration: number;
+  readonly easing: string;
+  readonly startTime: number | null;
+  readonly keyframes: readonly string[];
+  readonly behavior: string;
+  readonly connected: boolean;
+  readonly foldDisplay: string;
+  readonly noticeDisplay: string;
+}
 
-  const folding = frames.filter((frame) => frame.fold! > 0 && frame.fold! < notice.height - 0.5);
-  const heights = folding.map((frame) => frame.fold!);
-  expect(new Set(heights).size).toBeGreaterThanOrEqual(2);
-  const falls = folding.slice(1).every((frame, index) => frame.fold! <= heights[index]);
-  expect(falls).toBe(true);
-  expect(heights.at(-1)!).toBeLessThan(heights[0]);
-  const times = folding.map((frame) => frame.at);
-  expect(times.at(-1)!).toBeGreaterThan(times[0]);
+interface FoldTransitionTrace {
+  readonly samples: readonly FoldSample[];
+  readonly endedAt: number | null;
+}
 
-  const start = frames[0].card!;
-  const end = frames.at(-1)!.card!;
-  expect(frames.some((frame) => frame.card! < start - 0.5 && frame.card! > end + 0.5)).toBe(true);
+async function followFoldTransition(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const trace: { samples: unknown[]; endedAt: number | null } = { samples: [], endedAt: null };
+    Object.assign(window, { nfnnFoldTransition: trace });
+    document.addEventListener(
+      'transitionend',
+      (event) => {
+        const target = event.target as Element;
+        if (
+          event.propertyName === 'grid-template-rows' &&
+          target.closest('app-first-download-notice app-fold') !== null
+        ) {
+          trace.endedAt ??= performance.now();
+        }
+      },
+      true,
+    );
+    const sample = () => {
+      const fold = document.querySelector('app-first-download-notice app-fold');
+      const transition = fold
+        ?.getAnimations({ subtree: true })
+        .find(
+          (animation): animation is CSSTransition =>
+            animation instanceof CSSTransition &&
+            animation.transitionProperty === 'grid-template-rows',
+        );
+      const effect = transition?.effect as KeyframeEffect | undefined;
+      const target = effect?.target as HTMLElement | null | undefined;
+      if (transition && effect && target) {
+        const style = getComputedStyle(target);
+        const properties = style.transitionProperty.split(',').map((name) => name.trim());
+        const behaviors = style.transitionBehavior.split(',').map((name) => name.trim());
+        const notice = document.querySelector('app-first-download-notice .first-download');
+        trace.samples.push({
+          running: transition.playState === 'running',
+          progress: effect.getComputedTiming().progress ?? null,
+          duration: Number(effect.getComputedTiming().duration ?? 0),
+          easing: effect.getTiming().easing ?? '',
+          startTime: transition.startTime === null ? null : Number(transition.startTime),
+          keyframes: effect
+            .getKeyframes()
+            .map((keyframe) => String(keyframe['gridTemplateRows'] ?? '')),
+          behavior: behaviors[properties.indexOf('grid-template-rows') % behaviors.length] ?? '',
+          connected: target.isConnected && notice !== null && notice.isConnected,
+          foldDisplay: style.display,
+          noticeDisplay: notice === null ? 'none' : getComputedStyle(notice).display,
+        });
+      }
+      if (trace.endedAt === null) {
+        setTimeout(sample, 4);
+      }
+    };
+    sample();
+  });
+}
 
-  const lastFull = frames.findLastIndex(
-    (frame, index) => index < frames.indexOf(folding[0]) && frame.fold! >= notice.height - 0.5,
+async function foldTransitionTrace(page: Page): Promise<FoldTransitionTrace> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            (window as unknown as { nfnnFoldTransition: FoldTransitionTrace }).nfnnFoldTransition
+              .endedAt !== null,
+        ),
+      { message: 'the grid-template-rows transition of the fold ends' },
+    )
+    .toBe(true);
+  return page.evaluate(
+    () => (window as unknown as { nfnnFoldTransition: FoldTransitionTrace }).nfnnFoldTransition,
   );
-  const firstGone = frames.findIndex((frame) => frame.fold === 0);
-  expect(lastFull).toBeGreaterThanOrEqual(0);
-  expect(frames[firstGone].at - frames[lastFull].at).toBeGreaterThanOrEqual(duration * 0.8);
+}
+
+async function expectFoldsByRunningTransition(page: Page): Promise<void> {
+  const trace = await foldTransitionTrace(page);
+  const duration = await durationOf(page, '--duration-base');
+  expect(duration, 'the computed --duration-base').toBeGreaterThan(0);
+  const easing = await easingOf(page, '--ease-standard');
+
+  const midway = trace.samples.filter(
+    (sample) =>
+      sample.running &&
+      sample.progress !== null &&
+      sample.progress > 0 &&
+      sample.progress < 1 &&
+      sample.connected &&
+      sample.foldDisplay !== 'none' &&
+      sample.noticeDisplay !== 'none',
+  );
+  expect(
+    midway.length,
+    'a sample of the running grid-template-rows transition between progress 0 and 1, with the notice still rendered',
+  ).toBeGreaterThanOrEqual(1);
+  const sample = midway[0];
+  expect(sample.behavior, 'grid-template-rows does not move as a discrete step').toBe('normal');
+  expect(sample.keyframes, 'the transition interpolates from 1fr to 0fr').toEqual(['1fr', '0fr']);
+  expect(sample.duration, 'the transition lasts the computed --duration-base').toBe(duration);
+  expect(sample.easing, 'the transition eases as motion.expand').toBe(easing);
+  expect(sample.startTime, 'the transition has started').not.toBeNull();
+  expect(
+    trace.endedAt! - sample.startTime!,
+    'the transition ends after at least 80 % of --duration-base',
+  ).toBeGreaterThanOrEqual(duration * 0.8);
 }
 
 async function cardGapUnderHeader(page: Page): Promise<number> {
@@ -406,14 +493,18 @@ function timesSaid(frames: readonly NoticeFrame[], sentence: string): number {
 test.describe('Given an administrator on the card of a donor whose device could not store the administration', () => {
   test.use({ reducedMotion: 'no-preference' });
 
-  test('when Uložit znovu stores it, then it folds over the token duration, not in one cut (in Chromium frame by frame, in WebKit by its running transition and its heights in time), the card rises by exactly the notice and ends at the gap of the page without the notice, and from the start of the fold the focus is on the heading and screen readers hear once that it is stored', async ({
+  test('when Uložit znovu stores it, then it folds over the token duration, not in one cut (in Chromium frame by frame, in WebKit by its grid-template-rows transition from 1fr to 0fr, sampled running between progress 0 and 1 while the notice is rendered, never a discrete step), the card rises by exactly the notice and ends at the gap of the page without the notice, and from the start of the fold the focus is on the heading and screen readers hear once that it is stored', async ({
     page,
   }, testInfo) => {
     await openCardWithFailedCopy(page);
     const fold = page.locator('app-first-download-notice app-fold');
     const notice = (await fold.boundingBox())!;
     const card = (await page.getByRole('region', { name: 'Shrnutí dárce' }).boundingBox())!;
+    const webkit = testInfo.project.name === 'iphone';
     await followNoticeFrames(page);
+    if (webkit) {
+      await followFoldTransition(page);
+    }
 
     await page.locator('.first-download').getByRole('button', { name: 'Uložit znovu' }).click();
 
@@ -428,8 +519,8 @@ test.describe('Given an administrator on the card of a donor whose device could 
     expect(Math.abs(start - end - notice.height)).toBeLessThanOrEqual(0.5);
     expect(notice.height).toBeGreaterThan(40);
 
-    if (testInfo.project.name === 'iphone') {
-      await expectFoldsOverTime(page, frames, notice);
+    if (webkit) {
+      await expectFoldsByRunningTransition(page);
     } else {
       await expectFoldsOverFrames(page, frames, notice);
     }
@@ -473,7 +564,9 @@ test.describe('Given an administrator who asks for less motion, on the card of a
     );
     const reduced = await durationOf(page, '--duration-reduced');
     const moves = frames.flatMap((frame) => frame.transitions).filter((move) => move.running);
-    expect(moves.filter((move) => move.property === 'grid-template-rows')).toEqual([]);
+    expect(
+      moves.filter((move) => move.property === 'grid-template-rows' || move.property === 'height'),
+    ).toEqual([]);
     expect(moves.filter((move) => move.property === 'opacity' && move.duration > reduced)).toEqual(
       [],
     );
