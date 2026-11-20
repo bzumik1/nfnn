@@ -59,8 +59,9 @@
 }
 
 .ui-button--small {
-  padding: var(--space-1-75) var(--space-3-5);
-  font-size: var(--text-xs);
+  min-height: var(--button-small-min-height);
+  padding: var(--button-small-padding);
+  font-size: var(--text-button-small);
 }
 
 .ui-button--quiet {
@@ -124,14 +125,14 @@
 
 .ui-pill-button {
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-size: var(--text-button-small);
   font-weight: var(--weight-semibold);
   color: var(--color-accent);
   background-color: var(--color-surface);
   border: 1.5px solid var(--color-border-accent);
   border-radius: var(--radius-pill);
-  padding: var(--space-1-5) var(--space-3-5);
-  min-height: 32px;
+  padding: var(--button-small-padding);
+  min-height: var(--button-small-min-height);
   cursor: pointer;
   white-space: nowrap;
   @include motion.state(background-color, border-color, color);

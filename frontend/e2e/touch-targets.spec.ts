@@ -146,6 +146,21 @@ test.describe('Given a visitor tapping small controls on a phone', () => {
     );
   });
 
+  test('when a signed-in donor taps near the edge of Stáhnout PDF in a gift row on Moje dary, then a finger-sized area around it still reaches it, or the control beside it, never empty space', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, twoGifts);
+    await rememberedDonorSession(page);
+    await page.goto('/darce/dary');
+
+    await expectFingerSized(
+      page
+        .getByRole('main')
+        .getByRole('button', { name: /^Stáhnout PDF\b/ })
+        .first(),
+    );
+  });
+
   test('when a signed-in donor taps near the edge of the link button Jak nastavit trvalý příkaz on Moje dary, then a finger-sized area around it still reaches it, or the control beside it, never empty space', async ({
     page,
   }) => {

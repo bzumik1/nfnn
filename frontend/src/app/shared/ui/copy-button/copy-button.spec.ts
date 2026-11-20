@@ -165,3 +165,39 @@ describe('Given a copy button with sentences of its own for its status', () => {
     expect(status()).toBe('Odkaz najdete v adresním řádku.');
   });
 });
+
+describe('Given a copy button in a row whose other actions are small tinted buttons', () => {
+  let fixture: ComponentFixture<CopyButton>;
+
+  beforeEach(async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      configurable: true,
+    });
+    await TestBed.configureTestingModule({ imports: [CopyButton] }).compileComponents();
+    fixture = TestBed.createComponent(CopyButton);
+    fixture.componentRef.setInput('value', 'Zálohy nefungují.');
+    fixture.componentRef.setInput('what', 'zprávu pro technika');
+    fixture.componentRef.setInput('look', 'tinted');
+    fixture.detectChanges();
+  });
+
+  const button = () => fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+
+  it('when it renders, then it is the small tinted button instead of the pill', () => {
+    expect([...button().classList]).toEqual(
+      expect.arrayContaining(['ui-button', 'ui-button--small']),
+    );
+    expect(button().classList).not.toContain('ui-pill-button');
+  });
+
+  it('when it is pressed, then it shows Zkopírováno and stays tinted without the outline of the pill', async () => {
+    button().click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(button().classList).toContain('copy-button--copied');
+    expect(button().classList).not.toContain('ui-pill-button--done');
+    expect(button().classList).toContain('ui-button--small');
+  });
+});

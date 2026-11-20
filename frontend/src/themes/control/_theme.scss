@@ -357,9 +357,9 @@
   --list-chevron-size: 1rem;
   --icon-beside-text-size: min(1.5em, 2rem);
   --donations-column-date: 8.5rem;
-  --donations-column-amount: 8rem;
+  --donations-column-amount: 7.75rem;
   --donations-column-status: 7rem;
-  --donations-column-receipt: 14.5rem;
+  --donations-column-receipt: 14.75rem;
   --pdf-status-reserve: 13rem;
   --pdf-status-reserve-compact: 12rem;
   --sheet-close-icon-size: min(1.125rem, var(--sheet-close-size) * 0.5);
@@ -385,6 +385,9 @@
   --scroll-edge-fade: 25px;
   --scroll-shade-amount: 14%;
   --touch-target-size: 45px;
+  --button-small-min-height: 32px;
+  --button-small-padding: var(--space-1-75) var(--space-3-5);
+  --text-button-small: var(--text-xs);
   --list-row-min-height: 55px;
   --list-inset-row-min-height: 2.8rem;
   --weight-list-inset-title: var(--weight-regular);

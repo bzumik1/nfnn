@@ -1,7 +1,11 @@
 <button
   type="button"
-  class="ui-pill-button"
-  [class.ui-pill-button--done]="state() === 'copied'"
+  class="copy-button"
+  [class.ui-pill-button]="look() === 'pill'"
+  [class.ui-button]="look() === 'tinted'"
+  [class.ui-button--small]="look() === 'tinted'"
+  [class.ui-pill-button--done]="look() === 'pill' && state() === 'copied'"
+  [class.copy-button--copied]="state() === 'copied'"
   (click)="copy()"
 >
   <span class="copy-button__faces">
