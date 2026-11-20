@@ -468,24 +468,34 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
       await page.evaluate(() => {
         const seen: string[] = [];
         (window as unknown as { seen: string[] }).seen = seen;
-        const october = () =>
-          Array.from(document.querySelectorAll('.payments-month h3')).some((heading) =>
-            /říjen 2026/i.test(heading.textContent ?? ''),
-          );
+        const october = document.getElementById('payments-month-2026-10');
+        const month = october?.closest('.payments-month');
+        if (!october || !month) {
+          seen.push('no month heading of October');
+          return;
+        }
         new MutationObserver((records) => {
-          for (const record of records) {
-            if (
-              record.type === 'attributes' &&
-              record.target instanceof HTMLLIElement &&
-              record.target.hasAttribute('inert')
-            ) {
-              seen.push('row out of reach');
-            }
-            for (const node of record.removedNodes) {
-              if (node instanceof HTMLLIElement && node.hasAttribute('inert')) {
-                seen.push(`row gone, month heading ${october() ? 'there' : 'gone'}`);
-              }
-            }
+          const removed = records.flatMap((record) => Array.from(record.removedNodes));
+          if (
+            records.some(
+              (record) =>
+                record.type === 'attributes' &&
+                record.target instanceof HTMLLIElement &&
+                record.target.hasAttribute('inert'),
+            )
+          ) {
+            seen.push('row out of reach');
+          }
+          const rowGone = removed.some(
+            (node) => node instanceof HTMLLIElement && node.hasAttribute('inert'),
+          );
+          const monthGone = removed.some((node) => node === month || node.contains(month));
+          if (rowGone && monthGone) {
+            seen.push('row and month heading gone in one batch');
+          } else if (rowGone) {
+            seen.push(`row gone, month heading ${october.isConnected ? 'there' : 'gone'}`);
+          } else if (monthGone) {
+            seen.push('month heading gone');
           }
         }).observe(document.body, {
           attributes: true,
@@ -518,7 +528,12 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
       await expect(page.locator('.payments-month h3')).toHaveText(['Září 2026']);
       await expect
         .poll(() => page.evaluate(() => (window as unknown as { seen: string[] }).seen))
-        .toEqual(['row out of reach', leave, 'row gone, month heading there']);
+        .toEqual([
+          'row out of reach',
+          leave,
+          'row gone, month heading there',
+          'month heading gone',
+        ]);
     });
   }
 
