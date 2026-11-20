@@ -54,6 +54,7 @@ async function openSheetSection(page: Page, name: string) {
   const sheet = page.getByRole('dialog');
   await sheet.getByRole('link', { name }).click();
   await expect(sheet.getByRole('heading', { level: 2, name, exact: true })).toBeVisible();
+  await expect(page.locator('.page-transition')).toHaveCount(0);
   return sheet;
 }
 

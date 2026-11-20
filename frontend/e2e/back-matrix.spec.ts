@@ -21,8 +21,7 @@ const SHEET_TOP_GAP_PX = 80;
 const BAND = { y: 4, height: 20 };
 const SAME_COLOUR = 3;
 const SCROLLED_BY_PX = 160;
-const PAGE_DURATION_MS = 350;
-const FASTEST_EASE = 3;
+const PACE_HEADROOM = 1.1;
 const STEP_ENDS_WITHIN_MS = 6000;
 const FIRST_SHOWN_AT_MOST = 0.25;
 const BUSY_AS_ON_THE_PHONE_MS = 140;
@@ -54,6 +53,11 @@ interface Frame {
   readonly rounded: number;
 }
 
+interface Pace {
+  readonly durationMs: number;
+  readonly easings: string[];
+}
+
 interface StepProbe {
   frames: Frame[];
   under: string | null;
@@ -61,11 +65,18 @@ interface StepProbe {
   tappedAt: number | null;
   busyFrameAt: number | null;
   busyFor: number;
+  placed: boolean;
+  placedTinted: boolean;
+  placedRounded: number;
+  motions: number;
+  paces: Pace[];
 }
 
 declare global {
   interface Window {
     nfnnStepProbe?: StepProbe;
+    nfnnMotionGiven?: (animation: Animation) => void;
+    nfnnAnimateWatched?: boolean;
   }
 }
 
@@ -168,7 +179,10 @@ async function onThePhone(page: Page, look: Look): Promise<void> {
     Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
     Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
     localStorage.setItem('nfnn.donor-session-app', '1');
-    document.documentElement.style.setProperty('--sheet-top-gap', `${gap}px`, 'important');
+    const lowerTheSheets = (): void =>
+      document.documentElement?.style.setProperty('--sheet-top-gap', `${gap}px`, 'important');
+    lowerTheSheets();
+    new MutationObserver(lowerTheSheets).observe(document, { childList: true });
   }, SHEET_TOP_GAP_PX);
   await page.route('**/api/donors/auth/refresh', (route) =>
     route.fulfill(session(200, administrator)),
@@ -282,7 +296,7 @@ function leavingOffset(page: Page): Promise<number> {
     .evaluate((over) => Math.round(new DOMMatrixReadOnly(getComputedStyle(over).transform).m41));
 }
 
-function measuresFrames(page: Page): boolean {
+function drawsFramesInTime(page: Page): boolean {
   return page.context().browser()?.browserType().name() === 'chromium';
 }
 
@@ -296,6 +310,11 @@ async function watchTheStep(page: Page): Promise<void> {
         tappedAt: null,
         busyFrameAt: null,
         busyFor: 0,
+        placed: false,
+        placedTinted: false,
+        placedRounded: 0,
+        motions: 0,
+        paces: [],
       };
       window.nfnnStepProbe = probe;
       const started = performance.now();
@@ -303,9 +322,117 @@ async function watchTheStep(page: Page): Promise<void> {
         capture: true,
         once: true,
       });
+      const tinted = (overlay: Element): boolean => {
+        const style = getComputedStyle(overlay);
+        const filter = style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter');
+        return filter === undefined || filter === '' || filter === 'none';
+      };
+      const rounded = (overlay: Element): number =>
+        Math.max(
+          0,
+          ...Array.from(overlay.querySelectorAll('.page-transition__page'), (page) => {
+            const style = getComputedStyle(page);
+            return Math.max(
+              ...[
+                style.borderTopLeftRadius,
+                style.borderTopRightRadius,
+                style.borderBottomLeftRadius,
+                style.borderBottomRightRadius,
+              ].map((radius) => Number.parseFloat(radius) || 0),
+            );
+          }),
+        );
+      const offsetOf = (transform: string): number | null => {
+        try {
+          return new DOMMatrixReadOnly(transform).m41;
+        } catch {
+          return null;
+        }
+      };
+      const counted = new WeakSet<Animation>();
+      const moves = (animation: Animation): boolean => {
+        const effect = animation.effect;
+        if (!(effect instanceof KeyframeEffect)) {
+          return false;
+        }
+        const target = effect.target;
+        if (!(target instanceof Element) || !target.matches('.page-transition__page--over')) {
+          return false;
+        }
+        const transforms = effect
+          .getKeyframes()
+          .map((frame) => frame['transform'])
+          .filter((value): value is string => typeof value === 'string');
+        if (Number(effect.getComputedTiming().duration) <= 0 || transforms.length === 0) {
+          return false;
+        }
+        if (transforms.length > 1) {
+          return transforms[0] !== transforms.at(-1);
+        }
+        const from = offsetOf(getComputedStyle(target).transform);
+        const to = offsetOf(transforms[0]);
+        return from !== null && to !== null && Math.abs(to - from) > 1;
+      };
+      const motionGiven = (animation: Animation): void => {
+        if (!counted.has(animation) && moves(animation)) {
+          counted.add(animation);
+          probe.motions++;
+          const effect = animation.effect as KeyframeEffect;
+          probe.paces.push({
+            durationMs: Number(effect.getComputedTiming().duration),
+            easings: [
+              effect.getTiming().easing ?? 'linear',
+              ...effect.getKeyframes().map((frame) => frame.easing ?? 'linear'),
+            ],
+          });
+        }
+      };
+      window.nfnnMotionGiven = motionGiven;
+      if (window.nfnnAnimateWatched !== true) {
+        window.nfnnAnimateWatched = true;
+        const animate = Element.prototype.animate;
+        Element.prototype.animate = function (
+          this: Element,
+          ...args: Parameters<Element['animate']>
+        ): Animation {
+          const animation = animate.apply(this, args);
+          window.nfnnMotionGiven?.(animation);
+          return animation;
+        };
+      }
       const bothPlaced = (): boolean =>
         document.querySelector('.page-transition__page--over') !== null &&
         document.querySelector('.page-transition__page--under') !== null;
+      const notePlacement = (): void => {
+        const overlay = document.querySelector('.page-transition');
+        if (overlay === null || !bothPlaced()) {
+          return;
+        }
+        if (!probe.placed) {
+          probe.placed = true;
+          probe.placedTinted = tinted(overlay);
+          probe.placedRounded = rounded(overlay);
+        }
+        const under = overlay.querySelector('.page-transition__page--under');
+        const text = (under?.textContent ?? '').replace(/\s+/g, ' ');
+        if (probe.under === null && text.trim() !== '') {
+          probe.under = text;
+        }
+        if (overlay.classList.contains('page-transition--moving')) {
+          overlay
+            .querySelector('.page-transition__page--over')
+            ?.getAnimations()
+            .forEach(motionGiven);
+        }
+      };
+      const placement = new MutationObserver(notePlacement);
+      placement.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class'],
+      });
+      notePlacement();
       const placed = new MutationObserver(() => {
         if (!bothPlaced() || busyMs === 0) {
           return;
@@ -329,42 +456,21 @@ async function watchTheStep(page: Page): Promise<void> {
       const look = (now: number): void => {
         const overlay = document.querySelector('.page-transition');
         const over = overlay?.querySelector('.page-transition__page--over') ?? null;
-        const under = overlay?.querySelector('.page-transition__page--under') ?? null;
-        const layerStyle = overlay === null ? null : getComputedStyle(overlay);
-        const filter =
-          layerStyle?.backdropFilter || layerStyle?.getPropertyValue('-webkit-backdrop-filter');
-        const corners = Array.from(
-          overlay?.querySelectorAll<HTMLElement>('.page-transition__page') ?? [],
-          (page) => {
-            const style = getComputedStyle(page);
-            return Math.max(
-              ...[
-                style.borderTopLeftRadius,
-                style.borderTopRightRadius,
-                style.borderBottomLeftRadius,
-                style.borderBottomRightRadius,
-              ].map((radius) => Number.parseFloat(radius) || 0),
-            );
-          },
-        );
+        notePlacement();
         probe.frames.push({
           at: now,
           overlay: overlay !== null,
-          offset:
-            over === null ? null : new DOMMatrixReadOnly(getComputedStyle(over).transform).m41,
-          tinted:
-            layerStyle !== null && (filter === undefined || filter === '' || filter === 'none'),
-          rounded: Math.max(0, ...corners),
+          offset: over === null ? null : offsetOf(getComputedStyle(over).transform),
+          tinted: overlay !== null && tinted(overlay),
+          rounded: overlay === null ? 0 : rounded(overlay),
         });
-        if (under !== null && probe.under === null) {
-          probe.under = (under.textContent ?? '').replace(/\s+/g, ' ');
-        }
-        seen ||= overlay !== null;
+        seen ||= overlay !== null || probe.placed;
         if (seen && overlay === null) {
           framesAfter++;
         }
         if (framesAfter > 2 || now - started > 5000) {
           placed.disconnect();
+          placement.disconnect();
           probe.done = true;
           return;
         }
@@ -372,7 +478,7 @@ async function watchTheStep(page: Page): Promise<void> {
       };
       requestAnimationFrame(look);
     },
-    measuresFrames(page) ? BUSY_AS_ON_THE_PHONE_MS : 0,
+    drawsFramesInTime(page) ? BUSY_AS_ON_THE_PHONE_MS : 0,
   );
 }
 
@@ -383,6 +489,19 @@ async function stepSeen(page: Page): Promise<StepProbe> {
     })
     .toBe(true);
   return page.evaluate(() => window.nfnnStepProbe!);
+}
+
+function expectSetInMotion(page: Page, probe: StepProbe, frameByFrame: () => void): void {
+  expect(probe.placed, 'the step placed no moving page over the screen before').toBe(true);
+  expect(
+    probe.placedTinted,
+    'Safari would tint the band under the clock from the moving layer',
+  ).toBe(false);
+  expect(probe.placedRounded, 'the moving page had rounded corners').toBe(0);
+  expect(probe.motions, 'the moving page was set in no motion').toBeGreaterThan(0);
+  if (drawsFramesInTime(page)) {
+    frameByFrame();
+  }
 }
 
 function travelled(frames: readonly Frame[]): Frame[] {
@@ -408,14 +527,54 @@ function travelled(frames: readonly Frame[]): Frame[] {
   return shown.filter((frame) => frame.offset !== null);
 }
 
-function expectNoJump(frames: readonly Frame[], width: number): void {
+const NAMED_EASES: Record<string, readonly [number, number, number, number]> = {
+  ease: [0.25, 0.1, 0.25, 1],
+  'ease-in': [0.42, 0, 1, 1],
+  'ease-out': [0, 0, 0.58, 1],
+  'ease-in-out': [0.42, 0, 0.58, 1],
+};
+
+function steepestSlope(easing: string): number {
+  if (easing === 'linear') {
+    return 1;
+  }
+  const curve =
+    NAMED_EASES[easing] ??
+    easing
+      .match(/^cubic-bezier\(([^)]*)\)$/)?.[1]
+      .split(',')
+      .map((value) => Number.parseFloat(value));
+  expect(curve, `the motion eases by ${easing}, which the matrix cannot pace`).toHaveLength(4);
+  const [x1, y1, x2, y2] = curve!;
+  const speed = (t: number, from: number, to: number): number =>
+    3 * (1 - t) ** 2 * from + 6 * (1 - t) * t * (to - from) + 3 * t ** 2 * (1 - to);
+  let steepest = 0;
+  for (let step = 1; step < 1000; step++) {
+    const t = step / 1000;
+    steepest = Math.max(steepest, speed(t, y1, y2) / Math.max(speed(t, x1, x2), 1e-9));
+  }
+  return steepest;
+}
+
+function fastestPace(probe: StepProbe): number {
+  expect(probe.paces.length, 'the moving page was set in no motion').toBeGreaterThan(0);
+  return Math.max(
+    ...probe.paces.map(
+      (pace) =>
+        pace.easings.reduce((slope, easing) => slope * steepestSlope(easing), 1) / pace.durationMs,
+    ),
+  );
+}
+
+function expectNoJump(probe: StepProbe, frames: readonly Frame[], width: number): void {
+  const pace = fastestPace(probe) * PACE_HEADROOM;
   for (let at = 1; at < frames.length; at++) {
     const gap = Math.abs(frames[at].offset! - frames[at - 1].offset!);
     const elapsed = frames[at].at - frames[at - 1].at;
     expect(
       gap,
       `the leaving page jumped ${Math.round(gap)} px in ${Math.round(elapsed)} ms`,
-    ).toBeLessThanOrEqual((width * FASTEST_EASE * elapsed) / PAGE_DURATION_MS + 2);
+    ).toBeLessThanOrEqual(width * pace * elapsed + 2);
   }
 }
 
@@ -461,7 +620,7 @@ function expectLeftAway(probe: StepProbe, width: number, from: number): void {
       moving[at - 1].offset! - 1,
     );
   }
-  expectNoJump(moving, width);
+  expectNoJump(probe, moving, width);
 }
 
 function expectArrived(probe: StepProbe, width: number): void {
@@ -481,7 +640,7 @@ function expectArrived(probe: StepProbe, width: number): void {
       moving[at - 1].offset! + 1,
     );
   }
-  expectNoJump(moving, width);
+  expectNoJump(probe, moving, width);
 }
 
 function expectSlidBack(probe: StepProbe, width: number, from: number): void {
@@ -494,7 +653,7 @@ function expectSlidBack(probe: StepProbe, width: number, from: number): void {
       moving[at - 1].offset! + 1,
     );
   }
-  expectNoJump(moving, width);
+  expectNoJump(probe, moving, width);
 }
 
 interface Colour {
@@ -504,6 +663,12 @@ interface Colour {
 }
 
 async function bandColour(page: Page): Promise<Colour> {
+  expect(
+    await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--sheet-top-gap').trim(),
+    ),
+    'the sheets do not stand low enough for the band above them to lie on the background alone',
+  ).toBe(`${SHEET_TOP_GAP_PX}px`);
   const shot = await page.screenshot({
     clip: { x: 0, y: BAND.y, width: WIDTH, height: BAND.height },
     animations: 'allow',
@@ -600,19 +765,17 @@ async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): P
     expect(probe.under ?? '', 'the screen before was not under the leaving one').toContain(
       row.name,
     );
-    expectLeftAway(probe, WIDTH, 0);
-    if (measuresFrames(page)) {
+    expectSetInMotion(page, probe, () => {
+      expectLeftAway(probe, WIDTH, 0);
       expectMovedSoonAfterTheTap(probe);
-    }
+    });
     return;
   }
   const completes = way === 'swipe-completed';
   const { probe, letGoAt } = await swipeBack(page, row, completes, ground);
-  if (completes) {
-    expectLeftAway(probe, WIDTH, letGoAt);
-  } else {
-    expectSlidBack(probe, WIDTH, letGoAt);
-  }
+  expectSetInMotion(page, probe, () =>
+    completes ? expectLeftAway(probe, WIDTH, letGoAt) : expectSlidBack(probe, WIDTH, letGoAt),
+  );
 }
 
 async function activeHref(page: Page): Promise<string | null> {
@@ -636,7 +799,7 @@ async function walkRow(
   expect(opening.under ?? '', 'the screen before was not under the arriving one').toContain(
     row.name,
   );
-  expectArrived(opening, WIDTH);
+  expectSetInMotion(page, opening, () => expectArrived(opening, WIDTH));
   if (groundBefore !== null) {
     expectSameColour(await bandColour(page), groundBefore, 'when the next screen opened');
   }
@@ -879,6 +1042,7 @@ for (const look of LOOKS) {
           }
           await expect(page.locator('main h1, .admin-page h1').first()).toBeVisible();
           const within = page.locator(administration ? '.admin-frame' : 'main').first();
+          await expect(within.locator(`a[href^="${list}/"]`).first()).toBeAttached();
           const [detail] = await linksOut(list, within);
           expect(detail, `${list} offers no ${path}`).toBeDefined();
           const screens: Screens = {
@@ -921,8 +1085,40 @@ for (const look of LOOKS) {
       await page.keyboard.press('Enter');
       await accountListShown(page);
       await page.evaluate(() => {
+        const watched = window as unknown as { nfnnSheetTops: number[]; nfnnSheetWentDown: number };
         const seen: number[] = [];
-        (window as unknown as { nfnnSheetTops: number[] }).nfnnSheetTops = seen;
+        watched.nfnnSheetTops = seen;
+        watched.nfnnSheetWentDown = 0;
+        const downOf = (value: unknown): number =>
+          Number.parseFloat(
+            String(value ?? '')
+              .trim()
+              .split(/\s+/)[1] ?? '0',
+          ) || 0;
+        const leaving = new MutationObserver(() => {
+          const panel = document.querySelector('app-account-sheet .dialog--leaving .dialog-panel');
+          if (panel === null) {
+            return;
+          }
+          leaving.disconnect();
+          watched.nfnnSheetWentDown = panel.getAnimations().filter((motion) => {
+            const effect = motion.effect as KeyframeEffect;
+            const ways = effect
+              .getKeyframes()
+              .map((frame) => frame['translate'])
+              .filter((way) => way !== undefined);
+            return (
+              Number(effect.getComputedTiming().duration) > 0 &&
+              ways.length > 1 &&
+              downOf(ways.at(-1)) > downOf(ways[0])
+            );
+          }).length;
+        });
+        leaving.observe(document.body, {
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['class'],
+        });
         const look = (): void => {
           const panel = document.querySelector('app-account-sheet .dialog-panel');
           if (panel === null) {
@@ -937,12 +1133,17 @@ for (const look of LOOKS) {
       await stepBack(page);
 
       await expect(accountSheet(page)).toHaveCount(0);
-      const tops = await page.evaluate(
-        () => (window as unknown as { nfnnSheetTops: number[] }).nfnnSheetTops,
-      );
-      expect(tops.filter((at) => at > tops[0] + 1 && at < HEIGHT - 1).length).toBeGreaterThan(0);
-      for (let at = 1; at < tops.length; at++) {
-        expect(tops[at]).toBeGreaterThanOrEqual(tops[at - 1] - 1);
+      const watched = await page.evaluate(() => {
+        const sheet = window as unknown as { nfnnSheetTops: number[]; nfnnSheetWentDown: number };
+        return { tops: sheet.nfnnSheetTops, wentDown: sheet.nfnnSheetWentDown };
+      });
+      expect(watched.wentDown, 'the sheet was set in no motion downwards').toBeGreaterThan(0);
+      if (drawsFramesInTime(page)) {
+        const tops = watched.tops;
+        expect(tops.filter((at) => at > tops[0] + 1 && at < HEIGHT - 1).length).toBeGreaterThan(0);
+        for (let at = 1; at < tops.length; at++) {
+          expect(tops[at]).toBeGreaterThanOrEqual(tops[at - 1] - 1);
+        }
       }
       await expect.poll(() => pageScroll(page).scrollTop()).toBe(top);
       await expect(account).toBeFocused();

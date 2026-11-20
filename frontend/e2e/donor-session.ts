@@ -488,6 +488,7 @@ export async function openAccountItem(page: Page, name: string): Promise<void> {
   await item.click();
   if (opensInSheet) {
     await expect(sheet.getByRole('heading', { level: 2, name: sectionName(name) })).toBeVisible();
+    await expect(page.locator('.page-transition')).toHaveCount(0);
     return;
   }
   await expect(page.getByRole('dialog')).toHaveCount(0);
