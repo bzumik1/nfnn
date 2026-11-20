@@ -287,7 +287,9 @@ export class PageTransitions {
     running.overlay.classList.add(`${PAGE_TRANSITION_CLASS}--moving`);
     this.finishWhenStill(running, shown.box, view);
     if (startsOnceDrawn) {
-      void afterDrawn(view).then(() => running.overlay.classList.remove(HELD_CLASS));
+      void afterDrawn(view, this.durationOf('--duration-fast') / 2).then(() =>
+        running.overlay.classList.remove(HELD_CLASS),
+      );
     }
   }
 
@@ -613,8 +615,12 @@ export function nextFrame(view: Window, then: (now: number) => void): void {
   view.requestAnimationFrame(once);
 }
 
-export function afterDrawn(view: Window): Promise<void> {
-  return new Promise((drawn) => afterFrames(view, 2, drawn));
+export function afterDrawn(view: Window, longestMs?: number): Promise<void> {
+  const drawn = new Promise<void>((done) => afterFrames(view, 2, done));
+  if (longestMs === undefined) {
+    return drawn;
+  }
+  return Promise.race([drawn, new Promise<void>((done) => view.setTimeout(done, longestMs))]);
 }
 
 function afterFrames(view: Window, frames: number, then: () => void): void {

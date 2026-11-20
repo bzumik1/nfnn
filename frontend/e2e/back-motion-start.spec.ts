@@ -7,6 +7,7 @@ const FINGER_Y = 420;
 const LIST_TITLE = 'Co je u nás nového';
 const BUSY_AS_ON_THE_PHONE_MS = 140;
 const SMALL_PART_OF_THE_WAY = 0.2;
+const HELD_AT_MOST_MS = 150;
 
 const article = {
   id: '0199f3e0-0000-7000-8000-00000000c031',
@@ -30,6 +31,7 @@ interface SeenFrame {
 declare global {
   interface Window {
     nfnnFramesSeen?: SeenFrame[];
+    nfnnHoldSeen?: { heldAt: number | null; releasedAt: number | null };
   }
 }
 
@@ -147,6 +149,51 @@ async function openArticleFromList(page: Page): Promise<void> {
   await expect(page.locator('.page-transition')).toHaveCount(0);
 }
 
+async function articleOpenedFromTheNews(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+    Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
+  });
+  await mockDonorApi(page);
+  await page.route(
+    (url) => url.pathname === `/api/content/news/${article.slug}`,
+    (route) => route.fulfill({ json: article }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/content/news',
+    (route) =>
+      route.fulfill({ json: { items: [article], page: 0, size: 10, total: 1, hasMore: false } }),
+  );
+  await openArticleFromList(page);
+}
+
+async function watchTheHoldWithoutFrames(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const seen = { heldAt: null as number | null, releasedAt: null as number | null };
+    window.nfnnHoldSeen = seen;
+    const watch = new MutationObserver((records) => {
+      for (const record of records) {
+        const overlay = record.target;
+        if (
+          !(overlay instanceof HTMLElement) ||
+          !overlay.classList.contains('page-transition--moving')
+        ) {
+          continue;
+        }
+        if (overlay.classList.contains('page-transition--held')) {
+          seen.heldAt ??= performance.now();
+        } else if (seen.heldAt !== null) {
+          seen.releasedAt = performance.now();
+          watch.disconnect();
+          return;
+        }
+      }
+    });
+    watch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    window.requestAnimationFrame = () => 0;
+  });
+}
+
 function width(page: Page): number {
   return page.viewportSize()!.width;
 }
@@ -159,23 +206,7 @@ test.describe('Given the app on the home screen of a phone with an article opene
     reducedMotion: 'no-preference',
   });
 
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
-      Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
-    });
-    await mockDonorApi(page);
-    await page.route(
-      (url) => url.pathname === `/api/content/news/${article.slug}`,
-      (route) => route.fulfill({ json: article }),
-    );
-    await page.route(
-      (url) => url.pathname === '/api/content/news',
-      (route) =>
-        route.fulfill({ json: { items: [article], page: 0, size: 10, total: 1, hasMore: false } }),
-    );
-    await openArticleFromList(page);
-  });
+  test.beforeEach(({ page }) => articleOpenedFromTheNews(page));
 
   test('when Zpět is pressed, then the first frame shown after the busy one shows the article at the start of its way off, not in its middle', async ({
     page,
@@ -218,5 +249,32 @@ test.describe('Given the app on the home screen of a phone with an article opene
     expect(letGoAt - shown).toBeLessThanOrEqual(letGoAt * SMALL_PART_OF_THE_WAY);
     await expect(page.locator('.page-transition')).toHaveCount(0);
     await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+  });
+});
+
+test.describe('Given the app on the home screen of a phone with an article opened from the news, whose browser then gives no more animation frames', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(({ page }) => articleOpenedFromTheNews(page));
+
+  test('when Zpět is pressed, then the step back lets its held motion go by the page clock within the duration of a quick change all the same', async ({
+    page,
+  }) => {
+    await watchTheHoldWithoutFrames(page);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+
+    await expect
+      .poll(() => page.evaluate(() => window.nfnnHoldSeen?.releasedAt ?? null))
+      .not.toBeNull();
+    const hold = await page.evaluate(() => window.nfnnHoldSeen!);
+    expect(hold.releasedAt! - hold.heldAt!).toBeLessThanOrEqual(HELD_AT_MOST_MS);
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.locator('.page-transition')).toHaveCount(0);
   });
 });
