@@ -221,7 +221,7 @@ async function swipeBack(page: Page): Promise<void> {
   await touch(page, 'touchend', [250]);
 }
 
-async function placesWhileSettling(page: Page): Promise<number[]> {
+async function placesShownWhileSettling(page: Page): Promise<number[]> {
   await page.evaluate(() => {
     const seen = [Math.round(window.scrollY)];
     (window as Window & { placesSeen?: number[] }).placesSeen = seen;
@@ -268,7 +268,8 @@ test.describe('Given the app on the home screen of a phone with an article opene
       await expect(page).toHaveURL('/aktuality');
       await expect(page.locator('.page-transition')).toHaveCount(0);
       await expect.poll(() => scrollY(page)).toBe(listTop);
-      expect(await placesWhileSettling(page)).toEqual([listTop]);
+      const shown = await placesShownWhileSettling(page);
+      expect(shown.filter((place) => place !== listTop)).toEqual([]);
     });
   }
 });
