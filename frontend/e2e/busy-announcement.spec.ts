@@ -1,4 +1,4 @@
-import { Locator, Page } from '@playwright/test';
+import { Locator, Page, Route } from '@playwright/test';
 import {
   administrator,
   claudeConnection,
@@ -6,7 +6,9 @@ import {
   mockDonorApi,
   noDonations,
   openDonorSection,
+  openSignInDialog,
   problem,
+  secondFactorRequired,
   signedInDevices,
   signIn,
 } from './donor-session';
@@ -430,3 +432,304 @@ async function lockedAndDisabledLooks(
     return looks;
   });
 }
+
+test.describe('Given a visitor signing in from the sign-in dialog', () => {
+  test('when the server takes longer than the loading delay, then the pressed Přihlásit se keeps the focus, takes no second press and the dialog says first Přihlašujeme… and then only the result', async ({
+    page,
+  }) => {
+    await page.clock.install();
+    await mockDonorApi(page);
+    let answer: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => (answer = resolve));
+    let requests = 0;
+    await page.route('**/api/donors/auth/login', async (route) => {
+      requests += 1;
+      await answered;
+      await route.fulfill(
+        problem(
+          401,
+          'auth/invalid-credentials',
+          'Nesprávný e-mail nebo heslo',
+          'Zkontrolujte prosím e-mail a heslo.',
+        ),
+      );
+    });
+    await openSignInDialog(page);
+    const dialog = page.getByRole('dialog');
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('wrong horse battery');
+    const submit = dialog.locator('.login-form .ui-button--primary');
+    const status = dialog.locator('.login-form [role="status"]');
+    const heard = await listenTo(status);
+    await lengthenLoadingDelay(page);
+    await submit.focus();
+
+    await submit.press('Enter');
+
+    await expect(submit).toHaveAttribute('aria-busy', 'true');
+    await expect(submit).toBeFocused();
+    await expect(status).toHaveText('');
+
+    await page.clock.fastForward(10_000);
+
+    await expect(status).toHaveText('Přihlašujeme…');
+    await expect(submit.locator('.busy-label__face--shown')).toHaveText('Přihlašujeme…');
+    await expect(submit).toHaveAccessibleName('Přihlásit se');
+    await expect(submit).toBeFocused();
+
+    await submit.press('Enter');
+
+    answer();
+
+    await expect(dialog.getByRole('alert')).toContainText('Nesprávný e-mail nebo heslo');
+    await expect(status).toHaveText('');
+    await expect(submit).not.toHaveAttribute('aria-busy');
+    await expect(submit).toBeFocused();
+    expect(requests).toBe(1);
+    expect(await heard()).toEqual(['Přihlašujeme…']);
+  });
+
+  test('when the visitor presses Přihlásit se and the browser moves the focus onto the dialog itself, then the focus goes back to that button without a focus ring and stays there while the answer is slow', async ({
+    page,
+    hasTouch,
+  }) => {
+    await mockDonorApi(page);
+    let answer: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => (answer = resolve));
+    await page.route('**/api/donors/auth/login', async (route) => {
+      await answered;
+      await route.fulfill(WRONG_PASSWORD);
+    });
+    await openSignInDialog(page);
+    const dialog = page.getByRole('dialog');
+    await fillInSignIn(page);
+    const submit = dialog.locator('.login-form .ui-button--primary');
+    await pressWithPointer(page.locator('#login-password'), hasTouch);
+
+    await pressWhileFocusFallsOntoDialog(page, submit);
+
+    await expect(submit).toHaveAttribute('aria-busy', 'true');
+    await expect.poll(() => holdsFocus(submit)).toBe(true);
+    expect(await showsFocusRing(submit)).toBe(false);
+
+    answer();
+
+    await expect(dialog.getByRole('alert')).toContainText('Nesprávný e-mail nebo heslo');
+    await expect.poll(() => holdsFocus(submit)).toBe(true);
+    expect(await showsFocusRing(submit)).toBe(false);
+  });
+
+  test('when the visitor tabs from Heslo to Přihlásit se, then that button shows its focus ring', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await openSignInDialog(page);
+    await fillInSignIn(page);
+    const submit = page.getByRole('dialog').locator('.login-form .ui-button--primary');
+    await page.locator('#login-password').focus();
+
+    await tabUntilFocused(page, submit);
+
+    expect(await showsFocusRing(submit)).toBe(true);
+  });
+});
+
+function holdsFocus(control: Locator): Promise<boolean> {
+  return control.evaluate((element) => document.activeElement === element);
+}
+
+function showsFocusRing(control: Locator): Promise<boolean> {
+  return control.evaluate((element) => element.matches(':focus-visible'));
+}
+
+async function pressWithPointer(control: Locator, hasTouch: boolean): Promise<void> {
+  if (hasTouch) {
+    await control.tap();
+  } else {
+    await control.click();
+  }
+}
+
+async function pressWhileFocusFallsOntoDialog(page: Page, control: Locator): Promise<void> {
+  const box = await control.boundingBox();
+  if (box === null) {
+    throw new Error('The pressed control is not on the screen');
+  }
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect.poll(() => holdsFocus(control)).toBe(true);
+  await page.locator('dialog[open]').evaluate((dialog: HTMLDialogElement) => dialog.focus());
+  await page.mouse.up();
+}
+
+async function tabUntilFocused(page: Page, control: Locator): Promise<void> {
+  for (let presses = 0; presses < 10 && !(await holdsFocus(control)); presses += 1) {
+    await page.keyboard.press('Tab');
+  }
+  expect(await holdsFocus(control)).toBe(true);
+}
+
+interface BusyStep {
+  readonly name: string;
+  readonly busy: string;
+  readonly path: string;
+  readonly answersBeforeHeld: number;
+  readonly answer?: Parameters<Route['fulfill']>[0];
+  readonly reach: (page: Page) => Promise<Locator>;
+}
+
+const ACCEPTED = { status: 202 };
+const WRONG_PASSWORD = problem(
+  401,
+  'auth/invalid-credentials',
+  'Nesprávný e-mail nebo heslo',
+  'Zkontrolujte prosím e-mail a heslo.',
+);
+const WRONG_CODE = problem(
+  401,
+  'auth/invalid-second-factor-code',
+  'Nesprávný kód',
+  'Zadejte kód, který ukazuje aplikace.',
+);
+
+async function fillInSignIn(page: Page): Promise<void> {
+  await page.locator('#login-email').fill('jana@example.cz');
+  await page.locator('#login-password').fill('correct horse battery');
+}
+
+async function fillInRegistration(page: Page): Promise<void> {
+  await page.getByRole('dialog').getByRole('button', { name: 'Registrace', exact: true }).click();
+  await page.locator('#register-name').fill('Jana Nováková');
+  await page.locator('#register-street').fill('Dlouhá 12');
+  await page.locator('#register-city').fill('Ústí nad Labem');
+  await page.locator('#register-postal-code').fill('400 01');
+  await page.locator('#register-email').fill('jana@example.cz');
+  await page.locator('#register-password').fill('correct horse battery');
+}
+
+async function fillInReset(page: Page): Promise<void> {
+  await page.getByRole('dialog').locator('.forgot-link').click();
+  await page.locator('#reset-email').fill('jana@example.cz');
+}
+
+const BUSY_STEPS: readonly BusyStep[] = [
+  {
+    name: 'Přihlásit se',
+    busy: 'Přihlašujeme…',
+    path: '/api/donors/auth/login',
+    answersBeforeHeld: 0,
+    answer: WRONG_PASSWORD,
+    reach: async (page) => {
+      await fillInSignIn(page);
+      return page.locator('.login-form .ui-button--primary');
+    },
+  },
+  {
+    name: 'Přihlásit se with the code from the app',
+    busy: 'Ověřujeme kód…',
+    path: '/api/donors/auth/login/second-factor',
+    answersBeforeHeld: 0,
+    answer: WRONG_CODE,
+    reach: async (page) => {
+      await page.route('**/api/donors/auth/login', (route) =>
+        route.fulfill(secondFactorRequired()),
+      );
+      await fillInSignIn(page);
+      await page.locator('.login-form .ui-button--primary').click();
+      await page.getByLabel('Kód z aplikace').fill('287082');
+      return page.locator('.code-form .ui-button--primary');
+    },
+  },
+  {
+    name: 'Vytvořit účet',
+    busy: 'Vytváříme účet…',
+    path: '/api/donors/auth/register',
+    answersBeforeHeld: 0,
+    reach: async (page) => {
+      await fillInRegistration(page);
+      return page.locator('.register-form .ui-button--primary');
+    },
+  },
+  {
+    name: 'Poslat odkaz znovu',
+    busy: 'Odesíláme…',
+    path: '/api/donors/auth/email-verification/request',
+    answersBeforeHeld: 0,
+    reach: async (page) => {
+      await page.route('**/api/donors/auth/register', (route) => route.fulfill(ACCEPTED));
+      await fillInRegistration(page);
+      await page.locator('.register-form .ui-button--primary').click();
+      return page.locator('.registration-resend');
+    },
+  },
+  {
+    name: 'Odeslat odkaz',
+    busy: 'Odesíláme…',
+    path: '/api/donors/auth/password-reset/request',
+    answersBeforeHeld: 0,
+    reach: async (page) => {
+      await fillInReset(page);
+      return page.locator('.reset-form .ui-button--primary');
+    },
+  },
+  {
+    name: 'Poslat znovu',
+    busy: 'Odesíláme…',
+    path: '/api/donors/auth/password-reset/request',
+    answersBeforeHeld: 1,
+    reach: async (page) => {
+      await fillInReset(page);
+      await page.locator('.reset-form .ui-button--primary').click();
+      return page.locator('.reset-resend');
+    },
+  },
+];
+
+async function holdAnswers(page: Page, step: BusyStep): Promise<() => void> {
+  let release: () => void = () => undefined;
+  const released = new Promise<void>((resolve) => (release = resolve));
+  let answered = 0;
+  await page.route(
+    (url) => url.pathname === step.path,
+    async (route) => {
+      answered += 1;
+      if (answered > step.answersBeforeHeld) {
+        await released;
+      }
+      await route.fulfill(step.answer ?? ACCEPTED);
+    },
+  );
+  return release;
+}
+
+test.describe('Given a visitor in a step of the sign-in dialog whose answer is slower than the loading delay', () => {
+  for (const step of BUSY_STEPS) {
+    test(`when they press ${step.name}, then exactly one status region says ${step.busy} while the button keeps the focus and looks as a disabled button did, and none says it after the answer`, async ({
+      page,
+    }) => {
+      await page.clock.install();
+      await mockDonorApi(page);
+      const release = await holdAnswers(page, step);
+      await openSignInDialog(page);
+      const button = await step.reach(page);
+      await lengthenLoadingDelay(page);
+      const starting = page.locator('[role="status"]').filter({ hasText: step.busy });
+      await button.focus();
+
+      await button.press('Enter');
+
+      await expect(button).toHaveAttribute('aria-busy', 'true');
+      await page.clock.fastForward(10_000);
+      await expect(button.locator('.busy-label__face--shown')).toHaveText(step.busy);
+      await expect(starting).toHaveCount(1);
+      await expect(starting).toHaveText(step.busy);
+      await expect(button).toBeFocused();
+      const looks = await lockedAndDisabledLooks(button);
+      expect(looks.locked).toEqual(looks.disabled);
+
+      release();
+
+      await expect(starting).toHaveCount(0);
+    });
+  }
+});

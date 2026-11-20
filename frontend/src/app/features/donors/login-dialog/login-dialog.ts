@@ -44,6 +44,8 @@ import {
   PasskeyAuthenticator,
   PasskeyCeremonyError,
 } from '../../../core/auth/passkey-authenticator';
+import { BusyButton } from '../../../shared/ui/busy-button/busy-button';
+import { BusyAnnouncement } from '../../../shared/ui/busy-label/busy-announcement';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
@@ -131,7 +133,9 @@ const REGISTRATION_FIELDS: Readonly<Record<string, string>> = {
     NeedsConnection,
     SegmentThumb,
     BusyLabel,
+    BusyButton,
   ],
+  providers: [BusyAnnouncement],
   templateUrl: './login-dialog.html',
   styleUrl: './login-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -144,6 +148,7 @@ export class LoginDialog {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   protected readonly appearance = inject(Appearance);
+  protected readonly busyAnnouncement = inject(BusyAnnouncement);
   private readonly compact = inject(CompactLayout).isCompact;
   protected readonly presentation = computed(() => (this.compact() ? 'sheet' : 'centered'));
   private readonly passkeyAuthenticator = inject(PasskeyAuthenticator);

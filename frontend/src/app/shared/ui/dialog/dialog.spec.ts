@@ -5,6 +5,7 @@ import { provideRouter, Router } from '@angular/router';
 import { Appearance } from '../../../core/appearance/appearance';
 import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { EDGE_SWIPE_DRAGGING_CLASS } from '../../../core/navigation/edge-swipe-back';
 import { Dialog } from './dialog';
 import { SuspendsDialogs } from './dialog-suspension';
 import { DialogAnnouncer } from './dialog-announcer';
@@ -204,6 +205,117 @@ describe('Given a dialog opened from a button', () => {
 
     expect(document.activeElement).toBe(main);
     main.remove();
+  });
+});
+
+@Component({
+  imports: [Dialog],
+  template: `
+    <button type="button" id="outside">Na stránce</button>
+    <app-dialog labelledBy="title" (dismissed)="dismissals = dismissals + 1">
+      <h2 id="title">Název</h2>
+      <input id="field" />
+      <button type="button" id="send" [disabled]="sendDisabled()">Přihlásit se</button>
+    </app-dialog>
+  `,
+})
+class FocusFallbackHost {
+  readonly sendDisabled = signal(false);
+  dismissals = 0;
+}
+
+describe('Given an open dialog whose browser moves the focus onto the dialog itself when a control inside it is pressed', () => {
+  let fixture: ComponentFixture<FocusFallbackHost>;
+
+  const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+  const byId = <T extends HTMLElement>(id: string) =>
+    fixture.nativeElement.querySelector(`#${id}`) as T;
+
+  const focusFallsOntoDialogFrom = (control: HTMLElement): void => {
+    control.focus();
+    native().focus();
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [FocusFallbackHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    }).compileComponents();
+    fixture = TestBed.createComponent(FocusFallbackHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    window.matchMedia = realMatchMedia;
+    fixture.nativeElement.remove();
+  });
+
+  it('when the focus falls from the pressed button onto the dialog, then it goes back to that button', () => {
+    const send = byId<HTMLButtonElement>('send');
+
+    focusFallsOntoDialogFrom(send);
+
+    expect(document.activeElement).toBe(send);
+  });
+
+  it('when the press that moved the focus onto the dialog itself started on that button, then the focus goes back to it', () => {
+    const send = byId<HTMLButtonElement>('send');
+    send.focus();
+
+    send.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    native().focus();
+
+    expect(document.activeElement).toBe(send);
+  });
+
+  it('when a press that started elsewhere in the dialog was cancelled and the focus then falls from the button onto the dialog, then it goes back to that button', () => {
+    const title = byId<HTMLElement>('title');
+    title.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    title.dispatchEvent(new Event('pointercancel', { bubbles: true }));
+    const send = byId<HTMLButtonElement>('send');
+
+    focusFallsOntoDialogFrom(send);
+
+    expect(document.activeElement).toBe(send);
+  });
+
+  it('when the visitor presses an empty part of the dialog while a field has the focus, then the focus stays on the dialog', () => {
+    byId<HTMLInputElement>('field').focus();
+
+    byId<HTMLElement>('title').dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    native().focus();
+
+    expect(document.activeElement).toBe(native());
+  });
+
+  it('when the focus comes onto the dialog from outside it, then it stays on the dialog', () => {
+    focusFallsOntoDialogFrom(byId<HTMLButtonElement>('outside'));
+
+    expect(document.activeElement).toBe(native());
+  });
+
+  it('when the button it fell from can no longer take the focus, then the focus stays on the dialog', () => {
+    const send = byId<HTMLButtonElement>('send');
+    send.focus();
+    fixture.componentInstance.sendDisabled.set(true);
+    fixture.detectChanges();
+
+    native().focus();
+
+    expect(document.activeElement).toBe(native());
+  });
+
+  it('when its own close button starts it leaving, then the dialog itself keeps the focus', () => {
+    deviceAsksForLessMotion(false);
+    const close = fixture.nativeElement.querySelector('.dialog-close') as HTMLButtonElement;
+    close.focus();
+
+    close.click();
+    fixture.detectChanges();
+
+    expect(native().classList).toContain('dialog--leaving');
+    expect(document.activeElement).toBe(native());
   });
 });
 
@@ -746,6 +858,43 @@ describe('Given a sheet whose content the visitor pulls with a finger', () => {
 
     expect(fixture.componentInstance.dismissals).toBe(1);
     expect(question()).toBeNull();
+  });
+
+  describe('when a press on its text turned into a gesture and the focus later falls from the field onto the dialog', () => {
+    const field = () => fixture.nativeElement.querySelector('#pulled-field') as HTMLInputElement;
+    const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+    const pressText = (): void => {
+      text().dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    };
+    const focusFallsOntoDialogFromField = (): void => {
+      field().focus();
+      native().focus();
+    };
+
+    afterEach(() => document.documentElement.classList.remove(EDGE_SWIPE_DRAGGING_CLASS));
+
+    it('then after the sheet was pulled the focus goes back to the field', async () => {
+      pressText();
+      await pull(130);
+      await letGo();
+
+      focusFallsOntoDialogFromField();
+
+      expect(document.activeElement).toBe(field());
+    });
+
+    it('then after an edge swipe took the finger over the focus goes back to the field', () => {
+      pressText();
+      touch('touchstart', text(), [[4, 100]], 0);
+      document.documentElement.classList.add(EDGE_SWIPE_DRAGGING_CLASS);
+      touch('touchmove', text(), [[80, 100]], 40);
+      document.documentElement.classList.remove(EDGE_SWIPE_DRAGGING_CLASS);
+      touch('touchend', text(), [], 400);
+
+      focusFallsOntoDialogFromField();
+
+      expect(document.activeElement).toBe(field());
+    });
   });
 });
 
