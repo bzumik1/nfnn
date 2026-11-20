@@ -484,7 +484,7 @@
                   <button
                     appNeedsConnection
                     type="button"
-                    class="ui-pill-button"
+                    class="ui-button ui-button--small"
                     (click)="retry(target)"
                     i18n="@@admin.home.attention.retry"
                   >
@@ -496,6 +496,7 @@
                 &ngsp;
                 <span class="ui-list__value attention-action">
                   <app-copy-button
+                    look="tinted"
                     [value]="message"
                     what="zprávu pro technika"
                     i18n-what="@@admin.backups.message.what"

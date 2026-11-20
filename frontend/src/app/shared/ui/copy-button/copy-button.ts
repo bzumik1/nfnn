@@ -36,6 +36,7 @@ export class CopyButton {
   readonly align = input<'start' | 'end'>('end');
   readonly tone = input<'light' | 'dark'>('light');
   readonly size = input<'compact' | 'finger'>('compact');
+  readonly look = input<'pill' | 'tinted'>('pill');
   readonly copied = output<void>();
 
   protected readonly state = signal<CopyState>('idle');

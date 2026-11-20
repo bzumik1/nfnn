@@ -4,11 +4,11 @@
   display: inline-flex;
 }
 
-.ui-pill-button {
+.copy-button {
   max-inline-size: 100%;
 }
 
-:host(.is-finger-size) .ui-pill-button {
+:host(.is-finger-size) .copy-button {
   min-height: var(--touch-target-size);
 }
 
@@ -33,7 +33,7 @@
   }
 }
 
-.ui-pill-button--done {
+.copy-button--copied {
   .copy-button__action {
     opacity: 0;
   }
