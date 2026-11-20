@@ -1270,4 +1270,103 @@ test.describe('Given a signed-in donor with gift receipts on a 390 px phone', ()
     expect(change.end).toBeGreaterThan(0);
     await expect(rows.first().getByRole('status')).toHaveText('Připravujeme údaje potvrzení…');
   });
+
+test.describe('Given a donor whose summary counts gifts and an account verification', () => {
+  const summaryWithVerification = {
+    summary: {
+      totalAmountMinor: 2400,
+      currency: 'CZK',
+      count: 5,
+      lastReceivedAt: '2026-10-18',
+      byYear: [{ year: 2026, totalAmountMinor: 2400, count: 5 }],
+      yearlyReceiptsAvailableThrough: 2025,
+      receiptsAvailableFrom: 2026,
+    },
+    list: {
+      items: [
+        donation('0192f0f1-0000-7000-8000-000000000011', '2026-10-18', 200),
+        donation('0192f0f1-0000-7000-8000-000000000012', '2026-10-10', 1000),
+        donation('0192f0f1-0000-7000-8000-000000000013', '2026-09-10', 600),
+        donation('0192f0f1-0000-7000-8000-000000000014', '2026-08-10', 500),
+        donationItem({
+          id: '0192f0f1-0000-7000-8000-000000000015',
+          receivedAt: '2026-08-01',
+          amountMinor: 100,
+          accountVerification: true,
+        }),
+      ],
+      totalAmountMinor: 2400,
+      currency: 'CZK',
+      count: 5,
+    },
+  };
+
+  for (const rootPx of [null, 53]) {
+    const textSize = rootPx ? `with a root of ${rootPx} px` : 'at the default text size';
+    test(`when the donor opens Můj přehled 390 px wide ${textSize}, then every value and the note under the count end at one right edge and each label stands on its value's first line`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, summaryWithVerification);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width: 390, height: 900 });
+      if (rootPx) {
+        await page.addStyleTag({ content: `html { font-size: ${rootPx}px; }` });
+      }
+      const stats = page.locator('.overview-stat');
+      await expect(stats).toHaveCount(3);
+      await expect(stats.nth(1).locator('dd')).toContainText('4');
+      await expect(stats.nth(1).locator('.stat-note')).toContainText('a ověření účtu');
+      await page.evaluate(() => document.fonts.ready);
+
+      const rows = await stats.evaluateAll((elements) =>
+        elements.map((element) => {
+          const value = element.querySelector('dd')!;
+          const range = document.createRange();
+          range.selectNodeContents(value);
+          const lines = Array.from(range.getClientRects()).filter((rect) => rect.width > 0);
+          const firstLine = lines[0];
+          const note = value.querySelector('.stat-note');
+          const noteRange = document.createRange();
+          if (note) {
+            noteRange.selectNodeContents(note);
+          }
+          const noteLines = note
+            ? Array.from(noteRange.getClientRects()).filter((rect) => rect.width > 0)
+            : [];
+          const label = element.querySelector('dt')!.getBoundingClientRect();
+          return {
+            firstLine: { top: firstLine.top, bottom: firstLine.bottom, right: firstLine.right },
+            noteRights: noteLines.map((rect) => rect.right),
+            label: { top: label.top, bottom: label.bottom, right: label.right },
+          };
+        }),
+      );
+
+      const edge = rows[0].firstLine.right;
+      for (const row of rows) {
+        expect(Math.abs(row.firstLine.right - edge)).toBeLessThanOrEqual(1);
+        for (const right of row.noteRights) {
+          expect(Math.abs(right - edge)).toBeLessThanOrEqual(1);
+        }
+      }
+      expect(rows[1].noteRights.length).toBeGreaterThan(0);
+
+      for (const { firstLine, label } of rows) {
+        const besideTheValue = label.bottom > firstLine.top;
+        if (besideTheValue) {
+          const labelMiddle = (label.top + label.bottom) / 2;
+          expect(labelMiddle).toBeGreaterThanOrEqual(firstLine.top);
+          expect(labelMiddle).toBeLessThanOrEqual(firstLine.bottom);
+        } else {
+          expect(label.bottom).toBeLessThanOrEqual(firstLine.top + 1);
+        }
+      }
+      if (!rootPx) {
+        for (const { firstLine, label } of rows) {
+          expect(label.bottom).toBeGreaterThan(firstLine.top);
+        }
+      }
+    });
+  }
 });
