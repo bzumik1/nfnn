@@ -56,6 +56,10 @@
     hyphens: auto;
     overflow-wrap: break-word;
   }
+
+  .account-panel > * {
+    min-inline-size: 0;
+  }
 }
 
 .account-value {

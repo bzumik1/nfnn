@@ -2842,7 +2842,7 @@ async function wordsBrokenThatWouldFit(element: Locator): Promise<string[]> {
 async function linesOfText(element: Locator): Promise<string[]> {
   await element.evaluate(() => document.fonts.ready);
   return element.evaluate((root) => {
-    const lines = new Map<number, string>();
+    const lines: { top: number; bottom: number; text: string }[] = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       const text = node.textContent ?? '';
@@ -2851,15 +2851,23 @@ async function linesOfText(element: Locator): Promise<string[]> {
         range.setStart(node, index);
         range.setEnd(node, index + 1);
         const rect = range.getClientRects()[0];
-        if (rect) {
-          const top = Math.round(rect.top);
-          lines.set(top, (lines.get(top) ?? '') + text[index]);
+        if (!rect || rect.height === 0) {
+          continue;
+        }
+        const middle = (rect.top + rect.bottom) / 2;
+        const line = lines.find(({ top, bottom }) => top <= middle && middle <= bottom);
+        if (line) {
+          line.text += text[index];
+          line.top = Math.min(line.top, rect.top);
+          line.bottom = Math.max(line.bottom, rect.bottom);
+        } else {
+          lines.push({ top: rect.top, bottom: rect.bottom, text: text[index] });
         }
       }
     }
-    return Array.from(lines.entries())
-      .sort(([first], [second]) => first - second)
-      .map(([, text]) => text.trim())
+    return lines
+      .sort((first, second) => first.top - second.top)
+      .map(({ text }) => text.trim())
       .filter((text) => text.length > 0);
   });
 }
