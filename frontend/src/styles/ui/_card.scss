@@ -2,6 +2,7 @@
 @use 'touch-target';
 
 .ui-card {
+  container: ui-card / inline-size;
   background: var(--color-surface);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
@@ -30,6 +31,8 @@
 }
 
 .ui-card__title {
+  min-inline-size: 0;
+  overflow-wrap: break-word;
   font-family: var(--font-title);
   font-size: var(--text-card-title);
   font-weight: var(--weight-semibold);

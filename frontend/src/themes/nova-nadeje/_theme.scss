@@ -391,6 +391,8 @@
     (60vw - 1.2 * var(--space-5) - 2 * var(--space-4-5) - 3px) / 5.6
   );
   --text-account-number: min(var(--text-lg), 7vw);
+  --text-account-number-in-text: min(1em, 7vw);
+  --text-sheet-account-number: min(var(--text-md), 7vw);
   --side-nav-width: 240px;
   --floating-notice-height: 0rem;
   --offline-pill-height: 0rem;
@@ -428,7 +430,7 @@
   --text-sheet-head: min(var(--text-sheet-body), 5.2vw);
   --text-card-title: max(
     var(--text-sheet-body),
-    min(var(--text-2xl), (100vw - 2 * var(--space-4) - 2 * var(--space-6)) / 6.25)
+    min(var(--text-2xl), (100cqi - 2 * var(--space-6)) / 6.25)
   );
   --text-dialog-title-large: max(
     var(--text-sheet-body),

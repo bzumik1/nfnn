@@ -1,3 +1,4 @@
+@use 'breakpoints' as bp;
 @use 'motion';
 
 :host {
@@ -6,6 +7,7 @@
 }
 
 .lock-panel {
+  container: lock-panel / inline-size;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
@@ -52,4 +54,12 @@
 .lock-back,
 .lock-sign-out {
   justify-self: center;
+}
+
+@include bp.container-down(lock-panel, tabs) {
+  .lock-actions .ui-button,
+  .lock-form .ui-button {
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
 }

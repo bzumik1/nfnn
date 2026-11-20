@@ -1348,8 +1348,15 @@ describe('Given the bank accounts card in the overview', () => {
 
       const numbers = Array.from(
         (element('.add-account-verified') as HTMLElement).querySelectorAll('.add-account-number'),
-      ).map((number) => number.innerHTML.replace(/<!--.*?-->/g, ''));
-      expect(numbers).toEqual(['8877665544/<wbr>2700']);
+      ).map((number) => {
+        const breakOpportunity = number.querySelector('wbr')!;
+        return {
+          text: number.textContent,
+          before: breakOpportunity.previousSibling?.textContent,
+          after: breakOpportunity.nextSibling?.textContent,
+        };
+      });
+      expect(numbers).toEqual([{ text: '8877665544/2700', before: '8877665544/', after: '2700' }]);
     });
 
     it('then two verified accounts are named together', async () => {
