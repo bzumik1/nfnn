@@ -1,11 +1,9 @@
 import {
-  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   ElementRef,
   inject,
-  Injector,
   input,
   output,
   signal,
@@ -32,7 +30,6 @@ let nextId = 0;
 })
 export class StandingOrder {
   private readonly paymentDetails = inject(PaymentDetailsStore);
-  private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly variableSymbol = input.required<string>();
@@ -71,9 +68,10 @@ export class StandingOrder {
     if (this.account() === null && this.ownAccount().kind !== 'ready') {
       this.loadAccount();
     }
-    afterNextRender(() => this.host.nativeElement.scrollIntoView?.({ block: 'nearest' }), {
-      injector: this.injector,
-    });
+  }
+
+  protected bringIntoView(): void {
+    this.host.nativeElement.scrollIntoView?.({ block: 'nearest' });
   }
 
   protected close(): void {

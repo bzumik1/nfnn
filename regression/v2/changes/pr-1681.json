@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/standing-order/standing-order.spec.ts > Given the standing order guide of the donor area > when the donor opens it below the visible part of the page > then the button and the opened guide are brought into view together",
+    "replacement": "src/app/features/donors/dashboard/standing-order/standing-order.spec.ts > Given the standing order guide of the donor area > when the donor opens it below the visible part of the page > then the button and the opened guide are brought into view together once the guide has unfolded",
+    "reason": "Flaky standing order guide (#1488): the guide is brought into view on appDisclosure's new unfolded output, after its height has unfolded, instead of in the opening render where the fold had no height yet; the test is renamed to say when",
+    "contract": "docs/frontend-overview.md, Motion (Rozbalení)"
+  }
+]
