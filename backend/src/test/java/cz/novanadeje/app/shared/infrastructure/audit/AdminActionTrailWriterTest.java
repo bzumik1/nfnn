@@ -59,6 +59,31 @@ class AdminActionTrailWriterTest {
     }
 
     @Test
+    @DisplayName("Given no transaction, when an admin action is published, then publishing fails and nothing is stored")
+    void should_fail_and_store_nothing_when_published_given_no_transaction() {
+        UUID admin = UUID.randomUUID();
+
+        assertThatThrownBy(() -> events.publishEvent(new AdminActionPerformed(admin, "PAIR_PAYMENT", Optional.empty(), "details", AT)))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(jdbc.sql("select count(*) from admin_action where admin_id = ?").param(admin).query(Long.class).single()).isZero();
+    }
+
+    @Test
+    @DisplayName("Given a read-only transaction, when an admin action is published in it, then the transaction fails and nothing is stored")
+    void should_fail_and_store_nothing_when_published_given_a_read_only_transaction() {
+        UUID admin = UUID.randomUUID();
+        TransactionTemplate readOnly = new TransactionTemplate(transactions.getTransactionManager());
+        readOnly.setReadOnly(true);
+
+        assertThatThrownBy(() -> readOnly.executeWithoutResult(status ->
+                events.publishEvent(new AdminActionPerformed(admin, "PAIR_PAYMENT", Optional.empty(), "details", AT))))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(jdbc.sql("select count(*) from admin_action where admin_id = ?").param(admin).query(Long.class).single()).isZero();
+    }
+
+    @Test
     @DisplayName("Given an admin action with facts, when it commits, then its facts are stored as a JSON object of the summary key and the values")
     void should_store_facts_as_json_when_transaction_commits_given_facts() {
         UUID admin = UUID.randomUUID();

@@ -2,6 +2,7 @@ package cz.novanadeje.app.shared.infrastructure.audit;
 
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.infrastructure.security.ClientClaim;
+import cz.novanadeje.app.shared.infrastructure.transaction.PublishingTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
@@ -24,8 +25,9 @@ class AdminActionTrailWriter {
         this.actions = actions;
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     public void record(AdminActionPerformed event) {
+        PublishingTransaction.require(event);
         Optional<String> client = connectedClient();
         actions.save(AdminActionJpaEntity.of(event, client));
         log.info("Admin {} performed {} on {}{}", event.adminId(), event.action(), event.subjectId().map(Object::toString).orElse("nothing"),

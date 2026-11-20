@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.events.DonorRecordSynchronizerTest > Given the three listeners, when their annotations are read, then the copy is written before the commit and pairing runs after it, all without a surrounding transaction too",
+    "replacement": "donations.infrastructure.events.DonorRecordSynchronizerTest > Given the three listeners, when their annotations are read, then the copy is written before the commit and pairing runs after it, each also run when no transaction would call it",
+    "reason": "PR #1440 (Khononov review T4, #1439): the copy listeners now fail without their publisher's read-write transaction, so the name no longer says they work without one; the test reads the same annotations",
+    "contract": "docs/system-overview.md, shared (Work before the commit)"
+  }
+]

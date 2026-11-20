@@ -1832,7 +1832,7 @@ A signed-in browser keeps one event stream open while a page that shows changing
 Events consumed by another context live in `shared/application/event/` and carry only shared types and JDK types; events consumed inside their own context stay in `<context>/application/event/`. All are immutable Java `record`s published from application services through `ApplicationEventPublisher`; they never carry JPA entities, only IDs and value objects. Three kinds of listener:
 
 - Side-effect listeners (mail) run `@Async @TransactionalEventListener(phase = AFTER_COMMIT)`, off the request thread.
-- A projection another context's correctness depends on runs `BEFORE_COMMIT` in the publisher's transaction, so the source row and the projection commit together or neither does.
+- A projection another context's correctness depends on runs `BEFORE_COMMIT` in the publisher's transaction, so the source row and the projection commit together or neither does. Every `BEFORE_COMMIT` listener declares `fallbackExecution = true` and calls `PublishingTransaction.require` first, so an event published outside a read-write transaction fails the publisher (500) instead of being dropped (`EventListenerRulesTest.before_commit_listeners_fail_without_the_publishers_read_write_transaction`).
 - Follow-up work on that projection runs synchronously `AFTER_COMMIT` in its own `REQUIRES_NEW` transaction and must only log on failure, never fail the request.
 
 | Event | Publisher | Listener | Effect |
