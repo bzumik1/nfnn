@@ -226,6 +226,18 @@
     }
   }
 
+  .dialog--sheet[open]:has(> .dialog-panel--grouped) {
+    background-color: color-mix(
+      in srgb,
+      #{sheet.$ground} calc((1 - var(--dialog-pull)) * 100%),
+      transparent
+    );
+
+    @starting-style {
+      background-color: transparent;
+    }
+  }
+
   .dialog--sheet.dialog--leaving[open] {
     transition-duration: var(--duration-sheet);
     transition-timing-function: var(--ease-sheet);

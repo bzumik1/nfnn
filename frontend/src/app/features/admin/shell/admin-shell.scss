@@ -19,10 +19,9 @@
 
 .admin-sheet-backdrop,
 .admin-sheet-cover {
+  @include sheet.ground;
+
   position: fixed;
-  background: linear-gradient(var(--color-backdrop), var(--color-backdrop)), var(--color-surface);
-  backdrop-filter: blur(var(--blur-backdrop));
-  -webkit-backdrop-filter: blur(var(--blur-backdrop));
 }
 
 .admin-sheet-backdrop {

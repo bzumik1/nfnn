@@ -6,6 +6,7 @@ import { formatBankTime } from '../../features/donations/donation-date';
 import { Location } from '@angular/common';
 import {
   afterNextRender,
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -28,6 +29,8 @@ import { SignedOutNotice } from '../../core/auth/signed-out-notice';
 import { CompactLayout } from '../../core/layout/compact-layout';
 import { pathOf } from '../../core/navigation/app-tabs';
 import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
+import { PageTransitions } from '../../core/navigation/page-transitions';
+import { SheetSteps, StepsInside } from '../../core/navigation/sheet-steps';
 import { APP_ACCOUNT_KEY } from './account-return';
 import { Dialog } from '../../shared/ui/dialog/dialog';
 import { Appearance, AppearanceChoice } from '../../core/appearance/appearance';
@@ -89,6 +92,14 @@ export class AccountSheet {
   private readonly history = inject(DialogHistory);
   private readonly backTarget = inject(BackTarget);
   private readonly signedOut = inject(SignedOutNotice);
+  private readonly transitions = inject(PageTransitions);
+  private readonly sheetSteps = inject(SheetSteps);
+  private readonly scrolls = new Map<number, number>();
+  private readonly sectionSteps: StepsInside = {
+    startSwipe: () =>
+      this.sectionHasUnsavedInput() ? null : this.transitions.startSheetSwipe(this.depth()),
+    back: () => this.back(),
+  };
 
   readonly portrait = input<string | null>(null);
   readonly reopenedOn = input<string | null>(null);
@@ -166,6 +177,12 @@ export class AccountSheet {
         this.standAtOnce();
       }
     });
+    afterRenderEffect((onCleanup) => {
+      const dialog = this.section() === null ? null : this.host.querySelector('dialog');
+      if (dialog !== null) {
+        onCleanup(this.sheetSteps.offer(dialog, this.sectionSteps));
+      }
+    });
   }
 
   protected follow(event: MouseEvent, url: string): void {
@@ -175,7 +192,7 @@ export class AccountSheet {
     event.preventDefault();
     const item = sectionAt(url);
     if (item !== null && this.compact() && this.router.url !== url) {
-      this.trail.set([item]);
+      this.stepTo('push', [item]);
       this.focusSectionTitle();
       return;
     }
@@ -224,7 +241,7 @@ export class AccountSheet {
 
   private leaveSection(): void {
     const left = this.section();
-    this.trail.update((trail) => trail.slice(0, -1));
+    this.stepTo('pop', this.trail().slice(0, -1));
     afterNextRender(
       () => {
         if (left !== null) {
@@ -233,6 +250,23 @@ export class AccountSheet {
       },
       { injector: this.injector },
     );
+  }
+
+  private stepTo(kind: 'push' | 'pop', trail: AccountItem[]): void {
+    const panel = this.host.querySelector<HTMLElement>('.dialog-panel');
+    if (kind === 'push') {
+      this.scrolls.set(this.depth(), panel?.scrollTop ?? 0);
+    }
+    this.transitions.stepInSheet({
+      kind,
+      depth: trail.length,
+      change: () => this.trail.set(trail),
+      placed: () => {
+        if (panel !== null) {
+          panel.scrollTop = kind === 'push' ? 0 : (this.scrolls.get(trail.length) ?? 0);
+        }
+      },
+    });
   }
 
   private standAtOnce(): void {
@@ -281,7 +315,7 @@ export class AccountSheet {
       return;
     }
     if (item !== null) {
-      this.trail.update((trail) => [...trail, item]);
+      this.stepTo('push', [...this.trail(), item]);
       this.focusSectionTitle();
     } else {
       this.leaveFor(url);

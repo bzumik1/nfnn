@@ -229,18 +229,76 @@ export function startSwipe(
   const leaving = stage.place(overlay, stage.shown(layer), 'over');
   const dress = (into: PlacedPage): BarItem[] =>
     content?.lineUp() ?? stage.dressChrome(overlay, leaving, into);
-  const bar = { items: dress(arriving) };
-  const under = arriving.box;
-  const over = leaving.box;
-  const dim = under.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__dim`);
   const sheet = behind?.sheet ?? null;
   const running: Running = { kind: 'pop', overlay, swiping: true, sheet, revealed: false };
   stage.running = running;
   stage.sheetUnder(sheet);
-  const width = Math.max(1, content?.width ?? view.innerWidth);
+  return followingFinger(stage, view, {
+    running,
+    under: arriving.box,
+    over: leaving.box,
+    bar: { items: dress(arriving) },
+    width: Math.max(1, content?.width ?? view.innerWidth),
+    ready: behind !== null,
+    draw: (bar, takeOver) =>
+      behind === null && destination.path !== null && !stage.dirtyForms.any()
+        ? drawUnder(stage, destination.path, running, arriving, (into) => {
+            bar.items = dress(into);
+            return takeOver();
+          })
+        : photosDrawn(arriving.box, FRAME_LATE_MS),
+    handOver: () => (stage.handingOver = true),
+    discard: () => stage.preview.discard(),
+  });
+}
+
+export function startSheetSwipe(stage: PageTransitions, under: HTMLElement): SwipePreview | null {
+  const view = stage.document.defaultView;
+  const shown = stage.standingSheetCopy();
+  if (view === null || shown === null || stage.running !== null || !motionAllowed(view)) {
+    return null;
+  }
+  const overlay = stage.overlay('pop');
+  overlay.classList.add(`${PAGE_TRANSITION_CLASS}--swipe`);
+  const arriving = stage.place(overlay, stage.sheetOnly(under), 'under');
+  const leaving = stage.place(overlay, stage.sheetOnly(shown), 'over');
+  const running: Running = { kind: 'pop', overlay, swiping: true, sheet: shown, revealed: true };
+  stage.running = running;
+  stage.sheetUnder(shown);
+  return followingFinger(stage, view, {
+    running,
+    under: arriving.box,
+    over: leaving.box,
+    bar: { items: stage.dressChrome(overlay, leaving, arriving) },
+    width: Math.max(1, view.innerWidth),
+    ready: true,
+    draw: () => Promise.resolve(),
+    handOver: () => (stage.sheetHandOver = running),
+    discard: () => undefined,
+  });
+}
+
+interface FingerStage {
+  readonly running: Running;
+  readonly under: HTMLElement;
+  readonly over: HTMLElement;
+  readonly bar: { items: BarItem[] };
+  readonly width: number;
+  readonly ready: boolean;
+  readonly draw: (bar: { items: BarItem[] }, takeOver: () => Promise<void>) => Promise<void>;
+  readonly handOver: () => void;
+  readonly discard: () => void;
+}
+
+function followingFinger(
+  stage: PageTransitions,
+  view: Window,
+  { running, under, over, bar, width, draw, handOver, discard, ...start }: FingerStage,
+): SwipePreview {
+  const dim = under.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__dim`);
   let progress = 0;
   let offset = 0;
-  let ready = behind !== null;
+  let ready = start.ready;
   let shown = 0;
   let catchingUp = false;
   const follow = (): void => {
@@ -253,6 +311,7 @@ export function startSwipe(
     followBar(bar.items, progress);
   };
   const takeOver = async (): Promise<void> => {
+    followBar(bar.items, progress);
     await photosDrawn(under, FRAME_LATE_MS);
     if (stage.running !== running) {
       return;
@@ -270,14 +329,7 @@ export function startSwipe(
       caughtUp: () => (catchingUp = false),
     });
   };
-  const drawn =
-    behind === null && destination.path !== null && !stage.dirtyForms.any()
-      ? drawUnder(stage, destination.path, running, arriving, (into) => {
-          bar.items = dress(into);
-          followBar(bar.items, progress);
-          return takeOver();
-        })
-      : photosDrawn(under, FRAME_LATE_MS);
+  const drawn = draw(bar, takeOver);
   const settle = async (end: SwipeSettle): Promise<boolean> => {
     catchingUp = false;
     if (stage.running !== running) {
@@ -287,7 +339,7 @@ export function startSwipe(
       await drawn;
     }
     if (!ready) {
-      stage.preview.discard();
+      discard();
       if (stage.running === running) {
         stage.finish();
       }
@@ -313,14 +365,14 @@ export function startSwipe(
     ]);
     await drawn;
     if (!end.completes) {
-      stage.preview.discard();
+      discard();
     }
     if (stage.running !== running) {
       return false;
     }
     if (end.completes) {
       running.stepped = true;
-      stage.handingOver = true;
+      handOver();
       stage.finishing = view.setTimeout(() => stage.finish(), PAGE_COVER_LONGEST_MS);
     } else {
       stage.finish();
