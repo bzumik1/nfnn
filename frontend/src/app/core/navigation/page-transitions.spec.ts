@@ -13,6 +13,7 @@ import { PagePlacement } from './page-placement';
 import { ACCOUNT_RETURNS_KEY } from './page-transitions';
 import { NavigationPreview } from './navigation-preview';
 import {
+  FRAME_LATE_MS,
   PAGE_LAYER_CLASS,
   PAGE_TRANSITION_CLASS,
   PAGE_TRANSITION_LONGEST_MS,
@@ -30,6 +31,10 @@ class Blank {}
 class ScrolledShell {}
 
 const jsdomWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+
+function motionEnding(finished: Promise<unknown>) {
+  return { finished, pause: () => undefined, play: () => undefined };
+}
 
 afterAll(() => {
   expect(Object.getOwnPropertyDescriptor(window, 'innerWidth')).toEqual(jsdomWidth);
@@ -157,6 +162,25 @@ describe('Given a phone that animates, an article opened from the news, and the 
     await vi.advanceTimersByTimeAsync(50);
 
     expect(moved).toBe(true);
+  });
+
+  it('when the news moves in, then its motion holds still at its start until the frame that shows both pages has been drawn', async () => {
+    const heldWhenItBegins: boolean[] = [];
+    const first = new MutationObserver(() => {
+      const moving = document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
+      if (moving !== null && heldWhenItBegins.length === 0) {
+        heldWhenItBegins.push(moving.classList.contains(`${PAGE_TRANSITION_CLASS}--held`));
+      }
+    });
+    first.observe(document.body, { subtree: true, attributes: true, childList: true });
+    try {
+      await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+      await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
+
+      expect(heldWhenItBegins).toEqual([true]);
+    } finally {
+      first.disconnect();
+    }
   });
 
   it('when the news is never placed, then the step back moves in after the duration of a page step all the same', async () => {
@@ -413,7 +437,7 @@ describe('Given the app on the home screen of a phone, where the news led to the
 
     Object.defineProperty(HTMLElement.prototype, 'animate', {
       configurable: true,
-      value: () => ({ finished: Promise.resolve() }),
+      value: () => motionEnding(Promise.resolve()),
     });
     try {
       const swipe = swipeBack();
@@ -458,7 +482,7 @@ describe('Given the app on the home screen of a phone, where the news led to the
     });
     Object.defineProperty(HTMLElement.prototype, 'animate', {
       configurable: true,
-      value: () => ({ finished: Promise.resolve() }),
+      value: () => motionEnding(Promise.resolve()),
     });
     try {
       const swipe = swipeBack();
@@ -508,7 +532,7 @@ describe('Given the app on the home screen of a phone, where the news led to the
     const slid = new Promise<void>((done) => (release = done));
     Object.defineProperty(HTMLElement.prototype, 'animate', {
       configurable: true,
-      value: () => ({ finished: slid }),
+      value: () => motionEnding(slid),
     });
     return release;
   }
@@ -520,6 +544,30 @@ describe('Given the app on the home screen of a phone, where the news led to the
     durationMs: 150,
     easing: 'ease-out',
   } as const;
+
+  it('when the finger lets go, then the page holds where it was let go until the frame drawn next and only then slides on', async () => {
+    const steps: string[] = [];
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => ({
+        finished: Promise.resolve(),
+        pause: () => steps.push('holds'),
+        play: () => steps.push('slides'),
+      }),
+    });
+    try {
+      await openOverviewFromTheNews({ title: 'Aktuality' }, { title: 'Přehled' });
+      const left = swipeBack().settle(LET_GO_PAST_HALF);
+      const atOnce = [...steps];
+
+      expect(await left).toBe(true);
+      expect(atOnce.length).toBeGreaterThan(0);
+      expect(new Set(atOnce)).toEqual(new Set(['holds']));
+      expect(steps).toEqual([...atOnce, ...atOnce.map(() => 'slides')]);
+    } finally {
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
 
   it('when another step takes the page over while it slides off under the finger, then the swipe says the page did not leave, so no second step follows', async () => {
     const slidOff = slidesWhenReleased();
@@ -635,11 +683,13 @@ describe('Given the app on the home screen of a phone, where the news led to the
     });
     Object.defineProperty(HTMLElement.prototype, 'animate', {
       configurable: true,
-      value: () => ({ finished: Promise.resolve() }),
+      value: () => motionEnding(Promise.resolve()),
     });
     vi.useFakeTimers();
     try {
-      expect(await swipeBack().settle(LET_GO_PAST_HALF)).toBe(true);
+      const left = swipeBack().settle(LET_GO_PAST_HALF);
+      await vi.advanceTimersByTimeAsync(FRAME_LATE_MS * 2);
+      expect(await left).toBe(true);
       expect(entrance.finish).not.toHaveBeenCalled();
 
       await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
@@ -917,7 +967,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
   it('when the page Zpět leads to cannot be drawn, then letting go past half leaves the page where it is and says it did not leave', async () => {
     Object.defineProperty(HTMLElement.prototype, 'animate', {
       configurable: true,
-      value: () => ({ finished: Promise.resolve() }),
+      value: () => motionEnding(Promise.resolve()),
     });
     try {
       const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
@@ -1124,7 +1174,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
     Object.defineProperty(HTMLElement.prototype, 'animate', {
       configurable: true,
-      value: () => ({ finished: Promise.resolve() }),
+      value: () => motionEnding(Promise.resolve()),
     });
     layer = document.createElement('div');
     layer.className = PAGE_LAYER_CLASS;

@@ -50,6 +50,7 @@ const BACKDROP_LOOKS = [
   '-webkit-backdrop-filter',
 ];
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
+const HELD_CLASS = `${PAGE_TRANSITION_CLASS}--held`;
 
 export interface Running {
   readonly kind: PageTransitionKind;
@@ -281,8 +282,15 @@ export class PageTransitions {
     );
     const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
     this.dressChrome(running.overlay, left, shown);
+    const startsOnceDrawn = running.kind === 'pop';
+    running.overlay.classList.toggle(HELD_CLASS, startsOnceDrawn);
     running.overlay.classList.add(`${PAGE_TRANSITION_CLASS}--moving`);
     this.finishWhenStill(running, shown.box, view);
+    if (startsOnceDrawn) {
+      void afterDrawn(view, this.durationOf('--duration-fast') / 2).then(() =>
+        running.overlay.classList.remove(HELD_CLASS),
+      );
+    }
   }
 
   private finishWhenStill(running: Running, page: HTMLElement, view: Window): void {
@@ -605,6 +613,14 @@ export function nextFrame(view: Window, then: (now: number) => void): void {
   };
   const late = view.setTimeout(() => once(view.performance.now()), FRAME_LATE_MS);
   view.requestAnimationFrame(once);
+}
+
+export function afterDrawn(view: Window, longestMs?: number): Promise<void> {
+  const drawn = new Promise<void>((done) => afterFrames(view, 2, done));
+  if (longestMs === undefined) {
+    return drawn;
+  }
+  return Promise.race([drawn, new Promise<void>((done) => view.setTimeout(done, longestMs))]);
 }
 
 function afterFrames(view: Window, frames: number, then: () => void): void {

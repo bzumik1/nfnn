@@ -150,6 +150,16 @@
   .page-transition__bar-item--in {
     animation-name: page-dim;
   }
+
+  &.page-transition--held {
+    .page-transition__page,
+    .page-transition__dim,
+    .page-transition__bar-item--out,
+    .page-transition__bar-item--out-early,
+    .page-transition__bar-item--in {
+      animation-play-state: paused;
+    }
+  }
 }
 
 @keyframes page-enter {
