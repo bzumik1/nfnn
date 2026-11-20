@@ -380,6 +380,7 @@ describe('Given the app on the home screen of a phone, where the news led to the
       state: { [APP_DEPTH_KEY]: depth, ...(sheetReturns ? { [ACCOUNT_RETURNS_KEY]: '' } : {}) },
     });
     paint(layer, overview);
+    transitions.finish();
   }
 
   beforeEach(async () => {
