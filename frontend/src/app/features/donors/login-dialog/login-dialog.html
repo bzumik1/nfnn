@@ -248,11 +248,6 @@
             @if (error()) {
               <p class="ui-field-error" role="alert">{{ error() }}</p>
             }
-            <div role="status">
-              @if (busyAnnouncement.text(); as starting) {
-                <span class="visually-hidden">{{ starting }}</span>
-              }
-            </div>
 
             <button
               appNeedsConnection
@@ -267,6 +262,11 @@
                 >
               </app-busy-label>
             </button>
+            <div role="status">
+              @if (busyAnnouncement.text(); as starting) {
+                <span class="visually-hidden">{{ starting }}</span>
+              }
+            </div>
           </form>
 
           <p class="recovery-offer">
@@ -868,11 +868,6 @@
             @if (error()) {
               <p class="ui-field-error" role="alert">{{ error() }}</p>
             }
-            <div role="status">
-              @if (busyAnnouncement.text(); as starting) {
-                <span class="visually-hidden">{{ starting }}</span>
-              }
-            </div>
 
             <button
               appNeedsConnection
@@ -885,6 +880,11 @@
                 <span when-busy i18n="@@donor.login.submit.register.loading">Vytváříme účet…</span>
               </app-busy-label>
             </button>
+            <div role="status">
+              @if (busyAnnouncement.text(); as starting) {
+                <span class="visually-hidden">{{ starting }}</span>
+              }
+            </div>
           </form>
         </div>
       }
@@ -999,11 +999,6 @@
             @if (error()) {
               <p class="ui-field-error" role="alert">{{ error() }}</p>
             }
-            <div role="status">
-              @if (busyAnnouncement.text(); as starting) {
-                <span class="visually-hidden">{{ starting }}</span>
-              }
-            </div>
 
             <button
               appNeedsConnection
@@ -1016,6 +1011,11 @@
                 <span when-busy i18n="@@donor.login.reset.submitLoading">Odesíláme…</span>
               </app-busy-label>
             </button>
+            <div role="status">
+              @if (busyAnnouncement.text(); as starting) {
+                <span class="visually-hidden">{{ starting }}</span>
+              }
+            </div>
           </form>
         </div>
       }
