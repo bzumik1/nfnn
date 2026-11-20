@@ -623,43 +623,6 @@ async function holdAnswers(page: Page, step: BusyStep): Promise<() => void> {
   return release;
 }
 
-interface ButtonLook {
-  readonly backgroundColor: string;
-  readonly backgroundImage: string;
-  readonly color: string;
-  readonly opacity: string;
-  readonly borderColor: string;
-  readonly boxShadow: string;
-}
-
-async function lockedAndDisabledLooks(
-  button: Locator,
-): Promise<{ locked: ButtonLook; disabled: ButtonLook }> {
-  return button.evaluate((locked: HTMLButtonElement) => {
-    const disabled = locked.cloneNode(true) as HTMLButtonElement;
-    disabled.removeAttribute('aria-disabled');
-    disabled.removeAttribute('aria-busy');
-    disabled.disabled = true;
-    locked.after(disabled);
-    const look = (element: HTMLElement): ButtonLook => {
-      element.style.transition = 'none';
-      const style = getComputedStyle(element);
-      return {
-        backgroundColor: style.backgroundColor,
-        backgroundImage: style.backgroundImage,
-        color: style.color,
-        opacity: style.opacity,
-        borderColor: style.borderColor,
-        boxShadow: style.boxShadow,
-      };
-    };
-    const looks = { locked: look(locked), disabled: look(disabled) };
-    locked.style.transition = '';
-    disabled.remove();
-    return looks;
-  });
-}
-
 test.describe('Given a visitor in a step of the sign-in dialog whose answer is slower than the loading delay', () => {
   for (const step of BUSY_STEPS) {
     test(`when they press ${step.name}, then exactly one status region says ${step.busy} while the button keeps the focus and looks as a disabled button did, and none says it after the answer`, async ({
