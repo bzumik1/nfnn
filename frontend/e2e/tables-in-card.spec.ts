@@ -4,14 +4,151 @@ import {
   mockAdministration,
   PETR_DETAIL_PATH,
   rememberedSession,
-  serveEmptyAdministrationCopy,
 } from './baseline/screen-mocks';
-import { mockDonorApi, whenAdministrationCopied } from './donor-session';
+import {
+  administrationCopyGift,
+  administrator,
+  mockDonorApi,
+  serveAdministrationCopy,
+  whenAdministrationCopied,
+} from './donor-session';
 import { ADMINISTRATION_LOCKED, expect, test } from './fixtures';
 
 const HEIGHT = 900;
 const WIDTHS = [900, 1000, 1280] as const;
 const TOLERANCE = 0.5;
+
+interface LongDonor {
+  readonly donorId: string;
+  readonly name: string;
+  readonly type: 'PERSON' | 'COMPANY';
+  readonly email: string;
+  readonly variableSymbol: string;
+  readonly account: string;
+  readonly bookedOn: string;
+  readonly amountMinor: number;
+}
+
+const LONG_DONORS: readonly LongDonor[] = [
+  {
+    donorId: administrator.id,
+    name: 'Bohumila Kateřina Novotná-Procházková',
+    type: 'PERSON',
+    email: 'bohumila.katerina.novotna-prochazkova@nejdelsi-domena-ceske-republiky.cz',
+    variableSymbol: '1234567890',
+    account: '000019-2000145399/0800',
+    bookedOn: '2026-10-24',
+    amountMinor: 123456789,
+  },
+  {
+    donorId: '01a18e56-bdb0-775a-bd0a-a6075683e001',
+    name: 'Společenství vlastníků jednotek Nábřeží Kapitána Jaroše 1928/14',
+    type: 'COMPANY',
+    email: 'predseda.vyboru.spolecenstvi@svj-nabrezi-kapitana-jarose.example.cz',
+    variableSymbol: '9876543210',
+    account: '670100-2213456789/6210',
+    bookedOn: '2026-10-18',
+    amountMinor: 9999900,
+  },
+  {
+    donorId: '01a18e56-bdb0-775a-bd0a-a6075683e002',
+    name: 'Maximilián Vojtěch Šťastný z Lichtenštejnů',
+    type: 'PERSON',
+    email: 'maximilian.vojtech.stastny.z.lichtenstejnu@seznam-dlouhych-adres.cz',
+    variableSymbol: '5550001112',
+    account: '123456-1234567890/2700',
+    bookedOn: '2026-10-09',
+    amountMinor: 500000,
+  },
+];
+
+const WAITING_PAYMENT = {
+  id: '019a1c00-0000-7000-8000-00000000f100',
+  bookedOn: '2026-10-26',
+  amountMinor: 4200000,
+  variableSymbol: '0000000001',
+  counterpartyAccount: '000099-9999999999/0300',
+  counterpartyName: 'Nadační fond přátel Krušnohorských luk a pastvin, z. ú.',
+  messageForRecipient: 'Příspěvek na letní tábor pro děti z dětského domova v Krásné Lípě',
+};
+
+function payment(
+  id: string,
+  fields: Pick<
+    typeof WAITING_PAYMENT,
+    'bookedOn' | 'amountMinor' | 'variableSymbol' | 'counterpartyAccount' | 'counterpartyName'
+  > & { messageForRecipient: string | null },
+) {
+  return {
+    id,
+    version: `0123456789ab${id.slice(-4)}`,
+    bankTransactionId: Number.parseInt(id.slice(-4), 16),
+    currency: 'CZK',
+    importedAt: `${fields.bookedOn}T10:00:00Z`,
+    unpairedByAdminAt: null,
+    accountVerification: false,
+    ...fields,
+  };
+}
+
+function paymentOf(donor: LongDonor, index: number) {
+  return payment(`019a1c00-0000-7000-8000-00000000f00${index}`, {
+    bookedOn: donor.bookedOn,
+    amountMinor: donor.amountMinor,
+    variableSymbol: donor.variableSymbol,
+    counterpartyAccount: donor.account,
+    counterpartyName: donor.name,
+    messageForRecipient: 'Dar na provoz fondu a na rekonstrukci klubovny v Ústí nad Labem',
+  });
+}
+
+function recordOf(donor: LongDonor) {
+  return {
+    donorId: donor.donorId,
+    name: donor.name,
+    type: donor.type,
+    variableSymbol: donor.variableSymbol,
+    companyIdentifier: donor.type === 'COMPANY' ? '12345678' : null,
+    address: {
+      street: 'Nábřeží Kapitána Jaroše 1928/14',
+      city: 'Ústí nad Labem-Střekov',
+      postalCode: '400 03',
+    },
+    preferredLocale: 'cs',
+    registeredAt: '2026-01-15T10:00:00Z',
+    erasedAt: null,
+  };
+}
+
+function accountOf(donor: LongDonor) {
+  return {
+    ...recordOf(donor),
+    email: donor.email,
+    emailVerified: true,
+    administrator: donor.donorId === administrator.id,
+    secondFactorEnabled: true,
+    passkeys: 0,
+  };
+}
+
+async function serveCopyOfLongDonors(page: Page): Promise<void> {
+  const payments = LONG_DONORS.map(paymentOf);
+  await serveAdministrationCopy(page, {
+    donations: {
+      'payments:2026-10': [payment(WAITING_PAYMENT.id, WAITING_PAYMENT), ...payments],
+      'donations:2026-10': LONG_DONORS.map((donor, index) =>
+        administrationCopyGift(
+          payments[index].id,
+          donor.donorId,
+          donor.bookedOn,
+          donor.amountMinor,
+        ),
+      ),
+      'donor-records:2026-01': LONG_DONORS.map(recordOf),
+    },
+    donors: { 'accounts:2026-01': LONG_DONORS.map(accountOf) },
+  });
+}
 
 interface TablePage {
   readonly name: string;
@@ -50,7 +187,7 @@ async function openPage(page: Page, target: TablePage): Promise<void> {
   await rememberedSession(page);
   if (target.administration) {
     await mockAdministration(page);
-    await serveEmptyAdministrationCopy(page);
+    await serveCopyOfLongDonors(page);
     const copied = whenAdministrationCopied(page);
     await page.goto(target.path);
     await expect(page.locator('h1').first()).not.toHaveText(ADMINISTRATION_LOCKED);
@@ -60,6 +197,7 @@ async function openPage(page: Page, target: TablePage): Promise<void> {
   }
   await target.open?.(page);
   await expect(page.locator('main table').first()).toBeVisible();
+  await expect(page.locator('main table tbody tr').first()).toBeVisible();
 }
 
 async function overflowsOfTheirCards(page: Page): Promise<Overflow[]> {
