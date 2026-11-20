@@ -253,8 +253,7 @@ $_pressed: (--pressed-tint, filter);
   grid-template-rows: 1fr;
   transition:
     grid-template-rows var(--duration-base) var(--ease-standard),
-    opacity var(--duration-fast) var(--ease-out),
-    display var(--duration-base) allow-discrete;
+    opacity var(--duration-fast) var(--ease-out);
 
   > * {
     min-height: 0;
@@ -280,9 +279,7 @@ $_pressed: (--pressed-tint, filter);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    transition:
-      opacity var(--duration-reduced) var(--ease-standard),
-      display var(--duration-reduced) allow-discrete !important;
+    transition: opacity var(--duration-reduced) var(--ease-standard) !important;
 
     > * {
       transition: none !important;

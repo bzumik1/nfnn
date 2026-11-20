@@ -89,15 +89,10 @@ describe('Given a disclosure that opens and closes through motion.expand', () =>
     assert.doesNotMatch(valueOf(child, 'transition'), /\d(m?s)\b/);
   });
 
-  it('when it opens, then its height and opacity change by tokens while its visibility changes at once, so its content takes the focus from the first frame', () => {
+  it('when it opens, then its height and opacity change by tokens while its visibility and display change at once, so its content takes the focus from the first frame in WebKit too', () => {
     const plain = plainOf(css, '.panel');
 
-    assert.deepEqual(transitionedProperties(plain).sort(), [
-      'display',
-      'grid-template-rows',
-      'opacity',
-    ]);
-    assert.match(valueOf(plain, 'transition'), /display var\(--duration-base\) allow-discrete/);
+    assert.deepEqual(transitionedProperties(plain).sort(), ['grid-template-rows', 'opacity']);
     assert.doesNotMatch(valueOf(plain, 'transition'), /\d(m?s)\b/);
     assert.doesNotMatch(css, MOVING);
   });
@@ -166,10 +161,10 @@ describe('Given a disclosure that opens and closes through motion.expand', () =>
     );
   });
 
-  it('when the visitor asks for less motion, then its height and visibility change at once on opening and only its opacity fades in the reduced duration', () => {
+  it('when the visitor asks for less motion, then its height, visibility and display change at once on opening and only its opacity fades in the reduced duration', () => {
     const reduced = reducedOf(css, '.panel');
 
-    assert.deepEqual(transitionedProperties(reduced).sort(), ['display', 'opacity']);
+    assert.deepEqual(transitionedProperties(reduced), ['opacity']);
     assert.doesNotMatch(valueOf(reduced, 'transition'), HEIGHT);
     assert.match(valueOf(reduced, 'transition'), /var\(--duration-reduced\)/);
     assert.match(valueOf(reduced, 'transition'), /!important/);
