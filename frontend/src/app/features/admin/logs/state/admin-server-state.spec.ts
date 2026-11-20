@@ -108,6 +108,16 @@ describe('Given an administrator on the server state page', () => {
     }
   });
 
+  it('when the state loads, then the Java version reads under its title and the findings are a shared list', async () => {
+    page.http.expectOne(DIAGNOSTICS_URL).flush(STATE);
+    await page.settle();
+
+    const javaRow = page.cardTitled('Aplikace').querySelectorAll('.ui-list__row')[4];
+    expect(javaRow.querySelector('.ui-list__meta')?.textContent?.trim()).toBe('25.0.1+8');
+    expect(javaRow.querySelector('.ui-list__value')).toBeNull();
+    expect(page.has('.verdict ul.findings.ui-list')).toBe(true);
+  });
+
   it('when a level is raised for a while, then it is listed with its end', async () => {
     page.http.expectOne(DIAGNOSTICS_URL).flush({ ...STATE, logLevelOverrides: [logOverride()] });
     await page.settle();
