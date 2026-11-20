@@ -19,6 +19,7 @@ import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterOutlet } from '@an
 import { filter, map } from 'rxjs';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from '../../../core/navigation/back-target';
+import { PageFocus } from '../../../core/navigation/page-focus';
 import { RouteChrome } from '../../../core/navigation/route-chrome';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AccountReturn } from '../../../layout/account-sheet/account-return';
@@ -65,6 +66,7 @@ export class AdminShell {
   private readonly location = inject(Location);
   private readonly backTarget = inject(BackTarget);
   private readonly accountReturn = inject(AccountReturn);
+  private readonly pageFocus = inject(PageFocus);
   private readonly chrome = inject(RouteChrome).current;
   private readonly fullScreen = toSignal(
     this.router.events.pipe(
@@ -88,7 +90,10 @@ export class AdminShell {
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.keepEntry());
+      .subscribe(() => {
+        this.keepEntry();
+        this.returnFocusAfterStepBack();
+      });
     effect((onCleanup) => {
       const page = this.sheet() ? this.page()?.nativeElement : undefined;
       if (page !== undefined) {
@@ -137,6 +142,18 @@ export class AdminShell {
     const observer = new MutationObserver(read);
     observer.observe(page, { childList: true, subtree: true, characterData: true });
     return () => observer.disconnect();
+  }
+
+  private returnFocusAfterStepBack(): void {
+    afterNextRender(
+      () => {
+        const page = this.page()?.nativeElement;
+        if (page !== undefined && !this.lock.locked()) {
+          this.pageFocus.returnAfterStepBack(page);
+        }
+      },
+      { injector: this.injector },
+    );
   }
 
   private keptEntry(): number | null {
