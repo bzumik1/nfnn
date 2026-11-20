@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import {
   afterNextRender,
   DestroyRef,
+  effect,
   EnvironmentProviders,
   inject,
   Injectable,
@@ -57,6 +58,16 @@ const ON_GROUND_CLASS = `${PAGE_TRANSITION_CLASS}--on-ground`;
 const SHEET_LOOKS = '.dialog--sheet, app-sheet-head';
 const SHEET_PANEL = '.dialog-panel';
 const PANEL_SCROLL = 'panelScroll';
+const MOVING_CLASS = `${PAGE_TRANSITION_CLASS}--moving`;
+const HEADS_HELD_CLASS = `${PAGE_TRANSITION_CLASS}--heads-held`;
+const TITLES_FOLLOW_CLASS = `${PAGE_TRANSITION_CLASS}--titles-follow`;
+const TITLE_CLASS = `${PAGE_TRANSITION_CLASS}__title`;
+const TITLE_TEXT_CLASS = `${PAGE_TRANSITION_CLASS}__title-text`;
+const SHEET_TITLE = '.sheet-head-title';
+const SHOWN_EDGE_TITLE = '.edge-title--shown';
+const EDGE_TITLE_TEXT = '.edge-title-text';
+const TITLE_FADE_AT = '--page-title-fade-at';
+const TITLE_TRAVEL = '--page-title-travel';
 
 export interface Running {
   readonly kind: PageTransitionKind;
@@ -91,6 +102,12 @@ export interface SheetStep {
 interface KeptSheet {
   readonly sheet: HTMLElement;
   readonly width: number;
+}
+
+interface FollowedTitle {
+  readonly title: HTMLElement;
+  readonly text: HTMLElement;
+  readonly leaves: boolean;
 }
 
 export type BarCurve = 'still' | 'out' | 'out-early' | 'in';
@@ -130,8 +147,18 @@ export class PageTransitions {
   private standingSheet: HTMLElement | null = null;
   running: Running | null = null;
   finishing: number | null = null;
+  private titleFrame: number | null = null;
 
   constructor() {
+    effect(() => {
+      if (!this.compact()) {
+        untracked(() => {
+          if (this.running !== null) {
+            this.finish();
+          }
+        });
+      }
+    });
     const events = this.router.events.subscribe((event) => this.follow(event));
     inject(DestroyRef).onDestroy(() => {
       events.unsubscribe();
@@ -385,7 +412,7 @@ export class PageTransitions {
     const shown = this.place(running.overlay, arriving, running.kind === 'push' ? 'over' : 'under');
     const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
     this.dressChrome(running.overlay, left, shown);
-    running.overlay.classList.add(HELD_CLASS, `${PAGE_TRANSITION_CLASS}--moving`);
+    running.overlay.classList.add(HELD_CLASS, MOVING_CLASS);
     this.finishWhenStill(running, shown.box, view);
     void afterDrawn(view, this.durationOf('--duration-fast') / 2).then(() =>
       running.overlay.classList.remove(HELD_CLASS),
@@ -514,9 +541,13 @@ export class PageTransitions {
     const bar = this.document.createElement('div');
     bar.className = `${PAGE_TRANSITION_CLASS}__bar`;
     overlay.append(bar);
-    const heads = this.holdHeads(overlay, bar, leaving, arriving);
+    const titles: FollowedTitle[] = [];
+    const heads = this.holdHeads(overlay, bar, leaving, arriving, titles);
     const arrivingPart = this.barPart(bar, arriving);
     const leavingPart = this.barPart(bar, leaving);
+    this.addTitle(titles, leavingPart?.querySelector<HTMLElement>(SHOWN_EDGE_TITLE), true);
+    this.addTitle(titles, arrivingPart?.querySelector<HTMLElement>(SHOWN_EDGE_TITLE), false);
+    this.followTitles(overlay, titles);
     return [
       ...heads,
       ...BAR_ITEMS.flatMap((selector) => {
@@ -539,17 +570,81 @@ export class PageTransitions {
     bar: HTMLElement,
     leaving: PlacedPage | null,
     arriving: PlacedPage | null,
+    titles: FollowedTitle[],
   ): BarItem[] {
-    const out = leaving?.copy?.querySelector<HTMLElement>(SHEET_HEAD) ?? null;
-    const into = arriving?.copy?.querySelector<HTMLElement>(SHEET_HEAD) ?? null;
+    const out = this.headOf(leaving);
+    const into = this.headOf(arriving);
     const held = leaving !== null && arriving !== null && out !== null && into !== null;
-    overlay.classList.toggle(`${PAGE_TRANSITION_CLASS}--heads-held`, held);
+    overlay.classList.toggle(HEADS_HELD_CLASS, held);
     if (!held) {
       return [];
     }
     const standing = this.standingCopy(bar, into, arriving.box);
     const leavingHead = this.standingCopy(bar, out, leaving.box);
+    this.addTitle(titles, leavingHead.querySelector<HTMLElement>(SHEET_TITLE), true);
+    this.addTitle(titles, standing.querySelector<HTMLElement>(SHEET_TITLE), false);
     return [this.barItem(standing, 'still'), this.barItem(leavingHead, 'out')];
+  }
+
+  private headOf(page: PlacedPage | null): HTMLElement | null {
+    return (
+      page?.box.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__sheet ${SHEET_HEAD}`) ??
+      page?.copy?.querySelector<HTMLElement>(SHEET_HEAD) ??
+      null
+    );
+  }
+
+  private addTitle(
+    titles: FollowedTitle[],
+    title: HTMLElement | null | undefined,
+    leaves: boolean,
+  ): void {
+    if (title == null || !this.compact()) {
+      return;
+    }
+    let text = title.querySelector<HTMLElement>(EDGE_TITLE_TEXT);
+    if (text === null) {
+      text = this.document.createElement('span');
+      text.append(...Array.from(title.childNodes));
+      title.append(text);
+    }
+    title.classList.add(TITLE_CLASS);
+    text.classList.add(TITLE_TEXT_CLASS);
+    titles.push({ title, text, leaves });
+  }
+
+  private followTitles(overlay: HTMLElement, titles: readonly FollowedTitle[]): void {
+    this.stopTitles();
+    const view = this.document.defaultView;
+    overlay.classList.toggle(TITLES_FOLLOW_CLASS, titles.length > 0);
+    if (view === null || titles.length === 0) {
+      return;
+    }
+    const pushes = overlay.classList.contains(`${PAGE_TRANSITION_CLASS}--push`);
+    const fadeAt = Number.parseFloat(
+      view.getComputedStyle(this.document.documentElement).getPropertyValue(TITLE_FADE_AT),
+    );
+    const follow = (): void => {
+      this.titleFrame = null;
+      if (!overlay.isConnected) {
+        return;
+      }
+      const progress = stepProgress(overlay, pushes, view);
+      titles.forEach((title) =>
+        showTitle(title, progress, Number.isFinite(fadeAt) ? fadeAt : 0, pushes),
+      );
+      if (typeof view.requestAnimationFrame === 'function') {
+        this.titleFrame = view.requestAnimationFrame(follow);
+      }
+    };
+    follow();
+  }
+
+  private stopTitles(): void {
+    if (this.titleFrame !== null) {
+      this.document.defaultView?.cancelAnimationFrame(this.titleFrame);
+      this.titleFrame = null;
+    }
   }
 
   private standingCopy(bar: HTMLElement, head: HTMLElement, box: HTMLElement): HTMLElement {
@@ -673,6 +768,7 @@ export class PageTransitions {
       view?.clearTimeout(this.finishing);
       this.finishing = null;
     }
+    this.stopTitles();
     this.lent.splice(0).forEach((giveBack) => giveBack());
     if (this.running?.stepped) {
       this.drawing?.standAtOnce([this.layer() ?? this.document.body]);
@@ -687,6 +783,49 @@ export class PageTransitions {
       this.drawing?.standAtOnce(this.document.querySelectorAll('dialog[open]'));
     }
   }
+}
+
+function stepProgress(overlay: HTMLElement, pushes: boolean, view: Window): number {
+  const over = overlay.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`);
+  if (over === null || (pushes && !overlay.classList.contains(MOVING_CLASS))) {
+    return 0;
+  }
+  const transform = view.getComputedStyle(over).transform;
+  const Matrix = (view as Window & { DOMMatrixReadOnly?: typeof DOMMatrixReadOnly })
+    .DOMMatrixReadOnly;
+  const width = over.offsetWidth || view.innerWidth;
+  const offset =
+    typeof Matrix === 'function' && transform !== '' && transform !== 'none'
+      ? new Matrix(transform).m41
+      : 0;
+  const along = width > 0 ? Math.min(1, Math.max(0, offset / width)) : 0;
+  return pushes ? 1 - along : along;
+}
+
+function showTitle(
+  { title, text, leaves }: FollowedTitle,
+  progress: number,
+  fadeAt: number,
+  pushes: boolean,
+): void {
+  const opacity = leaves ? fadingOut(progress, fadeAt) : fadingIn(progress, fadeAt);
+  const travel = (pushes ? -1 : 1) * (leaves ? progress : progress - 1);
+  title.style.opacity = String(opacity);
+  text.style.setProperty(TITLE_TRAVEL, String(travel));
+}
+
+function fadingOut(progress: number, fadeAt: number): number {
+  if (fadeAt <= 0) {
+    return progress > 0 ? 0 : 1;
+  }
+  return Math.min(1, Math.max(0, 1 - progress / fadeAt));
+}
+
+function fadingIn(progress: number, fadeAt: number): number {
+  if (fadeAt >= 1) {
+    return progress >= 1 ? 1 : 0;
+  }
+  return Math.min(1, Math.max(0, (progress - fadeAt) / (1 - fadeAt)));
 }
 
 export function liveDialogs(document: Document, selector: string): HTMLDialogElement[] {

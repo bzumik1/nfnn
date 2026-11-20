@@ -28,8 +28,36 @@
   visibility: hidden;
 }
 
-.page-transition--heads-held .page-transition__scroller app-sheet-head {
+.page-transition--heads-held
+  :is(.page-transition__scroller, .page-transition__sheet)
+  app-sheet-head {
   visibility: hidden;
+}
+
+.page-transition--titles-follow .page-transition__scroller .edge-title {
+  visibility: hidden;
+}
+
+.page-transition__title {
+  overflow: clip;
+  transition: none !important;
+}
+
+.page-transition__bar-part .page-transition__title {
+  visibility: visible;
+}
+
+.page-transition__title-text {
+  --page-title-travel: 0;
+
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+  translate: calc(var(--page-title-shift) * var(--page-title-travel)) 0;
 }
 
 .page-transition--on-ground {
