@@ -6,7 +6,13 @@ test.describe('Given a visitor at the bottom of the About page', () => {
   test('when they click the privacy policy link in the note under the contact section, then the policy opens scrolled to the top', async ({
     page,
   }) => {
+    await page.route('**/api/contact/messages', (route) => route.fulfill({ status: 202 }));
     await page.goto('/o-nas');
+    await page.locator('#contact-name').fill('Jana Nováková');
+    await page.locator('#contact-email').fill('jana@example.cz');
+    await page.locator('#contact-message').fill('Mám dotaz k projektu.');
+    await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
+    await expect(page.getByRole('heading', { name: 'Zpráva je odeslaná' })).toBeFocused();
     const noteLink = page
       .locator('#kontakt .contact-legal')
       .getByRole('link', { name: 'zásady ochrany osobních údajů' });
@@ -85,6 +91,25 @@ test.describe('Given a visitor reading the privacy policy on a phone', () => {
 });
 
 test.describe('Given a visitor with a direct link to the privacy policy', () => {
+  test('when they read a part, then its heading carries the number its entry has in the contents', async ({
+    page,
+  }) => {
+    await page.goto('/zasady-ochrany-osobnich-udaju');
+    const items = page.getByRole('navigation', { name: 'Obsah' }).getByRole('listitem');
+    await expect(items).toHaveCount(9);
+    const entries = await items.allTextContents();
+
+    for (const [index, entry] of entries.entries()) {
+      await expect(
+        page.getByRole('heading', {
+          level: 2,
+          name: `${index + 1}. ${entry.replace(/\s+/g, ' ').trim()}`,
+          exact: true,
+        }),
+      ).toBeVisible();
+    }
+  });
+
   test('when they open it, then the policy renders under its own tab title', async ({ page }) => {
     await page.goto('/zasady-ochrany-osobnich-udaju');
 
