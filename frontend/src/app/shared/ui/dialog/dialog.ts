@@ -220,6 +220,10 @@ export class Dialog implements AfterViewInit, OnDestroy {
     if (this.pressStartedOnBackdrop && event.target === this.element().nativeElement) {
       this.dismiss();
     }
+    this.forgetPress();
+  }
+
+  protected forgetPress(): void {
     this.pressStartedOnBackdrop = false;
     this.pressTarget = null;
   }
