@@ -4,14 +4,35 @@ export interface ViewBand {
 }
 
 export function focusInView(target: HTMLElement, options: FocusOptions = {}): boolean {
-  target.focus({ ...options, preventScroll: true });
-  if (target.ownerDocument.activeElement !== target) {
+  if (!focusWithoutScroll(target, options)) {
     return false;
   }
+  bringIntoView(target);
+  return true;
+}
+
+export function focusWithoutScroll(target: HTMLElement, options: FocusOptions = {}): boolean {
+  target.focus({ ...options, preventScroll: true });
+  return target.ownerDocument.activeElement === target;
+}
+
+export function bringIntoView(target: Element): void {
   if (!liesInView(target)) {
     target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }
-  return true;
+}
+
+export function motionsMoving(target: Element): Animation[] {
+  const motions: Animation[] = [];
+  for (let element: Element | null = target; element !== null; element = element.parentElement) {
+    motions.push(
+      ...(element.getAnimations?.() ?? []).filter(
+        (motion) =>
+          motion.playState === 'running' && motion.effect?.getComputedTiming().endTime !== Infinity,
+      ),
+    );
+  }
+  return motions;
 }
 
 export function liesInView(target: Element): boolean {

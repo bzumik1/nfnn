@@ -96,10 +96,10 @@ describe('Given a list of the administration that a step back returns to from th
     let focused: ReturnType<typeof vi.fn<(options?: FocusOptions) => void>>;
     let shown: ReturnType<typeof vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>>;
 
-    async function returnWithTheLinkAt(top: number): Promise<void> {
+    async function returnWithTheLinkAt(top: number, within: HTMLElement = scope): Promise<void> {
       link = row({ href: CARD });
       link.getBoundingClientRect = () => new DOMRect(0, top, 300, 56);
-      scope.append(link);
+      within.append(link);
       await openTheCard(link);
       await stepBack();
       const focusLink = link.focus.bind(link);
@@ -140,6 +140,50 @@ describe('Given a list of the administration that a step back returns to from th
 
       expect(document.activeElement).toBe(link);
       expect(shown).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+    });
+
+    describe("when the focus sets the row's tile moving, as a tile lifts while its link shows the focus ring", () => {
+      let lifted: () => void;
+      let tile: HTMLElement;
+
+      beforeEach(() => {
+        tile = document.createElement('div');
+        scope.append(tile);
+        const lift = new Promise<void>((done) => (lifted = done));
+        tile.getAnimations = () =>
+          [
+            {
+              playState: 'running',
+              finished: lift,
+              effect: { getComputedTiming: () => ({ endTime: 200 }) },
+            },
+          ] as unknown as Animation[];
+      });
+
+      it('then the page moves only once the tile has come to rest, so the row is measured where it stays and ends at the edge', async () => {
+        await returnWithTheLinkAt(window.innerHeight + 120, tile);
+
+        expect(document.activeElement).toBe(link);
+        expect(shown).not.toHaveBeenCalled();
+        lifted();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(shown).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+      });
+
+      it('then the page stays when the visitor has moved the focus elsewhere before the tile came to rest', async () => {
+        const search = document.createElement('input');
+        scope.append(search);
+        await returnWithTheLinkAt(window.innerHeight + 120, tile);
+
+        search.focus();
+        lifted();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(shown).not.toHaveBeenCalled();
+      });
     });
 
     it('then the row half under the head still counts as shown and the page stays', async () => {

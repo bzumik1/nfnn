@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { NavigationStart, Router } from '@angular/router';
 import { InputModality } from '../input/input-modality';
-import { focusInView } from '../layout/focus-in-view';
+import { bringIntoView, focusWithoutScroll, motionsMoving } from '../layout/focus-in-view';
 import { pathOf } from './app-tabs';
 import { BackTarget } from './back-target';
 import { NavigationPreview } from './navigation-preview';
@@ -245,7 +245,40 @@ export class PageFocus {
     if (target === null || !this.atFallback(scope)) {
       return false;
     }
-    return focusInView(target, this.modality.lastPressByPointer() ? { focusVisible: false } : {});
+    if (
+      !focusWithoutScroll(target, this.modality.lastPressByPointer() ? { focusVisible: false } : {})
+    ) {
+      return false;
+    }
+    this.bringIntoViewOnceStill(target);
+    return true;
+  }
+
+  private bringIntoViewOnceStill(target: HTMLElement): void {
+    const view = this.document.defaultView;
+    const motions = motionsMoving(target);
+    if (view === null || motions.length === 0) {
+      bringIntoView(target);
+      return;
+    }
+    const settle = (): void => {
+      if (this.stopReturning !== stop) {
+        return;
+      }
+      stop();
+      if (this.document.activeElement === target) {
+        bringIntoView(target);
+      }
+    };
+    const timer = view.setTimeout(settle, RETURNING_FOCUS_LONGEST_MS);
+    const stop = (): void => {
+      view.clearTimeout(timer);
+      if (this.stopReturning === stop) {
+        this.stopReturning = null;
+      }
+    };
+    this.stopReturning = stop;
+    void Promise.allSettled(motions.map((motion) => motion.finished)).then(settle);
   }
 
   private atFallback(scope: HTMLElement): boolean {
