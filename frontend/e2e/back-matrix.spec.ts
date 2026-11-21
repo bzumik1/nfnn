@@ -841,10 +841,12 @@ async function walkRow(
   link: Locator,
   open: () => Promise<void> = () => clickWithoutScrolling(link),
 ): Promise<void> {
-  const top = await screens.scrollTo(scrolled ? SCROLLED_BY_PX : 0);
+  await motionsEnded(page);
+  await screens.scrollTo(scrolled ? SCROLLED_BY_PX : 0);
   const shownBefore = (await placementOf(link)).shown;
   const groundBefore = onTheSheetGround(screens, row) ? await bandColour(page) : null;
   await watchTheStep(page);
+  const top = await screens.scrollTop();
   await open();
   await screens.shown(row);
   const opening = await stepSeen(page);
@@ -946,6 +948,21 @@ async function openAccountSheetOverTheNews(page: Page): Promise<void> {
   await accountListShown(page);
   await expect(page.locator('.page-transition')).toHaveCount(0);
   await sheetSettled(page);
+}
+
+function motionsEnded(page: Page): Promise<unknown> {
+  return page.evaluate(() =>
+    Promise.allSettled(
+      document
+        .getAnimations()
+        .filter(
+          (motion) =>
+            motion.playState === 'running' &&
+            motion.effect?.getComputedTiming().endTime !== Infinity,
+        )
+        .map((motion) => motion.finished),
+    ),
+  );
 }
 
 function sheetSettled(page: Page): Promise<unknown> {
