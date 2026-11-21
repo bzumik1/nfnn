@@ -309,7 +309,7 @@ test.describe('Given an administrator on the settings page', () => {
       };
     });
     expect(look.paper).not.toBe(look.cardFill);
-    expect(look.signatureFill).toBe(look.paper);
+    expect(look.signatureFill).toBe('rgba(0, 0, 0, 0)');
     expect(look.lowestContrast).toBeGreaterThanOrEqual(4.5);
   });
 
