@@ -198,7 +198,7 @@ for (const screen of [
     inSheet: true,
     shares: false,
   },
-  { name: 'an iPad on its side', width: 1180, height: 820, inSheet: false, shares: true },
+  { name: 'a large iPad on its side', width: 1366, height: 1024, inSheet: false, shares: true },
   { name: 'a phone', width: 390, height: 844, inSheet: false, shares: false },
 ]) {
   test.describe(`Given a donor with a ready yearly receipt on ${screen.name} with a root of 17 px`, () => {
