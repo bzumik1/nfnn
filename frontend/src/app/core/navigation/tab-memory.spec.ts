@@ -12,6 +12,7 @@ import {
   withInMemoryScrolling,
 } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { keepRoomForOfflinePill } from '../../layout/offline-status/offline-pill-room';
 import { APP_TABS, tabOf } from './app-tabs';
 import { KeptTabPages } from './kept-tab-pages';
 import { PagePlacement } from './page-placement';
@@ -354,7 +355,7 @@ describe('Given a visitor who goes back through the history of the browser', () 
 describe('Given a visitor who steps back to a page drawn afresh, shorter at first than the place they left', () => {
   let harness: RouterTestingHarness;
   let scrolledTo: number[];
-  let grown: (() => void) | null;
+  let observers: Set<() => void>;
   let placed: HTMLElement[];
 
   function scrolledBy(top: number): void {
@@ -370,7 +371,7 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
 
   function grows(height: number): void {
     pageHeight(height);
-    grown?.();
+    [...observers].forEach((changed) => changed());
   }
 
   function farthestPlace(): number {
@@ -379,7 +380,7 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
 
   beforeEach(async () => {
     scrolledTo = [];
-    grown = null;
+    observers = new Set();
     placed = [];
     vi.spyOn(window, 'scrollTo').mockImplementation((options?: ScrollToOptions | number) => {
       if (typeof options === 'object') {
@@ -393,12 +394,15 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
       class {
         readonly observe = vi.fn();
 
+        private readonly changed: () => void;
+
         constructor(changed: () => void) {
-          grown = changed;
+          this.changed = changed;
+          observers.add(changed);
         }
 
         disconnect(): void {
-          grown = null;
+          observers.delete(this.changed);
         }
       },
     );
@@ -486,6 +490,26 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
 
     expect(scrolledTo).toEqual([]);
     expect(window.scrollY).toBe(942);
+  });
+
+  it('when the Offline pill appears at the end of the page before it grows, then the page is still put where they left it and the pill does not move it', async () => {
+    pageHeight(1200);
+    await stepBack();
+    const pill = document.createElement('div');
+    document.body.append(pill);
+    placed.push(pill);
+    scrolledTo = [];
+    const releasePill = keepRoomForOfflinePill(
+      document,
+      pill,
+      TestBed.inject(ScrollHold),
+      TestBed.inject(PagePlacement),
+    );
+    grows(3000);
+    releasePill();
+
+    expect(scrolledTo).toEqual([900]);
+    expect(scrolledTo.at(-1)).toBe(900);
   });
 
   function placedYet(): () => boolean {

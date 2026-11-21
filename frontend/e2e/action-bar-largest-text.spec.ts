@@ -52,6 +52,28 @@ function labelsOutsideTheirButton(bar: Locator): Promise<string[]> {
   );
 }
 
+interface ButtonSizes {
+  readonly heights: number[];
+  readonly fontSizes: string[];
+  readonly smallText: string;
+}
+
+function sizesOfTheButtons(bar: Locator): Promise<ButtonSizes> {
+  return bar.evaluate((element) => {
+    const buttons = [...element.querySelectorAll<HTMLElement>('.ui-button')];
+    const probe = document.createElement('span');
+    probe.style.fontSize = 'var(--text-sm)';
+    element.append(probe);
+    const smallText = getComputedStyle(probe).fontSize;
+    probe.remove();
+    return {
+      heights: buttons.map((button) => button.getBoundingClientRect().height),
+      fontSizes: buttons.map((button) => getComputedStyle(button).fontSize),
+      smallText,
+    };
+  });
+}
+
 test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide whose installed app shows the largest accessibility text`, () => {
   test.use({ viewport: NARROW_PHONE });
 
@@ -72,5 +94,21 @@ test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide
     expect(box).not.toBeNull();
     expect(box!.height).toBeLessThanOrEqual(NARROW_PHONE.height * LARGEST_SHARE_OF_THE_SCREEN);
     expect(await labelsOutsideTheirButton(bar)).toEqual([]);
+  });
+
+  test('when they start a new article, then both buttons of the action bar keep one height and the small text size', async ({
+    page,
+  }) => {
+    await openUnlockedAdministration(page, '/sprava/aktuality/nova');
+    const bar = page.locator('.ui-action-bar');
+    await expect(bar.getByRole('button', { name: 'Uložit koncept' })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Uložit a zveřejnit' })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const { heights, fontSizes, smallText } = await sizesOfTheButtons(bar);
+
+    expect(heights).toHaveLength(2);
+    expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(0.5);
+    expect(fontSizes).toEqual([smallText, smallText]);
   });
 });
