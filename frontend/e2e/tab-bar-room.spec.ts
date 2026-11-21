@@ -143,6 +143,38 @@ test.describe('Given a visitor on a computer, where a page ends with a section t
   }
 });
 
+test.describe('Given a visitor on a phone who has lost the connection, so the Offline pill floats above the tab bar', () => {
+  test.use({ viewport: PHONE });
+
+  for (const { path, lastPart } of [
+    { path: '/o-nas', lastPart: '#kontakt form' },
+    { path: '/prispet', lastPart: '#prispet .bank' },
+  ]) {
+    test(`when they scroll ${path} to its end, then its last line stands above the pill`, async ({
+      page,
+      context,
+    }) => {
+      await mockDonorApi(page);
+      await mockPublicContent(page);
+      await servePaymentDetails(page);
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.locator(lastPart).first()).toBeVisible();
+
+      await page.route('**/api/**', (route) => route.abort('internetdisconnected'));
+      await context.setOffline(true);
+      const pill = page.getByRole('button', { name: /^Offline/ });
+      await expect(pill).toBeVisible();
+      await expect(page.locator('html')).toHaveClass(/\bis-offline\b/);
+      await scrolledToTheEnd(page);
+
+      const box = await pill.boundingBox();
+      expect(box).not.toBeNull();
+      expect(await lowestContentEdge(page)).toBeLessThanOrEqual(box!.y);
+    });
+  }
+});
+
 test.describe('Given a signed-in donor', () => {
   for (const [width, viewport] of [
     ['a phone', PHONE],
