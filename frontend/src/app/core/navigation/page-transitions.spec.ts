@@ -283,6 +283,53 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(new Set(started)).toEqual(new Set([5140]));
   });
 
+  async function heldUntilTwoFramesAt(draw: (at: number) => void, first: number, second: number) {
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + FRAME_LATE_MS * 2 + 100);
+    draw(first);
+    draw(second);
+    await vi.advanceTimersByTimeAsync(0);
+  }
+
+  it('when the frame after the one that ends the hold comes late, then every held motion starts again at that late frame, so it still shows them at their start', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    await heldUntilTwoFramesAt(draw, 5000, 5016);
+
+    draw(5100);
+    draw(5116);
+
+    const started = [...motions.values()].map((motion) => motion.startTime);
+    expect(started.length).toBeGreaterThan(0);
+    expect(new Set(started)).toEqual(new Set([5100]));
+  });
+
+  it('when the frames after the one that ends the hold come at the same pace, then the held motions keep the start they were given', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    await heldUntilTwoFramesAt(draw, 5000, 5016);
+
+    draw(5033);
+    draw(5050);
+
+    expect(new Set([...motions.values()].map((motion) => motion.startTime))).toEqual(
+      new Set([5016]),
+    );
+  });
+
+  it('when the tab is hidden while the step moves, then the step ends at once instead of running on the clock it would come back to', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    await heldUntilTwoFramesAt(draw, 5000, 5016);
+    expect(moving()).not.toBeNull();
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    onTestFinished(() => visibility.mockRestore());
+
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+  });
+
   it('when another article opens from this one, then its motion holds still at its start until the frame that shows both pages has been drawn', async () => {
     const held = await heldWhenTheMotionBegins(() => router.navigateByUrl('/aktuality/druhy'));
 

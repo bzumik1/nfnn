@@ -26,6 +26,7 @@ const STEP_ENDS_WITHIN_MS = 6000;
 const FIRST_SHOWN_AT_MOST = 0.25;
 const BUSY_AS_ON_THE_PHONE_MS = 140;
 const DRAWN_AS_LATE_AS_ON_THE_PHONE_MS = 140;
+const LONG_AS_ON_THE_PHONE_MS = 80;
 const FIRST_MOVED_FRAME_AT_MOST = 0.2;
 const PLACED_AFTER_THE_TAP_WITHIN_MS = 150;
 const FIRST_OPENING_PLACED_WITHIN_MS = 300;
@@ -88,7 +89,7 @@ declare global {
     nfnnStepProbe?: StepProbe;
     nfnnListScrolls?: number[];
     nfnnHeadTitles?: () => HeadTitle[];
-    nfnnLateFrames?: { until: number };
+    nfnnLateFrames?: { until: number; read: (reader: FrameRequestCallback) => void };
   }
 }
 
@@ -376,11 +377,11 @@ function measuresFrames(page: Page): boolean {
   return page.context().browser()?.browserType().name() === 'chromium';
 }
 
-type FrameCost = 'busy' | 'drawn-late';
+type FrameCost = 'busy' | 'drawn-late' | 'drawn-late-then-long';
 
 async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void> {
   await page.evaluate(
-    ({ busyMs, lateMs, hiddenAtMost, paced }) => {
+    ({ busyMs, lateMs, longMs, hiddenAtMost, paced }) => {
       const curves: Record<string, readonly number[]> = {
         linear: [0, 0, 1, 1],
         ease: [0.25, 0.1, 0.25, 1],
@@ -447,22 +448,56 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
         });
       }
       const late = (window.nfnnLateFrames ??= (() => {
-        const state = { until: 0 };
         const request = window.requestAnimationFrame.bind(window);
         const cancel = window.cancelAnimationFrame.bind(window);
         const requested = new Map<number, number>();
+        const readers: FrameRequestCallback[] = [];
+        let reading: { id: number; requestedIn: number } | null = null;
+        let frameAt = -1;
         let next = 1_000_000_000;
+        const readLast = (): void => {
+          if (reading !== null) {
+            cancel(reading.id);
+          }
+          reading = { id: request(readAll), requestedIn: frameAt };
+        };
+        const keepReadersLast = (): void => {
+          if (reading !== null && reading.requestedIn === frameAt) {
+            readLast();
+          }
+        };
+        const state = {
+          until: 0,
+          read: (reader: FrameRequestCallback): void => {
+            readers.push(reader);
+            if (reading === null) {
+              readLast();
+            }
+          },
+        };
+        const readAll = (now: number): void => {
+          frameAt = now;
+          reading = null;
+          if (performance.now() < state.until) {
+            readLast();
+            return;
+          }
+          readers.splice(0).forEach((reader) => reader(now));
+        };
         window.requestAnimationFrame = (callback) => {
           const id = next++;
           const run = (now: number): void => {
+            frameAt = now;
             if (performance.now() < state.until) {
               requested.set(id, request(run));
+              keepReadersLast();
               return;
             }
             requested.delete(id);
             callback(now);
           };
           requested.set(id, request(run));
+          keepReadersLast();
           return id;
         };
         window.cancelAnimationFrame = (id) => {
@@ -471,6 +506,13 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
         };
         return state;
       })());
+      const keepBusy = (ms: number): void => {
+        const from = performance.now();
+        let at = from;
+        while (at < from + ms) {
+          at = performance.now();
+        }
+      };
       const bothPlaced = (): boolean =>
         document.querySelector('.page-transition__page--over') !== null &&
         document.querySelector('.page-transition__page--under') !== null;
@@ -490,15 +532,16 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
           );
         if (lateMs > 0) {
           late.until = placedAt + lateMs;
-          requestAnimationFrame((now) => (probe.busyFrameAt = now));
+          requestAnimationFrame((now) => {
+            probe.busyFrameAt = now;
+            if (longMs > 0) {
+              requestAnimationFrame(() => keepBusy(longMs));
+            }
+          });
         } else if (busyMs > 0) {
           requestAnimationFrame((now) => {
             probe.busyFrameAt = now;
-            const from = performance.now();
-            let at = from;
-            while (at < from + busyMs) {
-              at = performance.now();
-            }
+            keepBusy(busyMs);
           });
         }
       });
@@ -558,13 +601,14 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
           probe.done = true;
           return;
         }
-        requestAnimationFrame(look);
+        late.read(look);
       };
-      requestAnimationFrame(look);
+      late.read(look);
     },
     {
       busyMs: measuresFrames(page) && cost === 'busy' ? BUSY_AS_ON_THE_PHONE_MS : 0,
-      lateMs: measuresFrames(page) && cost === 'drawn-late' ? DRAWN_AS_LATE_AS_ON_THE_PHONE_MS : 0,
+      lateMs: measuresFrames(page) && cost !== 'busy' ? DRAWN_AS_LATE_AS_ON_THE_PHONE_MS : 0,
+      longMs: measuresFrames(page) && cost === 'drawn-late-then-long' ? LONG_AS_ON_THE_PHONE_MS : 0,
       hiddenAtMost: HIDDEN_TITLE_AT_MOST,
       paced: measuresFrames(page),
     },
@@ -1579,62 +1623,84 @@ for (const look of LOOKS) {
 
     test.beforeEach(({ page }) => onThePhone(page, look));
 
-    test('when each section of the account sheet opens for the first time, then it moves within two frames after the late one and its first moved frame comes at most a fifth of the way', async ({
-      page,
-    }) => {
-      test.setTimeout(120_000);
-      await openAccountSheetOverTheNews(page);
-      const screens = accountScreens(page);
-      const rows = (await accountRows(page)).filter((row) => row.href !== '/sprava');
-      expect(rows.map((row) => row.href)).toEqual(expect.arrayContaining(donorScreens()));
-      for (const row of rows) {
-        await test.step(row.name, async () => {
-          await motionsEnded(page);
-          await watchTheStep(page, 'drawn-late');
-          await clickWithoutScrolling(accountSheet(page).locator(`a[href="${row.href}"]`).first());
-          await screens.shown(row);
-          const opening = await stepSeen(page);
-          expectArrived(opening, WIDTH);
-          expectWithinTheBudget(opening);
-          await screens.backButton().click();
-          await screens.returned(row);
-          await expect(page.locator('.page-transition')).toHaveCount(0);
-        });
-      }
-    });
-
-    test('when ‹ is pressed on Platby, Zálohy and Lidé fondu, then the page moves within two frames after the late one and its first moved frame comes at most a fifth of the way', async ({
-      page,
-    }) => {
-      test.setTimeout(120_000);
-      const screens = administrationScreensOf(page);
-      const sections: readonly (readonly [readonly string[], string])[] = [
-        [['/sprava'], '/sprava/platby'],
-        [['/sprava', '/sprava/vice'], '/sprava/zalohy'],
-        [['/sprava', '/sprava/vice'], '/sprava/lide-fondu'],
-      ];
-      for (const [trail, href] of sections) {
-        await openAdministrationAt(page, trail);
-        const link = page.locator(`.admin-frame a[href="${href}"]`).first();
-        const row: Row = {
-          name: (await link.innerText()).split('\n')[0].trim(),
-          href,
-          from: trail.at(-1)!,
-        };
-        await test.step(href, async () => {
-          await clickWithoutScrolling(link);
-          await screens.shown(row);
-          await motionsEnded(page);
-          await watchTheStep(page, 'drawn-late');
-          await screens.backButton().click();
-          const probe = await stepSeen(page);
-          expectLeftAway(probe, WIDTH, 0);
+    const lateFrames: readonly (readonly [FrameCost, string, string])[] = [
+      [
+        'drawn-late',
+        'it moves within two frames after the late one and its first moved frame comes at most a fifth of the way',
+        'the page moves within two frames after the late one and its first moved frame comes at most a fifth of the way',
+      ],
+      [
+        'drawn-late-then-long',
+        'its first moved frame comes at most a fifth of the way even when the frame after the late one lasts long too',
+        'its first moved frame comes at most a fifth of the way even when the frame after the late one lasts long too',
+      ],
+    ];
+    for (const [cost, opens, steps] of lateFrames) {
+      const withinTheBudget = (probe: StepProbe): void => {
+        if (cost === 'drawn-late') {
           expectWithinTheBudget(probe);
-          await screens.returned(row);
-          await expect(page.locator('.page-transition')).toHaveCount(0);
-        });
-      }
-    });
+        }
+      };
+
+      test(`when each section of the account sheet opens for the first time, then ${opens}`, async ({
+        page,
+      }) => {
+        test.setTimeout(120_000);
+        await openAccountSheetOverTheNews(page);
+        const screens = accountScreens(page);
+        const rows = (await accountRows(page)).filter((row) => row.href !== '/sprava');
+        expect(rows.map((row) => row.href)).toEqual(expect.arrayContaining(donorScreens()));
+        for (const row of rows) {
+          await test.step(row.name, async () => {
+            await motionsEnded(page);
+            await watchTheStep(page, cost);
+            await clickWithoutScrolling(
+              accountSheet(page).locator(`a[href="${row.href}"]`).first(),
+            );
+            await screens.shown(row);
+            const opening = await stepSeen(page);
+            expectArrived(opening, WIDTH);
+            withinTheBudget(opening);
+            await screens.backButton().click();
+            await screens.returned(row);
+            await expect(page.locator('.page-transition')).toHaveCount(0);
+          });
+        }
+      });
+
+      test(`when ‹ is pressed on Platby, Zálohy and Lidé fondu, then ${steps}`, async ({
+        page,
+      }) => {
+        test.setTimeout(120_000);
+        const screens = administrationScreensOf(page);
+        const sections: readonly (readonly [readonly string[], string])[] = [
+          [['/sprava'], '/sprava/platby'],
+          [['/sprava', '/sprava/vice'], '/sprava/zalohy'],
+          [['/sprava', '/sprava/vice'], '/sprava/lide-fondu'],
+        ];
+        for (const [trail, href] of sections) {
+          await openAdministrationAt(page, trail);
+          const link = page.locator(`.admin-frame a[href="${href}"]`).first();
+          const row: Row = {
+            name: (await link.innerText()).split('\n')[0].trim(),
+            href,
+            from: trail.at(-1)!,
+          };
+          await test.step(href, async () => {
+            await clickWithoutScrolling(link);
+            await screens.shown(row);
+            await motionsEnded(page);
+            await watchTheStep(page, cost);
+            await screens.backButton().click();
+            const probe = await stepSeen(page);
+            expectLeftAway(probe, WIDTH, 0);
+            withinTheBudget(probe);
+            await screens.returned(row);
+            await expect(page.locator('.page-transition')).toHaveCount(0);
+          });
+        }
+      });
+    }
   });
 
   test.describe(`Given a visitor on a wide screen, in the ${look} appearance`, () => {

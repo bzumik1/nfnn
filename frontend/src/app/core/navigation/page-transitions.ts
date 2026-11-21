@@ -43,6 +43,7 @@ export const FRAME_LATE_MS = 100;
 export const ACCOUNT_RETURNS_KEY = 'nfnnAppAccount';
 
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
+const LATE_FRAME_PAST_THE_ONE_BEFORE = 1.5;
 const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
 const BAR_ITEMS = ['.back-button', '.account-button'];
 export const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
@@ -184,10 +185,19 @@ export class PageTransitions {
       }
     });
     const events = this.router.events.subscribe((event) => this.follow(event));
+    const hidden = (): void => this.endWhenHidden();
+    this.document.addEventListener('visibilitychange', hidden);
     inject(DestroyRef).onDestroy(() => {
       events.unsubscribe();
+      this.document.removeEventListener('visibilitychange', hidden);
       this.finish();
     });
+  }
+
+  private endWhenHidden(): void {
+    if (this.document.visibilityState === 'hidden' && this.running?.swiping === false) {
+      this.finish();
+    }
   }
 
   private follow(event: RouterEvent): void {
@@ -480,10 +490,29 @@ export class PageTransitions {
   private startMoving(running: Running, view: Window, page: HTMLElement): void {
     running.overlay.classList.add(HELD_CLASS, MOVING_CLASS);
     this.finishWhenStill(running, page, view);
-    framesDrawn(view, 2, (frameAt) => {
+    framesDrawn(view, 2, (frameAt, frameMs) => {
       if (this.running === running) {
-        startHeldMotions(running.overlay, frameAt);
+        const motions = startHeldMotions(running.overlay, frameAt);
+        this.startAgainAfterLateFrames(running, view, motions, frameAt, frameMs);
       }
+    });
+  }
+
+  private startAgainAfterLateFrames(
+    running: Running,
+    view: Window,
+    motions: readonly Animation[],
+    startedAt: number,
+    frameMs: number,
+  ): void {
+    view.requestAnimationFrame((frameAt) => {
+      const sinceStart = frameAt - startedAt;
+      const late = sinceStart > frameMs * LATE_FRAME_PAST_THE_ONE_BEFORE;
+      if (this.running !== running || !late) {
+        return;
+      }
+      motions.forEach((motion) => (motion.startTime = frameAt));
+      this.startAgainAfterLateFrames(running, view, motions, frameAt, sinceStart);
     });
   }
 
@@ -941,20 +970,24 @@ function fadingIn(progress: number, fadeAt: number): number {
   return Math.min(1, Math.max(0, (progress - fadeAt) / (1 - fadeAt)));
 }
 
-function startHeldMotions(overlay: HTMLElement, frameAt: number): void {
+function startHeldMotions(overlay: HTMLElement, frameAt: number): Animation[] {
   overlay.classList.remove(HELD_CLASS);
   if (typeof overlay.getAnimations !== 'function') {
-    return;
+    return [];
   }
-  overlay
-    .getAnimations({ subtree: true })
-    .filter((motion) => motion.pending)
-    .forEach((motion) => (motion.startTime = frameAt));
+  const motions = overlay.getAnimations({ subtree: true }).filter((motion) => motion.pending);
+  motions.forEach((motion) => (motion.startTime = frameAt));
+  return motions;
 }
 
-function framesDrawn(view: Window, frames: number, then: (frameAt: number) => void): void {
+function framesDrawn(
+  view: Window,
+  frames: number,
+  then: (frameAt: number, frameMs: number) => void,
+  previousAt = Number.NaN,
+): void {
   view.requestAnimationFrame((frameAt) =>
-    frames > 1 ? framesDrawn(view, frames - 1, then) : then(frameAt),
+    frames > 1 ? framesDrawn(view, frames - 1, then, frameAt) : then(frameAt, frameAt - previousAt),
   );
 }
 
