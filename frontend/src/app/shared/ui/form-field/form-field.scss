@@ -25,7 +25,8 @@
   overflow-wrap: anywhere;
 }
 
-:host-context(app-admin-shell) .field-hint {
+:host-context(app-admin-shell) .field-hint,
+:host-context(app-admin-shell) .field-error {
   max-inline-size: var(--measure-prose);
 }
 

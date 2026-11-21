@@ -311,7 +311,11 @@
                   <app-file-button
                     inputId="person-portrait"
                     accept="image/jpeg,image/png,image/webp"
-                    describedBy="person-portrait-hint"
+                    [describedBy]="
+                      portraitError()
+                        ? 'person-portrait-error person-portrait-hint'
+                        : 'person-portrait-hint'
+                    "
                     [disabled]="busy()"
                     (chosen)="uploadPortrait($event)"
                   >
@@ -337,6 +341,9 @@
                     </button>
                   }
                 </div>
+                @if (portraitError(); as error) {
+                  <p id="person-portrait-error" class="field-error" role="alert">{{ error }}</p>
+                }
                 <p id="person-portrait-hint" class="field-hint" i18n="@@admin.people.portrait.hint">
                   JPEG, PNG nebo WebP do 10 MB, nejlépe čtvercový. Web ho ukáže v&nbsp;kruhu
                   a&nbsp;okraje ořízne. Nahrajte ho jen se souhlasem toho, kdo je na něm. Na web se
@@ -349,9 +356,6 @@
                     </p>
                   }
                 </div>
-                @if (portraitError(); as error) {
-                  <p class="field-error" role="alert">{{ error }}</p>
-                }
               </div>
 
               <div class="form-actions">

@@ -11,16 +11,33 @@ import { ADMINISTRATION_LOCKED, expect, test } from './fixtures';
 const COMPUTER_WIDTHS = [1280, 1920];
 const MOST_CHARACTERS_A_LINE = 80;
 
-const PROSE = [
+interface Prose {
+  readonly name: string;
+  readonly path: string;
+  readonly selector: string;
+  readonly openedBy?: string;
+}
+
+const PROSE: readonly Prose[] = [
   { name: 'the page intro of Zálohy', path: '/sprava/zalohy', selector: 'main .ui-page-intro' },
   { name: 'the card intro of Správci', path: '/sprava/spravci', selector: 'main .grant-intro' },
-  { name: 'the hint of the founders’ note', path: '/sprava/lide', selector: '#founders-note-hint' },
+  {
+    name: 'the hint of the founders’ note',
+    path: '/sprava/lide-fondu',
+    selector: '#founders-note-hint',
+  },
+  {
+    name: 'the hand-written hint of the e-mails only for the administration',
+    path: '/sprava/lide-fondu',
+    selector: '.emails .field-hint',
+    openedBy: 'Přidat osobu',
+  },
   {
     name: 'the row description of the overview',
     path: '/sprava',
     selector: '#admin-overview-hint',
   },
-] as const;
+];
 
 async function openUnlocked(page: Page, path: string): Promise<void> {
   await mockDonorApi(page, donorWithDonations);
@@ -65,13 +82,17 @@ for (const width of COMPUTER_WIDTHS) {
       await page.setViewportSize({ width, height: 900 });
     });
 
-    for (const { name, path, selector } of PROSE) {
+    for (const { name, path, selector, openedBy } of PROSE) {
       test(`when ${name} is shown, then none of its lines runs over ${MOST_CHARACTERS_A_LINE} characters`, async ({
         page,
       }) => {
         await openUnlocked(page, path);
+        if (openedBy !== undefined) {
+          await page.getByRole('button', { name: openedBy }).click();
+        }
         const prose = page.locator(selector).first();
         await expect(prose).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
 
         const lines = await charactersPerLine(prose);
 
