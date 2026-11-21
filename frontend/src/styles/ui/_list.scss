@@ -1,6 +1,7 @@
 @use 'breakpoints' as bp;
 @use 'motion';
 @use 'pressed';
+@use 'focus-ring';
 
 .ui-list {
   list-style: none;
@@ -324,8 +325,28 @@ div.ui-list__row {
   }
 }
 
-.ui-card .ui-list__row:focus-visible {
-  outline-offset: -3px;
+.ui-card .ui-list__row:focus-visible,
+.ui-list--inset .ui-list__row:focus-visible,
+.ui-list--grouped .ui-list__row:focus-visible {
+  @include focus-ring.ring(inside);
+}
+
+.ui-card:not(.ui-card--padded) > .ui-list:first-child,
+.ui-card:not(.ui-card--padded) > .ui-list:first-child > :first-child,
+.ui-card:not(.ui-card--padded) > .ui-list:first-child > :first-child > .ui-list__row,
+:is(.ui-list--inset, .ui-list--grouped) > :first-child,
+:is(.ui-list--inset, .ui-list--grouped) > :first-child > .ui-list__row {
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+}
+
+.ui-card:not(.ui-card--padded) > .ui-list:last-child,
+.ui-card:not(.ui-card--padded) > .ui-list:last-child > :last-child,
+.ui-card:not(.ui-card--padded) > .ui-list:last-child > :last-child > .ui-list__row,
+:is(.ui-list--inset, .ui-list--grouped) > :last-child,
+:is(.ui-list--inset, .ui-list--grouped) > :last-child > .ui-list__row {
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
 }
 
 .ui-list--inset {
@@ -370,10 +391,6 @@ div.ui-list__row {
   .ui-list__value:not(.ui-list__count) {
     font-weight: var(--weight-list-inset-title);
   }
-}
-
-.ui-list--inset .ui-list__row:focus-visible {
-  outline-offset: -3px;
 }
 
 .ui-list__tile,
@@ -465,10 +482,6 @@ div.ui-list__row {
 
   .ui-list__row:not(:has(.ui-list__meta)) > .ui-list__title {
     grid-row: 1;
-  }
-
-  .ui-list__row:focus-visible {
-    outline-offset: -3px;
   }
 
   .ui-list__row--action {

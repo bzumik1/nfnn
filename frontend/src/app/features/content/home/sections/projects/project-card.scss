@@ -1,5 +1,6 @@
 @use 'motion';
 @use 'pressed';
+@use 'focus-ring';
 
 @mixin lifted {
   translate: 0 calc(-1 * var(--motion-lift));
@@ -127,11 +128,10 @@
   }
 
   &:focus-visible {
-    outline: none;
+    @include focus-ring.ring(elsewhere);
   }
 
   &:focus-visible::after {
-    outline: 3px solid var(--color-focus-ring);
-    outline-offset: 2px;
+    @include focus-ring.ring(outside);
   }
 }

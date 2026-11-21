@@ -1,3 +1,5 @@
+@use 'focus-ring';
+
 .zoom-viewer {
   flex: 1;
   min-height: 0;
@@ -21,7 +23,7 @@
   cursor: zoom-in;
 
   &:focus-visible {
-    outline: none;
+    @include focus-ring.ring(elsewhere);
   }
 
   &:focus-visible::after {
@@ -30,8 +32,7 @@
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    outline: 3px solid var(--color-focus-ring);
-    outline-offset: calc(-1 * var(--space-1));
+    @include focus-ring.ring(inside);
   }
 
   &.is-zoomed {
@@ -113,10 +114,4 @@
 
 .zoom-level {
   min-width: calc(var(--space-12) * 2);
-}
-
-@media (forced-colors: active) {
-  .zoom-stage:focus-visible::after {
-    outline-color: Highlight;
-  }
 }

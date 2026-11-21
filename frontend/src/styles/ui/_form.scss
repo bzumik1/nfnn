@@ -1,6 +1,7 @@
 @use 'motion';
 @use 'pressed';
 @use 'touch-target';
+@use 'focus-ring';
 
 .ui-field-error {
   color: var(--color-danger);
@@ -209,16 +210,11 @@
 
   @supports selector(:has(*)) {
     .form-control:focus-visible {
-      outline: none;
+      @include focus-ring.ring(elsewhere);
     }
 
     app-form-field:has(.form-control:focus-visible) {
-      outline: 3px solid var(--color-focus-ring);
-      outline-offset: -3px;
-
-      @media (forced-colors: active) {
-        outline-color: Highlight;
-      }
+      @include focus-ring.ring(inside);
     }
   }
 
