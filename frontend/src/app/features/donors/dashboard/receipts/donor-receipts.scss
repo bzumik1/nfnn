@@ -117,9 +117,8 @@ a {
   }
 
   .receipt-saved {
-    flex: none;
+    flex: 1 1 var(--pdf-status-reserve);
     flex-wrap: nowrap;
-    inline-size: var(--pdf-status-reserve);
     min-inline-size: 0;
     max-inline-size: 100%;
     margin-top: 0;
