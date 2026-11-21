@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/people/admin-people.spec.ts > Given an administrator whose check of who signs the receipts fails > when they try again, then the signatory loads and the part offers the choice",
+    "replacement": "src/app/features/admin/people/admin-people.spec.ts > Given an administrator whose check of who signs the receipts fails > when they try again, then the retry is busy and keeps the focus, and the signatory loads and the part offers the choice",
+    "reason": "#1955 (the shared failure pattern of #1902, R131): the load failure is the shared app-load-failure block, whose busy retry keeps the focus and whose new failure is a new alert, so the test names what it now proves",
+    "contract": "docs/frontend-overview.md, load failures (app-load-failure)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signatory/receipt-signatory.spec.ts > Given the receipt settings card that shows who signs the receipts > when the signatory cannot be loaded, then it says so and loads again on request",
+    "replacement": "src/app/features/admin/settings/receipt-signatory/receipt-signatory.spec.ts > Given the receipt settings card that shows who signs the receipts > when the signatory cannot be loaded, then it says so and a busy retry keeps the focus and loads again",
+    "reason": "#1955 (the shared failure pattern of #1902, R131): the load failure is the shared app-load-failure block, whose busy retry keeps the focus and whose new failure is a new alert, so the test names what it now proves",
+    "contract": "docs/frontend-overview.md, load failures (app-load-failure)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/settings/receipt-signing-key/receipt-signing-key.spec.ts > Given the receipt signing key section of the receipt settings > when the keys cannot be loaded, then an alert offers a retry that asks again",
+    "replacement": "src/app/features/admin/settings/receipt-signing-key/receipt-signing-key.spec.ts > Given the receipt signing key section of the receipt settings > when the keys cannot be loaded, then an alert says so and a busy retry keeps the focus and asks again",
+    "reason": "#1955 (the shared failure pattern of #1902, R131): the load failure is the shared app-load-failure block, whose busy retry keeps the focus and whose new failure is a new alert, so the test names what it now proves",
+    "contract": "docs/frontend-overview.md, load failures (app-load-failure)"
+  }
+]
