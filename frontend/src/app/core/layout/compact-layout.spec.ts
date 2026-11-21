@@ -180,6 +180,21 @@ describe('Given the compact layout of the app', () => {
       ).toContain('width: 1rem');
     });
 
+    it('then it names the root text size and follows it when the text of an open page grows', () => {
+      const view = new FakeWindow(1194, 17);
+      const layout = layoutIn(view);
+      const before = layout.rootFontPx();
+
+      view.enlargeText(32);
+
+      expect(before).toBe(17);
+      expect(layout.rootFontPx()).toBe(32);
+    });
+
+    it('then a browser that cannot answer media queries names the default root text size', () => {
+      expect(layoutIn({}).rootFontPx()).toBe(16);
+    });
+
     it('then once the app goes, the box that watches the text size goes with it', () => {
       const view = new FakeWindow(1194);
       layoutIn(view);

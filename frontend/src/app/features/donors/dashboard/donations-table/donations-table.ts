@@ -44,9 +44,13 @@ export function donationStatusLabel(status: DonationStatus): string {
 })
 export class DonationsTable {
   protected readonly donations = inject(DonorDonations);
-  protected readonly rows = inject(CompactLayout).listsAsRows;
-  private readonly withinLedger = signal(false);
-  protected readonly narrow = computed(() => !this.rows() && this.withinLedger());
+  private readonly layout = inject(CompactLayout);
+  protected readonly rows = this.layout.listsAsRows;
+  private readonly hostWidth = signal<number | null>(null);
+  protected readonly narrow = computed(() => {
+    const width = this.hostWidth();
+    return !this.rows() && width !== null && width / this.layout.rootFontPx() <= LEDGER_REM;
+  });
 
   readonly items = input.required<readonly DonationItem[]>();
   readonly withReceipts = input(true);
@@ -62,13 +66,9 @@ export class DonationsTable {
     }
     const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
     const follow = (inlineSize: number): void => {
-      if (!(inlineSize > 0)) {
-        return;
+      if (inlineSize > 0) {
+        this.hostWidth.set(inlineSize);
       }
-      const rootFontPx =
-        parseFloat(view.getComputedStyle(document.documentElement).fontSize) ||
-        DEFAULT_ROOT_FONT_PX;
-      this.withinLedger.set(inlineSize / rootFontPx <= LEDGER_REM);
     };
     const observer = new Observer((entries) => {
       const entry = entries.at(-1);

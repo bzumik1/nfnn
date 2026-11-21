@@ -50,7 +50,13 @@
         <th role="columnheader" class="amount" i18n="@@donor.dashboard.payments.col.amount">
           Částka
         </th>
-        <th role="columnheader" i18n="@@donor.dashboard.payments.col.purpose">Účel</th>
+        <th
+          role="columnheader"
+          class="purpose-header"
+          i18n="@@donor.dashboard.payments.col.purpose"
+        >
+          Účel
+        </th>
         @if (!narrow()) {
           <th role="columnheader" i18n="@@donor.dashboard.payments.col.status">Stav</th>
         }
