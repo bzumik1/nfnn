@@ -173,10 +173,12 @@
     min-width: 0;
   }
 
-  > li::before,
+  > li:not(.account-gifts)::before,
+  .account-gift-count::before,
   .account-total::before {
     content: '·' / '';
     display: inline-block;
+    flex-shrink: 0;
     width: var(--meta-separator-width);
     text-align: center;
   }
@@ -186,8 +188,10 @@
   }
 }
 
+.account-gift-count,
 .account-total {
   display: flex;
+  min-width: 0;
 }
 
 .account-meta-wrap {
@@ -397,9 +401,13 @@
   dd {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
+    align-items: start;
     gap: var(--space-1-5) var(--space-2-5);
     min-block-size: var(--button-small-min-height);
+
+    > .bank-value {
+      padding-block-start: calc((var(--button-small-min-height) - 1lh) / 2);
+    }
 
     > app-copy-button.has-failed {
       grid-column: 1 / -1;

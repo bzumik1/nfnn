@@ -231,6 +231,52 @@ test.describe('Given a signed-in donor on a phone', () => {
   }
 });
 
+test.describe('Given a signed-in donor on a phone with the largest system text', () => {
+  for (const width of [375, 390]) {
+    test(`when Bankovní účty lists accounts with gifts in the account sheet ${width} px wide, then each gift count starts its line whole beside its separator and no text of the row is clipped`, async ({
+      page,
+    }) => {
+      const rows = await openBankAccounts(page, width);
+      await page.addStyleTag({ content: 'html { font-size: 53px; }' });
+
+      const gifts = rows.locator('.account-gifts');
+      await expect(gifts).toHaveCount(2);
+      const placed = await gifts.evaluateAll((found) =>
+        found.map((item) => {
+          const wrap = item.closest('.account-meta-wrap')!;
+          const firstGlyph = (part: Element) => {
+            const text = document
+              .createTreeWalker(part, NodeFilter.SHOW_TEXT, {
+                acceptNode: (node) =>
+                  node.textContent!.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT,
+              })
+              .nextNode()!;
+            const start = text.textContent!.search(/\S/);
+            const range = document.createRange();
+            range.setStart(text, start);
+            range.setEnd(text, start + 1);
+            return range.getBoundingClientRect();
+          };
+          const wrapLeft = wrap.getBoundingClientRect().left;
+          const count = item.querySelector('.account-gift-count')!;
+          return {
+            unclipped: wrap.scrollWidth <= wrap.clientWidth,
+            countWhole: firstGlyph(count).left >= wrapLeft - 0.5,
+            totalWhole: firstGlyph(item.querySelector('.account-total')!).left >= wrapLeft - 0.5,
+            countOnFirstLine:
+              Math.round(count.getBoundingClientRect().top) ===
+              Math.round(item.getBoundingClientRect().top),
+          };
+        }),
+      );
+      expect(placed).toEqual([
+        { unclipped: true, countWhole: true, totalWhole: true, countOnFirstLine: true },
+        { unclipped: true, countWhole: true, totalWhole: true, countOnFirstLine: true },
+      ]);
+    });
+  }
+});
+
 test.describe('Given a signed-in donor adding a bank account on a wide screen', () => {
   for (const width of [820, 1280]) {
     test(`when Přidat bankovní účet opens ${width} px wide, then the QR code starts level with the first payment fact`, async ({
@@ -246,8 +292,26 @@ test.describe('Given a signed-in donor adding a bank account on a wide screen', 
       const qr = dialog.locator('.add-account-qr');
       const facts = dialog.locator('.add-account-bank');
       await expect(facts).toBeVisible();
-      const [qrBox, factsBox] = [(await qr.boundingBox())!, (await facts.boundingBox())!];
-      expect(Math.abs(qrBox.y - factsBox.y)).toBeLessThanOrEqual(1);
+      await expect(qr).toBeVisible();
+      await expect
+        .poll(
+          () =>
+            dialog.evaluate(
+              (sheet) =>
+                sheet
+                  .getAnimations({ subtree: true })
+                  .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+                  .filter((animation) => animation.playState === 'running').length,
+            ),
+          { message: 'the sheet has settled' },
+        )
+        .toBe(0);
+      const [qrTop, factsTop] = await dialog.evaluate((sheet) =>
+        ['.add-account-qr', '.add-account-bank'].map(
+          (part) => sheet.querySelector(part)!.getBoundingClientRect().top,
+        ),
+      );
+      expect(Math.abs(qrTop - factsTop)).toBeLessThanOrEqual(1);
     });
   }
 });
