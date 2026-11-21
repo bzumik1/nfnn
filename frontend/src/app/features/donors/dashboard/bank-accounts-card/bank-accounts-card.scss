@@ -80,10 +80,6 @@
   align-items: start;
 }
 
-.accounts-add > .ui-list__lead {
-  block-size: 1lh;
-}
-
 .accounts-add:disabled .ui-list__glyph {
   color: inherit;
 }
@@ -119,9 +115,7 @@
 }
 
 .account-lead {
-  align-self: start;
   font-size: var(--text-account-number);
-  margin-block: calc((1lh - var(--list-lead-size)) / 2);
 }
 
 .account-row > .account-line {

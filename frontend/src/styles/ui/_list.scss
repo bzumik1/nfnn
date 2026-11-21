@@ -19,6 +19,7 @@
     'lead title value chevron'
     'lead meta value chevron';
   gap: var(--space-1) 0;
+  align-content: center;
   align-items: center;
   width: 100%;
   min-height: var(--list-row-min-height);
@@ -56,6 +57,9 @@ div.ui-list__row {
 
 .ui-list__lead {
   grid-area: lead;
+  align-self: start;
+  block-size: var(--list-lead-size);
+  margin-block: calc((1lh - var(--list-lead-size)) / 2);
   margin-inline-end: var(--space-3);
   display: flex;
   align-items: center;
@@ -172,22 +176,8 @@ div.ui-list__row {
   padding: var(--space-4) var(--list-row-padding-inline) var(--space-1);
 }
 
-@include bp.container-down(list-card, pair) {
-  .ui-card > .ui-list > *,
-  .ui-card__group > * {
-    --list-row-padding-inline: var(--space-4);
-  }
-
-  .ui-card .ui-list__lead.ui-list__glyph {
-    width: auto;
-    margin-inline-end: var(--space-2);
-  }
-
-  .ui-card .ui-list__chevron {
-    margin-inline-start: var(--space-2);
-  }
-
-  .ui-card .ui-list__row:has(> .ui-list__value):not(:has(> .ui-list__state, > .ui-switch)) {
+@include bp.container-down(list-card, narrow) {
+  .ui-card .ui-list__row:has(> .ui-list__value):not(:has(> .ui-switch)) {
     grid-template-areas:
       'lead title title chevron'
       'lead meta meta chevron'
@@ -203,11 +193,70 @@ div.ui-list__row {
       'lead value value chevron';
   }
 
-  .ui-card .ui-list__row:not(:has(> .ui-list__state, > .ui-switch)) > .ui-list__value {
+  .ui-card .ui-list__row:has(> .ui-list__value):has(> .ui-list__state):not(:has(> .ui-switch)) {
+    grid-template-areas:
+      'lead title title chevron'
+      'lead meta meta chevron'
+      'lead value state chevron';
+  }
+
+  .ui-card
+    .ui-list__row:has(> .ui-list__value):has(> .ui-list__state):not(
+      :has(> .ui-list__meta, > .ui-switch)
+    ) {
+    grid-template-areas:
+      'lead title title chevron'
+      'lead value state chevron';
+
+    > .ui-list__title {
+      grid-row: title;
+    }
+  }
+
+  .ui-card .ui-list__row:not(:has(> .ui-switch)) > .ui-list__value {
     justify-self: start;
     margin-inline-start: 0;
     text-align: start;
     white-space: normal;
+  }
+}
+
+@include bp.container-down(list-card, pair) {
+  .ui-card > .ui-list > *,
+  .ui-card__group > * {
+    --list-row-padding-inline: var(--space-4);
+  }
+
+  .ui-card .ui-list__lead.ui-list__glyph {
+    width: auto;
+    margin-inline-end: var(--space-2);
+  }
+
+  .ui-card .ui-list__chevron {
+    margin-inline-start: var(--space-2);
+  }
+
+  .ui-card .ui-list__row:has(> .ui-list__value):has(> .ui-list__state):not(:has(> .ui-switch)) {
+    grid-template-areas:
+      'lead title title chevron'
+      'lead meta meta chevron'
+      'lead value value chevron'
+      'lead state state chevron';
+  }
+
+  .ui-card
+    .ui-list__row:has(> .ui-list__value):has(> .ui-list__state):not(
+      :has(> .ui-list__meta, > .ui-switch)
+    ) {
+    grid-template-areas:
+      'lead title title chevron'
+      'lead value value chevron'
+      'lead state state chevron';
+  }
+
+  .ui-card .ui-list__row:has(> .ui-list__value):not(:has(> .ui-switch)) > .ui-list__state {
+    justify-self: start;
+    margin-inline-start: 0;
   }
 }
 
@@ -298,6 +347,12 @@ div.ui-list__row {
   border-radius: var(--radius-sm);
   background: var(--color-tile-neutral);
   color: var(--color-on-tile);
+
+  svg {
+    flex: none;
+    inline-size: var(--list-tile-icon-size);
+    block-size: var(--list-tile-icon-size);
+  }
 }
 
 .ui-list__tile--accent {
@@ -319,6 +374,12 @@ div.ui-list__row {
 
 .ui-list__glyph {
   color: var(--color-accent);
+
+  svg {
+    flex: none;
+    inline-size: var(--list-glyph-size);
+    block-size: var(--list-glyph-size);
+  }
 }
 
 .ui-list--grouped {
