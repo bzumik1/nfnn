@@ -260,6 +260,26 @@ describe('Given the sign-in and security card of the details page', () => {
     expect(card.values()[2]).toBe('VypnutéPřihlášení přístupovým klíčem je chráněné i bez kódu.');
   });
 
+  it('when the passkeys fail to load, then the passkeys row says so instead of loading for good, and counts them once they load again', async () => {
+    fixture = TestBed.createComponent(AccountCard);
+    await card.settle();
+    http
+      .expectOne(PASSKEYS_URL)
+      .flush(problem('server-error'), { status: 500, statusText: 'Server Error' });
+    await card.settle();
+
+    expect(card.values()[3]).toBe('Nepodařilo se načíst');
+
+    card.button('Spravovat přístupové klíče')?.click();
+    await card.settle();
+    card.button('Zkusit znovu')?.click();
+    await card.settle();
+    http.expectOne(PASSKEYS_URL).flush({ items: [IPHONE] });
+    await card.settle();
+
+    expect(card.values()[3]).toBe('1 klíč');
+  });
+
   describe('when the donor turns the second factor on', () => {
     beforeEach(async () => {
       await render();

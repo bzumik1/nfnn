@@ -16,6 +16,7 @@ import {
   catchError,
   EMPTY,
   filter,
+  finalize,
   last,
   map,
   Observable,
@@ -163,6 +164,7 @@ export class DonorDonations implements GiftFeed {
     inject(ActivatedRoute).snapshot.queryParamMap.get(RECEIPT_RESTART_PARAM);
 
   readonly state = signal<DonationsState>('loading');
+  readonly retrying = signal(false);
   readonly summary = signal<DonationSummaryResponse | null>(null);
   readonly items = signal<readonly DonationItem[]>([]);
 
@@ -366,6 +368,13 @@ export class DonorDonations implements GiftFeed {
   load(): void {
     this.state.set('loading');
     this.fetchDonations();
+  }
+
+  retry(): void {
+    this.retrying.set(true);
+    this.reloadDonations()
+      .pipe(finalize(() => this.retrying.set(false)))
+      .subscribe();
   }
 
   refreshFromBank(): void {

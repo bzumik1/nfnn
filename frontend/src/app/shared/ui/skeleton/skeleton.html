@@ -1,8 +1,19 @@
-<div class="ui-skeleton" [class.ui-card]="!inset()" [class.ui-skeleton--inset]="inset()">
-  @if (!inset()) {
-    <span class="ui-skeleton__line ui-skeleton__line--title"></span>
-  }
-  @for (line of lines(); track line) {
-    <span class="ui-skeleton__line"></span>
-  }
-</div>
+@if (title(); as heading) {
+  <div class="ui-card ui-skeleton-card">
+    <p class="ui-card__title">{{ heading }}</p>
+    <div class="ui-skeleton ui-skeleton--inset">
+      @for (line of lines(); track line) {
+        <span class="ui-skeleton__line"></span>
+      }
+    </div>
+  </div>
+} @else {
+  <div class="ui-skeleton" [class.ui-card]="!inset()" [class.ui-skeleton--inset]="inset()">
+    @if (!inset()) {
+      <span class="ui-skeleton__line ui-skeleton__line--title"></span>
+    }
+    @for (line of lines(); track line) {
+      <span class="ui-skeleton__line"></span>
+    }
+  </div>
+}

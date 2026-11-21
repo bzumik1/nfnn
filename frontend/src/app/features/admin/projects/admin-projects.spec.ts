@@ -134,13 +134,12 @@ describe('Given an administrator on the project list', () => {
     ]);
   });
 
-  it('when the list cannot be loaded, then an alert offers a retry that asks again', async () => {
+  it('when the list cannot be loaded, then an alert says only what failed and a retry beside it asks again', async () => {
     http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle();
 
-    expect(texts('[role="alert"]:not(:empty)')).toEqual([
-      'Příběhy se nepodařilo načíst. Zkusit znovu',
-    ]);
+    expect(texts('[role="alert"]:not(:empty)')).toEqual(['Příběhy se nepodařilo načíst.']);
+    expect(fixture.nativeElement.querySelector('[role="alert"] button')).toBeNull();
     (
       fixture.nativeElement.querySelector('.ui-load-state--error button') as HTMLButtonElement
     ).click();

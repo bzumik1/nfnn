@@ -34,3 +34,29 @@ describe('Given a skeleton in place of content that is loading', () => {
     expect(host().querySelectorAll('.ui-skeleton__line')).toHaveLength(4);
   });
 });
+
+describe('Given a skeleton for a card whose title is known before its data', () => {
+  let fixture: ComponentFixture<Skeleton>;
+
+  beforeEach(async () => {
+    fixture = TestBed.createComponent(Skeleton);
+    fixture.componentRef.setInput('rows', 3);
+    fixture.componentRef.setInput('title', 'Stav záloh');
+    await fixture.whenStable();
+  });
+
+  const host = () => fixture.nativeElement as HTMLElement;
+
+  it('when it shows, then the card shows its own title over the rows instead of a title bar', () => {
+    expect(host().querySelector('.ui-card .ui-card__title')?.textContent?.trim()).toBe(
+      'Stav záloh',
+    );
+    expect(host().querySelector('.ui-skeleton__line--title')).toBeNull();
+    expect(host().querySelectorAll('.ui-skeleton--inset .ui-skeleton__line')).toHaveLength(3);
+  });
+
+  it('when it shows, then a screen reader still hears nothing of it', () => {
+    expect(host().getAttribute('aria-hidden')).toBe('true');
+    expect(host().querySelector('h1, h2, h3, [role="heading"]')).toBeNull();
+  });
+});

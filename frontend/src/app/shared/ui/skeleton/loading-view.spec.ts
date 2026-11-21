@@ -20,7 +20,7 @@ type PageState = 'loading' | 'ready' | 'error';
           <p class="content" [class.appears]="view.appears()">Obsah</p>
         }
         @case ('error') {
-          <p class="failure">Nepovedlo se.</p>
+          <p class="failure" [class.appears]="view.appears()">Nepovedlo se.</p>
         }
       }
     </section>
@@ -28,6 +28,26 @@ type PageState = 'loading' | 'ready' | 'error';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class Page {
+  readonly state = signal<PageState>('loading');
+  readonly view = loadingView(this.state, (state) => state === 'loading');
+}
+
+@Component({
+  template: `
+    @switch (view.state()) {
+      @case ('loading') {
+        @if (view.skeleton()) {
+          <div class="skeleton"></div>
+        }
+      }
+      @case ('error') {
+        <p class="failure" [class.appears]="view.appears()">Nepovedlo se.</p>
+      }
+    }
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class PageShowingFailureAtOnce {
   readonly state = signal<PageState>('loading');
   readonly view = loadingView(
     this.state,
@@ -142,14 +162,31 @@ describe('Given a page that loads its data behind a skeleton', () => {
     expect(element('.content')?.classList).toContain('appears');
   });
 
-  it('when a failure follows a shown skeleton, then the failure shows at once without the minimum', async () => {
+  it('when a failure follows a shown skeleton, then the skeleton stands its minimum and the failure then appears like content', async () => {
     await open();
     await wait(300);
 
     await answer('error');
 
+    expect(element('.skeleton')).not.toBeNull();
+    expect(element('.failure')).toBeNull();
+
+    await wait(399);
+    expect(element('.failure')).toBeNull();
+
+    await wait(1);
     expect(element('.skeleton')).toBeNull();
-    expect(element('.failure')).not.toBeNull();
+    expect(element('.failure')?.classList).toContain('appears');
+  });
+
+  it('when a failure comes before the delay, then it shows at once without appearing', async () => {
+    await open();
+    await wait(100);
+
+    await answer('error');
+
+    expect(element('.skeleton')).toBeNull();
+    expect(element('.failure')?.classList).not.toContain('appears');
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -157,6 +194,7 @@ describe('Given a page that loads its data behind a skeleton', () => {
     await open();
     await wait(300);
     await answer('error');
+    await wait(700);
 
     await answer('loading');
     await wait(100);
@@ -230,5 +268,44 @@ describe('Given a page that loads its data behind a skeleton', () => {
 
     expect(element('.loading')).not.toBeNull();
     expect(element('.skeleton')).toBeNull();
+  });
+});
+
+describe('Given a page whose failure shows at once, behind a skeleton', () => {
+  let fixture: ComponentFixture<PageShowingFailureAtOnce>;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: Connectivity, useValue: { offline: signal(false) } },
+        {
+          provide: LOADING_TIMINGS,
+          useValue: () => ({ delayMs: 300, minimumMs: 400, appearMs: 300 }),
+        },
+      ],
+    });
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  const element = (selector: string) =>
+    (fixture.nativeElement as HTMLElement).querySelector(selector);
+
+  it('when the failure follows a shown skeleton, then it replaces the skeleton at once without the minimum and without appearing', async () => {
+    fixture = TestBed.createComponent(PageShowingFailureAtOnce);
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(300);
+    fixture.detectChanges();
+    expect(element('.skeleton')).not.toBeNull();
+
+    fixture.componentInstance.state.set('error');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+
+    expect(element('.skeleton')).toBeNull();
+    expect(element('.failure')?.classList).not.toContain('appears');
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

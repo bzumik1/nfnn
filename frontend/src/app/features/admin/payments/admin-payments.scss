@@ -86,6 +86,10 @@
   line-height: var(--leading-normal);
 }
 
+.payments-failure {
+  margin: 0 var(--space-6) var(--space-5);
+}
+
 .payments-card tbody tr {
   border-top-color: var(--color-divider);
 }

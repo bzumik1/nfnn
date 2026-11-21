@@ -35,6 +35,7 @@ import {
   tap,
   timer,
 } from 'rxjs';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { LiveUpdates } from '../../../../core/live/live-updates';
 import { describeProblem, problemOf, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -136,6 +137,7 @@ const PAYMENT_WATCH_CHECKS = 20;
 @Component({
   selector: 'app-bank-accounts-card',
   imports: [
+    LoadFailure,
     Dialog,
     Disclosure,
     CopyButton,
@@ -184,6 +186,7 @@ export class BankAccountsCard {
   protected readonly helpOpen = signal(false);
 
   protected readonly state = signal<ListState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly accounts = signal<readonly BankAccountItem[]>([]);
   protected readonly confirming = signal<string | null>(null);
   protected readonly busy = signal<string | null>(null);
@@ -285,7 +288,7 @@ export class BankAccountsCard {
   }
 
   protected retry(): void {
-    this.state.set('loading');
+    this.retrying.set(true);
     this.fetch();
   }
 
@@ -294,12 +297,14 @@ export class BankAccountsCard {
     const list = shownBefore ? this.kept.read('bank-accounts', server) : server;
     list.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ items }) => {
+        this.retrying.set(false);
         this.showAccounts(items);
         if (focusTitle) {
           afterNextRender(() => this.focusTitle(), { injector: this.injector });
         }
       },
       error: (failure: unknown) => {
+        this.retrying.set(false);
         if (this.sessionHasEnded(failure)) {
           this.sessionEnded.emit();
           return;

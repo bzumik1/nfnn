@@ -9,26 +9,28 @@
   @case ('error') {
     <section class="detail detail--waiting ui-intro">
       <div class="ui-intro__head ui-container">
-        <p class="ui-notice ui-notice--alert" role="alert">
+        <h1 class="ui-intro__title" tabindex="-1">
+          @if (kind === 'news') {
+            <ng-container i18n="@@content.detail.error.news.title"
+              >Aktualita se nenačetla</ng-container
+            >
+          } @else {
+            <ng-container i18n="@@content.detail.error.projects.title"
+              >Příběh se nenačetl</ng-container
+            >
+          }
+        </h1>
+        <app-load-failure class="detail-failure" [retrying]="retrying()" (retry)="retry()">
           @if (kind === 'news') {
             <ng-container i18n="@@content.detail.error.news"
-              >Aktualitu se nepodařilo načíst. Zkuste to znovu.</ng-container
+              >Aktualitu se nepodařilo načíst.</ng-container
             >
           } @else {
             <ng-container i18n="@@content.detail.error.projects"
-              >Příběh se nepodařilo načíst. Zkuste to znovu.</ng-container
+              >Příběh se nepodařilo načíst.</ng-container
             >
           }
-        </p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-cta ui-cta--ghost"
-          (click)="retry()"
-          i18n="@@content.detail.retry"
-        >
-          Zkusit znovu
-        </button>
+        </app-load-failure>
       </div>
     </section>
   }

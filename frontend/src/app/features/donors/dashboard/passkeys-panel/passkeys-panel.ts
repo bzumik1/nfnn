@@ -18,6 +18,7 @@ import {
 import { FormsModule, NgForm } from '@angular/forms';
 import { Observable, finalize, from, map, of, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { Confirmation, Passkey } from '../../../../core/auth/donor';
@@ -54,6 +55,7 @@ const RENAME_BUTTONS = '[id^="passkey-rename-button-"]';
   selector: 'app-passkeys-panel',
   providers: [BusyAnnouncement],
   imports: [
+    LoadFailure,
     BusyButton,
     BusyLabel,
     Disclosure,
@@ -84,6 +86,7 @@ export class PasskeysPanel {
   readonly labelledBy = input<string | null>(null);
   readonly sessionEnded = output<void>();
   readonly countChanged = output<number>();
+  readonly countUnknown = output<void>();
 
   private readonly region = viewChild.required<ElementRef<HTMLElement>>('region');
   private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
@@ -108,6 +111,7 @@ export class PasskeysPanel {
     () => !this.hasPassword() && this.passkeys()?.length === 0,
   );
   protected readonly loadError = signal('');
+  protected readonly retrying = signal(false);
   protected readonly adding = signal(false);
   protected readonly saving = signal(false);
   protected readonly error = signal('');
@@ -146,13 +150,30 @@ export class PasskeysPanel {
 
   load(shownBefore = false, quietly = false): void {
     this.loadError.set('');
+    this.fetch(shownBefore, quietly);
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch(false, false);
+  }
+
+  private fetch(shownBefore: boolean, quietly: boolean): void {
     const server = this.changes.track(this.authApi.passkeys());
     const passkeys = shownBefore ? this.kept.read('passkeys', server) : server;
-    passkeys.subscribe({
-      next: (list) => this.passkeys.set(list.items),
+    passkeys.pipe(finalize(() => this.retrying.set(false))).subscribe({
+      next: (list) => {
+        if (this.retrying()) {
+          this.loadError.set('');
+        }
+        this.passkeys.set(list.items);
+      },
       error: (failure: unknown) => {
         if (this.sessionLost(failure) || (quietly && this.passkeys() !== null)) {
           return;
+        }
+        if (this.passkeys() === null) {
+          this.countUnknown.emit();
         }
         this.loadError.set(
           describeProblem(

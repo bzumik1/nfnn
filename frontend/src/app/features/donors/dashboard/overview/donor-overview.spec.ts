@@ -164,5 +164,25 @@ describe("Given the donor's overview while the gifts load", () => {
 
     expect(all('app-skeleton')).toEqual([]);
     expect(root().querySelector('app-donations-pending')).not.toBeNull();
+    expect(root().querySelector('app-donations-pending')?.classList).not.toContain(
+      'ui-skeleton-reveal',
+    );
+  });
+
+  it('when the gifts fail after the skeleton showed, then the skeleton stays for its minimum and the failure is revealed in its place', async () => {
+    await open();
+    await wait(300);
+
+    state.set('error');
+    await settle();
+    expect(all('app-skeleton').length).toBeGreaterThan(0);
+    expect(root().querySelector('app-donations-pending')).toBeNull();
+
+    await wait(400);
+
+    expect(all('app-skeleton')).toEqual([]);
+    expect(root().querySelector('app-donations-pending')?.classList).toContain(
+      'ui-skeleton-reveal',
+    );
   });
 });

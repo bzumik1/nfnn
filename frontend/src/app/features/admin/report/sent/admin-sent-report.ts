@@ -73,11 +73,7 @@ export class AdminSentReport {
   protected readonly known = MONTH_SHAPE.test(this.month);
   protected readonly monthName = this.known ? formatReportMonth(this.month) : '';
   protected readonly state = signal<LoadState>(this.known ? 'loading' : 'not-found');
-  protected readonly loadView = loadingView(
-    this.state,
-    (state) => state === 'loading',
-    (state) => state !== 'ready',
-  );
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly report = signal<SentReportDetailResponse | null>(null);
   protected readonly blocks = computed(() => {
     const report = this.report();

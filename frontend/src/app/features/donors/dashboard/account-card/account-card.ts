@@ -97,6 +97,7 @@ export class AccountCard {
 
   protected readonly donor = this.auth.donor;
   protected readonly passkeyCount = signal<number | null>(null);
+  protected readonly passkeyCountUnknown = signal(false);
   protected readonly pendingEmailChange = computed(() => this.donor()?.pendingEmailChange ?? null);
   protected readonly secondFactor = computed(
     () => this.donor()?.secondFactor ?? { enabled: false, neededForAdministration: false },
