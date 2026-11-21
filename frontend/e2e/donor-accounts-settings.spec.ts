@@ -198,6 +198,36 @@ test.describe('Given a signed-in donor on a phone', () => {
       expect(new Set(buttons.map((each) => each.buttonStart)).size).toBe(1);
       expect(new Set(placed.map((each) => each.gap)).size).toBe(1);
     });
+
+    test(`when copying a payment fact fails in Přidat bankovní účet ${width} px wide, then the failure message takes its own line under the value and the value keeps its width`, async ({
+      page,
+    }) => {
+      await page.addInitScript(() => {
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: { writeText: () => Promise.reject(new Error('Clipboard refused')) },
+        });
+      });
+      await openBankAccounts(page, width);
+      await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+
+      const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
+      const row = dialog
+        .locator('.add-account-row')
+        .filter({ has: page.locator('app-copy-button') })
+        .first();
+      const copy = row.locator('app-copy-button');
+      await copy.getByRole('button').click();
+      await expect(copy).toHaveClass(/has-failed/);
+
+      const placed = await row.evaluate((found) => {
+        const value = found.querySelector('.bank-value')!.getBoundingClientRect();
+        const failure = found.querySelector('app-copy-button')!.getBoundingClientRect();
+        return { valueWidth: value.width, valueBottom: value.bottom, failureTop: failure.top };
+      });
+      expect(placed.valueWidth).toBeGreaterThan(0);
+      expect(placed.failureTop).toBeGreaterThanOrEqual(placed.valueBottom);
+    });
   }
 });
 
