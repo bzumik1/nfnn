@@ -227,7 +227,6 @@ export class AdminPayments {
   );
   protected readonly changedMeanwhile = signal(false);
   private afterReload: (() => void) | null = null;
-  private leftByStep: string | null = null;
 
   protected readonly hasMore = computed(() => this.items().length < this.total());
   protected readonly filteredDonorName = computed(
@@ -240,17 +239,7 @@ export class AdminPayments {
   );
 
   constructor() {
-    afterNextRender(
-      () => {
-        this.leftByStep =
-          this.router.lastSuccessfulNavigation()?.trigger === 'popstate'
-            ? this.backTarget.leftPath
-            : null;
-        this.title().nativeElement.focus();
-        this.focusRowLeftBy();
-      },
-      { injector: this.injector },
-    );
+    afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
     this.pages
       .pipe(
         switchMap((filters) => this.firstPage(filters)),
@@ -495,33 +484,6 @@ export class AdminPayments {
     }
     this.state.set('ready');
     afterReload?.();
-    if (this.leftByStep !== null) {
-      afterNextRender(() => this.focusRowLeftBy(), { injector: this.injector });
-    }
-  }
-
-  private focusRowLeftBy(): void {
-    const left = this.leftByStep;
-    if (left === null || this.state() !== 'ready') {
-      return;
-    }
-    this.leftByStep = null;
-    const shown = this.rows() ? this.months().flatMap((month) => month.items) : this.items();
-    const index = shown.findIndex(
-      (item) => item.donation !== null && this.donorHref(item.donation.donorId) === left,
-    );
-    const row = this.host.nativeElement
-      .querySelectorAll<HTMLElement>('[data-payment-row]')
-      .item(index);
-    if (index < 0 || row === null) {
-      return;
-    }
-    const link = Array.from(row.querySelectorAll<HTMLElement>('a[href]')).find(
-      (candidate) => candidate.getAttribute('href') === left,
-    );
-    const target = link ?? row;
-    target.focus({ preventScroll: true });
-    target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }
 
   private leaveOnRefusal(failure: unknown): boolean {
@@ -605,6 +567,11 @@ export class AdminPayments {
     this.notice.set(null);
     this.changedDonor.set(null);
     this.opened.set(payment);
+  }
+
+  protected leadsTo(payment: AdminPaymentResponse): string | null {
+    const donation = payment.donation;
+    return donation?.donorName ? this.donorHref(donation.donorId) : null;
   }
 
   protected donorHref(donorId: string): string {

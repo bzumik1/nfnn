@@ -1,13 +1,17 @@
-import { DOCUMENT, Injector, untracked } from '@angular/core';
+import { afterNextRender, type AfterRenderRef, DOCUMENT, Injector, untracked } from '@angular/core';
 import { NavigationStart, Router, Scroll } from '@angular/router';
+import { PagePlacement } from './page-placement';
 import { ScrollHold } from './scroll-hold';
 
 const PLACE_WAIT_LONGEST_MS = 3000;
+const UNANCHORED_LONGEST_MS = 4000;
+const SCROLL_ANCHORING = 'overflow-anchor';
 const VISITOR_MOVES = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'focusin'] as const;
 const LISTENING: AddEventListenerOptions = { passive: true, capture: true };
 
 const followed = new WeakSet<Router>();
 let stopWaiting: (() => void) | null = null;
+let anchorAgain: (() => void) | null = null;
 
 export function placeOnceGrown(restored: Scroll, injector: Injector, placed: () => void): void {
   const top = restored.position?.[1] ?? 0;
@@ -20,6 +24,7 @@ export function placeOnceGrown(restored: Scroll, injector: Injector, placed: () 
     router.events.subscribe((event) => {
       if (event instanceof NavigationStart) {
         stopWaiting?.();
+        anchorAgain?.();
       }
     });
   }
@@ -45,6 +50,7 @@ export function placeOnceGrown(restored: Scroll, injector: Injector, placed: () 
     if (reaches(view, top)) {
       if (!hidesFocus(view, top)) {
         scrollHold.run(() => view.scrollTo({ top, behavior: 'instant' }));
+        unanchoredUntilDrawn(view, injector);
       }
       stop();
     }
@@ -70,6 +76,37 @@ export function placeOnceGrown(restored: Scroll, injector: Injector, placed: () 
     growth.observe(view.document.body);
     placeOnceReached();
   });
+}
+
+function unanchoredUntilDrawn(view: Window, injector: Injector): void {
+  anchorAgain?.();
+  const root = view.document.documentElement;
+  const before = root.style.getPropertyValue(SCROLL_ANCHORING);
+  root.style.setProperty(SCROLL_ANCHORING, 'none');
+  let drawing: AfterRenderRef | null = null;
+  const anchor = (): void => {
+    if (anchorAgain !== anchor) {
+      return;
+    }
+    anchorAgain = null;
+    drawing?.destroy();
+    view.clearTimeout(timer);
+    if (before === '') {
+      root.style.removeProperty(SCROLL_ANCHORING);
+    } else {
+      root.style.setProperty(SCROLL_ANCHORING, before);
+    }
+  };
+  const timer = view.setTimeout(anchor, UNANCHORED_LONGEST_MS);
+  anchorAgain = anchor;
+  void injector
+    .get(PagePlacement)
+    .answered(view, PLACE_WAIT_LONGEST_MS)
+    .then(() => {
+      if (anchorAgain === anchor) {
+        drawing = afterNextRender(() => view.requestAnimationFrame(anchor), { injector });
+      }
+    });
 }
 
 function reaches(view: Window, top: number): boolean {

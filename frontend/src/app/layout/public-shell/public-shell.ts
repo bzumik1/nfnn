@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -11,6 +12,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
+  ActivatedRoute,
   NavigationEnd,
   NavigationSkipped,
   NavigationSkippedCode,
@@ -19,9 +21,10 @@ import {
 } from '@angular/router';
 import { KeptTabPages } from '../../core/navigation/kept-tab-pages';
 import { PageFocus } from '../../core/navigation/page-focus';
-import { RouteChrome } from '../../core/navigation/route-chrome';
+import { chromeOf, RouteChrome } from '../../core/navigation/route-chrome';
 import { AppHeader } from '../app-header/app-header';
 import { TabBar } from '../tab-bar/tab-bar';
+import { reserveRoomForTabBar } from '../tab-bar/tab-bar-room';
 import { SignedOutNotice } from '../signed-out-notice/signed-out-notice';
 import { SetupRedirect } from '../../features/operations/setup/setup-redirect';
 
@@ -46,7 +49,11 @@ export class PublicShell {
   constructor() {
     inject(SetupRedirect).checkOnce();
     const keptTabPages = inject(KeptTabPages);
-    inject(DestroyRef).onDestroy(() => keptTabPages.forget());
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => keptTabPages.forget());
+    if (chromeOf(inject(ActivatedRoute).snapshot.root).tabBar) {
+      destroyRef.onDestroy(reserveRoomForTabBar(inject(DOCUMENT)));
+    }
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event instanceof NavigationEnd && this.pageFocus.movesOnLastNavigation()) {
         const fragment = this.router.parseUrl(event.urlAfterRedirects).fragment;

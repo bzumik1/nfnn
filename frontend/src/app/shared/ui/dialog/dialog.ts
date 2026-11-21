@@ -26,7 +26,9 @@ import { canPullSheetFrom, PullIntent, pullIntent, SheetDrag, TouchOrigin } from
 import { Appearance } from '../../../core/appearance/appearance';
 import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { focusInView } from '../../../core/layout/focus-in-view';
 import { EDGE_SWIPE_DRAGGING_CLASS } from '../../../core/navigation/edge-swipe-back';
+import { liveDialogs, STACKED_DIALOG_CLASS } from '../../../core/navigation/page-transitions';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
@@ -173,7 +175,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
       dialog.close();
     }
     if (this.opener instanceof HTMLElement && this.opener.isConnected) {
-      this.opener.focus();
+      focusInView(this.opener);
     } else {
       this.document.querySelector<HTMLElement>('main#obsah')?.focus({ preventScroll: true });
     }
@@ -388,6 +390,8 @@ export class Dialog implements AfterViewInit, OnDestroy {
 
   private showModal(): void {
     const dialog = this.element().nativeElement;
+    const overAnother = liveDialogs(this.document, 'dialog[open]').some((open) => open !== dialog);
+    dialog.classList.toggle(STACKED_DIALOG_CLASS, overAnother);
     dialog.showModal();
     if (this.modality.lastPressByPointer()) {
       this.focusTitle(dialog);

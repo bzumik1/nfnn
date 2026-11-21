@@ -20,9 +20,9 @@
   </svg>
 </button>
 @if (titleId(); as id) {
-  <h2 class="sheet-head-title" [id]="id" tabindex="-1">{{ title() }}</h2>
+  <h2 #shownTitle class="sheet-head-title" [id]="id" tabindex="-1">{{ shown() }}</h2>
 } @else {
-  <p class="sheet-head-title" aria-hidden="true">{{ title() }}</p>
+  <p #shownTitle class="sheet-head-title" aria-hidden="true">{{ shown() }}</p>
 }
 <button
   type="button"

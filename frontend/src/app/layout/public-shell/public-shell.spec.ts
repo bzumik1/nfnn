@@ -10,11 +10,13 @@ import {
   RouterLink,
   withInMemoryScrolling,
 } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { filter, firstValueFrom } from 'rxjs';
 import { Location } from '@angular/common';
 import { CompactLayout } from '../../core/layout/compact-layout';
 import { BackTarget } from '../../core/navigation/back-target';
 import { KeptTabPages } from '../../core/navigation/kept-tab-pages';
+import { keepRoomForTabBar } from '../tab-bar/tab-bar-room';
 import { PublicShell } from './public-shell';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
@@ -415,5 +417,67 @@ describe('Given the public shell around the pages of the tabs', () => {
     const shell = await openAt('/pripojeni');
 
     expect(withOrdinarySpaces(shell.textContent)).not.toContain('Přeskočit na navigaci');
+  });
+});
+
+describe('Given the public pages opened again from an area without the tab bar', () => {
+  const ROOM = '--tab-bar-rendered-height';
+  let written: string[];
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: 'aktuality', component: PublicShell, children: [] },
+          { path: 'pripojeni', component: PublicShell, data: { tabBar: false }, children: [] },
+        ]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
+    }).compileComponents();
+    const lastBar = document.createElement('nav');
+    Object.defineProperty(lastBar, 'offsetHeight', { value: 64 });
+    document.body.append(lastBar);
+    keepRoomForTabBar(document, lastBar)();
+    lastBar.remove();
+    written = [];
+    const setProperty = document.documentElement.style.setProperty.bind(
+      document.documentElement.style,
+    );
+    vi.spyOn(document.documentElement.style, 'setProperty').mockImplementation(
+      (property, value, priority) => {
+        if (property === ROOM) {
+          written.push(value ?? '');
+        }
+        setProperty(property, value, priority);
+      },
+    );
+  });
+
+  afterEach(() => {
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .match('/api/operations/setup')
+      .forEach((request) => request.flush({ required: false, codeRequired: true }));
+    http.verify();
+    vi.restoreAllMocks();
+    document.documentElement.style.removeProperty(ROOM);
+  });
+
+  it('when the navigation creates the shell for a page with the tab bar, then the room the last bar had is kept before the shell draws anything, so the bar finds it in place', async () => {
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl('/aktuality');
+
+    expect(written[0]).toBe('64px');
+  });
+
+  it('when the navigation creates the shell for a page without the tab bar, then no room is kept for one', async () => {
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl('/pripojeni');
+
+    expect(written).toEqual([]);
+    expect(document.documentElement.style.getPropertyValue(ROOM)).toBe('');
   });
 });

@@ -2,6 +2,15 @@ $top: calc(var(--safe-area-top) + var(--sheet-top-gap));
 
 $inline-start: max(var(--sheet-inset-inline), env(safe-area-inset-left));
 $inline-end: max(var(--sheet-inset-inline), env(safe-area-inset-right));
+$ground: color-mix(
+  in srgb,
+  var(--color-backdrop-tint) var(--backdrop-strength),
+  var(--color-surface)
+);
+
+@mixin ground {
+  background: $ground;
+}
 
 @mixin edge {
   max-width: var(--sheet-max-width);
