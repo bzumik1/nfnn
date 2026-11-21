@@ -78,6 +78,7 @@ const BLUR_BEHIND_VEIL = 0.25;
 const STRIP_TOLERANCE = 16;
 const MINIMAL_BAND_PX = 64;
 const BAND_MARGIN_PX = 4;
+const MINIMAL_BAND_HEIGHT_PX = 24;
 const SHOWN_BACKDROP = 0.1;
 const OPACITY_WORTH_JUDGING = 0.25;
 const BLUR_SHARE_SHOWN = 0.5;
@@ -349,7 +350,7 @@ export async function sampleFrames(
           if (late === undefined) {
             requestAnimationFrame(afterPaint);
           } else {
-            late.read(sample);
+            late.read(afterPaint);
           }
         };
         channel.port1.onmessage = (message: MessageEvent<number>) => sample(message.data);
@@ -423,16 +424,34 @@ function bandOf(page: Page, name: BandName): Promise<Band> {
   }, name === 'under the clock');
 }
 
-function panelsOver(page: Page, band: Band): Promise<[number, number][]> {
+interface PanelOver {
+  readonly left: number;
+  readonly right: number;
+  readonly top: number;
+}
+
+function panelsOver(page: Page, band: Band): Promise<PanelOver[]> {
   return page.evaluate(
     (under) =>
       Array.from(document.querySelectorAll('dialog[open] .dialog-panel'), (panel) =>
         panel.getBoundingClientRect(),
       )
         .filter((box) => box.top < under.bottom && box.bottom > under.top)
-        .map((box): [number, number] => [box.left, box.right]),
+        .map((box) => ({ left: box.left, right: box.right, top: box.top })),
     band,
   );
+}
+
+function clearPartOf(band: Band, panels: readonly PanelOver[]): Band | null {
+  const beside = widestClearSpan(
+    band,
+    panels.map((panel): [number, number] => [panel.left, panel.right]),
+  );
+  if (beside !== null) {
+    return beside;
+  }
+  const above = Math.min(...panels.map((panel) => panel.top)) - BAND_MARGIN_PX;
+  return above - band.top < MINIMAL_BAND_HEIGHT_PX ? null : { ...band, bottom: Math.floor(above) };
 }
 
 function widestClearSpan(band: Band, covered: readonly [number, number][]): Band | null {
@@ -525,7 +544,7 @@ export async function topAreaWhile(
     const frames = await topAreaFramesWhile(page, act, arrived);
     await screencast.send('Page.stopScreencast');
     const after = await still();
-    const clear = widestClearSpan(band, [...coveredBefore, ...(await panelsOver(page, band))]);
+    const clear = clearPartOf(band, [...coveredBefore, ...(await panelsOver(page, band))]);
     return {
       frames,
       screens: clear === null ? [] : await screensOf(page, [before, ...shots, after], clear),

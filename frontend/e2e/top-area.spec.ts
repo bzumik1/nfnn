@@ -173,6 +173,15 @@ testWithoutBrowser.describe('Given frames of the top of the page planted by hand
         expect(veilStepsBack(planted([1, 1, null, null]))).toEqual([]);
       });
 
+      await testWithoutBrowser.step('a backdrop that blinks while it grows or fades', () => {
+        expect(veilStepsBack(planted([0, 0.5, 0, 1]))).toEqual([
+          'the backdrop goes from 50 % to 0 % of its strength in frame 2, 17 ms after the previous one',
+        ]);
+        expect(veilStepsBack(planted([1, 0.5, 1, 0]))).toEqual([
+          'the backdrop goes from 50 % to 100 % of its strength in frame 2, 17 ms after the previous one',
+        ]);
+      });
+
       await testWithoutBrowser.step('screencast frames whose backdrop never blurs', () => {
         const unblurred = screens([
           [253, 2.65],
@@ -341,6 +350,10 @@ async function pullsTheSheetDown(page: Page): Promise<void> {
   );
 }
 
+function sheetGone(page: Page): () => Promise<void> {
+  return () => expect(page.getByRole('dialog')).toHaveCount(0);
+}
+
 function whileTheSheetOpens(page: Page): Promise<TopAreaFrame[]> {
   return topAreaFramesWhile(page, ...opensTheSheet(page));
 }
@@ -356,6 +369,8 @@ function expectTheBackdropInStep(frames: TopAreaFrame[]): void {
 }
 
 const STATUS_BAR_PX = 59;
+const HOLD_MS = 100;
+const HOLD_SLACK_MS = 50;
 const PULL_DOWNS = [0, 20, 80, 400];
 const CLASSIC_SCROLLBARS_ONLY =
   'an iPhone draws no classic scrollbar beside the backdrop; Safari’s own strips are #1694 and the device checklist';
@@ -452,6 +467,43 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     const reported = blurMissingUnderHeader(closing);
     expect(reported).not.toEqual([]);
     expect(reported.filter((problem) => !BLUR_REPORTED.test(problem))).toEqual([]);
+  });
+
+  test('when a test holds the app’s frames back for 100 ms through nfnnLateFrames, then the sampler reads none of the held frames, its frames skip just the hold, and the backdrop raises no false alarm', async ({
+    page,
+  }) => {
+    await page.evaluate((holdMs) => {
+      const held = window as unknown as {
+        nfnnLateFrames: { until: number; read(reader: FrameRequestCallback): void };
+      };
+      held.nfnnLateFrames = {
+        until: 0,
+        read(reader) {
+          const tick = (now: number): void => {
+            if (performance.now() < held.nfnnLateFrames.until) {
+              requestAnimationFrame(tick);
+            } else {
+              reader(now);
+            }
+          };
+          requestAnimationFrame(tick);
+        },
+      };
+      document.addEventListener(
+        'keydown',
+        () => {
+          held.nfnnLateFrames.until = performance.now() + holdMs;
+        },
+        { capture: true, once: true },
+      );
+    }, HOLD_MS);
+
+    const frames = await whileTheSheetOpens(page);
+
+    const gaps = frames.slice(1).map((frame, index) => frame.at - frames[index].at);
+    expect(Math.max(...gaps)).toBeGreaterThanOrEqual(HOLD_MS);
+    expect(Math.max(...gaps)).toBeLessThan(HOLD_MS + HOLD_SLACK_MS);
+    expect(veilJumps(frames)).toEqual([]);
   });
 
   test('when the account sheet opens and closes, then the ground beside its backdrop and the scrollbar darken and lighten with it', async ({
@@ -577,25 +629,56 @@ for (const width of [BREAKPOINTS.nav, 390]) {
   });
 }
 
-test.describe('Given a signed-in donor reading the news on a phone that animates', () => {
+test.describe('Given a signed-in donor on a phone that animates', () => {
   test.use({
     viewport: { width: 390, height: 844 },
     colorScheme: 'light',
     reducedMotion: 'no-preference',
   });
 
-  test.beforeEach(async ({ page }) => {
-    await readingTheNews(page);
-  });
-
-  test('when the account sheet comes up and goes down again, then its backdrop grows and fades a little in every frame, declares its blur with it, and the button of the header and the tab bar keep their glass', async ({
+  test('when the account sheet comes up over the news and goes down again, then its backdrop grows and fades a little in every frame, declares its blur with it, and the button of the header and the tab bar keep their glass', async ({
     page,
   }) => {
+    await readingTheNews(page);
     const opening = await whileTheSheetOpens(page);
     const closing = await whileTheSheetCloses(page);
 
     expectTheBackdropInStep(opening);
     expectTheBackdropInStep(closing);
+  });
+
+  test('when the account sheet comes up over the landing page and a pull takes it down, then the photo under the header, above the sheet, blurs and clears with its backdrop in every frame of the screencast', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', SCREENCAST_ONLY);
+    await signedInOn(page, '/');
+    await underTheClock(page);
+
+    const opening = await topAreaWhile(page, ...opensTheSheet(page));
+    const closing = await topAreaWhile(page, () => pullsTheSheetDown(page), sheetGone(page));
+
+    expect(blurMissingUnderHeader(opening)).toEqual([]);
+    expect(blurMissingUnderHeader(closing)).toEqual([]);
+  });
+
+  test('when the sheet’s backdrop loses its blur as a pull takes it down, then the screencast check reports the blur missing', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', SCREENCAST_ONLY);
+    await signedInOn(page, '/');
+    await underTheClock(page);
+    await page.addStyleTag({
+      content: '.dialog--leaving::backdrop { backdrop-filter: none !important; }',
+    });
+    await whileTheSheetOpens(page);
+
+    const closing = await topAreaWhile(page, () => pullsTheSheetDown(page), sheetGone(page));
+
+    const reported = blurMissingUnderHeader(closing);
+    expect(reported).not.toEqual([]);
+    expect(reported.filter((problem) => !BLUR_REPORTED.test(problem))).toEqual([]);
   });
 });
 
@@ -610,7 +693,7 @@ for (const { place, path } of [
     const known =
       path === '/' && colorScheme === 'light'
         ? null
-        : '#1972: below 900 px html:has(.dialog:modal) is never darkened, so the ground under the clock stays as it was beside the backdrop';
+        : '#1972: below 900 px html:has(.dialog:modal) never darkens the ground beside the backdrop, the likely cause, unmeasured (#1978)';
     test.describe(`Given a signed-in donor ${place} on a phone in the ${colorScheme} appearance`, () => {
       test.use({
         viewport: { width: 390, height: 844 },
@@ -622,20 +705,22 @@ for (const { place, path } of [
         await signedInOn(page, path);
       });
 
-      test(`when the account sheet comes up, then the ground of the page, which shows under the clock, darkens with its backdrop${known === null ? ` (${NAVY_GROUND_UNDER_NAVY_BACKDROP})` : ''}`, async ({
+      test(`when the account sheet comes up, then the ground of the page, which iOS shows under the clock in the home-screen app, darkens and clears with its backdrop${known === null ? ` (${NAVY_GROUND_UNDER_NAVY_BACKDROP})` : ''}`, async ({
         page,
       }) => {
         test.fail(known !== null, known ?? '');
 
         const opening = await whileTheSheetOpens(page);
+        const closing = await whileTheSheetCloses(page);
 
         expect(groundOutOfStep(opening)).toEqual([]);
+        expect(groundOutOfStep(closing)).toEqual([]);
       });
     });
   }
 }
 
-test.describe('Given a signed-in donor on the landing page of a phone in the dark appearance, under a status bar (video 13)', () => {
+test.describe('Given a signed-in donor on the landing page of a phone in the dark appearance, under a 59 px safe area, as in video 13', () => {
   test.use({
     viewport: { width: 390, height: 844 },
     colorScheme: 'dark',
@@ -666,7 +751,26 @@ test.describe('Given a signed-in donor on the landing page of a phone in the dar
     expectTheBackdropInStep(closing);
   });
 
-  test('when a tap brings the account sheet up and a pull takes it down, then the band under the clock darkens and clears with the backdrop in the screencast', async ({
+  test('when a tap brings the account sheet up and a pull takes it down, then the ground of the page, which iOS shows under the clock in the home-screen app, darkens and clears with its backdrop', async ({
+    page,
+  }) => {
+    test.fail(
+      true,
+      '#1972: below 900 px html:has(.dialog:modal) never darkens the ground beside the backdrop, the likely cause, unmeasured (#1978)',
+    );
+
+    const opening = await topAreaFramesWhile(
+      page,
+      () => accountButton(page).tap(),
+      () => expect(accountSheet(page)).toBeVisible(),
+    );
+    const closing = await topAreaFramesWhile(page, () => pullsTheSheetDown(page), sheetGone(page));
+
+    expect(groundOutOfStep(opening)).toEqual([]);
+    expect(groundOutOfStep(closing)).toEqual([]);
+  });
+
+  test('when a tap brings the account sheet up and a pull takes it down, then the page’s own 59 px band darkens and clears with the backdrop in Chromium’s screencast, where the backdrop covers it (what Safari draws under the clock is #1978)', async ({
     page,
     browserName,
   }) => {
