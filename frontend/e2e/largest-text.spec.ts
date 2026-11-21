@@ -646,6 +646,12 @@ for (const { width, height } of [
         });
       const eye = field.getByRole('button', { name: 'Zobrazit heslo' });
       await expect(eye).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      await expect
+        .poll(() =>
+          field.evaluate((row) => row.closest('dialog')!.getAnimations({ subtree: true }).length),
+        )
+        .toBe(0);
 
       const measured = await field.evaluate((row) => {
         const label = row.querySelector('.field-label')!.getBoundingClientRect();
