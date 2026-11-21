@@ -16,6 +16,8 @@ const CLAMPED_TITLE_LINES = 3;
 const TITLE_WITH_DESCENDERS_AND_RINGS =
   'Příspěvek pro Řehoře, Šárku a Žofii: nový vozík a jízdy pro Ůvaly, Ůžice, Ůštěk, Ůhlejov a Ůsobí';
 const RING_LETTER = 'Ů';
+const DESCENDER_LETTERS = /[gjpqyý]/;
+const INK_SCALE = 4;
 const LONG_PEREX =
   'Rodina přišla o domov i o všechno, co v něm měla. Díky dárcům má znovu střechu nad hlavou, nová okna a kamna, a děti se mohou vrátit do své školy.';
 
@@ -26,11 +28,19 @@ interface Box {
   readonly bottom: number;
 }
 
-interface InkAroundClip {
+interface InkAtClip {
   readonly lines: number;
+  readonly lastKeptLine: string;
   readonly firstCutLine: string;
-  readonly keptInkOutside: number;
-  readonly cutInkInside: number;
+  readonly movedLetters: number;
+  readonly keptRowsCut: number;
+  readonly cutRowsShown: number;
+}
+
+interface ClipShot {
+  readonly base64: string;
+  readonly height: number;
+  readonly edgeFromTop: number;
 }
 
 interface ArticleOptions {
@@ -168,65 +178,170 @@ function missingLettersOfTag(tag: Locator): Promise<number> {
   });
 }
 
-function inkAroundClip(title: Locator, keptLines: number): Promise<InkAroundClip> {
-  return title.evaluate((element, kept) => {
-    const style = getComputedStyle(element);
-    const context = document.createElement('canvas').getContext('2d');
-    if (context === null) {
-      return {
-        lines: 0,
-        firstCutLine: '',
-        keptInkOutside: Number.POSITIVE_INFINITY,
-        cutInkInside: Number.POSITIVE_INFINITY,
-      };
-    }
-    context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-    const clip = element.getBoundingClientRect();
+interface Letter {
+  readonly letter: string;
+  readonly top: number;
+  readonly left: number;
+}
+
+function lettersOf(locator: Locator): Promise<Letter[]> {
+  return locator.evaluate((element) => {
     const range = document.createRange();
-    const glyphs: { line: number; letter: string; top: number; bottom: number }[] = [];
+    const letters: Letter[] = [];
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
     for (let text = walker.nextNode(); text !== null; text = walker.nextNode()) {
       const value = text.textContent ?? '';
       for (let index = 0; index < value.length; index += 1) {
-        const letter = value[index];
-        if (/\s/.test(letter)) {
-          continue;
-        }
         range.setStart(text, index);
         range.setEnd(text, index + 1);
         const box = range.getClientRects()[0];
-        if (box === undefined) {
-          continue;
+        letters.push({ letter: value[index], top: box?.top ?? NaN, left: box?.left ?? NaN });
+      }
+    }
+    return letters;
+  });
+}
+
+function linesOfLetters(letters: Letter[]): string[] {
+  const tops = [
+    ...new Set(
+      letters.filter(({ letter }) => !/\s/.test(letter)).map(({ top }) => Math.round(top)),
+    ),
+  ].sort((a, b) => a - b);
+  const lines: string[] = [];
+  let line = 0;
+  for (const { letter, top } of letters) {
+    if (!/\s/.test(letter)) {
+      line = tops.indexOf(Math.round(top));
+    }
+    lines[line] = (lines[line] ?? '') + letter;
+  }
+  return lines;
+}
+
+async function afterNextPaint(page: Page): Promise<void> {
+  await page.evaluate(
+    () =>
+      new Promise<void>((painted) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => painted())),
+      ),
+  );
+}
+
+async function shotAroundClipEdge(page: Page, title: Locator): Promise<ClipShot> {
+  const region = await title.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const lineHeight = parseFloat(getComputedStyle(element).lineHeight);
+    const top = Math.floor(box.bottom - lineHeight);
+    const left = Math.floor(box.left);
+    return {
+      clip: {
+        x: left,
+        y: top,
+        width: Math.ceil(box.right) - left,
+        height: Math.ceil(box.bottom + lineHeight) - top,
+      },
+      edgeFromTop: box.bottom - top,
+    };
+  });
+  await afterNextPaint(page);
+  const shot = await page.screenshot({
+    clip: region.clip,
+    scale: 'device',
+    animations: 'disabled',
+  });
+  return {
+    base64: shot.toString('base64'),
+    height: region.clip.height,
+    edgeFromTop: region.edgeFromTop,
+  };
+}
+
+function rowsThatDiffer(
+  page: Page,
+  rendered: ClipShot,
+  keptOnly: ClipShot,
+): Promise<{ insideClip: number; outsideClip: number }> {
+  return page.evaluate(
+    async ({ first, second, height, edgeFromTop }) => {
+      const pixels = async (base64: string) => {
+        const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+        const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const context = canvas.getContext('2d', { willReadFrequently: true })!;
+        context.drawImage(bitmap, 0, 0);
+        return context.getImageData(0, 0, bitmap.width, bitmap.height);
+      };
+      const [one, other] = [await pixels(first), await pixels(second)];
+      const edgeRow = (edgeFromTop * one.height) / height;
+      let insideClip = 0;
+      let outsideClip = 0;
+      for (let row = 0; row < one.height; row += 1) {
+        let differs = false;
+        for (let index = row * one.width * 4; index < (row + 1) * one.width * 4; index += 1) {
+          if (one.data[index] !== other.data[index]) {
+            differs = true;
+            break;
+          }
         }
-        const metrics = context.measureText(letter);
-        const ascentShare =
-          metrics.fontBoundingBoxAscent /
-          (metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent);
-        const baseline = box.top + box.height * ascentShare;
-        glyphs.push({
-          line: Math.round(box.top),
-          letter,
-          top: baseline - metrics.actualBoundingBoxAscent,
-          bottom: baseline + metrics.actualBoundingBoxDescent,
-        });
+        if (differs && row + 0.5 < edgeRow) {
+          insideClip += 1;
+        } else if (differs) {
+          outsideClip += 1;
+        }
       }
+      return { insideClip, outsideClip };
+    },
+    {
+      first: rendered.base64,
+      second: keptOnly.base64,
+      height: rendered.height,
+      edgeFromTop: rendered.edgeFromTop,
+    },
+  );
+}
+
+async function inkAtClip(page: Page, title: Locator, keptLines: number): Promise<InkAtClip> {
+  const before = await lettersOf(title);
+  const lines = linesOfLetters(before);
+  await title.evaluate(
+    (element, { texts, kept }) => {
+      (element as HTMLElement).style.setProperty('text-shadow', 'none', 'important');
+      element.replaceChildren(
+        ...texts.map((text, index) => {
+          const span = document.createElement('span');
+          span.dataset['inkLine'] = index < kept ? 'kept' : 'cut';
+          span.textContent = text;
+          return span;
+        }),
+      );
+    },
+    { texts: lines, kept: keptLines },
+  );
+  const rendered = await shotAroundClipEdge(page, title);
+  await title.evaluate((element) => {
+    (element as HTMLElement).style.setProperty('overflow', 'visible', 'important');
+    for (const cut of element.querySelectorAll<HTMLElement>('[data-ink-line="cut"]')) {
+      cut.style.setProperty('color', 'transparent', 'important');
     }
-    const lineTops = [...new Set(glyphs.map((glyph) => glyph.line))].sort((a, b) => a - b);
-    let keptInkOutside = Number.NEGATIVE_INFINITY;
-    let cutInkInside = Number.NEGATIVE_INFINITY;
-    for (const glyph of glyphs) {
-      if (lineTops.indexOf(glyph.line) < kept) {
-        keptInkOutside = Math.max(keptInkOutside, clip.top - glyph.top, glyph.bottom - clip.bottom);
-      } else {
-        cutInkInside = Math.max(cutInkInside, clip.bottom - glyph.top);
-      }
-    }
-    const firstCutLine = glyphs
-      .filter((glyph) => glyph.line === lineTops[kept])
-      .map((glyph) => glyph.letter)
-      .join('');
-    return { lines: lineTops.length, firstCutLine, keptInkOutside, cutInkInside };
-  }, keptLines);
+  });
+  const keptOnly = await shotAroundClipEdge(page, title);
+  const after = await lettersOf(title);
+  const movedLetters = before.filter(
+    (letter, index) =>
+      after[index]?.letter !== letter.letter ||
+      after[index].top !== letter.top ||
+      after[index].left !== letter.left,
+  ).length;
+  const rows = await rowsThatDiffer(page, rendered, keptOnly);
+  return {
+    lines: lines.length,
+    lastKeptLine: lines[keptLines - 1] ?? '',
+    firstCutLine: lines[keptLines] ?? '',
+    movedLetters,
+    keptRowsCut: rows.outsideClip,
+    cutRowsShown: rows.insideClip,
+  };
 }
 
 function lastLetterPastTheBox(locator: Locator): Promise<number> {
@@ -357,21 +472,6 @@ test.describe('Given a visitor on the Aktuality tab on a computer', () => {
     });
   }
 
-  test('when the leading news title runs past three lines, then its first three lines show their accents and descenders and nothing of the fourth shows, not even the ring of a capital Ů', async ({
-    page,
-  }) => {
-    await openNews(page, [article(1, { title: TITLE_WITH_DESCENDERS_AND_RINGS }), article(2)], {
-      width: 1280,
-      height: 900,
-    });
-
-    const ink = await inkAroundClip(page.locator('.featured-title'), CLAMPED_TITLE_LINES);
-    expect(ink.lines).toBeGreaterThan(CLAMPED_TITLE_LINES);
-    expect(ink.firstCutLine).toContain(RING_LETTER);
-    expect(ink.keptInkOutside).toBeLessThanOrEqual(0);
-    expect(ink.cutInkInside).toBeLessThanOrEqual(0);
-  });
-
   for (const { width, tags } of [
     { width: 1280, tags: 'each tag keeps one line' },
     { width: 1024, tags: 'each tag shows whole and the long one wraps' },
@@ -442,6 +542,34 @@ test.describe('Given a visitor on the Aktuality tab on a computer', () => {
     expect(signer.top - perex.bottom).toBeLessThanOrEqual(NEAR_PX);
     expect(share.top - textEnd).toBeLessThanOrEqual(NEAR_PX);
   });
+});
+
+test.describe('Given a visitor on the Aktuality tab on a computer with a 4× screen', () => {
+  test.use({ deviceScaleFactor: INK_SCALE });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+  });
+
+  for (const width of [1280, 1100]) {
+    test(`when the leading news title runs past three lines in a ${width} px window, then its first three lines show their accents and descenders whole and nothing of the fourth shows, not even the ring of a capital Ů`, async ({
+      page,
+    }) => {
+      await openNews(page, [article(1, { title: TITLE_WITH_DESCENDERS_AND_RINGS }), article(2)], {
+        width,
+        height: 900,
+      });
+
+      const ink = await inkAtClip(page, page.locator('.featured-title'), CLAMPED_TITLE_LINES);
+
+      expect(ink.lines).toBeGreaterThan(CLAMPED_TITLE_LINES);
+      expect(ink.lastKeptLine).toMatch(DESCENDER_LETTERS);
+      expect(ink.firstCutLine).toContain(RING_LETTER);
+      expect(ink.movedLetters).toBe(0);
+      expect(ink.keptRowsCut).toBe(0);
+      expect(ink.cutRowsShown).toBe(0);
+    });
+  }
 });
 
 test.describe('Given a visitor on the Aktuality tab with enlarged text', () => {
