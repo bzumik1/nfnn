@@ -29,26 +29,32 @@ test.describe('Given a signed-in donor adding a bank account on a phone', () => 
       await expect(facts.locator('.add-account-row')).toHaveCount(4);
       const measured = await facts.evaluate((list) => {
         const rows = Array.from(list.querySelectorAll('.add-account-row'));
-        const contentBottom = (row: Element) =>
-          Math.max(
-            ...Array.from(
-              row.querySelectorAll('dt, dd > *'),
-              (part) => part.getBoundingClientRect().bottom,
-            ),
-          );
+        const valueTop = (row: Element) => {
+          const range = document.createRange();
+          range.selectNodeContents(row.querySelector('.bank-value')!);
+          return Math.min(...Array.from(range.getClientRects(), (rect) => rect.top));
+        };
         return {
           height: list.getBoundingClientRect().height,
           allowedGap: parseFloat(getComputedStyle(list).rowGap),
+          labelToValue: rows.map(
+            (row) => valueTop(row) - row.querySelector('dt')!.getBoundingClientRect().bottom,
+          ),
           gaps: rows
             .slice(1)
             .map(
               (row, index) =>
-                row.querySelector('dt')!.getBoundingClientRect().top - contentBottom(rows[index]),
+                row.querySelector('dt')!.getBoundingClientRect().top -
+                rows[index].getBoundingClientRect().bottom,
             ),
         };
       });
 
       expect(measured.height).toBeLessThanOrEqual(FACTS_MAXIMUM_HEIGHT);
+      for (const gap of measured.labelToValue) {
+        expect(Math.abs(gap - measured.labelToValue[0])).toBeLessThanOrEqual(1);
+        expect(gap).toBeLessThanOrEqual(measured.allowedGap + 1);
+      }
       for (const gap of measured.gaps) {
         expect(gap).toBeLessThanOrEqual(measured.allowedGap + 1);
       }
