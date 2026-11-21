@@ -722,3 +722,54 @@ test.describe('Given a visitor reading a news article or a story on a computer',
     });
   }
 });
+
+test.describe('Given a visitor opening a news article or a story on a computer while it still loads', () => {
+  for (const { kind, path, api, page: body } of [
+    {
+      kind: 'news article',
+      path: `/aktuality/${newsArticle.slug}`,
+      api: `/api/content/news/${newsArticle.slug}`,
+      page: newsArticle,
+    },
+    {
+      kind: 'story',
+      path: `/projekty/${project.slug}`,
+      api: `/api/content/projects/${project.slug}`,
+      page: project,
+    },
+  ]) {
+    for (const width of [1280, 1920]) {
+      test(`when the ${kind} arrives in a ${width} px window, then its title starts exactly where Načítáme stránku… stood`, async ({
+        page,
+      }) => {
+        await mockPublicContent(page);
+        let arrive: () => void = () => undefined;
+        const arrived = new Promise<void>((resolve) => (arrive = resolve));
+        await page.route(
+          (url) => url.pathname === api,
+          async (route) => {
+            await arrived;
+            await route.fulfill({ json: body });
+          },
+        );
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(path);
+        const waiting = page.getByRole('status').filter({ hasText: 'Načítáme stránku…' });
+        await expect(waiting).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+        const waitingLeft = await waiting.evaluate((element) =>
+          Math.round(element.getBoundingClientRect().left),
+        );
+
+        arrive();
+        const heading = page.getByRole('heading', { level: 1 });
+        await expect(heading).toBeVisible();
+        const headingLeft = await heading.evaluate((element) =>
+          Math.round(element.getBoundingClientRect().left),
+        );
+
+        expect(Math.abs(headingLeft - waitingLeft)).toBeLessThanOrEqual(EDGE_TOLERANCE_PX);
+      });
+    }
+  }
+});

@@ -14,7 +14,8 @@
   padding-inline: var(--space-6);
 }
 
-.devices-intro {
+.devices-intro,
+.devices-inset.devices-empty {
   box-sizing: content-box;
 }
 
@@ -136,11 +137,8 @@
 }
 
 @include bp.container-down(devices, tabs) {
-  .device-row {
-    grid-template-areas:
-      'lead title'
-      'lead meta'
-      'value value';
+  .device-action {
+    grid-column: 1 / -1;
   }
 }
 

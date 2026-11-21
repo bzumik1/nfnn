@@ -360,6 +360,34 @@ describe('Given the sign-in and security card of the details page', () => {
       );
     });
 
+    for (const { key, groups, first, second } of [
+      {
+        key: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ',
+        groups: 'eight groups',
+        first: 'GEZD GNBV GY3T QOJQ',
+        second: 'GEZD GNBV GY3T QOJQ',
+      },
+      {
+        key: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3T',
+        groups: 'seven groups',
+        first: 'GEZD GNBV GY3T QOJQ',
+        second: 'GEZD GNBV GY3T',
+      },
+      { key: 'GEZDGN', groups: 'a short key', first: 'GEZD', second: 'GN' },
+    ]) {
+      it(`and confirms the password for a key of ${groups}, then the key shows in two halves that each keep their groups together`, async () => {
+        await card.fillIn('#account-second-factor-password', 'correct horse battery');
+
+        await card.submit();
+        http
+          .expectOne('/api/donors/me/second-factor/setup')
+          .flush({ ...secondFactorEnrolment(), secret: key });
+        await card.settle();
+
+        expect(card.texts('.account-secret-value .account-secret-half')).toEqual([first, second]);
+      });
+    }
+
     it("and confirms the password, then the QR code is the browser's own encoding of the otpauth URI", async () => {
       const authenticatorCase = sharedCases('qr/totp.json').find(
         (sharedCase) => sharedCase.name === 'an address with a dot',

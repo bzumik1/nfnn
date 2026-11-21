@@ -100,17 +100,13 @@
 
 .overview-question,
 .admin-refusal {
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-5);
+  padding-inline: var(--card-inset);
 
   a {
     color: inherit;
     font-weight: var(--weight-semibold);
   }
-}
-
-.overview-question {
-  margin-bottom: var(--space-5);
-  padding-inline: var(--card-inset);
 }
 
 .receipt-ready {

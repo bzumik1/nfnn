@@ -3720,7 +3720,7 @@ test.describe('Given a phone 320 pt wide with the text at its default size', () 
 });
 
 test.describe('Given a donor on an iPhone SE 320 pt wide with the largest accessibility text on Údaje a zabezpečení', () => {
-  test('when the card Přihlášená zařízení lists another device, then its whole Odhlásit stays inside the device row', async ({
+  test('when the card Přihlášená zařízení lists its devices, then Odhlásit and Toto zařízení start under the device icon and stay inside the row', async ({
     page,
   }) => {
     await mockDonorApi(page);
@@ -3731,19 +3731,32 @@ test.describe('Given a donor on an iPhone SE 320 pt wide with the largest access
       `${LARGEST_SYSTEM_TEXT_PX}px`,
     );
     await openDonorSection(page, 'Údaje a zabezpečení');
-    const signOuts = page.locator('app-devices-card .device-sign-out');
-    await expect(signOuts.first()).toHaveText('Odhlásit');
+    await expect(page.locator('app-devices-card .device-sign-out').first()).toHaveText('Odhlásit');
+    await expect(page.locator('app-devices-card .device-current')).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
 
-    const pastTheRow = await signOuts.evaluateAll((buttons) =>
-      buttons.map((button) => {
-        const row = button.closest('.device-row')!.getBoundingClientRect();
-        const own = button.getBoundingClientRect();
-        return Math.max(0, Math.round(own.right - row.right), Math.round(row.left - own.left));
+    const actions = await page.locator('app-devices-card .device-action').evaluateAll((slots) =>
+      slots.map((slot) => {
+        const row = slot.closest('.device-row')!;
+        const box = row.getBoundingClientRect();
+        const icon = row.querySelector('.device-icon')!.getBoundingClientRect();
+        const content = slot.firstElementChild!.getBoundingClientRect();
+        return {
+          current: slot.querySelector('.device-current') !== null,
+          fromIcon: Math.round(content.left - icon.left),
+          pastTheRow: Math.max(
+            0,
+            Math.round(content.right - box.right),
+            Math.round(box.left - content.left),
+          ),
+        };
       }),
     );
 
-    expect(pastTheRow.length).toBeGreaterThan(0);
-    expect(pastTheRow).toEqual(pastTheRow.map(() => 0));
+    expect(actions.some((action) => action.current)).toBe(true);
+    expect(actions.some((action) => !action.current)).toBe(true);
+    expect(actions.map(({ fromIcon, pastTheRow }) => ({ fromIcon, pastTheRow }))).toEqual(
+      actions.map(() => ({ fromIcon: 0, pastTheRow: 0 })),
+    );
   });
 });

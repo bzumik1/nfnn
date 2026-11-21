@@ -150,6 +150,23 @@ test.describe('Given a visitor reading a news article on a computer 1280 px wide
     }
     expect(await fontSizeOf(side.getByRole('heading', { level: 2 }))).toBe(listHeading);
   });
+
+  test('when Další aktuality show under the article, then their heading starts where the article title starts', async ({
+    page,
+  }) => {
+    await page.goto(`/aktuality/${news[0].slug}`);
+    const side = page.getByRole('complementary', { name: 'Další aktuality' });
+    await settled(page, side.locator('app-news-card'), 3);
+
+    const lefts = await page.evaluate(() => ({
+      title: Math.round(
+        document.querySelector('app-content-article h1')!.getBoundingClientRect().left,
+      ),
+      onward: Math.round(document.querySelector('.onward-heading')!.getBoundingClientRect().left),
+    }));
+
+    expect(Math.abs(lefts.onward - lefts.title)).toBeLessThanOrEqual(PIXEL_TOLERANCE);
+  });
 });
 
 test.describe('Given a visitor reading a story on a computer 1280 px wide', () => {

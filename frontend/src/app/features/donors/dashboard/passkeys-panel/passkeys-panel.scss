@@ -29,6 +29,7 @@
 }
 
 .passkeys-warning {
+  max-inline-size: var(--measure-prose);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   color: var(--color-warning);
@@ -119,6 +120,7 @@
   @include motion.expand($closes-by: class);
 
   p {
+    max-inline-size: var(--measure-prose);
     margin-bottom: var(--space-2);
   }
 }
