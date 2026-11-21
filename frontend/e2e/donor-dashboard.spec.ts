@@ -607,7 +607,7 @@ test.describe('Given a signed-in donor', () => {
 });
 
 test.describe('Given a signed-in donor on a computer', () => {
-  test('when the window leaves the gift list too narrow for its columns, then each gift is a card and Stáhnout PDF stays on one line inside it', async ({
+  test('when a 1000 px window, between nav and laptop, leaves the gift list too narrow for all its columns, then each year stays a table without the Stav column and Stáhnout PDF stays on one line inside it', async ({
     page,
   }) => {
     await mockDonorApi(page, withReceipts);
@@ -616,7 +616,13 @@ test.describe('Given a signed-in donor on a computer', () => {
     await page.setViewportSize({ width: 1000, height: 800 });
 
     const card = page.locator('.payments-card');
-    await expect(card.locator('thead').first()).toHaveCSS('position', 'absolute');
+    await expect(card.locator('table').first().locator('thead th')).toHaveText([
+      'Datum',
+      'Částka',
+      'Účel',
+      'Potvrzení',
+    ]);
+    await expect(card.locator('thead').first()).not.toHaveCSS('position', 'absolute');
     const buttons = card.getByRole('button', { name: /^Stáhnout PDF/ });
     await expect(buttons).toHaveCount(3);
     const lines = await buttons.evaluateAll((elements) =>
@@ -1028,7 +1034,7 @@ test.describe('Given a signed-in donor on a computer', () => {
     expect(lines).toBe(1);
   });
 
-  test('when the gifts are cards in a 900 px window, then the date, the purpose and the account tag keep whole words inside their column', async ({
+  test('when the gifts are a table without the Stav column in a 900 px window, then the date with its state, the purpose and the account tag keep whole words inside their column', async ({
     page,
   }) => {
     await mockDonorApi(page, donorWithDonations);
@@ -1037,7 +1043,14 @@ test.describe('Given a signed-in donor on a computer', () => {
     await page.setViewportSize({ width: 900, height: 800 });
 
     const card = page.locator('.payments-card');
-    await expect(card.locator('thead').first()).toHaveCSS('position', 'absolute');
+    await expect(card.locator('table').first().locator('thead th')).toHaveText([
+      'Datum',
+      'Částka',
+      'Účel',
+      'Potvrzení',
+    ]);
+    await expect(card.locator('thead').first()).not.toHaveCSS('position', 'absolute');
+    await expect(card.locator('td.date .verification-tag')).toHaveText(['Vráceno']);
     await expect(card.locator('.pairing-tag').first()).toBeVisible();
     const problems = await card.locator('tbody tr').evaluateAll((rows) =>
       rows.flatMap((row) => {
@@ -1060,6 +1073,9 @@ test.describe('Given a signed-in donor on a computer', () => {
           }
           const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
           for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+            if (node.parentElement?.closest('.visually-hidden')) {
+              continue;
+            }
             for (const match of (node.textContent ?? '').matchAll(/\S+/g)) {
               const range = document.createRange();
               range.setStart(node, match.index);
