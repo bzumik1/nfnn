@@ -11,7 +11,7 @@
     [class.ui-cta--ghost]="!compact()"
     [class.ui-button]="compact()"
     [appBusy]="busy()"
-    (click)="pressed(retryButton)"
+    (click)="pressed()"
   >
     <app-busy-label [busy]="busy()">
       <span when-idle i18n="@@ui.loadFailure.retry">Zkusit znovu</span>

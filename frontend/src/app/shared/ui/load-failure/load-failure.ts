@@ -11,6 +11,7 @@ import {
   linkedSignal,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 
 import { PageFocus } from '../../../core/navigation/page-focus';
@@ -47,11 +48,20 @@ export class LoadFailure {
   private readonly environment = inject(EnvironmentInjector);
   private readonly pageFocus = inject(PageFocus);
   private readonly timings = inject(LOADING_TIMINGS);
+  private readonly retryButton = viewChild.required<ElementRef<HTMLButtonElement>>('retryButton');
   private places: readonly HTMLElement[] = [];
   private holdTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
+    const keepFocusOnPressedRetry = (event: Event) => {
+      const button = this.retryButton().nativeElement;
+      if (event.target instanceof Node && button.contains(event.target)) {
+        this.pageFocus.keepOnPressed(button);
+      }
+    };
+    this.host.addEventListener('click', keepFocusOnPressedRetry, { capture: true });
     inject(DestroyRef).onDestroy(() => {
+      this.host.removeEventListener('click', keepFocusOnPressedRetry, { capture: true });
       clearTimeout(this.holdTimer);
       const places = this.places;
       if (places.length > 0) {
@@ -62,8 +72,7 @@ export class LoadFailure {
     });
   }
 
-  protected pressed(control: HTMLElement): void {
-    this.pageFocus.keepOnPressed(control);
+  protected pressed(): void {
     const places: HTMLElement[] = [];
     for (let at = this.host.parentElement; at !== null; at = at.parentElement) {
       places.push(at);

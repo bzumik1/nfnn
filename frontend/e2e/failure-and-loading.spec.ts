@@ -139,23 +139,25 @@ async function linesStartAt(text: Locator, edgeSelector: string): Promise<number
 
 async function pressLeavesFocusOnPageAsIos(retry: Locator): Promise<void> {
   await retry.evaluate((button) => {
-    button.addEventListener(
-      'mousedown',
-      (event) => {
-        event.preventDefault();
-        document.getElementById('obsah')?.focus({ preventScroll: true });
-      },
-      { once: true },
-    );
+    button.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      document.getElementById('obsah')?.focus({ preventScroll: true });
+    });
     document.addEventListener(
       'click',
       () => {
         (window as unknown as { focusAtPress: string | null }).focusAtPress =
           document.activeElement?.id ?? null;
       },
-      { capture: true, once: true },
+      { capture: true },
     );
   });
+}
+
+async function pressUnavailable(page: Page, control: Locator): Promise<void> {
+  const box = await control.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
 }
 
 async function focusAtPress(page: Page): Promise<string | null> {
@@ -640,6 +642,73 @@ test.describe('Given a visitor on a phone whose article fails to load', () => {
     answer();
     await expect(failure(page, 'Aktualitu se nepodařilo načíst.')).toHaveCount(0);
     await expect(page.getByRole('heading', { level: 1, name: article.title })).toBeFocused();
+  });
+
+  test('when a second press while „Načítáme…“ leaves the focus on the page as iOS does, then „Zkusit znovu“ takes it back, the page does not move and the article heading then takes the focus', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockPublicContent(page);
+    let loads = false;
+    let answer: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => (answer = resolve));
+    await page.route(
+      (url) => url.pathname === `/api/content/news/${article.slug}`,
+      async (route) => {
+        if (!loads) {
+          await route.fulfill(SERVER_ERROR);
+          return;
+        }
+        await answered;
+        await route.fallback();
+      },
+    );
+    await page.goto(`/aktuality/${article.slug}`);
+    await expect(failure(page, 'Aktualitu se nepodařilo načíst.')).toBeVisible();
+    const retry = page.locator('app-load-failure button');
+    await retry.scrollIntoViewIfNeeded();
+    const before = await scrollTop(page);
+    await pressLeavesFocusOnPageAsIos(retry);
+    loads = true;
+    await retry.click();
+    await expect(retry).toHaveAttribute('aria-busy', 'true');
+
+    await pressUnavailable(page, retry);
+
+    expect(await focusAtPress(page)).toBe('obsah');
+    await expect(retry).toHaveAttribute('aria-busy', 'true');
+    await expect(retry).toBeFocused();
+    expect(await scrollTop(page)).toBe(before);
+    answer();
+    await expect(failure(page, 'Aktualitu se nepodařilo načíst.')).toHaveCount(0);
+    await expect(page.getByRole('heading', { level: 1, name: article.title })).toBeFocused();
+  });
+
+  test('when a press offline leaves the focus on the page as iOS does, then „Zkusit znovu“ takes it back and the page does not move', async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockPublicContent(page);
+    await page.route(
+      (url) => url.pathname === `/api/content/news/${article.slug}`,
+      (route) => route.fulfill(SERVER_ERROR),
+    );
+    await page.goto(`/aktuality/${article.slug}`);
+    await expect(failure(page, 'Aktualitu se nepodařilo načíst.')).toBeVisible();
+    const retry = page.locator('app-load-failure button');
+    await retry.scrollIntoViewIfNeeded();
+    const before = await scrollTop(page);
+    await pressLeavesFocusOnPageAsIos(retry);
+    await context.setOffline(true);
+    await expect(retry).toHaveAttribute('aria-disabled', 'true');
+
+    await pressUnavailable(page, retry);
+
+    expect(await focusAtPress(page)).toBe('obsah');
+    await expect(retry).toBeFocused();
+    await expect(retry).not.toHaveAttribute('aria-busy', 'true');
+    expect(await scrollTop(page)).toBe(before);
   });
 });
 
