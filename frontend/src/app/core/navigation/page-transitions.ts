@@ -353,23 +353,25 @@ export class PageTransitions {
       }
       return;
     }
-    const overlay = this.overlay(kind);
     const left = { ...this.shown(layer), sheet: kind === 'push' ? returningSheet : null };
+    const overlay = this.overlay(kind);
     if (kind === 'push') {
       this.keepBehind(this.backTarget.nextDepth() - 1, { ...left, url: this.router.url });
     }
-    const placed = this.place(overlay, left, kind === 'push' ? 'under' : 'over');
-    this.dressChrome(overlay, placed, null);
     const behind =
       kind === 'pop' && this.restoredDepth !== null ? this.keptAt(this.restoredDepth, view) : null;
     const sheet = behind?.sheet ?? null;
     const ahead = behind?.copy != null && behind.url === event.urlAfterRedirects;
     const running: Running = { kind, overlay, swiping: false, sheet, revealed: false, ahead };
+    if (!ahead) {
+      const placed = this.place(overlay, left, kind === 'push' ? 'under' : 'over');
+      this.dressChrome(overlay, placed, null);
+    }
     this.running = running;
     this.sheetUnder(sheet ?? left.sheet);
     this.finishing = view.setTimeout(() => this.finish(), PAGE_COVER_LONGEST_MS);
     if (ahead) {
-      this.moveTo(running, view, behind);
+      this.moveOver(running, view, left, behind);
     }
   }
 
@@ -431,8 +433,21 @@ export class PageTransitions {
     const shown = this.place(running.overlay, arriving, running.kind === 'push' ? 'over' : 'under');
     const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
     this.dressChrome(running.overlay, left, shown);
+    this.startMoving(running, view, shown.box);
+  }
+
+  private moveOver(running: Running, view: Window, leaving: KeptPage, arriving: KeptPage): void {
+    const left = this.put(running.overlay, leaving, 'over');
+    const shown = this.put(running.overlay, arriving, 'under');
+    left.scroll();
+    shown.scroll();
+    this.dressChrome(running.overlay, this.placedPage(running.overlay, 'over'), shown.page);
+    this.startMoving(running, view, shown.page.box);
+  }
+
+  private startMoving(running: Running, view: Window, page: HTMLElement): void {
     running.overlay.classList.add(HELD_CLASS, MOVING_CLASS);
-    this.finishWhenStill(running, shown.box, view);
+    this.finishWhenStill(running, page, view);
     void afterDrawn(view, this.durationOf('--duration-fast') / 2).then(() =>
       startHeldMotions(running.overlay, view),
     );
@@ -502,6 +517,16 @@ export class PageTransitions {
   }
 
   place(overlay: HTMLElement, kept: KeptPage, position: 'under' | 'over'): PlacedPage {
+    const placed = this.put(overlay, kept, position);
+    placed.scroll();
+    return placed.page;
+  }
+
+  private put(
+    overlay: HTMLElement,
+    kept: KeptPage,
+    position: 'under' | 'over',
+  ): { readonly page: PlacedPage; readonly scroll: () => void } {
     const page = this.document.createElement('div');
     page.className = `${PAGE_TRANSITION_CLASS}__page ${PAGE_TRANSITION_CLASS}__page--${position}`;
     page.style.backgroundColor = kept.ground;
@@ -524,12 +549,16 @@ export class PageTransitions {
     } else {
       overlay.append(page);
     }
-    scroller.scrollTop = kept.scrollY;
     const panel = sheet?.querySelector<HTMLElement>(SHEET_PANEL);
-    if (panel != null) {
-      panel.scrollTop = Number(sheet?.dataset[PANEL_SCROLL] ?? 0);
-    }
-    return { box: page, copy, scrollY: kept.scrollY };
+    return {
+      page: { box: page, copy, scrollY: kept.scrollY },
+      scroll: () => {
+        scroller.scrollTop = kept.scrollY;
+        if (panel != null) {
+          panel.scrollTop = Number(sheet?.dataset[PANEL_SCROLL] ?? 0);
+        }
+      },
+    };
   }
 
   private placedPage(overlay: HTMLElement, position: 'under' | 'over'): PlacedPage | null {
