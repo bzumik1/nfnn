@@ -86,8 +86,8 @@
   }
 }
 
-.page-transition-sheet-under :modal,
-.page-transition-sheet-under :modal::backdrop {
+.page-transition-sheet-under :modal:not(.dialog--stacked),
+.page-transition-sheet-under :modal:not(.dialog--stacked)::backdrop {
   opacity: 0 !important;
   transition: none !important;
 }

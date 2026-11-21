@@ -57,6 +57,8 @@ const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', '
 const BAR_ITEMS = ['.back-button', '.account-button'];
 export const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
 const STANDING_DIALOG = 'dialog[open]:not(.dialog--leaving)';
+export const STACKED_DIALOG_CLASS = 'dialog--stacked';
+const DRAWN_DIALOG = `${STANDING_DIALOG}:not(.${STACKED_DIALOG_CLASS})`;
 const SHEET_HEAD = 'app-sheet-head';
 const BACKDROP_LOOKS = [
   'background-color',
@@ -967,7 +969,7 @@ export class PageTransitions {
     const root = this.document.documentElement;
     if (root.classList.contains(SHEET_UNDER_CLASS)) {
       root.classList.remove(SHEET_UNDER_CLASS);
-      this.drawing?.standAtOnce(this.document.querySelectorAll(STANDING_DIALOG));
+      this.drawing?.standAtOnce(this.document.querySelectorAll(DRAWN_DIALOG));
     }
     if (ran) {
       this.sampleFramePace();
