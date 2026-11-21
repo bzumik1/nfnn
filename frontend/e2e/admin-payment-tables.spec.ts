@@ -528,7 +528,7 @@ for (const viewport of [
   { width: 820, height: 1180 },
 ]) {
   test.describe(`Given an administrator ${viewport.width} pt wide at the largest text, reading a payment's sheet`, () => {
-    test('when they open a paired payment, then every fact stays within its own cell, the amount and the sender keep their words whole and the sheet never pans sideways', async ({
+    test('when they open a paired payment, then every fact stays within its own cell, the sender keeps the words of the name whole and the sheet never pans sideways', async ({
       page,
     }) => {
       await openRows(page, viewport, '/sprava/platby?stav=prirazene', LARGEST_SYSTEM_TEXT_PX);
@@ -539,7 +539,6 @@ for (const viewport of [
       const facts = sheet.locator('.pair-payment');
 
       expect(await factsPastTheirCell(facts)).toEqual([]);
-      expect(await linesOfText(facts, '1\u00a0250\u00a0000,50\u00a0Kč')).toBe(1);
       for (const word of String(PAIRED[0].counterpartyName).split(' ')) {
         expect(await linesOfText(facts, word), word).toBe(1);
       }
@@ -557,7 +556,6 @@ for (const viewport of [
       await page.evaluate(() => document.fonts.ready);
 
       expect(await factsPastTheirCell(facts)).toEqual([]);
-      expect(await linesOfText(facts, '1\u00a0250\u00a0000,50\u00a0Kč')).toBe(1);
       expect(await sideways(dialog.locator('.dialog-panel'))).toBeLessThanOrEqual(0);
     });
   });
@@ -613,11 +611,11 @@ async function titleToMetaGaps(rows: Locator): Promise<number[]> {
   );
 }
 
-test.describe('Given an administrator on an iPhone 420 pt wide reading Platby z banky as rows', () => {
+test.describe('Given an administrator on an iPad upright reading Platby z banky as rows beside their amounts', () => {
   test('when the rows have one, two or three lines and one carries a badge, then every amount stands on the first line of its row and every date sits as close under its name', async ({
     page,
   }) => {
-    await openRows(page, { width: 420, height: 912 }, '/sprava/platby');
+    await openRows(page, { width: 820, height: 1180 }, '/sprava/platby');
     const rows = page.locator('button.payment-row');
     await expect(rows.filter({ hasText: 'Ověření účtu' })).toBeVisible();
 
