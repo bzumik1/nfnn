@@ -443,3 +443,205 @@ for (const { width, rootSize } of [
     });
   });
 }
+
+const LARGEST_SYSTEM_TEXT_PX = 53;
+
+async function openRows(
+  page: Page,
+  viewport: { width: number; height: number },
+  path: string,
+  rootPx: number | null = null,
+): Promise<void> {
+  if (rootPx !== null) {
+    await page.addInitScript((px) => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent = `html { font-size: ${px}px; }`;
+        document.head.append(style);
+      });
+    }, rootPx);
+  }
+  await page.setViewportSize(viewport);
+  await mockDonorApi(page, donorWithDonations);
+  await rememberedSession(page);
+  await mockAdministration(page);
+  await page.route(
+    (url) => url.pathname === '/api/admin/donations/payments',
+    (route) => {
+      const paired = new URL(route.request().url()).searchParams.get('pairing') === 'paired';
+      const items = paired ? PAIRED : UNPAIRED;
+      return route.fulfill({
+        json: { year: null, availableYears: [2026], items, total: items.length },
+      });
+    },
+  );
+  await page.goto(path);
+  await expect(page.locator('h1').first()).not.toHaveText(ADMINISTRATION_LOCKED);
+  await expect(page.locator('button.payment-row').first()).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+}
+
+async function factsPastTheirCell(facts: Locator): Promise<string[]> {
+  return facts.evaluate((list) =>
+    [...list.querySelectorAll<HTMLElement>(':scope > div')].flatMap((cell) => {
+      const frame = cell.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(cell);
+      return [...range.getClientRects()]
+        .filter(
+          (box) => box.width > 0 && (box.left < frame.left - 1 || box.right > frame.right + 1),
+        )
+        .map(
+          (box) =>
+            `${cell.querySelector('dt')?.textContent?.trim()}: ${Math.round(box.left)}..${Math.round(box.right)} in ${Math.round(frame.left)}..${Math.round(frame.right)}`,
+        );
+    }),
+  );
+}
+
+async function linesOfText(within: Locator, text: string): Promise<number> {
+  return within.evaluate((element, wanted) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const index = (node.textContent ?? '').indexOf(wanted);
+      if (index >= 0) {
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + wanted.length);
+        return new Set(
+          [...range.getClientRects()]
+            .filter((box) => box.width > 0)
+            .map((box) => Math.round(box.top)),
+        ).size;
+      }
+    }
+    return 0;
+  }, text);
+}
+
+async function sideways(panel: Locator): Promise<number> {
+  return panel.evaluate((element) => element.scrollWidth - element.clientWidth);
+}
+
+for (const viewport of [
+  { width: 420, height: 912 },
+  { width: 820, height: 1180 },
+]) {
+  test.describe(`Given an administrator ${viewport.width} pt wide at the largest text, reading a payment's sheet`, () => {
+    test('when they open a paired payment, then every fact stays within its own cell, the amount and the sender keep their words whole and the sheet never pans sideways', async ({
+      page,
+    }) => {
+      await openRows(page, viewport, '/sprava/platby?stav=prirazene', LARGEST_SYSTEM_TEXT_PX);
+      await page.locator('button.payment-row').first().click();
+      const sheet = page.getByRole('dialog', { name: 'Přiřazená platba' });
+      await expect(sheet.getByText('potvrzení vystaveno')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const facts = sheet.locator('.pair-payment');
+
+      expect(await factsPastTheirCell(facts)).toEqual([]);
+      expect(await linesOfText(facts, '1\u00a0250\u00a0000,50\u00a0Kč')).toBe(1);
+      for (const word of String(PAIRED[0].counterpartyName).split(' ')) {
+        expect(await linesOfText(facts, word), word).toBe(1);
+      }
+      expect(await sideways(sheet.locator('.dialog-panel'))).toBeLessThanOrEqual(0);
+    });
+
+    test('when they open a waiting payment to pair it, then every fact stays within its own cell and the dialog never pans sideways', async ({
+      page,
+    }) => {
+      await openRows(page, viewport, '/sprava/platby', LARGEST_SYSTEM_TEXT_PX);
+      await page.locator('button.payment-row').first().click();
+      const dialog = page.getByRole('dialog', { name: 'Přiřadit platbu dárci' });
+      const facts = dialog.locator('.pair-payment');
+      await expect(facts).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      expect(await factsPastTheirCell(facts)).toEqual([]);
+      expect(await linesOfText(facts, '1\u00a0250\u00a0000,50\u00a0Kč')).toBe(1);
+      expect(await sideways(dialog.locator('.dialog-panel'))).toBeLessThanOrEqual(0);
+    });
+  });
+}
+
+test.describe('Given an administrator on an iPad upright pairing a payment with a long message', () => {
+  test('when the pairing dialog shows the facts, then the symbol and message take the whole width of the facts box', async ({
+    page,
+  }) => {
+    await openRows(page, { width: 820, height: 1180 }, '/sprava/platby');
+    await page.locator('button.payment-row').first().click();
+    const facts = page
+      .getByRole('dialog', { name: 'Přiřadit platbu dárci' })
+      .locator('.pair-payment');
+    await expect(facts.getByText(LONG_MESSAGE)).toBeVisible();
+
+    const widths = await facts.evaluate((list) => {
+      const style = getComputedStyle(list);
+      const content =
+        list.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const message = [...list.querySelectorAll(':scope > div')].at(-1)!;
+      return {
+        content: Math.round(content),
+        message: Math.round(message.getBoundingClientRect().width),
+      };
+    });
+    expect(widths.message).toBe(widths.content);
+  });
+});
+
+async function amountsOffTheFirstLine(rows: Locator): Promise<string[]> {
+  return rows.evaluateAll((buttons) =>
+    buttons.flatMap((row) => {
+      const title = row.querySelector('.ui-list__title')!;
+      const value = row.querySelector('.ui-list__value')!;
+      const range = document.createRange();
+      range.selectNodeContents(title);
+      const first = range.getClientRects()[0];
+      const amount = value.getBoundingClientRect();
+      const offset = amount.top + amount.height / 2 - (first.top + first.height / 2);
+      return Math.abs(offset) > 3 ? [`${value.textContent?.trim()}: ${Math.round(offset)} px`] : [];
+    }),
+  );
+}
+
+async function titleToMetaGaps(rows: Locator): Promise<number[]> {
+  return rows.evaluateAll((buttons) =>
+    buttons.map((row) => {
+      const title = row.querySelector('.ui-list__title')!.getBoundingClientRect();
+      const meta = row.querySelector('.ui-list__meta')!.getBoundingClientRect();
+      return Math.round(meta.top - title.bottom);
+    }),
+  );
+}
+
+test.describe('Given an administrator on an iPhone 420 pt wide reading Platby z banky as rows', () => {
+  test('when the rows have one, two or three lines and one carries a badge, then every amount stands on the first line of its row and every date sits as close under its name', async ({
+    page,
+  }) => {
+    await openRows(page, { width: 420, height: 912 }, '/sprava/platby');
+    const rows = page.locator('button.payment-row');
+    await expect(rows.filter({ hasText: 'Ověření účtu' })).toBeVisible();
+
+    expect(await amountsOffTheFirstLine(rows)).toEqual([]);
+    expect(new Set(await titleToMetaGaps(rows)).size).toBe(1);
+  });
+});
+
+test.describe('Given an administrator on an iPad in landscape at the largest text, scrolling Platby z banky', () => {
+  test('when the month heading sticks, then it rests at the top of the screen with no row of its month above it', async ({
+    page,
+  }) => {
+    await openRows(page, { width: 1180, height: 820 }, '/sprava/platby', LARGEST_SYSTEM_TEXT_PX);
+    const heading = page.locator('.ui-list__group-title').first();
+    const start = await heading.evaluate(
+      (element) => element.getBoundingClientRect().top + window.scrollY,
+    );
+    await page.evaluate((top) => window.scrollTo(0, top + 400), start);
+    await expect
+      .poll(() => heading.evaluate((element) => element.parentElement!.getBoundingClientRect().top))
+      .toBeLessThan(0);
+
+    await expect
+      .poll(() => heading.evaluate((element) => Math.round(element.getBoundingClientRect().top)))
+      .toBe(0);
+  });
+});
