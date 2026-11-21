@@ -25,6 +25,10 @@
   overflow-wrap: anywhere;
 }
 
+:host-context(app-admin-shell) .field-hint {
+  max-inline-size: var(--measure-prose);
+}
+
 .field-error {
   color: var(--color-danger);
   font-weight: var(--weight-semibold);

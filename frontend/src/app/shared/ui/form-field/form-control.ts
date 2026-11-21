@@ -101,8 +101,8 @@ export class FormControlDirective {
 
   readonly describedBy = computed(() => {
     const ids = [
-      this.field.hint() ? `${this.id}-hint` : null,
       this.showsError() ? `${this.id}-error` : null,
+      this.field.hint() ? `${this.id}-hint` : null,
     ].filter((id) => id !== null);
     return ids.length > 0 ? ids.join(' ') : null;
   });
