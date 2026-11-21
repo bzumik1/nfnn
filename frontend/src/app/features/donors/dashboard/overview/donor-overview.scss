@@ -180,13 +180,6 @@
   }
 }
 
-@include bp.down(cards) {
-  .receipt-saved {
-    justify-content: flex-start;
-    text-align: left;
-  }
-}
-
 .first-gift-steps {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
