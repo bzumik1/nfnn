@@ -363,7 +363,9 @@ function cardLink(page: Page, kind: CardKind): Locator {
 }
 
 function cardOf(page: Page, kind: CardKind): Locator {
-  return page.locator(kind.host).filter({ has: cardLink(page, kind) });
+  return page
+    .locator(kind.host)
+    .filter({ has: page.getByRole('link', { name: cardItem(kind).title }) });
 }
 
 function backButton(page: Page): Locator {
