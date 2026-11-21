@@ -79,7 +79,7 @@ describe('Given an administrator choosing the order of the projects', () => {
 
     expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Řazení se nepodařilo načíst.']);
     expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
-    expect(text(loadFailureRetry(fixture.nativeElement))).toBe('Zkusit znovu');
+    expect(accessibleText(loadFailureRetry(fixture.nativeElement))).toBe('Zkusit znovu');
   });
 
   it('when the device is offline, then a status line says the order shows once online, and the card loads it when the device is back online', async () => {
