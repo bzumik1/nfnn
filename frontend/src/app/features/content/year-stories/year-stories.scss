@@ -50,6 +50,7 @@
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain;
+  container: stories / inline-size;
 }
 
 .story {
@@ -63,7 +64,6 @@
   background: var(--color-story-tile);
   border: 1px solid var(--color-border-soft);
   scroll-snap-align: start;
-  container: story / inline-size;
 }
 
 .story-photo {
@@ -108,7 +108,7 @@
   font-weight: var(--weight-bold);
 
   @include bp.up(tablet) {
-    @include bp.container-up(story, tile) {
+    @include bp.container-up(stories, laptop) {
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;

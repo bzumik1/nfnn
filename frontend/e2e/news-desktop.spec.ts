@@ -11,6 +11,7 @@ const LONG_TAG = 'Pobyty v lázních pro celé rodiny dětí';
 const LONGEST_TITLE =
   'Nová střecha nad hlavou pro rodinu z Vysočiny, které loni v létě vyhořel dům i se vším, co měli, a teď začíná znovu';
 const LARGEST_SYSTEM_TEXT_PX = 53;
+const ENLARGED_ROOT_PX = 23;
 const CLAMPED_TITLE_LINES = 3;
 const TITLE_WITH_DESCENDERS_AND_RINGS =
   'Příspěvek pro Řehoře, Šárku a Žofii: nový vozík a jízdy pro Ůvaly, Ůžice, Ůštěk, Ůhlejov a Ůsobí';
@@ -371,30 +372,32 @@ test.describe('Given a visitor on the Aktuality tab on a computer', () => {
     expect(ink.cutInkInside).toBeLessThanOrEqual(0);
   });
 
-  test('when the stories of the year mix long tags and none, then each tag keeps one line, no title breaks inside a word and the titles of a row line up', async ({
-    page,
-  }) => {
-    await openNews(page, [article(1), article(2)], { width: 1280, height: 900 }, [
-      story(1, LONG_TAG, 'Rehabilitační pobyt pro jejich nejmenšího syna'),
-      story(2, null, 'Fenka Belinka'),
-      story(3, 'Léčba', 'Nový vozík pro Michala, který se znovu učí chodit'),
-      story(4, null, 'Rehabilitace pro Natálku a jejich maminku'),
-    ]);
-    const tiles = page.locator('app-year-stories .story');
-    await expect(tiles).toHaveCount(4);
+  for (const width of [1280, 1024]) {
+    test(`when the stories of the year mix long tags and none in a ${width} px window, then each tag keeps one line, no title breaks inside a word and the titles of a row line up`, async ({
+      page,
+    }) => {
+      await openNews(page, [article(1), article(2)], { width, height: 900 }, [
+        story(1, LONG_TAG, 'Rehabilitační pobyt pro jejich nejmenšího syna'),
+        story(2, null, 'Fenka Belinka'),
+        story(3, 'Léčba', 'Nový vozík pro Michala, který se znovu učí chodit'),
+        story(4, null, 'Rehabilitace pro Natálku a jejich maminku'),
+      ]);
+      const tiles = page.locator('app-year-stories .story');
+      await expect(tiles).toHaveCount(4);
 
-    for (const tag of await page.locator('app-year-stories .story-tag').all()) {
-      expect(await linesOf(tag)).toBe(1);
-    }
-    const tops: number[] = [];
-    for (const title of await page.locator('app-year-stories .story-title').all()) {
-      expect(await breaksInsideWords(title)).toBe(0);
-      tops.push((await boxOf(title)).top);
-    }
-    for (const top of tops) {
-      expect(Math.abs(top - tops[0])).toBeLessThanOrEqual(EDGE_TOLERANCE_PX);
-    }
-  });
+      for (const tag of await page.locator('app-year-stories .story-tag').all()) {
+        expect(await linesOf(tag)).toBe(1);
+      }
+      const tops: number[] = [];
+      for (const title of await page.locator('app-year-stories .story-title').all()) {
+        expect(await breaksInsideWords(title)).toBe(0);
+        tops.push((await boxOf(title)).top);
+      }
+      for (const top of tops) {
+        expect(Math.abs(top - tops[0])).toBeLessThanOrEqual(EDGE_TOLERANCE_PX);
+      }
+    });
+  }
 
   test('when an older news card has no photo and a short text beside cards with photos, then its button follows its text', async ({
     page,
@@ -434,6 +437,12 @@ test.describe('Given a visitor on the Aktuality tab with enlarged text', () => {
       rootFontSize: `${LARGEST_SYSTEM_TEXT_PX}px`,
       size: 'the largest text',
     },
+    {
+      width: 1024,
+      height: 1366,
+      rootFontSize: `${LARGEST_SYSTEM_TEXT_PX}px`,
+      size: 'the largest text',
+    },
   ]) {
     test(`when a news card carries a long tag at ${size} in a ${width} px window, then its whole tag shows and the card does not overflow`, async ({
       page,
@@ -455,10 +464,10 @@ test.describe('Given a visitor on the Aktuality tab with enlarged text', () => {
     });
   }
 
-  test('when a story of the year carries a long tag at the largest text in an 834 px window, then its whole tag shows', async ({
+  test(`when a story of the year carries a long tag at a ${ENLARGED_ROOT_PX} px root in an 834 px window, then its tag loses no letter`, async ({
     page,
   }) => {
-    await enlargeText(page, `${LARGEST_SYSTEM_TEXT_PX}px`);
+    await enlargeText(page, `${ENLARGED_ROOT_PX}px`);
     await openNews(page, [article(1), article(2)], { width: 834, height: 1194 }, [
       story(1, LONG_TAG, 'Rehabilitační pobyt pro jejich nejmenšího syna'),
     ]);
@@ -467,6 +476,25 @@ test.describe('Given a visitor on the Aktuality tab with enlarged text', () => {
 
     expect(await missingLettersOfTag(tag)).toBeLessThanOrEqual(0);
   });
+
+  for (const { width, height } of [
+    { width: 834, height: 1194 },
+    { width: 1024, height: 1366 },
+  ]) {
+    test(`when a story of the year carries a long tag at the largest text in a ${width} px window, then its tag wraps whole`, async ({
+      page,
+    }) => {
+      await enlargeText(page, `${LARGEST_SYSTEM_TEXT_PX}px`);
+      await openNews(page, [article(1), article(2)], { width, height }, [
+        story(1, LONG_TAG, 'Rehabilitační pobyt pro jejich nejmenšího syna'),
+      ]);
+      const tag = page.locator('app-year-stories .story-tag');
+      await expect(tag).toHaveText(LONG_TAG);
+
+      expect(await missingLettersOfTag(tag)).toBeLessThanOrEqual(0);
+      expect(await linesOf(tag)).toBeGreaterThan(1);
+    });
+  }
 
   test('when the leading news has a long title at the largest text in an 834 px window, then the whole title shows', async ({
     page,
