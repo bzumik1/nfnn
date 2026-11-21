@@ -209,6 +209,7 @@ test.describe('Given a visitor on a phone who has lost the connection, so the Of
       await expect(page.locator(lastPart).first()).toBeVisible();
       await scrolledToTheEnd(page);
       const roomUnderTheLastLineOnline = PHONE.height - (await lowestContentEdge(page));
+      const bodyPaddingOnline = await bottomPaddingOfTheBody(page);
 
       await page.route('**/api/**', (route) => route.abort('internetdisconnected'));
       await context.setOffline(true);
@@ -222,7 +223,8 @@ test.describe('Given a visitor on a phone who has lost the connection, so the Of
       const lastLine = await lowestContentEdge(page);
       expect(lastLine).toBeLessThanOrEqual(box!.y);
       const roomAddedOffline = PHONE.height - lastLine - roomUnderTheLastLineOnline;
-      expect(roomAddedOffline).toBeLessThanOrEqual((await bottomPaddingOfTheBody(page)) + 1);
+      const bodyPaddingAddedOffline = (await bottomPaddingOfTheBody(page)) - bodyPaddingOnline;
+      expect(roomAddedOffline).toBeLessThanOrEqual(bodyPaddingAddedOffline + 1);
     });
   }
 });
