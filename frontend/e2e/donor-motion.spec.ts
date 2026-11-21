@@ -169,8 +169,11 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     await openDonorSection(page, 'Údaje a zabezpečení');
 
     const devices = page.locator('.devices');
+    const otherDevice = signedInDevices.find((device) => !device.current);
+    const row = `device-row-${otherDevice?.id}`;
     await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
     await firstSyncSettled();
+    await expect(page.locator(`#${row} .device-sign-out-slot`)).toHaveAttribute('inert', '');
     await recordMoves(page, 'app-devices-card');
     await recordElementsMadeInert(page, 'app-devices-card');
     await devices
@@ -182,8 +185,6 @@ test.describe('Given a donor on a computer who asks for less motion', () => {
     await expect(devices.getByText('Jinde přihlášení nejste.')).toBeVisible();
     await expect(devices.getByRole('heading', { name: 'Přihlášená zařízení' })).toBeFocused();
     await expectOnlyAShortFadeOn(page, /(^| )device-slot( |$)/);
-    const otherDevice = signedInDevices.find((device) => !device.current);
-    const row = `device-row-${otherDevice?.id}`;
     expect(await elementsMadeInert(page)).toEqual([row, `inside ${row}`]);
   });
 
