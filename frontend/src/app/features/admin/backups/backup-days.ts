@@ -24,7 +24,11 @@ export function backupDays(backups: readonly BackupFileResponse[]): BackupDay[] 
     if (current?.day === day) {
       current.backups.push(entry);
     } else {
-      days.push({ day, title: `${weekdayOf(day)} ${at.slice(0, separator)}`, backups: [entry] });
+      days.push({
+        day,
+        title: `${capitalised(weekdayOf(day))} ${at.slice(0, separator)}`,
+        backups: [entry],
+      });
     }
   }
   return days;
@@ -33,4 +37,8 @@ export function backupDays(backups: readonly BackupFileResponse[]): BackupDay[] 
 function weekdayOf(day: string): string {
   const isoWeekday = new Date(`${day}T12:00:00Z`).getUTCDay() || 7;
   return BACKUP_DAYS.find((candidate) => candidate.value === isoWeekday)?.name ?? '';
+}
+
+function capitalised(word: string): string {
+  return word.charAt(0).toLocaleUpperCase('cs') + word.slice(1);
 }

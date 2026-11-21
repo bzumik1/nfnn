@@ -47,19 +47,26 @@ describe('Given an administrator on the older log files page', () => {
 
     expect(page.text('h1')).toBe('Starší soubory');
     expect(page.texts('h2')).toEqual(['Aplikace', 'Konektor']);
-    expect(page.links('.ui-list a')).toEqual([
-      {
-        text: 'backend.log.2026-11-06.0.gz 41 kB · 7. 11. 2026 0:08',
-        href: '/sprava/logy/soubor?nazev=backend.log.2026-11-06.0.gz',
-      },
-      {
-        text: 'backend.log.2026-10-24.0.gz 20 kB · 25. 10. 2026 0:52',
-        href: '/sprava/logy/soubor?nazev=backend.log.2026-10-24.0.gz',
-      },
-      {
-        text: 'mcp.log.2026-11-06.gz 8 kB · 7. 11. 2026 1:00',
-        href: '/sprava/logy/soubor?nazev=mcp.log.2026-11-06.gz',
-      },
+    expect(
+      ['Aplikace', 'Konektor'].flatMap((heading) =>
+        Array.from(page.cardTitled(heading).querySelectorAll('.file-name'), (name) =>
+          name.textContent?.trim(),
+        ),
+      ),
+    ).toEqual([
+      'backend.log.2026-11-06.0.gz',
+      'backend.log.2026-10-24.0.gz',
+      'mcp.log.2026-11-06.gz',
+    ]);
+    expect(page.texts('.ui-list a .ui-list__meta')).toEqual([
+      '41 kB · 7. 11. 2026 0:08',
+      '20 kB · 25. 10. 2026 0:52',
+      '8 kB · 7. 11. 2026 1:00',
+    ]);
+    expect(page.links('.ui-list a').map((link) => link.href)).toEqual([
+      '/sprava/logy/soubor?nazev=backend.log.2026-11-06.0.gz',
+      '/sprava/logy/soubor?nazev=backend.log.2026-10-24.0.gz',
+      '/sprava/logy/soubor?nazev=mcp.log.2026-11-06.gz',
     ]);
   });
 
@@ -76,6 +83,27 @@ describe('Given an administrator on the older log files page', () => {
     for (const heading of ['Aplikace', 'Konektor']) {
       expect(page.cardTitled(heading).querySelectorAll('.ui-list a.ui-list__row')).toHaveLength(1);
     }
+  });
+
+  it('when the files load, then each name may break only after a dot, inside a row led by the file icon as on Logy a diagnostika', async () => {
+    page.http.expectOne(LOGS_URL).flush({
+      available: true,
+      files: [logFile({ name: 'backend.log.2026-10-22.0.gz', compressed: true })],
+    });
+    await page.settle();
+
+    const row = page.cardTitled('Aplikace').querySelector('a.ui-list__row') as HTMLElement;
+    const name = row.querySelector('.ui-list__title.file-name') as HTMLElement;
+    expect([...name.querySelectorAll('.ui-word')].map((part) => part.textContent)).toEqual([
+      'backend.',
+      'log.',
+      '2026-10-22.',
+      '0.',
+      'gz',
+    ]);
+    expect(name.querySelectorAll('wbr')).toHaveLength(4);
+    expect(row.firstElementChild?.matches('.ui-list__lead.ui-list__glyph')).toBe(true);
+    expect(row.querySelector('.ui-list__glyph svg')?.getAttribute('width')).toBe('20');
   });
 
   it('when there is no older file, then the page says so', async () => {

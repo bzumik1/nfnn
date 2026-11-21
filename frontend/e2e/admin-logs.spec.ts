@@ -532,3 +532,73 @@ test.describe('Given an administrator on the server state on a phone', () => {
     expect(box.overflows).toBe(false);
   });
 });
+
+test.describe('Given an administrator on the log files on a 375 pt phone', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await routeLogsApi(page);
+    await rememberedAdministrator(page);
+    await page.setViewportSize({ width: 375, height: 667 });
+  });
+
+  test('when they read an older file name on Starší soubory, then every line of it ends after a dot or at its end, never at a hyphen of the date', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/logy/soubory');
+    const name = page
+      .getByRole('link', { name: /backend\.log\.2026-10-22\.0\.gz/ })
+      .locator('.file-name');
+    await expect(name).toHaveText('backend.log.2026-10-22.0.gz');
+
+    const lines = await name.evaluate((element) => {
+      const parts = Array.from(element.querySelectorAll('.ui-word'), (part) => ({
+        text: part.textContent ?? '',
+        boxes: part.getClientRects().length,
+        top: Math.round(part.getBoundingClientRect().top),
+      }));
+      const byLine = new Map<number, string[]>();
+      for (const part of parts) {
+        byLine.set(part.top, [...(byLine.get(part.top) ?? []), part.text]);
+      }
+      return {
+        boxes: parts.map((part) => part.boxes),
+        lines: [...byLine.values()].map((line) => line.join('')),
+      };
+    });
+
+    expect(lines.boxes.every((boxes) => boxes === 1)).toBe(true);
+    expect(lines.lines.join('')).toBe('backend.log.2026-10-22.0.gz');
+    for (const line of lines.lines.slice(0, -1)) {
+      expect(line.endsWith('.')).toBe(true);
+    }
+  });
+
+  test('when they go from Logy a diagnostika to Starší soubory, then a log file is the same row with its file icon at the same place', async ({
+    page,
+  }) => {
+    const placeOf = async () => {
+      const row = page
+        .getByRole('main')
+        .locator('a.ui-list__row', { has: page.locator('.file-name') });
+      await expect(row.first().locator('.ui-list__glyph svg')).toBeVisible();
+      return row.first().evaluate((element) => {
+        const icon = element.querySelector('.ui-list__glyph svg') as SVGElement;
+        const name = element.querySelector('.file-name') as HTMLElement;
+        return {
+          iconLeft: Math.round(icon.getBoundingClientRect().left),
+          iconWidth: Math.round(icon.getBoundingClientRect().width),
+          nameLeft: Math.round(name.getBoundingClientRect().left),
+        };
+      });
+    };
+
+    await page.goto('/sprava/logy');
+    const hub = await placeOf();
+    await page.getByRole('link', { name: /Starší soubory/ }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Starší soubory' })).toBeFocused();
+    const older = await placeOf();
+
+    expect(older).toEqual(hub);
+    expect(hub.iconWidth).toBe(20);
+  });
+});
