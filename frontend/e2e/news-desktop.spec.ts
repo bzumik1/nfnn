@@ -372,8 +372,11 @@ test.describe('Given a visitor on the Aktuality tab on a computer', () => {
     expect(ink.cutInkInside).toBeLessThanOrEqual(0);
   });
 
-  for (const width of [1280, 1024]) {
-    test(`when the stories of the year mix long tags and none in a ${width} px window, then each tag keeps one line, no title breaks inside a word and the titles of a row line up`, async ({
+  for (const { width, tags } of [
+    { width: 1280, tags: 'each tag keeps one line' },
+    { width: 1024, tags: 'each tag shows whole and the long one wraps' },
+  ]) {
+    test(`when the stories of the year mix long tags and none in a ${width} px window, then ${tags}, no title breaks inside a word and the titles of a row line up`, async ({
       page,
     }) => {
       await openNews(page, [article(1), article(2)], { width, height: 900 }, [
@@ -385,8 +388,16 @@ test.describe('Given a visitor on the Aktuality tab on a computer', () => {
       const tiles = page.locator('app-year-stories .story');
       await expect(tiles).toHaveCount(4);
 
-      for (const tag of await page.locator('app-year-stories .story-tag').all()) {
-        expect(await linesOf(tag)).toBe(1);
+      const storyTags = page.locator('app-year-stories .story-tag');
+      if (width === 1280) {
+        for (const tag of await storyTags.all()) {
+          expect(await linesOf(tag)).toBe(1);
+        }
+      } else {
+        for (const tag of await storyTags.all()) {
+          expect(await missingLettersOfTag(tag)).toBeLessThanOrEqual(0);
+        }
+        expect(await linesOf(storyTags.filter({ hasText: LONG_TAG }))).toBeGreaterThan(1);
       }
       const tops: number[] = [];
       for (const title of await page.locator('app-year-stories .story-title').all()) {
