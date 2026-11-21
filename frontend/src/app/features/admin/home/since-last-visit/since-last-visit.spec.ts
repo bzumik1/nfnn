@@ -349,6 +349,7 @@ describe('Given the block of what is new since the last visit on the administrat
 
     expect(fixture.nativeElement.querySelector('app-load-failure')).toBeNull();
     expect(text('.since-lead')).toContain('Od té doby nepřibylo nic nového.');
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('section.ui-card'));
   });
 
   it('when a retry fails again, then the alert is rendered anew', async () => {

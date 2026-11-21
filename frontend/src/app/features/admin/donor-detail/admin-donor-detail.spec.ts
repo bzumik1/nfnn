@@ -1935,6 +1935,7 @@ describe('Given an administrator on a donor card opened part by part', () => {
     fixture.detectChanges();
 
     expect(cardTitles()).toEqual(['Vystavená potvrzení']);
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
   });
 
   it('when the card opens and the gifts could not be loaded, then their rows say to open them and try again', async () => {
@@ -1968,6 +1969,7 @@ describe('Given an administrator on a donor card opened part by part', () => {
 
     expect(fixture.nativeElement.querySelector('app-load-failure')).toBeNull();
     expect(cardTitles()).toEqual(['Přihlášení']);
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
   });
 
   it('when the address names the erasure, then only the erasure shows', async () => {

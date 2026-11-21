@@ -369,6 +369,36 @@ describe('Given an administrator on the donors page', () => {
     expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
   });
 
+  it('when a query is typed while the retry runs, then the retry stops being busy and „Hledáme dárce…“ shows', async () => {
+    type('nov');
+    await vi.advanceTimersByTimeAsync(300);
+    fixture.detectChanges();
+    http
+      .expectOne((candidate) => candidate.url === SEARCH_URL)
+      .flush(null, { status: 500, statusText: 'Error' });
+    fixture.detectChanges();
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    fixture.detectChanges();
+    const retried = http.expectOne((candidate) => candidate.url === SEARCH_URL);
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(text('[role="status"]')).toBe('');
+
+    type('nová');
+    await vi.advanceTimersByTimeAsync(300);
+    fixture.detectChanges();
+
+    expect(retried.cancelled).toBe(true);
+    expect(fixture.nativeElement.querySelector('app-load-failure')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(text('[role="status"]')).toBe('Hledáme dárce…');
+    const typed = http.expectOne((candidate) => candidate.url === SEARCH_URL);
+    expect(typed.request.params.get('query')).toBe('nová');
+    typed.flush({ items: [jana], hasMore: false });
+    fixture.detectChanges();
+
+    expect(rows()).toHaveLength(1);
+  });
+
   it('when more donors match than the page shows, then the page says only the first ones are shown', async () => {
     await searched('a', [jana, stavby], true);
 
