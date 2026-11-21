@@ -5,6 +5,10 @@ export class PagePlacement {
   private readonly waiting = new Set<object>();
   private settled: (() => void)[] = [];
 
+  get settling(): boolean {
+    return this.waiting.size > 0;
+  }
+
   pending(): () => void {
     const placement = {};
     this.waiting.add(placement);

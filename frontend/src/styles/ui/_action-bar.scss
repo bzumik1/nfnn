@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'button-sizes';
 
 :root {
   --action-bar-height: 0px;
@@ -69,7 +70,7 @@ html:has(app-root app-tab-bar) {
 }
 
 @include bp.container-down(action-bar, tabs) {
-  .ui-action-bar .ui-button:not(.ui-button--small, .ui-button--block, .ui-button--grouped) {
+  .ui-action-bar .ui-button#{button-sizes.$default-size} {
     padding-inline: var(--space-2-5);
     font-size: var(--text-sm);
   }

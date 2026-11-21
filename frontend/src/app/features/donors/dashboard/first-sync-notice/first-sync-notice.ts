@@ -11,6 +11,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { PagePlacement } from '../../../../core/navigation/page-placement';
 import { ScrollHold } from '../../../../core/navigation/scroll-hold';
 import { keepRoomForFloatingNotice } from '../../../../shared/ui/floating-notice/floating-notice-room';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
@@ -33,6 +34,7 @@ export class FirstSyncNotice {
   private readonly copy = inject(DonorCopyLink).copy;
   private readonly document = inject(DOCUMENT);
   private readonly scrollHold = inject(ScrollHold);
+  private readonly placement = inject(PagePlacement);
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   private readonly saving = computed(() => {
     const copy = this.copy();
@@ -45,7 +47,7 @@ export class FirstSyncNotice {
     afterRenderEffect((onCleanup) => {
       const bar = this.bar()?.nativeElement;
       if (bar) {
-        onCleanup(keepRoomForFloatingNotice(this.document, bar, this.scrollHold));
+        onCleanup(keepRoomForFloatingNotice(this.document, bar, this.scrollHold, this.placement));
       }
     });
     effect((onCleanup) => {

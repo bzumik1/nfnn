@@ -9,10 +9,6 @@ const LISTENING: AddEventListenerOptions = { passive: true, capture: true };
 const followed = new WeakSet<Router>();
 let stopWaiting: (() => void) | null = null;
 
-export function restoringPlace(): boolean {
-  return stopWaiting !== null;
-}
-
 export function placeOnceGrown(restored: Scroll, injector: Injector, placed: () => void): void {
   const top = restored.position?.[1] ?? 0;
   const router = injector.get(Router);

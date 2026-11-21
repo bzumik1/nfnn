@@ -23,6 +23,7 @@ import {
 import { Connectivity } from '../../core/connectivity/connectivity';
 import { formatDataTime } from '../../core/connectivity/data-time';
 import { ShownAnswers } from '../../core/connectivity/shown-answers';
+import { PagePlacement } from '../../core/navigation/page-placement';
 import { ScrollHold } from '../../core/navigation/scroll-hold';
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
@@ -54,6 +55,7 @@ export class OfflineStatus {
   private readonly shown = inject(ShownAnswers);
   private readonly document = inject(DOCUMENT);
   private readonly scrollHold = inject(ScrollHold);
+  private readonly placement = inject(PagePlacement);
   private readonly dialogAnnouncer = inject(DialogAnnouncer);
   private readonly chunkLoadRecovery = inject(ChunkLoadRecovery);
   private readonly injector = inject(Injector);
@@ -124,7 +126,7 @@ export class OfflineStatus {
     afterRenderEffect((onCleanup) => {
       const pill = this.pill()?.nativeElement;
       if (pill) {
-        onCleanup(keepRoomForOfflinePill(this.document, pill, this.scrollHold));
+        onCleanup(keepRoomForOfflinePill(this.document, pill, this.scrollHold, this.placement));
       }
     });
   }

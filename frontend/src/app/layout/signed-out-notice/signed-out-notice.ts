@@ -13,6 +13,7 @@ import { NavigationStart, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthStore } from '../../core/auth/auth-store';
 import { SignedOutNotice as SignedOutNoticeState } from '../../core/auth/signed-out-notice';
+import { PagePlacement } from '../../core/navigation/page-placement';
 import { ScrollHold } from '../../core/navigation/scroll-hold';
 import { keepRoomForFloatingNotice } from '../../shared/ui/floating-notice/floating-notice-room';
 import { LeavingNotice } from '../../shared/ui/leaving-notice/leaving-notice';
@@ -29,6 +30,7 @@ export class SignedOutNotice {
   protected readonly auth = inject(AuthStore);
   private readonly document = inject(DOCUMENT);
   private readonly scrollHold = inject(ScrollHold);
+  private readonly placement = inject(PagePlacement);
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
 
   constructor() {
@@ -46,7 +48,7 @@ export class SignedOutNotice {
     afterRenderEffect((onCleanup) => {
       const bar = this.bar()?.nativeElement;
       if (bar) {
-        onCleanup(keepRoomForFloatingNotice(this.document, bar, this.scrollHold));
+        onCleanup(keepRoomForFloatingNotice(this.document, bar, this.scrollHold, this.placement));
       }
     });
   }
