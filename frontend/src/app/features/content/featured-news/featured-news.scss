@@ -239,6 +239,10 @@
 }
 
 @include bp.container-up(featured, tablet) {
+  .featured-text {
+    padding-block-start: var(--space-10);
+  }
+
   .featured-title {
     display: -webkit-box;
     -webkit-box-orient: vertical;
