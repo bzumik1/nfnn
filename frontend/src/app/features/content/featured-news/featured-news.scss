@@ -1,11 +1,14 @@
 @use 'breakpoints' as bp;
 @use 'pressed';
 
+$clamped-title-lines: 3;
+
 :host {
   display: block;
 }
 
 .featured {
+  container: featured / inline-size;
   position: relative;
   display: flex;
   align-items: flex-end;
@@ -226,6 +229,41 @@
   .featured--photo .featured-text {
     grid-column: 1;
     grid-row: 1;
+  }
+
+  .featured-foot {
+    justify-content: flex-start;
+  }
+
+  .featured-actions {
+    margin-inline-start: 0;
+  }
+}
+
+@include bp.container-up(featured, tablet) {
+  .featured-text {
+    padding-block-start: var(--space-10);
+  }
+
+  .featured-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: $clamped-title-lines;
+    line-clamp: $clamped-title-lines;
+    overflow: hidden;
+    line-height: var(--leading-clamped-heading);
+    padding-block-end: max(0em, var(--line-clamp-ink-room));
+    max-block-size: calc(#{$clamped-title-lines} * 1lh + var(--line-clamp-ink-room));
+    margin-block-end: calc(-1 * var(--line-clamp-ink-room));
+  }
+
+  .featured-perex {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .featured-foot {
+    margin-top: var(--space-4);
   }
 }
 

@@ -50,12 +50,13 @@
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain;
+  container: stories / inline-size;
 }
 
 .story {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   min-width: 0;
   padding: var(--space-2);
@@ -96,13 +97,23 @@
 
 .story-tag {
   display: inline-block;
-  margin-bottom: var(--space-1);
+  max-width: 100%;
+  margin-top: var(--space-1);
+  vertical-align: top;
   padding: var(--space-0-75) var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--color-accent-soft);
   color: var(--color-accent);
   font-size: var(--text-2xs);
   font-weight: var(--weight-bold);
+
+  @include bp.up(tablet) {
+    @include bp.container-up(stories, laptop) {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
 }
 
 .story-title {
@@ -112,7 +123,6 @@
   line-height: var(--leading-snug);
   color: var(--color-text);
   overflow-wrap: break-word;
-  hyphens: auto;
 }
 
 .story-link {
