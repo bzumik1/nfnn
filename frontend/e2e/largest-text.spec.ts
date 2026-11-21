@@ -1706,6 +1706,7 @@ for (const { phone, viewport } of [
       await page.goto(PETR_DETAIL_PATH);
       const notice = page.locator('.first-download');
       const retry = notice.getByRole('button', { name: 'Uložit znovu' });
+      await expect(notice).toBeVisible();
       await expect(retry).toBeVisible();
       const summary = page.getByRole('region', { name: 'Shrnutí dárce' });
       await expect(summary).toBeVisible();
@@ -3334,6 +3335,7 @@ for (const { width, height } of [
       await signIn(page);
       await openDonorSection(page, 'Údaje a zabezpečení');
       await page.setViewportSize({ width, height });
+      await expect(page.getByRole('navigation', { name: 'Můj účet' })).toHaveCount(0);
       const label = page.locator('main .account-row dt', { hasText: 'Dvoufaktorové' });
       await expect(label).toBeVisible();
 
