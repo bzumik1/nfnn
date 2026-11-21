@@ -35,7 +35,7 @@ table {
   width: var(--donations-column-amount-long);
 }
 
-:host-context(.payments-card:has(.receipt-note--long)) .column-receipt {
+:host-context(.payments-card:has(.receipt-note--long)) .column-receipt--fits-note {
   width: var(--donations-column-receipt-note);
 }
 
@@ -116,10 +116,29 @@ td.amount {
   text-align: right;
 }
 
+th.purpose-header {
+  text-align: start;
+}
+
 td.date .verification-tag {
   display: block;
   inline-size: fit-content;
   margin-top: var(--space-1-5);
+}
+
+td.date .date-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1-5);
+
+  .verification-tag {
+    margin-top: 0;
+  }
+}
+
+:host(.donations-table--narrow) td.receipt .receipt-note {
+  white-space: normal;
 }
 
 .pairing-tag {
@@ -270,8 +289,12 @@ td .receipt-diagnostics {
   }
 }
 
-@include bp.container-down(donations-table, ledger) {
-  @include table-as-cards;
+@include bp.down(nav) {
+  @include bp.container-down(donations-table, ledger) {
+    :host(:not(.donations-table--narrow)) {
+      @include table-as-cards;
+    }
+  }
 }
 
 @include bp.up(nav) {
@@ -318,8 +341,12 @@ td .receipt-diagnostics {
   }
 
   .donation-amount {
-    font-size: var(--text-lg);
+    font-size: var(--text-gift-amount);
     font-weight: var(--weight-bold);
+  }
+
+  .ui-list__row > :is(.ui-list__title, .ui-list__value) {
+    align-self: first baseline;
   }
 
   .pairing-tag {

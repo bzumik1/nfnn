@@ -3718,3 +3718,118 @@ test.describe('Given a phone 320 pt wide with the text at its default size', () 
     }
   });
 });
+
+const GIFTS_OF_TWO_YEARS = [
+  donationItem({ id: 'g-4', receivedAt: '2026-03-15', amountMinor: 125000000 }),
+  donationItem({
+    id: 'g-3',
+    receivedAt: '2026-02-10',
+    amountMinor: 150000,
+    pairedBy: 'SENDER_ACCOUNT',
+    senderAccount: '19-2000145399/0800',
+  }),
+  donationItem({ id: 'g-2', receivedAt: '2026-01-20', amountMinor: 200 }),
+  donationItem({
+    id: 'g-v',
+    receivedAt: '2026-01-05',
+    amountMinor: 100,
+    accountVerification: true,
+    receiptAvailable: false,
+  }),
+  donationItem({ id: 'g-1', receivedAt: '2025-06-10', amountMinor: 26000 }),
+  donationItem({
+    id: 'g-r',
+    receivedAt: '2025-05-02',
+    amountMinor: 30000,
+    status: 'REFUNDED',
+    receiptAvailable: false,
+  }),
+];
+
+const TWO_YEARS_OF_GIFTS = {
+  summary: {
+    totalAmountMinor: 125176300,
+    currency: 'CZK',
+    count: GIFTS_OF_TWO_YEARS.length,
+    lastReceivedAt: '2026-03-15',
+    byYear: [
+      { year: 2026, count: 4, totalAmountMinor: 125150300 },
+      { year: 2025, count: 2, totalAmountMinor: 26000 },
+    ],
+    yearlyReceiptsAvailableThrough: 2025,
+    receiptsAvailableFrom: 2025,
+  },
+  list: {
+    items: GIFTS_OF_TWO_YEARS,
+    totalAmountMinor: 125176300,
+    currency: 'CZK',
+    count: GIFTS_OF_TWO_YEARS.length,
+  },
+};
+
+async function pageWiderThanTheWindow(page: Page): Promise<number> {
+  return page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+}
+
+for (const width of [320, 390]) {
+  test.describe(`Given a donor with gifts of two years on an iPhone ${width} pt wide whose installed app shows the largest accessibility text`, () => {
+    test.use({ viewport: { width, height: 844 } });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await mockDonorApi(page, TWO_YEARS_OF_GIFTS);
+      await rememberedDonorSession(page);
+    });
+
+    test('when they open Potvrzení o daru, then each year keeps a gap between the year and its total or puts the total under it, its notes wrap within the card and Ověřit potvrzení stays inside the screen', async ({
+      page,
+    }) => {
+      await page.goto('/darce/potvrzeni');
+      const rows = page.locator('.year-row');
+      await expect(rows).toHaveCount(2);
+      await expect(rows.first().locator('.year-total')).toHaveText(/1\s251\s503\sKč/);
+
+      const crowded = await rows.evaluateAll((found) =>
+        found.flatMap((row) => {
+          const year = row.querySelector('.year')!.getBoundingClientRect();
+          const total = row.querySelector('.year-total')!.getBoundingClientRect();
+          const apart = total.left >= year.right + 1 || total.top >= year.bottom - 1;
+          return apart ? [] : [row.querySelector('.year')!.textContent!.trim()];
+        }),
+      );
+      expect(crowded).toEqual([]);
+      await expect.poll(() => contentPastTheSides(page.locator('.yearly-card'))).toEqual([]);
+      await expect.poll(() => contentPastTheSides(page.locator('.verify-card'))).toEqual([]);
+      await expect.poll(() => pageWiderThanTheWindow(page)).toBe(0);
+    });
+
+    test('when they open Potvrzení o daru, then each year keeps its total on one line inside its card', async ({
+      page,
+    }) => {
+      await page.goto('/darce/potvrzeni');
+      const totals = page.locator('.yearly-card .year-total');
+      await expect(totals).toHaveCount(2);
+      await expect(totals.first()).toHaveText(/1\s251\s503\sKč/);
+      await page.evaluate(() => document.fonts.ready);
+
+      for (const total of await totals.all()) {
+        expect(await linesOf(total), await total.textContent()).toBe(1);
+      }
+      await expect.poll(() => contentPastTheSides(page.locator('.yearly-card'))).toEqual([]);
+    });
+
+    test('when they open Moje dary, then nothing in the list of gifts is wider than its card', async ({
+      page,
+    }) => {
+      await page.goto('/darce/dary');
+      const card = page.locator('.payments-card');
+      await expect(card.locator('.donation-rows > li')).toHaveCount(GIFTS_OF_TWO_YEARS.length);
+
+      await expect.poll(() => contentPastTheSides(card)).toEqual([]);
+      expect(await card.evaluate((element) => element.scrollWidth - element.clientWidth)).toBe(0);
+      await expect.poll(() => pageWiderThanTheWindow(page)).toBe(0);
+    });
+  });
+}
