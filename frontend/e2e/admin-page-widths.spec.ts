@@ -403,34 +403,47 @@ test.describe('Given an administrator on Správci on a narrow computer', () => {
 
 const TABLET = { width: 820, height: 1180 } as const;
 const PHONE = { width: 390, height: 844 } as const;
-const FORM_MEASURE_REM = 45;
+const INSTALLED_APP_ROOT_PX = 17;
 
-interface FrameColumn {
-  readonly frameLeft: number;
-  readonly frameRight: number;
+interface ColumnEdges {
   readonly contentLeft: number;
   readonly contentRight: number;
-  readonly rootFontSize: number;
+  readonly cardLeft: number;
+  readonly cardRight: number;
+  readonly backLeft: number;
+  readonly accountRight: number;
 }
 
-async function frameColumn(page: Page): Promise<FrameColumn> {
-  return pageBox(page).evaluate((element) => {
-    const frame = element.closest('.admin-frame')!.getBoundingClientRect();
+async function columnAgainstTheHeader(page: Page): Promise<ColumnEdges> {
+  const banner = page.getByRole('banner');
+  const back = await banner.getByRole('button', { name: 'Zpět' }).boundingBox();
+  const account = await banner.getByRole('button', { name: /^Účet/ }).boundingBox();
+  const column = await pageBox(page).evaluate((element) => {
     const box = element.getBoundingClientRect();
     const style = getComputedStyle(element);
+    const card = element.querySelector('form .ui-card')!.getBoundingClientRect();
     return {
-      frameLeft: frame.left,
-      frameRight: frame.right,
       contentLeft: box.left + parseFloat(style.paddingLeft),
       contentRight: box.right - parseFloat(style.paddingRight),
-      rootFontSize: parseFloat(getComputedStyle(document.documentElement).fontSize),
+      cardLeft: card.left,
+      cardRight: card.right,
     };
   });
+  return { ...column, backLeft: back!.x, accountRight: account!.x + account!.width };
+}
+
+function expectOnTheHeaderButtons(edges: ColumnEdges): void {
+  for (const left of [edges.contentLeft, edges.cardLeft]) {
+    expect(Math.abs(left - edges.backLeft)).toBeLessThanOrEqual(1);
+  }
+  for (const right of [edges.contentRight, edges.cardRight]) {
+    expect(Math.abs(right - edges.accountRight)).toBeLessThanOrEqual(1);
+  }
 }
 
 test.describe('Given an administrator in an editor on an upright tablet', () => {
   for (const path of ['/sprava/aktuality/nova', '/sprava/projekty/nova'] as const) {
-    test(`when ${path} opens, then the form stands in the form page's measure in the middle of the full-screen frame`, async ({
+    test(`when ${path} opens in a browser tab and in the home-screen app's ${INSTALLED_APP_ROOT_PX} px text, then the form's column ends on the back and account buttons`, async ({
       page,
     }) => {
       await page.setViewportSize(TABLET);
@@ -439,18 +452,19 @@ test.describe('Given an administrator in an editor on an upright tablet', () => 
         page.locator('.admin-frame:not(.admin-sheet) .admin-page form .ui-card').first(),
       ).toBeVisible();
 
-      const column = await frameColumn(page);
-      expect(column.contentRight - column.contentLeft).toBeLessThanOrEqual(
-        FORM_MEASURE_REM * column.rootFontSize + 0.5,
-      );
-      expect(column.contentLeft - column.frameLeft).toBeCloseTo(
-        column.frameRight - column.contentRight,
-        0,
-      );
+      expectOnTheHeaderButtons(await columnAgainstTheHeader(page));
+
+      await page.addStyleTag({ content: `html { font-size: ${INSTALLED_APP_ROOT_PX}px; }` });
+      await expect
+        .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).fontSize))
+        .toBe(`${INSTALLED_APP_ROOT_PX}px`);
+      expectOnTheHeaderButtons(await columnAgainstTheHeader(page));
     });
   }
 
-  test('when a story opens, then its year stays a short field like its date', async ({ page }) => {
+  test('when a story opens, then its year stays a short field narrower than half its title', async ({
+    page,
+  }) => {
     await page.setViewportSize(TABLET);
     await openUnlocked(page, '/sprava/projekty/nova');
     const year = await page.locator('#projects-year').boundingBox();

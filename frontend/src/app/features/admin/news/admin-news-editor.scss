@@ -7,9 +7,12 @@
 @include bp.up(tablet) {
   @include bp.down(nav) {
     .ui-page--form {
-      box-sizing: content-box;
-      max-width: var(--page-form-max);
-      margin-inline: auto;
+      padding-inline: max(
+          var(--space-8),
+          env(safe-area-inset-left),
+          var(--window-controls-inset-inline)
+        )
+        max(var(--space-8), env(safe-area-inset-right));
     }
   }
 }
