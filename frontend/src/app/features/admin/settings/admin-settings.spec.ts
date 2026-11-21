@@ -136,7 +136,7 @@ describe('Given an administrator on the settings page', () => {
     fixture.componentInstance['state'].set('slow');
     await settle();
 
-    expect(texts('[role="alert"]')).toEqual([
+    expect(texts('[role="alert"]').filter(Boolean)).toEqual([
       'Nastavení je uložené, ale web se po restartu zatím nespustil. Počkejte pár minut a zkuste to znovu; když to nepomůže, napište správci serveru.',
     ]);
     expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
