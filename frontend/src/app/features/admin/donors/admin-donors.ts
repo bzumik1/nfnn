@@ -43,6 +43,13 @@ interface ListedDonor {
   lastGift: LastGift | null;
 }
 
+interface StatusLine {
+  text: string;
+  look: string;
+}
+
+const HIDDEN_LOOK = 'visually-hidden';
+
 interface Outcome {
   state: SearchState;
   items: DonorAccountResponse[];
@@ -107,6 +114,27 @@ export class AdminDonors {
     return [];
   });
 
+  protected readonly statusLine = computed<StatusLine>(() => {
+    switch (this.state()) {
+      case 'idle':
+        return this.listsRecent()
+          ? { text: '', look: HIDDEN_LOOK }
+          : {
+              text: $localize`:@@admin.donors.search.idle:Začněte psát a\u00a0dárci se objeví tady.`,
+              look: 'ui-card__empty',
+            };
+      case 'searching':
+        return {
+          text: $localize`:@@admin.donors.search.searching:Hledáme dárce…`,
+          look: 'ui-load-state ui-load-state--inset',
+        };
+      case 'ready':
+        return this.foundLine(this.results().length);
+      case 'error':
+        return { text: '', look: HIDDEN_LOOK };
+    }
+  });
+
   constructor() {
     this.loadPortraits();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
@@ -164,6 +192,25 @@ export class AdminDonors {
     return item.type === 'COMPANY'
       ? $localize`:@@admin.donors.type.company:Firma`
       : $localize`:@@admin.donors.type.person:Člověk`;
+  }
+
+  private foundLine(count: number): StatusLine {
+    if (count === 0) {
+      return {
+        text: $localize`:@@admin.donors.search.empty:Žádný dárce neodpovídá.`,
+        look: 'ui-card__empty',
+      };
+    }
+    if (this.hasMore()) {
+      return {
+        text: $localize`:@@admin.donors.search.more:Zobrazujeme prvních ${count}:INTERPOLATION: dárců. Upřesněte hledání, ať najdete toho správného.`,
+        look: 'search-more',
+      };
+    }
+    return {
+      text: $localize`:@@admin.donors.search.count:Nalezení dárci: ${count}:INTERPOLATION:`,
+      look: HIDDEN_LOOK,
+    };
   }
 
   private loadPortraits(): void {

@@ -32,36 +32,7 @@
     </div>
 
     <div role="status">
-      @switch (state()) {
-        @case ('idle') {
-          @if (!listsRecent()) {
-            <p class="ui-card__empty" i18n="@@admin.donors.search.idle">
-              Začněte psát a&nbsp;dárci se objeví tady.
-            </p>
-          }
-        }
-        @case ('searching') {
-          <p class="ui-load-state ui-load-state--inset" i18n="@@admin.donors.search.searching">
-            Hledáme dárce…
-          </p>
-        }
-        @case ('ready') {
-          @if (results().length === 0) {
-            <p class="ui-card__empty" i18n="@@admin.donors.search.empty">Žádný dárce neodpovídá.</p>
-          } @else {
-            @if (hasMore()) {
-              <p class="search-more" i18n="@@admin.donors.search.more">
-                Zobrazujeme prvních {{ results().length }} dárců. Upřesněte hledání, ať najdete toho
-                správného.
-              </p>
-            } @else {
-              <p class="visually-hidden" i18n="@@admin.donors.search.count">
-                Nalezení dárci: {{ results().length }}
-              </p>
-            }
-          }
-        }
-      }
+      <p [class]="statusLine().look">{{ statusLine().text }}</p>
     </div>
     @if (state() === 'error') {
       <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
