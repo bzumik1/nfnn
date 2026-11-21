@@ -22,6 +22,50 @@ function action(overrides: Record<string, unknown>) {
   };
 }
 
+const BUSY_HISTORY = [
+  action({}),
+  action({
+    id: '019a1c00-0000-7000-8000-00000000e002',
+    adminName: 'Bohumila Kateřina Novotná-Procházková',
+    adminEmail: 'bohumila.katerina.novotna-prochazkova@nejdelsi-domena-ceske-republiky.cz',
+    action: 'CHANGE_PUSH_ALERTS',
+    donorId: null,
+    summary:
+      'Upozornění přes push na zařízení iPhone změněna: výpadek importu zapnut, výpadek záloh vypnut.',
+    client: 'claude.ai',
+  }),
+  action({
+    id: '019a1c00-0000-7000-8000-00000000e003',
+    action: 'REVERSE_SYMBOL_CLAIM',
+    summary:
+      'Odpověď o starším symbolu 4821 ze dne 3. 9. 2026 vrácena; dary z 12. 10. 2026 a 13. 10. 2026 jsou znovu nespárované.',
+  }),
+  action({
+    id: '019a1c00-0000-7000-8000-00000000e004',
+    action: 'SEND_MONTHLY_REPORT',
+    donorId: null,
+    summary: 'Měsíční přehled za září 2026 ručně odeslán.',
+  }),
+  action({
+    id: '019a1c00-0000-7000-8000-00000000e005',
+    action: 'REGISTER_RECEIPT_SIGNING_KEY',
+    adminId: '00000000-0000-0000-0000-000000000000',
+    adminName: null,
+    adminEmail: null,
+    donorId: null,
+    summary: 'Klíč k ověřovacím QR kódům 21fe31df zaregistrován 20. 11. 2026.',
+  }),
+  action({
+    id: '019a1c00-0000-7000-8000-00000000e006',
+    adminName: null,
+    adminEmail: null,
+    action: 'REVOKE_ADMINISTRATION',
+    summary: 'Role správce odebrána dárci Petr Svoboda; všechna přihlášení dárce skončila.',
+  }),
+];
+
+const DETAILS_COLUMN_SHARE = 1 / 3;
+
 async function rememberedSession(page: Page): Promise<void> {
   await page.route('**/api/donors/auth/refresh', (route) =>
     route.fulfill(session(200, administrator)),
@@ -135,4 +179,36 @@ test.describe('Given an administrator on the history page', () => {
 
     await expect(page.getByText('Zatím žádný správce nic nezměnil.')).toBeVisible();
   });
+  for (const width of [1280, 1920]) {
+    test(`when the history lists long names and sentences at ${width} px, then Podrobnosti is the widest column with more than a third of the table and Otevřít kartu dárce stays on one line`, async ({
+      page,
+    }) => {
+      await page.route(
+        (url) => url.pathname === ACTIONS,
+        (route) => route.fulfill({ json: { items: BUSY_HISTORY, hasMore: false } }),
+      );
+      await page.setViewportSize({ width, height: 900 });
+
+      await page.goto('/sprava/historie');
+
+      await expect(page.locator('tbody tr')).toHaveCount(BUSY_HISTORY.length);
+      const table = (await page.locator('.ui-table').boundingBox())!;
+      const widths = await page
+        .getByRole('columnheader')
+        .evaluateAll((headers) => headers.map((header) => header.getBoundingClientRect().width));
+      const details = widths[3];
+      expect(details).toBe(Math.max(...widths));
+      expect(details).toBeGreaterThan(table.width * DETAILS_COLUMN_SHARE);
+      const linkLines = await page
+        .getByRole('link', { name: 'Otevřít kartu dárce' })
+        .evaluateAll((links) =>
+          links.map((link) => {
+            const range = document.createRange();
+            range.selectNodeContents(link);
+            return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
+          }),
+        );
+      expect(linkLines).toEqual(linkLines.map(() => 1));
+    });
+  }
 });
