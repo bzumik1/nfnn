@@ -229,7 +229,7 @@
                 <h3 class="ui-list__group-title" [id]="monthHeadingId(month.key)">
                   {{ month.label }}
                 </h3>
-                <ul class="ui-list">
+                <ul class="ui-list ui-list--wide-values">
                   @for (item of month.items; track item.id) {
                     <li [attr.data-month]="month.key" (animate.leave)="leaveRow($event)">
                       <div>

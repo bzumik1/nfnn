@@ -401,6 +401,7 @@
   --list-lead-size: max(var(--space-7), min(2.1875rem, 11cqi));
   --list-glyph-size: calc(var(--list-lead-size) * 24 / 35);
   --list-tile-icon-size: calc(var(--list-lead-size) * 4 / 7);
+  --text-list-tile-mark: var(--list-tile-icon-size);
   --status-icon-size: 4rem;
   --list-group-title-top: 0rem;
 

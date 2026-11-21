@@ -1,5 +1,19 @@
-import type { Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import type { Locator, Page } from '@playwright/test';
+import {
+  donorWithDonations,
+  mockAdministration,
+  rememberedSession,
+  serveEmptyAdministrationCopy,
+} from './baseline/screen-mocks';
+import { mockDonorApi, whenAdministrationCopied } from './donor-session';
+import { ADMINISTRATION_LOCKED, expect, test } from './fixtures';
+import {
+  serveReceiptKeys,
+  serveReceiptStatus,
+  SINGLE_RECEIPT,
+  verdictHeading,
+  YEARLY_RECEIPT,
+} from './receipt-verification';
 
 interface Part {
   readonly tag: string;
@@ -21,11 +35,14 @@ interface Box {
 const DEFAULT_ROOT_PX = 16;
 const SYSTEM_DEFAULT_ROOT_PX = 17;
 const DOUBLE_ROOT_PX = 32;
+const DOUBLE_SYSTEM_ROOT_PX = 34;
 const LARGEST_SYSTEM_ROOT_PX = 53;
 const SUBPIXEL_PX = 1;
 const PHONE_CARD_PX = 343;
 const WIDE_PHONE_CARD_PX = 388;
 const COMPUTER_CARD_PX = 640;
+const PHONE_WIDTH_PX = 390;
+const PHONE_HEIGHT_PX = 844;
 const LONG_TITLE =
   'Klíč k ověřovacím QR kódům se nepodařilo zkontrolovat a server to zkusí znovu za hodinu';
 const LONG_META = 'Bez jména odesílatele · 2 dary · bez variabilního symbolu · poslední 20. 10.';
@@ -69,11 +86,21 @@ const buttonValue = (text: string): Part => ({
   children: [{ tag: 'button', className: 'ui-button ui-button--small', text }],
 });
 
-const card = (...rows: Part[]): Part => ({
+const countValue = (text: string): Part => ({
+  tag: 'span',
+  className: 'ui-list__value ui-list__count',
+  text,
+});
+
+const listCard = (listClass: string, rows: Part[]): Part => ({
   tag: 'section',
   className: 'ui-card',
-  children: [{ tag: 'ul', className: 'ui-list', children: rows }],
+  children: [{ tag: 'ul', className: listClass, children: rows }],
 });
+
+const card = (...rows: Part[]): Part => listCard('ui-list', rows);
+
+const wideValuesCard = (...rows: Part[]): Part => listCard('ui-list ui-list--wide-values', rows);
 
 async function mount(page: Page, widthPx: number, root: Part, rootPx = DEFAULT_ROOT_PX) {
   await page.goto('/');
@@ -175,6 +202,39 @@ async function lineCountOf(page: Page, selector: string, index = 0): Promise<num
 
 const middle = (box: Box) => box.top + box.height / 2;
 
+async function valuesOffTheirTitleLine(
+  rows: Locator,
+): Promise<{ readonly checked: number; readonly off: readonly string[] }> {
+  return rows.evaluateAll((found, subpixel) => {
+    const off: string[] = [];
+    let checked = 0;
+    for (const row of found) {
+      const title = row.querySelector(':scope > .ui-list__title');
+      const value = row.querySelector(':scope > .ui-list__value');
+      if (!title || !value || !row.checkVisibility()) {
+        continue;
+      }
+      checked += 1;
+      if (value.getBoundingClientRect().left < title.getBoundingClientRect().right - subpixel) {
+        off.push(title.textContent?.trim() ?? '');
+      }
+    }
+    return { checked, off };
+  }, SUBPIXEL_PX);
+}
+
+async function openAdministration(page: Page, path: string): Promise<void> {
+  await page.setViewportSize({ width: PHONE_WIDTH_PX, height: PHONE_HEIGHT_PX });
+  await mockDonorApi(page, donorWithDonations);
+  await mockAdministration(page);
+  await serveEmptyAdministrationCopy(page);
+  await rememberedSession(page);
+  const copied = whenAdministrationCopied(page);
+  await page.goto(path);
+  await expect(page.locator('h1').first()).not.toHaveText(ADMINISTRATION_LOCKED);
+  await copied();
+}
+
 test.describe('Given a list row whose text runs over several lines', () => {
   for (const rootPx of [DEFAULT_ROOT_PX, DOUBLE_ROOT_PX]) {
     test(`when a tile, an icon or nothing leads it at a root of ${rootPx} px, then the tile and the icon stand on the middle of the title's first line`, async ({
@@ -254,7 +314,7 @@ test.describe('Given list rows led by icons drawn at different sizes', () => {
   });
 });
 
-test.describe('Given list rows with a wide amount, a date or a small button', () => {
+test.describe('Given a list of wide values: an amount, a date or a small button', () => {
   for (const [widthPx, rootPx] of [
     [PHONE_CARD_PX, SYSTEM_DEFAULT_ROOT_PX],
     [WIDE_PHONE_CARD_PX, SYSTEM_DEFAULT_ROOT_PX],
@@ -266,7 +326,7 @@ test.describe('Given list rows with a wide amount, a date or a small button', ()
       await mount(
         page,
         widthPx,
-        card(
+        wideValuesCard(
           listRow(tile(18), title('6 plateb čeká na přiřazení'), value('1 253 311,50 Kč')),
           listRow(
             glyph(20),
@@ -311,13 +371,152 @@ test.describe('Given list rows with a wide amount, a date or a small button', ()
     await mount(
       page,
       COMPUTER_CARD_PX,
-      card(listRow(tile(18), title('6 plateb čeká na přiřazení'), value('1 253 311,50 Kč'))),
+      wideValuesCard(
+        listRow(tile(18), title('6 plateb čeká na přiřazení'), value('1 253 311,50 Kč')),
+      ),
     );
 
     const text = await boxOf(page, '.ui-list__title');
     const shown = await boxOf(page, '.ui-list__value');
     expect(shown.top).toBeLessThan(text.bottom);
     expect(shown.left).toBeGreaterThanOrEqual(text.right);
+  });
+
+  test('when a count stands in it on a phone card at the default text, then the count stays by the arrow', async ({
+    page,
+  }) => {
+    await mount(
+      page,
+      PHONE_CARD_PX,
+      wideValuesCard(listRow(glyph(20), title('Platby'), countValue('3'))),
+      SYSTEM_DEFAULT_ROOT_PX,
+    );
+
+    const text = await boxOf(page, '.ui-list__title');
+    const count = await boxOf(page, '.ui-list__count');
+    expect(count.left).toBeGreaterThanOrEqual(text.right - SUBPIXEL_PX);
+  });
+});
+
+test.describe('Given a list of short values', () => {
+  const shortValues = () =>
+    card(
+      listRow(glyph(20), title('Vlákna'), meta('nejvíc 48, z toho 30 na pozadí'), value('42')),
+      listRow(glyph(20), title('Čekají na spojení'), value('0')),
+      listRow(glyph(20), title('Odpovídá'), value('za 2 ms')),
+      listRow(glyph(20), title('Disk'), meta('/DATA'), value('48 % volno')),
+      listRow(null, title('31. 1. 2026'), value('1 000 Kč')),
+    );
+
+  test('when the card is as wide as on a phone at the default text, then each value stays beside its title', async ({
+    page,
+  }) => {
+    await mount(page, PHONE_CARD_PX, shortValues(), SYSTEM_DEFAULT_ROOT_PX);
+
+    const shown = await valuesOffTheirTitleLine(page.locator('#list-rows-host .ui-list__row'));
+    expect(shown.checked).toBe(5);
+    expect(shown.off).toEqual([]);
+  });
+
+  test('when the text doubles on a phone card, then each value moves under its title, from where the title starts', async ({
+    page,
+  }) => {
+    await mount(page, PHONE_CARD_PX, shortValues(), DOUBLE_SYSTEM_ROOT_PX);
+
+    for (const index of [0, 1, 2, 3, 4]) {
+      const text = await boxOf(page, '.ui-list__title', index);
+      const shown = await boxOf(page, '.ui-list__value', index);
+      expect(shown.top).toBeGreaterThanOrEqual(text.bottom - SUBPIXEL_PX);
+      expect(Math.abs(shown.left - text.left)).toBeLessThanOrEqual(SUBPIXEL_PX);
+    }
+  });
+
+  test('when a long title meets a value in it on a phone card at the default text, then the value moves under it only in a list of wide values', async ({
+    page,
+  }) => {
+    const row = () => listRow(tile(18), title(LONG_TITLE), buttonValue('Zkusit znovu'));
+    await mount(page, PHONE_CARD_PX, card(row()), SYSTEM_DEFAULT_ROOT_PX);
+    const plain = await valuesOffTheirTitleLine(page.locator('#list-rows-host .ui-list__row'));
+    expect(plain).toEqual({ checked: 1, off: [] });
+
+    await mount(page, PHONE_CARD_PX, wideValuesCard(row()), SYSTEM_DEFAULT_ROOT_PX);
+    const text = await boxOf(page, '.ui-list__title');
+    const shown = await boxOf(page, '.ui-list__value');
+    expect(shown.top).toBeGreaterThanOrEqual(text.bottom - SUBPIXEL_PX);
+    expect(Math.abs(shown.left - text.left)).toBeLessThanOrEqual(SUBPIXEL_PX);
+  });
+});
+
+test.describe('Given an administrator on a phone at the default text', () => {
+  test('when Stav serveru opens, then its counts, times and shares stay beside their titles', async ({
+    page,
+  }) => {
+    await openAdministration(page, '/sprava/logy/stav');
+    await expect(page.locator('#obsah').getByText('za 2 ms').first()).toBeVisible();
+
+    const shown = await valuesOffTheirTitleLine(page.locator('#obsah .ui-list__row'));
+    expect(shown.checked).toBeGreaterThanOrEqual(3);
+    expect(shown.off).toEqual([]);
+  });
+
+  for (const [path, rowTitle] of [
+    ['/sprava/zalohy', 'Všechny zálohy'],
+    ['/sprava/logy', 'Starší soubory'],
+  ] as const) {
+    test(`when ${path} opens, then the count of ${rowTitle} stays beside its title`, async ({
+      page,
+    }) => {
+      await openAdministration(page, path);
+      const rows = page.locator('#obsah .ui-list__row', { hasText: rowTitle });
+      await expect(rows.first()).toBeVisible();
+
+      expect(await valuesOffTheirTitleLine(rows)).toEqual({ checked: 1, off: [] });
+    });
+  }
+});
+
+test.describe('Given a visitor who checks a receipt on a phone', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: PHONE_WIDTH_PX, height: PHONE_HEIGHT_PX });
+    await mockDonorApi(page);
+    await serveReceiptKeys(page);
+    await serveReceiptStatus(page, 'active');
+  });
+
+  test('when a yearly receipt is read at the default text, then the amount of each gift stays beside its date', async ({
+    page,
+  }) => {
+    await page.goto(`/overit#${YEARLY_RECEIPT.fragment}`);
+    const gifts = page.locator('.verify-gift');
+    await expect(gifts.first()).toBeVisible();
+
+    const shown = await valuesOffTheirTitleLine(gifts);
+    expect(shown.checked).toBeGreaterThan(1);
+    expect(shown.off).toEqual([]);
+  });
+
+  test('when the verdict shows at the largest system text, then the mark lies inside its tile', async ({
+    page,
+  }) => {
+    await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
+    await expect(verdictHeading(page)).toHaveText('Podepsáno fondem Nová naděje');
+
+    const boxes = await page.locator('.verify-tone').evaluate((tone, rootPx) => {
+      document.documentElement.style.fontSize = `${rootPx}px`;
+      const range = document.createRange();
+      range.selectNodeContents(tone);
+      const mark = range.getBoundingClientRect();
+      const tile = tone.getBoundingClientRect();
+      return {
+        mark: { top: mark.top, bottom: mark.bottom, left: mark.left, right: mark.right },
+        tile: { top: tile.top, bottom: tile.bottom, left: tile.left, right: tile.right },
+      };
+    }, LARGEST_SYSTEM_ROOT_PX);
+
+    expect(boxes.mark.top).toBeGreaterThanOrEqual(boxes.tile.top - SUBPIXEL_PX);
+    expect(boxes.mark.bottom).toBeLessThanOrEqual(boxes.tile.bottom + SUBPIXEL_PX);
+    expect(boxes.mark.left).toBeGreaterThanOrEqual(boxes.tile.left - SUBPIXEL_PX);
+    expect(boxes.mark.right).toBeLessThanOrEqual(boxes.tile.right + SUBPIXEL_PX);
   });
 });
 

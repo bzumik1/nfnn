@@ -937,59 +937,6 @@ test.describe('Given an administrator on the donors page', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeFocused();
   });
 
-  test('when they search on a phone, then each row is one link that names the donor once, its list item has no name of its own and one status line changes once to the count', async ({
-    page,
-  }) => {
-    await page.route(
-      (url) => url.pathname === DONORS,
-      (route) =>
-        route.fulfill({
-          json: { items: [{ ...janaAccount, email: 'kontakt@firma-dobro.cz' }, petrAccount] },
-        }),
-    );
-    await page.goto('/sprava/darci');
-    await page.setViewportSize({ width: 390, height: 844 });
-    const search = page.locator('section[aria-labelledby="search-title"]');
-    const status = search.getByRole('status');
-    await expect(status).toHaveCount(1);
-    await expect(status).toContainText('Začněte psát');
-    await status.evaluate((region) => {
-      const changes: string[] = [];
-      Object.assign(window, { donorStatusChanges: changes });
-      new MutationObserver((records) => {
-        for (const record of records) {
-          changes.push(
-            record.type === 'characterData' ? (record.target.textContent ?? '').trim() : 'node',
-          );
-        }
-      }).observe(region, { childList: true, characterData: true, subtree: true });
-    });
-
-    await search.getByLabel('Jméno, e-mail nebo variabilní symbol').fill('nov');
-
-    const rows = search.getByRole('list').getByRole('listitem');
-    await expect(rows).toHaveCount(2);
-    await expect(status).toHaveText('Nalezení dárci: 2');
-    expect(
-      await page.evaluate(
-        () => (window as unknown as { donorStatusChanges: string[] }).donorStatusChanges,
-      ),
-    ).toEqual(['Hledáme dárce…', 'Nalezení dárci: 2']);
-
-    const list = await search.getByRole('list').ariaSnapshot();
-    expect(list).not.toMatch(/- listitem "/);
-    expect(list.match(/Jana Nováková/g)).toHaveLength(1);
-    expect(list.match(/Petr Svoboda/g)).toHaveLength(1);
-    await expect(rows.first().getByRole('link')).toHaveCount(1);
-    await expect(rows.first().getByRole('link')).toHaveAccessibleName(
-      /^Jana Nováková VS 1234567890 · kontakt@firma-dobro\.cz/,
-    );
-    const card = await search.ariaSnapshot();
-    expect(card.match(/Nalezení dárci: 2/g)).toHaveLength(1);
-    expect(card.match(/- status/g)).toHaveLength(1);
-    await expect(page.getByText('Nalezení dárci: 2')).toHaveCount(1);
-  });
-
   test('when the donor does not exist, then one card says so and leads back to the search', async ({
     page,
   }) => {

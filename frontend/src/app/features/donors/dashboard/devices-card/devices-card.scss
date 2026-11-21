@@ -75,7 +75,8 @@
   padding-top: var(--space-4);
 }
 
-.devices-confirm {
+.devices-confirm,
+.device-sign-out-slot {
   @include motion.expand($closes-by: class);
 }
 

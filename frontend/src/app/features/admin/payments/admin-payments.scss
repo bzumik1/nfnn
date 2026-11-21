@@ -377,9 +377,11 @@
   border-top: 1px solid var(--color-divider);
 }
 
-.payment-row .ui-list__value {
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
+@include bp.container-up(list-card, narrow) {
+  .payment-row .ui-list__value {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+  }
 }
 
 .sheet-actions {

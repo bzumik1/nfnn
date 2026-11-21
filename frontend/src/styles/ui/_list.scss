@@ -227,14 +227,25 @@ div.ui-list__row {
     text-align: start;
     white-space: normal;
   }
+
+  .ui-card
+    .ui-list__row:where(#{$rows}):not(:has(> .ui-switch))
+    > .ui-list__value:not(.ui-list__count) {
+    font-weight: var(--weight-regular);
+  }
+}
+
+.ui-list--wide-values {
+  container-name: list-card;
+  container-type: inline-size;
 }
 
 @include bp.container-down(list-card, narrow) {
-  @include value-under-text(':not(.ui-list--centred *)');
+  @include value-under-text('.ui-list--wide-values *:not(:has(> .ui-list__count))');
 }
 
 @include bp.container-down(list-card, pair) {
-  @include value-under-text('.ui-list--centred *');
+  @include value-under-text('*');
 
   .ui-card > .ui-list > *,
   .ui-card__group > * {
