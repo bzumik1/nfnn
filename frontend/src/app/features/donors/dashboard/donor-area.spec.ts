@@ -1800,6 +1800,20 @@ describe('Given a signed-in donor in the donor area', () => {
       );
     });
 
+    it('then the note of a year that is not over keeps the day with its month and lets the year go to the next line, on a computer and on a phone', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(element(`${yearSection(2026)} .gift-year-note`)?.textContent?.trim()).toBe(
+        'Ke stažení od 1.\u00a0ledna 2027',
+      );
+
+      compact.set(true);
+      await settle();
+      expect(element(`${yearSection(2026)} .gift-year-note`)?.textContent?.trim()).toBe(
+        'Roční potvrzení za rok 2026 stáhnete po skončení roku, od 1.\u00a0ledna 2027.',
+      );
+    });
+
     it('then the yearly receipt offered at a year heading is saved', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
@@ -2809,6 +2823,13 @@ describe('Given a signed-in donor in the donor area', () => {
         ['2025', '1 dar', '250 Kč', 'Stáhnout potvrzení za rok 2025 (PDF)'],
       ]);
       expect(element('.yearly-hint')).toBeNull();
+    });
+
+    it('then the note of a year that is not over keeps the day with its month and lets the year go to the next line', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('.year-note')?.textContent?.trim()).toBe('Ke stažení od 1.\u00a0ledna 2027');
     });
 
     it('then a donor without a year before the first receipt year still reads from which year receipts are issued here and whom to write for earlier gifts', async () => {
