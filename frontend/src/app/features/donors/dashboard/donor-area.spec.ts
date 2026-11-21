@@ -69,7 +69,6 @@ const PAYMENT_DETAILS_URL_MATCH = (request: { url: string }): boolean =>
 
 describe('Given a signed-in donor in the donor area', () => {
   const compact = signal(false);
-  const narrowTables = signal(false);
   let harness: RouterTestingHarness;
   let http: HttpTestingController;
   let store: AuthStore;
@@ -82,7 +81,6 @@ describe('Given a signed-in donor in the donor area', () => {
 
   beforeEach(async () => {
     compact.set(false);
-    narrowTables.set(false);
     receiptEnvironment = new FakeReceiptPdfEnvironment();
     receiptEnvironment.autoDraw = true;
     localStorage.clear();
@@ -111,11 +109,7 @@ describe('Given a signed-in donor in the donor area', () => {
         { provide: RECEIPT_PDF_ENVIRONMENT, useValue: receiptEnvironment },
         {
           provide: CompactLayout,
-          useValue: {
-            isCompact: compact.asReadonly(),
-            listsAsRows: compact.asReadonly(),
-            narrowTables: narrowTables.asReadonly(),
-          },
+          useValue: { isCompact: compact.asReadonly(), listsAsRows: compact.asReadonly() },
         },
         provideRouter([
           { path: 'darce', children: donorsRoutes },
@@ -236,6 +230,10 @@ describe('Given a signed-in donor in the donor area', () => {
     return [
       ...root().querySelectorAll<HTMLElement>(blocks.map((name) => `.${name}`).join(', ')),
     ].map((node) => blocks.find((name) => node.classList.contains(name)) ?? '');
+  }
+
+  function normalizedKeepingNoBreakSpaces(node: Element | null): string {
+    return (node?.textContent ?? '').replace(/[ \t\n\r]+/g, ' ').trim();
   }
 
   function normalized(value: string): string {
@@ -1606,8 +1604,26 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
     });
 
-    describe('when the window is between the nav and laptop breakpoints, so the table is narrow', () => {
-      beforeEach(() => narrowTables.set(true));
+    describe("when the window is wider than nav and the table's container is at most ledger (54 rem) wide, so the table is narrow", () => {
+      beforeEach(() => {
+        vi.stubGlobal(
+          'ResizeObserver',
+          class {
+            constructor(private readonly callback: ResizeObserverCallback) {}
+
+            observe(target: Element): void {
+              const entry = { target, contentBoxSize: [{ inlineSize: 800, blockSize: 0 }] };
+              this.callback([entry as unknown as ResizeObserverEntry], this as never);
+            }
+
+            disconnect(): void {
+              return undefined;
+            }
+          },
+        );
+      });
+
+      afterEach(() => vi.unstubAllGlobals());
 
       it('then the table has no Stav column and every cell reads under its own header', async () => {
         await open('/darce/dary');
@@ -2537,6 +2553,15 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
       expect(text('.payments-card .receipts-from')).toBe(
         'Potvrzení o daru tu vystavujeme za dary přijaté od 1. ledna 2026, u starších darů proto tlačítko „Stáhnout PDF“ chybí.',
+      );
+    });
+
+    it('then the line saying from when receipts are issued keeps the day with its month and lets the year go to the next line', async () => {
+      await open('/darce/dary');
+      await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+      expect(normalizedKeepingNoBreakSpaces(element('.payments-card .receipts-from'))).toContain(
+        'od 1.\u00a0ledna 2026, u\u00a0starších',
       );
     });
 

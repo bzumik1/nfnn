@@ -195,37 +195,4 @@ describe('Given the compact layout of the app', () => {
       expect(layoutIn({}).listsAsRows()).toBe(false);
     });
   });
-
-  describe('when it chooses whether a table is narrow, between the nav and laptop breakpoints', () => {
-    it('then a window one pixel wider than nav and one as wide as laptop show narrow tables', () => {
-      expect(layoutIn(new FakeWindow(900)).narrowTables()).toBe(true);
-      TestBed.resetTestingModule();
-      expect(layoutIn(new FakeWindow(1100)).narrowTables()).toBe(true);
-    });
-
-    it('then a window one pixel wider than laptop shows full tables', () => {
-      expect(layoutIn(new FakeWindow(1101)).narrowTables()).toBe(false);
-    });
-
-    it('then a compact window shows rows, not a narrow table', () => {
-      expect(layoutIn(new FakeWindow(390)).narrowTables()).toBe(false);
-    });
-
-    it('then a window 2000 px wide whose text is twice as large shows narrow tables, as it is narrower than laptop in text widths', () => {
-      expect(layoutIn(new FakeWindow(2000, 32)).narrowTables()).toBe(true);
-    });
-
-    it('then widening the window past laptop turns the narrow table into a full one', () => {
-      const view = new FakeWindow(1000);
-      const layout = layoutIn(view);
-
-      view.resize(1280);
-
-      expect(layout.narrowTables()).toBe(false);
-    });
-
-    it('then a browser that cannot answer media queries shows full tables, as today', () => {
-      expect(layoutIn({}).narrowTables()).toBe(false);
-    });
-  });
 });
