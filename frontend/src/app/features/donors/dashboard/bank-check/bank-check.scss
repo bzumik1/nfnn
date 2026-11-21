@@ -47,6 +47,16 @@
   overflow-wrap: anywhere;
 }
 
+.bank-check-btn--busy-unseen[aria-disabled='true']:not(.needs-connection-offline) {
+  opacity: 1;
+  cursor: pointer;
+
+  @media (forced-colors: active) {
+    border-color: ButtonText;
+    color: ButtonText;
+  }
+}
+
 .bank-check-error {
   flex-basis: 100%;
   margin: 0;

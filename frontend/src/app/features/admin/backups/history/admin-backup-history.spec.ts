@@ -121,7 +121,7 @@ describe('Given an administrator on the history of backups', () => {
   it('when the backups arrive, then they are grouped by Prague day with a count, each row its time, kind and size', async () => {
     await respond(backupsView({ backups: BACKUPS }));
 
-    expect(texts('.day-title')).toEqual(['sobota 7. 11. 2026', 'pátek 6. 11. 2026']);
+    expect(texts('.day-title')).toEqual(['Sobota 7. 11. 2026', 'Pátek 6. 11. 2026']);
     expect(texts('.day-count')).toEqual(['1 záloha', '2 zálohy']);
     expect(texts('button.ui-list__row .ui-list__title')).toEqual(['0:37', '19:48', '3:00']);
     expect(texts('button.ui-list__row .ui-list__meta')).toEqual([

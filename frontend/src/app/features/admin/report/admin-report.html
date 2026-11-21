@@ -304,7 +304,7 @@
             @for (item of sentReports(); track item.month) {
               <li>
                 <a class="ui-list__row" [routerLink]="['/sprava/prehledy', item.month]">
-                  <span class="ui-list__title">{{ formatMonth(item.month) }}</span>
+                  <span class="ui-list__title">{{ monthTitle(item.month) }}</span>
                   <span class="ui-list__meta" i18n="@@admin.report.sent.at"
                     >Odesláno {{ sentTime(item) }}</span
                   >

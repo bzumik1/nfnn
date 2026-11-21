@@ -108,6 +108,15 @@
   }
 }
 
+@include bp.container-up(ui-table, ledger) {
+  .ui-table--compact {
+    th,
+    td {
+      padding-inline: var(--space-3);
+    }
+  }
+}
+
 @include bp.container-down(ui-table, ledger) {
   .ui-table {
     @include stacked;

@@ -21,6 +21,28 @@
   }
 }
 
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.meta-tag {
+  min-width: 0;
+  padding: var(--space-0-75) var(--space-2-25);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+}
+
+.meta-when {
+  color: var(--color-text-subtle);
+  font-weight: var(--weight-regular);
+}
+
 .body {
   padding-bottom: var(--space-27);
 }
