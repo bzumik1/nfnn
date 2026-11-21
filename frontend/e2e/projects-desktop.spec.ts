@@ -6,6 +6,8 @@ import { expect, test } from './fixtures';
 const PNG = Buffer.from(samplePngBase64, 'base64');
 const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a002';
 const EDGE_TOLERANCE_PX = 1;
+const VISIBLE_PART_PX = 24;
+const MAXIMUM_STEPS = 4;
 const CATEGORIES = ['CHILDREN', 'ADULTS', 'ANIMALS', 'OTHER'];
 const TITLES = [
   'Sofinka',
@@ -146,21 +148,35 @@ test.describe('Given a visitor on the Pomáháme tab on a computer', () => {
       page,
     }) => {
       await openStories(page, '/projekty?rok=vse', width);
-      const strip = yearSection(page, 2023).locator('ul.strip');
+      const section = yearSection(page, 2023);
+      const strip = section.locator('ul.strip');
       await strip.scrollIntoViewIfNeeded();
-      const frame = await boxOf(strip);
-      const links = strip.locator('.tile-link');
-      const cut = await links.evaluateAll(
-        (elements, { right, tolerance }) =>
-          elements.findIndex(
-            (element) => element.getBoundingClientRect().right > right + tolerance,
-          ),
-        { right: frame.right, tolerance: EDGE_TOLERANCE_PX },
-      );
+      const tiles = strip.locator('app-story-tile');
+      const cutTile = async (): Promise<number> => {
+        const frame = await boxOf(strip);
+        return tiles.evaluateAll(
+          (elements, { right, shown, tolerance }) =>
+            elements.findIndex((element) => {
+              const box = element.getBoundingClientRect();
+              return box.right > right + tolerance && box.left <= right - shown;
+            }),
+          { right: frame.right, shown: VISIBLE_PART_PX, tolerance: EDGE_TOLERANCE_PX },
+        );
+      };
+      let cut = await cutTile();
+      for (let step = 0; cut === -1 && step < MAXIMUM_STEPS; step += 1) {
+        const before = await strip.evaluate((element) => element.scrollLeft);
+        await section.getByRole('button', { name: 'Další příběhy' }).click();
+        await expect
+          .poll(() => strip.evaluate((element) => element.scrollLeft))
+          .toBeGreaterThan(before);
+        cut = await cutTile();
+      }
       expect(cut).toBeGreaterThan(-1);
-      const link = links.nth(cut);
-      const href = await link.getAttribute('href');
-      const box = await boxOf(link);
+      const tile = tiles.nth(cut);
+      const href = await tile.locator('.tile-link').getAttribute('href');
+      const frame = await boxOf(strip);
+      const box = await boxOf(tile);
 
       await page.mouse.click((box.left + frame.right) / 2, (box.top + box.bottom) / 2);
 
