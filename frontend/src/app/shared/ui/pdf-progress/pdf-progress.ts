@@ -1,4 +1,12 @@
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import {
+  booleanAttribute,
+  Component,
+  computed,
+  effect,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 
 export type PdfProgressState =
   | { readonly kind: 'running'; readonly text: string }
@@ -24,6 +32,7 @@ export const PDF_CANCEL_OFFERED_AFTER_MS = 8000;
 export class PdfProgress {
   readonly progress = input<PdfProgressState | null>(null);
   readonly compact = input(false);
+  readonly reservesCancel = input(false, { transform: booleanAttribute });
   readonly cancelOf = input('');
   readonly cancelled = output<void>();
 

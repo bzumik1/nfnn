@@ -104,6 +104,7 @@ export class AccountCard {
   );
   protected readonly hasPassword = computed(() => this.donor()?.hasPassword ?? true);
   protected readonly accountEmail = computed(() => this.donor()?.email ?? '');
+  protected readonly emailSegments = computed(() => this.accountEmail().split(/(?<=[@.])/));
   protected readonly withoutSignInMethod = computed(
     () => !this.hasPassword() && this.passkeyCount() === 0,
   );

@@ -253,6 +253,16 @@ describe('Given an administrator on the bank logos page', () => {
     expect(element('.add-intro').classList).toContain('ui-card__intro');
   });
 
+  it('when the page opens, then the App Store host names may break only after a dot, never at their hyphen', async () => {
+    await listed([]);
+
+    const kept = Array.from(
+      fixture.nativeElement.querySelectorAll('.ui-page-intro .ui-word') as NodeListOf<HTMLElement>,
+    );
+    expect(kept.map((word) => word.textContent)).toEqual(['is1-ssl.', 'is5-ssl.']);
+    expect(kept.map((word) => word.nextElementSibling?.tagName)).toEqual(['WBR', 'WBR']);
+  });
+
   it('when the list cannot be loaded, then an alert offers a retry that loads again', async () => {
     http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle();

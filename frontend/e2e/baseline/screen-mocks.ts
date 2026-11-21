@@ -19,7 +19,7 @@ import type { RouteTarget } from '../fixtures';
 export const FIXED_TIME = new Date('2026-10-28T09:00:00Z');
 
 const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
-const PETR_ID = '019a1c00-0000-7000-8000-00000000a002';
+export const PETR_ID = '019a1c00-0000-7000-8000-00000000a002';
 const coverImage = { id: IMAGE_ID, url: `/api/content/media/${IMAGE_ID}`, alt: 'Děti na zahradě' };
 
 export const article = {

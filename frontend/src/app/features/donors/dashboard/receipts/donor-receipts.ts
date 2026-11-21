@@ -5,7 +5,6 @@ import { DonationItem } from '../../../donations/donations-api';
 import { DonationsTable } from '../donations-table/donations-table';
 import { MissingGift } from '../missing-gift/missing-gift';
 import { DonationsPending } from '../donations-pending/donations-pending';
-import { CompactLayout } from '../../../../core/layout/compact-layout';
 import { DonorDonations } from '../donor-donations';
 import { PdfButtonFace } from '../../../../shared/ui/pdf-button-face/pdf-button-face';
 import { PdfProgress } from '../../../../shared/ui/pdf-progress/pdf-progress';
@@ -41,7 +40,6 @@ interface YearRow {
 })
 export class DonorReceipts {
   protected readonly donations = inject(DonorDonations);
-  protected readonly compact = inject(CompactLayout).isCompact;
 
   protected readonly rows = computed<readonly YearRow[]>(() => {
     const summary = this.donations.summary();

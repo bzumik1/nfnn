@@ -13,7 +13,8 @@ export interface ContentSigner {
 
 export interface ContentPage {
   title: string;
-  eyebrow: string;
+  tag: string | null;
+  when: string;
   perex: string;
   body: string;
   imageId: string | null;
@@ -29,7 +30,8 @@ export function newsPage(article: NewsArticleResponse): ContentPage {
   const date = article.publishedOn ? formatDonationDate(article.publishedOn) : '';
   return {
     title: article.title,
-    eyebrow: article.tag ? `${article.tag} · ${date}` : date,
+    tag: article.tag,
+    when: date,
     perex: article.perex,
     body: article.body,
     imageId: article.coverImage?.id ?? null,
@@ -51,7 +53,8 @@ export function newsPage(article: NewsArticleResponse): ContentPage {
 export function projectPage(project: ProjectResponse): ContentPage {
   return {
     title: project.title,
-    eyebrow: project.tag ? `${project.tag} · ${project.year}` : String(project.year),
+    tag: project.tag,
+    when: String(project.year),
     perex: project.perex,
     body: project.body,
     imageId: project.coverImage?.id ?? null,

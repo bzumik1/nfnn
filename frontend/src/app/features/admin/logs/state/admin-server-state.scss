@@ -1,3 +1,4 @@
+@use 'breakpoints' as bp;
 @use 'motion';
 
 :host {
@@ -10,7 +11,7 @@
 
 h2.ui-list__title {
   margin: 0;
-  font-size: var(--text-lg);
+  font-size: inherit;
   font-weight: var(--weight-semibold);
 }
 
@@ -59,6 +60,12 @@ h2.ui-list__title {
   margin-bottom: var(--space-1);
   color: var(--color-accent);
   font-weight: var(--weight-semibold);
+}
+
+@include bp.container-down(list-card, pair) {
+  .release .ui-list__value {
+    font-size: var(--text-md);
+  }
 }
 
 .release-history {

@@ -1,5 +1,11 @@
 import { logFile } from '../testing/admin-fixtures';
-import { currentLogFiles, logSeries, logSeriesLabel, olderLogFileGroups } from './log-files';
+import {
+  currentLogFiles,
+  logFileNameParts,
+  logSeries,
+  logSeriesLabel,
+  olderLogFileGroups,
+} from './log-files';
 
 const FILES = [
   logFile({ name: 'backend.log', changedAt: '2026-11-07T00:14:59Z' }),
@@ -54,5 +60,25 @@ describe('Given the log files of the server', () => {
     expect(logSeriesLabel('backup.log')).toBe('Zálohy');
     expect(logSeriesLabel('mcp.log')).toBe('Konektor');
     expect(logSeriesLabel('odd.txt')).toBeNull();
+  });
+});
+
+describe('Given the name of a log file', () => {
+  it('when it carries a date, then it may break only after a dot and the date stays whole', () => {
+    expect(logFileNameParts('backend.log.2026-10-22.0.gz')).toEqual([
+      'backend.',
+      'log.',
+      '2026-10-22.',
+      '0.',
+      'gz',
+    ]);
+  });
+
+  it('when its series has a hyphen, then the hyphen is no break either', () => {
+    expect(logFileNameParts('nginx-access.log')).toEqual(['nginx-access.', 'log']);
+  });
+
+  it('when it has no dot, then it stays one part', () => {
+    expect(logFileNameParts('odd')).toEqual(['odd']);
   });
 });

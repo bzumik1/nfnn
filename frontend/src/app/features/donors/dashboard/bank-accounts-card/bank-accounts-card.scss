@@ -142,6 +142,21 @@
   margin-inline-start: auto;
 }
 
+@include bp.container-down(account, phone) {
+  .account-line {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .account-status {
+    margin-inline-start: 0;
+  }
+
+  .account-row > .account-body {
+    grid-column: 1 / -1;
+  }
+}
+
 .account-meta {
   --meta-separator-width: 16px;
 
@@ -158,12 +173,25 @@
     min-width: 0;
   }
 
-  > li::before {
+  > li:not(.account-gifts)::before,
+  .account-gift-count::before,
+  .account-total::before {
     content: '·' / '';
     display: inline-block;
+    flex-shrink: 0;
     width: var(--meta-separator-width);
     text-align: center;
   }
+
+  > .account-gifts {
+    flex-wrap: wrap;
+  }
+}
+
+.account-gift-count,
+.account-total {
+  display: flex;
+  min-width: 0;
 }
 
 .account-meta-wrap {
@@ -234,7 +262,6 @@
 .account-action {
   max-width: 100%;
   white-space: normal;
-  text-align: start;
 }
 
 .account-action--apart {
@@ -252,12 +279,6 @@
   color: var(--color-text);
   margin-bottom: var(--space-3);
   padding-right: var(--space-8);
-}
-
-@include bp.container-down(dialog-panel, tabs) {
-  .add-account-title {
-    font-size: var(--text-dialog-title-large);
-  }
 }
 
 .add-account-text {
@@ -320,7 +341,7 @@
 .add-account-payment {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-5) var(--space-6);
   margin-top: var(--space-5);
 }
@@ -360,8 +381,9 @@
 }
 
 .add-account-bank {
-  flex: 1 1 200px;
+  flex: 1 1 14rem;
   display: grid;
+  container: facts / inline-size;
   gap: var(--space-3);
 
   dt {
@@ -372,10 +394,29 @@
   }
 
   dd {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
     gap: var(--space-1-5) var(--space-2-5);
+    min-block-size: var(--button-small-min-height);
+
+    > .bank-value {
+      padding-block-start: calc((var(--button-small-min-height) - 1lh) / 2);
+    }
+
+    > app-copy-button {
+      justify-self: end;
+    }
+
+    > app-copy-button.has-failed {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
+@container facts (width < 14rem) {
+  .add-account-bank dd {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -487,6 +528,10 @@
 }
 
 @include bp.container-down(dialog-panel, tabs) {
+  .add-account-title {
+    font-size: var(--text-dialog-title-large);
+  }
+
   .watch-title,
   .watch-detail {
     max-inline-size: min(var(--measure-prose), 100%);
@@ -544,12 +589,11 @@
 
 @include bp.down(phone) {
   .add-account-payment {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
   }
 
   .add-account-qr {
-    align-self: center;
+    justify-self: center;
   }
 
   .add-account-bank {

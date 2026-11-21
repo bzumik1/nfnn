@@ -27,6 +27,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { PeopleApi, PersonResponse } from '../../content/people-api';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatDonationDate, pragueDay } from '../../donations/donation-date';
@@ -64,7 +65,7 @@ const RECENT_DONORS_SHOWN = 10;
 
 @Component({
   selector: 'app-admin-donors',
-  imports: [RouterLink, Avatar],
+  imports: [RouterLink, Avatar, LoadFailure],
   templateUrl: './admin-donors.html',
   styleUrl: './admin-donors.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -85,6 +86,7 @@ export class AdminDonors {
 
   protected readonly query = signal('');
   protected readonly state = signal<SearchState>('idle');
+  protected readonly retrying = signal(false);
   protected readonly results = signal<DonorAccountResponse[]>([]);
   protected readonly hasMore = signal(false);
   private readonly retries = new Subject<string>();
@@ -143,11 +145,16 @@ export class AdminDonors {
         debounceTime(SEARCH_DEBOUNCE_MS),
         map((query) => query.trim()),
         distinctUntilChanged(),
-        (typed) => merge(typed, this.retries),
-        switchMap((query) => this.lookUp(query)),
+        (typed) =>
+          merge(
+            typed.pipe(map((query) => ({ query, retry: false }))),
+            this.retries.pipe(map((query) => ({ query, retry: true }))),
+          ),
+        switchMap(({ query, retry }) => this.lookUp(query, retry)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((outcome) => {
+        this.retrying.set(false);
         this.results.set(outcome.items);
         this.hasMore.set(outcome.hasMore);
         this.state.set(outcome.state);
@@ -165,6 +172,7 @@ export class AdminDonors {
   }
 
   protected retry(): void {
+    this.retrying.set(true);
     this.retries.next(this.query().trim());
   }
 
@@ -223,12 +231,15 @@ export class AdminDonors {
       });
   }
 
-  private lookUp(query: string) {
+  private lookUp(query: string, retry: boolean) {
     this.rememberInUrl(query);
+    this.retrying.set(retry);
     if (query === '') {
       return of<Outcome>({ state: 'idle', items: [], hasMore: false });
     }
-    this.state.set('searching');
+    if (!retry) {
+      this.state.set('searching');
+    }
     return this.reads.accountList(query).pipe(
       map((response): Outcome => ({
         state: 'ready',

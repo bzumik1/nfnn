@@ -14,6 +14,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -46,6 +47,7 @@ import { reloadWhenOnlineAgain } from '../device-copy/online-again';
 import { KeptAdministrationAnswers } from '../kept-administration-answers';
 import { DeviceAlertMarks } from './device-alert-marks';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'unavailable';
@@ -93,7 +95,7 @@ const SERVICE_NAMES: Record<PushService, string> = {
 
 @Component({
   selector: 'app-admin-alerts',
-  imports: [BusyLabel, Dialog, LiveNotice, NeedsConnection, RouterLink],
+  imports: [BusyLabel, Dialog, LiveNotice, LoadFailure, NeedsConnection, RouterLink],
   templateUrl: './admin-alerts.html',
   styleUrl: './admin-alerts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -121,6 +123,7 @@ export class AdminAlerts {
   protected readonly areaLabels = AREA_LABELS;
   protected readonly areaDescriptions = AREA_DESCRIPTIONS;
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   private refreshMissed = false;
   private readonly onlineAgain = reloadWhenOnlineAgain(
     () => this.refreshMissed,
@@ -194,8 +197,13 @@ export class AdminAlerts {
     }
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
     this.fetch();
   }
 
@@ -413,7 +421,10 @@ export class AdminAlerts {
   private fetch(quietly = false): void {
     this.changes
       .track(this.api.push())
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (view) => {
           this.refreshMissed = false;

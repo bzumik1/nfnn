@@ -13,7 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { concatMap, from, Subscription } from 'rxjs';
+import { concatMap, finalize, from, Subscription } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -26,6 +26,7 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { DownloadedFile } from '../../donations/donations-api';
 import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
@@ -89,6 +90,7 @@ interface SkippedLine {
     FormsModule,
     LiveNotice,
     NeedsConnection,
+    LoadFailure,
     RouterLink,
   ],
   templateUrl: './admin-yearly-receipts.html',
@@ -112,6 +114,7 @@ export class AdminYearlyReceipts {
   private readonly failureRegion = viewChild<ElementRef<HTMLElement>>('failureRegion');
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly loadRetrying = signal(false);
   protected readonly candidates = signal<YearlyReceiptCandidatesResponse | null>(null);
   protected readonly switching = signal(false);
   private readonly requestedYear = signal<number | null>(null);
@@ -238,17 +241,29 @@ export class AdminYearlyReceipts {
   }
 
   protected load(year: number | null): void {
-    this.loading?.unsubscribe();
-    this.requestedYear.set(year);
     if (this.state() === 'ready') {
       this.switching.set(true);
     } else {
       this.state.set('loading');
     }
+    this.fetch(year, false);
+  }
+
+  protected retryLoad(): void {
+    this.fetch(this.requestedYear(), true);
+  }
+
+  private fetch(year: number | null, retrying: boolean): void {
+    this.loading?.unsubscribe();
+    this.loadRetrying.set(retrying);
+    this.requestedYear.set(year);
     this.resetRun();
     this.loading = this.api
       .yearlyReceiptCandidates(year)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.loadRetrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (candidates) => {
           this.candidates.set(candidates);
@@ -268,10 +283,6 @@ export class AdminYearlyReceipts {
           );
         },
       });
-  }
-
-  protected reload(): void {
-    this.load(this.requestedYear());
   }
 
   protected start(): void {

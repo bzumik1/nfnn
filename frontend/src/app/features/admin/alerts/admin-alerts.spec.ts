@@ -28,6 +28,11 @@ import { DeviceAlertMarks } from './device-alert-marks';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const PUSH_URL = '/api/admin/operations/push';
 const DEVICE: DevicePushSubscription = {
@@ -981,12 +986,18 @@ describe('Given an administrator on the alerts page', () => {
     http.expectOne(PUSH_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle();
 
-    expect(text('[role="alert"]')).toContain('Upozornění se nepodařilo načíst.');
-    button('Zkusit znovu').click();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Upozornění se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Upozornění se nepodařilo načíst.']);
     http.expectOne(PUSH_URL).flush(adminPush());
     await settle();
 
     expect(text('h2')).toBe('Co se hlídá');
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
   });
 
   describe('when the page was shown once and is opened again', () => {

@@ -1,6 +1,6 @@
 <div class="bank-check">
   <p class="bank-check-status" role="status">
-    @if (donations.checkingBank()) {
+    @if (showsChecking()) {
       <span i18n="@@donor.dashboard.bank.checking">Kontrolujeme nové platby v&nbsp;bance…</span>
     } @else {
       @if (outcome(); as outcome) {
@@ -30,7 +30,8 @@
     appNeedsConnection
     type="button"
     class="ui-button ui-button--small bank-check-btn"
-    [appBusy]="donations.checkingBank()"
+    [appBusy]="checking.busy()"
+    [class.bank-check-btn--busy-unseen]="busyUnseen()"
     (click)="donations.refreshFromBank()"
     i18n="@@donor.dashboard.bank.refresh"
   >

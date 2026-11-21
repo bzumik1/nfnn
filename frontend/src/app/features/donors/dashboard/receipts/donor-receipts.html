@@ -30,15 +30,6 @@
             <span class="year-action">
               @switch (row.receipt) {
                 @case ('available') {
-                  @if (!compact()) {
-                    <app-pdf-progress
-                      class="receipt-saved"
-                      [progress]="donations.yearlyProgress(row.year)"
-                      cancelOf="přípravu potvrzení za rok {{ row.year }}"
-                      i18n-cancelOf="@@donor.dashboard.receipt.cancelOfYear"
-                      (cancelled)="donations.cancelYearlyReceipt(row.year)"
-                    />
-                  }
                   <button
                     type="button"
                     class="ui-button ui-button--primary yearly-pdf"
@@ -57,15 +48,14 @@
                       i18n-openLabel="@@donor.dashboard.yearly.open"
                     />
                   </button>
-                  @if (compact()) {
-                    <app-pdf-progress
-                      class="receipt-saved"
-                      [progress]="donations.yearlyProgress(row.year)"
-                      cancelOf="přípravu potvrzení za rok {{ row.year }}"
-                      i18n-cancelOf="@@donor.dashboard.receipt.cancelOfYear"
-                      (cancelled)="donations.cancelYearlyReceipt(row.year)"
-                    />
-                  }
+                  <app-pdf-progress
+                    class="receipt-saved"
+                    reservesCancel
+                    [progress]="donations.yearlyProgress(row.year)"
+                    cancelOf="přípravu potvrzení za rok {{ row.year }}"
+                    i18n-cancelOf="@@donor.dashboard.receipt.cancelOfYear"
+                    (cancelled)="donations.cancelYearlyReceipt(row.year)"
+                  />
                 }
                 @case ('after-year-end') {
                   <span class="year-note" i18n="@@donor.receipts.year.afterYearEnd"
@@ -121,7 +111,7 @@
         <span i18n="@@donor.receipts.single.runningYear"
           >Potvrzení k&nbsp;letošním darům stáhnete tady hned po jejich připsání, ke starším darům
           v&nbsp;části</span
-        >&ngsp;<a routerLink="/darce/dary" i18n="@@donor.receipts.single.link">Moje dary</a>.
+        >&ngsp;<a routerLink="/darce/dary" i18n="@@donor.receipts.single.link">Moje&nbsp;dary</a>.
       </p>
       @if (donations.receiptError(); as error) {
         @if (error.scope === 'single') {
@@ -141,7 +131,7 @@
         <span i18n="@@donor.receipts.single.text"
           >Potvrzení ke každému přijatému daru zvlášť stáhnete hned po jeho připsání
           v&nbsp;části</span
-        >&ngsp;<a routerLink="/darce/dary" i18n="@@donor.receipts.single.link">Moje dary</a>.
+        >&ngsp;<a routerLink="/darce/dary" i18n="@@donor.receipts.single.link">Moje&nbsp;dary</a>.
       </p>
     }
   </section>

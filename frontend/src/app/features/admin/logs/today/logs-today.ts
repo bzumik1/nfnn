@@ -8,8 +8,9 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { RouterLink } from '@angular/router';
-import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { pragueTime } from '../../../donations/donation-date';
 import { AdminApi, LogSearchResponse } from '../../admin-api';
 import { HealthIcon } from '../health-icon/health-icon';
@@ -28,7 +29,7 @@ export const TODAY_SHOWN = 5;
 
 @Component({
   selector: 'app-logs-today',
-  imports: [RouterLink, NeedsConnection, HealthIcon, LevelIcon],
+  imports: [RouterLink, LoadFailure, HealthIcon, LevelIcon],
   templateUrl: './logs-today.html',
   styleUrl: './logs-today.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +44,7 @@ export class LogsToday {
   protected readonly filePath = LOG_FILE_PATH;
   protected readonly allQuery = { nazev: TODAY_FILE, uroven: 'varovani' };
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly result = signal<LogSearchResponse | null>(null);
   protected readonly problems = computed(() =>
     todayProblems(this.result()?.matches ?? [], this.today()),
@@ -63,11 +65,23 @@ export class LogsToday {
     this.load();
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.api
       .searchLog(TODAY_FILE, levelPattern('spring', 'warnings') ?? '', null, TODAY_LIMIT)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (result) => {
           this.result.set(result);

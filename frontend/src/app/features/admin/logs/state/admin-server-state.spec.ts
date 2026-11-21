@@ -225,6 +225,22 @@ describe('Given an administrator on the server state page', () => {
     expect(page.text('#vydani')).toBe('Vydání nejnovější vydání zatím neznáme dev');
   });
 
+  it('when the release loads, then its number may break only after a dot', async () => {
+    await loaded(releaseView({ running: '2026.11.109' }));
+
+    const value = page.cardTitled('Aplikace').querySelector('.release .release-parts')!;
+    const breaks = Array.from(value.childNodes)
+      .map((node) =>
+        node.nodeName === 'WBR'
+          ? '|'
+          : node.nodeType === Node.COMMENT_NODE
+            ? ''
+            : (node.textContent ?? ''),
+      )
+      .join('');
+    expect(breaks).toBe('2026.|11.|109');
+  });
+
   it('when the release cannot be read, then the application rows show without it', async () => {
     await loaded(null);
 
@@ -308,13 +324,17 @@ describe('Given an administrator on the server state page', () => {
     page.http.expectOne(HISTORY_URL).flush(null, { status: 500, statusText: 'Error' });
     await page.settle();
 
-    expect(page.text('#historie-vydani [role="alert"]')).toBe(
-      'Historii vydání se nepodařilo načíst. Zkusit znovu',
-    );
-
-    await page.click('Zkusit znovu');
+    const history = page.element<HTMLElement>('#historie-vydani');
+    expect(loadFailureAlerts(history)).toEqual(['Historii vydání se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(history)).toBe(0);
+    const retry = pressLoadFailureRetry(history);
+    await page.settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(history)).toEqual(['Historii vydání se nepodařilo načíst.']);
     page.http.expectOne(HISTORY_URL).flush(releaseHistoryView());
     await page.settle();
     expect(page.texts('#historie-vydani .ui-list__row')).toHaveLength(3);
+    expect(document.activeElement).toBe(page.element('h1'));
   });
 });

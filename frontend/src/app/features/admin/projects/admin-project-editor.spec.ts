@@ -31,6 +31,11 @@ import {
 } from '../device-copy/testing/opened-copy';
 import { project as heldProject } from '../../content/testing/project-fixtures';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const PROJECTS_URL = '/api/admin/content/projects';
 const MEDIA_URL = '/api/admin/content/media';
@@ -633,6 +638,31 @@ describe('Given an administrator opening a project that is still on its way', ()
     expect(text(fixture, 'h1')).toBe('Úprava příběhu');
 
     http.expectOne(`${PROJECTS_URL}/${draftProject().id}`).flush(draftProject());
+    http.verify();
+  });
+});
+
+describe('Given an administrator opening a project that does not load', () => {
+  it('when the server fails, then the page offers a retry that keeps the failure while it asks again and loads it', async () => {
+    const { fixture, http } = await setUp(draftProject().id);
+    http
+      .expectOne(`${PROJECTS_URL}/${draftProject().id}`)
+      .flush(null, { status: 500, statusText: 'Error' });
+    await settle(fixture);
+
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Příběh se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await settle(fixture);
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Příběh se nepodařilo načíst.']);
+    http.expectOne(`${PROJECTS_URL}/${draftProject().id}`).flush(draftProject());
+    await settle(fixture);
+
+    expect(fixture.nativeElement.querySelector('app-load-failure')).toBeNull();
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
     http.verify();
   });
 });

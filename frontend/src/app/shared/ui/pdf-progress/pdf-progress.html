@@ -1,3 +1,6 @@
+@if (reservesCancel()) {
+  <span class="ui-button ui-button--small pdf-progress__strut" aria-hidden="true"></span>
+}
 <p
   class="pdf-progress__line"
   [class.pdf-progress__line--done]="shown()?.kind === 'ready' || shown()?.kind === 'done'"

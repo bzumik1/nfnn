@@ -2,16 +2,13 @@
   id="accounts-help-panel"
   class="accounts-help-panel"
   role="region"
-  aria-labelledby="accounts-help-title"
+  aria-labelledby="accounts-help-toggle"
   appDisclosure
   [closed]="!open()"
   (keydown.escape)="requestClose()"
 >
   <div>
     <div class="accounts-help-box">
-      <h3 id="accounts-help-title" class="help-title" i18n="@@donor.bankAccounts.help.title">
-        Jak přiřazujeme platby
-      </h3>
       <ul class="help-list">
         @if (variableSymbol(); as symbol) {
           <li i18n="@@donor.bankAccounts.help.bySymbol">

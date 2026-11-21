@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -25,6 +26,7 @@ import { PeopleApi, PersonResponse } from '../../content/people-api';
 import { AdminApi, AdministratorResponse } from '../admin-api';
 import { portraitsByEmail } from '../people/portraits-by-email';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { ListChanges } from '../../../core/kept/list-changes';
 import { KeptAdministrationAnswers } from '../kept-administration-answers';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
@@ -50,6 +52,7 @@ const FORBIDDEN = 'auth/forbidden';
     RouterLink,
     Avatar,
     NeedsConnection,
+    LoadFailure,
   ],
   templateUrl: './admin-administrators.html',
   styleUrl: './admin-administrators.scss',
@@ -71,6 +74,7 @@ export class AdminAdministrators {
   private readonly noticeRegion = viewChild('noticeRegion', { read: ElementRef });
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly items = signal<AdministratorResponse[]>([]);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly busy = signal(false);
@@ -97,29 +101,43 @@ export class AdminAdministrators {
     if (this.state() !== 'ready') {
       this.state.set('loading');
     }
+    this.fetch(shownBefore, quietly);
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch(false, false);
+  }
+
+  private fetch(shownBefore: boolean, quietly: boolean): void {
     const server = this.changes.track(this.api.administrators());
     const list = shownBefore ? this.kept.read('administrators', server) : server;
-    list.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (answer) => {
-        this.items.set(answer.items);
-        this.state.set('ready');
-        this.kept.keep('administrators', answer);
-      },
-      error: (failure: unknown) => {
-        if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
-          this.sendToSignIn();
-          return;
-        }
-        if (problemTypeEndsWith(failure, FORBIDDEN)) {
-          this.router.navigateByUrl('/darce/prehled');
-          return;
-        }
-        if (quietly && this.state() === 'ready') {
-          return;
-        }
-        this.state.set('error');
-      },
-    });
+    list
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (answer) => {
+          this.items.set(answer.items);
+          this.state.set('ready');
+          this.kept.keep('administrators', answer);
+        },
+        error: (failure: unknown) => {
+          if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
+            this.sendToSignIn();
+            return;
+          }
+          if (problemTypeEndsWith(failure, FORBIDDEN)) {
+            this.router.navigateByUrl('/darce/prehled');
+            return;
+          }
+          if (quietly && this.state() === 'ready') {
+            return;
+          }
+          this.state.set('error');
+        },
+      });
   }
 
   protected portraitOf(item: AdministratorResponse): string | null {

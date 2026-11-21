@@ -16,18 +16,11 @@
       </p>
     }
     @case ('error') {
-      <div class="ui-load-state ui-load-state--error" role="alert">
-        <p i18n="@@admin.yearlyReceipts.error.text">Dárce za rok se nepodařilo načíst.</p>
-        <button
-          type="button"
-          class="ui-button"
-          (click)="reload()"
-          appNeedsConnection
-          i18n="@@admin.yearlyReceipts.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
+      <app-load-failure [compact]="true" [retrying]="loadRetrying()" (retry)="retryLoad()"
+        ><ng-container i18n="@@admin.yearlyReceipts.error.text"
+          >Dárce za rok se nepodařilo načíst.</ng-container
+        ></app-load-failure
+      >
     }
     @case ('no-year') {
       <p class="ui-card ui-card--padded no-year" i18n="@@admin.yearlyReceipts.noYear">

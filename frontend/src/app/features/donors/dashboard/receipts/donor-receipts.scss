@@ -22,7 +22,10 @@
 
 .years {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr) max-content auto;
+  grid-template-columns: max-content minmax(max-content, 1fr) max-content minmax(
+      min-content,
+      var(--yearly-column-action)
+    );
   column-gap: var(--space-4);
   list-style: none;
   margin-top: var(--space-4);
@@ -114,9 +117,8 @@ a {
   }
 
   .receipt-saved {
-    flex: none;
+    flex: 1 1 var(--pdf-status-reserve);
     flex-wrap: nowrap;
-    inline-size: var(--pdf-status-reserve);
     min-inline-size: 0;
     max-inline-size: 100%;
     margin-top: 0;
@@ -131,29 +133,28 @@ a {
   }
 
   .year-row {
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      'year total'
-      'count count'
-      'action action';
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
   }
 
   .year {
-    grid-area: year;
+    flex: 1 1 auto;
   }
 
   .year-count {
-    grid-area: count;
+    order: 1;
+    flex-basis: 100%;
   }
 
   .year-total {
-    grid-area: total;
+    margin-inline-start: auto;
   }
 
   .year-action {
-    grid-area: action;
+    order: 2;
+    flex-basis: 100%;
     justify-content: flex-start;
-    justify-self: stretch;
   }
 
   .receipt-saved {
@@ -179,25 +180,14 @@ a {
 }
 
 @include bp.up(nav) {
-  .year-action {
-    flex-direction: row;
-    align-items: center;
-    gap: var(--space-3);
-  }
-
-  .receipt-saved {
-    flex: none;
-    flex-wrap: nowrap;
-    inline-size: var(--pdf-status-reserve);
-    min-inline-size: 0;
-    margin-top: 0;
-    justify-content: flex-end;
-    text-align: end;
+  .year-row {
+    align-items: first baseline;
   }
 
   @include bp.container-down(yearly-receipts, cards) {
-    .year-action {
+    .receipt-saved {
       justify-content: flex-end;
+      text-align: end;
     }
   }
 }

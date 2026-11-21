@@ -1,0 +1,37 @@
+@use 'breakpoints' as bp;
+
+@include bp.up(tablet) {
+  @include bp.container-up(payment-panel, phone) {
+    :host(:not(.split)) {
+      .bank-rows {
+        grid-template-columns: max-content minmax(0, max-content) max-content;
+        justify-content: start;
+      }
+
+      .bank-row {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: subgrid;
+        justify-items: start;
+      }
+
+      .bank-value-wrap {
+        display: contents;
+      }
+    }
+  }
+}
+
+@include bp.container-down(payment-panel, pager) {
+  :host(:not(.split)) .bank {
+    margin-inline: calc(-1 * var(--space-2));
+    padding-inline: var(--space-3);
+  }
+}
+
+@include bp.container-down(payment-panel, pair) {
+  :host(:not(.split)) .bank {
+    margin-inline: calc(-1 * var(--space-4));
+    padding-inline: var(--space-2);
+  }
+}

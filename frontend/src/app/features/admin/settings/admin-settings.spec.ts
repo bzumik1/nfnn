@@ -25,6 +25,11 @@ import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { readDetailsDisclosures } from '../../../shared/ui/disclosure/testing/details-disclosures';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const SETTINGS_URL = '/api/admin/operations/settings';
 const TEST_EMAIL_URL = '/api/admin/operations/settings/test-email';
@@ -123,6 +128,24 @@ describe('Given an administrator on the settings page', () => {
     expect(text('h1')).toBe('Nastavení');
     expect(text('[role="status"]:not(:empty)')).toBe('Načítáme nastavení…');
     http.expectOne(SETTINGS_URL).flush(settingsView());
+  });
+
+  it('when the settings fail to load, then a retry keeps the failure while it asks again and shows them', async () => {
+    http.expectOne(SETTINGS_URL).flush(null, { status: 500, statusText: 'Error' });
+    await settle();
+
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Nastavení se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Nastavení se nepodařilo načíst.']);
+    await respond(settingsView());
+
+    expect(fixture.nativeElement.querySelector('app-load-failure')).toBeNull();
+    expect(fixture.nativeElement.querySelector('form.settings-form')).not.toBeNull();
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
   });
 
   describe('when the settings arrive', () => {
