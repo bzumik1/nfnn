@@ -1,4 +1,4 @@
-import { keepThePageEnd } from '../../../core/layout/page-end';
+import { HeldScroll, keepThePageEnd } from '../../../core/layout/page-end';
 
 const ROOM_CLASS = 'has-floating-notice';
 const ROOM_HEIGHT = '--floating-notice-height';
@@ -21,7 +21,11 @@ function keepRoomForLatest(document: Document, bars: HTMLElement[]): void {
   root.style.removeProperty(ROOM_HEIGHT);
 }
 
-export function keepRoomForFloatingNotice(document: Document, bar: HTMLElement): () => void {
+export function keepRoomForFloatingNotice(
+  document: Document,
+  bar: HTMLElement,
+  scrollHold: HeldScroll,
+): () => void {
   const measure = () => {
     const bars = shownBars(document);
     if (bars.at(-1) === bar) {
@@ -44,7 +48,7 @@ export function keepRoomForFloatingNotice(document: Document, bar: HTMLElement):
     }
     view?.requestAnimationFrame(() => scrollAboveBar(focused));
   };
-  keepThePageEnd(view, () =>
+  keepThePageEnd(view, scrollHold, () =>
     keepRoomForLatest(document, [...shownBars(document).filter((shown) => shown !== bar), bar]),
   );
   observer?.observe(bar);

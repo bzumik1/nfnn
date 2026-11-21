@@ -241,6 +241,47 @@ async function nextFrames(page: Page): Promise<void> {
   );
 }
 
+async function imagesAndFontsSettled(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    const images = [...document.images];
+    images.forEach((image) => (image.loading = 'eager'));
+    await Promise.all(
+      images
+        .filter((image) => !image.complete)
+        .map(
+          (image) =>
+            new Promise((done) => {
+              image.addEventListener('load', done, { once: true });
+              image.addEventListener('error', done, { once: true });
+            }),
+        ),
+    );
+  });
+  await expect
+    .poll(() => page.evaluate(() => [...document.images].every((image) => image.complete)))
+    .toBe(true);
+}
+
+async function recordTheEndWhenTheRoomArrives(page: Page): Promise<() => Promise<boolean[]>> {
+  await page.evaluate(() => {
+    const records: boolean[] = [];
+    Object.assign(window, { endHeldWhenOffline: records });
+    new MutationObserver(() => {
+      if (document.documentElement.classList.contains('is-offline') && records.length === 0) {
+        records.push(
+          Math.ceil(window.scrollY + window.innerHeight) >=
+            document.documentElement.scrollHeight - 1,
+        );
+      }
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  });
+  return () =>
+    page.evaluate(
+      () => (window as unknown as { endHeldWhenOffline: boolean[] }).endHeldWhenOffline,
+    );
+}
+
 async function loseTheConnection(page: Page, context: BrowserContext): Promise<Locator> {
   await page.route('**/api/**', (route) => route.abort('internetdisconnected'));
   await context.setOffline(true);
@@ -271,10 +312,13 @@ test.describe('Given a visitor on a phone who reads a page that ends with a sect
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.locator(lastPart).first()).toBeVisible();
+      await imagesAndFontsSettled(page);
       await scrolledToTheEnd(page);
+      const recordedEnd = await recordTheEndWhenTheRoomArrives(page);
 
       const pill = await loseTheConnection(page, context);
 
+      expect(await recordedEnd()).toEqual([true]);
       await expect
         .poll(async () => (await pill.boundingBox())!.y - (await lowestContentEdge(page)))
         .toBeGreaterThanOrEqual(0);
@@ -287,6 +331,7 @@ test.describe('Given a visitor on a phone who reads a page that ends with a sect
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.locator(lastPart).first()).toBeVisible();
+      await imagesAndFontsSettled(page);
       const middle = await page.evaluate(() => {
         const top = Math.round((document.documentElement.scrollHeight - window.innerHeight) / 2);
         window.scrollTo({ top, behavior: 'instant' });

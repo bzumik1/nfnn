@@ -69,11 +69,8 @@ html:has(app-root app-tab-bar) {
 }
 
 @include bp.container-down(action-bar, tabs) {
-  .ui-action-bar .ui-button:not(.ui-button--small) {
+  .ui-action-bar .ui-button:not(.ui-button--small, .ui-button--block, .ui-button--grouped) {
     padding-inline: var(--space-2-5);
-  }
-
-  .ui-action-bar .ui-button:not(.ui-button--primary, .ui-button--small) {
     font-size: var(--text-sm);
   }
 }

@@ -11,6 +11,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { ScrollHold } from '../../../../core/navigation/scroll-hold';
 import { keepRoomForFloatingNotice } from '../../../../shared/ui/floating-notice/floating-notice-room';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { DonorCopyLink } from '../../../donations/device-copy/donor-copy';
@@ -31,6 +32,7 @@ type Shown = 'saving' | 'stored' | 'failed' | null;
 export class FirstSyncNotice {
   private readonly copy = inject(DonorCopyLink).copy;
   private readonly document = inject(DOCUMENT);
+  private readonly scrollHold = inject(ScrollHold);
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   private readonly saving = computed(() => {
     const copy = this.copy();
@@ -43,7 +45,7 @@ export class FirstSyncNotice {
     afterRenderEffect((onCleanup) => {
       const bar = this.bar()?.nativeElement;
       if (bar) {
-        onCleanup(keepRoomForFloatingNotice(this.document, bar));
+        onCleanup(keepRoomForFloatingNotice(this.document, bar, this.scrollHold));
       }
     });
     effect((onCleanup) => {
