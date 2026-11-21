@@ -520,6 +520,16 @@ export async function renamePetr(page: RouteTarget, name: string): Promise<void>
   );
 }
 
+export async function servePetrBankAccounts(
+  page: RouteTarget,
+  bankAccounts: Record<string, unknown>[],
+): Promise<void> {
+  await page.route(
+    (url) => url.pathname === `/api/admin/donations/donors/${PETR_ID}`,
+    (route) => route.fulfill({ json: { ...petrDetail, bankAccounts } }),
+  );
+}
+
 interface PaymentDetailsCase {
   name: string;
   expected: object;

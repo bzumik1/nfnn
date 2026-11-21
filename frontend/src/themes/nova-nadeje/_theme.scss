@@ -175,6 +175,8 @@
   --color-grouped-alt: var(--color-surface-muted);
   --color-group-divider: var(--color-divider);
   --color-badge-accent-bg: var(--color-accent-bg);
+  --color-badge-neutral-bg: color-mix(in srgb, var(--color-text-muted) 14%, transparent);
+  --color-badge-warning-bg: color-mix(in srgb, var(--color-warning) 14%, transparent);
   --color-sheet-text: var(--color-text);
   --color-sheet-secondary: var(--color-text-muted);
   --color-sheet-separator: var(--color-border);
@@ -352,6 +354,7 @@
   --radius-sheet: 34px;
   --radius-sheet-group: 24px;
   --radius-pill: 50px;
+  --radius-badge: calc(0.5lh + var(--space-0-75));
   --cta-border-width: 1.5px;
   --radius-round: 50%;
 
