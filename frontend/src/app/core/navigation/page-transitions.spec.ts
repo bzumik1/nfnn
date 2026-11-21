@@ -1102,6 +1102,40 @@ describe('Given the app on the home screen of a phone, where the news led to the
     }
   });
 
+  it('when the step ends while a question that opened over the sheet fades in, then the question keeps its own fade, since the step never drew it', async () => {
+    await openOverviewFromTheNews({ title: 'Aktuality', sheet: true }, { title: 'Přehled' }, true);
+    const asking = document.createElement('dialog');
+    const fadingIn = {
+      effect: { target: asking, getComputedTiming: () => ({ endTime: 300 }) },
+      finish: vi.fn(),
+    };
+    Object.defineProperty(asking, 'getAnimations', {
+      configurable: true,
+      value: () => [fadingIn],
+    });
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => motionEnding(Promise.resolve()),
+    });
+    try {
+      const swipe = swipeBack();
+      asking.setAttribute('open', '');
+      asking.className = 'dialog dialog--stacked';
+      document.body.append(asking);
+      await vi.dynamicImportSettled();
+
+      await swipe.slideBack();
+
+      expect(document.documentElement.classList).not.toContain(
+        `${PAGE_TRANSITION_CLASS}-sheet-under`,
+      );
+      expect(fadingIn.finish).not.toHaveBeenCalled();
+    } finally {
+      asking.remove();
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
   it('when both pages are sheets of the administration, then the head of the sheet stands while the pages move and its title changes in place', async () => {
     await openOverviewFromTheNews(
       { title: 'Dárci', head: 'Dárci' },
