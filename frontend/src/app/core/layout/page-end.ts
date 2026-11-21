@@ -21,7 +21,7 @@ function shownBottom(view: ScrolledView): number {
   return shown ? shown.pageTop + shown.height : view.scrollY + view.innerHeight;
 }
 
-function standsAtTheEnd(view: ScrolledView): boolean {
+export function standsAtTheEnd(view: ScrolledView): boolean {
   const { scrollHeight } = view.document.documentElement;
   return view.scrollY > 0 && shownBottom(view) >= scrollHeight - AT_THE_END_WITHIN_PX;
 }
@@ -31,9 +31,11 @@ export function keepThePageEnd(
   scrollHold: HeldScroll,
   placement: SettlingPlacement,
   addRoom: () => void,
+  stoodAtTheEndBeforeRender = false,
 ): void {
   const placeIsKept = scrollHold.holding || placement.settling;
-  const atTheEnd = view !== null && !placeIsKept && standsAtTheEnd(view);
+  const atTheEnd =
+    view !== null && !placeIsKept && (stoodAtTheEndBeforeRender || standsAtTheEnd(view));
   addRoom();
   if (atTheEnd) {
     view.scrollTo({ top: view.document.documentElement.scrollHeight, behavior: 'instant' });

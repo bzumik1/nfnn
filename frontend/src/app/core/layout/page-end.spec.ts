@@ -114,6 +114,24 @@ describe('Given a page whose bottom room grows when a bar appears at the bottom 
     expect(reader.scrolls).toEqual([]);
   });
 
+  it('when the reader stood at the end before the same render grew the page above the room, then the page still scrolls to its new end', () => {
+    const reader = readerAt(1200, 2000);
+    reader.grow(22);
+
+    keepThePageEnd(reader, NOTHING_HELD, NOTHING_SETTLING, () => reader.grow(96), true);
+
+    expect(reader.scrolls).toEqual([{ top: 2118, behavior: 'instant' }]);
+  });
+
+  it('when the reader stood further up before the same render grew the page, then the page does not move', () => {
+    const reader = readerAt(600, 2000);
+    reader.grow(22);
+
+    keepThePageEnd(reader, NOTHING_HELD, NOTHING_SETTLING, () => reader.grow(96), false);
+
+    expect(reader.scrolls).toEqual([]);
+  });
+
   it('when there is no window, then the room still grows', () => {
     let grown = false;
 
@@ -137,6 +155,24 @@ describe('Given a reader at the end of a page whose place the app itself may sti
     placement.pending();
 
     keepThePageEnd(reader, scrollHold, placement, () => reader.grow(96));
+
+    expect(reader.scrolls).toEqual([]);
+  });
+
+  it('when the reader stood at the end before the render but a step back is still putting the page where it was left, then the page does not move', () => {
+    const reader = readerAt(1200, 2000);
+    placement.pending();
+
+    keepThePageEnd(reader, scrollHold, placement, () => reader.grow(96), true);
+
+    expect(reader.scrolls).toEqual([]);
+  });
+
+  it('when the reader stood at the end before the render but a page transition holds the scroll, then the page does not move', () => {
+    const reader = readerAt(1200, 2000);
+    scrollHold.hold();
+
+    keepThePageEnd(reader, scrollHold, placement, () => reader.grow(96), true);
 
     expect(reader.scrolls).toEqual([]);
   });

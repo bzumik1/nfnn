@@ -6,9 +6,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   DOCUMENT,
   effect,
   ElementRef,
+  EnvironmentInjector,
   inject,
   Injector,
   inputBinding,
@@ -22,6 +24,7 @@ import {
 
 import { Connectivity } from '../../core/connectivity/connectivity';
 import { formatDataTime } from '../../core/connectivity/data-time';
+import { standsAtTheEnd } from '../../core/layout/page-end';
 import { ShownAnswers } from '../../core/connectivity/shown-answers';
 import { PagePlacement } from '../../core/navigation/page-placement';
 import { ScrollHold } from '../../core/navigation/scroll-hold';
@@ -70,6 +73,7 @@ export class OfflineStatus {
   private pulseDelay: ReturnType<typeof setTimeout> | undefined;
   private oneBreathTaken = false;
   private endsAfterBreath = false;
+  private stoodAtTheEndWhenOffline = false;
 
   protected readonly dataTime = computed(() => {
     const oldest = this.shown.oldest();
@@ -123,10 +127,27 @@ export class OfflineStatus {
         onCleanup(this.dialogAnnouncer.announce(message));
       }
     });
+    const endBeforeRender = effect(
+      () => {
+        const offline = this.connectivity.offline();
+        const view = this.document.defaultView;
+        this.stoodAtTheEndWhenOffline = offline && view !== null && standsAtTheEnd(view);
+      },
+      { injector: inject(EnvironmentInjector), manualCleanup: true },
+    );
+    inject(DestroyRef).onDestroy(() => endBeforeRender.destroy());
     afterRenderEffect((onCleanup) => {
       const pill = this.pill()?.nativeElement;
       if (pill) {
-        onCleanup(keepRoomForOfflinePill(this.document, pill, this.scrollHold, this.placement));
+        onCleanup(
+          keepRoomForOfflinePill(
+            this.document,
+            pill,
+            this.scrollHold,
+            this.placement,
+            this.stoodAtTheEndWhenOffline,
+          ),
+        );
       }
     });
   }
