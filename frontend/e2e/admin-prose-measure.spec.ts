@@ -102,5 +102,38 @@ for (const width of COMPUTER_WIDTHS) {
         );
       });
     }
+
+    test('when the news editor refuses a photo, then its error stays within the measure', async ({
+      page,
+    }) => {
+      await openUnlocked(page, '/sprava/aktuality/nova');
+      await page.getByLabel('Nahrát fotku').setInputFiles({
+        name: 'koncert.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('not a photo'),
+      });
+      const error = page.locator('#news-image-error');
+      await expect(error).toHaveText('Vyberte prosím fotku ve formátu JPEG, PNG nebo WebP.');
+      await page.evaluate(() => document.fonts.ready);
+
+      const { width, measure } = await error.evaluate((element) => {
+        const probe = document.createElement('span');
+        probe.style.display = 'block';
+        probe.style.inlineSize = 'var(--measure-prose)';
+        element.append(probe);
+        const measured = {
+          width: element.getBoundingClientRect().width,
+          measure: probe.getBoundingClientRect().width,
+        };
+        probe.remove();
+        return measured;
+      });
+      const lines = await charactersPerLine(error);
+
+      expect(width).toBeLessThanOrEqual(measure + 0.5);
+      expect(Math.max(...lines), `characters a line: ${lines.join(', ')}`).toBeLessThanOrEqual(
+        MOST_CHARACTERS_A_LINE,
+      );
+    });
   });
 }
