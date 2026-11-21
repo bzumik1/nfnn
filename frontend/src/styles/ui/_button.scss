@@ -1,3 +1,4 @@
+@use 'button-sizes';
 @use 'motion';
 @use 'pressed';
 @use 'touch-target';
@@ -53,7 +54,7 @@
   }
 }
 
-$default-size: ':not(.ui-button--small, .ui-button--block, .ui-button--grouped)';
+$default-size: button-sizes.$default-size;
 $beside-a-primary: '.ui-button--primary#{$default-size} ~ *, :has(~ .ui-button--primary#{$default-size})';
 
 .ui-button--large,

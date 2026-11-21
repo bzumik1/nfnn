@@ -42,6 +42,14 @@ describe('Given the scroll hold of a page transition', () => {
       expect(released).not.toHaveBeenCalled();
     });
 
+    it('then it reports holding until it is released', () => {
+      expect(hold.holding).toBe(true);
+
+      hold.release();
+
+      expect(hold.holding).toBe(false);
+    });
+
     it('then a wait runs only once, though the scroll is released again', () => {
       const released = vi.fn();
       hold.whenReleased(released);

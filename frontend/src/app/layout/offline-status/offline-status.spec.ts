@@ -4,14 +4,22 @@ import {
   provideHttpClientTesting,
   TestRequest,
 } from '@angular/common/http/testing';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { OFFLINE_AFTER_MS, PROBE_PATH } from '../../core/connectivity/connectivity';
 import { connectivityInterceptor } from '../../core/connectivity/connectivity-interceptor';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
+import { NeedsConnection } from '../../shared/ui/needs-connection/needs-connection';
 import { OfflineStatus } from './offline-status';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
+
+@Component({
+  imports: [NeedsConnection],
+  template: `<button type="submit" appNeedsConnection>Odeslat zprávu</button>`,
+})
+class PageEndingWithSend {}
 
 const NOW = Date.parse('2026-11-05T11:30:00Z');
 const HOME_WRITTEN = new Date('2026-11-05T09:05:00Z');
@@ -292,6 +300,54 @@ describe('Given the offline status of the app', () => {
 
     expect(root.classList.contains('is-offline')).toBe(false);
     expect(root.style.getPropertyValue('--offline-pill-height')).toBe('');
+  });
+
+  describe('when the reader stands at the end of a page whose last button needs the connection', () => {
+    const PAGE_HEIGHT = 2000;
+    const SCREEN_HEIGHT = 800;
+    const HINT_HEIGHT = 22;
+    const PILL_ROOM = 42;
+    let page: ComponentFixture<PageEndingWithSend>;
+    let scrolledTo: (number | undefined)[];
+
+    beforeEach(async () => {
+      const root = document.documentElement;
+      scrolledTo = [];
+      Object.defineProperty(window, 'scrollY', {
+        value: PAGE_HEIGHT - SCREEN_HEIGHT,
+        configurable: true,
+      });
+      Object.defineProperty(window, 'innerHeight', { value: SCREEN_HEIGHT, configurable: true });
+      Object.defineProperty(window, 'visualViewport', { value: null, configurable: true });
+      Object.defineProperty(window, 'scrollTo', {
+        value: (options: ScrollToOptions) => scrolledTo.push(options.top),
+        configurable: true,
+      });
+      Object.defineProperty(root, 'scrollHeight', {
+        get: () =>
+          PAGE_HEIGHT +
+          HINT_HEIGHT * document.querySelectorAll('.ui-needs-connection').length +
+          (root.classList.contains('is-offline') ? PILL_ROOM : 0),
+        configurable: true,
+      });
+      page = TestBed.createComponent(PageEndingWithSend);
+      document.body.appendChild(page.nativeElement);
+      page.detectChanges();
+      await page.whenStable();
+    });
+
+    afterEach(() => {
+      page.destroy();
+      page.nativeElement.remove();
+      Reflect.deleteProperty(document.documentElement, 'scrollHeight');
+    });
+
+    it('and the app goes offline, then the line under the button does not keep the page from scrolling to its new end', async () => {
+      await nothingAnswers();
+
+      expect(document.querySelectorAll('.ui-needs-connection')).toHaveLength(1);
+      expect(scrolledTo).toEqual([PAGE_HEIGHT + HINT_HEIGHT + PILL_ROOM]);
+    });
   });
 
   it('when the app comes back online by itself, then the button goes and the return is announced', async () => {
