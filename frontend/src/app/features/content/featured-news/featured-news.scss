@@ -236,6 +236,11 @@
     overflow: hidden;
   }
 
+  .featured-perex {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
   .featured:not(.featured--photo) .featured-foot {
     justify-content: flex-start;
   }
