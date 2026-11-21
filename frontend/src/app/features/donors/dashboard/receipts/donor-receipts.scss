@@ -182,15 +182,6 @@ a {
 }
 
 @include bp.up(nav) {
-  .receipt-saved.pdf-progress--idle {
-    position: absolute;
-    inline-size: 0;
-    min-inline-size: 0;
-    block-size: 0;
-    margin-top: 0;
-    overflow: hidden;
-  }
-
   @include bp.container-down(yearly-receipts, cards) {
     .receipt-saved {
       justify-content: flex-end;

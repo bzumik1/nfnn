@@ -2096,13 +2096,15 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), list);
 
-      const shown = [
-        ...root().querySelectorAll<HTMLElement>('.payments-card .pairing-tag [aria-hidden="true"]'),
-      ].map((tag) => (tag.textContent ?? '').replace(/[\t\n ]+/g, ' ').trim());
-      expect(shown).toEqual([
-        'bez symbolu · účet …3333/2010',
-        'symbol 6123456789 · účet …5399/0800',
+      const textOf = (selector: string) =>
+        [...root().querySelectorAll<HTMLElement>(`.payments-card .pairing-tag ${selector}`)].map(
+          (part) => (part.textContent ?? '').replace(/[\t\n ]+/g, ' ').trim(),
+        );
+      expect(textOf('[aria-hidden="true"]')).toEqual([
+        'bez symbolu · účet …3333/2010',
+        'symbol 6123456789 · účet …5399/0800',
       ]);
+      expect(textOf('.account-ref')).toEqual(['účet …3333/2010', 'účet …5399/0800']);
     });
 
     it('then donations paired by the variable symbol or by hand carry no tag', async () => {

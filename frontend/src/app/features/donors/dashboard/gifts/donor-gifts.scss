@@ -137,14 +137,6 @@
     min-inline-size: 100%;
     justify-content: flex-end;
     text-align: end;
-
-    &.pdf-progress--idle {
-      position: absolute;
-      min-inline-size: 0;
-      block-size: 0;
-      margin-top: 0;
-      overflow: hidden;
-    }
   }
 
   @include bp.container-down(gift-year, tablet) {

@@ -127,6 +127,11 @@ td.date .verification-tag {
   font-variant-numeric: var(--numeric-figures);
 }
 
+.account-ref {
+  display: inline-block;
+  max-inline-size: 100%;
+}
+
 .account-end {
   white-space: nowrap;
 }
