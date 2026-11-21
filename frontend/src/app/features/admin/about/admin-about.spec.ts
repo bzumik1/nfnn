@@ -17,6 +17,11 @@ import { aboutPhoto as heldPhoto } from '../../content/testing/about-fixtures';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const ABOUT_URL = '/api/admin/content/about';
 const MEDIA_URL = '/api/admin/content/media';
@@ -403,15 +408,20 @@ describe('Given an administrator whose About section does not load', () => {
     http.expectOne(ABOUT_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle(fixture);
 
-    expect(text(fixture, '[role="alert"]')).toContain('Fotku se nepodařilo načíst.');
-
-    await click(fixture, 'Zkusit znovu');
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Fotku se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await settle(fixture);
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Fotku se nepodařilo načíst.']);
     http.expectOne(ABOUT_URL).flush({ photo: null });
     await settle(fixture);
 
     expect(text(fixture, '.photo-state')).toBe(
       'Fotka zatím není nahraná, web ukazuje ilustrační fotku.',
     );
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
   });
 
   it('when the role was taken away meanwhile, then the page goes to the overview', async () => {
@@ -445,7 +455,7 @@ describe('Given an administrator offline whose device keeps the administration c
     );
 
     expect(page.querySelector('img')).toBeNull();
-    expect(page.querySelector('.ui-load-state--error')).toBeNull();
+    expect(page.querySelector('app-load-failure')).toBeNull();
     http.verify();
   });
 });

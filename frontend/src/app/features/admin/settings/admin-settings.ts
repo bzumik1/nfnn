@@ -19,6 +19,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { TrackedForm } from '../../../core/updates/tracked-form';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { describeProblem, problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -37,6 +38,7 @@ import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { BusyButton } from '../../../shared/ui/busy-button/busy-button';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { formDraft } from '../../../core/drafts/form-draft';
 import {
   DRAFT_DISCARDED_TEXT,
@@ -223,6 +225,7 @@ const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše 
     ReceiptSigningKey,
     TrackedForm,
     NeedsConnection,
+    LoadFailure,
     DraftOffer,
     ChangedMeanwhileDialog,
     ActionBar,
@@ -248,6 +251,7 @@ export class AdminSettings {
   private readonly settingsForm = viewChild(NgForm);
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly fields = signal<Field[]>([]);
   protected readonly everyday = computed(() => sectionsOf(EVERYDAY, this.fields()));
   protected readonly technical = computed(() => sectionsOf(TECHNICAL, this.fields()));
@@ -324,9 +328,21 @@ export class AdminSettings {
 
   protected load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.reads
       .settings()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (response) => {
           const fields = fieldsOf(response.settings);

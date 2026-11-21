@@ -6,6 +6,11 @@ import { AdministrationVisit, type VisitState } from '../../device-copy/administ
 import type { VisitChanges } from '../../device-copy/visit-changes';
 import { SinceLastVisit } from './since-last-visit';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const NOTHING: VisitChanges = {
   payments: { count: 0, totalMinor: 0 },
@@ -323,15 +328,44 @@ describe('Given the block of what is new since the last visit on the administrat
   it('when the copy cannot catch up, then an alert offers a retry that checks again', async () => {
     await show({ kind: 'failed' });
 
-    const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
-    expect(withOrdinarySpaces(alert.textContent)).toContain(
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual([
       'Co je od minula nového, se nepodařilo zjistit.',
-    );
-
-    (alert.querySelector('button') as HTMLButtonElement).click();
+    ]);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    let checked: () => void = () => undefined;
+    check.mockReturnValueOnce(new Promise<void>((resolve) => (checked = resolve)));
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await show({ kind: 'checking' });
 
     expect(check).toHaveBeenCalledTimes(2);
-    expect(document.activeElement?.id).toBe('admin-visit-title');
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual([
+      'Co je od minula nového, se nepodařilo zjistit.',
+    ]);
+
+    checked();
+    await show(ready(NOTHING));
+
+    expect(fixture.nativeElement.querySelector('app-load-failure')).toBeNull();
+    expect(text('.since-lead')).toContain('Od té doby nepřibylo nic nového.');
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('section.ui-card'));
+  });
+
+  it('when a retry fails again, then the alert is rendered anew', async () => {
+    await show({ kind: 'failed' });
+    const first = fixture.nativeElement.querySelector('app-load-failure [role="alert"]');
+    let checked: () => void = () => undefined;
+    check.mockReturnValueOnce(new Promise<void>((resolve) => (checked = resolve)));
+    pressLoadFailureRetry(fixture.nativeElement);
+    await show({ kind: 'checking' });
+
+    checked();
+    await show({ kind: 'failed' });
+
+    const again = fixture.nativeElement.querySelector('app-load-failure [role="alert"]');
+    expect(again).not.toBeNull();
+    expect(again).not.toBe(first);
   });
 
   it('when the summary is closed, then the card goes away for this visit', async () => {

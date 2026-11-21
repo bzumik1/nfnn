@@ -35,17 +35,15 @@
       <p [class]="statusLine().look">{{ statusLine().text }}</p>
     </div>
     @if (state() === 'error') {
-      <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-        <p i18n="@@admin.donors.search.failed">Hledání se nepodařilo. Zkuste to prosím znovu.</p>
-        <button
-          type="button"
-          class="ui-button ui-button--small"
-          (click)="retry()"
-          i18n="@@admin.donors.search.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
+      <app-load-failure
+        class="ui-load-state--inset"
+        [compact]="true"
+        [retrying]="retrying()"
+        (retry)="retry()"
+        ><ng-container i18n="@@admin.donors.search.failed"
+          >Hledání se nepodařilo.</ng-container
+        ></app-load-failure
+      >
     }
     @if (listsRecent()) {
       <h3 class="ui-card__subtitle recent-title" i18n="@@admin.donors.recent.title">

@@ -19,7 +19,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { DOCUMENT } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { from, Observable, Subscription, switchMap } from 'rxjs';
+import { finalize, from, Observable, Subscription, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { Connectivity, isUnreachable } from '../../../core/connectivity/connectivity';
@@ -55,6 +55,7 @@ import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { AdminReceiptDownloads } from './admin-receipt-downloads';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { AdministrationReads, type BankAccountsSource } from '../device-copy/administration-reads';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
@@ -131,6 +132,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
     RouterLink,
     TrackedForm,
     NeedsConnection,
+    LoadFailure,
   ],
   providers: [AdminReceiptDownloads],
   templateUrl: './admin-donor-detail.html',
@@ -167,8 +169,10 @@ export class AdminDonorDetail {
 
   protected readonly donorId = this.route.snapshot.paramMap.get('id') ?? '';
   protected readonly accountState = signal<LoadState>('loading');
+  protected readonly accountRetrying = signal(false);
   protected readonly account = signal<DonorAccountResponse | null>(null);
   protected readonly donationsState = signal<LoadState>('loading');
+  protected readonly donationsRetrying = signal(false);
   private readonly donationsUnreachable = signal(false);
   protected readonly donationsAwaitConnection = computed(
     () => this.donationsUnreachable() && this.connectivity.offline(),
@@ -343,11 +347,23 @@ export class AdminDonorDetail {
     }
   }
 
-  protected loadAccount(): void {
+  private loadAccount(): void {
     this.accountState.set('loading');
+    this.fetchAccount();
+  }
+
+  protected retryAccount(): void {
+    this.accountRetrying.set(true);
+    this.fetchAccount();
+  }
+
+  private fetchAccount(): void {
     this.reads
       .account(this.donorId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.accountRetrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (account) => {
           this.account.set(account);
@@ -378,6 +394,13 @@ export class AdminDonorDetail {
       this.reads.changed();
     }
     this.onCardLoaded = onLoaded;
+    this.readCard();
+  }
+
+  protected retryDonations(): void {
+    this.cardRead?.unsubscribe();
+    this.donationsRetrying.set(true);
+    this.onCardLoaded = undefined;
     this.readCard();
   }
 
@@ -450,7 +473,10 @@ export class AdminDonorDetail {
     this.cardRead?.unsubscribe();
     this.cardRead = this.reads
       .donorCard(this.donorId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.donationsRetrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: ({ detail, bankAccounts }) => {
           this.detail.set(detail);

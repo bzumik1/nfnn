@@ -5,6 +5,8 @@ import {
   donorWithDonations,
   mockAdministration,
   mockPublicContent,
+  PETR_DETAIL_PATH,
+  PETR_ID,
   rememberedSession,
 } from './baseline/screen-mocks';
 import {
@@ -44,6 +46,8 @@ const LARGEST_SYSTEM_TEXT_PX = 53;
 const TRANSPARENT = 'rgba(0, 0, 0, 0)';
 const COMPUTER_ONLY =
   'the computer layout runs in the chromium project; the iphone project runs the phone journey of the article in this file';
+const WIDTHS_IN_CHROMIUM =
+  'the phone and computer widths of the donor card are set in the chromium project; the iphone project runs the phone journey of the article in this file';
 const PHONE_WIDTH_IN_CHROMIUM =
   'the largest text at phone width is measured in the chromium project; the iphone project runs the phone journey of the article in this file';
 
@@ -182,6 +186,58 @@ async function administrationCopyNotStored(page: Page): Promise<void> {
   await expect(
     page.locator('.first-download').getByRole('button', { name: 'Uložit znovu' }),
   ).toBeVisible();
+}
+
+interface FailureLayout {
+  readonly wordsSplit: readonly string[];
+  readonly linesOutside: number;
+  readonly linesUnderButton: number;
+  readonly buttonInside: boolean;
+}
+
+async function failureLayout(alert: Locator): Promise<FailureLayout> {
+  return alert.evaluate((element) => {
+    const frame = element.closest('.ui-notice--action') ?? element;
+    const box = frame.getBoundingClientRect();
+    const pressed = frame.querySelector('button')?.getBoundingClientRect() ?? new DOMRect();
+    const wordsSplit: string[] = [];
+    const lines: DOMRect[] = [];
+    const texts = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = texts.nextNode(); node !== null; node = texts.nextNode()) {
+      for (const word of (node.textContent ?? '').matchAll(/[^ \t\n]+/g)) {
+        const range = document.createRange();
+        range.setStart(node, word.index);
+        range.setEnd(node, word.index + word[0].length);
+        const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0);
+        if (new Set(rects.map((rect) => Math.round(rect.top))).size > 1) {
+          wordsSplit.push(word[0]);
+        }
+        lines.push(...rects);
+      }
+    }
+    const overlaps = (line: DOMRect) =>
+      line.left < pressed.right &&
+      line.right > pressed.left &&
+      line.top < pressed.bottom &&
+      line.bottom > pressed.top;
+    return {
+      wordsSplit,
+      linesOutside: lines.filter(
+        (line) =>
+          line.left < box.left - 0.5 ||
+          line.right > box.right + 0.5 ||
+          line.top < box.top - 0.5 ||
+          line.bottom > box.bottom + 0.5,
+      ).length,
+      linesUnderButton: lines.filter(overlaps).length,
+      buttonInside:
+        pressed.width > 0 &&
+        pressed.left >= box.left &&
+        pressed.right <= box.right + 0.5 &&
+        pressed.top >= box.top &&
+        pressed.bottom <= box.bottom + 0.5,
+    };
+  });
 }
 
 interface FadesSeen {
@@ -1030,6 +1086,46 @@ test.describe('Given an administrator on a computer whose administration pages f
       .toBeGreaterThanOrEqual(DARK_CONTROL_EDGE_CONTRAST);
   });
 });
+
+const DONOR_CARD_WIDTHS = [
+  { name: 'a phone', width: 390, height: 844, path: `${PETR_DETAIL_PATH}/potvrzeni` },
+  { name: 'a computer', width: 1280, height: 900, path: PETR_DETAIL_PATH },
+] as const;
+
+for (const screen of DONOR_CARD_WIDTHS) {
+  test.describe(`Given an administrator on ${screen.name} whose donor card cannot load the accounts and gifts`, () => {
+    test.skip(({ browserName }) => browserName !== 'chromium', WIDTHS_IN_CHROMIUM);
+
+    test.beforeEach(async ({ page }) => {
+      await page.setViewportSize({ width: screen.width, height: screen.height });
+      await mockDonorApi(page);
+      await rememberedSession(page);
+      await mockAdministration(page);
+      await page.route(
+        (url) => url.pathname === `/api/admin/donations/donors/${PETR_ID}`,
+        (route) => route.fulfill(SERVER_ERROR),
+      );
+    });
+
+    test(`when the failure shows at ${screen.width} px, then its sentence and „Zkusit znovu“ stay inside the block, no word breaks and the button covers no text`, async ({
+      page,
+    }) => {
+      await page.goto(screen.path);
+      const alerts = failure(page, 'Účty, dary a potvrzení se nepodařilo načíst.');
+      await expect(alerts.first()).toBeVisible();
+
+      for (const alert of await alerts.all()) {
+        await expect(alert).toHaveText('Účty, dary a potvrzení se nepodařilo načíst.');
+        expect(await failureLayout(alert)).toEqual({
+          wordsSplit: [],
+          linesOutside: 0,
+          linesUnderButton: 0,
+          buttonInside: true,
+        });
+      }
+    });
+  });
+}
 
 test.describe('Given an administrator on a computer whose backups load slowly', () => {
   test.skip(({ browserName }) => browserName !== 'chromium', COMPUTER_ONLY);
