@@ -1,3 +1,5 @@
+@use 'focus-ring';
+
 :host {
   display: block;
 }
@@ -154,8 +156,7 @@ app-backup-key-panel {
 }
 
 .file-input:focus-visible + .file-pick {
-  outline: 3px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  @include focus-ring.ring;
 }
 
 .file-input:disabled + .file-pick {

@@ -1,3 +1,4 @@
+@use 'focus-ring';
 @use 'breakpoints' as bp;
 @use 'motion';
 @use 'pressed';
@@ -73,7 +74,7 @@
   }
 
   &:focus-visible {
-    outline-offset: -3px;
+    @include focus-ring.ring(inside);
   }
 
   .ui-list__chevron {

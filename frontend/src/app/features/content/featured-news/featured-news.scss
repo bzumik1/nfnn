@@ -1,5 +1,6 @@
 @use 'breakpoints' as bp;
 @use 'pressed';
+@use 'focus-ring';
 
 $clamped-title-lines: 3;
 
@@ -189,12 +190,11 @@ $clamped-title-lines: 3;
   }
 
   &:focus-visible {
-    outline: none;
+    @include focus-ring.ring(elsewhere);
   }
 
   &:focus-visible::after {
-    outline: 3px solid var(--color-focus-ring);
-    outline-offset: -3px;
+    @include focus-ring.ring(inside);
   }
 }
 

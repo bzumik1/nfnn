@@ -1,6 +1,7 @@
 @use 'theme';
 @use 'breakpoints' as bp;
 @use 'motion';
+@use 'focus-ring';
 @use 'visually-hidden';
 @use 'styles/form-controls';
 @use 'styles/controls';
@@ -161,9 +162,11 @@ html.contact-in-view app-root {
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  @include focus-ring.ring;
 }
+
+@include focus-ring.only-after-keyboard;
+@include focus-ring.room-in-scrolling;
 
 [tabindex='-1']:focus {
   outline: none;
@@ -174,10 +177,6 @@ img.is-unavailable {
 }
 
 @media (forced-colors: active) {
-  :focus-visible {
-    outline-color: Highlight;
-  }
-
   button,
   [role='button'] {
     border: 1px solid ButtonText;

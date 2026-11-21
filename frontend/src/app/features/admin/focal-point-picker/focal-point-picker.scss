@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'focus-ring';
 
 :host {
   display: block;
@@ -24,8 +25,7 @@
   overflow: hidden;
 
   &:focus-visible {
-    outline: 3px solid var(--color-focus-ring);
-    outline-offset: 2px;
+    @include focus-ring.ring;
   }
 }
 

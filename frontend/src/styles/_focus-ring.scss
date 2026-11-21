@@ -1,0 +1,42 @@
+$width: 3px;
+$offset-outside: 2px;
+$offset-inside: -$width;
+$reach: $width + $offset-outside;
+
+@mixin ring($at: outside, $colour: var(--color-focus-ring)) {
+  @if $at == elsewhere {
+    outline: none;
+  } @else {
+    outline: $width solid var(--focus-ring-after-pointer, #{$colour});
+    @if $at == inside {
+      outline-offset: $offset-inside;
+    } @else if $at == outside {
+      outline-offset: $offset-outside;
+    } @else {
+      @error 'focus-ring.ring takes outside, inside or elsewhere, not #{$at}';
+    }
+
+    @media (forced-colors: active) {
+      outline-color: Highlight;
+    }
+  }
+}
+
+@mixin only-after-keyboard {
+  @media (forced-colors: none) {
+    :root[data-input='pointer'] {
+      --focus-ring-after-pointer: transparent;
+      --focus-lift-after-pointer: 0;
+    }
+  }
+}
+
+@function lift-after-pointer() {
+  @return var(--focus-lift-after-pointer, 1);
+}
+
+@mixin room-in-scrolling {
+  :where(a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])) {
+    scroll-margin-block: $reach;
+  }
+}

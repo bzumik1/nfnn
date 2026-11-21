@@ -1,5 +1,6 @@
 @use 'breakpoints' as bp;
 @use 'motion';
+@use 'focus-ring';
 
 :host {
   display: contents;
@@ -97,8 +98,7 @@
   }
 
   &:focus-visible {
-    outline: 3px solid var(--color-tab-focus-ring);
-    outline-offset: -3px;
+    @include focus-ring.ring(inside, var(--color-tab-focus-ring));
   }
 }
 

@@ -1,3 +1,5 @@
+@use 'focus-ring';
+
 :host {
   display: inline-block;
   position: relative;
@@ -8,20 +10,15 @@
 }
 
 .file-input:focus-visible {
-  outline: none;
+  @include focus-ring.ring(elsewhere);
 }
 
 .file-input:focus-visible + .file-label {
-  outline: 3px solid var(--color-focus-ring);
-  outline-offset: 2px;
-
-  @media (forced-colors: active) {
-    outline-color: Highlight;
-  }
+  @include focus-ring.ring;
 }
 
 .file-input:focus-visible + .ui-list__row {
-  outline-offset: -3px;
+  @include focus-ring.ring(inside);
 }
 
 .file-label--disabled {
