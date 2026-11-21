@@ -3,11 +3,15 @@
 @use 'pressed';
 @use 'focus-ring';
 
-@mixin lifted {
-  translate: 0 calc(-1 * var(--motion-lift));
+@mixin lifted($by: 1) {
+  @if $by == 1 {
+    translate: 0 calc(-1 * var(--motion-lift));
+  } @else {
+    translate: 0 calc(-1 * var(--motion-lift) * #{$by});
+  }
 
   &::after {
-    opacity: 1;
+    opacity: $by;
   }
 }
 
@@ -32,7 +36,13 @@
 }
 
 :host(:has(.news-link:focus-visible)) {
-  @include lifted;
+  @include lifted(focus-ring.lift-after-pointer());
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :host(:has(.news-link:focus-visible):hover) {
+    @include lifted;
+  }
 }
 
 .news-card {

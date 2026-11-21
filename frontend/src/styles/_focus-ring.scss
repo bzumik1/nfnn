@@ -26,8 +26,13 @@ $reach: $width + $offset-outside;
   @media (forced-colors: none) {
     :root[data-input='pointer'] {
       --focus-ring-after-pointer: transparent;
+      --focus-lift-after-pointer: 0;
     }
   }
+}
+
+@function lift-after-pointer() {
+  @return var(--focus-lift-after-pointer, 1);
 }
 
 @mixin room-in-scrolling {

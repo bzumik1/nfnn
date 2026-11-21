@@ -61,33 +61,46 @@ function focusedShowsRing(page: Page, ringShows: JSHandle<RingShows>): Promise<b
   return page.evaluate((shows) => shows(document.activeElement), ringShows);
 }
 
-interface FrameSampler {
-  readonly frames: boolean[];
-  stop(): boolean[];
+interface SampledFrame {
+  readonly ring: boolean;
+  readonly onTarget: boolean;
 }
 
-function sampleEveryFrame(
+interface FrameSampler {
+  readonly frames: SampledFrame[];
+  stop(): SampledFrame[];
+}
+
+async function sampleEveryFrame(
   page: Page,
   ringShows: JSHandle<RingShows>,
+  target: Locator,
 ): Promise<JSHandle<FrameSampler>> {
-  return page.evaluateHandle((shows) => {
-    const frames: boolean[] = [];
-    let sampling = true;
-    const sample = () => {
-      frames.push(shows(document.activeElement));
-      if (sampling) {
-        requestAnimationFrame(sample);
-      }
-    };
-    requestAnimationFrame(sample);
-    return {
-      frames,
-      stop: () => {
-        sampling = false;
-        return frames;
-      },
-    };
-  }, ringShows);
+  const element = await target.elementHandle();
+  return page.evaluateHandle(
+    ([shows, focusTarget]) => {
+      const frames: SampledFrame[] = [];
+      let sampling = true;
+      const sample = () => {
+        frames.push({
+          ring: shows(document.activeElement),
+          onTarget: document.activeElement === focusTarget,
+        });
+        if (sampling) {
+          requestAnimationFrame(sample);
+        }
+      };
+      requestAnimationFrame(sample);
+      return {
+        frames,
+        stop: () => {
+          sampling = false;
+          return frames;
+        },
+      };
+    },
+    [ringShows, element] as const,
+  );
 }
 
 function press(page: Page, control: Locator, browserName: string): Promise<void> {
@@ -146,13 +159,15 @@ test.describe('Given a visitor on the Přispět page who works with a finger or 
     browserName,
   }) => {
     const ringShows = await installRingCheck(page);
-    const sampler = await sampleEveryFrame(page, ringShows);
+    const sampler = await sampleEveryFrame(page, ringShows, qrButton(page));
 
     await zoomAndCloseByPointer(page, browserName);
-    await expect.poll(() => sampler.evaluate((frames) => frames.frames.length)).toBeGreaterThan(2);
-    const frames = await sampler.evaluate((frames) => frames.stop());
+    await expect
+      .poll(() => sampler.evaluate((sampled) => sampled.frames.some((frame) => frame.onTarget)))
+      .toBe(true);
+    const frames = await sampler.evaluate((sampled) => sampled.stop());
 
-    expect(frames.filter(Boolean)).toEqual([]);
+    expect(frames.filter((frame) => frame.ring)).toEqual([]);
   });
 
   test('when they press Tab after that, then the control the focus reaches shows its ring at once', async ({
@@ -191,6 +206,26 @@ test.describe('Given a visitor on the Přispět page who works with a finger or 
     await expect(page.getByLabel('Vlastní částka v korunách')).toBeFocused();
     expect(await focusedShowsRing(page, ringShows)).toBe(false);
   });
+
+  test('when they type an amount into the field the site focused, then it still shows no ring, and Tab brings the ring to the next control', async ({
+    page,
+    browserName,
+  }) => {
+    const ringShows = await installRingCheck(page);
+    const amount = page.getByLabel('Vlastní částka v korunách');
+    await press(page, page.getByRole('radio', { name: 'Jiná částka' }), browserName);
+    await expect(amount).toBeFocused();
+
+    await page.keyboard.type('500');
+
+    await expect(amount).toHaveValue('500');
+    expect(await focusedShowsRing(page, ringShows)).toBe(false);
+
+    await page.keyboard.press('Tab');
+
+    await expect(amount).not.toBeFocused();
+    expect(await focusedShowsRing(page, ringShows)).toBe(true);
+  });
 });
 
 test.describe('Given a visitor on the Přispět page who works with the keyboard', () => {
@@ -217,7 +252,7 @@ test.describe('Given a visitor on the Přispět page who works with the keyboard
 test.describe('Given a visitor whose system forces its own colours', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
-    'Playwright emulates forced colours only in Chromium; iOS has none, and real Safari on a Mac runs in safari.yml',
+    'Playwright emulates forced colours only in Chromium; iOS has none, and no Safari run covers them; the simulator check does',
   );
 
   test('when they choose Jiná částka by mouse and the focus moves into its field, then the field shows its ring all the same', async ({
@@ -232,6 +267,106 @@ test.describe('Given a visitor whose system forces its own colours', () => {
 
     await expect(page.getByLabel('Vlastní částka v korunách')).toBeFocused();
     expect(await focusedShowsRing(page, ringShows)).toBe(true);
+  });
+});
+
+const ARTICLES = ['Zahrada pro děti', 'Nová dílna'].map((title, index) => ({
+  id: `0199f3e0-0000-7000-8000-00000000f00${index + 1}`,
+  slug: `aktualita-${index + 1}`,
+  title,
+  tag: 'Projekt',
+  perex: 'Krátké shrnutí aktuality.',
+  body: 'První odstavec.',
+  coverImage: null,
+  publishedOn: `2026-10-2${index}`,
+  createdAt: '2026-10-19T09:00:00Z',
+  updatedAt: '2026-10-20T07:30:00Z',
+}));
+const CARD_ARTICLE = ARTICLES[1];
+
+interface CardLift {
+  readonly verticalShift: number;
+  readonly shadow: number;
+}
+
+async function openCardArticleFromList(
+  page: Page,
+  open: (link: Locator) => Promise<void>,
+): Promise<void> {
+  for (const article of ARTICLES) {
+    await page.route(
+      (url) => url.pathname === `/api/content/news/${article.slug}`,
+      (route) => route.fulfill({ json: article }),
+    );
+  }
+  await page.route(
+    (url) => url.pathname === '/api/content/news',
+    (route) =>
+      route.fulfill({
+        json: { items: ARTICLES, page: 0, size: 10, total: ARTICLES.length, hasMore: false },
+      }),
+  );
+  await page.goto('/aktuality');
+  await open(cardLink(page));
+  await expect(page.getByRole('heading', { level: 1, name: CARD_ARTICLE.title })).toBeFocused();
+}
+
+function cardLink(page: Page): Locator {
+  return page.locator('app-news-card').getByRole('link', { name: CARD_ARTICLE.title });
+}
+
+function backButton(page: Page): Locator {
+  return page.getByRole('banner').getByRole('button', { name: 'Zpět' });
+}
+
+function settledLiftOf(card: Locator): Promise<CardLift> {
+  return card.evaluate(async (host) => {
+    await Promise.all(
+      host
+        .getAnimations({ subtree: true })
+        .filter((animation) => (animation.effect as KeyframeEffect | null)?.target === host)
+        .map((animation) => animation.finished),
+    );
+    const [, y = '0'] = getComputedStyle(host).translate.split(' ');
+    return {
+      verticalShift: parseFloat(y) || 0,
+      shadow: parseFloat(getComputedStyle(host, '::after').opacity),
+    };
+  });
+}
+
+test.describe('Given a visitor who comes back from an article to the news list', () => {
+  test('when they press Zpět with a finger or a mouse and the site focuses the card they came from, then the card is not lifted', async ({
+    page,
+    browserName,
+  }) => {
+    await mockDonorApi(page);
+    await openCardArticleFromList(page, (link) => press(page, link, browserName));
+
+    await press(page, backButton(page), browserName);
+
+    await expect(cardLink(page)).toBeFocused();
+    const lift = await settledLiftOf(page.locator('app-news-card'));
+    expect(lift.verticalShift).toBeCloseTo(0);
+    expect(lift.shadow).toBe(0);
+  });
+
+  test('when they press Zpět with the keyboard and the site focuses the card they came from, then the card is lifted', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await openCardArticleFromList(page, async (link) => {
+      await link.focus();
+      await page.keyboard.press('Enter');
+    });
+
+    await backButton(page).focus();
+    await page.keyboard.press('Enter');
+
+    await expect(cardLink(page)).toBeFocused();
+    const lift = await settledLiftOf(page.locator('app-news-card'));
+    expect(lift.verticalShift).toBeLessThan(0);
+    expect(lift.shadow).toBe(1);
   });
 });
 
@@ -405,7 +540,7 @@ const AREAS = [
 test.describe('Given a keyboard user on a computer', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
-    "the side navigation and the window's bottom edge at 1280 px are a computer's layout; real Safari on a Mac runs them in safari.yml",
+    "the side navigation and the window's bottom edge at 1280 px are a computer's layout; no Safari run covers them; the simulator check does",
   );
   test.use({ viewport: { width: 1280, height: 640 } });
 
