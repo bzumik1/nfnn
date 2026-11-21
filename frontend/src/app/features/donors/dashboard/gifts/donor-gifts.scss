@@ -126,6 +126,10 @@
 }
 
 @include bp.up(nav) {
+  .gift-year-head {
+    align-items: first baseline;
+  }
+
   .gift-year-action {
     display: flex;
     flex-direction: column;

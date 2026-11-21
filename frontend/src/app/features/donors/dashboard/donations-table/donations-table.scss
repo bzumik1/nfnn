@@ -31,6 +31,14 @@ table {
   width: var(--donations-column-receipt);
 }
 
+:host-context(.payments-card:has(.amount--long)) .column-amount {
+  width: var(--donations-column-amount-long);
+}
+
+:host-context(.payments-card:has(.receipt-note--long)) .column-receipt {
+  width: var(--donations-column-receipt-note);
+}
+
 thead tr {
   background: var(--color-surface-alt);
 }

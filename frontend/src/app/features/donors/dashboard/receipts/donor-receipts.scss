@@ -182,6 +182,10 @@ a {
 }
 
 @include bp.up(nav) {
+  .year-row {
+    align-items: first baseline;
+  }
+
   @include bp.container-down(yearly-receipts, cards) {
     .receipt-saved {
       justify-content: flex-end;

@@ -76,6 +76,7 @@
             data-label="Částka"
             i18n-data-label="@@donor.dashboard.payments.col.amount"
             class="amount ui-figures"
+            [class.amount--long]="longAmount(item)"
           >
             <span class="ui-amount">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
           </td>
@@ -150,7 +151,7 @@
   @if (item.pairedBy === 'CONFIRMED_SYMBOL' && item.senderAccount && item.confirmedSymbol) {
     <span class="pairing-tag">
       <span aria-hidden="true" i18n="@@donor.dashboard.payments.symbolPrefix"
-        >symbol {{ item.confirmedSymbol }} ·
+        ><span class="account-ref">symbol {{ item.confirmedSymbol }}</span> ·
         <span class="account-ref"
           >účet <span class="account-end">{{ senderAccountEnd(item.senderAccount) }}</span></span
         ></span
@@ -212,7 +213,9 @@
   } @else {
     @switch (missingReceipt(item)) {
       @case ('on-yearly-receipt') {
-        <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.onYearlyReceipt"
+        <span
+          class="receipt-note receipt-note--long"
+          i18n="@@donor.dashboard.payments.noReceipt.onYearlyReceipt"
           >Je na ročním potvrzení za rok {{ yearOf(item) }}</span
         >
       }
@@ -222,12 +225,16 @@
         >
       }
       @case ('verification') {
-        <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.verification"
+        <span
+          class="receipt-note receipt-note--long"
+          i18n="@@donor.dashboard.payments.noReceipt.verification"
           >Započítá se do ročního potvrzení</span
         >
       }
       @case ('before-first-year') {
-        <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.beforeFirstYear"
+        <span
+          class="receipt-note receipt-note--long"
+          i18n="@@donor.dashboard.payments.noReceipt.beforeFirstYear"
           >Potvrzení vystavujeme od roku {{ donations.receiptsFrom() }}</span
         >
       }
