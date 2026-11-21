@@ -21,6 +21,16 @@ import {
   withoutSessionStorage,
 } from './lost-chunks';
 
+const MS_PER_SECOND = 1000;
+const APP_CLOCK_TICK_MS = 1;
+
+interface LoadingSeen {
+  skeleton: number | null;
+  failure: number | null;
+  appears: boolean;
+  longestFrame: number;
+}
+
 const SERVER_ERROR = problem(500, 'server-error', 'Chyba serveru', 'Zkuste to prosím znovu.');
 const BACKUPS = '/api/admin/operations/backups';
 
@@ -229,13 +239,9 @@ test.describe('Given an administrator on a computer whose pages load slowly', ()
     page,
   }) => {
     await page.addInitScript(() => {
-      const seen: { skeleton: number | null; failure: number | null; appears: boolean } = {
-        skeleton: null,
-        failure: null,
-        appears: false,
-      };
-      (window as unknown as { loadingSeen: typeof seen }).loadingSeen = seen;
-      const watch = () => {
+      const seen: LoadingSeen = { skeleton: null, failure: null, appears: false, longestFrame: 0 };
+      (window as unknown as { loadingSeen: LoadingSeen }).loadingSeen = seen;
+      const changes = new MutationObserver(() => {
         const now = performance.now();
         if (seen.skeleton === null && document.querySelector('app-skeleton') !== null) {
           seen.skeleton = now;
@@ -243,14 +249,24 @@ test.describe('Given an administrator on a computer whose pages load slowly', ()
         const shown = [...document.querySelectorAll('[role="alert"]')].find((alert) =>
           alert.textContent?.includes('Stav záloh se nepodařilo'),
         );
-        if (seen.failure === null && shown !== undefined) {
+        if (seen.skeleton !== null && seen.failure === null && shown !== undefined) {
           seen.failure = now;
           seen.appears = shown.closest('.ui-skeleton-reveal') !== null;
-          return;
+          changes.disconnect();
         }
-        requestAnimationFrame(watch);
+      });
+      changes.observe(document, { childList: true, subtree: true, characterData: true });
+      let previous: number | null = null;
+      const frame = (time: number) => {
+        if (previous !== null && seen.skeleton !== null) {
+          seen.longestFrame = Math.max(seen.longestFrame, time - previous);
+        }
+        previous = time;
+        if (seen.failure === null) {
+          requestAnimationFrame(frame);
+        }
       };
-      requestAnimationFrame(watch);
+      requestAnimationFrame(frame);
     });
     let retried = false;
     let answer: () => void = () => undefined;
@@ -272,15 +288,21 @@ test.describe('Given an administrator on a computer whose pages load slowly', ()
     await expect(failure(page, 'Stav záloh se nepodařilo načíst.')).toBeVisible();
 
     const seen = await page.evaluate(
-      () =>
-        (
-          window as unknown as {
-            loadingSeen: { skeleton: number | null; failure: number | null; appears: boolean };
-          }
-        ).loadingSeen,
+      () => (window as unknown as { loadingSeen: LoadingSeen }).loadingSeen,
     );
+    const minimumMs = await page.evaluate((msPerSecond) => {
+      const token = getComputedStyle(document.documentElement)
+        .getPropertyValue('--duration-loading-min')
+        .trim();
+      const value = Number.parseFloat(token);
+      return token.endsWith('ms') ? value : value * msPerSecond;
+    }, MS_PER_SECOND);
+    const renderLag = seen.longestFrame;
     expect(seen.skeleton).not.toBeNull();
-    expect((seen.failure ?? 0) - (seen.skeleton ?? 0)).toBeGreaterThanOrEqual(380);
+    expect(seen.failure).not.toBeNull();
+    expect(seen.failure! - seen.skeleton!).toBeGreaterThanOrEqual(
+      minimumMs - renderLag - APP_CLOCK_TICK_MS,
+    );
     expect(seen.appears).toBe(true);
 
     const retry = page.getByRole('button', { name: 'Zkusit znovu' });
