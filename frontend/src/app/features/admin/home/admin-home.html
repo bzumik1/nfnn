@@ -341,27 +341,27 @@
                       </td>
                       <td
                         role="cell"
-                        class="num ui-figures"
+                        class="num ui-amount"
                         data-label="Celkem"
                         i18n-data-label="@@admin.home.overview.col.total"
                       >
-                        <span class="ui-amount">{{ amount(item.received) }}</span>
+                        {{ amount(item.received) }}
                       </td>
                       <td
                         role="cell"
-                        class="num col-paired ui-figures"
+                        class="num col-paired ui-amount"
                         data-label="Přiřazené"
                         i18n-data-label="@@admin.home.overview.col.paired"
                       >
-                        <span class="ui-amount">{{ amount(item.paired) }}</span>
+                        {{ amount(item.paired) }}
                       </td>
                       <td
                         role="cell"
-                        class="num ui-figures"
+                        class="num ui-amount"
                         data-label="Bez dárce"
                         i18n-data-label="@@admin.home.overview.col.unpaired"
                       >
-                        <span class="ui-amount">{{ amount(item.unpaired) }}</span>
+                        {{ amount(item.unpaired) }}
                       </td>
                     </tr>
                   }
@@ -403,27 +403,27 @@
                     </td>
                     <td
                       role="cell"
-                      class="num ui-figures"
+                      class="num ui-amount"
                       data-label="Celkem"
                       i18n-data-label="@@admin.home.overview.col.total"
                     >
-                      <span class="ui-amount">{{ amount(data.received) }}</span>
+                      {{ amount(data.received) }}
                     </td>
                     <td
                       role="cell"
-                      class="num col-paired ui-figures"
+                      class="num col-paired ui-amount"
                       data-label="Přiřazené"
                       i18n-data-label="@@admin.home.overview.col.paired"
                     >
-                      <span class="ui-amount">{{ amount(data.paired) }}</span>
+                      {{ amount(data.paired) }}
                     </td>
                     <td
                       role="cell"
-                      class="num ui-figures"
+                      class="num ui-amount"
                       data-label="Bez dárce"
                       i18n-data-label="@@admin.home.overview.col.unpaired"
                     >
-                      <span class="ui-amount">{{ amount(data.unpaired) }}</span>
+                      {{ amount(data.unpaired) }}
                     </td>
                   </tr>
                 </tfoot>

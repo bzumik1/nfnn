@@ -7,7 +7,8 @@
   white-space: nowrap;
 }
 
-.ui-amount {
+.ui-amount,
+.ui-table td.ui-amount {
   font-family: var(--font-figures);
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
