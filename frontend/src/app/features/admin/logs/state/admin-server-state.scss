@@ -65,7 +65,6 @@ h2.ui-list__title {
 @include bp.container-down(list-card, pair) {
   .release .ui-list__value {
     font-size: var(--text-md);
-    overflow-wrap: anywhere;
   }
 }
 
