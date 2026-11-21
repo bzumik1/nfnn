@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
+import { mockPublicContent, servePaymentDetails } from './baseline/screen-mocks';
 import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, session, signIn } from './donor-session';
 
@@ -113,6 +114,34 @@ for (const [width, viewport] of [
     }
   });
 }
+
+test.describe('Given a visitor on a computer, where a page ends with a section that keeps its full bottom padding', () => {
+  test.use({ viewport: COMPUTER });
+
+  for (const { path, lastPart } of [
+    { path: '/o-nas', lastPart: '#kontakt form' },
+    { path: '/prispet', lastPart: '#prispet .bank' },
+  ]) {
+    test(`when they scroll ${path} to its end, then the empty band between its last line and the tab bar is no taller than the room the bar takes`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await mockPublicContent(page);
+      await servePaymentDetails(page);
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.locator(lastPart).first()).toBeVisible();
+      await scrolledToTheEnd(page);
+
+      const bar = await tabBar(page).boundingBox();
+      expect(bar).not.toBeNull();
+      const roomOfTheBar = COMPUTER.height - bar!.y;
+      const emptyBand = bar!.y - (await lowestContentEdge(page));
+
+      expect(emptyBand).toBeLessThanOrEqual(roomOfTheBar);
+    });
+  }
+});
 
 test.describe('Given a signed-in donor', () => {
   for (const [width, viewport] of [
