@@ -92,11 +92,25 @@
           appNeedsConnection
           type="button"
           class="ui-button ui-button--quiet ui-button--small browser-errors"
+          [attr.aria-pressed]="showsBrowserErrors()"
           [disabled]="searching()"
-          (click)="findBrowserErrors()"
-          i18n="@@admin.logs.search.browserErrors"
+          (click)="toggleBrowserErrors()"
         >
-          Chyby z&nbsp;prohlížečů
+          <svg
+            class="browser-errors-check"
+            aria-hidden="true"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span i18n="@@admin.logs.search.browserErrors">Chyby z&nbsp;prohlížečů</span>
         </button>
       }
     </div>
@@ -130,7 +144,7 @@
           <button
             appNeedsConnection
             type="button"
-            class="ui-button ui-button--quiet load-more"
+            class="ui-button ui-button--small load-more"
             [disabled]="loadingMore() !== null"
             (click)="loadNewer()"
           >
@@ -144,7 +158,7 @@
             <button
               appNeedsConnection
               type="button"
-              class="ui-button ui-button--quiet"
+              class="ui-button ui-button--small"
               [disabled]="loadingMore() !== null"
               (click)="loadNewer()"
             >
@@ -157,7 +171,7 @@
               <button
                 appNeedsConnection
                 type="button"
-                class="ui-button ui-button--quiet"
+                class="ui-button ui-button--small"
                 [disabled]="loadingMore() !== null || searching()"
                 (click)="loadOlder()"
               >
@@ -215,7 +229,7 @@
                           <span class="visually-hidden">{{ levelLabel(entry.level) }}</span>
                         }
                         @if (entry.title) {
-                          <span class="entry-title">{{ entry.title }}</span>
+                          <span class="entry-title" [appTitleBreaks]="entry.title"></span>
                         }
                         <span class="entry-time">{{ time(entry) }}</span>
                       </span>
@@ -260,7 +274,7 @@
           <button
             appNeedsConnection
             type="button"
-            class="ui-button"
+            class="ui-button ui-button--small"
             [disabled]="loadingMore() !== null || searching()"
             (click)="loadOlder()"
           >
@@ -274,6 +288,7 @@
         }
         @if (entries().length > 0) {
           <app-copy-button
+            look="tinted"
             [value]="loadedText()"
             what="načtené záznamy"
             i18n-what="@@admin.logs.reader.copyLoaded"

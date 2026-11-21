@@ -248,12 +248,12 @@ describe('Given an administrator on the monthly report page', () => {
       })),
     ).toEqual([
       {
-        month: 'září 2026',
+        month: 'Září 2026',
         sentAt: 'Odesláno 5. 10. 2026 7:00',
         href: '/sprava/prehledy/2026-09',
       },
       {
-        month: 'srpen 2026',
+        month: 'Srpen 2026',
         sentAt: 'Odesláno 1. 9. 2026 7:00',
         href: '/sprava/prehledy/2026-08',
       },

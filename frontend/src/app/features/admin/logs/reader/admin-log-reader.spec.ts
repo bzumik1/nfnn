@@ -406,6 +406,40 @@ describe('Given an administrator reading a log file', () => {
     expect(page.texts('.entry')[0]).toContain('kind=pdf-render');
   });
 
+  it('when they turn the browser error reports on and off, then the filter says whether it is on and turning it off brings the file back', async () => {
+    await openTail();
+    expect(page.button('Chyby z prohlížečů').getAttribute('aria-pressed')).toBe('false');
+
+    await page.click('Chyby z prohlížečů');
+    await flushSearch('pattern=Browser%20error&limit=50', []);
+    expect(page.button('Chyby z prohlížečů').getAttribute('aria-pressed')).toBe('true');
+
+    await page.click('Chyby z prohlížečů');
+
+    expect(page.button('Chyby z prohlížečů').getAttribute('aria-pressed')).toBe('false');
+    expect(page.element<HTMLInputElement>('#log-search').value).toBe('');
+    expect(page.texts('.entry')).toHaveLength(3);
+  });
+
+  it('when an entry is titled by a long class name, then the title may break only where a word of the name starts', async () => {
+    await openTail();
+
+    const title = page.element('.entry-title');
+    expect(title.textContent?.trim()).toBe('AuthorizationServerService');
+    expect(title.querySelectorAll('wbr')).toHaveLength(2);
+  });
+
+  it('when the file holds older lines, then every load button and the copy button come from the one family of Hledat', async () => {
+    await openTail();
+
+    const search = page.button('Hledat');
+    const looks = Array.from(page.element('.ui-page').querySelectorAll('button'))
+      .filter((button) => /^(Načíst|Kopírovat)/.test(accessibleText(button)))
+      .map((button) => button.className.replace(/\s*copy-button(--\S+)?/g, '').trim());
+    expect(looks).toHaveLength(4);
+    expect(new Set(looks)).toEqual(new Set([search.className.trim()]));
+  });
+
   it('when the file writes no level, then the level filter is not offered', async () => {
     await open('backup.log');
     await flushWindow(
