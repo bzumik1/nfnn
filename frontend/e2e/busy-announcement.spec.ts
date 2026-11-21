@@ -151,6 +151,7 @@ test.describe('Given a donor sending the e-mail change link again on Údaje a za
     await resend.click();
 
     await expect(resend).toHaveAttribute('aria-busy', 'true');
+    await expect(status).toHaveText('');
     await page.clock.fastForward(PAST_THE_LOADING_DELAY_MS);
 
     await expect(resend.locator('.busy-label__face--shown')).toHaveText('Posíláme…');
