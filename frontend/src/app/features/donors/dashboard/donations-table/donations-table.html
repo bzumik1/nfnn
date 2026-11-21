@@ -137,8 +137,9 @@
   @if (item.pairedBy === 'SENDER_ACCOUNT' && item.senderAccount) {
     <span class="pairing-tag">
       <span aria-hidden="true" i18n="@@donor.dashboard.payments.withoutSymbol"
-        >bez symbolu · účet
-        <span class="account-end">{{ senderAccountEnd(item.senderAccount) }}</span></span
+        >bez symbolu · účet&nbsp;<span class="account-end">{{
+          senderAccountEnd(item.senderAccount)
+        }}</span></span
       >
       <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByAccount"
         >Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez variabilního symbolu</span
@@ -148,8 +149,9 @@
   @if (item.pairedBy === 'CONFIRMED_SYMBOL' && item.senderAccount && item.confirmedSymbol) {
     <span class="pairing-tag">
       <span aria-hidden="true" i18n="@@donor.dashboard.payments.symbolPrefix"
-        >symbol {{ item.confirmedSymbol }} · účet
-        <span class="account-end">{{ senderAccountEnd(item.senderAccount) }}</span></span
+        >symbol {{ item.confirmedSymbol }} · účet&nbsp;<span class="account-end">{{
+          senderAccountEnd(item.senderAccount)
+        }}</span></span
       >
       <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByConfirmedSymbol"
         >Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu

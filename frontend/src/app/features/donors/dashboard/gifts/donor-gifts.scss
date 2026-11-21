@@ -128,19 +128,23 @@
 @include bp.up(nav) {
   .gift-year-action {
     display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--space-3);
+    flex-direction: column;
+    align-items: flex-end;
   }
 
   .receipt-saved {
-    flex: none;
-    flex-wrap: nowrap;
-    inline-size: var(--pdf-status-reserve);
-    min-inline-size: 0;
-    margin-top: 0;
+    inline-size: 0;
+    min-inline-size: 100%;
     justify-content: flex-end;
     text-align: end;
+
+    &.pdf-progress--idle {
+      position: absolute;
+      min-inline-size: 0;
+      block-size: 0;
+      margin-top: 0;
+      overflow: hidden;
+    }
   }
 
   @include bp.container-down(gift-year, tablet) {

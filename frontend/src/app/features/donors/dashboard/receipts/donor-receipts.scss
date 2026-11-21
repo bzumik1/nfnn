@@ -22,7 +22,10 @@
 
 .years {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr) max-content auto;
+  grid-template-columns: max-content minmax(max-content, 1fr) max-content minmax(
+      min-content,
+      var(--yearly-column-action)
+    );
   column-gap: var(--space-4);
   list-style: none;
   margin-top: var(--space-4);
@@ -179,25 +182,19 @@ a {
 }
 
 @include bp.up(nav) {
-  .year-action {
-    flex-direction: row;
-    align-items: center;
-    gap: var(--space-3);
-  }
-
-  .receipt-saved {
-    flex: none;
-    flex-wrap: nowrap;
-    inline-size: var(--pdf-status-reserve);
+  .receipt-saved.pdf-progress--idle {
+    position: absolute;
+    inline-size: 0;
     min-inline-size: 0;
+    block-size: 0;
     margin-top: 0;
-    justify-content: flex-end;
-    text-align: end;
+    overflow: hidden;
   }
 
   @include bp.container-down(yearly-receipts, cards) {
-    .year-action {
+    .receipt-saved {
       justify-content: flex-end;
+      text-align: end;
     }
   }
 }
