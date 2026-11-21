@@ -62,7 +62,7 @@
 
 .year-total {
   justify-self: end;
-  font-size: var(--text-2xl);
+  font-size: var(--text-receipt-year-total);
   font-weight: var(--weight-bold);
   color: var(--color-text);
   white-space: nowrap;
@@ -153,7 +153,6 @@ a {
   .year-total {
     min-inline-size: 0;
     margin-inline-start: auto;
-    white-space: normal;
   }
 
   .year-action {

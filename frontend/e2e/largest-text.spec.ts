@@ -3805,6 +3805,21 @@ for (const width of [320, 390]) {
       await expect.poll(() => pageWiderThanTheWindow(page)).toBe(0);
     });
 
+    test('when they open Potvrzení o daru, then each year keeps its total on one line inside its card', async ({
+      page,
+    }) => {
+      await page.goto('/darce/potvrzeni');
+      const totals = page.locator('.yearly-card .year-total');
+      await expect(totals).toHaveCount(2);
+      await expect(totals.first()).toHaveText(/1\s251\s503\sKč/);
+      await page.evaluate(() => document.fonts.ready);
+
+      for (const total of await totals.all()) {
+        expect(await linesOf(total), await total.textContent()).toBe(1);
+      }
+      await expect.poll(() => contentPastTheSides(page.locator('.yearly-card'))).toEqual([]);
+    });
+
     test('when they open Moje dary, then nothing in the list of gifts is wider than its card', async ({
       page,
     }) => {
