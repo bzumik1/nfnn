@@ -20,6 +20,7 @@ import { filter, map } from 'rxjs';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from '../../../core/navigation/back-target';
 import { PageFocus } from '../../../core/navigation/page-focus';
+import { liveDialogs } from '../../../core/navigation/page-transitions';
 import { RouteChrome } from '../../../core/navigation/route-chrome';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AccountReturn } from '../../../layout/account-sheet/account-return';
@@ -116,7 +117,7 @@ export class AdminShell {
       event.defaultPrevented ||
       typesText(event.target) ||
       this.lock.locked() ||
-      this.document.querySelector('dialog[open]') !== null
+      liveDialogs(this.document, 'dialog[open]').length > 0
     ) {
       return;
     }
@@ -194,7 +195,7 @@ export class AdminShell {
 
   protected focusPage(remembered: Element | null): void {
     const page = this.page()?.nativeElement;
-    if (page === undefined || this.document.querySelector('dialog[open]')) {
+    if (page === undefined || liveDialogs(this.document, 'dialog[open]').length > 0) {
       return;
     }
     if (remembered instanceof HTMLElement && remembered.isConnected && page.contains(remembered)) {

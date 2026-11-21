@@ -178,7 +178,12 @@ export class PageFocus {
         stop();
       }
     });
-    const timer = view.setTimeout(() => stop(), RETURNING_FOCUS_LONGEST_MS);
+    const timer = view.setTimeout(() => {
+      stop();
+      if (this.document.activeElement === this.document.body) {
+        this.focusQuietly(scope.querySelector<HTMLElement>('h1'));
+      }
+    }, RETURNING_FOCUS_LONGEST_MS);
     const stop = (): void => {
       observer.disconnect();
       view.clearTimeout(timer);

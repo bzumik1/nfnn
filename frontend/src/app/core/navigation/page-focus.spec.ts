@@ -316,6 +316,18 @@ describe('Given a list of the administration that a step back returns to from th
     expect(document.activeElement).toBe(heading);
   });
 
+  it('when no row came and the focus was lost to the page while it waited, then the heading takes the focus once the wait has ended', async () => {
+    await openTheCard();
+    await stepBack();
+    vi.useFakeTimers();
+
+    focus.returnAfterStepBack(scope);
+    heading.blur();
+    await vi.advanceTimersByTimeAsync(RETURNING_FOCUS_LONGEST_MS);
+
+    expect(document.activeElement).toBe(heading);
+  });
+
   it('when the card was opened from a row that leads to it without being a link, then that row takes the focus', async () => {
     const button = row({ type: 'button', 'data-leads-to': CARD }, 'button');
     scope.append(button);

@@ -6,6 +6,7 @@ import { provideRouter, Router } from '@angular/router';
 import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
 import { AccountReturn } from '../../../layout/account-sheet/account-return';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { PAGE_TRANSITION_CLASS } from '../../../core/navigation/page-transitions';
 import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
 import { DIALOG_SUSPENSION } from '../../../shared/ui/dialog/dialog-suspension';
 import { AdminShell } from './admin-shell';
@@ -318,6 +319,18 @@ describe('Given an administrator anywhere in the administration', () => {
       expect(element('.lock-panel')).toBeNull();
     });
 
+    it('and it is unlocked again while a step moves the still copy of a sheet, then the focus still moves to the heading of the page that comes back', async () => {
+      document.body.appendChild(fixture.nativeElement);
+      const step = stillCopyOfASheet();
+      locked.set(false);
+      await settle();
+      await settle();
+      step.remove();
+
+      expect(document.activeElement).toBe(element('main#obsah h1'));
+      fixture.nativeElement.remove();
+    });
+
     it('and it is unlocked again, then the focus moves to the heading of the page that comes back', async () => {
       document.body.appendChild(fixture.nativeElement);
       locked.set(false);
@@ -601,6 +614,16 @@ describe('Given an administrator who opened the administration on a phone over a
     },
   );
 
+  it('when Esc is pressed while a step moves the still copy of a sheet, then the site steps back the same way as with Zpět', () => {
+    const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
+    const step = stillCopyOfASheet();
+
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    step.remove();
+
+    expect(back).toHaveBeenCalledWith('/');
+  });
+
   it('when Esc is pressed while a dialog of the page is open, then the dialog keeps it and the site stays', () => {
     const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
     const dialog = document.createElement('dialog');
@@ -613,3 +636,13 @@ describe('Given an administrator who opened the administration on a phone over a
     expect(back).not.toHaveBeenCalled();
   });
 });
+
+function stillCopyOfASheet(): HTMLElement {
+  const step = document.createElement('div');
+  step.className = PAGE_TRANSITION_CLASS;
+  const copy = document.createElement('dialog');
+  copy.setAttribute('open', '');
+  step.append(copy);
+  document.body.append(step);
+  return step;
+}
