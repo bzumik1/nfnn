@@ -1,5 +1,6 @@
 @use 'breakpoints' as bp;
 @use 'motion';
+@use 'tab-bar-room';
 @use 'touch-target';
 
 :host {
@@ -9,11 +10,7 @@
 .contact {
   padding: var(--space-27) 0;
   background: var(--color-surface-inverse);
-}
-
-:host-context(.with-tab-bar) .contact {
-  margin-bottom: calc(-1 * var(--tab-bar-clearance));
-  padding-bottom: calc(var(--space-27) + var(--tab-bar-clearance));
+  @include tab-bar-room.holds-tab-bar-in-bottom-padding(var(--space-27));
 }
 
 .two-col {
@@ -217,10 +214,7 @@ app-form-field {
 @include bp.down(tablet) {
   .contact {
     padding: var(--space-16) 0;
-  }
-
-  :host-context(.with-tab-bar) .contact {
-    padding-bottom: calc(var(--space-16) + var(--tab-bar-clearance));
+    @include tab-bar-room.holds-tab-bar-in-bottom-padding(var(--space-16));
   }
 
   .two-col {
