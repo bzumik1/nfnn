@@ -916,10 +916,13 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
       await page.addStyleTag({ content: 'html { font-size: 53px; }' });
       await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
       await expect(page.locator('#uvod')).toHaveClass(/hero--shaded/);
+      const heroRight = await page
+        .locator('#uvod')
+        .evaluate((hero) => Math.floor(hero.getBoundingClientRect().right));
 
       const [middle, edge] = await shadeStrengthIn(page, [
-        { left: 584, right: 596 },
-        { left: 1168, right: 1180 },
+        { left: Math.floor(heroRight / 2) - 6, right: Math.floor(heroRight / 2) + 6 },
+        { left: heroRight - 12, right: heroRight },
       ]);
 
       expect(middle, 'the shade does not cover the middle of the photo').toBeGreaterThan(0.5);
