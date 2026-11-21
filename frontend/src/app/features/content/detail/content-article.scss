@@ -125,12 +125,20 @@
   }
 }
 
+@include bp.up(nav) {
+  :host(:not(.is-preview)) .ui-intro__head,
+  :host(:not(.is-preview)) .body {
+    box-sizing: content-box;
+    max-width: 40rem;
+  }
+}
+
 @include bp.up(wide) {
   :host(:not(.is-preview)) {
     display: grid;
     grid-template-columns: minmax(0, 40rem) minmax(0, 24rem);
     grid-template-rows: auto 1fr;
-    justify-content: start;
+    justify-content: center;
     column-gap: var(--space-20);
     max-width: var(--content-max-wide);
     margin: 0 auto;

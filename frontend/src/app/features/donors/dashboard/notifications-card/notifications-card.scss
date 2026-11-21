@@ -21,6 +21,10 @@
   padding-inline: var(--space-6);
 }
 
+.ui-card__intro.notifications-inset {
+  box-sizing: content-box;
+}
+
 .notifications-note {
   margin-top: var(--space-2);
 }

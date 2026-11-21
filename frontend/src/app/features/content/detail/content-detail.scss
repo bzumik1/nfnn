@@ -67,6 +67,11 @@
 }
 
 @include bp.up(nav) {
+  .detail--waiting .ui-intro__head {
+    box-sizing: content-box;
+    max-width: 40rem;
+  }
+
   .onward-list--news {
     grid-template-columns: repeat(
       auto-fill,
@@ -75,7 +80,20 @@
   }
 }
 
+@include bp.up(nav) {
+  @include bp.down(wide) {
+    .onward-heading {
+      max-width: 40rem;
+      margin-inline: auto;
+    }
+  }
+}
+
 @include bp.up(wide) {
+  .detail--waiting .ui-intro__head {
+    max-width: calc(40rem + 24rem + var(--space-20));
+  }
+
   .onward {
     padding-bottom: 0;
   }

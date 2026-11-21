@@ -42,3 +42,38 @@ test.describe('Given a signed-in donor on Údaje a zabezpečení', () => {
     expect(looks.size, JSON.stringify(styles, null, 1)).toBe(1);
   });
 });
+
+test.describe('Given a signed-in donor on Údaje a zabezpečení on a computer', () => {
+  test('when the cards Upozornění and Přihlášená zařízení are shown, then their intros wrap at the full prose measure like the other card intros, though the cards indent them', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedDonorSession(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/darce/udaje');
+    const intros = page.locator('.notifications > p.ui-card__intro:first-of-type, .devices-intro');
+    await expect(intros).toHaveCount(2);
+    for (const intro of await intros.all()) {
+      await expect(intro).toBeVisible();
+    }
+
+    const measures = await intros.evaluateAll((paragraphs) =>
+      paragraphs.map((paragraph) => {
+        const style = getComputedStyle(paragraph);
+        const text =
+          paragraph.getBoundingClientRect().width -
+          parseFloat(style.paddingLeft) -
+          parseFloat(style.paddingRight);
+        return {
+          intro: (paragraph.textContent ?? '').trim().slice(0, 40),
+          text: Math.round(text),
+          measure: Math.round(parseFloat(style.maxInlineSize)),
+        };
+      }),
+    );
+
+    for (const { intro, text, measure } of measures) {
+      expect(text, intro).toBe(measure);
+    }
+  });
+});

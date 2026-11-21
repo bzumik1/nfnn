@@ -9,6 +9,7 @@ import {
 import { answerReceiptIssuing, RECEIPT_ISSUING_URL } from './receipt-issuing';
 import { donorWithDonations } from './baseline/screen-mocks';
 import {
+  bankAccountItem,
   donationItem,
   donor,
   mockDonorApi,
@@ -1492,6 +1493,123 @@ test.describe('Given a donor whose summary counts gifts and an account verificat
           expect(label.bottom).toBeGreaterThan(firstLine.top);
         }
       }
+    });
+  }
+});
+
+test.describe('Given a donor with a question about an account on Můj přehled', () => {
+  test('when the overview shows the question between the cards, then it keeps the gap of the cards below it and its text starts where the card titles start', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-accounts',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              bankAccountItem({
+                id: 'a-1',
+                accountNumber: '19-2000145399/0800',
+                symbolOffer: {
+                  variableSymbol: '1234567890',
+                  paymentCount: 3,
+                  firstMonth: '2026-09',
+                  lastMonth: '2026-11',
+                },
+              }),
+            ],
+          },
+        }),
+    );
+    await signIn(page);
+    const question = page.locator('.overview-question');
+    await expect(question).toContainText('Odpovědět');
+    await expect(page.locator('#last-gift-title')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const placed = await question.evaluate((notice) => {
+      const textLeft = (element: Element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        return Math.round(range.getClientRects()[0].left);
+      };
+      const bottom = notice.getBoundingClientRect().bottom;
+      const cardsBelow = [...document.querySelectorAll('main .ui-card')]
+        .map((card) => card.getBoundingClientRect())
+        .filter((card) => card.top >= bottom)
+        .sort((one, other) => one.top - other.top);
+      return {
+        gapBelow: Math.round(cardsBelow[0].top - bottom),
+        gapBetweenCards: Math.round(cardsBelow[1].top - cardsBelow[0].bottom),
+        text: textLeft(notice),
+        title: textLeft(document.querySelector('#last-gift-title')!),
+      };
+    });
+
+    expect(placed.gapBelow).toBe(placed.gapBetweenCards);
+    expect(placed.text).toBe(placed.title);
+  });
+});
+
+test.describe('Given a donor with large totals on Můj přehled', () => {
+  const largeTotals = {
+    ...donorWithDonations,
+    summary: {
+      ...(donorWithDonations.summary as Record<string, unknown>),
+      totalAmountMinor: 123456700,
+      count: 128,
+      byYear: [
+        { year: 2026, count: 120, totalAmountMinor: 98765400 },
+        { year: 2025, count: 8, totalAmountMinor: 24691300 },
+      ],
+    },
+  };
+
+  for (const { width, rootSize } of [
+    { width: 900, rootSize: null },
+    { width: 1000, rootSize: '200%' },
+    { width: 1280, rootSize: '200%' },
+  ]) {
+    test(`when the overview shows its figures in a ${width} px window ${rootSize ? `with the text at ${rootSize}` : 'at the default text size'}, then every figure stays inside its own cell and the card clips none`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, largeTotals);
+      await signIn(page);
+      await page.setViewportSize({ width, height: 900 });
+      if (rootSize) {
+        await page.addStyleTag({ content: `html { font-size: ${rootSize}; }` });
+      }
+      const stats = page.locator('.overview-stat');
+      await expect(stats).toHaveCount(3);
+      await expect(stats.first().locator('dd')).toContainText('1 234 567 Kč');
+      await page.evaluate(() => document.fonts.ready);
+
+      const overflows = await stats.evaluateAll((cells) =>
+        cells.map((cell) => {
+          const style = getComputedStyle(cell);
+          const box = cell.getBoundingClientRect();
+          const left = box.left + parseFloat(style.paddingLeft);
+          const right = box.right - parseFloat(style.paddingRight);
+          const card = cell.closest('.ui-card')!.getBoundingClientRect();
+          const range = document.createRange();
+          range.selectNodeContents(cell.querySelector('dd')!);
+          const past = Array.from(range.getClientRects())
+            .filter((line) => line.width > 0)
+            .map((line) =>
+              Math.max(
+                0,
+                left - line.left,
+                line.right - right,
+                card.left - line.left,
+                line.right - card.right,
+              ),
+            );
+          return Math.round(Math.max(0, ...past));
+        }),
+      );
+
+      expect(overflows).toEqual([0, 0, 0]);
     });
   }
 });
