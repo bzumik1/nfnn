@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import {
   InMemoryScrollingFeature,
   NavigationEnd,
+  NavigationStart,
   provideRouter,
   Router,
   RouteReuseStrategy,
@@ -429,6 +430,7 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
 
   afterEach(() => {
     placed.forEach((element) => element.remove());
+    document.documentElement.style.removeProperty('overflow-anchor');
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     scrolledBy(0);
@@ -499,6 +501,62 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
   async function settledPromises(): Promise<void> {
     await new Promise<void>((done) => setTimeout(done));
   }
+
+  function readOnTheWayBack(): () => void {
+    const placement = TestBed.inject(PagePlacement);
+    let answer = (): void => undefined;
+    const events = TestBed.inject(Router).events.subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        answer = placement.reading();
+      }
+    });
+    return () => {
+      events.unsubscribe();
+      answer();
+    };
+  }
+
+  function framesHeld(): () => void {
+    const waiting: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
+      waiting.push(frame);
+      return waiting.length;
+    });
+    return () => waiting.splice(0).forEach((frame) => frame(performance.now()));
+  }
+
+  function anchoring(): string {
+    return document.documentElement.style.getPropertyValue('overflow-anchor');
+  }
+
+  it('when the page is put where they left it while its reads are still on their way, then the browser does not move it after what they change above it until they have come and the page is drawn', async () => {
+    const nextFrame = framesHeld();
+    pageHeight(3000);
+    const answer = readOnTheWayBack();
+    await stepBack();
+    expect(scrolledTo.at(-1)).toBe(900);
+    expect(anchoring()).toBe('none');
+
+    answer();
+    await settledPromises();
+    expect(anchoring()).toBe('none');
+
+    TestBed.tick();
+    nextFrame();
+
+    expect(anchoring()).toBe('');
+  });
+
+  it('when another page opens before the reads of the page put back have come, then the browser follows what changes above the place again', async () => {
+    pageHeight(3000);
+    readOnTheWayBack();
+    await stepBack();
+    expect(anchoring()).toBe('none');
+
+    await harness.navigateByUrl('/projekty');
+
+    expect(anchoring()).toBe('');
+  });
 
   it('when the page has not grown yet, then the cover of the step back waits, and lifts once the page is put where they left it', async () => {
     await stepBack();
