@@ -63,12 +63,9 @@ export class SoftKeyboard {
   }
 
   private update(view: Window, viewport: VisualViewport): void {
-    if (!isTextEntry(this.document.activeElement)) {
-      this.show(null);
-      return;
-    }
+    const typing = isTextEntry(this.document.activeElement);
     const keyboardHeight = view.innerHeight - viewport.height;
-    if (keyboardHeight >= SMALLEST_KEYBOARD_PX) {
+    if (typing && keyboardHeight >= SMALLEST_KEYBOARD_PX) {
       this.show(
         { top: viewport.offsetTop, height: viewport.height },
         view.innerHeight - viewport.offsetTop - viewport.height,
