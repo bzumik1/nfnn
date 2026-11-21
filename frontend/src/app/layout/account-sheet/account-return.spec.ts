@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
 import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
+import { PageTransitions } from '../../core/navigation/page-transitions';
 import { AccountReturn, APP_ACCOUNT_KEY, APP_ACCOUNT_SCROLL_KEY } from './account-return';
 
 @Component({ template: '' })
@@ -147,6 +148,45 @@ describe('Given a page the account sheet handed its entry over to', () => {
     expect(accountReturn.takeSectionToReopen()).toBe('');
     expect(accountReturn.sectionToReopen()).toBeNull();
     expect(accountReturn.takeSectionToReopen()).toBeNull();
+  });
+
+  describe('when the sheet kept copies of its screens for a finger', () => {
+    let forget: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      forget = vi.spyOn(TestBed.inject(PageTransitions), 'forgetSheetsOf');
+    });
+
+    it('and handed its entry over to a page, then the copies stay while that page stands', async () => {
+      await openFromTheSheet('/overit', '/darce/potvrzeni');
+
+      expect(forget).not.toHaveBeenCalled();
+    });
+
+    it('and Zpět opens it again on its section, then the copies stay for the sheet to take', async () => {
+      await openFromTheSheet('/overit', '/darce/potvrzeni');
+
+      await stepBack(() => back.back('/'));
+
+      expect(forget).not.toHaveBeenCalled();
+    });
+
+    it('and Zpět steps back without opening it again, then the copies go', async () => {
+      await openFromTheSheet('/sprava', '');
+
+      accountReturn.closeAdministration();
+      await stepBack(() => back.backBy(1));
+
+      expect(forget).toHaveBeenCalledWith(accountReturn);
+    });
+
+    it('and another page opens from the page it handed over to, then the copies go', async () => {
+      await openFromTheSheet('/overit', '/darce/potvrzeni');
+
+      await router.navigateByUrl('/aktuality/druhy');
+
+      expect(forget).toHaveBeenCalledWith(accountReturn);
+    });
   });
 
   it('when another page opens before the request is taken, then the request is dropped', async () => {

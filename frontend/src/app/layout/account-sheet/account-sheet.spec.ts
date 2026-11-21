@@ -587,7 +587,53 @@ describe('Given the account sheet of a signed-in donor', () => {
 
     fixture.destroy();
 
-    expect(forget).toHaveBeenCalledWith(fixture.componentInstance);
+    expect(forget).toHaveBeenCalledWith(TestBed.inject(AccountReturn));
+  });
+
+  it('when it leaves a section for a page it returns from, then the copies of its screens kept for a finger stay, and the sheet a step back opens again takes them', async () => {
+    const transitions = TestBed.inject(PageTransitions);
+    const owners: object[] = [];
+    vi.spyOn(transitions, 'stepInSheet').mockImplementation((step) => {
+      owners.push(step.owner);
+      step.change();
+      step.placed();
+    });
+    const forget = vi.spyOn(transitions, 'forgetSheetsOf');
+    const sheet = open();
+    sheet
+      .querySelector<HTMLAnchorElement>('nav a[href="/darce/potvrzeni"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    sheet
+      .querySelector<HTMLAnchorElement>('a.stub-elsewhere')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    fixture.destroy();
+
+    expect(forget).not.toHaveBeenCalled();
+
+    fixture = TestBed.createComponent(AccountSheet);
+    fixture.componentRef.setInput('reopenedOn', '/darce/potvrzeni');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.destroy();
+
+    expect(owners).toHaveLength(1);
+    expect(forget).toHaveBeenCalledWith(owners[0]);
+  });
+
+  it('when it signs out, then the copies of its screens kept for a finger go, as no step back opens it again', async () => {
+    const forget = vi.spyOn(TestBed.inject(PageTransitions), 'forgetSheetsOf');
+    const sheet = open();
+
+    sheet.querySelector<HTMLButtonElement>('.account-sign-out')!.click();
+    await fixture.whenStable();
+    fixture.destroy();
+
+    expect(forget).toHaveBeenCalledWith(TestBed.inject(AccountReturn));
   });
 
   it('when a step back from the administration opens it again on its list scrolled before, then the list stands at that scroll again', async () => {

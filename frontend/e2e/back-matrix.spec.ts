@@ -54,10 +54,12 @@ interface Frame {
   readonly tinted: boolean;
   readonly rounded: number;
   readonly titles: string[];
+  readonly heads: string[];
 }
 
 interface HeadTitle {
   readonly text: string;
+  readonly sheetHead: boolean;
   readonly opacity: number;
   readonly left: number;
   readonly right: number;
@@ -291,7 +293,13 @@ async function seeHeadTitles(page: Page): Promise<void> {
           ) {
             opacity *= Number(getComputedStyle(node).opacity);
           }
-          return { text, opacity, left: box.left, right: box.right };
+          return {
+            text,
+            sheetHead: title.matches('.sheet-head-title'),
+            opacity,
+            left: box.left,
+            right: box.right,
+          };
         },
       ).filter((title) => title.opacity > 0);
     };
@@ -422,10 +430,12 @@ async function watchTheStep(page: Page): Promise<void> {
       const layers = new MutationObserver(seeLayers);
       layers.observe(document.body, { childList: true, subtree: true });
       seeLayers();
-      window.addEventListener('click', () => (probe.tappedAt ??= performance.now()), {
-        capture: true,
-        once: true,
-      });
+      for (const started of ['click', 'touchmove']) {
+        window.addEventListener(started, () => (probe.tappedAt ??= performance.now()), {
+          capture: true,
+          once: true,
+        });
+      }
       const bothPlaced = (): boolean =>
         document.querySelector('.page-transition__page--over') !== null &&
         document.querySelector('.page-transition__page--under') !== null;
@@ -470,6 +480,9 @@ async function watchTheStep(page: Page): Promise<void> {
             );
           },
         );
+        const titles = (window.nfnnHeadTitles?.() ?? []).filter(
+          (title) => title.opacity > hiddenAtMost,
+        );
         probe.frames.push({
           at: now,
           overlay: overlay !== null,
@@ -478,12 +491,11 @@ async function watchTheStep(page: Page): Promise<void> {
           tinted:
             layerStyle !== null && (filter === undefined || filter === '' || filter === 'none'),
           rounded: Math.max(0, ...corners),
-          titles: (window.nfnnHeadTitles?.() ?? [])
-            .filter((title) => title.opacity > hiddenAtMost)
-            .map(
-              (title) =>
-                `${title.text} ${title.opacity.toFixed(2)} ${Math.round(title.left)}..${Math.round(title.right)}`,
-            ),
+          titles: titles.map(
+            (title) =>
+              `${title.text} ${title.opacity.toFixed(2)} ${Math.round(title.left)}..${Math.round(title.right)}`,
+          ),
+          heads: titles.filter((title) => title.sheetHead).map((title) => title.text),
         });
         if (under !== null && probe.under === null) {
           probe.under = (under.textContent ?? '').replace(/\s+/g, ' ');
@@ -597,11 +609,11 @@ function shownAfterTheBusyFrame(probe: StepProbe, moving: readonly Frame[]): Fra
   return shown!;
 }
 
-function expectMovedSoonAfterTheTap(probe: StepProbe): void {
+function expectMovedSoonAfterTheTap(probe: StepProbe, restingAt?: number): void {
   const moving = travelled(probe);
   const tappedAt = probe.tappedAt;
   expect(tappedAt, 'the tap was not seen').not.toBeNull();
-  const start = moving[0].offset!;
+  const start = restingAt ?? moving[0].offset!;
   const moved = moving.find((frame) => Math.abs(frame.offset! - start) > 1);
   expect(moved, 'the page never moved').toBeDefined();
   const busy =
@@ -610,6 +622,41 @@ function expectMovedSoonAfterTheTap(probe: StepProbe): void {
     moved!.at - tappedAt! - busy,
     `ms from the tap until the page began to move, not counting the ${busy} ms of the busy frame`,
   ).toBeLessThanOrEqual(MOVES_AFTER_THE_TAP_WITHIN_MS);
+}
+
+async function expectEndedOnTheLiveTitle(page: Page, probe: StepProbe): Promise<void> {
+  if (!probe.paced) {
+    return;
+  }
+  const last = probe.frames.filter((frame) => frame.overlay && frame.heads.length > 0).at(-1);
+  if (last === undefined) {
+    return;
+  }
+  const live = await page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLElement>('.sheet-head-title'))
+      .filter(
+        (title) =>
+          title.closest('.page-transition') === null &&
+          title.checkVisibility() &&
+          title.getBoundingClientRect().width > 0,
+      )
+      .map((title) => (title.textContent ?? '').replace(/\s+/g, ' ').trim()),
+  );
+  expect(
+    last.heads.filter((head) => !live.includes(head)),
+    `titles the step ended with that the screen after it does not show (it shows ${live.join(' | ')})`,
+  ).toEqual([]);
+}
+
+async function fingerMovedThePage(page: Page): Promise<StepProbe> {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => window.nfnnStepProbe?.frames.some((frame) => (frame.offset ?? 0) > 1) ?? false,
+      ),
+    )
+    .toBe(true);
+  return page.evaluate(() => window.nfnnStepProbe!);
 }
 
 function expectShownOnItsWay(
@@ -773,6 +820,7 @@ async function swipeBack(
   ground: Colour | null,
 ): Promise<Swiped> {
   const ways = completes ? [60, 120, 180, HALF_WAY_X, 250, 290] : [40, 70, 100, 120];
+  await watchTheStep(page);
   await touchAt(page, 'touchstart', EDGE);
   for (const x of ways.slice(0, 2)) {
     await touchAt(page, 'touchmove', x);
@@ -780,6 +828,9 @@ async function swipeBack(
   const under = page.locator('.page-transition--swipe .page-transition__page--under');
   await expect(under, 'nothing lies under the page the finger takes').toContainText(row.name);
   await expect.poll(() => leavingOffset(page)).toBe(ways[1] - EDGE);
+  if (measuresFrames(page)) {
+    expectMovedSoonAfterTheTap(await fingerMovedThePage(page), 0);
+  }
   if (ground !== null) {
     expectSameColour(await bandColour(page), ground, 'under the finger');
   }
@@ -814,6 +865,7 @@ async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): P
     if (measuresFrames(page)) {
       expectMovedSoonAfterTheTap(probe);
     }
+    await expectEndedOnTheLiveTitle(page, probe);
     return;
   }
   const completes = way === 'swipe-completed';
@@ -823,6 +875,7 @@ async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): P
   } else {
     expectSlidBack(probe, WIDTH, letGoAt);
   }
+  await expectEndedOnTheLiveTitle(page, probe);
 }
 
 function oneLine(text: string): string {
@@ -858,6 +911,7 @@ async function walkRow(
   if (measuresFrames(page)) {
     expectMovedSoonAfterTheTap(opening);
   }
+  await expectEndedOnTheLiveTitle(page, opening);
   if (groundBefore !== null) {
     expectSameColour(await bandColour(page), groundBefore, 'when the next screen opened');
   }
@@ -1047,6 +1101,64 @@ function accountScreens(page: Page): Screens & { opening(row: Row): void } {
         return Math.round(panel.scrollTop);
       }, top),
   };
+}
+
+const ACCOUNT_LIST_ROW: Row = { name: 'Účet', href: '/darce/potvrzeni', from: 'Účet' };
+
+async function backOnASectionLeftFromTheScrolledList(
+  page: Page,
+): Promise<{ screens: Screens; listTop: number; section: Locator }> {
+  await openAccountSheetOverTheNews(page);
+  const screens = accountScreens(page);
+  await motionsEnded(page);
+  const listTop = await screens.scrollTo(SCROLLED_BY_PX);
+  expect(listTop, 'the list of the account does not scroll').toBeGreaterThan(0);
+  await clickWithoutScrolling(accountSheet(page).locator('a[href="/darce/potvrzeni"]').first());
+  const section = accountSheet(page).getByRole('heading', {
+    level: 2,
+    name: 'Potvrzení o daru',
+    exact: true,
+  });
+  await expect(section).toBeVisible();
+  await expect(page.locator('.page-transition')).toHaveCount(0);
+  await clickWithoutScrolling(
+    accountSheet(page).getByRole('link', { name: 'Ověřit potvrzení', exact: true }),
+  );
+  await expect(page).toHaveURL(/\/overit$/);
+  await expect(page.locator('.page-transition')).toHaveCount(0);
+
+  await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+  await expect(section).toBeVisible();
+  await expect(page).toHaveURL(/\/aktuality$/);
+  await expect(page.locator('.page-transition')).toHaveCount(0);
+  return { screens, listTop, section };
+}
+
+function recordTheListScrollsUnderTheSection(page: Page): Promise<void> {
+  return page.evaluate(() => {
+    window.nfnnListScrolls = [];
+    const look = (): void => {
+      const under = document.querySelector<HTMLElement>(
+        '.page-transition .page-transition__page--under .dialog-panel',
+      );
+      if (under !== null) {
+        window.nfnnListScrolls!.push(Math.round(under.scrollTop));
+      }
+      if (window.nfnnListScrolls!.length < 600) {
+        requestAnimationFrame(look);
+      }
+    };
+    requestAnimationFrame(look);
+  });
+}
+
+async function expectTheListUnderTheSectionAt(page: Page, listTop: number): Promise<void> {
+  const seen = await page.evaluate(() => window.nfnnListScrolls ?? []);
+  expect(seen.length, 'no frame showed the list under the leaving section').toBeGreaterThan(0);
+  expect(
+    seen.filter((top) => top !== listTop),
+    'frames in which the list under the leaving section stood elsewhere than its scroll',
+  ).toEqual([]);
 }
 
 function pageScroll(page: Page): Pick<Screens, 'scrollTop' | 'scrollTo'> {
@@ -1278,44 +1390,8 @@ for (const look of LOOKS) {
     test('when a section opened from the list leads out of the sheet and ‹ steps back twice, then the section and then the list come back, the list at its scroll, without a jump', async ({
       page,
     }) => {
-      await openAccountSheetOverTheNews(page);
-      const screens = accountScreens(page);
-      await motionsEnded(page);
-      const listTop = await screens.scrollTo(SCROLLED_BY_PX);
-      expect(listTop, 'the list of the account does not scroll').toBeGreaterThan(0);
-      await clickWithoutScrolling(accountSheet(page).locator('a[href="/darce/potvrzeni"]').first());
-      const section = accountSheet(page).getByRole('heading', {
-        level: 2,
-        name: 'Potvrzení o daru',
-        exact: true,
-      });
-      await expect(section).toBeVisible();
-      await expect(page.locator('.page-transition')).toHaveCount(0);
-      await clickWithoutScrolling(
-        accountSheet(page).getByRole('link', { name: 'Ověřit potvrzení', exact: true }),
-      );
-      await expect(page).toHaveURL(/\/overit$/);
-      await expect(page.locator('.page-transition')).toHaveCount(0);
-
-      await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
-      await expect(section).toBeVisible();
-      await expect(page).toHaveURL(/\/aktuality$/);
-      await expect(page.locator('.page-transition')).toHaveCount(0);
-      await page.evaluate(() => {
-        window.nfnnListScrolls = [];
-        const look = (): void => {
-          const under = document.querySelector<HTMLElement>(
-            '.page-transition .page-transition__page--under .dialog-panel',
-          );
-          if (under !== null) {
-            window.nfnnListScrolls!.push(Math.round(under.scrollTop));
-          }
-          if (window.nfnnListScrolls!.length < 600) {
-            requestAnimationFrame(look);
-          }
-        };
-        requestAnimationFrame(look);
-      });
+      const { screens, listTop } = await backOnASectionLeftFromTheScrolledList(page);
+      await recordTheListScrollsUnderTheSection(page);
       await watchTheStep(page);
       await screens.backButton().click();
       const probe = await stepSeen(page);
@@ -1327,13 +1403,32 @@ for (const look of LOOKS) {
         .poll(() => activeHref(page), { message: 'the focus did not return' })
         .toBe('/darce/potvrzeni');
       expect(await screens.scrollTop(), 'the list did not stand at its scroll').toBe(listTop);
-      const seen = await page.evaluate(() => window.nfnnListScrolls ?? []);
-      expect(seen.length, 'no frame showed the list under the leaving section').toBeGreaterThan(0);
-      expect(
-        seen.filter((top) => top !== listTop),
-        'frames in which the list under the leaving section stood elsewhere than its scroll',
-      ).toEqual([]);
+      await expectTheListUnderTheSectionAt(page, listTop);
     });
+
+    for (const completes of [true, false]) {
+      test(`when a section opened from the list leads out of the sheet, ‹ brings it back and ${completes ? WAY_NAMES['swipe-completed'] : WAY_NAMES['swipe-cancelled']}, then the list follows the finger under it at its scroll`, async ({
+        page,
+      }) => {
+        const { screens, listTop, section } = await backOnASectionLeftFromTheScrolledList(page);
+        await recordTheListScrollsUnderTheSection(page);
+
+        const { probe, letGoAt } = await swipeBack(page, ACCOUNT_LIST_ROW, completes, null);
+
+        if (completes) {
+          expectLeftAway(probe, WIDTH, letGoAt);
+          await accountListShown(page);
+          await expect
+            .poll(() => screens.scrollTop(), { message: 'the list did not stand at its scroll' })
+            .toBe(listTop);
+        } else {
+          expectSlidBack(probe, WIDTH, letGoAt);
+          await expect(section).toBeVisible();
+        }
+        await expect(page.locator('.page-transition')).toHaveCount(0);
+        await expectTheListUnderTheSectionAt(page, listTop);
+      });
+    }
   });
 
   test.describe(`Given a visitor on a wide screen, in the ${look} appearance`, () => {
