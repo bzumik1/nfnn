@@ -518,6 +518,28 @@
   }
 }
 
+@include bp.up(tablet) {
+  @include bp.container-up(payment-panel, phone) {
+    :host(:not(.split)) {
+      .bank-rows {
+        grid-template-columns: max-content minmax(0, max-content) max-content;
+        justify-content: start;
+      }
+
+      .bank-row {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: subgrid;
+        justify-items: start;
+      }
+
+      .bank-value-wrap {
+        display: contents;
+      }
+    }
+  }
+}
+
 @include bp.container-up(payment-panel, pair) {
   @include bp.container-down(payment-panel, pager) {
     :host(:not(.split)) .bank {
