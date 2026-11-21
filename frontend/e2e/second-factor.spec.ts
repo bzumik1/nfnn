@@ -306,3 +306,48 @@ test.describe('Given a donor who protects the account with an authenticator app'
     await expect(page.getByRole('link', { name: 'Správa' })).toHaveCount(0);
   });
 });
+
+test.describe('Given a donor turning on the code from an authenticator app', () => {
+  for (const width of [1280, 390]) {
+    test(`when the key shows in a ${width} px window, then it breaks only between its two halves of four groups, so no group stands alone on a line`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route('**/api/donors/me/second-factor/setup', (route) =>
+        route.fulfill({ json: secondFactorEnrolment }),
+      );
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height: 900 });
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
+      await page.getByLabel('Současné heslo').fill('correct horse battery');
+      await page.getByRole('button', { name: 'Pokračovat' }).click();
+      const key = page.locator('.account-secret-value');
+      await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
+      await page.evaluate(() => document.fonts.ready);
+
+      const groupsPerLine = await key.evaluate((value) => {
+        const lines = new Map<number, number>();
+        const walker = document.createTreeWalker(value, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          for (const group of (node.textContent ?? '').matchAll(/\S+/g)) {
+            const range = document.createRange();
+            const start = group.index ?? 0;
+            range.setStart(node, start);
+            range.setEnd(node, start + group[0].length);
+            const top = Math.round(range.getBoundingClientRect().top);
+            lines.set(top, (lines.get(top) ?? 0) + 1);
+          }
+        }
+        return [...lines.values()];
+      });
+
+      expect(groupsPerLine.length).toBeGreaterThan(0);
+      expect(
+        groupsPerLine.filter((count) => count % 4 !== 0),
+        JSON.stringify(groupsPerLine),
+      ).toEqual([]);
+    });
+  }
+});

@@ -1,4 +1,5 @@
 import { Locator, Page } from '@playwright/test';
+import { article as newsArticle, mockPublicContent, project } from './baseline/screen-mocks';
 import { LARGE_TEXT } from './devices/poses';
 import { mockDonorApi, samplePngBase64 } from './donor-session';
 import { expect, test } from './fixtures';
@@ -670,4 +671,54 @@ test.describe('Given a visitor on the Aktuality tab with enlarged text', () => {
 
     expect(await lastLetterPastTheBox(page.locator('.featured-title'))).toBeLessThanOrEqual(0);
   });
+});
+
+test.describe('Given a visitor reading a news article or a story on a computer', () => {
+  for (const { kind, path } of [
+    { kind: 'news article', path: `/aktuality/${newsArticle.slug}` },
+    { kind: 'story', path: `/projekty/${project.slug}` },
+  ]) {
+    test(`when the ${kind} opens in a 1280 px window, then its column of text stands in the middle with its title above it`, async ({
+      page,
+    }) => {
+      await mockPublicContent(page);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+      const placed = await page.evaluate(() => {
+        const prose = document.querySelector('app-content-article .prose')!.getBoundingClientRect();
+        const title = document.querySelector('app-content-article h1')!.getBoundingClientRect();
+        return {
+          before: Math.round(prose.left),
+          after: Math.round(document.documentElement.clientWidth - prose.right),
+          title: Math.round(title.left),
+          text: Math.round(prose.left),
+        };
+      });
+
+      expect(Math.abs(placed.before - placed.after)).toBeLessThanOrEqual(1);
+      expect(placed.title).toBe(placed.text);
+    });
+
+    test(`when the ${kind} opens in a 1920 px window, then its text and its side column stand together in the middle`, async ({
+      page,
+    }) => {
+      await mockPublicContent(page);
+      await page.setViewportSize({ width: 1920, height: 900 });
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+      const placed = await page.evaluate(() => {
+        const body = document.querySelector('app-content-article .body')!.getBoundingClientRect();
+        const side = document.querySelector('app-content-article .side')!.getBoundingClientRect();
+        return {
+          before: Math.round(body.left),
+          after: Math.round(document.documentElement.clientWidth - side.right),
+        };
+      });
+
+      expect(Math.abs(placed.before - placed.after)).toBeLessThanOrEqual(1);
+    });
+  }
 });

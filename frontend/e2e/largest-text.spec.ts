@@ -3718,3 +3718,32 @@ test.describe('Given a phone 320 pt wide with the text at its default size', () 
     }
   });
 });
+
+test.describe('Given a donor on an iPhone SE 320 pt wide with the largest accessibility text on Údaje a zabezpečení', () => {
+  test('when the card Přihlášená zařízení lists another device, then its whole Odhlásit stays inside the device row', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await signIn(page);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.evaluate(
+      (size) => (document.documentElement.style.fontSize = size),
+      `${LARGEST_SYSTEM_TEXT_PX}px`,
+    );
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    const signOuts = page.locator('app-devices-card .device-sign-out');
+    await expect(signOuts.first()).toHaveText('Odhlásit');
+    await page.evaluate(() => document.fonts.ready);
+
+    const pastTheRow = await signOuts.evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const row = button.closest('.device-row')!.getBoundingClientRect();
+        const own = button.getBoundingClientRect();
+        return Math.max(0, Math.round(own.right - row.right), Math.round(row.left - own.left));
+      }),
+    );
+
+    expect(pastTheRow.length).toBeGreaterThan(0);
+    expect(pastTheRow).toEqual(pastTheRow.map(() => 0));
+  });
+});
