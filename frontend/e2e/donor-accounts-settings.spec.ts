@@ -296,22 +296,15 @@ test.describe('Given a signed-in donor adding a bank account on a wide screen', 
       await expect
         .poll(
           () =>
-            dialog.evaluate(
-              (sheet) =>
-                sheet
-                  .getAnimations({ subtree: true })
-                  .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
-                  .filter((animation) => animation.playState === 'running').length,
-            ),
-          { message: 'the sheet has settled' },
+            dialog.evaluate((sheet) => {
+              const [qrTop, factsTop] = ['.add-account-qr', '.add-account-bank'].map(
+                (part) => sheet.querySelector(part)!.getBoundingClientRect().top,
+              );
+              return Math.abs(qrTop - factsTop);
+            }),
+          { message: 'the QR code is level with the first payment fact once the sheet stands' },
         )
-        .toBe(0);
-      const [qrTop, factsTop] = await dialog.evaluate((sheet) =>
-        ['.add-account-qr', '.add-account-bank'].map(
-          (part) => sheet.querySelector(part)!.getBoundingClientRect().top,
-        ),
-      );
-      expect(Math.abs(qrTop - factsTop)).toBeLessThanOrEqual(1);
+        .toBeLessThanOrEqual(1);
     });
   }
 });
