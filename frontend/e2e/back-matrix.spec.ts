@@ -1349,6 +1349,9 @@ function placementWithin(element: Element, band: ViewBand): Placement {
     }
   }
   const box = element.getBoundingClientRect();
+  const style = getComputedStyle(element);
+  const marginTop = parseFloat(style.scrollMarginTop) || 0;
+  const marginBottom = parseFloat(style.scrollMarginBottom) || 0;
   const scrolling = scroller ?? document.documentElement;
   const atAnEnd =
     scrolling.scrollTop <= 0 ||
@@ -1356,7 +1359,9 @@ function placementWithin(element: Element, band: ViewBand): Placement {
   return {
     shown: box.bottom > band.top && box.top < band.bottom,
     atAnEdge:
-      atAnEnd || Math.abs(box.top - band.top) <= 1 || Math.abs(box.bottom - band.bottom) <= 1,
+      atAnEnd ||
+      Math.abs(box.top - marginTop - band.top) <= 1 ||
+      Math.abs(box.bottom + marginBottom - band.bottom) <= 1,
   };
 }
 
