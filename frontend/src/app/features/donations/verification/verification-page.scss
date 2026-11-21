@@ -39,7 +39,7 @@ $intro-measure: calc($container-width - 2 * var(--space-6));
 
 .verify-domain--after {
   margin: var(--space-6) 0 0;
-  text-align: center;
+  padding-inline: var(--space-6);
 }
 
 .verify-another {

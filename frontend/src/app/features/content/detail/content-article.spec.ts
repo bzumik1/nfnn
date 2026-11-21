@@ -41,7 +41,8 @@ describe('Given the page of a news article', () => {
     await fixture.whenStable();
 
     expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
-    expect(text(fixture, '.ui-intro__meta')).toBe('Projekt · 20. 10. 2026');
+    expect(text(fixture, '.ui-intro__meta .meta-tag')).toBe('Projekt');
+    expect(text(fixture, '.ui-intro__meta .meta-when')).toBe('20. 10. 2026');
     expect(text(fixture, '.crumbs a')).toBe('← Všechny aktuality');
     expect(text(fixture, '.actions a.ui-cta--ghost')).toBe('Zpět na aktuality');
     expect(
@@ -195,7 +196,8 @@ describe('Given the page of a project', () => {
     fixture.componentRef.setInput('page', projectPage(project()));
     await fixture.whenStable();
 
-    expect(text(fixture, '.ui-intro__meta')).toBe('Projekt · 2024');
+    expect(text(fixture, '.ui-intro__meta .meta-tag')).toBe('Projekt');
+    expect(text(fixture, '.ui-intro__meta .meta-when')).toBe('2024');
     expect(text(fixture, '.crumbs a')).toBe('← Kde pomáháme');
   });
 });
