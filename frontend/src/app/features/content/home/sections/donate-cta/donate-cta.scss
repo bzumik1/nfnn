@@ -1,8 +1,9 @@
 @use 'breakpoints' as bp;
 @use 'motion';
+@use 'tab-bar-room';
 
 .donate {
-  padding-bottom: var(--space-27);
+  @include tab-bar-room.holds-tab-bar-in-bottom-padding(var(--space-27));
 }
 
 .donate-img-wrap {
@@ -151,7 +152,7 @@
 
 @mixin one-column {
   .donate {
-    padding-bottom: var(--space-16);
+    @include tab-bar-room.holds-tab-bar-in-bottom-padding(var(--space-16));
   }
 
   .donate-img-wrap {

@@ -1,6 +1,11 @@
 import { Locator, Page } from '@playwright/test';
-import { donorWithDonations } from './baseline/screen-mocks';
-import { expect, test } from './fixtures';
+import {
+  donorWithDonations,
+  mockAdministration,
+  rememberedSession,
+  serveEmptyAdministrationCopy,
+} from './baseline/screen-mocks';
+import { ADMINISTRATION_LOCKED, expect, test } from './fixtures';
 import {
   administrator,
   claudeConnection,
@@ -10,6 +15,7 @@ import {
   rememberedDonorSession,
   session,
   signIn,
+  whenAdministrationCopied,
 } from './donor-session';
 
 interface Look {
@@ -125,6 +131,17 @@ async function freshInstallWithBackupKey(page: Page): Promise<void> {
         },
       }),
   );
+}
+
+async function openUnlockedAdministration(page: Page, path: string): Promise<void> {
+  await mockDonorApi(page, donorWithDonations);
+  await mockAdministration(page);
+  await serveEmptyAdministrationCopy(page);
+  await rememberedSession(page);
+  const copied = whenAdministrationCopied(page);
+  await page.goto(path);
+  await expect(page.locator('h1').first()).not.toHaveText(ADMINISTRATION_LOCKED);
+  await copied();
 }
 
 async function rememberedAdministrator(page: Page): Promise<void> {
@@ -252,6 +269,38 @@ test.describe('Given an administrator with Claude connected', () => {
 
     expect(await lookOf(retry)).toEqual(await lookOf(copy));
   });
+});
+
+test.describe('Given an administrator on a computer', () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  for (const { place, path, primary, secondary } of [
+    {
+      place: 'Zálohy',
+      path: '/sprava/zalohy',
+      primary: 'Zálohovat teď',
+      secondary: 'Spustit zkušební obnovu',
+    },
+    {
+      place: 'a new article',
+      path: '/sprava/aktuality/nova',
+      primary: 'Uložit a zveřejnit',
+      secondary: 'Uložit koncept',
+    },
+  ]) {
+    test(`when they open ${place}, then ${primary} and ${secondary} beside it have one height`, async ({
+      page,
+    }) => {
+      await openUnlockedAdministration(page, path);
+      const main = page.getByRole('main');
+      const first = main.getByRole('button', { name: primary });
+      const second = main.getByRole('button', { name: secondary });
+      await expect(first).toBeVisible();
+      await expect(second).toBeVisible();
+
+      expect((await lookOf(first)).height).toBe((await lookOf(second)).height);
+    });
+  }
 });
 
 test.describe('Given a freshly installed site showing the backup key in the first setup', () => {
