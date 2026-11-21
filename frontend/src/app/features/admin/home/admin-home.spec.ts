@@ -161,7 +161,13 @@ describe('Given an administrator on the administration home', () => {
       fixture.nativeElement.querySelectorAll(
         '.overview-table tbody tr, .overview-table tfoot tr',
       ) as NodeListOf<HTMLTableRowElement>,
-    ).map((row) => (withOrdinarySpaces(row.textContent) ?? '').replace(/\s+/g, ' ').trim());
+    ).map((row) =>
+      Array.from(row.cells)
+        .map((cell) => withOrdinarySpaces(cell.textContent) ?? '')
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    );
   }
 
   it('when the page opens, then it asks for the import state with the token and says it is loading', () => {

@@ -336,7 +336,9 @@
                       >
                         <span class="ui-date">{{ date(item.bookedOn) }}</span>
                         @if (item.unpairedByAdminAt) {
-                          &ngsp;<span class="held-tag" i18n="@@admin.payments.heldTag"
+                          &ngsp;<span
+                            class="held-tag ui-badge ui-badge--warning"
+                            i18n="@@admin.payments.heldTag"
                             >jen ručně</span
                           >
                           <span class="held-note" i18n="@@admin.payments.heldTag.title"
@@ -350,9 +352,9 @@
                         i18n-data-label="@@admin.payments.col.amount"
                         class="amount ui-figures"
                       >
-                        {{ crowns(item.amountMinor) }}&nbsp;Kč
+                        <span class="ui-amount">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
                         @if (item.accountVerification) {
-                          <span
+                          &ngsp;<span
                             class="ui-badge ui-badge--accent verification-tag"
                             i18n="@@admin.payments.verificationTag"
                             >Ověření účtu</span
@@ -403,12 +405,16 @@
                             </span>
                             <span class="donor-method">{{ method(donation.pairedBy) }}</span>
                             @if (donation.status === 'REFUNDED') {
-                              <span class="refunded-tag" i18n="@@admin.payments.refunded"
+                              <span
+                                class="refunded-tag ui-badge ui-badge--warning"
+                                i18n="@@admin.payments.refunded"
                                 >vráceno</span
                               >
                             }
                             @if (donation.receiptIssued) {
-                              <span class="receipt-tag" i18n="@@admin.payments.receiptIssued"
+                              <span
+                                class="receipt-tag ui-badge ui-badge--neutral"
+                                i18n="@@admin.payments.receiptIssued"
                                 >potvrzení vystaveno</span
                               >
                             }
@@ -747,10 +753,14 @@
             }
             <span class="muted">{{ method(donation.pairedBy) }}</span>
             @if (donation.status === 'REFUNDED') {
-              <span class="refunded-tag" i18n="@@admin.payments.refunded">vráceno</span>
+              <span class="refunded-tag ui-badge ui-badge--warning" i18n="@@admin.payments.refunded"
+                >vráceno</span
+              >
             }
             @if (donation.receiptIssued) {
-              <span class="receipt-tag" i18n="@@admin.payments.receiptIssued"
+              <span
+                class="receipt-tag ui-badge ui-badge--neutral"
+                i18n="@@admin.payments.receiptIssued"
                 >potvrzení vystaveno</span
               >
             }

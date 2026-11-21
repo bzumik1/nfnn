@@ -7,6 +7,16 @@
   white-space: nowrap;
 }
 
+.ui-amount {
+  font-family: var(--font-figures);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: var(--numeric-figures);
+  font-feature-settings: var(--figure-features);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
 .ui-figures--groups {
   white-space: normal;
   overflow-wrap: normal;

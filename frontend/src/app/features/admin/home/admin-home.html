@@ -64,8 +64,8 @@
               <dt i18n="@@admin.home.import.balance">Zůstatek účtu</dt>
               <dd>
                 @if (balance(); as balance) {
-                  {{ balance.amount }}
-                  <span class="balance-read-at">
+                  <span class="ui-amount">{{ balance.amount }}</span
+                  >&ngsp;<span class="balance-read-at">
                     <ng-container i18n="@@admin.home.import.balance.readAt"
                       >k&nbsp;<span class="ui-date">{{ balance.readAt }}</span></ng-container
                     >
@@ -345,7 +345,7 @@
                         data-label="Celkem"
                         i18n-data-label="@@admin.home.overview.col.total"
                       >
-                        {{ amount(item.received) }}
+                        <span class="ui-amount">{{ amount(item.received) }}</span>
                       </td>
                       <td
                         role="cell"
@@ -353,7 +353,7 @@
                         data-label="Přiřazené"
                         i18n-data-label="@@admin.home.overview.col.paired"
                       >
-                        {{ amount(item.paired) }}
+                        <span class="ui-amount">{{ amount(item.paired) }}</span>
                       </td>
                       <td
                         role="cell"
@@ -361,7 +361,7 @@
                         data-label="Bez dárce"
                         i18n-data-label="@@admin.home.overview.col.unpaired"
                       >
-                        {{ amount(item.unpaired) }}
+                        <span class="ui-amount">{{ amount(item.unpaired) }}</span>
                       </td>
                     </tr>
                   }
@@ -407,7 +407,7 @@
                       data-label="Celkem"
                       i18n-data-label="@@admin.home.overview.col.total"
                     >
-                      {{ amount(data.received) }}
+                      <span class="ui-amount">{{ amount(data.received) }}</span>
                     </td>
                     <td
                       role="cell"
@@ -415,7 +415,7 @@
                       data-label="Přiřazené"
                       i18n-data-label="@@admin.home.overview.col.paired"
                     >
-                      {{ amount(data.paired) }}
+                      <span class="ui-amount">{{ amount(data.paired) }}</span>
                     </td>
                     <td
                       role="cell"
@@ -423,7 +423,7 @@
                       data-label="Bez dárce"
                       i18n-data-label="@@admin.home.overview.col.unpaired"
                     >
-                      {{ amount(data.unpaired) }}
+                      <span class="ui-amount">{{ amount(data.unpaired) }}</span>
                     </td>
                   </tr>
                 </tfoot>

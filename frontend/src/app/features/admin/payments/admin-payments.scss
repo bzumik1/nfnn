@@ -111,12 +111,6 @@
   white-space: nowrap;
 }
 
-.payments-card td.amount {
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
-  color: var(--color-text);
-}
-
 .payments-card th.amount,
 .payments-card td.amount {
   text-align: right;
@@ -155,13 +149,7 @@
 .held-tag,
 .refunded-tag,
 .receipt-tag {
-  display: inline-block;
   margin-top: var(--space-1);
-  padding: var(--space-0-5) var(--space-2);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  white-space: nowrap;
 }
 
 .held-note {
@@ -174,8 +162,6 @@
 }
 
 .refunded-tag {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
   margin-right: var(--space-1-5);
 }
 
@@ -189,15 +175,8 @@
 }
 
 .held-tag {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
   margin-left: var(--space-1-5);
   margin-top: 0;
-}
-
-.receipt-tag {
-  background: var(--color-accent-bg);
-  color: var(--color-text-muted);
 }
 
 .confirm {
