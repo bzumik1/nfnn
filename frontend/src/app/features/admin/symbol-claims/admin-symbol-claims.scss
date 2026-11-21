@@ -44,21 +44,15 @@ td.action {
 }
 
 @include bp.container-up(ui-table, ledger) {
-  .ui-table {
-    th,
-    td {
-      padding-inline: var(--space-3);
-    }
+  .claim-donor {
+    display: block;
+    inline-size: max-content;
+    max-inline-size: var(--table-text-column);
+    overflow-wrap: anywhere;
+  }
 
-    th:first-child,
-    td:first-child {
-      padding-inline-start: var(--card-inset);
-    }
-
-    th:last-child,
-    td:last-child {
-      padding-inline-end: var(--card-inset);
-    }
+  td.action > .ui-button {
+    min-inline-size: var(--table-action-column-min);
   }
 }
 

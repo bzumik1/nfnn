@@ -310,7 +310,11 @@
             }
           } @else {
             <div class="ui-table-frame">
-              <table role="table" class="ui-table">
+              <table
+                role="table"
+                class="ui-table ui-table--compact"
+                [class.payments-table--paired]="filter() === 'paired'"
+              >
                 <thead role="rowgroup">
                   <tr role="row">
                     <th role="columnheader" i18n="@@admin.payments.col.date">Datum</th>
