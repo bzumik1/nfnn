@@ -40,6 +40,11 @@ import { OpenAlert } from '../../../core/push/open-alerts-api';
 import { OpenAlerts } from '../../../core/push/open-alerts';
 import { LOADING_TIMINGS } from '../../../shared/ui/skeleton/loading-view';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
 const OVERVIEW_URL = '/api/admin/donations/overview';
@@ -612,11 +617,17 @@ describe('Given an administrator on the administration home', () => {
   it('when the state cannot be loaded, then an alert offers a retry that asks again', async () => {
     await respond({ title: 'Server error' }, 500);
 
-    expect(text('[role="alert"]')).toContain('Stav importu se nepodařilo načíst.');
-
-    (
-      fixture.nativeElement.querySelector('.ui-load-state--error button') as HTMLButtonElement
-    ).click();
+    expect(loadFailureAlerts(fixture.nativeElement.querySelector('.admin-status'))).toEqual([
+      'Stav importu se nepodařilo načíst.',
+    ]);
+    expect(alertsHoldingAButton(fixture.nativeElement.querySelector('.admin-status'))).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement.querySelector('.admin-status'));
+    fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement.querySelector('.admin-status'))).toEqual([
+      'Stav importu se nepodařilo načíst.',
+    ]);
     await respond(importState());
 
     expect(fixture.nativeElement.querySelector('[role="alert"]:not(:empty)')).toBeNull();
@@ -759,11 +770,13 @@ describe('Given an administrator on the administration home', () => {
     const card = fixture.nativeElement.querySelector(
       '.ui-card[aria-labelledby="admin-overview-title"]',
     ) as HTMLElement;
-    expect(withOrdinarySpaces(card.querySelector('[role="alert"]')?.textContent)).toContain(
-      'Dary po měsících se nepodařilo načíst.',
-    );
-
-    (card.querySelector('.ui-load-state--error button') as HTMLButtonElement).click();
+    expect(loadFailureAlerts(card)).toEqual(['Dary po měsících se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(card)).toBe(0);
+    const retry = pressLoadFailureRetry(card);
+    fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(card)).toEqual(['Dary po měsících se nepodařilo načíst.']);
     await respondOverview(OVERVIEW_URL, overview());
 
     expect(card.querySelector('[role="alert"]')).toBeNull();
@@ -821,11 +834,13 @@ describe('Given an administrator on the administration home', () => {
     it('then a failed load offers a retry that asks again', async () => {
       await respondOverview(BACKUPS_URL, { title: 'Server error' }, 500);
 
-      expect(
-        withOrdinarySpaces(backupsCard().querySelector('[role="alert"]')?.textContent),
-      ).toContain('Stav záloh se nepodařilo načíst.');
-
-      (backupsCard().querySelector('.ui-load-state--error button') as HTMLButtonElement).click();
+      expect(loadFailureAlerts(backupsCard())).toEqual(['Stav záloh se nepodařilo načíst.']);
+      expect(alertsHoldingAButton(backupsCard())).toBe(0);
+      const retry = pressLoadFailureRetry(backupsCard());
+      fixture.detectChanges();
+      expect(retry.getAttribute('aria-busy')).toBe('true');
+      expect(document.activeElement).toBe(retry);
+      expect(loadFailureAlerts(backupsCard())).toEqual(['Stav záloh se nepodařilo načíst.']);
       await respondOverview(BACKUPS_URL, backupsView());
 
       expect(backupsCard().querySelector('[role="alert"]')).toBeNull();

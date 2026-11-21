@@ -41,7 +41,7 @@ describe('Given a skeleton for a card whose title is known before its data', () 
   beforeEach(async () => {
     fixture = TestBed.createComponent(Skeleton);
     fixture.componentRef.setInput('rows', 3);
-    fixture.componentRef.setInput('title', 'Stav záloh');
+    fixture.componentRef.setInput('heading', 'Stav záloh');
     await fixture.whenStable();
   });
 
@@ -55,8 +55,21 @@ describe('Given a skeleton for a card whose title is known before its data', () 
     expect(host().querySelectorAll('.ui-skeleton--inset .ui-skeleton__line')).toHaveLength(3);
   });
 
-  it('when it shows, then a screen reader still hears nothing of it', () => {
-    expect(host().getAttribute('aria-hidden')).toBe('true');
-    expect(host().querySelector('h1, h2, h3, [role="heading"]')).toBeNull();
+  it('when it shows, then a screen reader finds its title among the headings and hears nothing of the rows', () => {
+    expect(host().getAttribute('aria-hidden')).toBeNull();
+    const heading = host().querySelector('h2');
+    expect(heading?.textContent?.trim()).toBe('Stav záloh');
+    expect(heading?.closest('[aria-hidden="true"]')).toBeNull();
+    const rows = host().querySelector('.ui-skeleton--inset');
+    expect(rows?.getAttribute('aria-hidden')).toBe('true');
+    expect(withOrdinarySpaces(host().textContent)?.trim()).toBe('Stav záloh');
+  });
+
+  it('when its title carries a no-break space, then the title keeps it as the card title does', async () => {
+    fixture.componentRef.setInput('heading', 'Klíč k\u00a0zálohám');
+    await fixture.whenStable();
+
+    expect(host().querySelector('h2')?.textContent).toBe('Klíč k\u00a0zálohám');
+    expect(host().hasAttribute('title')).toBe(false);
   });
 });
