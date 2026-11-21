@@ -266,7 +266,7 @@ test.describe('Given a signed-in donor on a phone', () => {
 });
 
 test.describe('Given a signed-in donor adding a bank account in a narrow bottom sheet', () => {
-  for (const root of [16, 17]) {
+  for (const root of [16, 17, 53]) {
     test(`when Přidat bankovní účet opens 490 px wide with a ${root} px root, then no number breaks across lines and every copy button ends at the right edge`, async ({
       page,
     }) => {
