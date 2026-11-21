@@ -12,7 +12,7 @@ import { ADMINISTRATION_LOCKED, expect, test } from './fixtures';
 const WIDTHS = [1280, 1000, 900] as const;
 const LONG_MESSAGE = 'Dar na podporu rodin s dětmi po léčbě, děkujeme za vaši práci a pomoc';
 const LONG_DONOR_NAME = 'Marie Josefína Dvořáková-Procházková';
-const ONE_WORD_DONOR_NAME = 'Severomoravskáenergetika';
+const ONE_WORD_DONOR_NAME = 'Severomoravskáenergetickáspolečnost';
 
 function payment(index: number, overrides: Record<string, unknown>) {
   const suffix = String(index).padStart(4, '0');
