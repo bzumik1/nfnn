@@ -4,6 +4,10 @@
   display: block;
 }
 
+:host-context(.ui-sheet-page) .ui-page-head {
+  margin-bottom: var(--space-5);
+}
+
 .admin-name {
   color: var(--color-text);
   font-weight: var(--weight-semibold);
