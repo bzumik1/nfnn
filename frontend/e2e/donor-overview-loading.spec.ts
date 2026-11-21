@@ -1,7 +1,13 @@
 import type { Locator, Page } from '@playwright/test';
 import { donorWithDonations } from './baseline/screen-mocks';
-import { mockDonorApi, noDonations, rememberedDonorSession } from './donor-session';
+import {
+  mockDonorApi,
+  noDonations,
+  openAccountItem,
+  rememberedDonorSession,
+} from './donor-session';
 import { expect, test } from './fixtures';
+import { donations as receiptDonations, openReceiptsAfterSignIn } from './receipt-donations';
 
 const SLOW_ANSWER_MS = 1500;
 const GIFTS_PATHS = new Set([
@@ -182,3 +188,63 @@ test.describe('Given a signed-in donor on Můj přehled', () => {
     }
   }
 });
+
+for (const screen of [
+  { name: 'an upright iPad, on the page', width: 820, height: 1180, inSheet: false, shares: false },
+  {
+    name: 'an upright iPad, in the account sheet',
+    width: 820,
+    height: 1180,
+    inSheet: true,
+    shares: false,
+  },
+  { name: 'an iPad on its side', width: 1180, height: 820, inSheet: false, shares: true },
+  { name: 'a phone', width: 390, height: 844, inSheet: false, shares: false },
+]) {
+  test.describe(`Given a donor with a ready yearly receipt on ${screen.name} with a root of 17 px`, () => {
+    test(`when Můj přehled shows the card of the receipt, then its button ${screen.shares ? 'shares the row with the title and ends on the card edge' : 'spans the text column under the title, from its edge to the card edge'}`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, receiptDonations);
+      await page.setViewportSize({ width: screen.width, height: screen.height });
+      await openReceiptsAfterSignIn(page);
+      await page.addStyleTag({ content: 'html { font-size: 17px; }' });
+      if (screen.inSheet) {
+        await openAccountItem(page, 'Můj přehled');
+      } else {
+        await page.goto('/darce/prehled');
+        await page.addStyleTag({ content: 'html { font-size: 17px; }' });
+      }
+      const card = page.locator('.receipt-ready');
+      await expect(card.locator('.receipt-ready-pdf')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      const layout = await card.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        const title = element.querySelector('.ui-card__title')!.getBoundingClientRect();
+        const button = element.querySelector('.receipt-ready-pdf')!.getBoundingClientRect();
+        return {
+          contentStart:
+            box.left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft),
+          contentEnd:
+            box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight),
+          titleStart: title.left,
+          buttonStart: button.left,
+          buttonEnd: button.right,
+          wrapped: button.top >= title.bottom,
+          axisOffset: Math.abs((button.top + button.bottom) / 2 - (title.top + title.bottom) / 2),
+        };
+      });
+
+      expect(layout.wrapped).toBe(!screen.shares);
+      expect(Math.abs(layout.titleStart - layout.contentStart)).toBeLessThanOrEqual(1);
+      expect(Math.abs(layout.buttonEnd - layout.contentEnd)).toBeLessThanOrEqual(1);
+      if (screen.shares) {
+        expect(layout.axisOffset).toBeLessThanOrEqual(2);
+      } else {
+        expect(Math.abs(layout.buttonStart - layout.contentStart)).toBeLessThanOrEqual(1);
+      }
+    });
+  });
+}
