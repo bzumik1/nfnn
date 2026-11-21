@@ -21,6 +21,13 @@ async function lengthenLoadingDelay(page: Page): Promise<void> {
   await page.evaluate(() => document.documentElement.style.setProperty('--delay-loading', '10s'));
 }
 
+async function openSignInDialogUnderLongLoadingDelay(page: Page): Promise<void> {
+  await page.goto('/');
+  await lengthenLoadingDelay(page);
+  await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+}
+
 async function listenTo(status: Locator): Promise<() => Promise<string[]>> {
   await status.evaluate((line) => {
     const heard: string[] = [];
@@ -50,6 +57,7 @@ async function signOutTheIPhone(page: Page, answers: Promise<void>): Promise<Loc
     },
   );
   await signIn(page);
+  await lengthenLoadingDelay(page);
   await openDonorSection(page, 'Údaje a zabezpečení');
   const devices = page.locator('.devices');
   await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
@@ -70,7 +78,6 @@ test.describe('Given a donor signing out another device on Údaje a zabezpečen�
     const devices = await signOutTheIPhone(page, answered);
     const status = devices.locator('.devices-status');
     const heard = await listenTo(status);
-    await lengthenLoadingDelay(page);
     const restingHeight = (await devices.boundingBox())?.height;
     const yes = devices.getByRole('button', { name: 'Odhlásit', exact: true });
 
@@ -100,7 +107,6 @@ test.describe('Given a donor signing out another device on Údaje a zabezpečen�
     const devices = await signOutTheIPhone(page, Promise.resolve());
     const status = devices.locator('.devices-status');
     const heard = await listenTo(status);
-    await lengthenLoadingDelay(page);
 
     await devices.getByRole('button', { name: 'Odhlásit', exact: true }).click();
 
@@ -129,12 +135,12 @@ test.describe('Given a donor sending the e-mail change link again on Údaje a za
       );
     });
     await signIn(page, { ...donor, pendingEmailChange: pending });
+    await lengthenLoadingDelay(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
     const row = page.locator('.account-row').filter({ hasText: 'Čeká na potvrzení' });
     const resend = row.locator('.account-resend');
     await expect(resend).toHaveAccessibleName('Poslat znovu potvrzovací odkaz');
     const status = page.locator('.account-status');
-    await lengthenLoadingDelay(page);
 
     await resend.click();
     await page.clock.fastForward(10_000);
@@ -310,6 +316,7 @@ async function openDetailsWithEveryBusyButton(page: Page): Promise<void> {
     (route) => route.fulfill({ json: { items: [IPHONE_PASSKEY] } }),
   );
   await signIn(page, signedIn);
+  await lengthenLoadingDelay(page);
   await openDonorSection(page, 'Údaje a zabezpečení');
 }
 
@@ -345,7 +352,6 @@ test.describe('Given an administrator on Údaje a zabezpečení pressing a busy 
         }
       });
       const button = await step.reach(page);
-      await lengthenLoadingDelay(page);
       const starting = page.locator('[role="status"]').filter({ hasText: step.busy });
       await button.focus();
 
@@ -454,14 +460,13 @@ test.describe('Given a visitor signing in from the sign-in dialog', () => {
         ),
       );
     });
-    await openSignInDialog(page);
+    await openSignInDialogUnderLongLoadingDelay(page);
     const dialog = page.getByRole('dialog');
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('wrong horse battery');
     const submit = dialog.locator('.login-form .ui-button--primary');
     const status = dialog.locator('.login-form [role="status"]');
     const heard = await listenTo(status);
-    await lengthenLoadingDelay(page);
     await submit.focus();
 
     await submit.press('Enter');
@@ -710,9 +715,8 @@ test.describe('Given a visitor in a step of the sign-in dialog whose answer is s
       await page.clock.install();
       await mockDonorApi(page);
       const release = await holdAnswers(page, step);
-      await openSignInDialog(page);
+      await openSignInDialogUnderLongLoadingDelay(page);
       const button = await step.reach(page);
-      await lengthenLoadingDelay(page);
       const starting = page.locator('[role="status"]').filter({ hasText: step.busy });
       await button.focus();
 
