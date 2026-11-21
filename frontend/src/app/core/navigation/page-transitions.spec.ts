@@ -193,12 +193,13 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(held).toEqual([true]);
   });
 
-  it('when the hold of a step back ends, then every held motion starts at that moment, not only at a frame drawn after it', async () => {
-    interface HeldMotion {
-      pending: boolean;
-      startTime: number | null;
-      finished: Promise<unknown>;
-    }
+  interface HeldMotion {
+    pending: boolean;
+    startTime: number | null;
+    finished: Promise<unknown>;
+  }
+
+  function watchHeldMotions(): Map<Element, HeldMotion> {
     const motions = new Map<Element, HeldMotion>();
     const motionOf = (element: Element): HeldMotion => {
       if (!motions.has(element)) {
@@ -220,36 +221,66 @@ describe('Given a phone that animates, an article opened from the news, and the 
           .map(motionOf);
       },
     });
-    let heldEndedAt: number | null = null;
-    const hold = new MutationObserver(() => {
-      const moving = document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
-      if (
-        moving !== null &&
-        heldEndedAt === null &&
-        !moving.classList.contains(`${PAGE_TRANSITION_CLASS}--held`)
-      ) {
-        heldEndedAt = performance.now();
-      }
-    });
-    hold.observe(document.body, { subtree: true, attributes: true, childList: true });
-    try {
-      await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-      await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
-    } finally {
-      hold.disconnect();
+    onTestFinished(() => {
       if (ownAnimations === undefined) {
         delete (Element.prototype as { getAnimations?: unknown }).getAnimations;
       } else {
         Object.defineProperty(Element.prototype, 'getAnimations', ownAnimations);
       }
-    }
+    });
+    return motions;
+  }
+
+  function framesOnRequest(): (at: number) => void {
+    const frames: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
+      frames.push(frame);
+      return frames.length;
+    });
+    onTestFinished(() => vi.mocked(window.requestAnimationFrame).mockRestore());
+    return (at) => frames.splice(0).forEach((frame) => frame(at));
+  }
+
+  function moving(): Element | null {
+    return document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
+  }
+
+  it('when the frame that shows both pages is not drawn yet, then the motion stays held at its start however long that frame takes, never started by the clock', async () => {
+    watchHeldMotions();
+    framesOnRequest();
+
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 2);
+
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
+  it('when no frame comes at all, then the step ends after its longest time instead of leaving its cover over the page', async () => {
+    watchHeldMotions();
+    framesOnRequest();
+
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+  });
+
+  it('when the frame that shows both pages has been drawn, then every held motion starts at the time of the next frame, so that frame still shows it at its start', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + FRAME_LATE_MS * 2 + 100);
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+
+    draw(5000);
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(5140);
+    await vi.advanceTimersByTimeAsync(0);
 
     const started = [...motions.values()].map((motion) => motion.startTime);
-    expect(heldEndedAt).not.toBeNull();
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
     expect(started.length).toBeGreaterThan(0);
-    expect(new Set(started).size).toBe(1);
-    expect(started[0]).toBeTypeOf('number');
-    expect(started[0]!).toBeLessThanOrEqual(heldEndedAt!);
+    expect(new Set(started)).toEqual(new Set([5140]));
   });
 
   it('when another article opens from this one, then its motion holds still at its start until the frame that shows both pages has been drawn', async () => {
@@ -523,6 +554,7 @@ describe('Given the app on the home screen of a phone, scrolling restored, on th
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
     document
       .querySelectorAll(`.${PAGE_TRANSITION_CLASS}, app-scrolled-shell`)

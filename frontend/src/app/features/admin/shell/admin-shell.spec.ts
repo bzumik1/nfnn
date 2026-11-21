@@ -65,11 +65,16 @@ describe('Given an administrator anywhere in the administration', () => {
           },
         },
         provideRouter([
-          { path: 'sprava', component: Page },
-          { path: 'sprava/darci', component: Page },
-          { path: 'sprava/darci/:id', component: Page },
-          { path: 'sprava/platby', component: Page },
-          { path: 'sprava/lide', component: NamedPage },
+          { path: 'sprava', component: Page, data: { headTitle: 'Stránka' } },
+          { path: 'sprava/darci', component: Page, data: { headTitle: 'Stránka' } },
+          { path: 'sprava/darci/:id', component: Page, data: { headTitle: 'Stránka' } },
+          { path: 'sprava/platby', component: Page, data: { headTitle: 'Platby z banky' } },
+          {
+            path: 'sprava/lide',
+            component: NamedPage,
+            data: { headTitle: 'Načítáme dárce…', headTitleFollowsHeading: true },
+          },
+          { path: 'sprava/stranka', component: NamedPage },
           {
             path: 'sprava/aktuality/nova',
             component: Page,
@@ -231,6 +236,35 @@ describe('Given an administrator anywhere in the administration', () => {
       expect(withOrdinarySpaces(element('main#obsah h1')?.textContent)).toBe('Stránka');
     });
 
+    it('and a page opens, then the head names it from its route in the same pass as the page, never from the heading the page draws', async () => {
+      await router.navigateByUrl('/sprava/platby');
+      fixture.detectChanges();
+
+      expect(
+        clean(
+          withOrdinarySpaces(
+            element('.admin-sheet [role="banner"] p[aria-hidden="true"]')?.textContent,
+          ),
+        ),
+      ).toBe('Platby z banky');
+    });
+
+    it('and a page that names no title of its own changes its heading, then the head stays as its route has it', async () => {
+      await router.navigateByUrl('/sprava/stranka');
+      await settle();
+      const page = fixture.debugElement.query(
+        (node) => node.componentInstance instanceof NamedPage,
+      );
+
+      (page.componentInstance as NamedPage).name.set('Jana Nováková');
+      await settle();
+      await settle();
+
+      expect(
+        clean(element('.admin-sheet [role="banner"] p[aria-hidden="true"]')?.textContent),
+      ).toBe('');
+    });
+
     it('and the page names itself only once its data arrive, then the head follows its heading', async () => {
       await router.navigateByUrl('/sprava/lide');
       await settle();
@@ -250,6 +284,10 @@ describe('Given an administrator anywhere in the administration', () => {
       await settle();
 
       expect(title()).toBe('Jana Nováková');
+      const heading = element('main#obsah h1')!;
+      expect(heading.closest('[aria-hidden="true"]')).toBeNull();
+      expect(getComputedStyle(heading).visibility).not.toBe('hidden');
+      expect(clean(heading.textContent)).toBe('Jana Nováková');
     });
 
     it('and a news editor opens, then it stands full screen under the header of the app, as before', async () => {

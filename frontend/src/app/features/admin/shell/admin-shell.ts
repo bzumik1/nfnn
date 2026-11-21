@@ -2,6 +2,7 @@
 
 import { Location, NgComponentOutlet } from '@angular/common';
 import {
+  afterEveryRender,
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
@@ -11,7 +12,7 @@ import {
   ElementRef,
   inject,
   Injector,
-  signal,
+  linkedSignal,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -77,7 +78,11 @@ export class AdminShell {
     { initialValue: framedFullScreen(this.router.routerState.snapshot.root) },
   );
   protected readonly sheet = computed(() => this.compact() && !this.fullScreen());
-  protected readonly pageTitle = signal('');
+  protected readonly headTitle = computed(() => this.chrome().headTitle ?? '');
+  protected readonly arrivedTitle = linkedSignal<unknown, string | null>({
+    source: this.chrome,
+    computation: () => null,
+  });
   private entryDepth: number | null = null;
   private focusBeforeLock: Element | null = null;
   private wasLocked = false;
@@ -95,12 +100,7 @@ export class AdminShell {
         this.keepEntry();
         this.returnFocusAfterStepBack();
       });
-    effect((onCleanup) => {
-      const page = this.sheet() ? this.page()?.nativeElement : undefined;
-      if (page !== undefined) {
-        onCleanup(this.followPageTitle(page));
-      }
-    });
+    afterEveryRender(() => this.followLateHeading());
     effect(() => {
       const locked = this.lock.locked();
       untracked(() => this.followLock(locked));
@@ -136,13 +136,16 @@ export class AdminShell {
     }
   }
 
-  private followPageTitle(page: HTMLElement): () => void {
-    const read = (): void =>
-      this.pageTitle.set(page.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim() ?? '');
-    read();
-    const observer = new MutationObserver(read);
-    observer.observe(page, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
+  private followLateHeading(): void {
+    const chrome = untracked(this.chrome);
+    const page = untracked(this.page)?.nativeElement;
+    if (!chrome.headTitleFollowsHeading || !untracked(this.sheet) || page === undefined) {
+      return;
+    }
+    const heading = page.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    if (heading !== '' && heading !== (untracked(this.arrivedTitle) ?? chrome.headTitle)) {
+      this.arrivedTitle.set(heading);
+    }
   }
 
   private returnFocusAfterStepBack(): void {

@@ -1,3 +1,5 @@
+export const REPORT_MONTH_SHAPE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
 const MONTH_NAMES = new Intl.DateTimeFormat('cs-CZ', { month: 'long', year: 'numeric' });
 
 export function formatReportMonth(isoMonth: string): string {

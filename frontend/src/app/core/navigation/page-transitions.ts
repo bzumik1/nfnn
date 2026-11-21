@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import {
   afterNextRender,
+  computed,
   DestroyRef,
   effect,
   EnvironmentProviders,
@@ -8,6 +9,7 @@ import {
   Injectable,
   Injector,
   provideAppInitializer,
+  signal,
   untracked,
 } from '@angular/core';
 import {
@@ -158,9 +160,18 @@ export class PageTransitions {
   private trigger: NavigationFacts['trigger'] = 'imperative';
   private restoredDepth: number | null = null;
   private standingSheet: HTMLElement | null = null;
-  running: Running | null = null;
+  private readonly step = signal<Running | null>(null);
+  readonly stepping = computed(() => this.step() !== null);
   finishing: number | null = null;
   private titleFrame: number | null = null;
+
+  get running(): Running | null {
+    return untracked(this.step);
+  }
+
+  set running(running: Running | null) {
+    this.step.set(running);
+  }
 
   constructor() {
     effect(() => {
@@ -469,9 +480,11 @@ export class PageTransitions {
   private startMoving(running: Running, view: Window, page: HTMLElement): void {
     running.overlay.classList.add(HELD_CLASS, MOVING_CLASS);
     this.finishWhenStill(running, page, view);
-    void afterDrawn(view, this.durationOf('--duration-fast') / 2).then(() =>
-      startHeldMotions(running.overlay, view),
-    );
+    framesDrawn(view, 2, (frameAt) => {
+      if (this.running === running) {
+        startHeldMotions(running.overlay, frameAt);
+      }
+    });
   }
 
   private finishWhenStill(running: Running, page: HTMLElement, view: Window): void {
@@ -928,16 +941,21 @@ function fadingIn(progress: number, fadeAt: number): number {
   return Math.min(1, Math.max(0, (progress - fadeAt) / (1 - fadeAt)));
 }
 
-function startHeldMotions(overlay: HTMLElement, view: Window): void {
+function startHeldMotions(overlay: HTMLElement, frameAt: number): void {
   overlay.classList.remove(HELD_CLASS);
   if (typeof overlay.getAnimations !== 'function') {
     return;
   }
-  const now = view.performance.now();
   overlay
     .getAnimations({ subtree: true })
     .filter((motion) => motion.pending)
-    .forEach((motion) => (motion.startTime = now));
+    .forEach((motion) => (motion.startTime = frameAt));
+}
+
+function framesDrawn(view: Window, frames: number, then: (frameAt: number) => void): void {
+  view.requestAnimationFrame((frameAt) =>
+    frames > 1 ? framesDrawn(view, frames - 1, then) : then(frameAt),
+  );
 }
 
 export function liveDialogs(document: Document, selector: string): HTMLDialogElement[] {

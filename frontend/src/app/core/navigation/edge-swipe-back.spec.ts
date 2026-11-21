@@ -50,6 +50,8 @@ function chromeWith(parent: string | null): Chrome {
     landing: false,
     backOnWide: true,
     darkThroughout: false,
+    headTitle: null,
+    headTitleFollowsHeading: false,
   };
 }
 

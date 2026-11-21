@@ -3,8 +3,12 @@ import { ActivatedRouteSnapshot, NavigationEnd, Params, Router } from '@angular/
 
 export type PageHead = 'photo' | 'dark' | 'light';
 
+export type HeadTitle = string | ((route: ActivatedRouteSnapshot) => string);
+
 export interface RouteChromeData {
   readonly parent?: string;
+  readonly headTitle?: HeadTitle;
+  readonly headTitleFollowsHeading?: boolean;
   readonly head?: PageHead;
   readonly tabBar?: boolean;
   readonly landing?: boolean;
@@ -19,6 +23,8 @@ export interface Chrome {
   readonly landing: boolean;
   readonly backOnWide: boolean;
   readonly darkThroughout: boolean;
+  readonly headTitle: string | null;
+  readonly headTitleFollowsHeading: boolean;
 }
 
 const PLAIN: Chrome = {
@@ -28,6 +34,8 @@ const PLAIN: Chrome = {
   landing: false,
   backOnWide: true,
   darkThroughout: false,
+  headTitle: null,
+  headTitleFollowsHeading: false,
 };
 
 @Injectable({ providedIn: 'root' })
@@ -62,6 +70,13 @@ export function chromeOf(root: ActivatedRouteSnapshot): Chrome {
       landing: data.landing ?? false,
       backOnWide: data.backOnWide ?? chrome.backOnWide,
       darkThroughout: data.darkThroughout ?? chrome.darkThroughout,
+      headTitle:
+        data.headTitle === undefined
+          ? chrome.headTitle
+          : typeof data.headTitle === 'string'
+            ? data.headTitle
+            : data.headTitle(route),
+      headTitleFollowsHeading: data.headTitleFollowsHeading ?? false,
     };
   }
   return chrome;
