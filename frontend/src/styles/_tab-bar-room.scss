@@ -4,18 +4,21 @@
 
   :host-context(.with-tab-bar) & {
     margin-bottom: calc(-1 * var(--tab-bar-clearance));
-    padding-bottom: max(#{$padding}, calc(var(--tab-bar-clearance) + var(--floating-room)));
+    padding-bottom: max(
+      #{$padding},
+      calc(var(--tab-bar-clearance) + var(--space-6) + var(--floating-room))
+    );
   }
 
-  :host-context(.has-floating-notice) & {
+  :host-context(html.has-floating-notice:has(app-root app-landing)) & {
     --floating-room: calc(var(--space-2) + var(--floating-notice-height) + var(--space-4));
   }
 
-  :host-context(.is-offline) & {
+  :host-context(html.is-offline:has(app-root app-landing)) & {
     --floating-room: calc(var(--offline-pill-height) + var(--space-4));
   }
 
-  :host-context(.has-floating-notice.is-offline) & {
+  :host-context(html.has-floating-notice.is-offline:has(app-root app-landing)) & {
     --floating-room: calc(
       var(--space-2) + var(--floating-notice-height) + var(--space-3) + var(--offline-pill-height) +
         var(--space-4)
