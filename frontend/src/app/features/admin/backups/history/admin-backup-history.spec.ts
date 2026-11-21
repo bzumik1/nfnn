@@ -110,6 +110,14 @@ describe('Given an administrator on the history of backups', () => {
     request.flush(backupsView({ backups: BACKUPS }));
   });
 
+  it('when the page opens, then its intro says what a backup offers without naming a gesture', async () => {
+    await respond(backupsView({ backups: BACKUPS }));
+
+    expect(text('.ui-page-intro')).toBe(
+      'Nejnovější nahoře. Vyberte zálohu a pak ji stáhnete nebo z ní web obnovíte.',
+    );
+  });
+
   it('when the backups arrive, then they are grouped by Prague day with a count, each row its time, kind and size', async () => {
     await respond(backupsView({ backups: BACKUPS }));
 

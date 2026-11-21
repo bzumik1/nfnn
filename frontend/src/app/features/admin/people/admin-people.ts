@@ -792,12 +792,6 @@ export class AdminPeople {
     return $localize`:@@admin.people.edit.label:Upravit: ${member.name}:name:`;
   }
 
-  protected boardLabel(member: PersonResponse): string {
-    return member.boardNote
-      ? $localize`:@@admin.people.badge.boardWithNote:Ve správní radě (${member.boardNote}:note:)`
-      : $localize`:@@admin.people.badge.board:Ve správní radě`;
-  }
-
   private open(id: string, member: PersonResponse | null): void {
     this.listNotice.set(null);
     this.editorNotice.set(null);
