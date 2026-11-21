@@ -40,9 +40,12 @@
 }
 
 .overview-stats {
+  margin-top: 0;
+}
+
+.overview-stats-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 0;
 }
 
 .overview-stat {
@@ -103,6 +106,11 @@
     color: inherit;
     font-weight: var(--weight-semibold);
   }
+}
+
+.overview-question {
+  margin-bottom: var(--space-5);
+  padding-inline: var(--card-inset);
 }
 
 .receipt-ready {
@@ -228,8 +236,8 @@
   opacity: 0;
 }
 
-@include bp.down(cards) {
-  .overview-stats {
+@include bp.container-down(ui-card, cards) {
+  .overview-stats-list {
     grid-template-columns: minmax(0, 1fr);
     padding: var(--space-1) 0;
   }

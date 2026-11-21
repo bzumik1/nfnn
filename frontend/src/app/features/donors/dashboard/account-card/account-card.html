@@ -676,7 +676,12 @@
                     <span class="account-secret-label" i18n="@@donor.account.secondFactor.secret"
                       >Klíč</span
                     >
-                    <span class="account-secret-value">{{ groupedSecret() }}</span>
+                    <span class="account-secret-value"
+                      ><span class="account-secret-half">{{ secretHalves().first }}</span
+                      >&ngsp;<span class="account-secret-half">{{
+                        secretHalves().second
+                      }}</span></span
+                    >
                     <app-copy-button
                       [value]="enrolment()?.secret ?? ''"
                       what="klíč"
