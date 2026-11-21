@@ -27,10 +27,13 @@ export function donationStatusLabel(status: DonationStatus): string {
   templateUrl: './donations-table.html',
   styleUrl: './donations-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.donations-table--narrow]': 'narrow()' },
 })
 export class DonationsTable {
   protected readonly donations = inject(DonorDonations);
-  protected readonly rows = inject(CompactLayout).listsAsRows;
+  private readonly layout = inject(CompactLayout);
+  protected readonly rows = this.layout.listsAsRows;
+  protected readonly narrow = this.layout.narrowTables;
 
   readonly items = input.required<readonly DonationItem[]>();
   readonly withReceipts = input(true);

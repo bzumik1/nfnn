@@ -287,6 +287,56 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
     });
   }
 
+  for (const width of [900, 1000, 1100]) {
+    test(`when Moje dary lists gifts in a ${width} px window, between nav and laptop, then each year stays a table without the Stav column, no cell runs past the card and only a refunded gift or an account verification names its state under the date`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, await notesInPlaceOfThePdf());
+      await signIn(page);
+      await page.setViewportSize({ width, height: 900 });
+      await openDonorSection(page, 'Moje dary');
+
+      const card = page.locator('.payments-card');
+      await expect(card.locator('table')).toHaveCount(3);
+      const heads = card.locator('table').first().locator('thead th');
+      await expect(heads).toHaveText(['Datum', 'Částka', 'Účel', 'Potvrzení']);
+      expect((await heads.first().boundingBox())!.height).toBeGreaterThan(1);
+
+      const pastTheCard = await card.evaluate((element) => {
+        const edge = element.getBoundingClientRect();
+        return Array.from(element.querySelectorAll('table, th, td'))
+          .filter((cell) => {
+            const box = cell.getBoundingClientRect();
+            return box.left < edge.left - 0.5 || box.right > edge.right + 0.5;
+          })
+          .map((cell) => cell.textContent!.trim());
+      });
+      expect(pastTheCard).toEqual([]);
+      expect(
+        await card
+          .locator('table')
+          .evaluateAll(
+            (tables) => tables.filter((table) => table.scrollWidth > table.clientWidth).length,
+          ),
+      ).toBe(0);
+
+      await expect(card.locator('td.date .verification-tag')).toHaveText([
+        'Ověření účtu',
+        'Vráceno',
+      ]);
+      await expect(card.getByText('Přijato')).toHaveCount(0);
+      const refunded = card.locator('tbody tr', { hasText: 'Vráceno' });
+      const tagBox = (await refunded.locator('td.date .verification-tag').boundingBox())!;
+      const dateBox = (await refunded.locator('td.date').boundingBox())!;
+      expect(tagBox.x).toBeGreaterThanOrEqual(dateBox.x - 0.5);
+      expect(tagBox.x + tagBox.width).toBeLessThanOrEqual(dateBox.x + dateBox.width + 0.5);
+
+      const read = await refunded.ariaSnapshot();
+      expect(read).toMatch(/- cell "5\.\s1\.\s2026 Stav: Vráceno"/);
+      expect(read.indexOf('Vráceno')).toBeLessThan(read.indexOf('300'));
+    });
+  }
+
   for (const place of [
     {
       name: 'a year on Moje dary',

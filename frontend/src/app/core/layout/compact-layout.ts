@@ -9,9 +9,13 @@ const NO_WIDTH = 1;
 @Injectable({ providedIn: 'root' })
 export class CompactLayout {
   private readonly compact = signal(false);
-  private readonly narrowForText = signal(false);
+  private readonly widthInDefaultText = signal(Number.POSITIVE_INFINITY);
+  private readonly narrowForText = computed(() => this.widthInDefaultText() <= BREAKPOINTS.nav);
   readonly isCompact: Signal<boolean> = this.compact.asReadonly();
   readonly listsAsRows: Signal<boolean> = computed(() => this.compact() || this.narrowForText());
+  readonly narrowTables: Signal<boolean> = computed(
+    () => !this.listsAsRows() && this.widthInDefaultText() <= BREAKPOINTS.laptop,
+  );
 
   constructor() {
     const document = inject(DOCUMENT);
@@ -28,9 +32,7 @@ export class CompactLayout {
         return;
       }
       this.compact.set(query.matches);
-      this.narrowForText.set(
-        view.innerWidth <= (BREAKPOINTS.nav * rootFontPx()) / DEFAULT_ROOT_FONT_PX,
-      );
+      this.widthInDefaultText.set((view.innerWidth * DEFAULT_ROOT_FONT_PX) / rootFontPx());
     };
     follow();
     query.addEventListener('change', follow);
