@@ -212,20 +212,15 @@
                   </p>
                 }
               } @else {
-                <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-                  <p i18n="@@admin.donorDetail.donations.error.text">
-                    Účty, dary a&nbsp;potvrzení se nepodařilo načíst.
-                  </p>
-                  <button
-                    appNeedsConnection
-                    type="button"
-                    class="ui-button ui-button--small"
-                    (click)="loadDonations()"
-                    i18n="@@admin.donorDetail.donations.error.retry"
-                  >
-                    Zkusit znovu
-                  </button>
-                </div>
+                <app-load-failure
+                  class="ui-load-state--inset"
+                  [compact]="true"
+                  [retrying]="donationsRetrying()"
+                  (retry)="retryDonations()"
+                  ><ng-container i18n="@@admin.donorDetail.donations.error.text"
+                    >Účty, dary a&nbsp;potvrzení se nepodařilo načíst.</ng-container
+                  ></app-load-failure
+                >
               }
             }
           }
@@ -241,18 +236,15 @@
               </p>
             }
             @case ('error') {
-              <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-                <p i18n="@@admin.donorDetail.account.error.text">Účet se nepodařilo načíst.</p>
-                <button
-                  appNeedsConnection
-                  type="button"
-                  class="ui-button ui-button--small"
-                  (click)="loadAccount()"
-                  i18n="@@admin.donorDetail.account.error.retry"
-                >
-                  Zkusit znovu
-                </button>
-              </div>
+              <app-load-failure
+                class="ui-load-state--inset"
+                [compact]="true"
+                [retrying]="accountRetrying()"
+                (retry)="retryAccount()"
+                ><ng-container i18n="@@admin.donorDetail.account.error.text"
+                  >Účet se nepodařilo načíst.</ng-container
+                ></app-load-failure
+              >
             }
           }
         }
@@ -275,18 +267,15 @@
             </p>
           }
           @case ('error') {
-            <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-              <p i18n="@@admin.donorDetail.account.error.text">Účet se nepodařilo načíst.</p>
-              <button
-                appNeedsConnection
-                type="button"
-                class="ui-button ui-button--small"
-                (click)="loadAccount()"
-                i18n="@@admin.donorDetail.account.error.retry"
-              >
-                Zkusit znovu
-              </button>
-            </div>
+            <app-load-failure
+              class="ui-load-state--inset"
+              [compact]="true"
+              [retrying]="accountRetrying()"
+              (retry)="retryAccount()"
+              ><ng-container i18n="@@admin.donorDetail.account.error.text"
+                >Účet se nepodařilo načíst.</ng-container
+              ></app-load-failure
+            >
           }
           @case ('ready') {
             @if (account(); as account) {
@@ -588,20 +577,15 @@
                 </p>
               }
             } @else {
-              <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-                <p i18n="@@admin.donorDetail.donations.error.text">
-                  Účty, dary a&nbsp;potvrzení se nepodařilo načíst.
-                </p>
-                <button
-                  appNeedsConnection
-                  type="button"
-                  class="ui-button ui-button--small"
-                  (click)="loadDonations()"
-                  i18n="@@admin.donorDetail.donations.error.retry"
-                >
-                  Zkusit znovu
-                </button>
-              </div>
+              <app-load-failure
+                class="ui-load-state--inset"
+                [compact]="true"
+                [retrying]="donationsRetrying()"
+                (retry)="retryDonations()"
+                ><ng-container i18n="@@admin.donorDetail.donations.error.text"
+                  >Účty, dary a&nbsp;potvrzení se nepodařilo načíst.</ng-container
+                ></app-load-failure
+              >
             }
           }
           @case ('ready') {

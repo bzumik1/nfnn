@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NeedsConnection } from '../../../../../shared/ui/needs-connection/needs-connection';
+import { finalize } from 'rxjs';
+import { LoadFailure } from '../../../../../shared/ui/load-failure/load-failure';
 import { formatBankTime } from '../../../../donations/donation-date';
 import { AdminApi, ReleaseRunResponse } from '../../../admin-api';
 import { LogPageAccess } from '../../log-page-access';
@@ -11,7 +12,7 @@ const RELEASES = 'https://github.com/bzumik1/nfnn/releases/tag/';
 
 @Component({
   selector: 'app-release-history',
-  imports: [NeedsConnection],
+  imports: [LoadFailure],
   templateUrl: './release-history.html',
   styleUrl: './release-history.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,17 +23,30 @@ export class ReleaseHistory {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly entries = signal<readonly ReleaseRunResponse[]>([]);
 
   constructor() {
     this.load();
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.api
       .releaseHistory()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (history) => {
           this.entries.set(history.entries);

@@ -365,7 +365,7 @@ test.describe('Given an administrator whose device keeps the administration copy
     const nav = page.getByRole('navigation', { name: 'Správa' });
     type Shows = (main: ReturnType<Page['locator']>) => Promise<void>;
     const nothingFailed: Shows = (main) =>
-      expect(main.locator('.ui-load-state--error')).toHaveCount(0);
+      expect(main.locator('.ui-load-state--error, app-load-failure')).toHaveCount(0);
     const waits =
       (name: string): Shows =>
       (main) =>

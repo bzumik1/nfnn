@@ -1,6 +1,11 @@
 import { DIAGNOSTICS_URL, LogPageHarness } from '../testing/log-page-harness';
 import { AdminThreadDump } from './admin-thread-dump';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const DUMP = [
   '"main" #1 state=RUNNABLE',
@@ -62,12 +67,21 @@ describe('Given an administrator on the thread dump page', () => {
       .flush(null, { status: 500, statusText: 'Error' });
     await page.settle();
 
-    expect(page.text('[role="alert"]')).toContain('Výpis vláken se nepodařilo načíst.');
-
-    await page.click('Zkusit znovu');
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
+      'Výpis vláken se nepodařilo načíst.',
+    ]);
+    expect(alertsHoldingAButton(page.fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(page.fixture.nativeElement);
+    await page.settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
+      'Výpis vláken se nepodařilo načíst.',
+    ]);
     page.http.expectOne(`${DIAGNOSTICS_URL}/threads`).flush(DUMP);
     await page.settle();
 
     expect(page.has('.dump')).toBe(true);
+    expect(document.activeElement).toBe(page.element('h1'));
   });
 });

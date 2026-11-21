@@ -9,7 +9,6 @@
 table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
 }
 
 .column-date {
@@ -30,6 +29,14 @@ table {
 
 .column-receipt {
   width: var(--donations-column-receipt);
+}
+
+:host-context(.payments-card:has(.amount--long)) .column-amount {
+  width: var(--donations-column-amount-long);
+}
+
+:host-context(.payments-card:has(.receipt-note--long)) .column-receipt {
+  width: var(--donations-column-receipt-note);
 }
 
 thead tr {
@@ -89,6 +96,7 @@ td.receipt {
 td.receipt .receipt-note {
   display: inline-block;
   margin-top: calc(var(--space-3-5) - var(--space-2));
+  white-space: nowrap;
 }
 
 .purpose {
@@ -125,6 +133,11 @@ td.date .verification-tag {
   white-space: nowrap;
   vertical-align: 1px;
   font-variant-numeric: var(--numeric-figures);
+}
+
+.account-ref {
+  display: inline-block;
+  max-inline-size: 100%;
 }
 
 .account-end {
@@ -242,6 +255,7 @@ td .receipt-diagnostics {
 
   td.receipt .receipt-note {
     margin-top: 0;
+    white-space: normal;
   }
 
   td.receipt.is-empty,

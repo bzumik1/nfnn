@@ -153,6 +153,31 @@ describe('Given an administrator on the logs hub', () => {
     expect(page.text('.today .ui-list__row')).toBe('Dnes žádná varování ani chyby');
   });
 
+  it('when today’s warnings and errors fail to load, then only that card offers a retry and it loads them again', async () => {
+    page.http.expectOne(LOGS_URL).flush({ available: true, files: FILES });
+    page.http.expectOne(DIAGNOSTICS_URL).flush(diagnostics({ disks: MOUNTED }));
+    await page.settle();
+    page.http.expectOne(TODAY_SEARCH).flush(null, { status: 500, statusText: 'Error' });
+    await page.settle();
+
+    expect(page.links('.files a')).toHaveLength(4);
+    expect(loadFailureAlerts(page.element('.today'))).toEqual([
+      'Dnešní varování a chyby se nepodařilo načíst.',
+    ]);
+    expect(alertsHoldingAButton(page.element('.today'))).toBe(0);
+    const retry = pressLoadFailureRetry(page.element('.today'));
+    await page.settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(page.element('.today'))).toEqual([
+      'Dnešní varování a chyby se nepodařilo načíst.',
+    ]);
+    await flushToday([]);
+
+    expect(page.text('.today .ui-list__row')).toBe('Dnes žádná varování ani chyby');
+    expect(document.activeElement).toBe(page.element('h1'));
+  });
+
   it('when a folder is not mounted and a level is raised for a while, then the state names the failure and the levels row says so', async () => {
     await load(
       {},

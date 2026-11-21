@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, of, switchMap, tap } from 'rxjs';
+import { finalize, Observable, of, switchMap, tap } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -60,6 +60,7 @@ import { ContentPreview, PreviewContent } from '../content-preview/content-previ
 import { GuardsUnsavedChanges } from '../unsaved-changes/unsaved-changes-guard';
 import { UnsavedChangesDialog } from '../unsaved-changes/unsaved-changes-dialog';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import {
   isChangedMeanwhile,
   savedAtInRefusal,
@@ -125,6 +126,7 @@ const PUBLISH_DATE_MOVED_TEXT = $localize`:@@admin.projectEditor.draft.dateMoved
     ActionBar,
     FocalPointPicker,
     NeedsConnection,
+    LoadFailure,
     DraftOffer,
     SegmentThumb,
   ],
@@ -169,6 +171,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly categoryLabel = projectCategoryLabel;
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly changedMeanwhile = signal<ChangedMeanwhileState | null>(null);
   private refusedDelete = false;
   protected readonly project = signal<AdminProjectResponse | null>(null);
@@ -357,9 +360,16 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
 
   protected load(id: string, loaded?: () => void): void {
     this.state.set('loading');
+    this.fetch(id, loaded);
+  }
+
+  private fetch(id: string, loaded?: () => void): void {
     this.reads
       .project(id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (project) => {
           this.show(project);
@@ -474,7 +484,8 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected retry(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id !== null) {
-      this.load(id);
+      this.retrying.set(true);
+      this.fetch(id);
     }
   }
 

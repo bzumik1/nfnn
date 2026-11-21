@@ -11,18 +11,9 @@
       <p class="ui-load-state" role="status" i18n="@@admin.alerts.loading">Načítáme upozornění…</p>
     }
     @case ('error') {
-      <div class="ui-load-state ui-load-state--error" role="alert">
-        <p>{{ loadError() }}</p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          (click)="load()"
-          i18n="@@admin.alerts.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
+      <app-load-failure [compact]="true" [retrying]="retrying()" (retry)="retry()">{{
+        loadError()
+      }}</app-load-failure>
     }
     @case ('unavailable') {
       <div class="ui-load-state ui-load-state--error" role="alert">

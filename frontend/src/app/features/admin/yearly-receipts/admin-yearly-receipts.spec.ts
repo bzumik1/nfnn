@@ -29,6 +29,11 @@ import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { SCREEN_WAKE_LOCKS, WakeLockSentinelLike } from './screen-wake-lock';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const URL = '/api/admin/donations/receipts/yearly';
 const SIGNATURE_BYTES = new TextEncoder().encode(SYNTHETIC_SIGNATURE_JSON);
@@ -324,8 +329,11 @@ describe('Given an administrator on the bulk receipts page', () => {
       http.expectOne(`${URL}?year=2025`).flush(null, { status: 500, statusText: 'Server Error' });
       fixture.detectChanges();
 
-      expect(alert()).toContain('Dárce za rok se nepodařilo načíst.');
-      button('Zkusit znovu').click();
+      expect(loadFailureAlerts(fixture.nativeElement)).toEqual([
+        'Dárce za rok se nepodařilo načíst.',
+      ]);
+      pressLoadFailureRetry(fixture.nativeElement);
+      fixture.detectChanges();
       http
         .expectOne(`${URL}?year=2025`)
         .flush(yearlyReceiptCandidates({ year: 2025, donors: [candidate(9, 'Nová Ida')] }));
@@ -351,15 +359,27 @@ describe('Given an administrator on the bulk receipts page', () => {
     expect(query('button[type="submit"]')).toBeNull();
   });
 
-  it('when the donors do not load, then an alert offers to try again', () => {
+  it('when the donors do not load, then an alert offers to try again', async () => {
     http.expectOne(URL).flush(null, { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 
-    expect(alert()).toContain('Dárce za rok se nepodařilo načíst.');
-    button('Zkusit znovu').click();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual([
+      'Dárce za rok se nepodařilo načíst.',
+    ]);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual([
+      'Dárce za rok se nepodařilo načíst.',
+    ]);
     http.expectOne(URL).flush(yearlyReceiptCandidates());
     fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
     expect(rows()).toHaveLength(1);
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
   });
 
   it('when the year has no donor with gifts, then nothing can be issued', () => {

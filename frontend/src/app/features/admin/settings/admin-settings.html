@@ -14,18 +14,11 @@
       <p class="ui-load-state" role="status" i18n="@@admin.settings.loading">Načítáme nastavení…</p>
     }
     @case ('error') {
-      <div class="ui-load-state ui-load-state--error" role="alert">
-        <p i18n="@@admin.settings.error.text">Nastavení se nepodařilo načíst.</p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          (click)="load()"
-          i18n="@@admin.settings.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
+      <app-load-failure [compact]="true" [retrying]="retrying()" (retry)="retry()"
+        ><ng-container i18n="@@admin.settings.error.text"
+          >Nastavení se nepodařilo načíst.</ng-container
+        ></app-load-failure
+      >
     }
     @case ('restarting') {
       <p class="ui-load-state" role="status">

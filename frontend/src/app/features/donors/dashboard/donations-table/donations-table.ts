@@ -15,6 +15,7 @@ const STATUS_LABELS: Record<DonationStatus, string> = {
 };
 
 const SENDER_ACCOUNT_DIGITS_SHOWN = 4;
+const CHARACTERS_OF_A_DEFAULT_AMOUNT = 7;
 
 export function donationStatusLabel(status: DonationStatus): string {
   return STATUS_LABELS[status];
@@ -42,6 +43,10 @@ export class DonationsTable {
 
   protected formatDate(isoDate: string): string {
     return formatDonationDate(isoDate);
+  }
+
+  protected longAmount(item: DonationItem): boolean {
+    return this.crowns(item.amountMinor).length > CHARACTERS_OF_A_DEFAULT_AMOUNT;
   }
 
   protected senderAccountEnd(senderAccount: string): string {
