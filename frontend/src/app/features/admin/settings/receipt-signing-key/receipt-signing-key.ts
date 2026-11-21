@@ -13,9 +13,11 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { PasskeyAuthenticator } from '../../../../core/auth/passkey-authenticator';
 import { LiveNotice, Notice } from '../../../../shared/ui/live-notice/live-notice';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { formatBankTime } from '../../../donations/donation-date';
 import {
   AdminApi,
@@ -49,7 +51,7 @@ interface WithdrawalOffer {
 
 @Component({
   selector: 'app-receipt-signing-key',
-  imports: [NeedsConnection, KeyWithdrawalDialog, LiveNotice],
+  imports: [NeedsConnection, KeyWithdrawalDialog, LiveNotice, LoadFailure],
   templateUrl: './receipt-signing-key.html',
   styleUrl: './receipt-signing-key.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -65,6 +67,7 @@ export class ReceiptSigningKey {
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   private readonly refreshMissed = signal(false);
   protected readonly onlineAgain = reloadWhenOnlineAgain(
     () => this.state() === 'offline' || this.refreshMissed(),
@@ -135,13 +138,25 @@ export class ReceiptSigningKey {
     return formatBankTime(instant);
   }
 
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch(false);
+  }
+
   protected load(quietly = false): void {
     if (!quietly) {
       this.state.set('loading');
     }
+    this.fetch(quietly);
+  }
+
+  private fetch(quietly: boolean): void {
     this.changes
       .track(this.api.receiptSigningKeys())
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (keys) => {
           this.refreshMissed.set(false);

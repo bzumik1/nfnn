@@ -12,18 +12,11 @@
       <p class="ui-load-state" role="status" i18n="@@admin.people.loading">Načítáme lidi fondu…</p>
     }
     @case ('error') {
-      <div class="ui-load-state ui-load-state--error" role="alert">
-        <p i18n="@@admin.people.error.text">Lidi fondu se nepodařilo načíst.</p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          (click)="load()"
-          i18n="@@admin.people.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
+      <app-load-failure [compact]="true" [retrying]="retrying()" (retry)="retry()"
+        ><ng-container i18n="@@admin.people.error.text"
+          >Lidi fondu se nepodařilo načíst.</ng-container
+        ></app-load-failure
+      >
     }
     @case ('ready') {
       <section class="ui-card" aria-labelledby="people-list-title">
@@ -452,11 +445,15 @@
                 <app-live-notice class="card-notice" [notice]="signatureNotice()" />
               </div>
 
-              <div class="ui-card__body receipt-part">
+              <div
+                class="ui-card__body receipt-part"
+                role="group"
+                tabindex="-1"
+                aria-labelledby="person-receipt-title"
+              >
                 <h3
-                  #receiptTitle
+                  id="person-receipt-title"
                   class="part-title"
-                  tabindex="-1"
                   i18n="@@admin.people.receipt.title"
                 >
                   Na potvrzení o&nbsp;daru
@@ -468,20 +465,14 @@
                     </p>
                   }
                   @case ('error') {
-                    <div class="receipt-error" role="alert">
-                      <p i18n="@@admin.people.receipt.loadFailed">
-                        Nepodařilo se zjistit, kdo podepisuje potvrzení.
-                      </p>
-                      <button
-                        appNeedsConnection
-                        type="button"
-                        class="ui-button ui-button--small"
-                        (click)="retrySignatory()"
-                        i18n="@@admin.people.receipt.retry"
-                      >
-                        Zjistit znovu
-                      </button>
-                    </div>
+                    <app-load-failure
+                      [compact]="true"
+                      [retrying]="signatoryRetrying()"
+                      (retry)="retrySignatory()"
+                      ><ng-container i18n="@@admin.people.receipt.loadFailed"
+                        >Nepodařilo se zjistit, kdo podepisuje potvrzení.</ng-container
+                      ></app-load-failure
+                    >
                   }
                   @case ('ready') {
                     <form

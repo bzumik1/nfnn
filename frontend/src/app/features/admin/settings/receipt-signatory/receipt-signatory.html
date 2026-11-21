@@ -1,6 +1,5 @@
-<section class="ui-card" aria-labelledby="receipt-signatory-title">
+<section class="ui-card" tabindex="-1" aria-labelledby="receipt-signatory-title">
   <h2
-    #heading
     id="receipt-signatory-title"
     class="ui-card__title"
     tabindex="-1"
@@ -16,18 +15,11 @@
         </p>
       }
       @case ('error') {
-        <div class="signatory-error" role="alert">
-          <p i18n="@@admin.signatory.loadFailed">Nepodařilo se načíst, kdo potvrzení podepisuje.</p>
-          <button
-            appNeedsConnection
-            type="button"
-            class="ui-button"
-            (click)="retry()"
-            i18n="@@admin.signatory.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
+        <app-load-failure [compact]="true" [retrying]="retrying()" (retry)="retry()"
+          ><ng-container i18n="@@admin.signatory.loadFailed"
+            >Nepodařilo se načíst, kdo potvrzení podepisuje.</ng-container
+          ></app-load-failure
+        >
       }
       @case ('ready') {
         @if (block(); as block) {

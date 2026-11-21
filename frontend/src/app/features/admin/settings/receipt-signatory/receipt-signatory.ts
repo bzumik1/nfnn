@@ -1,21 +1,13 @@
 /// <reference types="@angular/localize" />
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DestroyRef,
-  ElementRef,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { map, Observable, of } from 'rxjs';
+import { finalize, map, Observable, of, switchMap } from 'rxjs';
 import { mediaUrl } from '../../../content/news-api';
 import { PeopleApi } from '../../../content/people-api';
 import { AdminApi, ChosenReceiptSignatoryResponse } from '../../admin-api';
-import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { reloadWhenOnlineAgain } from '../../device-copy/online-again';
 import { KeptAdministrationAnswers } from '../../kept-administration-answers';
 
@@ -32,7 +24,7 @@ const SIGNATURE_WIDTH = 480;
 
 @Component({
   selector: 'app-receipt-signatory',
-  imports: [NeedsConnection, RouterLink],
+  imports: [LoadFailure, RouterLink],
   templateUrl: './receipt-signatory.html',
   styleUrl: './receipt-signatory.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,9 +34,9 @@ export class ReceiptSignatory {
   private readonly people = inject(PeopleApi);
   private readonly kept = inject(KeptAdministrationAnswers);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly heading = viewChild.required<ElementRef<HTMLHeadingElement>>('heading');
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   private readonly refreshMissed = signal(false);
   protected readonly onlineAgain = reloadWhenOnlineAgain(
     () => this.state() === 'offline' || this.refreshMissed(),
@@ -65,31 +57,29 @@ export class ReceiptSignatory {
   }
 
   protected retry(): void {
-    this.heading().nativeElement.focus();
-    this.load();
+    this.retrying.set(true);
+    this.fetch(false);
   }
 
   protected load(quietly = false): void {
     if (!quietly) {
       this.state.set('loading');
     }
+    this.fetch(quietly);
+  }
+
+  private fetch(quietly: boolean): void {
     this.api
       .receiptSignatory()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        switchMap((view) =>
+          view.signatory === null ? of<SignatureBlock | null>(null) : this.blockOf(view.signatory),
+        ),
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
-        next: (view) => {
-          const signatory = view.signatory;
-          if (signatory === null) {
-            this.show(null);
-            return;
-          }
-          this.blockOf(signatory)
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-              next: (block) => this.show(block),
-              error: () => this.failed(quietly),
-            });
-        },
+        next: (block) => this.show(block),
         error: () => this.failed(quietly),
       });
   }

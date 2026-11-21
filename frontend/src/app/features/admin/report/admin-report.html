@@ -14,18 +14,11 @@
       </p>
     }
     @case ('error') {
-      <div class="ui-load-state ui-load-state--error" role="alert">
-        <p i18n="@@admin.report.error.text">Nastavení přehledu se nepodařilo načíst.</p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          (click)="load()"
-          i18n="@@admin.report.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
+      <app-load-failure [compact]="true" [retrying]="retrying()" (retry)="retry()"
+        ><ng-container i18n="@@admin.report.error.text"
+          >Nastavení přehledu se nepodařilo načíst.</ng-container
+        ></app-load-failure
+      >
     }
     @case ('ready') {
       <section class="ui-card" aria-labelledby="report-settings-title">

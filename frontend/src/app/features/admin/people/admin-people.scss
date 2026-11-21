@@ -180,12 +180,3 @@
     margin-top: var(--space-3);
   }
 }
-
-.receipt-error {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-4);
-  font-size: var(--text-sm);
-  color: var(--color-danger);
-}

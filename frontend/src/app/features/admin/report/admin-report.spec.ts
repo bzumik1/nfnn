@@ -24,6 +24,11 @@ import {
 } from '../device-copy/testing/opened-copy';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const REPORT_URL = '/api/admin/donations/report';
 const SETTINGS_URL = '/api/admin/donations/report/settings';
@@ -574,15 +579,36 @@ describe('Given an administrator on the monthly report page', () => {
   it('when the report cannot be loaded, then an alert offers a retry that asks again', async () => {
     await respond({ title: 'Server error' }, 500);
 
-    expect(text('[role="alert"]:not(:empty)')).toContain(
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual([
       'Nastavení přehledu se nepodařilo načíst.',
-    );
-
-    element<HTMLButtonElement>('.ui-load-state--error button').click();
+    ]);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual([
+      'Nastavení přehledu se nepodařilo načíst.',
+    ]);
     await respond(reportView());
 
     expect(fixture.nativeElement.querySelector('[role="alert"]:not(:empty)')).toBeNull();
     expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('info@nfnn.cz');
+    expect(document.activeElement).toBe(element('h1'));
+  });
+
+  it('when the retry of the report fails again, then a new alert says so', async () => {
+    await respond({ title: 'Server error' }, 500);
+    const first = element('app-load-failure [role="alert"]');
+
+    pressLoadFailureRetry(fixture.nativeElement);
+    await settle();
+    await respond({ title: 'Server error' }, 500);
+
+    expect(element('app-load-failure [role="alert"]')).not.toBe(first);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual([
+      'Nastavení přehledu se nepodařilo načíst.',
+    ]);
   });
 
   it('when the role was taken away meanwhile, then the administrator is sent to their own overview', async () => {
@@ -808,7 +834,7 @@ describe('Given an administrator offline whose device keeps the administration c
     expect(textOf(page.querySelector('.next-report'))).toBe(
       'Příští přehled za září 2026 odejde 1. 10. 2026 v 7:00.',
     );
-    expect(page.querySelector('.ui-load-state--error')).toBeNull();
+    expect(page.querySelector('app-load-failure')).toBeNull();
     waitsForConnection(page, 'Uložit nastavení');
     http.verify();
   });

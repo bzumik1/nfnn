@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -51,6 +52,7 @@ import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { BusyButton } from '../../../shared/ui/busy-button/busy-button';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import {
   isChangedMeanwhile,
   savedAtInRefusal,
@@ -93,6 +95,7 @@ const SEND_HOURS = Array.from({ length: 24 }, (_, index) => index);
     BusyButton,
     BusyLabel,
     LiveNotice,
+    LoadFailure,
     RouterLink,
     FormsModule,
     FormField,
@@ -122,6 +125,7 @@ export class AdminReport {
   private readonly announcer = inject(DialogAnnouncer);
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly report = signal<AdminReportResponse | null>(null);
   private readonly heldAt = signal<string | null>(null);
   private readonly connectivity = inject(Connectivity);
@@ -238,10 +242,18 @@ export class AdminReport {
     this.fetch();
   }
 
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
   private fetch(loaded?: () => void, keepsEdits = false): void {
     this.reads
       .report()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: ({ heldAt, ...report }) => {
           this.heldAt.set(heldAt);

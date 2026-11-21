@@ -13,7 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { finalize, Observable } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -25,6 +25,7 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { BankMark } from '../../donations/bank-logo/bank-mark';
 import { BankNames } from '../../donations/bank-names';
 import { bankLogoImageUrl } from '../../donations/bank-logos-api';
@@ -86,6 +87,7 @@ const FAILURE_WORDS: Readonly<Record<BankLogoFailure, string>> = {
     FormControlDirective,
     FocusFirstInvalid,
     LiveNotice,
+    LoadFailure,
     NeedsConnection,
     BankLogoRemoveDialog,
     ChangedMeanwhileDialog,
@@ -112,6 +114,7 @@ export class AdminBankLogos {
   private readonly forms = new Map<string, NgForm>();
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   private refreshMissed = false;
   private readonly onlineAgain = reloadWhenOnlineAgain(
     () => this.refreshMissed,
@@ -158,9 +161,21 @@ export class AdminBankLogos {
     if (this.state() !== 'ready') {
       this.state.set('loading');
     }
+    this.fetch(onLoaded, quietly);
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(onLoaded?: () => void, quietly = false): void {
     this.changes
       .track(this.api.bankLogos())
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (list) => {
           this.refreshMissed = false;
