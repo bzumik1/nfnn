@@ -127,14 +127,13 @@ test.describe('Given a donor on a computer whose portal data fail to load', () =
   test('when they press „Zkusit znovu“, then the failure stays with the focus on its busy button until the overview shows, and the focus then moves to the page heading', async ({
     page,
   }) => {
-    let failing = true;
+    let retried = false;
     let answer: () => void = () => undefined;
     const answered = new Promise<void>((resolve) => (answer = resolve));
     await page.route(
       (url) => url.pathname === '/api/donations/me/summary',
       async (route) => {
-        if (failing) {
-          failing = false;
+        if (!retried) {
           await route.fulfill(SERVER_ERROR);
           return;
         }
@@ -144,7 +143,9 @@ test.describe('Given a donor on a computer whose portal data fail to load', () =
     );
     await page.goto('/darce/prehled');
     const retry = page.getByRole('button', { name: 'Zkusit znovu' });
+    await expect(retry).toBeVisible();
 
+    retried = true;
     await retry.click();
 
     await expect(page.locator('.dashboard-error button')).toBeFocused();
@@ -251,14 +252,13 @@ test.describe('Given an administrator on a computer whose pages load slowly', ()
       };
       requestAnimationFrame(watch);
     });
-    let calls = 0;
+    let retried = false;
     let answer: () => void = () => undefined;
     const answered = new Promise<void>((resolve) => (answer = resolve));
     await page.route(
       (url) => url.pathname === BACKUPS,
       async (route) => {
-        calls++;
-        if (calls === 1) {
+        if (!retried) {
           await new Promise((wait) => setTimeout(wait, 450));
           await route.fulfill(SERVER_ERROR);
           return;
@@ -284,6 +284,7 @@ test.describe('Given an administrator on a computer whose pages load slowly', ()
     expect(seen.appears).toBe(true);
 
     const retry = page.getByRole('button', { name: 'Zkusit znovu' });
+    retried = true;
     await retry.click();
     await expect(page.locator('app-load-failure button')).toBeFocused();
     answer();
