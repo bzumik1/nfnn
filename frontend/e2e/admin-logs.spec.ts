@@ -2,6 +2,7 @@ import { expect, test } from './fixtures';
 import {
   DIAGNOSTICS,
   LOGGERS,
+  LOGS,
   logsApi,
   RELEASE_HISTORY,
   rememberedAdministrator,
@@ -438,6 +439,42 @@ test.describe('Given an administrator reading backend.log on a phone', () => {
       }
     });
   }
+
+  test('when they read an entry whose class name has a part longer than the column with the largest text, then the name breaks inside that part and never runs past its row', async ({
+    page,
+  }) => {
+    const longName = 'AuthorizationServerConfigurationRegistration';
+    await page.route(
+      (url) => url.pathname === `${LOGS}/backend.log`,
+      (route) =>
+        route.fulfill({
+          json: {
+            name: 'backend.log',
+            sizeBytes: 200,
+            from: 0,
+            to: 200,
+            hasOlder: false,
+            hasNewer: false,
+            text: `2026-10-23T10:00:00.000+02:00  INFO 1 --- [nova-nadeje] [main] c.n.a.d.a.${longName}    : started\n`,
+          },
+        }),
+    );
+    await page.goto('/sprava/logy/soubor?nazev=backend.log');
+    await page.addStyleTag({ content: 'html { font-size: 53px }' });
+    const entry = page.getByRole('main').locator('.entry').first();
+    await expect(entry.locator('.entry-title')).toHaveText(longName);
+
+    const placed = await entry.evaluate((element) => {
+      const title = element.querySelector('.entry-title') as HTMLElement;
+      return {
+        clipped: title.scrollWidth > title.clientWidth + 1,
+        titleRight: title.getBoundingClientRect().right,
+        rowRight: element.getBoundingClientRect().right,
+      };
+    });
+    expect(placed.clipped).toBe(false);
+    expect(placed.titleRight).toBeLessThanOrEqual(placed.rowRight + 1);
+  });
 });
 
 test.describe('Given an administrator on the server state on a phone', () => {
