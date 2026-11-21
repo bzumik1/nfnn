@@ -18,6 +18,7 @@ import jsQR from 'jsqr';
 
 const QUIET_ZONE = 4;
 const PIXELS_PER_MODULE = 4;
+const LARGEST_SYSTEM_TEXT_PX = 53;
 const DARK_SQUARE = /M(\d+) (\d+)h1v1h-1z/g;
 
 async function plainQrText(qr: Locator): Promise<string | undefined> {
@@ -219,7 +220,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
     const qr = page.getByRole('img', { name: 'QR kód s nastavením pro ověřovací aplikaci' });
     await expect(qr).toBeVisible();
     await expect.poll(() => plainQrText(qr)).toBe(secondFactorEnrolment.otpauthUri);
-    await expect(page.locator('.account-secret-spoken')).toHaveText(
+    await expect(page.locator('.account-secret-value')).toHaveText(
       'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
     );
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
@@ -327,7 +328,7 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
       page,
     }) => {
       await showKey(page, width);
-      const key = page.locator('.account-secret-value [aria-hidden="true"]');
+      const key = page.locator('.account-secret-value');
       await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       await page.evaluate(() => document.fonts.ready);
 
@@ -353,22 +354,43 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
         JSON.stringify(groupsPerLine),
       ).toEqual([]);
     });
-
-    test(`when the key shows in a ${width} px window, then its spoken copy covers the visible key, so touching any of its lines finds the whole key`, async ({
-      page,
-    }) => {
-      await showKey(page, width);
-      const spoken = page.locator('.account-secret-spoken');
-      await expect(spoken).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
-      await page.evaluate(() => document.fonts.ready);
-
-      const spokenBox = (await spoken.boundingBox())!;
-      const valueBox = (await page.locator('.account-secret-value').boundingBox())!;
-
-      expect(Math.abs(spokenBox.x - valueBox.x)).toBeLessThanOrEqual(1);
-      expect(Math.abs(spokenBox.y - valueBox.y)).toBeLessThanOrEqual(1);
-      expect(Math.abs(spokenBox.width - valueBox.width)).toBeLessThanOrEqual(1);
-      expect(Math.abs(spokenBox.height - valueBox.height)).toBeLessThanOrEqual(1);
-    });
   }
+
+  test('when the key shows in a 375 px window with the largest system text, then no part of it reaches past its card', async ({
+    page,
+  }) => {
+    await page.addInitScript((px) => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent = `html { font-size: ${px}px; }`;
+        document.head.append(style);
+      });
+    }, LARGEST_SYSTEM_TEXT_PX);
+    await showKey(page, 375);
+    const key = page.locator('.account-secret-value');
+    await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
+    await page.evaluate(() => document.fonts.ready);
+
+    const outside = await key.evaluate((value) => {
+      const card = value.closest('.ui-card')!.getBoundingClientRect();
+      const reaching: string[] = [];
+      const walker = document.createTreeWalker(value, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent ?? '';
+        for (let index = 0; index < text.length; index++) {
+          const range = document.createRange();
+          range.setStart(node, index);
+          range.setEnd(node, index + 1);
+          for (const rect of Array.from(range.getClientRects())) {
+            if (rect.left < card.left - 0.5 || rect.right > card.right + 0.5) {
+              reaching.push(text[index]);
+            }
+          }
+        }
+      }
+      return reaching;
+    });
+
+    expect(outside).toEqual([]);
+  });
 });

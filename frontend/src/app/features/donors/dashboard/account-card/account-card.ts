@@ -134,7 +134,6 @@ export class AccountCard {
     const secret = this.enrolment()?.secret ?? '';
     return secret.match(new RegExp(`.{1,${SECRET_GROUP}}`, 'g')) ?? [];
   });
-  protected readonly groupedSecret = computed(() => this.secretGroups().join(' '));
   protected readonly secretHalves = computed(() => {
     const groups = this.secretGroups();
     const middle = Math.ceil(groups.length / 2);

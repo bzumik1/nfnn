@@ -342,7 +342,7 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(qr.getAttribute('aria-label')).toBe('QR kód s nastavením pro ověřovací aplikaci');
       expect(qr.querySelector('.qr-plain')).not.toBeNull();
       expect(qr.querySelector('.qr-star')).toBeNull();
-      expect(withOrdinarySpaces(card.element('.account-secret-spoken').textContent)).toBe(
+      expect(withOrdinarySpaces(card.element('.account-secret-value').textContent)).toBe(
         'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
       );
       expect(withOrdinarySpaces(card.element('app-copy-button button').textContent)).toContain(
@@ -388,7 +388,7 @@ describe('Given the sign-in and security card of the details page', () => {
       });
     }
 
-    it('and confirms the password, then assistive technology reads the whole key as one text and not its two halves', async () => {
+    it('and confirms the password, then the key is one text with ordinary spaces that assistive technology reads whole and nothing in it is hidden', async () => {
       await card.fillIn('#account-second-factor-password', 'correct horse battery');
 
       await card.submit();
@@ -396,19 +396,10 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.settle();
 
       const value = card.element('.account-secret-value');
-      expect(withOrdinarySpaces(accessibleText(value))).toBe(
-        'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
-      );
-      expect(
-        withOrdinarySpaces(
-          value.querySelector(':scope > .account-secret-spoken')?.textContent ?? '',
-        ),
-      ).toBe('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
-      const halves = Array.from(value.querySelectorAll('.account-secret-half'));
-      expect(halves).toHaveLength(2);
-      for (const half of halves) {
-        expect(half.closest('[aria-hidden="true"]')).not.toBeNull();
-      }
+      expect(accessibleText(value)).toBe('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
+      expect(value.textContent).toBe('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
+      expect(value.closest('[aria-hidden]')).toBeNull();
+      expect(value.querySelectorAll('[aria-hidden]')).toHaveLength(0);
     });
 
     it("and confirms the password, then the QR code is the browser's own encoding of the otpauth URI", async () => {
@@ -443,7 +434,7 @@ describe('Given the sign-in and security card of the details page', () => {
           withOrdinarySpaces(card.element('.account-enrolment [role="alert"]').textContent),
         ),
       ).toBe('QR kód se nepodařilo vykreslit. Opište prosím klíč níže do ověřovací aplikace.');
-      expect(withOrdinarySpaces(card.element('.account-secret-spoken').textContent)).toBe(
+      expect(withOrdinarySpaces(card.element('.account-secret-value').textContent)).toBe(
         'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
       );
       expect(card.element('#account-second-factor-code')).not.toBeNull();
