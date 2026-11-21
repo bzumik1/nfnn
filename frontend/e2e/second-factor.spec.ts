@@ -219,7 +219,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
     const qr = page.getByRole('img', { name: 'QR kód s nastavením pro ověřovací aplikaci' });
     await expect(qr).toBeVisible();
     await expect.poll(() => plainQrText(qr)).toBe(secondFactorEnrolment.otpauthUri);
-    await expect(page.locator('.account-secret-value')).toHaveText(
+    await expect(page.locator('.account-secret-value .visually-hidden')).toHaveText(
       'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
     );
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
@@ -323,7 +323,7 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
       await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
       await page.getByLabel('Současné heslo').fill('correct horse battery');
       await page.getByRole('button', { name: 'Pokračovat' }).click();
-      const key = page.locator('.account-secret-value');
+      const key = page.locator('.account-secret-value [aria-hidden="true"]');
       await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       await page.evaluate(() => document.fonts.ready);
 
