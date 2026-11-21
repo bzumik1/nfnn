@@ -39,9 +39,26 @@ const PROSE: readonly Prose[] = [
   },
 ];
 
+async function servePeopleOfTheFoundation(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/admin/content/people',
+    (route) =>
+      route.fulfill({
+        json: {
+          members: [],
+          note: null,
+          footnote: null,
+          noteVersion: '6a0c1e3f9b2d4875',
+          footnoteVersion: '1f8e2d7c4b6a9035',
+        },
+      }),
+  );
+}
+
 async function openUnlocked(page: Page, path: string): Promise<void> {
   await mockDonorApi(page, donorWithDonations);
   await mockAdministration(page);
+  await servePeopleOfTheFoundation(page);
   await serveEmptyAdministrationCopy(page);
   await rememberedSession(page);
   const copied = whenAdministrationCopied(page);
