@@ -69,6 +69,7 @@ const PAYMENT_DETAILS_URL_MATCH = (request: { url: string }): boolean =>
 
 describe('Given a signed-in donor in the donor area', () => {
   const compact = signal(false);
+  const narrowTables = signal(false);
   let harness: RouterTestingHarness;
   let http: HttpTestingController;
   let store: AuthStore;
@@ -81,6 +82,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
   beforeEach(async () => {
     compact.set(false);
+    narrowTables.set(false);
     receiptEnvironment = new FakeReceiptPdfEnvironment();
     receiptEnvironment.autoDraw = true;
     localStorage.clear();
@@ -109,7 +111,11 @@ describe('Given a signed-in donor in the donor area', () => {
         { provide: RECEIPT_PDF_ENVIRONMENT, useValue: receiptEnvironment },
         {
           provide: CompactLayout,
-          useValue: { isCompact: compact.asReadonly(), listsAsRows: compact.asReadonly() },
+          useValue: {
+            isCompact: compact.asReadonly(),
+            listsAsRows: compact.asReadonly(),
+            narrowTables: narrowTables.asReadonly(),
+          },
         },
         provideRouter([
           { path: 'darce', children: donorsRoutes },
@@ -1598,6 +1604,68 @@ describe('Given a signed-in donor in the donor area', () => {
         ['5. 11. 2025', '250 Kč', 'Obecný příspěvek', 'Přijato'],
         ['20. 8. 2025', '2 000 Kč', 'Obecný příspěvek', 'Vráceno'],
       ]);
+    });
+
+    describe('when the window is between the nav and laptop breakpoints, so the table is narrow', () => {
+      beforeEach(() => narrowTables.set(true));
+
+      it('then the table has no Stav column and every cell reads under its own header', async () => {
+        await open('/darce/dary');
+        await respond(twoYearSummary(), twoYearDonations());
+
+        const headers = [...root().querySelectorAll(`${yearSection(2025)} th`)].map((header) =>
+          normalized(header.textContent ?? ''),
+        );
+        expect(headers).toEqual(['Datum', 'Částka', 'Účel', 'Potvrzení']);
+        expect(
+          root().querySelectorAll('.payments-card td.status, .payments-card col.column-status'),
+        ).toHaveLength(0);
+        expect(
+          [...root().querySelectorAll(`${yearSection(2025)} tbody tr`)].map(
+            (row) => row.querySelectorAll('td').length,
+          ),
+        ).toEqual([4, 4]);
+      });
+
+      it('then the date of a refunded gift holds its state as a tag named Stav for a screen reader, and an ordinary gift says nothing under its date', async () => {
+        await open('/darce/dary');
+        await respond(twoYearSummary(), twoYearDonations());
+
+        const dates = [...root().querySelectorAll<HTMLElement>('.payments-card td.date')].map(
+          (cell) => normalized(withOrdinarySpaces(cell.textContent) ?? ''),
+        );
+        expect(dates).toEqual([
+          '15. 3. 2026',
+          '10. 1. 2026',
+          '5. 11. 2025',
+          '20. 8. 2025 Stav: Vráceno',
+        ]);
+        const tag = element(`${yearSection(2025)} tbody tr:nth-child(2) td.date .verification-tag`);
+        expect(normalized(tag?.textContent ?? '')).toBe('Vráceno');
+        expect(text(`${yearSection(2025)} tbody tr:nth-child(2) td.date .visually-hidden`)).toBe(
+          'Stav:',
+        );
+        expect(root().querySelector('.payments-card')?.textContent).not.toContain('Přijato');
+      });
+
+      it('then the date of an account verification holds Ověření účtu as its state, read after the date and before the amount', async () => {
+        const list = twoYearDonations();
+        list.items = [accountVerificationItem({ receivedAt: '2026-03-20' }), ...list.items];
+        await open('/darce/dary');
+        await respond(twoYearSummary(), list);
+
+        const first = element(`${yearSection(2026)} tbody tr:nth-child(1)`)!;
+        expect(
+          [...first.querySelectorAll('td')].map((cell) =>
+            normalized(withOrdinarySpaces(cell.textContent) ?? ''),
+          ),
+        ).toEqual([
+          '20. 3. 2026 Stav: Ověření účtu',
+          '1 Kč',
+          '',
+          'Započítá se do ročního potvrzení',
+        ]);
+      });
     });
 
     it('then the dot between the count and the sum of a year is bound to the count, so a wrapped line never starts with it', async () => {

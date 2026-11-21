@@ -122,6 +122,27 @@ td.date .verification-tag {
   margin-top: var(--space-1-5);
 }
 
+td.date .date-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1-5);
+
+  .verification-tag {
+    margin-top: 0;
+  }
+}
+
+:host(.donations-table--narrow) {
+  .column-receipt {
+    width: var(--donations-column-receipt);
+  }
+
+  td.receipt .receipt-note {
+    white-space: normal;
+  }
+}
+
 .pairing-tag {
   display: inline-block;
   padding: var(--space-0-5) var(--space-2);
@@ -271,7 +292,9 @@ td .receipt-diagnostics {
 }
 
 @include bp.container-down(donations-table, ledger) {
-  @include table-as-cards;
+  :host(:not(.donations-table--narrow)) {
+    @include table-as-cards;
+  }
 }
 
 @include bp.up(nav) {
