@@ -32,6 +32,30 @@ class Page {
   readonly view = loadingView(this.state, (state) => state === 'loading');
 }
 
+@Component({
+  template: `
+    @switch (view.state()) {
+      @case ('loading') {
+        @if (view.skeleton()) {
+          <div class="skeleton"></div>
+        }
+      }
+      @case ('error') {
+        <p class="failure" [class.appears]="view.appears()">Nepovedlo se.</p>
+      }
+    }
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class PageShowingFailureAtOnce {
+  readonly state = signal<PageState>('loading');
+  readonly view = loadingView(
+    this.state,
+    (state) => state === 'loading',
+    (state) => state === 'error',
+  );
+}
+
 describe('Given a page that loads its data behind a skeleton', () => {
   let fixture: ComponentFixture<Page>;
   const offline = signal(false);
@@ -244,5 +268,44 @@ describe('Given a page that loads its data behind a skeleton', () => {
 
     expect(element('.loading')).not.toBeNull();
     expect(element('.skeleton')).toBeNull();
+  });
+});
+
+describe('Given a page whose failure shows at once, behind a skeleton', () => {
+  let fixture: ComponentFixture<PageShowingFailureAtOnce>;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: Connectivity, useValue: { offline: signal(false) } },
+        {
+          provide: LOADING_TIMINGS,
+          useValue: () => ({ delayMs: 300, minimumMs: 400, appearMs: 300 }),
+        },
+      ],
+    });
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  const element = (selector: string) =>
+    (fixture.nativeElement as HTMLElement).querySelector(selector);
+
+  it('when the failure follows a shown skeleton, then it replaces the skeleton at once without the minimum and without appearing', async () => {
+    fixture = TestBed.createComponent(PageShowingFailureAtOnce);
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(300);
+    fixture.detectChanges();
+    expect(element('.skeleton')).not.toBeNull();
+
+    fixture.componentInstance.state.set('error');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+
+    expect(element('.skeleton')).toBeNull();
+    expect(element('.failure')?.classList).not.toContain('appears');
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

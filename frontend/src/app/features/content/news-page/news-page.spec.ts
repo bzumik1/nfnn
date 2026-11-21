@@ -753,9 +753,7 @@ describe('Given a visitor opening Aktuality', () => {
       http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
       await wait(0);
 
-      expect(text(root, '[role="alert"] .ui-notice__text')).toBe(
-        'Aktuality se nepodařilo načíst. Zkuste to znovu.',
-      );
+      expect(text(root, '[role="alert"] .ui-notice__text')).toBe('Aktuality se nepodařilo načíst.');
       await wait(1000);
       expect(root.querySelector('.list-state-loading')).toBeNull();
     });
@@ -783,9 +781,7 @@ describe('Given a visitor opening Aktuality', () => {
     await settle(fixture);
 
     const alert = root.querySelector('.news-notice.ui-notice--alert[role="alert"]') as HTMLElement;
-    expect(text(alert, '.ui-notice__text')).toBe(
-      'Aktuality se nepodařilo načíst. Zkuste to znovu.',
-    );
+    expect(text(alert, '.ui-notice__text')).toBe('Aktuality se nepodařilo načíst.');
     const retry = alert.querySelector('button.retry') as HTMLButtonElement;
     expect(text(alert, 'button')).toBe('Zkusit znovu');
     retry.focus();

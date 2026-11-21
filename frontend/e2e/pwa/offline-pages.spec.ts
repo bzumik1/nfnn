@@ -150,9 +150,7 @@ test.describe('Given a visitor who opened every public page once with a connecti
 
       await page.goto('/projekty/jiny-pribeh');
 
-      await expect(page.getByText('Příběh se nepodařilo načíst. Zkuste to znovu.')).toBeVisible(
-        SHOWN_WITHIN,
-      );
+      await expect(page.getByText('Příběh se nepodařilo načíst.')).toBeVisible(SHOWN_WITHIN);
       await expect(page.getByRole('button', { name: 'Zkusit znovu' })).toBeVisible();
       await nothingLoadsForever(page);
     });

@@ -3,6 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 import {
   article,
   donorWithDonations,
+  mockAdministration,
   mockPublicContent,
   rememberedSession,
 } from './baseline/screen-mocks';
@@ -33,6 +34,63 @@ interface LoadingSeen {
 
 const SERVER_ERROR = problem(500, 'server-error', 'Chyba serveru', 'Zkuste to prosím znovu.');
 const BACKUPS = '/api/admin/operations/backups';
+const PAYMENTS = '/api/admin/donations/payments';
+const LARGEST_SYSTEM_TEXT_PX = 53;
+const TRANSPARENT = 'rgba(0, 0, 0, 0)';
+const COMPUTER_ONLY =
+  'the computer layout runs in the chromium project; the iphone project runs the phone journey of the article in this file';
+const PHONE_WIDTH_IN_CHROMIUM =
+  'the largest text at phone width is measured in the chromium project; the iphone project runs the phone journey of the article in this file';
+
+interface BlockEdge {
+  readonly style: string;
+  readonly width: number;
+  readonly edge: string;
+  readonly ground: string;
+}
+
+async function blockEdge(alert: Locator): Promise<BlockEdge> {
+  return alert.evaluate((element, transparent) => {
+    const block = element.closest('.ui-notice--action') ?? element;
+    let ground = getComputedStyle(document.documentElement).backgroundColor;
+    for (let at = block.parentElement; at !== null; at = at.parentElement) {
+      const fill = getComputedStyle(at).backgroundColor;
+      if (fill !== transparent) {
+        ground = fill;
+        break;
+      }
+    }
+    const style = getComputedStyle(block);
+    return {
+      style: style.borderTopStyle,
+      width: Number.parseFloat(style.borderTopWidth),
+      edge: style.borderTopColor,
+      ground,
+    };
+  }, TRANSPARENT);
+}
+
+async function rememberAlert(alert: Locator): Promise<void> {
+  await alert.evaluate((element) => {
+    (window as unknown as { rememberedAlert: Element }).rememberedAlert = element;
+  });
+}
+
+async function isRememberedAlert(alert: Locator): Promise<boolean> {
+  return alert.evaluate(
+    (element) => element === (window as unknown as { rememberedAlert: Element }).rememberedAlert,
+  );
+}
+
+async function showLargestSystemText(page: Page): Promise<void> {
+  await page.addInitScript((px) => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = `html { font-size: ${px}px; }`;
+      document.head.append(style);
+    });
+  }, LARGEST_SYSTEM_TEXT_PX);
+}
 
 interface FailureBlock {
   readonly textInset: number;
@@ -84,6 +142,8 @@ function failure(page: Page, text: string): Locator {
 }
 
 test.describe('Given a donor on a computer whose portal data fail to load', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', COMPUTER_ONLY);
+
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await mockDonorApi(page, donorWithDonations);
@@ -160,13 +220,70 @@ test.describe('Given a donor on a computer whose portal data fail to load', () =
 
     await expect(page.locator('.dashboard-error button')).toBeFocused();
     await expect(page.locator('.dashboard-error button')).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.locator('.dashboard-error button')).toHaveAttribute('aria-busy', 'true');
+    await expect(page.locator('.dashboard-error [role="status"]')).toHaveText('Načítáme…');
     answer();
     await expect(failure(page, 'Přehled darů se nepodařilo načíst.')).toHaveCount(0);
     await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeFocused();
   });
+
+  test('when „Zkusit znovu“ fails once more, then a new alert says what failed and the same button keeps the focus', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/summary',
+      (route) => route.fulfill(SERVER_ERROR),
+    );
+    await page.goto('/darce/prehled');
+    const alert = failure(page, 'Přehled darů se nepodařilo načíst.');
+    await expect(alert).toBeVisible();
+    await rememberAlert(alert);
+    const retry = page.locator('.dashboard-error button');
+
+    await retry.click();
+    await expect(retry).toHaveAttribute('aria-busy', 'true');
+
+    await expect(retry).not.toHaveAttribute('aria-busy', 'true');
+    await expect(alert).toBeVisible();
+    expect(await isRememberedAlert(alert)).toBe(false);
+    await expect(retry).toBeFocused();
+  });
+
+  for (const appearance of [
+    { name: 'the dark appearance', media: { colorScheme: 'dark' as const } },
+    { name: 'forced colours', media: { forcedColors: 'active' as const } },
+  ]) {
+    test(`when the overview fails in ${appearance.name}, then the failure block keeps a visible edge against the page`, async ({
+      page,
+    }) => {
+      await page.route(
+        (url) => url.pathname === '/api/donations/me/summary',
+        (route) => route.fulfill(SERVER_ERROR),
+      );
+      await page.goto('/darce/prehled');
+      const alert = failure(page, 'Přehled darů se nepodařilo načíst.');
+      await expect(alert).toBeVisible();
+
+      await page.emulateMedia(appearance.media);
+
+      await expect
+        .poll(async () => {
+          const edge = await blockEdge(alert);
+          return (
+            edge.style === 'solid' &&
+            edge.width >= 1 &&
+            edge.edge !== TRANSPARENT &&
+            edge.edge !== edge.ground
+          );
+        })
+        .toBe(true);
+    });
+  }
 });
 
 test.describe('Given a visitor on a computer whose news fail to load', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', COMPUTER_ONLY);
+
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await mockPublicContent(page);
@@ -199,6 +316,8 @@ test.describe('Given a visitor on a computer whose news fail to load', () => {
 });
 
 test.describe('Given an administrator on a computer whose pages load slowly', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', COMPUTER_ONLY);
+
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await mockDonorApi(page);
@@ -209,7 +328,7 @@ test.describe('Given an administrator on a computer whose pages load slowly', ()
     page,
   }) => {
     const never = new Promise<void>(() => undefined);
-    for (const path of [BACKUPS, '/api/admin/content/news', '/api/admin/donations/payments']) {
+    for (const path of [BACKUPS, '/api/admin/content/news', PAYMENTS]) {
       await page.route(
         (url) => url.pathname === path,
         async () => {
@@ -313,9 +432,132 @@ test.describe('Given an administrator on a computer whose pages load slowly', ()
     await expect(page.getByText('Zálohování je v pořádku.')).toBeVisible();
     await expect(page.getByRole('heading', { level: 1, name: 'Zálohy' })).toBeFocused();
   });
+
+  test('when Aktuality arrive after their skeleton showed, then the card title stays still and only what is under it fades in', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const seen: { title: number | null; under: number | null } = { title: null, under: null };
+      (window as unknown as { revealSeen: typeof seen }).revealSeen = seen;
+      const changes = new MutationObserver(() => {
+        const title = document.getElementById('news-list-title');
+        if (title === null) {
+          return;
+        }
+        seen.title = title.getAnimations().length;
+        seen.under = title.nextElementSibling?.getAnimations().length ?? 0;
+        changes.disconnect();
+      });
+      changes.observe(document, { childList: true, subtree: true });
+    });
+    await mockAdministration(page);
+    let answer: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => (answer = resolve));
+    await page.route(
+      (url) => url.pathname === '/api/admin/content/news',
+      async (route) => {
+        await answered;
+        await route.fallback();
+      },
+    );
+
+    await page.goto('/sprava/aktuality');
+    await expect(page.locator('app-skeleton .ui-card__title')).toHaveText(['Všechny aktuality']);
+    answer();
+    await expect(page.locator('#news-list-title')).toBeVisible();
+
+    const seen = await page.evaluate(
+      () => (window as unknown as { revealSeen: { title: number; under: number } }).revealSeen,
+    );
+    expect(seen).toEqual({ title: 0, under: 1 });
+  });
+});
+
+test.describe('Given an administrator at phone width with the largest text whose payments fail to load', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', PHONE_WIDTH_IN_CHROMIUM);
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await showLargestSystemText(page);
+    await mockDonorApi(page);
+    await rememberedSession(page);
+    await page.route(
+      (url) => url.pathname === PAYMENTS,
+      (route) => route.fulfill(SERVER_ERROR),
+    );
+  });
+
+  test('when Platby show their failure, then only the sentence is the alert and „Zkusit znovu“ fits inside the block', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/platby');
+    const alert = failure(page, 'Platby se nepodařilo načíst.');
+    await expect(alert).toBeVisible();
+
+    await expect(alert).toHaveText('Platby se nepodařilo načíst.');
+    expect((await failureBlock(alert)).buttonInside).toBe(true);
+  });
+
+  test('when they press „Zkusit znovu“ and it fails again, then the button is busy and keeps the focus, and a new alert says what failed', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/platby');
+    const alert = failure(page, 'Platby se nepodařilo načíst.');
+    await expect(alert).toBeVisible();
+    await rememberAlert(alert);
+    const retry = page.locator('app-load-failure button');
+
+    await retry.click();
+    await expect(retry).toHaveAttribute('aria-busy', 'true');
+    await expect(retry).toBeFocused();
+
+    await expect(retry).not.toHaveAttribute('aria-busy', 'true');
+    await expect(alert).toBeVisible();
+    expect(await isRememberedAlert(alert)).toBe(false);
+    await expect(retry).toBeFocused();
+  });
+});
+
+test.describe('Given a visitor on a phone whose article fails to load', () => {
+  test('when „Zkusit znovu“ fails once more and then loads the article, then each failure is a new alert, the button is busy each time and the article heading then takes the focus', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockPublicContent(page);
+    let loads = false;
+    await page.route(
+      (url) => url.pathname === `/api/content/news/${article.slug}`,
+      async (route) => {
+        if (!loads) {
+          await route.fulfill(SERVER_ERROR);
+          return;
+        }
+        await route.fallback();
+      },
+    );
+    await page.goto(`/aktuality/${article.slug}`);
+    const alert = failure(page, 'Aktualitu se nepodařilo načíst.');
+    await expect(alert).toBeVisible();
+    await rememberAlert(alert);
+    const retry = page.locator('app-load-failure button');
+
+    await retry.click();
+    await expect(retry).toHaveAttribute('aria-busy', 'true');
+    await expect(retry).not.toHaveAttribute('aria-busy', 'true');
+    await expect(alert).toBeVisible();
+    expect(await isRememberedAlert(alert)).toBe(false);
+
+    loads = true;
+    await retry.click();
+
+    await expect(failure(page, 'Aktualitu se nepodařilo načíst.')).toHaveCount(0);
+    await expect(page.getByRole('heading', { level: 1, name: article.title })).toBeFocused();
+  });
 });
 
 test.describe('Given a visitor on a computer when a floating notice comes', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', COMPUTER_ONLY);
+
   test('when the app offers to load a missing page again, then the notice keeps a reading width in the middle instead of the whole window', async ({
     page,
   }) => {
@@ -336,6 +578,8 @@ test.describe('Given a visitor on a computer when a floating notice comes', () =
 });
 
 test.describe('Given a donor on a computer in a card that mixes text and actions', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', COMPUTER_ONLY);
+
   test('when they have no gift yet, then the message, the button and the help start at one edge', async ({
     page,
   }) => {

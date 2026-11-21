@@ -620,9 +620,7 @@ describe('Given the bank accounts card in the overview', () => {
     http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Server Error' });
     await settle();
 
-    expect(text('.accounts-load-error [role="alert"]')).toBe(
-      'Bankovní účty se nepodařilo načíst. Zkuste to znovu.',
-    );
+    expect(text('.accounts-load-error [role="alert"]')).toBe('Bankovní účty se nepodařilo načíst.');
     expect(text('.accounts-load-error button .busy-label__face--shown')).toBe('Zkusit znovu');
 
     await click('.accounts-load-error button');
