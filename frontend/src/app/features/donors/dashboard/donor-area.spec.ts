@@ -109,7 +109,11 @@ describe('Given a signed-in donor in the donor area', () => {
         { provide: RECEIPT_PDF_ENVIRONMENT, useValue: receiptEnvironment },
         {
           provide: CompactLayout,
-          useValue: { isCompact: compact.asReadonly(), listsAsRows: compact.asReadonly() },
+          useValue: {
+            isCompact: compact.asReadonly(),
+            listsAsRows: compact.asReadonly(),
+            rootFontPx: signal(16).asReadonly(),
+          },
         },
         provideRouter([
           { path: 'darce', children: donorsRoutes },
