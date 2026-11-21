@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import type { BrowserContext, Locator, Page } from '@playwright/test';
 import { mockPublicContent, servePaymentDetails } from './baseline/screen-mocks';
 import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, session, signIn } from './donor-session';
@@ -225,6 +225,79 @@ test.describe('Given a visitor on a phone who has lost the connection, so the Of
       const roomAddedOffline = PHONE.height - lastLine - roomUnderTheLastLineOnline;
       const bodyPaddingAddedOffline = (await bottomPaddingOfTheBody(page)) - bodyPaddingOnline;
       expect(roomAddedOffline).toBeLessThanOrEqual(bodyPaddingAddedOffline + 1);
+    });
+  }
+});
+
+async function animationsOf(element: Locator): Promise<void> {
+  await element.evaluate((node) =>
+    Promise.all(node.getAnimations({ subtree: true }).map((animation) => animation.finished)),
+  );
+}
+
+async function nextFrames(page: Page): Promise<void> {
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+}
+
+async function loseTheConnection(page: Page, context: BrowserContext): Promise<Locator> {
+  await page.route('**/api/**', (route) => route.abort('internetdisconnected'));
+  await context.setOffline(true);
+  const pill = page.getByRole('button', { name: /^Offline/ });
+  await expect(pill).toBeVisible();
+  await expect(page.locator('html')).toHaveClass(/\bis-offline\b/);
+  await animationsOf(pill);
+  return pill;
+}
+
+test.describe('Given a visitor on a phone who reads a page that ends with a section holding the tab bar in its bottom padding', () => {
+  test.use({ viewport: PHONE });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await mockPublicContent(page);
+    await servePaymentDetails(page);
+  });
+
+  for (const { path, lastPart } of [
+    { path: '/o-nas', lastPart: '#kontakt form' },
+    { path: '/prispet', lastPart: '#prispet .bank' },
+  ]) {
+    test(`when they stand at the end of ${path} and the Offline pill appears, then its last line stands above the pill without scrolling again`, async ({
+      page,
+      context,
+    }) => {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.locator(lastPart).first()).toBeVisible();
+      await scrolledToTheEnd(page);
+
+      const pill = await loseTheConnection(page, context);
+
+      await expect
+        .poll(async () => (await pill.boundingBox())!.y - (await lowestContentEdge(page)))
+        .toBeGreaterThanOrEqual(0);
+    });
+
+    test(`when they read the middle of ${path} and the Offline pill appears, then the page does not move`, async ({
+      page,
+      context,
+    }) => {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.locator(lastPart).first()).toBeVisible();
+      const middle = await page.evaluate(() => {
+        const top = Math.round((document.documentElement.scrollHeight - window.innerHeight) / 2);
+        window.scrollTo({ top, behavior: 'instant' });
+        return top;
+      });
+      await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(middle);
+
+      await loseTheConnection(page, context);
+      await nextFrames(page);
+
+      expect(await page.evaluate(() => Math.round(window.scrollY))).toBe(middle);
     });
   }
 });
