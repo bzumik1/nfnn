@@ -370,11 +370,6 @@ td.amount {
   white-space: nowrap;
 }
 
-td.amount {
-  font-weight: var(--weight-bold);
-  color: var(--color-text);
-}
-
 .admin-name {
   color: var(--color-text);
   font-weight: var(--weight-semibold);
@@ -403,34 +398,8 @@ td.amount {
 }
 
 .tag {
-  display: inline-block;
-  padding: var(--space-0-5) var(--space-2);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  white-space: nowrap;
   margin-left: var(--space-1-5);
   vertical-align: middle;
-}
-
-.tag--on {
-  background: var(--color-success-bg);
-  color: var(--color-success);
-}
-
-.tag--off {
-  background: var(--color-accent-bg);
-  color: var(--color-text-muted);
-}
-
-.tag--accent {
-  background: var(--color-accent-bg);
-  color: var(--color-accent);
-}
-
-.tag--warn {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
 }
 
 @mixin stacked-cells {

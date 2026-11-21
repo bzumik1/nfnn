@@ -78,11 +78,15 @@
                   <span class="email">{{ account.email }}</span
                   >&ngsp;
                   @if (account.emailVerified) {
-                    <span class="tag tag--on" i18n="@@admin.donorDetail.account.email.verified"
+                    <span
+                      class="tag ui-badge ui-badge--success"
+                      i18n="@@admin.donorDetail.account.email.verified"
                       >ověřen</span
                     >
                   } @else {
-                    <span class="tag tag--warn" i18n="@@admin.donorDetail.account.email.unverified"
+                    <span
+                      class="tag ui-badge ui-badge--warning"
+                      i18n="@@admin.donorDetail.account.email.unverified"
                       >neověřen</span
                     >
                   }
@@ -106,7 +110,9 @@
           </dl>
           <p class="badges">
             @if (account.administrator) {
-              <span class="tag tag--accent" i18n="@@admin.donorDetail.summary.administrator"
+              <span
+                class="tag ui-badge ui-badge--accent"
+                i18n="@@admin.donorDetail.summary.administrator"
                 >Správce</span
               >
             }
@@ -310,13 +316,13 @@
                         &ngsp;
                         @if (account.emailVerified) {
                           <span
-                            class="tag tag--on"
+                            class="tag ui-badge ui-badge--success"
                             i18n="@@admin.donorDetail.account.email.verified"
                             >ověřen</span
                           >
                         } @else {
                           <span
-                            class="tag tag--warn"
+                            class="tag ui-badge ui-badge--warning"
                             i18n="@@admin.donorDetail.account.email.unverified"
                             >neověřen</span
                           >
@@ -701,12 +707,16 @@
                         >
                           <app-bank-account class="account-number" [account]="item.accountNumber" />
                           @if (item.shared) {
-                            <span class="tag tag--warn" i18n="@@admin.donorDetail.accounts.shared"
+                            <span
+                              class="tag ui-badge ui-badge--warning"
+                              i18n="@@admin.donorDetail.accounts.shared"
                               >sdílený</span
                             >
                           }
                           @if (item.pairingExcluded) {
-                            <span class="tag tag--warn" i18n="@@admin.donorDetail.accounts.excluded"
+                            <span
+                              class="tag ui-badge ui-badge--warning"
+                              i18n="@@admin.donorDetail.accounts.excluded"
                               >jen s&nbsp;variabilním symbolem</span
                             >
                           }
@@ -1050,7 +1060,7 @@
                         @if (item.status === 'REFUNDED') {
                           <span class="ui-list__state">
                             <span
-                              class="tag tag--warn"
+                              class="tag ui-badge ui-badge--warning"
                               i18n="@@admin.donorDetail.donations.refunded"
                               >vráceno</span
                             >
@@ -1109,7 +1119,7 @@
                           <span class="ui-date">{{ day(item.receivedAt) }}</span>
                           @if (item.status === 'REFUNDED') {
                             &ngsp;<span
-                              class="tag tag--warn"
+                              class="tag ui-badge ui-badge--warning"
                               i18n="@@admin.donorDetail.donations.refunded"
                               >vráceno</span
                             >
@@ -1121,7 +1131,7 @@
                           data-label="Částka"
                           i18n-data-label="@@admin.donorDetail.donations.col.amount"
                         >
-                          <span class="ui-figures">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
+                          <span class="ui-amount">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
                         </td>
                         <td
                           role="cell"
@@ -1302,15 +1312,21 @@
                         i18n-data-label="@@admin.donorDetail.receipts.col.state"
                       >
                         @if (receipt.active) {
-                          <span class="tag tag--on" i18n="@@admin.donorDetail.receipts.active"
+                          <span
+                            class="tag ui-badge ui-badge--success"
+                            i18n="@@admin.donorDetail.receipts.active"
                             >platné</span
                           >
                         } @else if (receipt.withdrawalReason === 'DONATIONS_CHANGED') {
-                          <span class="tag tag--off" i18n="@@admin.donorDetail.receipts.outdated"
+                          <span
+                            class="tag ui-badge ui-badge--neutral"
+                            i18n="@@admin.donorDetail.receipts.outdated"
                             >zrušeno, dary se změnily</span
                           >
                         } @else {
-                          <span class="tag tag--off" i18n="@@admin.donorDetail.receipts.superseded"
+                          <span
+                            class="tag ui-badge ui-badge--neutral"
+                            i18n="@@admin.donorDetail.receipts.superseded"
                             >nahrazeno novějším</span
                           >
                         }

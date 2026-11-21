@@ -209,6 +209,21 @@ div.ui-list__row {
     text-align: start;
     white-space: normal;
   }
+
+  .ui-card .ui-list__row:has(> .ui-list__value):has(> .ui-list__state) {
+    grid-template-areas:
+      'lead title title chevron'
+      'lead meta meta chevron'
+      'lead value value chevron'
+      'lead state state chevron';
+
+    > .ui-list__value,
+    > .ui-list__state {
+      justify-self: start;
+      margin-inline-start: 0;
+      text-align: start;
+    }
+  }
 }
 
 .ui-list__lead--blank {

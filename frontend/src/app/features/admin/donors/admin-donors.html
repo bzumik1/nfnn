@@ -133,22 +133,28 @@
                 ) {
                   <span class="ui-list__extra tags">
                     @if (item.account.erasedAt) {
-                      <span class="tag tag--off" i18n="@@admin.donors.tag.erased"
+                      <span class="tag ui-badge ui-badge--neutral" i18n="@@admin.donors.tag.erased"
                         >Údaje vymazány</span
                       >
                     }
                     @if (item.account.administrator) {
-                      <span class="tag tag--admin" i18n="@@admin.donors.tag.administrator"
+                      <span
+                        class="tag ui-badge ui-badge--accent"
+                        i18n="@@admin.donors.tag.administrator"
                         >Správce</span
                       >
                     }
                     @if (item.account.secondFactorEnabled) {
-                      <span class="tag tag--on" i18n="@@admin.donors.tag.secondFactor"
+                      <span
+                        class="tag ui-badge ui-badge--success"
+                        i18n="@@admin.donors.tag.secondFactor"
                         >Dvoufaktorové ověření</span
                       >
                     }
                     @if (!item.account.emailVerified && !item.account.erasedAt) {
-                      <span class="tag tag--warn" i18n="@@admin.donors.tag.unverified"
+                      <span
+                        class="tag ui-badge ui-badge--warning"
+                        i18n="@@admin.donors.tag.unverified"
                         >E-mail neověřen</span
                       >
                     }
@@ -245,7 +251,7 @@
                       data-label="Poslední dar"
                       i18n-data-label="@@admin.donors.col.lastGift"
                     >
-                      <span class="ui-figures gift-amount">{{ giftAmount(gift) }}&nbsp;Kč</span>
+                      <span class="ui-amount gift-amount">{{ giftAmount(gift) }}&nbsp;Kč</span>
                       <span class="muted">{{ giftDay(gift) }}</span>
                     </td>
                   } @else {
@@ -264,22 +270,30 @@
                   >
                     <span class="tags">
                       @if (item.account.erasedAt) {
-                        <span class="tag tag--off" i18n="@@admin.donors.tag.erased"
+                        <span
+                          class="tag ui-badge ui-badge--neutral"
+                          i18n="@@admin.donors.tag.erased"
                           >Údaje vymazány</span
                         >
                       }
                       @if (item.account.administrator) {
-                        <span class="tag tag--admin" i18n="@@admin.donors.tag.administrator"
+                        <span
+                          class="tag ui-badge ui-badge--accent"
+                          i18n="@@admin.donors.tag.administrator"
                           >Správce</span
                         >
                       }
                       @if (item.account.secondFactorEnabled) {
-                        <span class="tag tag--on" i18n="@@admin.donors.tag.secondFactor"
+                        <span
+                          class="tag ui-badge ui-badge--success"
+                          i18n="@@admin.donors.tag.secondFactor"
                           >Dvoufaktorové ověření</span
                         >
                       }
                       @if (!item.account.emailVerified && !item.account.erasedAt) {
-                        <span class="tag tag--warn" i18n="@@admin.donors.tag.unverified"
+                        <span
+                          class="tag ui-badge ui-badge--warning"
+                          i18n="@@admin.donors.tag.unverified"
                           >E-mail neověřen</span
                         >
                       }

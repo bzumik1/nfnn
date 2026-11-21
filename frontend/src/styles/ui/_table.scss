@@ -46,6 +46,10 @@
     white-space: normal;
   }
 
+  td .ui-badge {
+    inline-size: max-content;
+  }
+
   td a:not(.ui-button) {
     color: var(--color-accent);
     font-weight: var(--weight-semibold);
@@ -88,6 +92,10 @@
     min-width: 0;
     padding: 0;
     text-align: start;
+  }
+
+  td .ui-badge {
+    inline-size: auto;
   }
 
   td::before {
