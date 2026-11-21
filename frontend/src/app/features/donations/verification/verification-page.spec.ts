@@ -167,6 +167,31 @@ describe('Given the verification page', () => {
     expect(note?.compareDocumentPosition(ways as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
+  describe('when it runs as the installed app, which has no address bar', () => {
+    const IN_APP_NOTE =
+      'Fond ověřuje potvrzení jen na adrese nfnn.cz/overit, na které tato aplikace běží.';
+
+    beforeEach(() => {
+      Object.defineProperty(window.navigator, 'standalone', { configurable: true, value: true });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(window.navigator, 'standalone');
+    });
+
+    it('when it opens without a code, then the note names the address without sending the visitor to an address bar', async () => {
+      await open('/overit');
+
+      expect(text('.verify-domain')).toBe(IN_APP_NOTE);
+    });
+
+    it('when a receipt is verified, then the note under the result says the same', async () => {
+      await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status: 'active' });
+
+      expect(text('.verify-domain--after')).toBe(IN_APP_NOTE);
+    });
+  });
+
   describe('when it opens without a code and the visitor pastes the link of a code', () => {
     beforeEach(async () => {
       await open('/overit');

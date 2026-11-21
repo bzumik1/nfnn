@@ -180,3 +180,75 @@ test.describe('Given a visitor reading a story on a computer 1280 px wide', () =
     expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(PIXEL_TOLERANCE);
   });
 });
+
+async function roomBelow(block: Locator): Promise<number> {
+  return block.evaluate(
+    (element) =>
+      document.documentElement.scrollHeight - (element.getBoundingClientRect().bottom + scrollY),
+  );
+}
+
+for (const screen of [
+  { name: 'a phone', width: 390, height: 844 },
+  { name: 'a tablet', width: 820, height: 1180 },
+]) {
+  test.describe(`Given a visitor who reads an article or a story to its end on ${screen.name}`, () => {
+    test.beforeEach(async ({ page }) => {
+      await mockDonorApi(page);
+      await publishedContent(page);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.setViewportSize({ width: screen.width, height: screen.height });
+    });
+
+    test('when the onward cards close the page, then as much room stays under them as under the closing band of the lists', async ({
+      page,
+    }) => {
+      await page.goto('/aktuality');
+      const listCards = page.locator('.older app-news-card');
+      await settled(page, listCards, 3);
+      const band = page.locator('app-donate-band .band');
+      await expect(band).toBeVisible();
+      const underBand = await roomBelow(band);
+
+      await page.goto(`/aktuality/${news[0].slug}`);
+      const newsList = page.locator('.onward-list');
+      await settled(page, newsList.locator('app-news-card'), 3);
+      expect(Math.abs((await roomBelow(newsList)) - underBand)).toBeLessThanOrEqual(
+        PIXEL_TOLERANCE,
+      );
+
+      await page.goto(`/projekty/${stories[0].slug}`);
+      const storyList = page.locator('.onward-list');
+      await settled(page, storyList.locator('app-story-tile .tile'), 3);
+      expect(Math.abs((await roomBelow(storyList)) - underBand)).toBeLessThanOrEqual(
+        PIXEL_TOLERANCE,
+      );
+    });
+  });
+}
+
+test.describe('Given a visitor reading an article with a photo on an iPad held upright, with the system text at its default 17 px', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await publishedContent(page);
+    await page.setViewportSize({ width: 820, height: 1180 });
+  });
+
+  test('when the photo shows above the text, then it ends where the text column ends', async ({
+    page,
+  }) => {
+    await page.goto(`/aktuality/${news[0].slug}`);
+    await page.addStyleTag({ content: 'html { font-size: 17px; }' });
+    const photo = page.locator('.photo');
+    const prose = page.locator('.prose');
+    await expect(photo).toBeVisible();
+    await expect(prose).toBeVisible();
+
+    const photoBox = (await photo.boundingBox())!;
+    const proseBox = (await prose.boundingBox())!;
+    expect(Math.abs(photoBox.x - proseBox.x)).toBeLessThanOrEqual(PIXEL_TOLERANCE);
+    expect(
+      Math.abs(photoBox.x + photoBox.width - (proseBox.x + proseBox.width)),
+    ).toBeLessThanOrEqual(PIXEL_TOLERANCE);
+  });
+});

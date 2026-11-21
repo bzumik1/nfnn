@@ -207,6 +207,14 @@ describe('Given the ways to read a receipt code on the verification page', () =>
     expect(element().querySelector('#proof-link')?.getAttribute('enterkeyhint')).toBe('go');
   });
 
+  it('when the hint shows the start of a link, then the address may break only after its slashes', async () => {
+    await render();
+
+    expect(element().querySelector('#proof-link-hint')?.textContent?.trim()).toBe(
+      'Odkaz začíná https://​nfnn.cz/​overit#',
+    );
+  });
+
   it('when the browser cannot use a camera, then the camera part is left out', async () => {
     device.camera = false;
     await render();

@@ -59,10 +59,16 @@
           Každé potvrzení od fondu nese QR kód. Načtěte ho a&nbsp;uvidíte, co v&nbsp;něm fond
           podepsal, a&nbsp;porovnejte to s&nbsp;papírem. Kód čteme jen ve vašem zařízení.
         </p>
-        <p class="ui-footnote verify-domain" i18n="@@donor.verify.domain">
-          Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte
-          v&nbsp;adresním řádku prohlížeče.
-        </p>
+        @if (installed) {
+          <p class="ui-footnote verify-domain" i18n="@@donor.verify.domainInApp">
+            Fond ověřuje potvrzení jen na adrese nfnn.cz/overit, na které tato aplikace běží.
+          </p>
+        } @else {
+          <p class="ui-footnote verify-domain" i18n="@@donor.verify.domain">
+            Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte
+            v&nbsp;adresním řádku prohlížeče.
+          </p>
+        }
       }
       <app-proof-input (found)="verifyProof($event)" />
     }
@@ -105,9 +111,15 @@
     }
   }
   @if (!administration && page().state !== 'empty') {
-    <p class="ui-footnote verify-domain verify-domain--after" i18n="@@donor.verify.domain">
-      Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte v&nbsp;adresním
-      řádku prohlížeče.
-    </p>
+    @if (installed) {
+      <p class="ui-footnote verify-domain verify-domain--after" i18n="@@donor.verify.domainInApp">
+        Fond ověřuje potvrzení jen na adrese nfnn.cz/overit, na které tato aplikace běží.
+      </p>
+    } @else {
+      <p class="ui-footnote verify-domain verify-domain--after" i18n="@@donor.verify.domain">
+        Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte
+        v&nbsp;adresním řádku prohlížeče.
+      </p>
+    }
   }
 </div>

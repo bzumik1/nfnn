@@ -13,6 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
+import { runsInstalled } from '../../../core/auth/session-jar';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { PageTitle } from '../../donors/dashboard/page-title/page-title';
 import { type FoundProof, ProofInput } from './proof-input';
@@ -42,6 +43,7 @@ export class VerificationPage {
   private fragment: string | null = null;
   protected readonly scanned = signal(false);
   protected readonly compact = inject(CompactLayout).isCompact;
+  protected readonly installed = runsInstalled(this.document.defaultView);
   private run = 0;
 
   protected readonly page = signal<PageState>({ state: 'checking' });
