@@ -332,9 +332,9 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
       expect(tagBox.x).toBeGreaterThanOrEqual(dateBox.x - 0.5);
       expect(tagBox.x + tagBox.width).toBeLessThanOrEqual(dateBox.x + dateBox.width + 0.5);
 
-      const read = await refunded.ariaSnapshot();
-      expect(read).toMatch(/- cell "5\.\s1\.\s2026 Stav: Vráceno"/);
-      expect(read.indexOf('Vráceno')).toBeLessThan(read.indexOf('300'));
+      const cells = refunded.getByRole('cell');
+      await expect(cells.first()).toHaveAccessibleName(/^5\.\s1\.\s2026 Stav: Vráceno$/);
+      await expect(cells.nth(1)).toHaveAccessibleName(/^300\sKč$/);
     });
   }
 
