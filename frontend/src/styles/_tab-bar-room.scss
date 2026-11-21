@@ -1,27 +1,8 @@
 @mixin holds-tab-bar-in-bottom-padding($padding) {
-  --floating-room: 0rem;
   padding-bottom: $padding;
 
   :host-context(.with-tab-bar) & {
     margin-bottom: calc(-1 * var(--tab-bar-clearance));
-    padding-bottom: max(
-      #{$padding},
-      calc(var(--tab-bar-clearance) + var(--space-6) + var(--floating-room))
-    );
-  }
-
-  :host-context(html.has-floating-notice:has(app-root app-landing)) & {
-    --floating-room: calc(var(--space-2) + var(--floating-notice-height) + var(--space-4));
-  }
-
-  :host-context(html.is-offline:has(app-root app-landing)) & {
-    --floating-room: calc(var(--offline-pill-height) + var(--space-4));
-  }
-
-  :host-context(html.has-floating-notice.is-offline:has(app-root app-landing)) & {
-    --floating-room: calc(
-      var(--space-2) + var(--floating-notice-height) + var(--space-3) + var(--offline-pill-height) +
-        var(--space-4)
-    );
+    padding-bottom: max(#{$padding}, calc(var(--tab-bar-clearance) + var(--space-6)));
   }
 }
