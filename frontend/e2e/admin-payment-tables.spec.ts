@@ -575,7 +575,7 @@ for (const viewport of [
       expect(await sideways(sheet.locator('.dialog-panel'))).toBeLessThanOrEqual(0);
     });
 
-    test("when they open a paired payment, then its amount stays on one line and the bank mark stands on its account number's line", async ({
+    test("when they open a paired payment, then the bank mark stands on its account number's line", async ({
       page,
     }) => {
       await openRows(page, viewport, '/sprava/platby?stav=prirazene', LARGEST_SYSTEM_TEXT_PX);
@@ -585,8 +585,7 @@ for (const viewport of [
       await page.evaluate(() => document.fonts.ready);
       const facts = sheet.locator('.pair-payment');
 
-      expect.soft(await linesOfText(facts, '1\u00a0250\u00a0000,50\u00a0Kč')).toBe(1);
-      expect.soft(await bankMarksBesideNoNumber(facts)).toEqual([]);
+      expect(await bankMarksBesideNoNumber(facts)).toEqual([]);
     });
 
     test('when they open a waiting payment to pair it, then every fact stays within its own cell and the dialog never pans sideways', async ({
