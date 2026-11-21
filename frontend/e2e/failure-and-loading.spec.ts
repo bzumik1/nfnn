@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import type { BrowserContext, Locator, Page, Route } from '@playwright/test';
 
 import {
   article,
@@ -32,6 +32,7 @@ interface LoadingSeen {
   longestFrame: number;
 }
 
+const DISCONNECTED = (route: Route) => route.abort('internetdisconnected');
 const SERVER_ERROR = problem(500, 'server-error', 'Chyba serveru', 'Zkuste to prosím znovu.');
 const BACKUPS = '/api/admin/operations/backups';
 const PAYMENTS = '/api/admin/donations/payments';
@@ -166,6 +167,17 @@ async function focusAtPress(page: Page): Promise<string | null> {
 
 async function scrollTop(page: Page): Promise<number> {
   return page.evaluate(() => Math.round(window.scrollY));
+}
+
+async function dropTheConnection(page: Page, context: BrowserContext): Promise<void> {
+  await page.route('**/api/**', DISCONNECTED);
+  await context.setOffline(true);
+}
+
+async function administrationCopyNotStored(page: Page): Promise<void> {
+  await expect(
+    page.locator('.first-download').getByRole('button', { name: 'Uložit znovu' }),
+  ).toBeVisible();
 }
 
 function failure(page: Page, text: string): Locator {
@@ -553,6 +565,7 @@ test.describe('Given an administrator at phone width with the largest text whose
   }) => {
     await page.goto('/sprava/platby');
     await expect(failure(page, 'Platby se nepodařilo načíst.')).toBeVisible();
+    await administrationCopyNotStored(page);
     const retry = page.locator('app-load-failure button');
     await retry.scrollIntoViewIfNeeded();
     const before = await scrollTop(page);
@@ -700,7 +713,7 @@ test.describe('Given a visitor on a phone whose article fails to load', () => {
     await retry.scrollIntoViewIfNeeded();
     const before = await scrollTop(page);
     await pressLeavesFocusOnPageAsIos(retry);
-    await context.setOffline(true);
+    await dropTheConnection(page, context);
     await expect(retry).toHaveAttribute('aria-disabled', 'true');
 
     await pressUnavailable(page, retry);
