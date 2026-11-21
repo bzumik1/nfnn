@@ -292,36 +292,47 @@ interface FrameRecorder {
 }
 
 const APPEARANCE_ICONS = '.account-appearance .appearance-icon';
+const QUIET_FRAMES_BEFORE_SWITCH = 2;
 
 async function framesAroundSwitch(page: Page, press: () => Promise<void>): Promise<DrawnFrame[]> {
   for (const selector of new Set(COLOURS_OF_THE_SWITCH.map(([measured]) => measured))) {
     await expect(page.locator(selector).first()).toBeVisible();
   }
-  await expect
-    .poll(() =>
-      page.evaluate(
-        (icons) =>
-          Array.from(document.querySelectorAll(icons)).flatMap((icon) => icon.getAnimations())
-            .length,
-        APPEARANCE_ICONS,
-      ),
-    )
-    .toBe(0);
-  await page.evaluate((icons) => {
-    const recorder = window as unknown as FrameRecorder;
-    recorder.iconFades = [];
-    document.addEventListener('transitionend', (event) => {
-      const icon = event.target as Element;
-      if (event.propertyName !== 'opacity' || !icon.matches(icons)) {
-        return;
-      }
-      recorder.iconFades.push({
-        icon: Array.from(document.querySelectorAll(icons)).indexOf(icon),
-        seconds: event.elapsedTime,
-        endedAtOpacity: Number(getComputedStyle(icon).opacity),
+  await page.evaluate(
+    async ([icons, quietFramesNeeded]) => {
+      const recorder = window as unknown as FrameRecorder;
+      recorder.iconFades = [];
+      document.addEventListener('transitionend', (event) => {
+        const icon = event.target as Element;
+        if (event.propertyName !== 'opacity' || !icon.matches(icons)) {
+          return;
+        }
+        recorder.iconFades.push({
+          icon: Array.from(document.querySelectorAll(icons)).indexOf(icon),
+          seconds: event.elapsedTime,
+          endedAtOpacity: Number(getComputedStyle(icon).opacity),
+        });
       });
-    });
-  }, APPEARANCE_ICONS);
+      const iconsStill = (): boolean =>
+        Array.from(document.querySelectorAll(icons)).every(
+          (icon) => icon.getAnimations().length === 0,
+        );
+      await new Promise<void>((settled) => {
+        let quietFrames = 0;
+        const check = (): void => {
+          quietFrames = iconsStill() ? quietFrames + 1 : 0;
+          if (quietFrames >= quietFramesNeeded) {
+            settled();
+          } else {
+            requestAnimationFrame(check);
+          }
+        };
+        requestAnimationFrame(check);
+      });
+      recorder.iconFades = [];
+    },
+    [APPEARANCE_ICONS, QUIET_FRAMES_BEFORE_SWITCH] as const,
+  );
   await page.evaluate(
     ([targets, icons]) => {
       const recorder = window as unknown as FrameRecorder;
