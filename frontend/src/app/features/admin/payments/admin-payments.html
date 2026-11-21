@@ -225,7 +225,7 @@
         @if (items().length > 0 || rowsLeaving() > 0) {
           @if (rows()) {
             @for (month of months(); track month.key) {
-              <div class="payments-month">
+              <div class="payments-month ui-card__group">
                 <h3 class="ui-list__group-title" [id]="monthHeadingId(month.key)">
                   {{ month.label }}
                 </h3>
