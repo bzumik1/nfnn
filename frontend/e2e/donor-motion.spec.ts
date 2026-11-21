@@ -279,7 +279,9 @@ test.describe('Given a donor on a computer', () => {
 });
 
 const PHONE = { width: 390, height: 844 };
+const SMALL_PHONE = { width: 375, height: 667 };
 const DOUBLE_ROOT = '200%';
+const LARGEST_ROOT = '53px';
 const SUBPIXEL_PX = 1;
 const ROW_WATCHED_MS = 1000;
 const ROW_AND_QUESTION = 'row height (left edge) and the question top under it (right edge)';
@@ -341,6 +343,7 @@ interface RowSample {
   readonly at: number;
   readonly height: number;
   readonly questionTop: number | null;
+  readonly scrollY: number;
 }
 
 interface RowWatch {
@@ -352,7 +355,7 @@ async function rowAndQuestionWhile(
   page: Page,
   rowId: string,
   press: () => Promise<void>,
-): Promise<{ start: [number, number]; frames: EdgeSample[] }> {
+): Promise<{ start: [number, number]; frames: EdgeSample[]; scrolls: number[] }> {
   await page.evaluate(
     ({ rowId, watchedMs }) => {
       const watch = window as unknown as RowWatch;
@@ -367,6 +370,7 @@ async function rowAndQuestionWhile(
           at: frameTime,
           height: row?.height ?? 0,
           questionTop: question === undefined || row === undefined ? null : question.top - row.top,
+          scrollY: window.scrollY,
         });
         if (performance.now() - began < watchedMs) {
           requestAnimationFrame(sample);
@@ -388,17 +392,25 @@ async function rowAndQuestionWhile(
     questionTop = sample.questionTop ?? questionTop;
     return { at: sample.at, edges: [sample.height, questionTop] };
   });
-  return { start: frames[0].edges, frames };
+  return { start: frames[0].edges, frames, scrolls: samples.map((sample) => sample.scrollY) };
 }
 
-async function openDevicesOnAPhone(page: Page, rootSize?: string): Promise<void> {
+function largestStep(values: number[]): number {
+  return values.reduce(
+    (largest, value, index) =>
+      index === 0 ? largest : Math.max(largest, Math.abs(value - values[index - 1])),
+    0,
+  );
+}
+
+async function openDevicesOnAPhone(page: Page, rootSize?: string, viewport = PHONE): Promise<void> {
   await mockDonorApi(page);
   await page.route(
     (url) => url.pathname === '/api/donors/me/devices',
     (route) => route.fulfill({ json: { items: [...signedInDevices, ...longUnusedDevices] } }),
   );
   await signIn(page);
-  await page.setViewportSize(PHONE);
+  await page.setViewportSize(viewport);
   if (rootSize !== undefined) {
     await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
   }
@@ -498,5 +510,52 @@ test.describe('Given a donor on a phone with the text at 200 %', () => {
     await openDevicesOnAPhoneAtDoubleText(page);
 
     await expectTheRowAndQuestionNeverToJump(page);
+  });
+});
+
+test.describe('Given a donor on a small phone with the largest text', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' });
+
+  test('when they cancel signing out the iPhone while the question stands in the middle of the screen, then the page never scrolls and neither its row nor the question under it jumps', async ({
+    page,
+  }) => {
+    await openDevicesOnAPhone(page, LARGEST_ROOT, SMALL_PHONE);
+    const devices = page.locator('.devices');
+    const rowId = `device-row-${signedInDevices.find((device) => !device.current)?.id}`;
+    const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+    const cancel = question.getByRole('button', { name: 'Zrušit' });
+
+    await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+    await expect(cancel).toBeFocused();
+    await question.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      window.scrollBy({
+        top: box.top + box.height / 2 - window.innerHeight / 2,
+        behavior: 'instant',
+      });
+    });
+    await expect
+      .poll(() =>
+        question.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          return Math.abs(box.top + box.height / 2 - window.innerHeight / 2);
+        }),
+      )
+      .toBeLessThanOrEqual(SUBPIXEL_PX);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollHeight - window.innerHeight - window.scrollY,
+      ),
+    ).toBeGreaterThan(SUBPIXEL_PX);
+
+    const scrolledBeforeCancel = await page.evaluate(() => window.scrollY);
+    const cancelling = await rowAndQuestionWhile(page, rowId, () => page.keyboard.press('Enter'));
+
+    await expect(devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' })).toBeFocused();
+    await expect(question).toHaveCount(0);
+    expect(largestStep([scrolledBeforeCancel, ...cancelling.scrolls])).toBeLessThanOrEqual(
+      SUBPIXEL_PX,
+    );
+    expect(jumpsOfTheEdges(cancelling.start, cancelling.frames), ROW_AND_QUESTION).toEqual([]);
   });
 });
