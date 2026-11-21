@@ -94,7 +94,7 @@ describe('Given an administrator on the older log files page', () => {
 
     const row = page.cardTitled('Aplikace').querySelector('a.ui-list__row') as HTMLElement;
     const name = row.querySelector('.ui-list__title.file-name') as HTMLElement;
-    expect([...name.querySelectorAll('.ui-word')].map((part) => part.textContent)).toEqual([
+    expect([...name.querySelectorAll('.file-name-part')].map((part) => part.textContent)).toEqual([
       'backend.',
       'log.',
       '2026-10-22.',

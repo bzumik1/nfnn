@@ -551,7 +551,7 @@ test.describe('Given an administrator on the log files on a 375 pt phone', () =>
     await expect(name).toHaveText('backend.log.2026-10-22.0.gz');
 
     const lines = await name.evaluate((element) => {
-      const parts = Array.from(element.querySelectorAll('.ui-word'), (part) => ({
+      const parts = Array.from(element.querySelectorAll('.file-name-part'), (part) => ({
         text: part.textContent ?? '',
         boxes: part.getClientRects().length,
         top: Math.round(part.getBoundingClientRect().top),
@@ -571,6 +571,33 @@ test.describe('Given an administrator on the log files on a 375 pt phone', () =>
     for (const line of lines.lines.slice(0, -1)) {
       expect(line.endsWith('.')).toBe(true);
     }
+  });
+
+  test('when they read an older file name on Starší soubory with the largest text, then a part wider than the column wraps inside it and nothing runs past the name or under the chevron', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/logy/soubory');
+    await page.addStyleTag({ content: 'html { font-size: 53px }' });
+    const row = page.getByRole('link', { name: /backend\.log\.2026-10-22\.0\.gz/ });
+    await expect(row.locator('.file-name')).toHaveText('backend.log.2026-10-22.0.gz');
+
+    const placed = await row.evaluate((element) => {
+      const name = element.querySelector('.file-name') as HTMLElement;
+      const chevron = element.querySelector('.ui-list__chevron') as SVGElement;
+      const nameBox = name.getBoundingClientRect();
+      return {
+        clipped: name.scrollWidth > name.clientWidth + 1,
+        nameRight: nameBox.right,
+        chevronLeft: chevron.getBoundingClientRect().left,
+        partsRight: Array.from(
+          name.querySelectorAll('.file-name-part'),
+          (part) => part.getBoundingClientRect().right - nameBox.right,
+        ),
+      };
+    });
+    expect(placed.clipped).toBe(false);
+    expect(placed.nameRight).toBeLessThanOrEqual(placed.chevronLeft + 1);
+    expect(placed.partsRight.every((past) => past <= 1)).toBe(true);
   });
 
   test('when they go from Logy a diagnostika to Starší soubory, then a log file is the same row with its file icon at the same place', async ({
