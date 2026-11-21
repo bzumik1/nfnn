@@ -181,6 +181,7 @@ export class AdminDonorDetail {
   private onCardLoaded: (() => void) | undefined;
   protected readonly detail = signal<AdminDonorDetailResponse | null>(null);
   protected readonly bankAccountsSource = signal<BankAccountsSource>('server');
+  protected readonly bankAccountsRetrying = signal(false);
   protected readonly cardNotice = signal<CardNotice | null>(null);
   protected readonly busy = signal(false);
   protected readonly changedMeanwhile = signal<{
@@ -458,9 +459,9 @@ export class AdminDonorDetail {
   }
 
   protected reloadBankAccounts(): void {
-    this.bankAccountsSource.set('pending');
+    this.cardRead?.unsubscribe();
+    this.bankAccountsRetrying.set(true);
     this.cardNotice.set(null);
-    this.focusAfterRender(() => this.byId(this.ids.accounts.id));
     this.readCard(true);
   }
 
@@ -474,15 +475,22 @@ export class AdminDonorDetail {
     this.cardRead = this.reads
       .donorCard(this.donorId)
       .pipe(
-        finalize(() => this.donationsRetrying.set(false)),
+        finalize(() => {
+          this.donationsRetrying.set(false);
+          this.bankAccountsRetrying.set(false);
+        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: ({ detail, bankAccounts }) => {
           this.detail.set(detail);
-          this.bankAccountsSource.set(bankAccounts);
+          if (bankAccounts !== 'pending' || !this.bankAccountsRetrying()) {
+            this.bankAccountsSource.set(bankAccounts);
+            this.bankAccountsRetrying.set(false);
+          }
           this.donationsState.set('ready');
           if (retried && bankAccounts === 'server') {
+            this.focusAfterRender(() => this.byId(this.ids.accounts.id));
             this.cardNotice.set({
               card: 'accounts',
               notice: {

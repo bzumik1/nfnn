@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { describeProblem } from '../../../../core/auth/api-problem';
@@ -19,6 +20,7 @@ import { Dialog } from '../../../../shared/ui/dialog/dialog';
 import { LiveNotice, Notice } from '../../../../shared/ui/live-notice/live-notice';
 import { BusyButton } from '../../../../shared/ui/busy-button/busy-button';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { RadioGroup } from '../../../../shared/ui/radio-group/radio-group';
 import { formatDonationDate, pragueDay, pragueTime } from '../../../donations/donation-date';
 import { AdminApi, LogSearchResponse, LogWindowResponse } from '../../admin-api';
@@ -80,6 +82,7 @@ const FILTER_PARAMS: Readonly<Record<string, LevelFilter>> = {
     CopyButton,
     Dialog,
     LiveNotice,
+    LoadFailure,
     NeedsConnection,
     LevelIcon,
     RadioGroup,
@@ -106,6 +109,7 @@ export class AdminLogReader {
   protected readonly browserErrors = this.format === 'spring';
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly loadError = signal('');
   protected readonly timeline = signal<LogTimeline | null>(null);
   protected readonly loadingMore = signal<'older' | 'newer' | null>(null);
@@ -157,6 +161,15 @@ export class AdminLogReader {
 
   protected loadTail(): void {
     this.state.set('loading');
+    this.fetchTail();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetchTail();
+  }
+
+  private fetchTail(): void {
     this.loadWindow(null, (window) => {
       this.timeline.set(startTimeline(window));
       this.state.set('ready');
@@ -403,7 +416,10 @@ export class AdminLogReader {
   private loadWindow(from: number | null, done: (window: LogWindowResponse) => void): void {
     this.api
       .logWindow(this.file, from, WINDOW_BYTES)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: done,
         error: (failure: unknown) => {
@@ -415,7 +431,7 @@ export class AdminLogReader {
             failure,
             $localize`:@@admin.logs.window.failed:Log se nepodařilo načíst. Zkuste to prosím znovu.`,
           );
-          if (this.state() === 'loading') {
+          if (this.state() !== 'ready') {
             this.loadError.set(text);
             this.state.set('error');
           } else {

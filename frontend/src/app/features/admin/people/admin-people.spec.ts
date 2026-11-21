@@ -32,6 +32,11 @@ import {
 } from '../device-copy/testing/opened-copy';
 import { person as heldPerson } from '../../content/testing/people-fixtures';
 import { KeptAdministrationAnswers } from '../kept-administration-answers';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const PEOPLE_URL = '/api/admin/content/people';
@@ -629,13 +634,32 @@ describe('Given an administrator whose people do not load', () => {
     http.expectOne(PEOPLE_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle(fixture);
 
-    expect(text(fixture, '[role="alert"]')).toContain('Lidi fondu se nepodařilo načíst.');
-
-    await press(fixture, 'Zkusit znovu');
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Lidi fondu se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await settle(fixture);
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Lidi fondu se nepodařilo načíst.']);
     http.expectOne(PEOPLE_URL).flush({ members: [ADAM], note: null, footnote: null, ...VERSIONS });
     await settle(fixture);
 
     expect(rows(fixture)).toEqual(['Adam Vzor']);
+    expect(document.activeElement).toBe(element(fixture, 'h1'));
+  });
+
+  it('when trying again fails once more, then a new alert says so', async () => {
+    http.expectOne(PEOPLE_URL).flush(null, { status: 500, statusText: 'Error' });
+    await settle(fixture);
+    const first = element(fixture, 'app-load-failure [role="alert"]');
+
+    pressLoadFailureRetry(fixture.nativeElement);
+    await settle(fixture);
+    http.expectOne(PEOPLE_URL).flush(null, { status: 500, statusText: 'Error' });
+    await settle(fixture);
+
+    expect(element(fixture, 'app-load-failure [role="alert"]')).not.toBe(first);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Lidi fondu se nepodařilo načíst.']);
   });
 
   it('when the role was taken away meanwhile, then the page goes to the overview', async () => {
@@ -1416,7 +1440,7 @@ describe('Given an administrator offline whose device keeps the administration c
     expect(textOf(page.querySelector('.receipt-offline[role="status"]'))).toBe(
       'Kdo potvrzení podepisuje, ukážeme, až budete online.',
     );
-    expect(page.querySelector('.ui-load-state--error, .receipt-error')).toBeNull();
+    expect(page.querySelector('app-load-failure, .receipt-error')).toBeNull();
     http.verify();
   });
 });

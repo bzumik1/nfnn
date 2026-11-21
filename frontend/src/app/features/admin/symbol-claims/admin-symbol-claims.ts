@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -22,6 +23,7 @@ import { AdminApi, SymbolClaimResponse } from '../admin-api';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -35,6 +37,7 @@ const FORBIDDEN = 'auth/forbidden';
     BusyLabel,
     LiveNotice,
     RouterLink,
+    LoadFailure,
     NeedsConnection,
     ChangedMeanwhileDialog,
     BankAccount,
@@ -56,6 +59,7 @@ export class AdminSymbolClaims {
   private readonly noticeRegion = viewChild('noticeRegion', { read: ElementRef });
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly items = signal<SymbolClaimResponse[]>([]);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly busy = signal(false);
@@ -69,9 +73,21 @@ export class AdminSymbolClaims {
 
   protected load(onLoaded?: () => void): void {
     this.state.set('loading');
+    this.fetch(onLoaded);
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(onLoaded?: () => void): void {
     this.api
       .symbolClaims()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (list) => {
           this.items.set(list.items);

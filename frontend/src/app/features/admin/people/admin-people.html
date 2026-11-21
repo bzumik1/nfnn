@@ -12,18 +12,11 @@
       <p class="ui-load-state" role="status" i18n="@@admin.people.loading">Načítáme lidi fondu…</p>
     }
     @case ('error') {
-      <div class="ui-load-state ui-load-state--error" role="alert">
-        <p i18n="@@admin.people.error.text">Lidi fondu se nepodařilo načíst.</p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          (click)="load()"
-          i18n="@@admin.people.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
+      <app-load-failure [compact]="true" [retrying]="retrying()" (retry)="retry()"
+        ><ng-container i18n="@@admin.people.error.text"
+          >Lidi fondu se nepodařilo načíst.</ng-container
+        ></app-load-failure
+      >
     }
     @case ('ready') {
       <section class="ui-card" aria-labelledby="people-list-title">

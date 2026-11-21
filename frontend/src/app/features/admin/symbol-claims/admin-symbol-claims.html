@@ -34,18 +34,15 @@
         </p>
       }
       @case ('error') {
-        <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-          <p i18n="@@admin.symbolClaims.error.text">Odpovědi se nepodařilo načíst.</p>
-          <button
-            appNeedsConnection
-            type="button"
-            class="ui-button ui-button--small"
-            (click)="load()"
-            i18n="@@admin.symbolClaims.error.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
+        <app-load-failure
+          class="ui-load-state--inset"
+          [compact]="true"
+          [retrying]="retrying()"
+          (retry)="retry()"
+          ><ng-container i18n="@@admin.symbolClaims.error.text"
+            >Odpovědi se nepodařilo načíst.</ng-container
+          ></app-load-failure
+        >
       }
       @case ('ready') {
         @if (items().length === 0) {

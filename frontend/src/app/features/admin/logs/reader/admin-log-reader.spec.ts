@@ -7,6 +7,11 @@ import { AdminLogReader } from './admin-log-reader';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const FIO =
   '2026-11-09T22:09:47.639+01:00  INFO 1 --- [nova-nadeje] [scheduling-1] c.n.a.d.i.fio.FioBankStatementSource     : Fio answered 2 movements';
@@ -467,7 +472,40 @@ describe('Given an administrator reading a log file', () => {
       .flush(missing.body, missing.options);
     await page.settle();
 
-    expect(page.text('[role="alert"] p')).toBe('Soubor nenalezen. Takový log není.');
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
+      'Soubor nenalezen. Takový log není.',
+    ]);
+    expect(alertsHoldingAButton(page.fixture.nativeElement)).toBe(0);
     expect(page.hasButton('Zkusit znovu')).toBe(true);
+  });
+
+  it('when the window fails and they press „Zkusit znovu“, then the retry is busy and keeps the focus, a new alert comes after a second failure and the focus goes to the heading after the load', async () => {
+    await open();
+    page.http
+      .expectOne((request) => request.urlWithParams === `${LOGS_URL}/backend.log?bytes=20000`)
+      .flush(null, { status: 500, statusText: 'Error' });
+    await page.settle();
+    const first = page.element('app-load-failure [role="alert"]');
+
+    const retry = pressLoadFailureRetry(page.fixture.nativeElement);
+    await page.settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
+      'Log se nepodařilo načíst. Zkuste to prosím znovu.',
+    ]);
+    page.http
+      .expectOne((request) => request.urlWithParams === `${LOGS_URL}/backend.log?bytes=20000`)
+      .flush(null, { status: 500, statusText: 'Error' });
+    await page.settle();
+    expect(page.element('app-load-failure [role="alert"]')).not.toBe(first);
+    expect(page.text('app-live-notice [role="alert"]')).toBe('');
+
+    pressLoadFailureRetry(page.fixture.nativeElement);
+    await page.settle();
+    await flushWindow('bytes=20000', { text: TAIL });
+
+    expect(page.texts('.entry').length).toBeGreaterThan(0);
+    expect(document.activeElement).toBe(page.element('h1'));
   });
 });
