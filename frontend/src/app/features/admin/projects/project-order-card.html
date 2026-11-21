@@ -25,21 +25,16 @@
         }
       }
       @case ('error') {
-        <div
-          class="ui-load-state ui-load-state--inset ui-load-state--error"
+        <app-load-failure
+          class="ui-load-state--inset"
           [class.ui-skeleton-reveal]="loadView.appears()"
+          [compact]="true"
+          [retrying]="retrying()"
+          (retry)="retry()"
+          ><ng-container i18n="@@admin.projects.order.error"
+            >Řazení se nepodařilo načíst.</ng-container
+          ></app-load-failure
         >
-          <p role="alert" i18n="@@admin.projects.order.error">Řazení se nepodařilo načíst.</p>
-          <button
-            appNeedsConnection
-            type="button"
-            class="ui-button"
-            (click)="load()"
-            i18n="@@admin.projects.order.error.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
       }
       @case ('ready') {
         <form

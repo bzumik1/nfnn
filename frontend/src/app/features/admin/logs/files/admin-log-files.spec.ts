@@ -1,6 +1,11 @@
 import { logFile } from '../../testing/admin-fixtures';
 import { LOGS_URL, LogPageHarness } from '../testing/log-page-harness';
 import { AdminLogFiles } from './admin-log-files';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../../shared/ui/load-failure/testing/load-failure-retry';
 
 describe('Given an administrator on the older log files page', () => {
   let page: LogPageHarness;
@@ -91,7 +96,17 @@ describe('Given an administrator on the older log files page', () => {
     page.http.expectOne(LOGS_URL).flush(null, { status: 500, statusText: 'Error' });
     await page.settle();
 
-    await page.click('Zkusit znovu');
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
+      'Soubory logu se nepodařilo načíst.',
+    ]);
+    expect(alertsHoldingAButton(page.fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(page.fixture.nativeElement);
+    await page.settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
+      'Soubory logu se nepodařilo načíst.',
+    ]);
     page.http.expectOne(LOGS_URL).flush({ available: true, files: [] });
     await page.settle();
 

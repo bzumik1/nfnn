@@ -59,6 +59,7 @@
   --color-danger-fill: #a1121a;
   --color-danger-bg: #fdf0ef;
   --color-danger-border: #f2b8b5;
+  --color-danger-control-border: var(--color-border);
   --color-on-danger: #ffffff;
   --color-warning: #7a4a00;
   --color-log-code: #1d5a52;
@@ -517,6 +518,7 @@
   --color-danger: #fca5a5;
   --color-danger-bg: #3a1214;
   --color-danger-border: #b4474a;
+  --color-danger-control-border: var(--color-danger-border);
   --color-warning: #fcd34d;
   --color-log-code: #9fd8cc;
   --color-log-warn: #fcd34d;
@@ -547,5 +549,6 @@
 @media (prefers-contrast: more) {
   :root {
     --scroll-shade-amount: 21%;
+    --color-danger-control-border: var(--color-border-field);
   }
 }

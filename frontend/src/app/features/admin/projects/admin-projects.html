@@ -22,25 +22,23 @@
         Načítáme příběhy…
       </p>
       @if (loadView.skeleton()) {
-        <app-skeleton [rows]="5" title="Všechny příběhy" i18n-title="@@admin.projects.list.title" />
+        <app-skeleton
+          [rows]="5"
+          heading="Všechny příběhy"
+          i18n-heading="@@admin.projects.list.title"
+        />
       }
     }
     @case ('error') {
-      <div
-        class="ui-load-state ui-load-state--error"
+      <app-load-failure
         [class.ui-skeleton-reveal]="loadView.appears()"
+        [compact]="true"
+        [retrying]="retrying()"
+        (retry)="retry()"
+        ><ng-container i18n="@@admin.projects.error.text"
+          >Příběhy se nepodařilo načíst.</ng-container
+        ></app-load-failure
       >
-        <p role="alert" i18n="@@admin.projects.error.text">Příběhy se nepodařilo načíst.</p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          (click)="load()"
-          i18n="@@admin.projects.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
     }
     @case ('ready') {
       <section
