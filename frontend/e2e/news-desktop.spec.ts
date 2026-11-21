@@ -269,7 +269,9 @@ test.describe('Given a visitor on the Aktuality tab on a computer', () => {
     await expect(card.locator('img')).toHaveCount(0);
 
     const perex = await boxOf(card.locator('.news-perex'));
+    const signer = await boxOf(card.locator('.signer'));
     const share = await boxOf(card.locator('.news-share').getByRole('button'));
-    expect(share.top - perex.bottom).toBeLessThanOrEqual(NEAR_PX);
+    const textEnd = share.top >= signer.bottom ? signer.bottom : perex.bottom;
+    expect(share.top - textEnd).toBeLessThanOrEqual(NEAR_PX);
   });
 });
