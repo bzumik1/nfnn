@@ -405,6 +405,13 @@
   color: var(--color-text);
 }
 
+.add-account-number {
+  min-width: 0;
+  max-width: 100%;
+  font-size: var(--text-sheet-account-number);
+  white-space: normal;
+}
+
 .add-account-watch {
   display: flex;
   align-items: flex-start;
@@ -497,6 +504,15 @@
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   color: var(--color-text-secondary);
+}
+
+@include bp.container-down(dialog-panel, tabs) {
+  .watch-title,
+  .watch-detail {
+    max-inline-size: min(var(--measure-prose), 100%);
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
 }
 
 .watch-again {

@@ -1,3 +1,4 @@
+@use 'breakpoints' as bp;
 @use 'motion';
 @use 'pressed';
 @use 'sheet';
@@ -113,9 +114,11 @@
 }
 
 .account-name {
+  overflow: hidden;
+  overflow-wrap: normal;
   font-size: var(--text-sheet-body);
   font-weight: var(--weight-semibold);
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
 }
 
 .account-profile-detail {
@@ -225,4 +228,49 @@
   line-height: var(--leading-normal);
   color: var(--color-text-secondary);
   margin: 0 0 var(--space-4-5);
+}
+
+@include bp.container-down(dialog-panel, tabs) {
+  .account-profile {
+    flex-wrap: wrap;
+
+    .ui-list__chevron {
+      order: 1;
+    }
+  }
+
+  .account-who {
+    flex-basis: 100%;
+    order: 2;
+  }
+
+  .account-profile-detail {
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
+
+  .ui-list__row:has(> .ui-list__value) {
+    grid-template-areas:
+      'lead title title chevron'
+      'lead meta meta chevron'
+      'lead value value chevron';
+  }
+
+  .ui-list__row:has(> .ui-list__value):not(:has(> .ui-list__meta)) {
+    grid-template-areas:
+      'lead title title chevron'
+      'lead value value chevron';
+  }
+
+  .ui-list__value {
+    justify-self: start;
+    margin-inline-start: 0;
+  }
+
+  .ui-list__value:not(.ui-list__count) {
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-align: start;
+    white-space: normal;
+  }
 }

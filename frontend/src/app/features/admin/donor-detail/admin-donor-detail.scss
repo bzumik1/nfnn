@@ -19,7 +19,8 @@
 }
 
 .donor-summary {
-  container: donor-summary / inline-size;
+  container-name: ui-card donor-summary;
+  container-type: inline-size;
   display: flex;
   flex-wrap: wrap;
   align-items: center;

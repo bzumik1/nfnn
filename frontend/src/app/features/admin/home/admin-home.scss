@@ -237,7 +237,8 @@
 }
 
 .attention {
-  container: attention / inline-size;
+  container-name: ui-card attention;
+  container-type: inline-size;
 }
 
 .attention-quiet {

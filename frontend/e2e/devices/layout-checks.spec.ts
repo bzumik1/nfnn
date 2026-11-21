@@ -416,6 +416,64 @@ test.describe('Given a page checked as on a phone', () => {
     ).toEqual(['every tab label on one line inside the tab bar']);
   });
 
+  test('when every card fills its parent, its grid track or the tracks it spans, then the card checks pass', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<main style="padding: 0 16px"><section class="ui-card" style="border: 1px solid; padding: 8px; container: ui-card / inline-size"><h2 class="ui-card__title">Title</h2></section>' +
+          '<app-card><section class="ui-card" style="margin: 0 4px">Inside a host</section></app-card>' +
+          '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"><section class="ui-card">A</section><section class="ui-card">B</section><section class="ui-card" style="grid-column: 1 / -1">C</section></div>' +
+          '<section class="ui-card"><div><h2 class="ui-card__title">In a plain box</h2></div></section></main>',
+      ),
+    ).toEqual([]);
+  });
+
+  test('when a card takes its width from its content, then the card width check fails', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<main><section class="ui-card" style="width: fit-content">Narrow</section></main>',
+      ),
+    ).toEqual(["every card as wide as its parent's content or its grid track"]);
+  });
+
+  test('when a card shrinks to its content in a flex row, then the card width check fails', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<main style="display: flex; gap: 8px"><section class="ui-card">One</section><section class="ui-card">Two</section></main>',
+      ),
+    ).toEqual(["every card as wide as its parent's content or its grid track"]);
+  });
+
+  test('when a card is narrower than its grid track, then the card width check fails', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<main style="display: grid; grid-template-columns: 1fr 1fr; justify-items: start"><section class="ui-card">A</section></main>',
+      ),
+    ).toEqual(["every card as wide as its parent's content or its grid track"]);
+  });
+
+  test('when a card title lies in a container inside its card, then the title check fails', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<main><section class="ui-card" style="container: ui-card / inline-size"><div class="ui-card__group" style="container: list-card / inline-size"><h3 class="ui-card__title">Nested</h3></div></section></main>',
+      ),
+    ).toEqual(['every card title sized by its own card']);
+  });
+
   test('when a modal dialog is open, then only its controls are checked', async ({ page }) => {
     await page.setViewportSize(VIEWPORT);
     await page.setContent(

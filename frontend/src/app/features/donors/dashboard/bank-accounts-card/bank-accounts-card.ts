@@ -231,13 +231,13 @@ export class BankAccountsCard {
     );
   });
   private readonly newlyVerifiedId = computed(() => this.newlyVerified()?.id ?? null);
-  protected readonly alreadyVerified = computed(() =>
-    alreadyVerifiedMessage(
-      this.accounts()
-        .filter((account) => labelOf(account) === 'active' && !account.pairingExcluded)
-        .map((account) => account.accountNumber),
-    ),
-  );
+  protected readonly alreadyVerified = computed(() => {
+    const accountNumbers = this.accounts()
+      .filter((account) => labelOf(account) === 'active' && !account.pairingExcluded)
+      .map((account) => account.accountNumber);
+    const message = alreadyVerifiedMessage(accountNumbers);
+    return message === null ? null : aroundAccountNumbers(message, accountNumbers);
+  });
   private watchRequest: Subscription | undefined;
   private liveWatch: Subscription | undefined;
 
@@ -704,6 +704,33 @@ function alreadyVerifiedMessage(accountNumbers: readonly string[]): string | nul
   return accountNumbers.length === 1
     ? $localize`:@@donor.bankAccounts.addDialog.alreadyVerified.one:Účet ${accounts}:account: už máte ověřený, 1\u00a0Kč z\u00a0něj posílat nemusíte.`
     : $localize`:@@donor.bankAccounts.addDialog.alreadyVerified.other:Účty ${accounts}:accounts: už máte ověřené, 1\u00a0Kč z\u00a0nich posílat nemusíte.`;
+}
+
+type MessagePart =
+  | { readonly text: string; readonly account?: undefined }
+  | { readonly account: ReturnType<typeof splitBeforeBankCode>; readonly text?: undefined };
+
+function aroundAccountNumbers(
+  message: string,
+  accountNumbers: readonly string[],
+): readonly MessagePart[] {
+  const parts: MessagePart[] = [];
+  let rest = message;
+  for (const accountNumber of accountNumbers) {
+    const at = rest.indexOf(accountNumber);
+    if (at < 0) {
+      continue;
+    }
+    if (at > 0) {
+      parts.push({ text: rest.slice(0, at) });
+    }
+    parts.push({ account: splitBeforeBankCode(accountNumber) });
+    rest = rest.slice(at + accountNumber.length);
+  }
+  if (rest.length > 0) {
+    parts.push({ text: rest });
+  }
+  return parts;
 }
 
 function receiptsChangedMessage(years: readonly number[]): string {

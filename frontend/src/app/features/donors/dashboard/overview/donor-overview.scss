@@ -3,7 +3,8 @@
 @use 'touch-target';
 
 .last-gift {
-  container: last-gift / inline-size;
+  container-name: ui-card last-gift;
+  container-type: inline-size;
 }
 
 .last-gift-main {
@@ -149,7 +150,8 @@
 
 @include bp.up(nav) {
   .receipt-ready {
-    container: receipt-ready / inline-size;
+    container-name: ui-card receipt-ready;
+    container-type: inline-size;
     row-gap: 0;
 
     .receipt-error {

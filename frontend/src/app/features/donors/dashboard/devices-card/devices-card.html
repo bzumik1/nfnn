@@ -220,13 +220,13 @@
           <span class="ui-list__meta device-meta">
             <span class="device-last-use"
               ><span i18n="@@donor.account.devices.lastUsed">naposledy použito</span>&ngsp;<span
-                class="device-date-value"
+                class="ui-date device-date-value"
                 >{{ lastUsed(device) }}</span
               ></span
             >
             <span class="device-sign-in"
               ><span i18n="@@donor.account.devices.since">přihlášeno</span>&ngsp;<span
-                class="device-date-value"
+                class="ui-date device-date-value"
                 >{{ signedInOn(device) }}</span
               >
               @if (kind(device); as sessionKind) {

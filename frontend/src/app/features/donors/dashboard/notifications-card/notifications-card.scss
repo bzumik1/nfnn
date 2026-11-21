@@ -1,3 +1,4 @@
+@use 'breakpoints' as bp;
 @use 'touch-target';
 
 :host {
@@ -45,4 +46,11 @@
 .notifications-retry {
   margin-top: var(--space-3);
   @include touch-target.reaches-finger-size;
+}
+
+@include bp.container-down(ui-card, tabs) {
+  .notifications-retry {
+    max-inline-size: 100%;
+    white-space: normal;
+  }
 }

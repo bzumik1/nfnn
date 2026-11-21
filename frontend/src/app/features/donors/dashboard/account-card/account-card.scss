@@ -51,6 +51,17 @@
   color: var(--color-text);
 }
 
+@include bp.container-down(account-card, tabs) {
+  .account-row dt {
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
+
+  .account-panel > * {
+    min-inline-size: 0;
+  }
+}
+
 .account-value {
   display: flex;
   flex-direction: column;

@@ -16,7 +16,8 @@
 }
 
 .yearly-card {
-  container: yearly-receipts / inline-size;
+  container-name: ui-card yearly-receipts;
+  container-type: inline-size;
 }
 
 .years {

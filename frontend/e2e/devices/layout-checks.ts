@@ -10,11 +10,13 @@ export interface Check {
 export const MINIMUM_TARGET_PX = 24;
 const CENTRING_TOLERANCE_PX = 1;
 const STACKED_SHARE = 0.25;
+const CARD_WIDTH_TOLERANCE_PX = 1;
 
 export const LIMITS = {
   minimumTarget: MINIMUM_TARGET_PX,
   stackedShare: STACKED_SHARE,
   centringTolerance: CENTRING_TOLERANCE_PX,
+  cardWidthTolerance: CARD_WIDTH_TOLERANCE_PX,
 };
 const LISTED = 6;
 
@@ -32,6 +34,8 @@ export interface Findings {
   offCentreQr: string[];
   tabBarEdge: string[];
   tabLabels: string[];
+  cardWidths: string[];
+  cardTitlesInAnotherContainer: string[];
 }
 
 export function collectFindings(limits: typeof LIMITS): Findings {
@@ -458,6 +462,92 @@ export function collectFindings(limits: typeof LIMITS): Findings {
     }
   }
 
+  const px = (value: string): number => Number.parseFloat(value) || 0;
+
+  const borderBoxWidth = (element: Element): number => {
+    const style = getComputedStyle(element);
+    const width = px(style.width);
+    return style.boxSizing === 'border-box'
+      ? width
+      : width +
+          px(style.paddingLeft) +
+          px(style.paddingRight) +
+          px(style.borderLeftWidth) +
+          px(style.borderRightWidth);
+  };
+
+  const layoutParent = (element: Element): Element | null => {
+    for (let node = element.parentElement; node; node = node.parentElement) {
+      const display = getComputedStyle(node).display;
+      if (display !== 'inline' && display !== 'contents') {
+        return node;
+      }
+    }
+    return null;
+  };
+
+  const widthsAllowedIn = (parent: Element): number[] => {
+    const style = getComputedStyle(parent);
+    const content = parent.clientWidth - px(style.paddingLeft) - px(style.paddingRight);
+    if (!style.display.includes('grid')) {
+      return [content];
+    }
+    const tracks = style.gridTemplateColumns
+      .replace(/\[[^\]]*\]/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .map(px);
+    const gap = px(style.columnGap);
+    const spans = tracks.flatMap((_, start) =>
+      tracks
+        .slice(start)
+        .map((__, length) =>
+          tracks.slice(start, start + length + 1).reduce((sum, track) => sum + track, length * gap),
+        ),
+    );
+    return [content, ...spans];
+  };
+
+  const cardWidths: string[] = [];
+  for (const card of scope.querySelectorAll('.ui-card')) {
+    const parent = layoutParent(card);
+    if (!parent || !shown(card)) {
+      continue;
+    }
+    const style = getComputedStyle(card);
+    const outer = borderBoxWidth(card) + px(style.marginLeft) + px(style.marginRight);
+    const allowed = widthsAllowedIn(parent);
+    if (!allowed.some((width) => Math.abs(width - outer) <= limits.cardWidthTolerance)) {
+      cardWidths.push(
+        `${describe(card)} is ${outer.toFixed(1)} px in ${allowed
+          .slice(0, 4)
+          .map((width) => width.toFixed(1))
+          .join(' or ')} px`,
+      );
+    }
+  }
+
+  const cardTitlesInAnotherContainer: string[] = [];
+  for (const title of scope.querySelectorAll('.ui-card__title')) {
+    const card = title.closest('.ui-card');
+    if (!card || !shown(title)) {
+      continue;
+    }
+    let container = title.parentElement;
+    while (
+      container &&
+      container !== card &&
+      getComputedStyle(container).containerType === 'normal'
+    ) {
+      container = container.parentElement;
+    }
+    if (container !== card) {
+      cardTitlesInAnotherContainer.push(
+        `${describe(title)} in ${container ? describe(container) : 'none'}`,
+      );
+    }
+  }
+
   return {
     pageWidth,
     viewportWidth,
@@ -472,6 +562,8 @@ export function collectFindings(limits: typeof LIMITS): Findings {
     offCentreQr,
     tabBarEdge,
     tabLabels,
+    cardWidths,
+    cardTitlesInAnotherContainer,
   };
 }
 
@@ -547,6 +639,16 @@ export function checksFrom(found: Findings, pageErrors: string[]): Check[] {
       name: 'every tab label on one line inside the tab bar',
       pass: found.tabLabels.length === 0,
       detail: list(found.tabLabels),
+    },
+    {
+      name: "every card as wide as its parent's content or its grid track",
+      pass: found.cardWidths.length === 0,
+      detail: list(found.cardWidths),
+    },
+    {
+      name: 'every card title sized by its own card',
+      pass: found.cardTitlesInAnotherContainer.length === 0,
+      detail: list(found.cardTitlesInAnotherContainer),
     },
   ];
 }

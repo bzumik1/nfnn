@@ -35,7 +35,7 @@ import {
   signIn,
   whenAdministrationCopied,
 } from './donor-session';
-import { ADMINISTRATION_LOCKED, expect, test } from './fixtures';
+import { ADMINISTRATION_LOCKED, ADMINISTRATION_UNLOCK_PATH, expect, test } from './fixtures';
 import {
   LongestKeptWord,
   longestKeptWord,
@@ -2775,3 +2775,877 @@ for (const width of [390, 1280]) {
     }
   });
 }
+
+async function textPastTheSides(
+  frame: Locator,
+  { ellipsis }: { ellipsis: 'past' | 'within' } = { ellipsis: 'past' },
+): Promise<string[]> {
+  await frame.evaluate(() => document.fonts.ready);
+  return frame.evaluate((element, ellipsizedTextStaysWithin) => {
+    const box = element.getBoundingClientRect();
+    const left = box.left + element.clientLeft;
+    const right = left + element.clientWidth;
+    const past: string[] = [];
+    const ellipsized = (text: Node): boolean => {
+      for (
+        let ancestor = text.parentElement;
+        ancestor && ancestor !== element;
+        ancestor = ancestor.parentElement
+      ) {
+        const style = getComputedStyle(ancestor);
+        if (style.textOverflow === 'ellipsis' && style.overflowX !== 'visible') {
+          return true;
+        }
+      }
+      return false;
+    };
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (
+        !node.textContent?.trim() ||
+        node.parentElement?.closest('.visually-hidden') ||
+        (ellipsizedTextStaysWithin && ellipsized(node))
+      ) {
+        continue;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      for (const rect of Array.from(range.getClientRects())) {
+        if (rect.width > 0 && (rect.left < left - 1 || rect.right > right + 1)) {
+          past.push(
+            `"${node.textContent.trim().slice(0, 30)}" ${Math.round(rect.left)}..${Math.round(rect.right)} in ${Math.round(left)}..${Math.round(right)}`,
+          );
+          break;
+        }
+      }
+    }
+    return past;
+  }, ellipsis === 'within');
+}
+
+async function rowTitlesNarrowerThanTheirLongestWord(rows: Locator): Promise<string[]> {
+  await rows.first().evaluate(() => document.fonts.ready);
+  return rows.evaluateAll((elements) =>
+    elements.flatMap((row) => {
+      const title = row.querySelector<HTMLElement>(':scope > .ui-list__title');
+      if (!title || title.getClientRects().length === 0) {
+        return [];
+      }
+      const rowStyle = getComputedStyle(row);
+      const beside = Array.from(
+        row.querySelectorAll<Element>(':scope > :is(.ui-list__lead, .ui-list__chevron)'),
+      ).reduce((sum, part) => {
+        const style = getComputedStyle(part);
+        return (
+          sum +
+          part.getBoundingClientRect().width +
+          parseFloat(style.marginInlineStart) +
+          parseFloat(style.marginInlineEnd)
+        );
+      }, 0);
+      const room =
+        row.clientWidth -
+        parseFloat(rowStyle.paddingInlineStart) -
+        parseFloat(rowStyle.paddingInlineEnd) -
+        beside;
+      const style = getComputedStyle(title);
+      const longest = Math.max(
+        ...(title.textContent ?? '')
+          .split(/\s+/)
+          .filter((word) => word.length > 0)
+          .map((word) => {
+            const probe = document.createElement('span');
+            probe.textContent = word;
+            probe.style.font = style.font;
+            probe.style.letterSpacing = style.letterSpacing;
+            probe.style.whiteSpace = 'nowrap';
+            probe.style.position = 'absolute';
+            document.body.append(probe);
+            const width = probe.getBoundingClientRect().width;
+            probe.remove();
+            return width;
+          }),
+      );
+      const width = title.getBoundingClientRect().width;
+      return width < Math.min(longest, room) - 1
+        ? [
+            `${(title.textContent ?? '').trim()} ${Math.round(width)} < ${Math.round(longest)} in ${Math.round(room)}`,
+          ]
+        : [];
+    }),
+  );
+}
+
+async function titlesOverTheirValues(rows: Locator): Promise<string[]> {
+  await rows.first().evaluate(() => document.fonts.ready);
+  return rows.evaluateAll((elements) =>
+    elements.flatMap((row) => {
+      const title = row.querySelector(':scope > .ui-list__title');
+      const value = row.querySelector(':scope > .ui-list__value');
+      if (!title || !value) {
+        return [];
+      }
+      const rectsOf = (part: Element): DOMRect[] => {
+        const range = document.createRange();
+        range.selectNodeContents(part);
+        return Array.from(range.getClientRects()).filter((rect) => rect.width > 0);
+      };
+      const valueRects = rectsOf(value);
+      const overlaps = rectsOf(title).some((text) =>
+        valueRects.some(
+          (other) =>
+            text.left < other.right - 1 &&
+            other.left < text.right - 1 &&
+            text.top < other.bottom - 1 &&
+            other.top < text.bottom - 1,
+        ),
+      );
+      return overlaps
+        ? [`${(title.textContent ?? '').trim()}: ${(value.textContent ?? '').trim()}`]
+        : [];
+    }),
+  );
+}
+
+async function wordsBrokenThatWouldFit(element: Locator): Promise<string[]> {
+  await element.evaluate(() => document.fonts.ready);
+  return element.evaluate((root) => {
+    const style = getComputedStyle(root);
+    const line =
+      root.clientWidth - parseFloat(style.paddingInlineStart) - parseFloat(style.paddingInlineEnd);
+    const broken: string[] = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      for (const word of (node.textContent ?? '').matchAll(/[^ \t\r\n-]+-?/g)) {
+        const range = document.createRange();
+        range.setStart(node, word.index);
+        range.setEnd(node, word.index + word[0].length);
+        const tops = new Set(
+          Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+        );
+        if (tops.size < 2) {
+          continue;
+        }
+        const probe = document.createElement('span');
+        probe.textContent = word[0];
+        probe.style.font = style.font;
+        probe.style.letterSpacing = style.letterSpacing;
+        probe.style.whiteSpace = 'nowrap';
+        probe.style.position = 'absolute';
+        document.body.append(probe);
+        const width = probe.getBoundingClientRect().width;
+        probe.remove();
+        if (width <= line) {
+          broken.push(`${word[0]} ${Math.round(width)} in ${line}`);
+        }
+      }
+    }
+    return broken;
+  });
+}
+
+async function linesOfText(element: Locator): Promise<string[]> {
+  await element.evaluate(() => document.fonts.ready);
+  return element.evaluate((root) => {
+    const lines: { top: number; bottom: number; text: string }[] = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
+      for (let index = 0; index < text.length; index++) {
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + 1);
+        const rect = range.getClientRects()[0];
+        if (!rect || rect.height === 0) {
+          continue;
+        }
+        const middle = (rect.top + rect.bottom) / 2;
+        const line = lines.find(({ top, bottom }) => top <= middle && middle <= bottom);
+        if (line) {
+          line.text += text[index];
+          line.top = Math.min(line.top, rect.top);
+          line.bottom = Math.max(line.bottom, rect.bottom);
+        } else {
+          lines.push({ top: rect.top, bottom: rect.bottom, text: text[index] });
+        }
+      }
+    }
+    return lines
+      .sort((first, second) => first.top - second.top)
+      .map(({ text }) => text.trim())
+      .filter((text) => text.length > 0);
+  });
+}
+
+async function controlsOverTheirLabels(rows: Locator): Promise<string[]> {
+  await rows.first().evaluate(() => document.fonts.ready);
+  return rows.evaluateAll((elements) =>
+    elements.flatMap((row) => {
+      const label = row.querySelector('dt');
+      if (!label) {
+        return [];
+      }
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      const text = range.getBoundingClientRect();
+      return Array.from(row.querySelectorAll<HTMLElement>(':scope > dd > button'))
+        .filter((button) => button.getClientRects().length > 0)
+        .filter((button) => {
+          const control = button.getBoundingClientRect();
+          return (
+            control.left < text.right - 1 &&
+            text.left < control.right - 1 &&
+            control.top < text.bottom - 1 &&
+            text.top < control.bottom - 1
+          );
+        })
+        .map(
+          (button) => `${(label.textContent ?? '').trim()}: ${(button.textContent ?? '').trim()}`,
+        );
+    }),
+  );
+}
+
+async function elementsPastTheScreen(page: Page, within = 'body'): Promise<string[]> {
+  return page.evaluate((scope) => {
+    const root = document.querySelector(scope) ?? document.body;
+    const right = document.documentElement.clientWidth;
+    const clippedFrom = (start: Element | null): boolean => {
+      for (
+        let ancestor = start;
+        ancestor && ancestor !== document.body;
+        ancestor = ancestor.parentElement
+      ) {
+        if (getComputedStyle(ancestor).overflowX !== 'visible') {
+          return true;
+        }
+      }
+      return false;
+    };
+    const elements = Array.from(root.querySelectorAll<HTMLElement>('*'))
+      .filter((element) => !element.closest('.visually-hidden'))
+      .filter((element) => !clippedFrom(element.parentElement))
+      .map((element) => ({ element, box: element.getBoundingClientRect() }))
+      .filter(({ box }) => box.width > 0 && box.right > right + 1)
+      .filter(
+        ({ element, box }) =>
+          !Array.from(element.children).some(
+            (child) => Math.round(child.getBoundingClientRect().right) === Math.round(box.right),
+          ),
+      )
+      .map(({ element, box }) => {
+        const name = (element.getAttribute('aria-label') ?? element.textContent ?? '')
+          .trim()
+          .slice(0, 30);
+        return `${element.tagName.toLowerCase()}.${String(element.className).trim().replace(/\s+/g, '.')} "${name}" ..${Math.round(box.right)} in 0..${right}`;
+      });
+    const texts: string[] = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (
+        !node.textContent?.trim() ||
+        node.parentElement?.closest('.visually-hidden') ||
+        clippedFrom(node.parentElement)
+      ) {
+        continue;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const reach = Math.max(0, ...Array.from(range.getClientRects()).map((rect) => rect.right));
+      if (reach > right + 1) {
+        texts.push(
+          `text in ${node.parentElement!.tagName.toLowerCase()}.${String(node.parentElement!.className).trim().replace(/\s+/g, '.')} "${node.textContent.trim().slice(0, 30)}" ..${Math.round(reach)} in 0..${right}`,
+        );
+      }
+    }
+    const pseudos = Array.from(root.querySelectorAll<HTMLElement>('*'))
+      .filter((element) => !clippedFrom(element))
+      .flatMap((element) =>
+        (['::before', '::after'] as const)
+          .filter((pseudo) => {
+            const style = getComputedStyle(element, pseudo);
+            if (style.content === 'none' || style.content === 'normal') {
+              return false;
+            }
+            const box = element.getBoundingClientRect();
+            const width = parseFloat(style.width) || 0;
+            const fromRight = parseFloat(style.right);
+            const fromLeft = parseFloat(style.left);
+            const reach = !Number.isNaN(fromRight)
+              ? box.right - fromRight
+              : !Number.isNaN(fromLeft)
+                ? box.left + fromLeft + width
+                : box.right;
+            return style.position === 'absolute' && reach > right + 1;
+          })
+          .map(
+            (pseudo) =>
+              `${element.tagName.toLowerCase()}.${String(element.className).trim().replace(/\s+/g, '.')}${pseudo}`,
+          ),
+      );
+    return [...elements, ...texts, ...pseudos];
+  }, within);
+}
+
+async function pageWiderThanTheScreen(page: Page): Promise<number> {
+  return page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+}
+
+for (const { width, height } of [
+  { width: 320, height: 568 },
+  { width: 390, height: 844 },
+]) {
+  test.describe(`Given a donor on an iPhone ${width} pt wide whose installed app shows the largest accessibility text, on their account`, () => {
+    test.use({ viewport: { width, height } });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+    });
+
+    test('when they open Údaje a zabezpečení with its passkeys open, then no text reaches past its card, no button covers its label, a heading breaks inside a word only when the word is wider than its line and no date breaks inside a number', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/passkeys',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                {
+                  id: '019a1b2c-3d4e-7f00-8000-000000000001',
+                  name: 'iPhone',
+                  createdAt: '2026-10-17T10:00:00Z',
+                  lastUsedAt: '2026-10-22T09:00:00Z',
+                },
+              ],
+            },
+          }),
+      );
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      await page.setViewportSize({ width, height });
+      await page.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
+      const passkeys = page.getByRole('region', { name: 'Přístupové klíče' });
+      await expect(passkeys.getByText('naposledy použito')).toBeVisible();
+      await expect(page.locator('.device-last-use').first()).toBeVisible();
+      const cards = page.locator('main .ui-card');
+
+      await expect.poll(() => elementsPastTheScreen(page)).toEqual([]);
+      await expect.poll(() => pageWiderThanTheScreen(page)).toBeLessThanOrEqual(0);
+      for (const card of await cards.all()) {
+        expect(await textPastTheSides(card)).toEqual([]);
+        expect(await contentPastTheSides(card)).toEqual([]);
+        expect(await numbersSplitAcrossLines(card)).toEqual([]);
+      }
+      for (const heading of await page.locator('main h2').all()) {
+        expect(await wordsBrokenThatWouldFit(heading)).toEqual([]);
+      }
+      expect(await controlsOverTheirLabels(page.locator('main .account-row'))).toEqual([]);
+    });
+
+    test('when they open Bankovní účty with a verified account and press Přidat bankovní účet, then no account number or other text reaches past the sheet and no account number breaks inside', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donations/me/bank-accounts',
+        (route) => route.fulfill({ json: { items: [bankAccountItem()] } }),
+      );
+      await page.route(
+        (url) => url.pathname === '/api/donations/me/bank-check',
+        (route) =>
+          route.fulfill({
+            status: 202,
+            json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false },
+          }),
+      );
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await openDonorSection(page, 'Bankovní účty');
+      await page.setViewportSize({ width, height });
+      await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
+      await expect(dialog.locator('.add-account-verified')).toContainText('2900233333/2010');
+      await expect(dialog.locator('.add-account-bank')).toContainText('5544332217/2010');
+      const panel = dialog.locator('.dialog-panel');
+
+      expect(await textPastTheSides(panel)).toEqual([]);
+      expect(await contentPastTheSides(panel)).toEqual([]);
+      for (const value of [
+        dialog.locator('.add-account-verified'),
+        dialog.locator('.add-account-bank .bank-value').first(),
+      ]) {
+        expect(await numbersSplitAcrossLines(value)).toEqual([]);
+      }
+    });
+  });
+
+  test.describe(`Given an administrator on an iPhone ${width} pt wide whose installed app shows the largest accessibility text`, () => {
+    test.use({ viewport: { width, height } });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+    });
+
+    test('when they open a paired payment, then the sender account number and every other text of Přiřazená platba stay within the sheet', async ({
+      page,
+    }) => {
+      const { column } = await openPairedPayment(page);
+      const panel = column.locator('.dialog-panel');
+      await expect(panel.locator('app-bank-account').first()).toBeVisible();
+
+      expect(await textPastTheSides(panel)).toEqual([]);
+      expect(await contentPastTheSides(panel)).toEqual([]);
+      expect(await numbersSplitAcrossLines(panel.locator('app-bank-account').first())).toEqual([]);
+    });
+
+    test('when they open the account sheet, then no row title is narrower than its longest word, jen správci stays clear of Správa, the name breaks only between words and no text reaches past its group', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await rememberedDonorSession(page, { user: administrator });
+      await page.goto('/darce/prehled');
+      const sheet = await showAccountList(page);
+      const administration = sheet.locator('.account-administration .ui-list__row');
+      await expect(administration.getByText('jen správci')).toBeVisible();
+      await expect(sheet.locator('.account-name')).toHaveText('Jana Nováková');
+      const rows = sheet.locator('.ui-list__row');
+
+      expect(await rowTitlesNarrowerThanTheirLongestWord(rows)).toEqual([]);
+      expect(await titlesOverTheirValues(rows)).toEqual([]);
+      expect(await wordsBrokenInside(sheet.locator('.account-name'))).toEqual([]);
+      expect(await wordsBrokenThatWouldFit(sheet.locator('.account-profile-detail'))).toEqual([]);
+      for (const group of await sheet.locator('.account-profile, .ui-list--grouped').all()) {
+        expect(await textPastTheSides(group, { ellipsis: 'within' })).toEqual([]);
+      }
+      await expect.poll(() => elementsPastTheScreen(page, 'app-account-sheet')).toEqual([]);
+    });
+  });
+
+  test.describe(`Given an administrator on an iPhone ${width} pt wide whose installed app shows the largest accessibility text and whose administration is locked`, () => {
+    test.use({ viewport: { width, height }, unlocksAdministration: false });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+    });
+
+    test('when they open the administration and choose Použít heslo, then the title, the fields and the buttons of the lock card stay within the card and the screen', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await rememberedSession(page);
+      await page.goto('/sprava');
+      const card = page.locator('.lock-panel');
+      await expect(
+        card.getByRole('heading', { level: 1, name: 'Správa je zamčená' }),
+      ).toBeVisible();
+
+      for (const step of ['locked', 'password']) {
+        if (step === 'password') {
+          await card.getByRole('button', { name: 'Použít heslo' }).click();
+          await expect(
+            card.getByRole('heading', { level: 1, name: 'Odemknout heslem' }),
+          ).toBeVisible();
+        }
+        await expect.poll(() => elementsPastTheScreen(page), step).toEqual([]);
+        await expect.poll(() => pageWiderThanTheScreen(page), step).toBeLessThanOrEqual(0);
+        expect(await textPastTheSides(card), step).toEqual([]);
+        expect(await contentPastTheSides(card), step).toEqual([]);
+      }
+    });
+  });
+}
+
+for (const { width, height } of [
+  { width: 320, height: 568 },
+  { width: 390, height: 844 },
+]) {
+  test.describe(`Given a donor on an iPhone ${width} pt wide whose installed app shows the largest accessibility text, reading the rows of their sign-in`, () => {
+    test.use({ viewport: { width, height } });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+    });
+
+    test('when they open Údaje a zabezpečení, then Dvoufaktorové ověření is split within its row label and reaches past neither the label nor its card', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      await page.setViewportSize({ width, height });
+      const label = page.locator('main .account-row dt', { hasText: 'Dvoufaktorové' });
+      await expect(label).toBeVisible();
+
+      const lines = await linesOfText(label);
+      test.info().annotations.push({ type: 'split', description: lines.join(' | ') });
+      expect(await textPastTheSides(label)).toEqual([]);
+      expect(await textPastTheSides(page.locator('app-account-card .ui-card'))).toEqual([]);
+    });
+  });
+
+  test.describe(`Given an administrator on an iPhone ${width} pt wide whose installed app shows the largest accessibility text and who unlocks the administration with the password`, () => {
+    test.use({ viewport: { width, height }, unlocksAdministration: false });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+    });
+
+    test('when they press Odemknout and the loading delay passes, then its label is split the same way at rest and at work, stays within the button and the button keeps its height', async ({
+      page,
+    }) => {
+      await page.clock.install();
+      await mockDonorApi(page);
+      await rememberedSession(page);
+      const neverAnswered = new Promise<void>(() => undefined);
+      await page.route(
+        (url) => url.pathname === ADMINISTRATION_UNLOCK_PATH,
+        async () => neverAnswered,
+      );
+      await page.goto('/sprava');
+      const card = page.locator('.lock-panel');
+      await card.getByRole('button', { name: 'Použít heslo' }).click();
+      await card.locator('#zamek-heslo').fill('correct horse battery');
+      await card.locator('#zamek-kod').fill('123456');
+      const unlock = card.locator('.lock-unlock');
+      await expect(unlock).toBeVisible();
+      const resting = {
+        height: (await unlock.boundingBox())!.height,
+        lines: await linesOfText(unlock.locator('.busy-label__face--shown')),
+        past: await textPastTheSides(unlock),
+      };
+
+      await unlock.click();
+      await page.clock.fastForward(1_000);
+      await expect(unlock.locator('.busy-label__face--shown')).toHaveText('Odemykáme…');
+      const working = {
+        height: (await unlock.boundingBox())!.height,
+        lines: await linesOfText(unlock.locator('.busy-label__face--shown')),
+        past: await textPastTheSides(unlock),
+      };
+
+      test
+        .info()
+        .annotations.push(
+          { type: 'split at rest', description: resting.lines.join(' | ') },
+          { type: 'split at work', description: working.lines.join(' | ') },
+        );
+      expect(resting.past).toEqual([]);
+      expect(working.past).toEqual([]);
+      expect(Math.abs(working.height - resting.height)).toBeLessThanOrEqual(1);
+    });
+  });
+}
+
+for (const rootSize of ['200%', `${LARGEST_SYSTEM_TEXT_PX}px`]) {
+  test.describe(`Given a computer window 900 px wide whose root text is ${rootSize}`, () => {
+    test.use({ viewport: { width: 900, height: 900 } });
+
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript((size) => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = `html { font-size: ${size}; }`;
+          document.head.append(style);
+        });
+      }, rootSize);
+    });
+
+    test('when a donor opens Údaje a zabezpečení, then every card title breaks only between words', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await signIn(page);
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      const titles = page.locator('main .ui-card__title');
+      await expect(titles.first()).toBeVisible();
+
+      for (const title of await titles.all()) {
+        expect(await wordsBrokenInside(title), await title.innerText()).toEqual([]);
+      }
+    });
+
+    for (const { path, heading } of [
+      { path: '/sprava/upozorneni', heading: 'Upozornění' },
+      { path: '/sprava/zalohy/historie', heading: 'Všechny zálohy' },
+      { path: '/sprava/prehledy/2026-09', heading: 'Přehled za září 2026' },
+      { path: `${PETR_DETAIL_PATH}/udaje`, heading: null },
+    ]) {
+      test(`when an administrator opens ${path}, then every card title breaks only between words`, async ({
+        page,
+      }) => {
+        await mockDonorApi(page, donorWithDonations);
+        await mockAdministration(page);
+        await rememberedSession(page);
+        await page.goto(path);
+        if (heading) {
+          await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+        }
+        const titles = page.locator('main .ui-card__title');
+        await expect(titles.first()).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+
+        for (const title of await titles.all()) {
+          expect(await wordsBrokenInside(title), await title.innerText()).toEqual([]);
+        }
+      });
+    }
+  });
+}
+
+async function cardTitlesBelowTheirFullSize(page: Page): Promise<string[]> {
+  const titles = page.locator('main .ui-card__title');
+  await expect(titles.first()).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  const below: string[] = [];
+  for (const title of await titles.all()) {
+    if (!(await title.isVisible())) {
+      continue;
+    }
+    const { title: size, token } = await fontSizes(title, '--text-2xl');
+    if (Math.abs(size - token) > 0.5) {
+      below.push(`${(await title.innerText()).trim()}: ${size} px, --text-2xl ${token} px`);
+    }
+  }
+  return below;
+}
+
+interface CardsBesideEachOther {
+  besideEachOther: number;
+  measured: number;
+  changed: string[];
+}
+
+async function cardsBesideEachOtherWithoutTheCardContainer(
+  page: Page,
+): Promise<CardsBesideEachOther> {
+  await page.evaluate(() => document.fonts.ready);
+  return page.evaluate(() => {
+    const cards = [...document.querySelectorAll<HTMLElement>('main .ui-card')].filter((card) =>
+      card.checkVisibility(),
+    );
+    const measure = () =>
+      cards.map((card) => {
+        const box = card.getBoundingClientRect();
+        return { left: box.left, top: box.top, width: box.width, height: box.height };
+      });
+    const withContainer = measure();
+    const beside = cards
+      .map((_, index) => index)
+      .filter((index) =>
+        withContainer.some(
+          (other, otherIndex) =>
+            otherIndex !== index &&
+            Math.abs(other.top - withContainer[index].top) <= 1 &&
+            (other.left >= withContainer[index].left + withContainer[index].width - 1 ||
+              other.left + other.width <= withContainer[index].left + 1),
+        ),
+      );
+    const newContainers = cards.filter(
+      (card) => getComputedStyle(card).containerName === 'ui-card',
+    );
+    for (const card of newContainers) {
+      card.style.setProperty('container-type', 'normal', 'important');
+    }
+    const withoutContainer = measure();
+    for (const card of newContainers) {
+      card.style.removeProperty('container-type');
+    }
+    const compared = beside.length > 0 ? beside : newContainers.map((card) => cards.indexOf(card));
+    const changed = compared
+      .filter(
+        (index) =>
+          Math.abs(withContainer[index].width - withoutContainer[index].width) > 0.5 ||
+          Math.abs(withContainer[index].height - withoutContainer[index].height) > 0.5,
+      )
+      .map((index) => {
+        const title = cards[index].querySelector('.ui-card__title')?.textContent?.trim() ?? '';
+        const [now, before] = [withContainer[index], withoutContainer[index]];
+        return `${title}: ${now.width.toFixed(1)}×${now.height.toFixed(1)}, without the container ${before.width.toFixed(1)}×${before.height.toFixed(1)}`;
+      });
+    return { besideEachOther: beside.length, measured: compared.length, changed };
+  });
+}
+
+for (const width of [1280, 1920]) {
+  for (const rootSize of [null, '200%']) {
+    test.describe(`Given a computer window ${width} px wide whose root text is ${rootSize ?? 'the default size'}`, () => {
+      test.use({ viewport: { width: 1280, height: 900 } });
+
+      test.beforeEach(async ({ page }) => {
+        if (rootSize) {
+          await page.addInitScript((size) => {
+            document.addEventListener('DOMContentLoaded', () => {
+              const style = document.createElement('style');
+              style.textContent = `html { font-size: ${size}; }`;
+              document.head.append(style);
+            });
+          }, rootSize);
+        }
+      });
+
+      test('when a donor opens Údaje a zabezpečení, then every card title takes --text-2xl', async ({
+        page,
+      }) => {
+        await mockDonorApi(page);
+        await signIn(page);
+        await page.setViewportSize({ width, height: 900 });
+        await openDonorSection(page, 'Údaje a zabezpečení');
+        await expect(page).toHaveURL(/\/darce\/udaje$/);
+
+        expect(await cardTitlesBelowTheirFullSize(page)).toEqual([]);
+      });
+
+      test('when an administrator opens Správa, then every card title takes --text-2xl and the cards beside each other, or every card container when none are, keep the width and height they have without the card container, as on main', async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await mockDonorApi(page, donorWithDonations);
+        await mockAdministration(page);
+        await rememberedSession(page);
+        await page.goto('/sprava');
+        await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeVisible();
+        await expect(page.locator('main .admin-status > .ui-card')).toHaveCount(2);
+
+        expect(await cardTitlesBelowTheirFullSize(page)).toEqual([]);
+        const cards = await cardsBesideEachOtherWithoutTheCardContainer(page);
+        test.info().annotations.push({
+          type: 'cards beside each other',
+          description: `${cards.besideEachOther}, measured ${cards.measured}`,
+        });
+        if (!rootSize) {
+          expect(cards.besideEachOther).toBeGreaterThanOrEqual(2);
+        }
+        expect(cards.measured).toBeGreaterThanOrEqual(1);
+        expect(cards.changed).toEqual([]);
+      });
+    });
+  }
+}
+
+async function wrappedOntoMoreLines(elements: Locator): Promise<string[]> {
+  await elements.first().evaluate(() => document.fonts.ready);
+  return elements.evaluateAll((list) =>
+    list
+      .filter((element) => {
+        const probe = document.createElement('span');
+        probe.textContent = '0';
+        probe.style.display = 'inline-block';
+        probe.style.whiteSpace = 'nowrap';
+        element.after(probe);
+        const line = probe.getBoundingClientRect().height;
+        probe.remove();
+        return element.getBoundingClientRect().height > line * 1.5;
+      })
+      .map((element) => (element.textContent ?? '').trim()),
+  );
+}
+
+test.describe('Given an administrator on a computer 1280 px wide with the text at its default size, reading account numbers and dates', () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page, donorWithDonations);
+    await mockAdministration(page);
+    await rememberedSession(page);
+  });
+
+  test('when they open /sprava/starsi-symboly, then every account number stays on one line', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/starsi-symboly');
+    const numbers = page.locator('main table app-bank-account .ui-figures');
+    await expect(numbers.first()).toBeVisible();
+
+    expect(await wrappedOntoMoreLines(numbers)).toEqual([]);
+  });
+
+  test('when they open the bank accounts of a donor, then every date of their last gift stays whole', async ({
+    page,
+  }) => {
+    await page.goto(`${PETR_DETAIL_PATH}/bankovni-ucty`);
+    const dates = page.locator('main td .muted', { hasText: 'poslední' }).locator('.ui-date');
+    await expect(dates.first()).toBeVisible();
+
+    expect(await wrappedOntoMoreLines(dates)).toEqual([]);
+  });
+});
+
+test.describe('Given a donor on an iPhone 390 pt wide with the text at its default size', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('when they open Údaje a zabezpečení, then the date and the time of every signed-in device stay together on one line', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole('navigation', { name: 'Můj účet' })).toHaveCount(0);
+    const dates = page.locator('app-devices-card .device-date-value');
+    await expect(dates.first()).toBeVisible();
+
+    expect(await wrappedOntoMoreLines(dates)).toEqual([]);
+  });
+});
+
+test.describe('Given a phone 320 pt wide with the text at its default size', () => {
+  test.use({ viewport: { width: 320, height: 568 }, unlocksAdministration: false });
+
+  test('when a donor with a verified account opens Přidat bankovní účet, then no word of the sheet breaks inside', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-accounts',
+      (route) => route.fulfill({ json: { items: [bankAccountItem()] } }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-check',
+      (route) =>
+        route.fulfill({
+          status: 202,
+          json: { bankDataAsOf: '2026-10-18T08:05:30Z', checking: false },
+        }),
+    );
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Bankovní účty');
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
+    await expect(dialog.locator('.watch-detail')).toBeVisible();
+
+    for (const text of await dialog.locator('.watch-title, .watch-detail').all()) {
+      expect(await wordsBrokenInside(text)).toEqual([]);
+    }
+  });
+
+  test('when an administrator opens the locked administration and its password view, then no word of the lock card breaks inside', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedSession(page);
+    await page.goto('/sprava');
+    const card = page.locator('.lock-panel');
+    await expect(card.getByRole('heading', { level: 1, name: 'Správa je zamčená' })).toBeVisible();
+
+    for (const step of ['locked', 'password']) {
+      if (step === 'password') {
+        await card.getByRole('button', { name: 'Použít heslo' }).click();
+        await expect(
+          card.getByRole('heading', { level: 1, name: 'Odemknout heslem' }),
+        ).toBeVisible();
+      }
+      for (const text of await card.locator('.lock-lead, .lock-note, .ui-button').all()) {
+        expect(await wordsBrokenInside(text), step).toEqual([]);
+      }
+    }
+  });
+});

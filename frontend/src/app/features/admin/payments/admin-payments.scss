@@ -433,3 +433,12 @@
 .pair-payment .held-note {
   max-width: none;
 }
+
+.pair-payment :is(.held-tag, .refunded-tag, .receipt-tag) {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.pair-payment .symbol {
+  font-size: var(--text-account-number-in-text);
+}

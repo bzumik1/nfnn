@@ -63,7 +63,8 @@
 }
 
 .device-date-value {
-  white-space: nowrap;
+  display: inline-block;
+  max-inline-size: 100%;
 }
 
 .devices-older-chevron--open {
@@ -104,6 +105,28 @@
   }
 }
 
+@include bp.container-down(devices, tabs) {
+  .device-current {
+    max-inline-size: 100%;
+    white-space: normal;
+  }
+}
+
 .devices-status {
   max-inline-size: var(--measure-prose);
+}
+
+@include bp.container-down(ui-card, tabs) {
+  .device-action {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  .device-sign-out {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    white-space: normal;
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
 }
