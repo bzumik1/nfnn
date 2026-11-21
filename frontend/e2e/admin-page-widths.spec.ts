@@ -405,22 +405,22 @@ const TABLET = { width: 820, height: 1180 } as const;
 const PHONE = { width: 390, height: 844 } as const;
 const FORM_MEASURE_REM = 45;
 
-interface SheetColumn {
-  readonly sheetLeft: number;
-  readonly sheetRight: number;
+interface FrameColumn {
+  readonly frameLeft: number;
+  readonly frameRight: number;
   readonly contentLeft: number;
   readonly contentRight: number;
   readonly rootFontSize: number;
 }
 
-async function sheetColumn(page: Page): Promise<SheetColumn> {
+async function frameColumn(page: Page): Promise<FrameColumn> {
   return pageBox(page).evaluate((element) => {
-    const sheet = element.closest('.admin-sheet')!.getBoundingClientRect();
+    const frame = element.closest('.admin-frame')!.getBoundingClientRect();
     const box = element.getBoundingClientRect();
     const style = getComputedStyle(element);
     return {
-      sheetLeft: sheet.left,
-      sheetRight: sheet.right,
+      frameLeft: frame.left,
+      frameRight: frame.right,
       contentLeft: box.left + parseFloat(style.paddingLeft),
       contentRight: box.right - parseFloat(style.paddingRight),
       rootFontSize: parseFloat(getComputedStyle(document.documentElement).fontSize),
@@ -430,19 +430,21 @@ async function sheetColumn(page: Page): Promise<SheetColumn> {
 
 test.describe('Given an administrator in an editor on an upright tablet', () => {
   for (const path of ['/sprava/aktuality/nova', '/sprava/projekty/nova'] as const) {
-    test(`when ${path} opens, then the form stands in the form page's measure in the middle of the sheet`, async ({
+    test(`when ${path} opens, then the form stands in the form page's measure in the middle of the full-screen frame`, async ({
       page,
     }) => {
       await page.setViewportSize(TABLET);
       await openUnlocked(page, path);
-      await expect(page.locator('.admin-sheet .ui-card').first()).toBeVisible();
+      await expect(
+        page.locator('.admin-frame:not(.admin-sheet) .admin-page form .ui-card').first(),
+      ).toBeVisible();
 
-      const column = await sheetColumn(page);
+      const column = await frameColumn(page);
       expect(column.contentRight - column.contentLeft).toBeLessThanOrEqual(
         FORM_MEASURE_REM * column.rootFontSize + 0.5,
       );
-      expect(column.contentLeft - column.sheetLeft).toBeCloseTo(
-        column.sheetRight - column.contentRight,
+      expect(column.contentLeft - column.frameLeft).toBeCloseTo(
+        column.frameRight - column.contentRight,
         0,
       );
     });

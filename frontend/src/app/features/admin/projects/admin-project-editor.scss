@@ -5,10 +5,12 @@
 }
 
 @include bp.up(tablet) {
-  :host-context(.ui-sheet-page) .ui-page--form {
-    box-sizing: content-box;
-    max-width: var(--page-form-max);
-    margin-inline: auto;
+  @include bp.down(nav) {
+    .ui-page--form {
+      box-sizing: content-box;
+      max-width: var(--page-form-max);
+      margin-inline: auto;
+    }
   }
 }
 
