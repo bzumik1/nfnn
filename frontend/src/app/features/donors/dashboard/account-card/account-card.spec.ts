@@ -190,6 +190,20 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(card.element('.account-pending')).toBeNull();
     });
 
+    it('then the e-mail may break only after its @ and after its dots', () => {
+      const breaks = Array.from(card.element('.account-email').childNodes)
+        .map((node) =>
+          node.nodeName === 'WBR'
+            ? '|'
+            : node.nodeType === Node.COMMENT_NODE
+              ? ''
+              : (node.textContent ?? ''),
+        )
+        .join('');
+
+      expect(breaks).toBe('jana@|example.|cz');
+    });
+
     it.each([
       ['Změnit e-mail', '#account-new-email'],
       ['Změnit heslo', '#account-current-password'],

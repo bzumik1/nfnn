@@ -5,6 +5,8 @@
     [attr.width]="size()"
     [attr.height]="size()"
     alt=""
+    [class.bank-mark-image--loaded]="loaded()"
+    (load)="loaded.set(true)"
     (error)="failed.set(true)"
   />
 } @else if (monogram(); as letters) {

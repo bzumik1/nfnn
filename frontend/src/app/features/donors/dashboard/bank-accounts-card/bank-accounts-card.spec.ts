@@ -705,7 +705,8 @@ describe('Given the bank accounts card in the overview', () => {
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
       expect(panel.getAttribute('role')).toBe('region');
-      expect(text('#' + panel.getAttribute('aria-labelledby'))).toBe('Jak přiřazujeme platby');
+      expect(element('#' + panel.getAttribute('aria-labelledby'))).toBe(helpButton());
+      expect(element('#accounts-help-panel h3')).toBeNull();
       expect(texts('#accounts-help-panel .help-symbol')).toEqual([
         '9876543210',
         '9876543210',
