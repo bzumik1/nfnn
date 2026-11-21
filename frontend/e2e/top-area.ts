@@ -37,26 +37,39 @@ interface TopAreaStop {
   readonly failed: (problem: Error) => void;
 }
 
+interface LateFrames {
+  read(reader: FrameRequestCallback): void;
+}
+
 interface TopAreaWatch {
   topAreaRun: number;
   topAreaFrames: TopAreaFrame[];
   topAreaFailure: string | null;
   topAreaStop: TopAreaStop | null;
+  nfnnLateFrames?: LateFrames;
 }
 
-interface WatchSettings {
-  readonly live: string;
-  readonly copies: string;
-  readonly copyVeils: string;
-  readonly quietFrames: number;
+export interface SampledRegions {
+  readonly glass: string;
+  readonly glassCopies: string;
+  readonly veilCopies: string;
+  readonly pagesOver: string;
 }
 
-const SETTINGS: WatchSettings = {
-  live: 'app-root .ui-glass',
-  copies: '.page-transition .ui-glass, .page-fade .ui-glass',
-  copyVeils: '.page-transition__sheet-backdrop, .page-transition__sheet > dialog',
-  quietFrames: 3,
+export const TOP_AREA_REGIONS: SampledRegions = {
+  glass: 'app-root .ui-glass',
+  glassCopies: '.page-transition .ui-glass, .page-fade .ui-glass',
+  veilCopies: '.page-transition__sheet-backdrop, .page-transition__sheet > dialog',
+  pagesOver: '.page-transition__page--over',
 };
+
+export interface FrameSampling {
+  stopWhenStill(): Promise<TopAreaFrame[]>;
+}
+
+export type BandName = 'under the header' | 'under the clock';
+
+const QUIET_FRAMES = 3;
 const LONGEST_SETTLE_MS = 2000;
 const FRAME_MS = 1000 / 60;
 const LONGEST_STEP_SHARE_PER_FRAME = 0.4;
@@ -70,10 +83,14 @@ const OPACITY_WORTH_JUDGING = 0.25;
 const BLUR_SHARE_SHOWN = 0.5;
 const BLUR_GAP_WORTH_JUDGING = 0.1;
 const EDGES_LEFT_UNDER_BLUR = 0.5;
+const CLOCK_BAND_TOLERANCE = 0.1;
 
-async function watchTopArea(page: Page): Promise<void> {
+export async function sampleFrames(
+  page: Page,
+  regions: SampledRegions = TOP_AREA_REGIONS,
+): Promise<FrameSampling> {
   await page.evaluate(
-    (settings) =>
+    ({ regions, quietFrames }) =>
       new Promise<void>((started, failedToStart) => {
         const watch = window as unknown as TopAreaWatch;
         watch.topAreaRun = (watch.topAreaRun ?? 0) + 1;
@@ -184,20 +201,39 @@ async function watchTopArea(page: Page): Promise<void> {
             tint: [red, green, blue],
           };
         };
+        const point = { x: innerWidth / 2, y: 1 };
+        const coversPoint = (element: Element): boolean => {
+          const box = element.getBoundingClientRect();
+          return (
+            box.left <= point.x && point.x < box.right && box.top <= point.y && point.y < box.bottom
+          );
+        };
+        const pageAbove = (copy: Element): boolean => {
+          const stack = document.elementsFromPoint(point.x, point.y);
+          return Array.from(document.querySelectorAll(regions.pagesOver)).some(
+            (over) =>
+              !over.contains(copy) &&
+              (copy.compareDocumentPosition(over) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 &&
+              (stack.some((element) => over.contains(element)) ||
+                (coversPoint(over) && shownShare(over) > 0)),
+          );
+        };
         const copyVeils = (): Veil[] =>
-          Array.from(document.querySelectorAll(settings.copyVeils), (copy) => {
-            const style = getComputedStyle(copy);
-            const share = shownShare(copy);
-            const [red, green, blue, alpha] = painted(style.backgroundColor);
-            return {
-              strength: alpha * share,
-              blur: backdropFilterOf(style) !== 'none' ? share : 0,
-              tint: [red, green, blue],
-            };
-          });
+          Array.from(document.querySelectorAll(regions.veilCopies))
+            .filter((copy) => coversPoint(copy) && !pageAbove(copy))
+            .map((copy) => {
+              const style = getComputedStyle(copy);
+              const share = shownShare(copy);
+              const [red, green, blue, alpha] = painted(style.backgroundColor);
+              return {
+                strength: alpha * share,
+                blur: backdropFilterOf(style) !== 'none' ? share : 0,
+                tint: [red, green, blue],
+              };
+            });
         const barsOf = (): BarLook[] => {
           const named = new Map<string, Element[]>();
-          for (const bar of document.querySelectorAll(`${settings.live}, ${settings.copies}`)) {
+          for (const bar of document.querySelectorAll(`${regions.glass}, ${regions.glassCopies}`)) {
             const name = bar.classList[0];
             named.set(name, [...(named.get(name) ?? []), bar]);
           }
@@ -259,7 +295,7 @@ async function watchTopArea(page: Page): Promise<void> {
           }
           const moving = running();
           stop.quiet = moving.length === 0 ? stop.quiet + 1 : 0;
-          if (stop.quiet >= settings.quietFrames) {
+          if (stop.quiet >= quietFrames) {
             end();
             stop.settled(frames);
           } else if (moving.length > 0 && performance.now() > stop.deadline) {
@@ -296,7 +332,7 @@ async function watchTopArea(page: Page): Promise<void> {
               thumb: scrollbar === null ? null : scrollbar.thumb,
               bars: barsOf(),
             });
-            if (frames.length === settings.quietFrames + 1) {
+            if (frames.length === quietFrames + 1) {
               started();
             }
             stopIfStill();
@@ -305,7 +341,15 @@ async function watchTopArea(page: Page): Promise<void> {
             return;
           }
           if (!ended()) {
+            nextFrame();
+          }
+        };
+        const nextFrame = (): void => {
+          const late = watch.nfnnLateFrames;
+          if (late === undefined) {
             requestAnimationFrame(afterPaint);
+          } else {
+            late.read(sample);
           }
         };
         channel.port1.onmessage = (message: MessageEvent<number>) => sample(message.data);
@@ -314,10 +358,11 @@ async function watchTopArea(page: Page): Promise<void> {
             channel.port2.postMessage(at);
           }
         };
-        requestAnimationFrame(afterPaint);
+        nextFrame();
       }),
-    SETTINGS,
+    { regions, quietFrames: QUIET_FRAMES },
   );
+  return { stopWhenStill: () => stopWhenStill(page) };
 }
 
 async function stopWhenStill(page: Page): Promise<TopAreaFrame[]> {
@@ -345,10 +390,10 @@ export async function topAreaFramesWhile(
   act: () => Promise<void>,
   arrived: () => Promise<void>,
 ): Promise<TopAreaFrame[]> {
-  await watchTopArea(page);
+  const sampling = await sampleFrames(page);
   await act();
   await arrived();
-  return stopWhenStill(page);
+  return sampling.stopWhenStill();
 }
 
 interface Band {
@@ -358,15 +403,24 @@ interface Band {
   readonly bottom: number;
 }
 
-function headerBand(page: Page): Promise<Band> {
-  return page.evaluate(() => {
+function bandOf(page: Page, name: BandName): Promise<Band> {
+  return page.evaluate((underClock) => {
+    if (underClock) {
+      const clock = Number.parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--safe-area-top'),
+      );
+      if (!(clock > 0)) {
+        throw new Error('no --safe-area-top to read the band under the clock');
+      }
+      return { left: 0, right: document.documentElement.clientWidth, top: 0, bottom: clock };
+    }
     const header = document.querySelector('[role="banner"], header');
     if (header === null) {
       throw new Error('no header to read the band under it');
     }
     const box = header.getBoundingClientRect();
     return { left: box.left, right: box.right, top: Math.max(0, box.top), bottom: box.bottom };
-  });
+  }, name === 'under the clock');
 }
 
 function panelsOver(page: Page, band: Band): Promise<[number, number][]> {
@@ -451,8 +505,9 @@ export async function topAreaWhile(
   page: Page,
   act: () => Promise<void>,
   arrived: () => Promise<void>,
+  bandName: BandName = 'under the header',
 ): Promise<TopArea> {
-  const band = await headerBand(page);
+  const band = await bandOf(page, bandName);
   const coveredBefore = await panelsOver(page, band);
   const screencast = await page.context().newCDPSession(page);
   const shots: string[] = [];
@@ -591,16 +646,25 @@ function veiledBy(frame: TopAreaFrame, base: Rgb): Rgb {
   return [under(0), under(1), under(2)];
 }
 
-export function stripOutOfStep(frames: readonly TopAreaFrame[]): string[] {
+function stripsDiffer(name: string, strip: Rgb | null, under: Rgb, index: number): string[] {
+  return strip !== null && apart(strip, under) > STRIP_TOLERANCE
+    ? [
+        `the ${name} beside the backdrop is ${hex(strip)} where the page under it is ${hex(under)} in frame ${index}`,
+      ]
+    : [];
+}
+
+export function groundOutOfStep(frames: readonly TopAreaFrame[]): string[] {
+  const rest = restingFrame(frames);
+  return frames.flatMap((frame, index) =>
+    stripsDiffer('ground', frame.ground, veiledBy(frame, rest.ground), index),
+  );
+}
+
+export function scrollbarOutOfStep(frames: readonly TopAreaFrame[]): string[] {
   const rest = restingFrame(frames);
   return frames.flatMap((frame, index) => {
     const page = veiledBy(frame, rest.ground);
-    const differs = (name: string, strip: Rgb | null, under: Rgb): string[] =>
-      strip !== null && apart(strip, under) > STRIP_TOLERANCE
-        ? [
-            `the ${name} beside the backdrop is ${hex(strip)} where the page under it is ${hex(under)} in frame ${index}`,
-          ]
-        : [];
     const previous = index === 0 ? null : frames[index - 1];
     const ownColours =
       frame.thumb === null && apart(page, rest.ground) > STRIP_TOLERANCE
@@ -619,11 +683,15 @@ export function stripOutOfStep(frames: readonly TopAreaFrame[]): string[] {
           ]
         : [];
     return [
-      ...differs('ground', frame.ground, page),
-      ...differs('scrollbar track', frame.track, veiledBy(frame, rest.track ?? rest.ground)),
+      ...stripsDiffer(
+        'scrollbar track',
+        frame.track,
+        veiledBy(frame, rest.track ?? rest.ground),
+        index,
+      ),
       ...(rest.thumb === null
         ? []
-        : differs('scrollbar thumb', frame.thumb, veiledBy(frame, rest.thumb))),
+        : stripsDiffer('scrollbar thumb', frame.thumb, veiledBy(frame, rest.thumb), index)),
       ...switched,
       ...ownColours,
     ];
@@ -669,7 +737,7 @@ export function blurMissingUnderHeader({ frames, screens }: TopArea): string[] {
   const problems =
     sharpness(open) > EDGES_LEFT_UNDER_BLUR
       ? [
-          `the page under the header keeps ${percent(sharpness(open))} of its edges under the whole backdrop in screencast frame ${open}, so its blur does not show`,
+          `the header band keeps ${percent(sharpness(open))} of its edges under the whole backdrop in screencast frame ${open}, so its blur does not show`,
         ]
       : [];
   return [
@@ -692,5 +760,37 @@ export function blurMissingUnderHeader({ frames, screens }: TopArea): string[] {
           ]
         : [];
     }),
+  ];
+}
+
+export function bandUnderClockOutOfStep({ frames, screens }: TopArea): string[] {
+  const veiled = frames.filter((frame) => frame.tint !== null);
+  if (veiled.length === 0 || screens.length < 2) {
+    return ['no backdrop or too few screencast frames to read the band under the clock against'];
+  }
+  const strongest = veiled.reduce((stronger, frame) =>
+    strengthOf(frame) > strengthOf(stronger) ? frame : stronger,
+  );
+  const opening = frames[0].veil === null;
+  const rest = (opening ? screens[0] : screens[screens.length - 1]).lightness;
+  const tint = lightnessOf(strongest.tint as Rgb);
+  const darkened = screens.map((screen) => (rest - screen.lightness) / (rest - tint));
+  const darkest = Math.max(...darkened);
+  const reached =
+    Math.abs(darkest - strengthOf(strongest)) > CLOCK_BAND_TOLERANCE
+      ? [
+          `the band under the clock darkens to ${percent(darkest)} where the backdrop reaches ${percent(strengthOf(strongest))}`,
+        ]
+      : [];
+  const direction = opening ? 1 : -1;
+  return [
+    ...reached,
+    ...darkened.flatMap((darkening, index) =>
+      index > 0 && direction * (darkening - darkened[index - 1]) < -CLOCK_BAND_TOLERANCE
+        ? [
+            `the band under the clock goes from ${percent(darkened[index - 1])} to ${percent(darkening)} of darkening in screencast frame ${index}, against the backdrop`,
+          ]
+        : [],
+    ),
   ];
 }

@@ -2,14 +2,17 @@ import { Locator, Page } from '@playwright/test';
 import { BREAKPOINTS } from '../src/app/core/layout/breakpoints';
 import { mockPublicContent } from './baseline/screen-mocks';
 import { mockDonorApi, rememberedDonorSession } from './donor-session';
+import { fingerAlong } from './finger';
 import { expect, test, testWithoutBrowser } from './fixtures';
 import {
+  bandUnderClockOutOfStep,
   barsThatChanged,
   blurMissingUnderHeader,
   blurOutOfStep,
   Rgb,
   ScreenFrame,
-  stripOutOfStep,
+  groundOutOfStep,
+  scrollbarOutOfStep,
   TopAreaFrame,
   topAreaFramesWhile,
   topAreaWhile,
@@ -71,7 +74,8 @@ testWithoutBrowser.describe('Given frames of the top of the page planted by hand
           expect(veilJumps(frames)).toEqual([]);
           expect(blurOutOfStep(frames)).toEqual([]);
           expect(barsThatChanged(frames)).toEqual([]);
-          expect(stripOutOfStep(frames)).toEqual([]);
+          expect(groundOutOfStep(frames)).toEqual([]);
+          expect(scrollbarOutOfStep(frames)).toEqual([]);
         },
       );
 
@@ -122,7 +126,7 @@ testWithoutBrowser.describe('Given frames of the top of the page planted by hand
           index < 4 ? { ...frame, ground: [108, 111, 126] as const } : frame,
         );
 
-        expect(stripOutOfStep(frames)).toEqual([
+        expect(groundOutOfStep(frames)).toEqual([
           'the ground beside the backdrop is #6c6f7e where the page under it is #b6b7bf in frame 1',
           'the ground beside the backdrop is #6c6f7e where the page under it is #ffffff in frame 2',
           'the ground beside the backdrop is #6c6f7e where the page under it is #ffffff in frame 3',
@@ -136,7 +140,7 @@ testWithoutBrowser.describe('Given frames of the top of the page planted by hand
             : { ...frame, track: veiled(WHITE, FULL_BACKDROP), thumb: veiled(GREY, FULL_BACKDROP) },
         );
 
-        expect(stripOutOfStep(frames)).toEqual([
+        expect(scrollbarOutOfStep(frames)).toEqual([
           'the scrollbar track beside the backdrop is #6c6f7e where the page under it is #ffffff in frame 1',
           'the scrollbar thumb beside the backdrop is #2e3750 where the page under it is #64748b in frame 1',
           'the scrollbar track beside the backdrop is #6c6f7e where the page under it is #b6b7bf in frame 2',
@@ -153,7 +157,7 @@ testWithoutBrowser.describe('Given frames of the top of the page planted by hand
               : { ...frame, thumb: GREY },
           );
 
-          expect(stripOutOfStep(frames)).toEqual([
+          expect(scrollbarOutOfStep(frames)).toEqual([
             'the scrollbar thumb switches from the browser’s own colour to #64748b in frame 1',
             'the scrollbar thumb switches back to the browser’s own colour in frame 2',
             'the scrollbar keeps the browser’s own colours beside a backdrop at 30 % in frame 2',
@@ -179,7 +183,7 @@ testWithoutBrowser.describe('Given frames of the top of the page planted by hand
         ]);
 
         expect(blurMissingUnderHeader({ frames: planted([null, 1]), screens: unblurred })).toEqual([
-          'the page under the header keeps 103 % of its edges under the whole backdrop in screencast frame 4, so its blur does not show',
+          'the header band keeps 103 % of its edges under the whole backdrop in screencast frame 4, so its blur does not show',
         ]);
       });
 
@@ -195,7 +199,7 @@ testWithoutBrowser.describe('Given frames of the top of the page planted by hand
           ]);
 
           expect(blurMissingUnderHeader({ frames: planted([null, 1]), screens: noisy })).toEqual([
-            'the page under the header keeps 94 % of its edges under the whole backdrop in screencast frame 4, so its blur does not show',
+            'the header band keeps 94 % of its edges under the whole backdrop in screencast frame 4, so its blur does not show',
           ]);
         },
       );
@@ -209,7 +213,7 @@ testWithoutBrowser.describe('Given frames of the top of the page planted by hand
         ]);
 
         expect(blurMissingUnderHeader({ frames: planted([1, null]), screens: closing })).toEqual([
-          'the page under the header keeps 103 % of its edges under the whole backdrop in screencast frame 1, so its blur does not show',
+          'the header band keeps 103 % of its edges under the whole backdrop in screencast frame 1, so its blur does not show',
         ]);
       });
 
@@ -229,8 +233,56 @@ testWithoutBrowser.describe('Given frames of the top of the page planted by hand
         ]);
       });
 
+      await testWithoutBrowser.step('a band under the clock that darkens with the backdrop', () => {
+        expect(
+          bandUnderClockOutOfStep({
+            frames: planted([null, 1]),
+            screens: screens([
+              [255, 0],
+              [200, 0],
+              [150, 0],
+              [111.4, 0],
+              [111.4, 0],
+            ]),
+          }),
+        ).toEqual([]);
+      });
+
+      await testWithoutBrowser.step('a band under the clock that stays bright', () => {
+        expect(
+          bandUnderClockOutOfStep({
+            frames: planted([null, 1]),
+            screens: screens([
+              [255, 0],
+              [250, 0],
+              [248, 0],
+              [246, 0],
+            ]),
+          }),
+        ).toEqual(['the band under the clock darkens to 4 % where the backdrop reaches 60 %']);
+      });
+
+      await testWithoutBrowser.step(
+        'a band under the clock that lightens while the backdrop grows',
+        () => {
+          expect(
+            bandUnderClockOutOfStep({
+              frames: planted([null, 1]),
+              screens: screens([
+                [255, 0],
+                [150, 0],
+                [230, 0],
+                [111.4, 0],
+              ]),
+            }),
+          ).toEqual([
+            'the band under the clock goes from 44 % to 10 % of darkening in screencast frame 2, against the backdrop',
+          ]);
+        },
+      );
+
       await testWithoutBrowser.step('frames that never rest without a backdrop', () => {
-        expect(() => stripOutOfStep(planted([1, 1]))).toThrow(
+        expect(() => groundOutOfStep(planted([1, 1]))).toThrow(
           'no frame without a backdrop to read the resting ground from',
         );
       });
@@ -246,29 +298,55 @@ function accountSheet(page: Page): Locator {
   return page.locator('app-account-sheet').getByRole('dialog');
 }
 
-async function readingTheNews(page: Page): Promise<void> {
+async function signedInOn(page: Page, path: string): Promise<void> {
   await mockDonorApi(page);
   await mockPublicContent(page);
   await rememberedDonorSession(page);
-  await page.goto('/aktuality');
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.goto(path);
   await expect(accountButton(page)).toBeVisible();
 }
 
-function whileTheSheetOpens(page: Page): Promise<TopAreaFrame[]> {
-  return topAreaFramesWhile(
-    page,
-    () => accountButton(page).press('Enter'),
-    () => expect(accountSheet(page)).toBeVisible(),
+async function readingTheNews(page: Page): Promise<void> {
+  await signedInOn(page, '/aktuality');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+}
+
+async function underTheClock(page: Page): Promise<void> {
+  await page.addStyleTag({ content: `:root { --safe-area-top: ${STATUS_BAR_PX}px; }` });
+}
+
+function opensTheSheet(page: Page): [() => Promise<void>, () => Promise<void>] {
+  return [() => accountButton(page).press('Enter'), () => expect(accountSheet(page)).toBeVisible()];
+}
+
+function closesTheSheet(page: Page): [() => Promise<void>, () => Promise<void>] {
+  return [
+    () => page.keyboard.press('Escape'),
+    () => expect(page.getByRole('dialog')).toHaveCount(0),
+  ];
+}
+
+async function pullsTheSheetDown(page: Page): Promise<void> {
+  const head = accountSheet(page).getByRole('heading').first();
+  const box = await head.boundingBox();
+  if (box === null) {
+    throw new Error('the account sheet has no heading to pull it by');
+  }
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await fingerAlong(
+    head,
+    PULL_DOWNS.map((down) => ({ x, y: y + down })),
+    true,
   );
 }
 
+function whileTheSheetOpens(page: Page): Promise<TopAreaFrame[]> {
+  return topAreaFramesWhile(page, ...opensTheSheet(page));
+}
+
 function whileTheSheetCloses(page: Page): Promise<TopAreaFrame[]> {
-  return topAreaFramesWhile(
-    page,
-    () => page.keyboard.press('Escape'),
-    () => expect(page.getByRole('dialog')).toHaveCount(0),
-  );
+  return topAreaFramesWhile(page, ...closesTheSheet(page));
 }
 
 function expectTheBackdropInStep(frames: TopAreaFrame[]): void {
@@ -277,8 +355,45 @@ function expectTheBackdropInStep(frames: TopAreaFrame[]): void {
   expect(barsThatChanged(frames)).toEqual([]);
 }
 
+const STATUS_BAR_PX = 59;
+const PULL_DOWNS = [0, 20, 80, 400];
 const CLASSIC_SCROLLBARS_ONLY =
   'an iPhone draws no classic scrollbar beside the backdrop; Safari’s own strips are #1694 and the device checklist';
+const SCREENCAST_ONLY =
+  'only Chromium gives a screencast; Playwright’s WebKit draws no backdrop blur (#1352), real Safari is #1978';
+const PHONE_SIZE_ONLY =
+  'the iphone project runs the phone width and reduced motion only, so its CI shard stays within its 30 minutes';
+
+for (const { place, path } of [
+  { place: 'reading the news', path: '/aktuality' },
+  { place: 'on the landing page with its photo under the header', path: '/' },
+]) {
+  test.describe(`Given a signed-in donor ${place} on a computer that animates`, () => {
+    test.use({
+      viewport: { width: 1280, height: 800 },
+      colorScheme: 'light',
+      reducedMotion: 'no-preference',
+    });
+
+    test.beforeEach(async ({ page, isMobile }) => {
+      test.skip(isMobile, PHONE_SIZE_ONLY);
+      await signedInOn(page, path);
+    });
+
+    test('when the account sheet opens and closes, then the header band under the backdrop, the header’s controls and what lies under them, blurs and clears with it in every frame of the screencast', async ({
+      page,
+      browserName,
+    }) => {
+      test.skip(browserName !== 'chromium', SCREENCAST_ONLY);
+
+      const opening = await topAreaWhile(page, ...opensTheSheet(page));
+      const closing = await topAreaWhile(page, ...closesTheSheet(page));
+
+      expect(blurMissingUnderHeader(opening)).toEqual([]);
+      expect(blurMissingUnderHeader(closing)).toEqual([]);
+    });
+  });
+}
 
 test.describe('Given a signed-in donor reading the news on a computer that animates', () => {
   test.use({
@@ -287,11 +402,12 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     reducedMotion: 'no-preference',
   });
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, isMobile }) => {
+    test.skip(isMobile, PHONE_SIZE_ONLY);
     await readingTheNews(page);
   });
 
-  test('when the account sheet opens, then its backdrop darkens the top of the page a little in every frame, declares its blur with it, and the buttons of the header and the tab bar keep their glass', async ({
+  test('when the account sheet opens, then its backdrop grows a little in every frame, declares its blur with it, and the buttons of the header and the tab bar keep their glass', async ({
     page,
   }) => {
     const frames = await whileTheSheetOpens(page);
@@ -301,7 +417,7 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     expect(frames[frames.length - 1].veil).toBeGreaterThan(WEAKEST_BACKDROP);
   });
 
-  test('when the account sheet closes, then its backdrop lightens a little in every frame, declares its blur with it, and the buttons of the header and the tab bar keep their glass', async ({
+  test('when the account sheet closes, then its backdrop fades a little in every frame, declares its blur with it, and the buttons of the header and the tab bar keep their glass', async ({
     page,
   }) => {
     await whileTheSheetOpens(page);
@@ -313,35 +429,11 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     expect(frames[frames.length - 1].veil).toBeNull();
   });
 
-  test('when the account sheet opens and closes, then the page under the header blurs and clears with the backdrop in every frame of the screencast', async ({
-    page,
-    browserName,
-  }) => {
-    test.skip(
-      browserName !== 'chromium',
-      'only Chromium gives a screencast; WebKit draws the blur but only the device checklist and safari.yml see it',
-    );
-
-    const opening = await topAreaWhile(
-      page,
-      () => accountButton(page).press('Enter'),
-      () => expect(accountSheet(page)).toBeVisible(),
-    );
-    const closing = await topAreaWhile(
-      page,
-      () => page.keyboard.press('Escape'),
-      () => expect(page.getByRole('dialog')).toHaveCount(0),
-    );
-
-    expect(blurMissingUnderHeader(opening)).toEqual([]);
-    expect(blurMissingUnderHeader(closing)).toEqual([]);
-  });
-
   test('when the backdrop loses its blur as the account sheet starts to close, then the screencast check reports the blur missing', async ({
     page,
     browserName,
   }) => {
-    test.skip(browserName !== 'chromium', 'only Chromium gives a screencast');
+    test.skip(browserName !== 'chromium', SCREENCAST_ONLY);
     await whileTheSheetOpens(page);
     await page.evaluate(() => {
       const dropBlur = (): void =>
@@ -355,11 +447,7 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
       });
     });
 
-    const closing = await topAreaWhile(
-      page,
-      () => page.keyboard.press('Escape'),
-      () => expect(page.getByRole('dialog')).toHaveCount(0),
-    );
+    const closing = await topAreaWhile(page, ...closesTheSheet(page));
 
     const reported = blurMissingUnderHeader(closing);
     expect(reported).not.toEqual([]);
@@ -368,9 +456,7 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
 
   test('when the account sheet opens and closes, then the ground beside its backdrop and the scrollbar darken and lighten with it', async ({
     page,
-    isMobile,
   }) => {
-    test.skip(isMobile, CLASSIC_SCROLLBARS_ONLY);
     test.fixme(
       true,
       '#1974: the ground and the scrollbar change ahead of the backdrop on opening and only after it on closing',
@@ -379,8 +465,10 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     const opening = await whileTheSheetOpens(page);
     const closing = await whileTheSheetCloses(page);
 
-    expect(stripOutOfStep(opening)).toEqual([]);
-    expect(stripOutOfStep(closing)).toEqual([]);
+    expect(groundOutOfStep(opening)).toEqual([]);
+    expect(scrollbarOutOfStep(opening)).toEqual([]);
+    expect(groundOutOfStep(closing)).toEqual([]);
+    expect(scrollbarOutOfStep(closing)).toEqual([]);
   });
 
   test('when the donor switches from Světlý to Tmavý in the open account sheet, then the backdrop stays over the page in every frame', async ({
@@ -403,7 +491,7 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     ).toEqual([]);
   });
 
-  test('when the donor opens Můj přehled from the account sheet, then the backdrop, live or its copy over the page transition, lightens a little in every frame', async ({
+  test('when the donor opens Můj přehled from the account sheet, then the backdrop at the top, live or its copy where no arriving page covers it, fades a little in every frame', async ({
     page,
   }) => {
     test.fixme(true, '#1646: the dialog and its backdrop are removed in one frame');
@@ -422,29 +510,33 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
   });
 });
 
-test.describe('Given a signed-in donor reading the news on a computer that asks for less motion', () => {
-  test.use({
-    viewport: { width: 1280, height: 800 },
-    colorScheme: 'light',
-    reducedMotion: 'reduce',
-  });
+for (const width of [1280, 390]) {
+  test.describe(`Given a signed-in donor reading the news ${width} px wide on a device that asks for less motion`, () => {
+    test.use({
+      viewport: { width, height: 844 },
+      colorScheme: 'light',
+      reducedMotion: 'reduce',
+    });
 
-  test.beforeEach(async ({ page }) => {
-    await readingTheNews(page);
-  });
+    test.beforeEach(async ({ page, isMobile }) => {
+      test.skip(isMobile && width > BREAKPOINTS.phone, PHONE_SIZE_ONLY);
+      await readingTheNews(page);
+    });
 
-  test('when the account sheet opens and closes, then its short fade darkens the top of the page without a jump, it goes at once without a blink, it declares its blur all the while, and the glass stays', async ({
-    page,
-  }) => {
-    const opening = await whileTheSheetOpens(page);
-    const closing = await whileTheSheetCloses(page);
+    test('when the account sheet opens and closes, then its short fade or instant change never blinks, it declares its blur all the while, and the glass stays', async ({
+      page,
+    }) => {
+      const opening = await whileTheSheetOpens(page);
+      const closing = await whileTheSheetCloses(page);
 
-    expectTheBackdropInStep(opening);
-    expect(veilStepsBack(closing)).toEqual([]);
-    expect(blurOutOfStep(closing)).toEqual([]);
-    expect(barsThatChanged(closing)).toEqual([]);
+      for (const frames of [opening, closing]) {
+        expect(veilStepsBack(frames)).toEqual([]);
+        expect(blurOutOfStep(frames)).toEqual([]);
+        expect(barsThatChanged(frames)).toEqual([]);
+      }
+    });
   });
-});
+}
 
 for (const width of [BREAKPOINTS.nav, 390]) {
   test.describe(`Given a signed-in donor reading the news in a window ${width} px wide`, () => {
@@ -454,20 +546,33 @@ for (const width of [BREAKPOINTS.nav, 390]) {
       reducedMotion: 'no-preference',
     });
 
-    test.beforeEach(async ({ page }) => {
+    test.beforeEach(async ({ page, isMobile }) => {
+      test.skip(isMobile, CLASSIC_SCROLLBARS_ONLY);
       await readingTheNews(page);
     });
 
-    test('when the account sheet is open, then the ground beside its backdrop and the scrollbar are darkened with it', async ({
+    test('when the account sheet is open, then the scrollbar beside its backdrop is darkened with it', async ({
       page,
-      isMobile,
     }) => {
-      test.skip(isMobile, CLASSIC_SCROLLBARS_ONLY);
       test.fixme(true, '#1974: below 900 px the strip beside the backdrop is never darkened');
 
       const opening = await whileTheSheetOpens(page);
 
-      expect(stripOutOfStep(opening)).toEqual([]);
+      expect(scrollbarOutOfStep(opening)).toEqual([]);
+    });
+
+    test('when the account sheet is open, then the ground beside its backdrop is darkened with it', async ({
+      page,
+    }) => {
+      test.skip(
+        width < BREAKPOINTS.nav,
+        'at phone width the ground is #1972, checked on the phone below',
+      );
+      test.fixme(true, '#1974: below 900 px the ground beside the backdrop is never darkened');
+
+      const opening = await whileTheSheetOpens(page);
+
+      expect(groundOutOfStep(opening)).toEqual([]);
     });
   });
 }
@@ -483,7 +588,7 @@ test.describe('Given a signed-in donor reading the news on a phone that animates
     await readingTheNews(page);
   });
 
-  test('when the account sheet comes up and goes down again, then its backdrop darkens and lightens the top of the page a little in every frame, declares its blur with it, and the button of the header and the tab bar keep their glass', async ({
+  test('when the account sheet comes up and goes down again, then its backdrop grows and fades a little in every frame, declares its blur with it, and the button of the header and the tab bar keep their glass', async ({
     page,
   }) => {
     const opening = await whileTheSheetOpens(page);
@@ -491,5 +596,96 @@ test.describe('Given a signed-in donor reading the news on a phone that animates
 
     expectTheBackdropInStep(opening);
     expectTheBackdropInStep(closing);
+  });
+});
+
+const NAVY_GROUND_UNDER_NAVY_BACKDROP =
+  'the landing’s navy ground moves less than the tolerance under the navy backdrop, so the probe sees no step there';
+
+for (const { place, path } of [
+  { place: 'reading the news', path: '/aktuality' },
+  { place: 'on the landing page with its photo', path: '/' },
+]) {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    const known =
+      path === '/' && colorScheme === 'light'
+        ? null
+        : '#1972: below 900 px html:has(.dialog:modal) is never darkened, so the ground under the clock stays as it was beside the backdrop';
+    test.describe(`Given a signed-in donor ${place} on a phone in the ${colorScheme} appearance`, () => {
+      test.use({
+        viewport: { width: 390, height: 844 },
+        colorScheme,
+        reducedMotion: 'no-preference',
+      });
+
+      test.beforeEach(async ({ page }) => {
+        await signedInOn(page, path);
+      });
+
+      test(`when the account sheet comes up, then the ground of the page, which shows under the clock, darkens with its backdrop${known === null ? ` (${NAVY_GROUND_UNDER_NAVY_BACKDROP})` : ''}`, async ({
+        page,
+      }) => {
+        test.fail(known !== null, known ?? '');
+
+        const opening = await whileTheSheetOpens(page);
+
+        expect(groundOutOfStep(opening)).toEqual([]);
+      });
+    });
+  }
+}
+
+test.describe('Given a signed-in donor on the landing page of a phone in the dark appearance, under a status bar (video 13)', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    colorScheme: 'dark',
+    reducedMotion: 'no-preference',
+    hasTouch: true,
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await signedInOn(page, '/');
+    await underTheClock(page);
+  });
+
+  test('when a tap brings the account sheet up and a pull takes it down, then its backdrop grows and fades a little in every frame, declares its blur with it, and the glass stays', async ({
+    page,
+  }) => {
+    const opening = await topAreaFramesWhile(
+      page,
+      () => accountButton(page).tap(),
+      () => expect(accountSheet(page)).toBeVisible(),
+    );
+    const closing = await topAreaFramesWhile(
+      page,
+      () => pullsTheSheetDown(page),
+      () => expect(page.getByRole('dialog')).toHaveCount(0),
+    );
+
+    expectTheBackdropInStep(opening);
+    expectTheBackdropInStep(closing);
+  });
+
+  test('when a tap brings the account sheet up and a pull takes it down, then the band under the clock darkens and clears with the backdrop in the screencast', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', SCREENCAST_ONLY);
+
+    const opening = await topAreaWhile(
+      page,
+      () => accountButton(page).tap(),
+      () => expect(accountSheet(page)).toBeVisible(),
+      'under the clock',
+    );
+    const closing = await topAreaWhile(
+      page,
+      () => pullsTheSheetDown(page),
+      () => expect(page.getByRole('dialog')).toHaveCount(0),
+      'under the clock',
+    );
+
+    expect(bandUnderClockOutOfStep(opening)).toEqual([]);
+    expect(bandUnderClockOutOfStep(closing)).toEqual([]);
   });
 });
