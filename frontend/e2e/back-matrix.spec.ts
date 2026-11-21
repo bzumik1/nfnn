@@ -2,6 +2,11 @@ import type { Locator, Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { viewBand, type ViewBand } from '../src/app/core/layout/focus-in-view';
+import {
+  LATE_FRAME_PAST_THE_STEADY_ONE,
+  RETIMED_WITHIN_MS,
+  steadyFrameMs,
+} from '../src/app/core/navigation/frame-pace';
 import { stepBack } from './app-history';
 import {
   administrationCopyGift,
@@ -27,7 +32,7 @@ const FIRST_SHOWN_AT_MOST = 0.25;
 const BUSY_AS_ON_THE_PHONE_MS = 140;
 const DRAWN_AS_LATE_AS_ON_THE_PHONE_MS = 140;
 const LONG_AS_ON_THE_PHONE_MS = 80;
-const FIRST_MOVED_FRAME_AT_MOST = 0.2;
+const STEADY_GAPS_AT_LEAST = 3;
 const PLACED_AFTER_THE_TAP_WITHIN_MS = 150;
 const FIRST_OPENING_PLACED_WITHIN_MS = 300;
 const MOVES_WITHIN_FRAMES_AFTER_THE_BUSY_ONE = 2;
@@ -61,6 +66,7 @@ interface Frame {
   readonly rounded: number;
   readonly titles: string[];
   readonly heads: string[];
+  readonly live: string[];
 }
 
 interface HeadTitle {
@@ -81,7 +87,11 @@ interface StepProbe {
   loadedCode: boolean;
   busyFrameAt: number | null;
   steepestPerMs: number;
+  curve: number[] | null;
+  durationMs: number;
   paced: boolean;
+  heading: string;
+  settled: boolean;
 }
 
 declare global {
@@ -381,7 +391,7 @@ type FrameCost = 'busy' | 'drawn-late' | 'drawn-late-then-long';
 
 async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void> {
   await page.evaluate(
-    ({ busyMs, lateMs, longMs, hiddenAtMost, paced }) => {
+    ({ busyMs, lateMs, longMs, hiddenAtMost, paced, arrivesLaterPattern, lateTitleWithinMs }) => {
       const curves: Record<string, readonly number[]> = {
         linear: [0, 0, 1, 1],
         ease: [0.25, 0.1, 0.25, 1],
@@ -424,8 +434,46 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
         loadedCode: false,
         busyFrameAt: null,
         steepestPerMs: steepest / durationMs,
+        curve: points?.length === 4 ? [...points] : null,
+        durationMs,
         paced,
+        heading: '',
+        settled: false,
       };
+      const arrivesLater = new RegExp(arrivesLaterPattern);
+      const oneLine = (text: string | null): string => (text ?? '').replace(/\s+/g, ' ').trim();
+      const liveTitles = (): string[] =>
+        Array.from(document.querySelectorAll<HTMLElement>('.sheet-head-title'))
+          .filter((title) => {
+            const box = title.getBoundingClientRect();
+            let opacity =
+              title.closest('.page-transition') === null &&
+              oneLine(title.textContent) !== '' &&
+              getComputedStyle(title).visibility !== 'hidden' &&
+              box.width > 0 &&
+              box.right > 0 &&
+              box.left < innerWidth &&
+              box.bottom > 0 &&
+              box.top < innerHeight
+                ? 1
+                : 0;
+            for (let node: Element | null = title; node !== null; node = node.parentElement) {
+              opacity *= Number(getComputedStyle(node).opacity);
+            }
+            return opacity > hiddenAtMost;
+          })
+          .map((title) => oneLine(title.textContent))
+          .sort();
+      const liveTitlesWhole = (): boolean =>
+        Array.from(document.querySelectorAll<HTMLElement>('.sheet-head-title')).every(
+          (title) =>
+            title.closest('.page-transition') !== null ||
+            Number(getComputedStyle(title).opacity) >= 0.99,
+        );
+      const pageHeading = (): string =>
+        oneLine(document.querySelector('app-root .admin-page h1')?.textContent ?? null);
+      const fastText = theme.getPropertyValue('--duration-fast').trim();
+      const fastMs = Number.parseFloat(fastText) * (fastText.endsWith('ms') ? 1 : 1000);
       window.nfnnStepProbe = probe;
       const started = performance.now();
       const seeLayers = (): void => {
@@ -550,6 +598,7 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
       }
       let seen = false;
       let framesAfter = 0;
+      let goneAt: number | null = null;
       const look = (now: number): void => {
         const overlay = document.querySelector('.page-transition');
         const over = overlay?.querySelector('.page-transition__page--over') ?? null;
@@ -587,6 +636,7 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
               `${title.text} ${title.opacity.toFixed(2)} ${Math.round(title.left)}..${Math.round(title.right)}`,
           ),
           heads: titles.filter((title) => title.sheetHead).map((title) => title.text),
+          live: overlay === null ? liveTitles() : [],
         });
         if (under !== null && probe.under === null) {
           probe.under = (under.textContent ?? '').replace(/\s+/g, ' ');
@@ -594,8 +644,16 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
         seen ||= overlay !== null;
         if (seen && overlay === null) {
           framesAfter++;
+          goneAt ??= now;
         }
-        if (framesAfter > 2 || now - started > 5000) {
+        const live = probe.frames.at(-1)!.live;
+        probe.heading = pageHeading();
+        probe.settled = arrivesLater.test(location.pathname)
+          ? live.length === 1 && live[0] === probe.heading && liveTitlesWhole()
+          : goneAt !== null && now - goneAt >= fastMs * 2;
+        const followed =
+          !paced || goneAt === null || probe.settled || now - goneAt > lateTitleWithinMs;
+        if ((framesAfter > 2 && followed) || (goneAt === null && now - started > 5000)) {
           placed.disconnect();
           layers.disconnect();
           probe.done = true;
@@ -611,6 +669,8 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
       longMs: measuresFrames(page) && cost === 'drawn-late-then-long' ? LONG_AS_ON_THE_PHONE_MS : 0,
       hiddenAtMost: HIDDEN_TITLE_AT_MOST,
       paced: measuresFrames(page),
+      arrivesLaterPattern: TITLE_ARRIVES_LATER.source,
+      lateTitleWithinMs: LATE_TITLE_WITHIN_MS,
     },
   );
 }
@@ -618,7 +678,7 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
 async function stepSeen(page: Page): Promise<StepProbe> {
   await expect
     .poll(() => page.evaluate(() => window.nfnnStepProbe?.done ?? false), {
-      timeout: STEP_ENDS_WITHIN_MS,
+      timeout: STEP_ENDS_WITHIN_MS + LATE_TITLE_WITHIN_MS,
     })
     .toBe(true);
   return page.evaluate(() => window.nfnnStepProbe!);
@@ -696,7 +756,54 @@ function firstMovedFrame(moving: readonly Frame[], from: number): Frame | null {
   return moving.find((frame) => Math.abs(frame.offset! - from) > 1) ?? null;
 }
 
-function expectFirstMovedFrameNear(
+function bezierAt(from: number, to: number, t: number): number {
+  return 3 * (1 - t) * (1 - t) * t * from + 3 * (1 - t) * t * t * to + t * t * t;
+}
+
+function solvedFor(value: number, at: (t: number) => number): number {
+  let low = 0;
+  let high = 1;
+  for (let round = 0; round < 40; round++) {
+    const middle = (low + high) / 2;
+    if (at(middle) < value) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+  return (low + high) / 2;
+}
+
+function springShareAt(curve: readonly number[], fraction: number): number {
+  const [x1, y1, x2, y2] = curve;
+  const clamped = Math.min(1, Math.max(0, fraction));
+  return bezierAt(
+    y1,
+    y2,
+    solvedFor(clamped, (t) => bezierAt(x1, x2, t)),
+  );
+}
+
+function springFractionAt(curve: readonly number[], share: number): number {
+  const [x1, y1, x2, y2] = curve;
+  const clamped = Math.min(1, Math.max(0, share));
+  return bezierAt(
+    x1,
+    x2,
+    solvedFor(clamped, (t) => bezierAt(y1, y2, t)),
+  );
+}
+
+function steadyFrameOf(probe: StepProbe): number {
+  const gaps = (frames: readonly Frame[]): number[] =>
+    frames.slice(1).map((frame, at) => frame.at - frames[at].at);
+  const beforeTheTap = gaps(probe.frames.filter((frame) => frame.at < (probe.tappedAt ?? 0)));
+  return steadyFrameMs(
+    beforeTheTap.length >= STEADY_GAPS_AT_LEAST ? beforeTheTap : gaps(probe.frames),
+  );
+}
+
+function expectSteadyFirstHalf(
   probe: StepProbe,
   moving: readonly Frame[],
   from: number,
@@ -706,12 +813,27 @@ function expectFirstMovedFrameNear(
   if (!probe.paced || moving.length === 0) {
     return;
   }
-  const moved = firstMovedFrame(moving, from);
-  expect(moved, `the ${what} page never moved`).not.toBeNull();
-  expect(
-    Math.abs(moved!.offset! - from),
-    `px the ${what} page had travelled in its first moved frame, of ${Math.round(way)} px`,
-  ).toBeLessThanOrEqual(way * FIRST_MOVED_FRAME_AT_MOST);
+  expect(probe.curve, 'the theme names no curve for the page').not.toBeNull();
+  const curve = probe.curve!;
+  const steadyMs = steadyFrameOf(probe);
+  const onePixel = 1 / way;
+  const shares = moving.map((frame) => Math.abs(frame.offset! - from) / way);
+  for (let at = 1; at < shares.length; at++) {
+    const before = shares[at - 1];
+    expect(
+      shares[at],
+      `the ${what} page went back from ${(before * 100).toFixed(1)} % of its way`,
+    ).toBeGreaterThanOrEqual(before - onePixel);
+    const shownMs = springFractionAt(curve, before) * probe.durationMs;
+    if (shownMs >= RETIMED_WITHIN_MS) {
+      continue;
+    }
+    const oneSteadyFrame = springShareAt(curve, (shownMs + steadyMs) / probe.durationMs) - before;
+    expect(
+      shares[at] - before,
+      `share of its way the ${what} page travelled in one frame at ${Math.round(shownMs)} ms of its motion, against one steady frame of ${steadyMs.toFixed(1)} ms`,
+    ).toBeLessThanOrEqual(LATE_FRAME_PAST_THE_STEADY_ONE * oneSteadyFrame + onePixel);
+  }
 }
 
 function expectWithinTheBudget(probe: StepProbe, restingAt?: number): void {
@@ -739,71 +861,21 @@ function expectWithinTheBudget(probe: StepProbe, restingAt?: number): void {
   ).toBeLessThanOrEqual(MOVES_WITHIN_FRAMES_AFTER_THE_BUSY_ONE);
 }
 
-async function expectEndedOnTheLiveTitle(page: Page, probe: StepProbe): Promise<void> {
+function expectEndedOnTheLiveTitle(page: Page, probe: StepProbe): void {
   if (!probe.paced) {
     return;
   }
-  const last = probe.frames.filter((frame) => frame.overlay).at(-1);
-  if (last === undefined) {
+  const lastShown = probe.frames.map((frame) => frame.overlay).lastIndexOf(true);
+  if (lastShown < 0) {
     return;
   }
+  const last = probe.frames[lastShown];
   const arrivesLater = TITLE_ARRIVES_LATER.test(new URL(page.url()).pathname);
-  const seen = await page.evaluate(
-    ({ hiddenAtMost, arrivesLater, longestMs }) =>
-      new Promise<{ titles: string[][]; heading: string; settled: boolean }>((done) => {
-        const oneLine = (text: string | null): string => (text ?? '').replace(/\s+/g, ' ').trim();
-        const shown = (): string[] =>
-          Array.from(document.querySelectorAll<HTMLElement>('.sheet-head-title'))
-            .filter((title) => {
-              const box = title.getBoundingClientRect();
-              let opacity =
-                title.closest('.page-transition') === null &&
-                oneLine(title.textContent) !== '' &&
-                getComputedStyle(title).visibility !== 'hidden' &&
-                box.width > 0 &&
-                box.right > 0 &&
-                box.left < innerWidth &&
-                box.bottom > 0 &&
-                box.top < innerHeight
-                  ? 1
-                  : 0;
-              for (let node: Element | null = title; node !== null; node = node.parentElement) {
-                opacity *= Number(getComputedStyle(node).opacity);
-              }
-              return opacity > hiddenAtMost;
-            })
-            .map((title) => oneLine(title.textContent))
-            .sort();
-        const whole = (): boolean =>
-          Array.from(document.querySelectorAll<HTMLElement>('.sheet-head-title')).every(
-            (title) =>
-              title.closest('.page-transition') !== null ||
-              Number(getComputedStyle(title).opacity) >= 0.99,
-          );
-        const heading = (): string =>
-          oneLine(document.querySelector('app-root .admin-page h1')?.textContent ?? null);
-        const root = getComputedStyle(document.documentElement);
-        const fastText = root.getPropertyValue('--duration-fast').trim();
-        const fastMs = Number.parseFloat(fastText) * (fastText.endsWith('ms') ? 1 : 1000);
-        const started = performance.now();
-        const titles: string[][] = [];
-        const look = (): void => {
-          const now = shown();
-          titles.push(now);
-          const elapsed = performance.now() - started;
-          const settled = arrivesLater
-            ? now.length === 1 && now[0] === heading() && whole()
-            : elapsed >= fastMs * 2;
-          if (settled || elapsed > longestMs) {
-            done({ titles, heading: heading(), settled });
-            return;
-          }
-          requestAnimationFrame(look);
-        };
-        requestAnimationFrame(look);
-      }),
-    { hiddenAtMost: HIDDEN_TITLE_AT_MOST, arrivesLater, longestMs: LATE_TITLE_WITHIN_MS },
-  );
+  const seen = {
+    titles: probe.frames.slice(lastShown + 1).map((frame) => frame.live),
+    heading: probe.heading,
+    settled: probe.settled,
+  };
   const ended = [...last.heads].sort();
   expect(
     seen.titles.filter((titles) => titles.length > 1),
@@ -885,7 +957,7 @@ function expectLeftAway(probe: StepProbe, width: number, from: number): void {
       from + width * FIRST_SHOWN_AT_MOST,
     ),
   );
-  expectFirstMovedFrameNear(probe, moving, from, width - from, 'leaving');
+  expectSteadyFirstHalf(probe, moving, from, width - from, 'leaving');
   for (let at = 1; at < moving.length; at++) {
     expect(moving[at].offset!, 'the leaving page went back on its way').toBeGreaterThanOrEqual(
       moving[at - 1].offset! - 1,
@@ -905,7 +977,7 @@ function expectArrived(probe: StepProbe, width: number): void {
       'px the arriving page was from its place in its first frame',
     ).toBeGreaterThanOrEqual(width * (1 - FIRST_SHOWN_AT_MOST)),
   );
-  expectFirstMovedFrameNear(probe, moving, width, width, 'arriving');
+  expectSteadyFirstHalf(probe, moving, width, width, 'arriving');
   for (let at = 1; at < moving.length; at++) {
     expect(moving[at].offset!, 'the arriving page went back on its way').toBeLessThanOrEqual(
       moving[at - 1].offset! + 1,
@@ -1048,7 +1120,7 @@ async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): P
     if (measuresFrames(page)) {
       expectWithinTheBudget(probe);
     }
-    await expectEndedOnTheLiveTitle(page, probe);
+    expectEndedOnTheLiveTitle(page, probe);
     return;
   }
   const completes = way === 'swipe-completed';
@@ -1058,7 +1130,7 @@ async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): P
   } else {
     expectSlidBack(probe, WIDTH, letGoAt);
   }
-  await expectEndedOnTheLiveTitle(page, probe);
+  expectEndedOnTheLiveTitle(page, probe);
 }
 
 function oneLine(text: string): string {
@@ -1094,7 +1166,7 @@ async function walkRow(
   if (measuresFrames(page)) {
     expectWithinTheBudget(opening);
   }
-  await expectEndedOnTheLiveTitle(page, opening);
+  expectEndedOnTheLiveTitle(page, opening);
   if (groundBefore !== null) {
     expectSameColour(await bandColour(page), groundBefore, 'when the next screen opened');
   }

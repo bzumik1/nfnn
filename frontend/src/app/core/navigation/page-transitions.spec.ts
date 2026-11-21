@@ -245,14 +245,46 @@ describe('Given a phone that animates, an article opened from the news, and the 
     return document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
   }
 
-  it('when the frame that shows both pages is not drawn yet, then the motion stays held at its start however long that frame takes, never started by the clock', async () => {
-    watchHeldMotions();
-    framesOnRequest();
+  async function holdBegun(): Promise<void> {
+    for (let waited = 0; moving() === null && waited < PAGE_TRANSITION_LONGEST_MS; waited += 5) {
+      await vi.advanceTimersByTimeAsync(5);
+    }
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  }
 
+  function drawnSteadilyBeforeTheTap(draw: (at: number) => void, gapMs: number): void {
+    document.dispatchEvent(new Event('pointerdown'));
+    for (let frame = 0; frame <= 10; frame++) {
+      draw(1000 + frame * gapMs);
+    }
+  }
+
+  function startTimes(motions: Map<Element, HeldMotion>): Set<number | null> {
+    return new Set([...motions.values()].map((motion) => motion.startTime));
+  }
+
+  it('when the browser has drawn a frame of the step but not yet the one that shows both pages, then the motion stays held at its start however long that frame takes, never started by the clock', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    draw(5000);
     await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 2);
 
     expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
+  it('when no frame comes after the hold begins, then the held motions start by the page clock within the time a frame may be late, well within a quick change', async () => {
+    const motions = watchHeldMotions();
+    framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    expect([...startTimes(motions)].every((start) => typeof start === 'number')).toBe(true);
   });
 
   it('when no frame comes at all, then the step ends after its longest time instead of leaving its cover over the page', async () => {
@@ -269,58 +301,86 @@ describe('Given a phone that animates, an article opened from the news, and the 
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + FRAME_LATE_MS * 2 + 100);
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    await holdBegun();
 
     draw(5000);
     expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
     draw(5140);
     await vi.advanceTimersByTimeAsync(0);
 
-    const started = [...motions.values()].map((motion) => motion.startTime);
     expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    expect(started.length).toBeGreaterThan(0);
-    expect(new Set(started)).toEqual(new Set([5140]));
+    expect(motions.size).toBeGreaterThan(0);
+    expect(startTimes(motions)).toEqual(new Set([5140]));
   });
 
-  async function heldUntilTwoFramesAt(draw: (at: number) => void, first: number, second: number) {
+  async function releasedAt(draw: (at: number) => void, first: number, second: number) {
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + FRAME_LATE_MS * 2 + 100);
+    await holdBegun();
     draw(first);
     draw(second);
     await vi.advanceTimersByTimeAsync(0);
   }
 
-  it('when the frame after the one that ends the hold comes late, then every held motion starts again at that late frame, so it still shows them at their start', async () => {
+  it('when a frame in the first half of the motion comes long, then every motion of the step starts later together by its lateness past one steady frame, so it shows one steady frame of travel and nothing goes back', async () => {
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
-    await heldUntilTwoFramesAt(draw, 5000, 5016);
+    drawnSteadilyBeforeTheTap(draw, 16);
+    await releasedAt(draw, 5000, 5016);
+    draw(5032);
+    const shownBefore = 5032 - 5016;
 
-    draw(5100);
-    draw(5116);
+    draw(5112);
 
-    const started = [...motions.values()].map((motion) => motion.startTime);
-    expect(started.length).toBeGreaterThan(0);
-    expect(new Set(started)).toEqual(new Set([5100]));
+    expect(motions.size).toBeGreaterThan(1);
+    expect(startTimes(motions)).toEqual(new Set([5016 + 80 - 16]));
+    const shown = 5112 - [...startTimes(motions)][0]!;
+    expect(shown).toBe(shownBefore + 16);
   });
 
-  it('when the frames after the one that ends the hold come at the same pace, then the held motions keep the start they were given', async () => {
+  it('when frames come long one after another, then the motions start later by at most the cap of a step, and run on unchanged after it', async () => {
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
-    await heldUntilTwoFramesAt(draw, 5000, 5016);
+    drawnSteadilyBeforeTheTap(draw, 16);
+    await releasedAt(draw, 5000, 5016);
 
-    draw(5033);
-    draw(5050);
+    for (const at of [5116, 5216, 5316, 5416]) {
+      draw(at);
+    }
 
-    expect(new Set([...motions.values()].map((motion) => motion.startTime))).toEqual(
-      new Set([5016]),
-    );
+    expect(startTimes(motions)).toEqual(new Set([5016 + 150]));
+  });
+
+  it('when the device draws steadily at 30 frames a second, then the motions keep the start they were given', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    drawnSteadilyBeforeTheTap(draw, 33);
+    await releasedAt(draw, 5000, 5033);
+
+    for (const at of [5066, 5099, 5132, 5165]) {
+      draw(at);
+    }
+
+    expect(startTimes(motions)).toEqual(new Set([5033]));
+  });
+
+  it('when a frame comes long after the first half of the motion, then the motions keep their start', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    drawnSteadilyBeforeTheTap(draw, 16);
+    await releasedAt(draw, 5000, 5016);
+    for (let at = 5032; at <= 5016 + 176; at += 16) {
+      draw(at);
+    }
+
+    draw(5016 + 176 + 80);
+
+    expect(startTimes(motions)).toEqual(new Set([5016]));
   });
 
   it('when the tab is hidden while the step moves, then the step ends at once instead of running on the clock it would come back to', async () => {
     watchHeldMotions();
     const draw = framesOnRequest();
-    await heldUntilTwoFramesAt(draw, 5000, 5016);
+    await releasedAt(draw, 5000, 5016);
     expect(moving()).not.toBeNull();
     const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
     onTestFinished(() => visibility.mockRestore());

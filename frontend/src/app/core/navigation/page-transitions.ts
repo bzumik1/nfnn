@@ -33,6 +33,7 @@ import { DirtyForms } from '../updates/dirty-forms';
 import { NavigationPreview } from './navigation-preview';
 import { PagePlacement } from './page-placement';
 import { stillCopyOf } from './still-copy';
+import { RETIMED_WITHIN_MS, retimingOf, STEADY_FRAMES_KEPT, steadyFrameMs } from './frame-pace';
 
 export const PAGE_LAYER_CLASS = 'page-layer';
 export const PAGE_TRANSITION_CLASS = 'page-transition';
@@ -43,7 +44,7 @@ export const FRAME_LATE_MS = 100;
 export const ACCOUNT_RETURNS_KEY = 'nfnnAppAccount';
 
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
-const LATE_FRAME_PAST_THE_ONE_BEFORE = 1.5;
+const PACE_SAMPLED_ON = ['pointerdown', 'touchstart', 'keydown'];
 const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
 const BAR_ITEMS = ['.back-button', '.account-button'];
 export const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
@@ -165,6 +166,8 @@ export class PageTransitions {
   readonly stepping = computed(() => this.step() !== null);
   finishing: number | null = null;
   private titleFrame: number | null = null;
+  private readonly frameGaps: number[] = [];
+  private sampling = false;
 
   get running(): Running | null {
     return untracked(this.step);
@@ -186,10 +189,17 @@ export class PageTransitions {
     });
     const events = this.router.events.subscribe((event) => this.follow(event));
     const hidden = (): void => this.endWhenHidden();
+    const sample = (): void => this.sampleFramePace();
     this.document.addEventListener('visibilitychange', hidden);
+    PACE_SAMPLED_ON.forEach((type) =>
+      this.document.addEventListener(type, sample, { capture: true, passive: true }),
+    );
     inject(DestroyRef).onDestroy(() => {
       events.unsubscribe();
       this.document.removeEventListener('visibilitychange', hidden);
+      PACE_SAMPLED_ON.forEach((type) =>
+        this.document.removeEventListener(type, sample, { capture: true }),
+      );
       this.finish();
     });
   }
@@ -490,30 +500,87 @@ export class PageTransitions {
   private startMoving(running: Running, view: Window, page: HTMLElement): void {
     running.overlay.classList.add(HELD_CLASS, MOVING_CLASS);
     this.finishWhenStill(running, page, view);
-    framesDrawn(view, 2, (frameAt, frameMs) => {
-      if (this.running === running) {
-        const motions = startHeldMotions(running.overlay, frameAt);
-        this.startAgainAfterLateFrames(running, view, motions, frameAt, frameMs);
+    const steadyMs = steadyFrameMs(this.frameGaps);
+    const movesForMs = Math.max(this.durationOf('--duration-page'), RETIMED_WITHIN_MS);
+    let drawn = 0;
+    let motions: readonly Animation[] | null = null;
+    let startedAt = 0;
+    let shownAt = 0;
+    let shiftedMs = 0;
+    const release = (at: number): void => {
+      motions = startHeldMotions(running.overlay, at);
+      startedAt = at;
+      shownAt = at;
+    };
+    const byClock = view.setTimeout(() => {
+      if (this.running === running && motions === null) {
+        release(view.performance.now());
       }
-    });
-  }
-
-  private startAgainAfterLateFrames(
-    running: Running,
-    view: Window,
-    motions: readonly Animation[],
-    startedAt: number,
-    frameMs: number,
-  ): void {
-    view.requestAnimationFrame((frameAt) => {
-      const sinceStart = frameAt - startedAt;
-      const late = sinceStart > frameMs * LATE_FRAME_PAST_THE_ONE_BEFORE;
-      if (this.running !== running || !late) {
+    }, FRAME_LATE_MS);
+    const frame = (at: number): void => {
+      if (this.running !== running) {
         return;
       }
-      motions.forEach((motion) => (motion.startTime = frameAt));
-      this.startAgainAfterLateFrames(running, view, motions, frameAt, sinceStart);
-    });
+      view.clearTimeout(byClock);
+      if (motions === null) {
+        drawn++;
+        if (drawn === 2) {
+          release(at);
+        }
+      } else {
+        const gapMs = at - shownAt;
+        const shownMs = shownAt - startedAt;
+        const shift = retimingOf({ gapMs, steadyMs, shownMs, shiftedMs });
+        if (shift > 0) {
+          startedAt += shift;
+          shiftedMs += shift;
+          motions.forEach((motion) => (motion.startTime = startedAt));
+        } else if (shownMs >= RETIMED_WITHIN_MS) {
+          this.keepFrameGap(gapMs);
+        }
+        shownAt = at;
+        if (at - startedAt >= movesForMs) {
+          return;
+        }
+      }
+      view.requestAnimationFrame(frame);
+    };
+    view.requestAnimationFrame(frame);
+  }
+
+  private sampleFramePace(): void {
+    const view = this.document.defaultView;
+    if (
+      this.sampling ||
+      this.running !== null ||
+      view === null ||
+      typeof view.requestAnimationFrame !== 'function' ||
+      !this.compact() ||
+      !motionAllowed(view)
+    ) {
+      return;
+    }
+    this.sampling = true;
+    let previousAt = Number.NaN;
+    let frames = 0;
+    const frame = (at: number): void => {
+      if (this.running !== null || frames > STEADY_FRAMES_KEPT) {
+        this.sampling = false;
+        return;
+      }
+      this.keepFrameGap(at - previousAt);
+      previousAt = at;
+      frames++;
+      view.requestAnimationFrame(frame);
+    };
+    view.requestAnimationFrame(frame);
+  }
+
+  private keepFrameGap(gapMs: number): void {
+    if (Number.isFinite(gapMs) && gapMs > 0) {
+      this.frameGaps.push(gapMs);
+      this.frameGaps.splice(0, Math.max(0, this.frameGaps.length - STEADY_FRAMES_KEPT));
+    }
   }
 
   private finishWhenStill(running: Running, page: HTMLElement, view: Window): void {
@@ -978,17 +1045,6 @@ function startHeldMotions(overlay: HTMLElement, frameAt: number): Animation[] {
   const motions = overlay.getAnimations({ subtree: true }).filter((motion) => motion.pending);
   motions.forEach((motion) => (motion.startTime = frameAt));
   return motions;
-}
-
-function framesDrawn(
-  view: Window,
-  frames: number,
-  then: (frameAt: number, frameMs: number) => void,
-  previousAt = Number.NaN,
-): void {
-  view.requestAnimationFrame((frameAt) =>
-    frames > 1 ? framesDrawn(view, frames - 1, then, frameAt) : then(frameAt, frameAt - previousAt),
-  );
 }
 
 export function liveDialogs(document: Document, selector: string): HTMLDialogElement[] {
