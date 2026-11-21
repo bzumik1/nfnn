@@ -313,7 +313,7 @@ test.describe('Given an administrator on the settings page', () => {
     expect(look.lowestContrast).toBeGreaterThanOrEqual(4.5);
   });
 
-  test('when the signature block is previewed on an upright tablet, then it takes the width of the warning and the intro of its card', async ({
+  test('when the signature block is previewed on an upright tablet, then it takes the width of the warning and the intro keeps to its measure within it', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 820, height: 1180 });
@@ -336,7 +336,8 @@ test.describe('Given an administrator on the settings page', () => {
     const intro = (await card.locator('.ui-card__intro').first().boundingBox())!;
     expect(Math.abs(figure.x - warning.x)).toBeLessThanOrEqual(1);
     expect(Math.abs(figure.x + figure.width - (warning.x + warning.width))).toBeLessThanOrEqual(1);
-    expect(Math.abs(figure.x + figure.width - (intro.x + intro.width))).toBeLessThanOrEqual(1);
+    expect(Math.abs(figure.x - intro.x)).toBeLessThanOrEqual(1);
+    expect(intro.x + intro.width).toBeLessThanOrEqual(figure.x + figure.width + 1);
   });
 
   test('when the signature block is previewed in a dark forced-colours mode, then it keeps the paper and shows the signature', async ({

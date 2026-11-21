@@ -21,6 +21,7 @@
   font-size: var(--text-xs);
   line-height: var(--leading-normal);
   margin-top: var(--space-1-5);
+  max-inline-size: var(--measure-prose);
 }
 
 .field-hint {

@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-settings.spec.ts > Given an administrator on the settings page > when the signature block is previewed on an upright tablet, then it takes the width of the warning and the intro of its card",
+    "replacement": "e2e/admin-settings.spec.ts > Given an administrator on the settings page > when the signature block is previewed on an upright tablet, then it takes the width of the warning and the intro keeps to its measure within it",
+    "reason": "PR #1960 (#1555): the administration's prose keeps to 54ch, so the receipts card's intro no longer reaches the right edge of the preview and the warning, which keep the card's whole text column as #1933 set",
+    "contract": "docs/frontend-overview.md, Frontend conventions in detail"
+  }
+]

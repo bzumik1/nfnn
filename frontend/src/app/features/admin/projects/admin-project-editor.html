@@ -235,7 +235,11 @@
                   <app-file-button
                     inputId="projects-image"
                     accept="image/jpeg,image/png,image/webp"
-                    describedBy="projects-image-hint"
+                    [describedBy]="
+                      uploadError()
+                        ? 'projects-image-error projects-image-hint'
+                        : 'projects-image-hint'
+                    "
                     [disabled]="uploading()"
                     (chosen)="upload($event)"
                   >
@@ -261,6 +265,9 @@
                     </button>
                   }
                 </div>
+                @if (uploadError(); as error) {
+                  <p id="projects-image-error" class="field-error" role="alert">{{ error }}</p>
+                }
                 <p
                   id="projects-image-hint"
                   class="field-hint"
@@ -280,9 +287,6 @@
                     </p>
                   }
                 </div>
-                @if (uploadError(); as error) {
-                  <p class="field-error" role="alert">{{ error }}</p>
-                }
                 @if (coverImage()) {
                   <app-form-field
                     class="alt-field"

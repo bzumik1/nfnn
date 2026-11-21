@@ -52,7 +52,11 @@
             <app-file-button
               inputId="donate-band-photo"
               accept="image/jpeg,image/png,image/webp"
-              describedBy="donate-band-photo-hint"
+              [describedBy]="
+                uploadError()
+                  ? 'donate-band-photo-error donate-band-photo-hint'
+                  : 'donate-band-photo-hint'
+              "
               [disabled]="busy()"
               (chosen)="upload($event)"
             >
@@ -63,6 +67,9 @@
               }
             </app-file-button>
           </div>
+          @if (uploadError(); as error) {
+            <p id="donate-band-photo-error" class="field-error" role="alert">{{ error }}</p>
+          }
           <p id="donate-band-photo-hint" class="field-hint" i18n="@@admin.donateBand.photo.hint">
             JPEG, PNG nebo WebP do 10 MB, nejlépe na šířku. Web fotku ořízne podle bodu výřezu
             a&nbsp;vyrobí si z&nbsp;ní zmenšené kopie.
@@ -76,9 +83,6 @@
               </p>
             }
           </div>
-          @if (uploadError(); as error) {
-            <p class="field-error" role="alert">{{ error }}</p>
-          }
 
           @if (chosen()) {
             <div class="fields">

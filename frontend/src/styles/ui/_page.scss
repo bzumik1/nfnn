@@ -47,7 +47,7 @@
   font-size: var(--text-lg);
   line-height: var(--leading-normal);
   margin-bottom: var(--space-5);
-  max-width: 680px;
+  max-width: var(--measure-prose);
 }
 
 .ui-crumbs {

@@ -205,6 +205,22 @@ describe('Given an administrator and an About section without a photo', () => {
     http.expectNone(MEDIA_URL);
   });
 
+  it('when the chosen file is refused, then the error comes right under the upload button, before the hint, and the button names the error first', async () => {
+    expect(element(fixture, '#about-photo').getAttribute('aria-describedby')).toBe(
+      'about-photo-hint',
+    );
+
+    await chooseFile(fixture, new File(['text'], 'poznamky.txt', { type: 'text/plain' }));
+
+    const error = element(fixture, '#about-photo-error');
+    expect(element(fixture, '.photo-actions').nextElementSibling).toBe(error);
+    expect(error.nextElementSibling).toBe(element(fixture, '#about-photo-hint'));
+    expect(element(fixture, '#about-photo').getAttribute('aria-describedby')).toBe(
+      'about-photo-error about-photo-hint',
+    );
+    http.expectNone(MEDIA_URL);
+  });
+
   it('when the server refuses the photo, then the page carries its words and shows no preview', async () => {
     await chooseFile(fixture, new File(['png'], 'velky.png', { type: 'image/png' }));
     const refusal = problem(
