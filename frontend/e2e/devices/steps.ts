@@ -346,7 +346,10 @@ export const STEPS: Step[] = [
     title: 'the dialog that deletes the data on this device',
     open: async (ui) => {
       await donorPage(ui, '/darce/udaje');
-      await ui.waitVisible({ css: 'app-device-data-card .device-data-state', text: 'Uloženo' });
+      await ui.waitVisible({
+        css: 'app-device-data-card .device-data-state',
+        text: 'aktualizováno',
+      });
       await ui.click({ css: 'app-device-data-card button', text: 'Smazat data z tohoto zařízení' });
       await ui.waitVisible({ css: 'dialog[open] h2', text: 'Smazat data z tohoto zařízení?' });
     },
