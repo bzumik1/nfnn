@@ -4,6 +4,14 @@
   display: block;
 }
 
+@include bp.up(tablet) {
+  :host-context(.ui-sheet-page) .ui-page--form {
+    box-sizing: content-box;
+    max-width: var(--page-form-max);
+    margin-inline: auto;
+  }
+}
+
 .ui-page-title {
   margin-bottom: var(--space-5);
 }
@@ -64,6 +72,10 @@
 
 .date-field {
   display: block;
+  max-width: 260px;
+}
+
+.short-control {
   max-width: 260px;
 }
 

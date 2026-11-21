@@ -400,3 +400,89 @@ test.describe('Given an administrator on Správci on a narrow computer', () => {
     });
   }
 });
+
+const TABLET = { width: 820, height: 1180 } as const;
+const PHONE = { width: 390, height: 844 } as const;
+const FORM_MEASURE_REM = 45;
+
+interface SheetColumn {
+  readonly sheetLeft: number;
+  readonly sheetRight: number;
+  readonly contentLeft: number;
+  readonly contentRight: number;
+  readonly rootFontSize: number;
+}
+
+async function sheetColumn(page: Page): Promise<SheetColumn> {
+  return pageBox(page).evaluate((element) => {
+    const sheet = element.closest('.admin-sheet')!.getBoundingClientRect();
+    const box = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      sheetLeft: sheet.left,
+      sheetRight: sheet.right,
+      contentLeft: box.left + parseFloat(style.paddingLeft),
+      contentRight: box.right - parseFloat(style.paddingRight),
+      rootFontSize: parseFloat(getComputedStyle(document.documentElement).fontSize),
+    };
+  });
+}
+
+test.describe('Given an administrator in an editor on an upright tablet', () => {
+  for (const path of ['/sprava/aktuality/nova', '/sprava/projekty/nova'] as const) {
+    test(`when ${path} opens, then the form stands in the form page's measure in the middle of the sheet`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(TABLET);
+      await openUnlocked(page, path);
+      await expect(page.locator('.admin-sheet .ui-card').first()).toBeVisible();
+
+      const column = await sheetColumn(page);
+      expect(column.contentRight - column.contentLeft).toBeLessThanOrEqual(
+        FORM_MEASURE_REM * column.rootFontSize + 0.5,
+      );
+      expect(column.contentLeft - column.sheetLeft).toBeCloseTo(
+        column.sheetRight - column.contentRight,
+        0,
+      );
+    });
+  }
+
+  test('when a story opens, then its year stays a short field like its date', async ({ page }) => {
+    await page.setViewportSize(TABLET);
+    await openUnlocked(page, '/sprava/projekty/nova');
+    const year = await page.locator('#projects-year').boundingBox();
+    const title = await page.locator('#projects-title').boundingBox();
+
+    expect(year!.width).toBeLessThan(title!.width / 2);
+  });
+});
+
+async function gapsAroundTheIntro(page: Page): Promise<{ above: number; below: number }> {
+  return page.locator('.admin-page .ui-page-intro').evaluate((intro) => {
+    const head = intro.previousElementSibling!.getBoundingClientRect();
+    const box = intro.getBoundingClientRect();
+    const next = intro.parentElement!.querySelector('.ui-card')!.getBoundingClientRect();
+    return { above: box.top - head.bottom, below: next.top - box.bottom };
+  });
+}
+
+test.describe('Given an administrator on a content list in the sheet', () => {
+  for (const viewport of [PHONE, TABLET]) {
+    for (const [path, action] of [
+      ['/sprava/aktuality', 'Nová aktualita'],
+      ['/sprava/projekty', 'Nový příběh'],
+    ] as const) {
+      test(`when ${path} opens at ${viewport.width} px, then ${action} keeps the page's gap above the intro`, async ({
+        page,
+      }) => {
+        await page.setViewportSize(viewport);
+        await openUnlocked(page, path);
+        await expect(page.locator('.admin-sheet .ui-card').first()).toBeVisible();
+
+        const gaps = await gapsAroundTheIntro(page);
+        expect(gaps.above).toBeCloseTo(gaps.below, 0);
+      });
+    }
+  }
+});
