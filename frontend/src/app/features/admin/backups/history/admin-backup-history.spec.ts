@@ -204,7 +204,7 @@ describe('Given an administrator on the history of backups', () => {
     http.expectOne(BACKUPS_URL).flush('boom', { status: 500, statusText: 'Server Error' });
     await settle();
 
-    expect(text('[role="alert"] p')).toBe('Zálohy se nepodařilo načíst.');
+    expect(text('p[role="alert"]')).toBe('Zálohy se nepodařilo načíst.');
     button('Zkusit znovu').click();
     await respond(backupsView({ backups: BACKUPS }));
 

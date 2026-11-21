@@ -39,11 +39,7 @@ export class ProjectOrderCard {
   protected readonly label = projectOrderLabel;
   protected readonly description = projectOrderDescription;
   protected readonly state = signal<LoadState>('loading');
-  protected readonly loadView = loadingView(
-    this.state,
-    (state) => state === 'loading',
-    (state) => state !== 'ready',
-  );
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly chosen = signal<ProjectOrder | null>(null);
   private readonly saved = signal<ProjectOrder | null>(null);
   protected readonly saving = signal(false);

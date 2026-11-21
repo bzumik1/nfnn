@@ -32,7 +32,7 @@
     </p>
 
     @if (state() === 'ready' && empty()) {
-      <div class="news-notice news-notice--empty ui-notice">
+      <div class="news-notice news-notice--empty ui-notice ui-notice--action">
         @if (pastLastPage()) {
           <p class="ui-notice__text" i18n="@@content.list.pastEnd">Tato strana neexistuje.</p>
           <a class="ui-cta ui-cta--ghost" routerLink="/aktuality" i18n="@@content.list.firstPage"
@@ -50,7 +50,7 @@
     }
 
     @if (state() === 'error') {
-      <div class="news-notice ui-notice ui-notice--alert" role="alert">
+      <div class="news-notice ui-notice ui-notice--alert ui-notice--action" role="alert">
         <p class="ui-notice__text">
           @if (offline()) {
             <ng-container i18n="@@content.news.offline"
@@ -59,7 +59,7 @@
             >
           } @else {
             <ng-container i18n="@@content.news.error.retry"
-              >Aktuality se nepodařilo načíst. Zkuste to znovu.</ng-container
+              >Aktuality se nepodařilo načíst.</ng-container
             >
           }
         </p>

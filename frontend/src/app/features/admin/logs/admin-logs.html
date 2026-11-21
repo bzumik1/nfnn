@@ -30,8 +30,13 @@
           }
         }
         @case ('error') {
-          <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-            <p i18n="@@admin.logs.health.failed">Stav serveru se nepodařilo zjistit.</p>
+          <div
+            class="ui-load-state ui-load-state--error ui-load-state--inset"
+            [class.ui-skeleton-reveal]="healthView.appears()"
+          >
+            <p role="alert" i18n="@@admin.logs.health.failed">
+              Stav serveru se nepodařilo zjistit.
+            </p>
             <button
               appNeedsConnection
               type="button"
@@ -101,8 +106,11 @@
           }
         }
         @case ('error') {
-          <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-            <p i18n="@@admin.logs.files.failed">Soubory logu se nepodařilo načíst.</p>
+          <div
+            class="ui-load-state ui-load-state--error ui-load-state--inset"
+            [class.ui-skeleton-reveal]="filesView.appears()"
+          >
+            <p role="alert" i18n="@@admin.logs.files.failed">Soubory logu se nepodařilo načíst.</p>
             <button
               appNeedsConnection
               type="button"

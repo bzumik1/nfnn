@@ -34,7 +34,8 @@ import {
   TallyResponse,
 } from '../admin-api';
 import { OpenAlerts } from '../../../core/push/open-alerts';
-import { LOADING_TIMINGS } from '../../../shared/ui/skeleton/loading-view';
+import { LOADING_TIMINGS, loadingView } from '../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { formatSize } from '../backups/backup-format';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { formatReportMonth } from '../report/report-month';
@@ -82,6 +83,7 @@ const TILE_OF_TONE: Readonly<Record<AttentionTone, string>> = {
 @Component({
   selector: 'app-admin-home',
   imports: [
+    Skeleton,
     NeedsConnection,
     RouterLink,
     CopyButton,
@@ -137,6 +139,7 @@ export class AdminHome {
     return read?.source === 'server' ? read.state : null;
   });
   protected readonly overviewState = signal<LoadState>('loading');
+  protected readonly overviewView = loadingView(this.overviewState, (state) => state === 'loading');
   protected readonly overview = signal<AdminOverviewResponse | null>(null);
   protected readonly unpairedState = signal<LoadState>('loading');
   protected readonly unpaired = signal<UnpairedSummary | null>(null);

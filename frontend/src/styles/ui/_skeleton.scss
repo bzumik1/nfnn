@@ -18,8 +18,20 @@
   }
 }
 
+.ui-skeleton-card {
+  @include motion.state(opacity);
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
 .ui-skeleton--inset {
   padding: 0 var(--space-6) var(--space-5);
+}
+
+.ui-card--padded .ui-skeleton--inset {
+  padding: 0;
 }
 
 .ui-skeleton__line {
@@ -49,5 +61,10 @@
 }
 
 .ui-skeleton-reveal {
+  @include motion.appear($rises: false);
+}
+
+.ui-card.ui-skeleton-reveal-under-title > :not(.ui-card__title),
+.ui-skeleton-reveal-under-title > .ui-card > :not(.ui-card__title) {
   @include motion.appear($rises: false);
 }

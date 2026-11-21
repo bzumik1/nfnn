@@ -260,13 +260,17 @@ describe('Given a visitor opening a news article', () => {
     await settle(fixture);
 
     const notice = fixture.nativeElement.querySelector('.ui-notice[role="alert"]');
-    expect(withOrdinarySpaces(notice?.textContent)?.trim()).toBe(
-      'Aktualitu se nepodařilo načíst. Zkuste to znovu.',
-    );
-    const retry = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
-    expect(withOrdinarySpaces(retry.textContent)?.trim()).toBe('Zkusit znovu');
+    expect(withOrdinarySpaces(notice?.textContent)?.trim()).toBe('Aktualitu se nepodařilo načíst.');
+    const retry = fixture.nativeElement.querySelector(
+      'app-load-failure button',
+    ) as HTMLButtonElement;
+    const shownFace = () =>
+      withOrdinarySpaces(retry.querySelector('.busy-label__face--shown')?.textContent)?.trim();
+    expect(shownFace()).toBe('Zkusit znovu');
     retry.click();
     await settle(fixture);
+    expect(shownFace()).toBe('Načítáme…');
+    expect(retry.getAttribute('aria-busy')).toBe('true');
     http.expectOne('/api/content/news/zahrada-pro-deti').flush(newsArticle());
     await settle(fixture);
 
@@ -337,10 +341,8 @@ describe('Given a visitor opening a project', () => {
     await settle(fixture);
 
     const notice = fixture.nativeElement.querySelector('.ui-notice[role="alert"]');
-    expect(withOrdinarySpaces(notice?.textContent)?.trim()).toBe(
-      'Příběh se nepodařilo načíst. Zkuste to znovu.',
-    );
-    (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();
+    expect(withOrdinarySpaces(notice?.textContent)?.trim()).toBe('Příběh se nepodařilo načíst.');
+    (fixture.nativeElement.querySelector('app-load-failure button') as HTMLButtonElement).click();
     await settle(fixture);
     http.expectOne('/api/content/projects/zahrada-pro-deti').flush(project());
     await settle(fixture);

@@ -12,7 +12,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import { map, Observable, of, Subscription } from 'rxjs';
+import { finalize, map, Observable, of, Subscription } from 'rxjs';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { whenLeft, whenShownAgain } from '../../../core/navigation/kept-tab-pages';
 import { NewsApi, NewsArticleResponse } from '../news-api';
@@ -23,7 +23,7 @@ import { StoryTile } from '../projects-page/story-tile';
 import { ProjectResponse, ProjectsApi } from '../projects-api';
 import { ContentArticle } from './content-article';
 import { ContentKind, ContentPage, newsPage, projectPage } from './content-page';
-import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -37,7 +37,7 @@ const SITE_NAME = $localize`:@@content.detail.siteName:Nová naděje – nadačn
 
 @Component({
   selector: 'app-content-detail',
-  imports: [NeedsConnection, NotFound, ContentArticle, NewsCard, StoryTile],
+  imports: [LoadFailure, NotFound, ContentArticle, NewsCard, StoryTile],
   templateUrl: './content-detail.html',
   styleUrl: './content-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -55,6 +55,7 @@ export class ContentDetail {
 
   protected readonly kind: ContentKind = this.route.snapshot.data['kind'] as ContentKind;
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly page = signal<ContentPage | null>(null);
   protected readonly onward = signal<Onward | null>(null);
   private articleLoad = Subscription.EMPTY;
@@ -77,7 +78,8 @@ export class ContentDetail {
   }
 
   protected retry(): void {
-    this.load();
+    this.retrying.set(true);
+    this.load(true);
   }
 
   private nameTabAfterPage(): void {
@@ -96,7 +98,10 @@ export class ContentDetail {
       this.state.set('loading');
     }
     this.articleLoad = this.fetch(slug)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (page) => {
           this.page.set(page);

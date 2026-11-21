@@ -690,14 +690,13 @@ describe('Given a signed-in donor in the donor area', () => {
         .flush({ title: 'Chyba' }, { status: 500, statusText: 'Internal Server Error' });
       await settle();
 
-      expect(text('.dashboard-error-text')).toBe(
-        'Přehled darů se nepodařilo načíst. Zkuste to znovu.',
-      );
+      expect(text('.dashboard-error [role="alert"]')).toBe('Přehled darů se nepodařilo načíst.');
       expect(element('.overview-stats')).toBeNull();
       expect(text('.send-gift h2')).toBe('Poslat dar');
 
       await click('.dashboard-error button');
-      expect(text('.overview-loading')).toBe('Načítáme vaše dary…');
+      expect(element('.overview-loading')).toBeNull();
+      expect(element('.dashboard-error button')?.getAttribute('aria-disabled')).toBe('true');
       await respond(twoYearSummary(), twoYearDonations());
 
       expect(element('[role="alert"]')).toBeNull();
@@ -1580,8 +1579,8 @@ describe('Given a signed-in donor in the donor area', () => {
         .flush({ title: 'Chyba' }, { status: 500, statusText: 'Internal Server Error' });
       await settle();
 
-      expect(text('.dashboard-error-text')).toBe('Dary se nepodařilo načíst. Zkuste to znovu.');
-      expect(text('.dashboard-error button')).toBe('Zkusit znovu');
+      expect(text('.dashboard-error [role="alert"]')).toBe('Dary se nepodařilo načíst.');
+      expect(text('.dashboard-error button .busy-label__face--shown')).toBe('Zkusit znovu');
     });
 
     it('then the payments table lists every donation newest first with date, amount, purpose and status', async () => {
@@ -2660,10 +2659,10 @@ describe('Given a signed-in donor in the donor area', () => {
         .flush({ title: 'Chyba' }, { status: 500, statusText: 'Internal Server Error' });
       await settle();
 
-      expect(text('.dashboard-error-text')).toBe(
-        'Potvrzení o daru se nepodařilo načíst. Zkuste to znovu.',
+      expect(text('.dashboard-error [role="alert"]')).toBe(
+        'Potvrzení o daru se nepodařilo načíst.',
       );
-      expect(text('.dashboard-error button')).toBe('Zkusit znovu');
+      expect(text('.dashboard-error button .busy-label__face--shown')).toBe('Zkusit znovu');
     });
 
     it('then a card offers to verify a receipt, the donor’s own or anyone else’s, on the verification page', async () => {

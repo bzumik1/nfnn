@@ -208,7 +208,7 @@
     <app-skeleton [rows]="2" />
   </div>
 } @else {
-  <app-donations-pending />
+  <app-donations-pending [class.ui-skeleton-reveal]="loadView.appears()" />
 }
 
 <app-send-gift [variableSymbol]="donor()?.variableSymbol ?? null" />

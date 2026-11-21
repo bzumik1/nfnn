@@ -80,7 +80,7 @@
     </p>
 
     @if (state() === 'error') {
-      <div class="stories-notice ui-notice ui-notice--alert" role="alert">
+      <div class="stories-notice ui-notice ui-notice--alert ui-notice--action" role="alert">
         <p class="ui-notice__text">
           @if (offline()) {
             <ng-container i18n="@@content.projects.offline"
@@ -88,7 +88,7 @@
             >
           } @else {
             <ng-container i18n="@@content.projects.error"
-              >Příběhy se nepodařilo načíst. Zkuste to znovu.</ng-container
+              >Příběhy se nepodařilo načíst.</ng-container
             >
           }
         </p>
@@ -107,7 +107,7 @@
 
     @if (state() === 'ready') {
       @if (projects().length === 0) {
-        <div class="stories-notice stories-notice--empty ui-notice">
+        <div class="stories-notice stories-notice--empty ui-notice ui-notice--action">
           <p class="ui-notice__text" i18n="@@content.projects.empty">Zatím tu žádný příběh není.</p>
           <a class="ui-cta ui-cta--ghost" routerLink="/" i18n="@@content.projects.empty.home"
             >Zpět na úvodní stránku</a

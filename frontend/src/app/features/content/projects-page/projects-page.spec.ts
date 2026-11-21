@@ -398,7 +398,7 @@ describe('Given the Pomáháme tab', () => {
 
     const notice = page.querySelector('.stories-notice.ui-notice[role="alert"]');
     expect(text(notice?.querySelector('.ui-notice__text') ?? null)).toBe(
-      'Příběhy se nepodařilo načíst. Zkuste to znovu.',
+      'Příběhy se nepodařilo načíst.',
     );
     expect(text(retryButton(page))).toBe('Zkusit znovu');
     expect(page.querySelectorAll('[role="alert"]').length).toBe(1);
@@ -447,7 +447,7 @@ describe('Given the Pomáháme tab', () => {
     await harness.fixture.whenStable();
 
     expect(text(page.querySelector('[role="alert"] .ui-notice__text'))).toBe(
-      'Příběhy se nepodařilo načíst. Zkuste to znovu.',
+      'Příběhy se nepodařilo načíst.',
     );
     expect(document.activeElement).toBe(retryButton(page));
     page.remove();

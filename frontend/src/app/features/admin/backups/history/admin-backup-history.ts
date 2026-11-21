@@ -43,11 +43,7 @@ export class AdminBackupHistory {
 
   protected readonly downloads = inject(BackupDownloads);
   protected readonly state = signal<LoadState>('loading');
-  protected readonly loadView = loadingView(
-    this.state,
-    (state) => state === 'loading',
-    (state) => state !== 'ready',
-  );
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly view = signal<AdminBackupsResponse | null>(null);
   protected readonly opened = signal<BackupFileResponse | null>(null);
   protected readonly days = computed(() => backupDays(this.view()?.backups ?? []));

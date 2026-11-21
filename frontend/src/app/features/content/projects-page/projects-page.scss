@@ -92,18 +92,7 @@
 }
 
 .stories-notice {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4) var(--space-6);
   margin-bottom: var(--space-6);
-  padding: var(--space-5) var(--space-6);
-  border-radius: var(--radius-card);
-
-  .ui-notice__text {
-    flex: 1 1 18rem;
-  }
 }
 
 .stories-notice--empty {

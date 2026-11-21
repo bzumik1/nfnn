@@ -452,7 +452,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     );
     await page.goto('/aktuality?strana=2');
     await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
-      'Aktuality se nepodařilo načíst. Zkuste to znovu.',
+      'Aktuality se nepodařilo načíst.',
     );
 
     expect(await violations(page)).toEqual([]);

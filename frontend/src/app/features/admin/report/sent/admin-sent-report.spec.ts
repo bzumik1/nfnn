@@ -149,7 +149,7 @@ describe('Given an administrator opening a sent monthly report', () => {
     await page.settle();
 
     expect(page.text('[role="alert"]')).toContain('Za říjen 2026 žádný přehled neodešel.');
-    expect(page.links('[role="alert"] a')).toEqual([
+    expect(page.links('.ui-load-state--error a')).toEqual([
       { text: 'Zpět na měsíční e-mail', href: '/sprava/prehledy' },
     ]);
   });

@@ -13,7 +13,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
-import { switchMap, take, takeWhile, timer } from 'rxjs';
+import { finalize, switchMap, take, takeWhile, timer } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -45,6 +45,7 @@ import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { loadingView } from '../../../shared/ui/skeleton/loading-view';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { fileNameParts } from './file-name-parts';
@@ -85,6 +86,7 @@ function failedAt(at: string): string {
   imports: [
     BusyLabel,
     Skeleton,
+    LoadFailure,
     NeedsConnection,
     LiveNotice,
     RestoreDialog,
@@ -116,11 +118,8 @@ export class AdminBackups {
   protected readonly historyPath = ADMIN_BACKUP_HISTORY_PATH;
 
   protected readonly state = signal<LoadState>('loading');
-  protected readonly loadView = loadingView(
-    this.state,
-    (state) => state === 'loading',
-    (state) => state !== 'ready',
-  );
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly retrying = signal(false);
   protected readonly view = signal<AdminBackupsResponse | null>(null);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly job = signal<RunningJob | null>(null);
@@ -165,9 +164,21 @@ export class AdminBackups {
 
   protected load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.reads
       .backups()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (view) => {
           this.view.set(view);
