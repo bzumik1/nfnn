@@ -133,29 +133,28 @@ a {
   }
 
   .year-row {
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      'year total'
-      'count count'
-      'action action';
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
   }
 
   .year {
-    grid-area: year;
+    flex: 1 1 auto;
   }
 
   .year-count {
-    grid-area: count;
+    order: 1;
+    flex-basis: 100%;
   }
 
   .year-total {
-    grid-area: total;
+    margin-inline-start: auto;
   }
 
   .year-action {
-    grid-area: action;
+    order: 2;
+    flex-basis: 100%;
     justify-content: flex-start;
-    justify-self: stretch;
   }
 
   .receipt-saved {
