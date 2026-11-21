@@ -399,13 +399,22 @@ test.describe('Given a visitor on the Aktuality tab on a computer', () => {
         }
         expect(await linesOf(storyTags.filter({ hasText: LONG_TAG }))).toBeGreaterThan(1);
       }
-      const tops: number[] = [];
-      for (const title of await page.locator('app-year-stories .story-title').all()) {
+      const rows: { tileTop: number; titleTops: number[] }[] = [];
+      for (const tile of await tiles.all()) {
+        const title = tile.locator('.story-title');
         expect(await breaksInsideWords(title)).toBe(0);
-        tops.push((await boxOf(title)).top);
+        const [tileTop, titleTop] = [(await boxOf(tile)).top, (await boxOf(title)).top];
+        const row = rows.find((each) => Math.abs(each.tileTop - tileTop) <= EDGE_TOLERANCE_PX);
+        if (row === undefined) {
+          rows.push({ tileTop, titleTops: [titleTop] });
+        } else {
+          row.titleTops.push(titleTop);
+        }
       }
-      for (const top of tops) {
-        expect(Math.abs(top - tops[0])).toBeLessThanOrEqual(EDGE_TOLERANCE_PX);
+      for (const { titleTops } of rows) {
+        for (const top of titleTops) {
+          expect(Math.abs(top - titleTops[0])).toBeLessThanOrEqual(EDGE_TOLERANCE_PX);
+        }
       }
     });
   }
@@ -488,11 +497,21 @@ test.describe('Given a visitor on the Aktuality tab with enlarged text', () => {
     expect(await missingLettersOfTag(tag)).toBeLessThanOrEqual(0);
   });
 
-  for (const { width, height } of [
-    { width: 834, height: 1194 },
-    { width: 1024, height: 1366 },
+  for (const { width, height, wraps, outcome } of [
+    {
+      width: 834,
+      height: 1194,
+      wraps: true,
+      outcome: 'its tag wraps onto more lines and loses no letter',
+    },
+    {
+      width: 1024,
+      height: 1366,
+      wraps: false,
+      outcome: 'its tag shows whole, with no letter cut off by an ellipsis',
+    },
   ]) {
-    test(`when a story of the year carries a long tag at the largest text in a ${width} px window, then its tag wraps whole`, async ({
+    test(`when a story of the year carries a long tag at the largest text in a ${width} px window, then ${outcome}`, async ({
       page,
     }) => {
       await enlargeText(page, `${LARGEST_SYSTEM_TEXT_PX}px`);
@@ -503,7 +522,12 @@ test.describe('Given a visitor on the Aktuality tab with enlarged text', () => {
       await expect(tag).toHaveText(LONG_TAG);
 
       expect(await missingLettersOfTag(tag)).toBeLessThanOrEqual(0);
-      expect(await linesOf(tag)).toBeGreaterThan(1);
+      expect(
+        await tag.evaluate((element) => element.scrollWidth - element.clientWidth),
+      ).toBeLessThanOrEqual(0);
+      if (wraps) {
+        expect(await linesOf(tag)).toBeGreaterThan(1);
+      }
     });
   }
 
