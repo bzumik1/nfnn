@@ -35,7 +35,7 @@ table {
   width: var(--donations-column-amount-long);
 }
 
-:host-context(.payments-card:has(.receipt-note--long)) .column-receipt {
+:host-context(.payments-card:has(.receipt-note--long)) .column-receipt--fits-note {
   width: var(--donations-column-receipt-note);
 }
 
@@ -133,14 +133,8 @@ td.date .date-status {
   }
 }
 
-:host(.donations-table--narrow) {
-  .column-receipt {
-    width: var(--donations-column-receipt);
-  }
-
-  td.receipt .receipt-note {
-    white-space: normal;
-  }
+:host(.donations-table--narrow) td.receipt .receipt-note {
+  white-space: normal;
 }
 
 .pairing-tag {
@@ -291,9 +285,11 @@ td .receipt-diagnostics {
   }
 }
 
-@include bp.container-down(donations-table, ledger) {
-  :host(:not(.donations-table--narrow)) {
-    @include table-as-cards;
+@include bp.down(nav) {
+  @include bp.container-down(donations-table, ledger) {
+    :host(:not(.donations-table--narrow)) {
+      @include table-as-cards;
+    }
   }
 }
 

@@ -93,6 +93,105 @@ async function notesInPlaceOfThePdf(): Promise<DonorApiMock> {
   };
 }
 
+const LARGE_GIFTS_WITH_LONG_NOTES = donationsOf([
+  gift(4, '2026-03-15', 125000000),
+  gift(3, '2026-02-10', 100, { accountVerification: true, receiptAvailable: false }),
+  gift(2, '2026-01-05', 123450),
+  gift(1, '2024-06-20', 50000, { receiptAvailable: false }),
+]);
+
+interface GiftTableRecord {
+  states: string[];
+  errors: string[];
+}
+
+async function recordGiftTableStates(page: Page, rootFontPx = 16): Promise<void> {
+  await page.addInitScript(() => {
+    const record: GiftTableRecord = { states: [], errors: [] };
+    Object.assign(window, { giftTableRecord: record });
+    window.addEventListener('error', (event) => record.errors.push(event.message));
+    window.addEventListener('unhandledrejection', (event) =>
+      record.errors.push(String(event.reason)),
+    );
+    const state = (): string | null => {
+      const host = document.querySelector('.payments-card app-donations-table');
+      if (!host) {
+        return null;
+      }
+      if (host.querySelector('.donation-rows')) {
+        return 'rows';
+      }
+      const head = host.querySelector('thead');
+      if (!head) {
+        return null;
+      }
+      if (getComputedStyle(head).position === 'absolute') {
+        return 'cards';
+      }
+      return Array.from(head.querySelectorAll('th')).some(
+        (cell) => cell.textContent?.trim() === 'Stav',
+      )
+        ? 'full'
+        : 'narrow';
+    };
+    const note = (): void => {
+      const now = state();
+      if (now !== null && record.states.at(-1) !== now) {
+        record.states.push(now);
+      }
+    };
+    new MutationObserver(note).observe(document, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+    });
+    const everyFrame = (): void => {
+      note();
+      requestAnimationFrame(everyFrame);
+    };
+    requestAnimationFrame(everyFrame);
+  });
+  if (rootFontPx !== 16) {
+    await rootTextOf(page, rootFontPx);
+  }
+}
+
+async function giftTableRecord(page: Page): Promise<GiftTableRecord> {
+  return page.evaluate(
+    () => (window as unknown as { giftTableRecord: GiftTableRecord }).giftTableRecord,
+  );
+}
+
+async function nextFrames(page: Page): Promise<void> {
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+}
+
+async function rootTextOf(page: Page, rootFontPx: number): Promise<void> {
+  await page.addInitScript((root) => {
+    const apply = (): boolean => {
+      if (!document.documentElement) {
+        return false;
+      }
+      document.documentElement.style.fontSize = `${root}px`;
+      return true;
+    };
+    if (!apply()) {
+      const untilRoot = new MutationObserver(() => {
+        if (apply()) {
+          untilRoot.disconnect();
+        }
+      });
+      untilRoot.observe(document, { childList: true });
+    }
+  }, rootFontPx);
+}
+
+async function textOfHomeScreenApp(page: Page): Promise<void> {
+  await rootTextOf(page, 17);
+}
+
 const ONE_YEAR = donationsOf([gift(1, '2026-03-15', 50000)]);
 
 const TWO_YEARS = donationsOf([gift(2, '2026-03-15', 50000), gift(1, '2025-11-05', 25000)]);
@@ -109,7 +208,11 @@ const MANY_YEARS = donationsOf([
   gift(3, '2022-05-10', 40000, { receiptAvailable: false }),
 ]);
 
-async function openReceiptsOf(page: Page, shown: () => DonorApiMock): Promise<void> {
+async function openReceiptsOf(
+  page: Page,
+  shown: () => DonorApiMock,
+  path = '/darce/potvrzeni',
+): Promise<void> {
   await mockDonorApi(page, shown());
   await page.route(
     (url) => url.pathname === '/api/donations/me/summary',
@@ -122,7 +225,7 @@ async function openReceiptsOf(page: Page, shown: () => DonorApiMock): Promise<vo
   await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200, donor)));
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
-  await page.goto('/darce/potvrzeni');
+  await page.goto(path);
 }
 
 function yearsOf(data: DonorApiMock): number {
@@ -288,8 +391,8 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
     });
   }
 
-  for (const width of [900, 1000, 1100]) {
-    test(`when Moje dary lists gifts in a ${width} px window, between nav and laptop, then each year stays a table without the Stav column, no cell runs past the card and only a refunded gift or an account verification names its state under the date`, async ({
+  for (const width of [900, 1000, 1100, 1150, 1180, 1194]) {
+    test(`when Moje dary lists gifts in a ${width} px window, from nav until the table's container reaches ledger (54 rem), then each year stays a table without the Stav column, no cell runs past the card and only a refunded gift or an account verification names its state under the date`, async ({
       page,
     }) => {
       await mockDonorApi(page, await notesInPlaceOfThePdf());
@@ -335,6 +438,212 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
       const cells = refunded.getByRole('cell');
       await expect(cells.first()).toHaveAccessibleName(/^5\.\s1\.\s2026 Stav: Vráceno$/);
       await expect(cells.nth(1)).toHaveAccessibleName(/^300\sKč$/);
+    });
+  }
+
+  for (const width of [1150, 1180]) {
+    test(`when Moje dary lists gifts in a ${width} px window with the 17 px text of the home-screen app, then the refunded gift's date cell reads its state before the amount cell`, async ({
+      page,
+    }) => {
+      await textOfHomeScreenApp(page);
+      await page.setViewportSize({ width, height: 900 });
+      await openOwnPage(page, '/darce/dary', await notesInPlaceOfThePdf());
+
+      const card = page.locator('.payments-card');
+      await expect(card.locator('table').first().locator('thead th')).toHaveText([
+        'Datum',
+        'Částka',
+        'Účel',
+        'Potvrzení',
+      ]);
+      const cells = card.locator('tbody tr', { hasText: 'Vráceno' }).getByRole('cell');
+      await expect(cells.first()).toHaveAccessibleName(/^5\.\s1\.\s2026 Stav: Vráceno$/);
+      await expect(cells.nth(1)).toHaveAccessibleName(/^300\sKč$/);
+    });
+  }
+
+  for (const width of [1150, 1180]) {
+    test(`when Moje dary opens directly in a ${width} px window, whose container is narrower than ledger, then no frame shows the gifts as cards before the table without Stav`, async ({
+      page,
+    }) => {
+      await recordGiftTableStates(page);
+      await page.setViewportSize({ width, height: 900 });
+      await openOwnPage(page, '/darce/dary', await notesInPlaceOfThePdf());
+
+      await expect(page.locator('.payments-card table').first().locator('thead th')).toHaveText([
+        'Datum',
+        'Částka',
+        'Účel',
+        'Potvrzení',
+      ]);
+      await nextFrames(page);
+      expect(await giftTableRecord(page)).toEqual({ states: ['narrow'], errors: [] });
+    });
+  }
+
+  for (const { root, widths, expected } of [
+    { root: 16, widths: [1194, 1200], expected: ['narrow', 'full'] },
+    { root: 17, widths: [1194, 1200], expected: ['narrow', 'narrow'] },
+  ]) {
+    test(`when Moje dary opens at ${widths.join(' and ')} px with a ${root} px root, then each shows either the table without Stav or the full table, never cards`, async ({
+      page,
+    }) => {
+      const shown: string[] = [];
+      await recordGiftTableStates(page, root);
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: 900 });
+        await openOwnPage(page, '/darce/dary', await notesInPlaceOfThePdf());
+        await expect(page.locator('.payments-card table').first()).toBeVisible();
+        await nextFrames(page);
+        const record = await giftTableRecord(page);
+        expect(record.errors).toEqual([]);
+        expect(record.states).toHaveLength(1);
+        shown.push(record.states[0]);
+      }
+      expect(shown).toEqual(expected);
+    });
+  }
+
+  for (const { root, from, to, edges } of [
+    { root: 16, from: 890, to: 1300, edges: [899, 900, 1194, 1195] },
+    { root: 17, from: 890, to: 1650, edges: [955, 956, 1599, 1600] },
+  ]) {
+    test(`when the window of Moje dary widens step by step from ${from} to ${to} px with a ${root} px root, then the gifts go from rows to the table without Stav to the full table, each switch once and without an error`, async ({
+      page,
+    }) => {
+      test.slow();
+      await recordGiftTableStates(page, root);
+      await page.setViewportSize({ width: from, height: 900 });
+      await openOwnPage(page, '/darce/dary', await notesInPlaceOfThePdf());
+      await expect(page.locator('.payments-card .donation-rows').first()).toBeVisible();
+
+      const widths = [
+        ...new Set([
+          ...Array.from({ length: (to - from) / 10 + 1 }, (_, i) => from + i * 10),
+          ...edges,
+        ]),
+      ].sort((a, b) => a - b);
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: 900 });
+        await nextFrames(page);
+      }
+
+      await expect(page.locator('.payments-card table').first().locator('thead th')).toHaveText([
+        'Datum',
+        'Částka',
+        'Účel',
+        'Stav',
+        'Potvrzení',
+      ]);
+      expect(await giftTableRecord(page)).toEqual({
+        states: ['rows', 'narrow', 'full'],
+        errors: [],
+      });
+    });
+  }
+
+  test('when an iPad with the 17 px text of the home-screen app turns between 820 and 1180 px, then Moje dary goes between rows and the table without Stav, never through cards and without an error', async ({
+    page,
+  }) => {
+    await recordGiftTableStates(page, 17);
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await openOwnPage(page, '/darce/dary', await notesInPlaceOfThePdf());
+    await expect(page.locator('.payments-card .donation-rows').first()).toBeVisible();
+
+    for (const [width, height] of [
+      [1180, 820],
+      [820, 1180],
+      [1180, 820],
+      [820, 1180],
+    ]) {
+      await page.setViewportSize({ width, height });
+      await nextFrames(page);
+    }
+
+    await expect(page.locator('.payments-card .donation-rows').first()).toBeVisible();
+    expect(await giftTableRecord(page)).toEqual({
+      states: ['rows', 'narrow', 'rows', 'narrow', 'rows'],
+      errors: [],
+    });
+  });
+
+  test("when the text of an open Moje dary grows from 16 to 17 px in a 1280 px window, which leaves the table's container narrower than ledger, then the full table becomes the table without Stav and back", async ({
+    page,
+  }) => {
+    await recordGiftTableStates(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openOwnPage(page, '/darce/dary', await notesInPlaceOfThePdf());
+    const heads = page.locator('.payments-card table').first().locator('thead th');
+    await expect(heads).toHaveText(['Datum', 'Částka', 'Účel', 'Stav', 'Potvrzení']);
+
+    await page.evaluate(() => (document.documentElement.style.fontSize = '17px'));
+    await expect(heads).toHaveText(['Datum', 'Částka', 'Účel', 'Potvrzení']);
+    await page.evaluate(() => document.documentElement.style.removeProperty('font-size'));
+    await expect(heads).toHaveText(['Datum', 'Částka', 'Účel', 'Stav', 'Potvrzení']);
+
+    expect(await giftTableRecord(page)).toEqual({
+      states: ['full', 'narrow', 'full'],
+      errors: [],
+    });
+  });
+
+  test('when Moje dary in a 900 px window lists gifts of a million crowns with long notes in place of the PDF, then Účel keeps the width it has beside buttons only, and the notes wrap inside Potvrzení', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 900, height: 900 });
+    const purposeWidth = async (): Promise<number> => {
+      const heads = page.locator('.payments-card table').first().locator('thead th');
+      await expect(heads).toHaveText(['Datum', 'Částka', 'Účel', 'Potvrzení']);
+      return (await heads.nth(2).boundingBox())!.width;
+    };
+
+    let shown = LARGE_GIFTS;
+    await openReceiptsOf(page, () => shown, '/darce/dary');
+    await expect(page.locator('.payments-card td.amount').first()).toHaveText(/1\s250\s000\sKč/);
+    await expect(page.locator('.payments-card .receipt-note')).toHaveCount(0);
+    const besideButtons = await purposeWidth();
+    shown = LARGE_GIFTS_WITH_LONG_NOTES;
+    await page.reload();
+    await expect(page.locator('.payments-card .receipt-note--long')).toHaveCount(2);
+
+    expect(Math.abs((await purposeWidth()) - besideButtons)).toBeLessThanOrEqual(0.5);
+    const outside = await page.locator('.payments-card').evaluate((card) => {
+      const edge = card.getBoundingClientRect();
+      return Array.from(card.querySelectorAll('.receipt-note')).filter((note) => {
+        const cell = note.closest('td')!.getBoundingClientRect();
+        const box = note.getBoundingClientRect();
+        return box.left < cell.left - 0.5 || box.right > Math.min(cell.right, edge.right) + 0.5;
+      }).length;
+    });
+    expect(outside).toBe(0);
+  });
+
+  for (const path of ['/darce/prehled', '/darce/dary', '/darce/potvrzeni']) {
+    test(`when ${path} shows its gifts table in a 900 px window, then nothing reaches past its card or the window`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 900, height: 900 });
+      await openOwnPage(page, path, await notesInPlaceOfThePdf());
+      const table = page.locator('app-donations-table table').first();
+      await expect(table.locator('thead th').first()).toHaveText('Datum');
+
+      const pastTheCard = await page.locator('app-donations-table').evaluateAll((hosts) =>
+        hosts.flatMap((host) => {
+          const edge = host.closest('.ui-card')!.getBoundingClientRect();
+          return Array.from(host.querySelectorAll('table, th, td'))
+            .filter((cell) => {
+              const box = cell.getBoundingClientRect();
+              return box.left < edge.left - 0.5 || box.right > edge.right + 0.5;
+            })
+            .map((cell) => cell.textContent!.trim());
+        }),
+      );
+      expect(pastTheCard).toEqual([]);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        ),
+      ).toBeLessThanOrEqual(0);
     });
   }
 

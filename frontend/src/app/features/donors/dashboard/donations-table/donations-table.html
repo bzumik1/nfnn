@@ -41,7 +41,7 @@
         <col class="column-status" />
       }
       @if (withReceipts()) {
-        <col class="column-receipt" />
+        <col class="column-receipt" [class.column-receipt--fits-note]="!narrow()" />
       }
     </colgroup>
     <thead role="rowgroup">
