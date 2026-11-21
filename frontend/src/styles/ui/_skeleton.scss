@@ -63,3 +63,8 @@
 .ui-skeleton-reveal {
   @include motion.appear($rises: false);
 }
+
+.ui-card.ui-skeleton-reveal-under-title > :not(.ui-card__title),
+.ui-skeleton-reveal-under-title > .ui-card > :not(.ui-card__title) {
+  @include motion.appear($rises: false);
+}

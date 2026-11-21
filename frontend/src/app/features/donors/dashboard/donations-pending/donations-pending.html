@@ -12,18 +12,16 @@
     >
       @switch (page()) {
         @case ('gifts') {
-          <ng-container i18n="@@donor.gifts.error.text"
-            >Dary se nepodařilo načíst. Zkuste to znovu.</ng-container
-          >
+          <ng-container i18n="@@donor.gifts.error.text">Dary se nepodařilo načíst.</ng-container>
         }
         @case ('receipts') {
           <ng-container i18n="@@donor.receipts.error.text"
-            >Potvrzení o&nbsp;daru se nepodařilo načíst. Zkuste to znovu.</ng-container
+            >Potvrzení o&nbsp;daru se nepodařilo načíst.</ng-container
           >
         }
         @default {
           <ng-container i18n="@@donor.dashboard.error.text"
-            >Přehled darů se nepodařilo načíst. Zkuste to znovu.</ng-container
+            >Přehled darů se nepodařilo načíst.</ng-container
           >
         }
       }

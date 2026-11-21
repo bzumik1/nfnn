@@ -41,6 +41,7 @@ import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
 import { loadingView } from '../../../shared/ui/skeleton/loading-view';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import {
   markRowsLeaving,
@@ -150,6 +151,7 @@ const ROW_CONTROLS =
     BankAccount,
     SegmentThumb,
     Skeleton,
+    LoadFailure,
   ],
   templateUrl: './admin-payments.html',
   styleUrl: './admin-payments.scss',
@@ -188,6 +190,7 @@ export class AdminPayments {
   protected readonly searchText = signal(this.filters().text);
   protected readonly state = signal<LoadState>('loading');
   protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly retrying = signal(false);
   protected readonly items = signal<AdminPaymentResponse[]>([]);
   protected readonly total = signal(0);
   protected readonly rowsLeaving = signal(0);
@@ -428,6 +431,11 @@ export class AdminPayments {
     this.pages.next(this.filters());
   }
 
+  protected retry(): void {
+    this.retrying.set(true);
+    this.pages.next(this.filters());
+  }
+
   protected loadMore(): void {
     if (this.loadingMore()) {
       return;
@@ -470,6 +478,7 @@ export class AdminPayments {
   }
 
   private showFirstPage(outcome: PageOutcome): void {
+    this.retrying.set(false);
     const afterReload = this.afterReload;
     this.afterReload = null;
     if (outcome.kind === 'failed') {

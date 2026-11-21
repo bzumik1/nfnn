@@ -182,21 +182,16 @@
         }
       }
       @case ('error') {
-        <div
-          class="ui-load-state ui-load-state--error ui-load-state--inset"
+        <app-load-failure
+          class="payments-failure"
           [class.ui-skeleton-reveal]="loadView.appears()"
-          role="alert"
+          [compact]="true"
+          [retrying]="retrying()"
+          (retry)="retry()"
+          ><ng-container i18n="@@admin.payments.error.text"
+            >Platby se nepodařilo načíst.</ng-container
+          ></app-load-failure
         >
-          <p i18n="@@admin.payments.error.text">Platby se nepodařilo načíst.</p>
-          <button
-            type="button"
-            class="ui-button"
-            (click)="load()"
-            i18n="@@admin.payments.error.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
       }
       @case ('ready') {
         @if (items().length === 0) {

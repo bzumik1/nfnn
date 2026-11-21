@@ -20,29 +20,17 @@
             >
           }
         </h1>
-        <div class="ui-notice--alert ui-notice--action detail-failure">
-          <p class="ui-notice ui-notice__text" role="alert">
-            @if (kind === 'news') {
-              <ng-container i18n="@@content.detail.error.news"
-                >Aktualitu se nepodařilo načíst. Zkuste to znovu.</ng-container
-              >
-            } @else {
-              <ng-container i18n="@@content.detail.error.projects"
-                >Příběh se nepodařilo načíst. Zkuste to znovu.</ng-container
-              >
-            }
-          </p>
-          <button
-            appNeedsConnection
-            type="button"
-            class="ui-cta ui-cta--ghost"
-            [appBusy]="retrying()"
-            (click)="retry()"
-            i18n="@@content.detail.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
+        <app-load-failure class="detail-failure" [retrying]="retrying()" (retry)="retry()">
+          @if (kind === 'news') {
+            <ng-container i18n="@@content.detail.error.news"
+              >Aktualitu se nepodařilo načíst.</ng-container
+            >
+          } @else {
+            <ng-container i18n="@@content.detail.error.projects"
+              >Příběh se nepodařilo načíst.</ng-container
+            >
+          }
+        </app-load-failure>
       </div>
     </section>
   }

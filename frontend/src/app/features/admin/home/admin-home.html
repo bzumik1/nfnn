@@ -23,8 +23,10 @@
           </p>
         }
         @case ('error') {
-          <div class="ui-load-state ui-load-state--error" role="alert">
-            <p i18n="@@admin.home.import.error.text">Stav importu se nepodařilo načíst.</p>
+          <div class="ui-load-state ui-load-state--error">
+            <p role="alert" i18n="@@admin.home.import.error.text">
+              Stav importu se nepodařilo načíst.
+            </p>
             <button
               appNeedsConnection
               type="button"
@@ -155,8 +157,10 @@
           </p>
         }
         @case ('error') {
-          <div class="ui-load-state ui-load-state--error" role="alert">
-            <p i18n="@@admin.home.backups.error.text">Stav záloh se nepodařilo načíst.</p>
+          <div class="ui-load-state ui-load-state--error">
+            <p role="alert" i18n="@@admin.home.backups.error.text">
+              Stav záloh se nepodařilo načíst.
+            </p>
             <button
               appNeedsConnection
               type="button"
@@ -240,9 +244,10 @@
         <div
           class="ui-load-state ui-load-state--error"
           [class.ui-skeleton-reveal]="overviewView.appears()"
-          role="alert"
         >
-          <p i18n="@@admin.home.overview.error.text">Dary po měsících se nepodařilo načíst.</p>
+          <p role="alert" i18n="@@admin.home.overview.error.text">
+            Dary po měsících se nepodařilo načíst.
+          </p>
           <button
             appNeedsConnection
             type="button"

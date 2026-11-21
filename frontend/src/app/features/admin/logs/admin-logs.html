@@ -33,9 +33,10 @@
           <div
             class="ui-load-state ui-load-state--error ui-load-state--inset"
             [class.ui-skeleton-reveal]="healthView.appears()"
-            role="alert"
           >
-            <p i18n="@@admin.logs.health.failed">Stav serveru se nepodařilo zjistit.</p>
+            <p role="alert" i18n="@@admin.logs.health.failed">
+              Stav serveru se nepodařilo zjistit.
+            </p>
             <button
               appNeedsConnection
               type="button"
@@ -108,9 +109,8 @@
           <div
             class="ui-load-state ui-load-state--error ui-load-state--inset"
             [class.ui-skeleton-reveal]="filesView.appears()"
-            role="alert"
           >
-            <p i18n="@@admin.logs.files.failed">Soubory logu se nepodařilo načíst.</p>
+            <p role="alert" i18n="@@admin.logs.files.failed">Soubory logu se nepodařilo načíst.</p>
             <button
               appNeedsConnection
               type="button"

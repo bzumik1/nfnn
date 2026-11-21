@@ -23,8 +23,7 @@ import { StoryTile } from '../projects-page/story-tile';
 import { ProjectResponse, ProjectsApi } from '../projects-api';
 import { ContentArticle } from './content-article';
 import { ContentKind, ContentPage, newsPage, projectPage } from './content-page';
-import { BusyButton } from '../../../shared/ui/busy-button/busy-button';
-import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -38,7 +37,7 @@ const SITE_NAME = $localize`:@@content.detail.siteName:Nová naděje – nadačn
 
 @Component({
   selector: 'app-content-detail',
-  imports: [NeedsConnection, BusyButton, NotFound, ContentArticle, NewsCard, StoryTile],
+  imports: [LoadFailure, NotFound, ContentArticle, NewsCard, StoryTile],
   templateUrl: './content-detail.html',
   styleUrl: './content-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

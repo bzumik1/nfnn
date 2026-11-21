@@ -29,9 +29,8 @@
       <div
         class="ui-load-state ui-load-state--error"
         [class.ui-skeleton-reveal]="loadView.appears()"
-        role="alert"
       >
-        <p i18n="@@admin.projects.error.text">Příběhy se nepodařilo načíst.</p>
+        <p role="alert" i18n="@@admin.projects.error.text">Příběhy se nepodařilo načíst.</p>
         <button
           appNeedsConnection
           type="button"
@@ -46,7 +45,7 @@
     @case ('ready') {
       <section
         class="ui-card"
-        [class.ui-skeleton-reveal]="loadView.appears()"
+        [class.ui-skeleton-reveal-under-title]="loadView.appears()"
         aria-labelledby="projects-list-title"
       >
         <h2 id="projects-list-title" class="ui-card__title" i18n="@@admin.projects.list.title">
