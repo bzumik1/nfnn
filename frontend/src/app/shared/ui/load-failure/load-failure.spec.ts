@@ -243,19 +243,15 @@ describe('Given a page whose data failed to load, with the theme timings of load
   });
 
   it('when the page is left while the button holds its busy state, then its timer is cancelled', async () => {
-    const started = vi.spyOn(globalThis, 'setTimeout');
     button().click();
-    const hold = started.mock.results.at(-1)?.value;
-    started.mockRestore();
     await settle();
     fixture.componentInstance.retrying.set(false);
     await settle();
-    const cancelled = vi.spyOn(globalThis, 'clearTimeout');
+    expect(vi.getTimerCount()).toBe(1);
 
     fixture.destroy();
+    await vi.advanceTimersToNextFrame();
 
-    expect(hold).toBeDefined();
-    expect(cancelled).toHaveBeenCalledWith(hold);
-    cancelled.mockRestore();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
