@@ -2,6 +2,7 @@ import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import {
   bankAccountItem,
+  donor,
   mockDonorApi,
   openAccountItem,
   openDonorSection,
@@ -44,13 +45,22 @@ async function linesOf(elements: Locator): Promise<number[]> {
   );
 }
 
-async function signInOnPhone(page: Page, width: number): Promise<void> {
+const DONOR_WITH_A_LONG_ADDRESS = {
+  ...donor,
+  address: {
+    street: 'Dlouhá ulice u Starého nádraží 1234/56a',
+    city: 'Ústí nad Labem-Severní Terasa',
+    postalCode: '400 11',
+  },
+};
+
+async function signInOnPhone(page: Page, width: number, user: typeof donor = donor): Promise<void> {
   await mockDonorApi(page);
   await page.route(
     (url) => url.pathname === '/api/donations/me/bank-accounts',
     (route) => route.fulfill({ json: { items: ACCOUNTS } }),
   );
-  await signIn(page);
+  await signIn(page, user);
   await page.setViewportSize({ width, height: 800 });
 }
 
@@ -78,6 +88,29 @@ test.describe('Given a signed-in donor on a phone', () => {
         'Přístupové klíče',
       ]);
       expect(await linesOf(titles)).toEqual([1, 1, 1, 1]);
+    });
+
+    test(`when Údaje a zabezpečení shows a long address in the account sheet ${width} px wide, then the postal code and the town start the line after the street and the postal code never splits`, async ({
+      page,
+    }) => {
+      await signInOnPhone(page, width, DONOR_WITH_A_LONG_ADDRESS);
+      await openAccountItem(page, 'Údaje a zabezpečení');
+
+      const parts = page.locator('.profile-address-part');
+      await expect(parts).toHaveCount(2);
+      const placed = await parts.evaluateAll(([street, locality]) => {
+        const postalCode = document.createRange();
+        postalCode.setStart(locality.firstChild!, 0);
+        postalCode.setEnd(locality.firstChild!, '400 11'.length);
+        const lineTops = (range: Range) =>
+          new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top))).size;
+        return {
+          localityBelowStreet:
+            locality.getBoundingClientRect().top >= street.getBoundingClientRect().bottom - 0.5,
+          postalCodeLines: lineTops(postalCode),
+        };
+      });
+      expect(placed).toEqual({ localityBelowStreet: true, postalCodeLines: 1 });
     });
 
     test(`when Bankovní účty lists numbers of every length in the account sheet ${width} px wide, then every badge stands in the same place under its number`, async ({
