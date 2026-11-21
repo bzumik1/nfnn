@@ -2080,6 +2080,31 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(texts('.pairing-tag')).toHaveLength(1);
     });
 
+    it('then the word účet in either pairing tag keeps the end of the account on its line', async () => {
+      const list = twoYearDonations();
+      list.items[0] = donationItem({
+        id: 'd-4',
+        pairedBy: 'SENDER_ACCOUNT',
+        senderAccount: '2900233333/2010',
+      });
+      list.items[1] = donationItem({
+        id: 'd-3',
+        pairedBy: 'CONFIRMED_SYMBOL',
+        senderAccount: '19-2000145399/0800',
+        confirmedSymbol: '6123456789',
+      });
+      await open('/darce/dary');
+      await respond(twoYearSummary(), list);
+
+      const shown = [
+        ...root().querySelectorAll<HTMLElement>('.payments-card .pairing-tag [aria-hidden="true"]'),
+      ].map((tag) => (tag.textContent ?? '').replace(/[\t\n ]+/g, ' ').trim());
+      expect(shown).toEqual([
+        'bez symbolu · účet …3333/2010',
+        'symbol 6123456789 · účet …5399/0800',
+      ]);
+    });
+
     it('then donations paired by the variable symbol or by hand carry no tag', async () => {
       const list = twoYearDonations();
       list.items[0] = donationItem({ id: 'd-4', pairedBy: null, source: 'MANUAL' });

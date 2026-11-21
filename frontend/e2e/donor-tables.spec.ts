@@ -1,0 +1,287 @@
+import { Locator, Page } from '@playwright/test';
+import { expect, test } from './fixtures';
+import {
+  donationItem,
+  donor,
+  DonorApiMock,
+  mockDonorApi,
+  openDonorSection,
+  session,
+  signIn,
+} from './donor-session';
+import { donations as receiptDonations, openReceiptsAfterSignIn } from './receipt-donations';
+import { RECEIPT_ISSUING_URL } from './receipt-issuing';
+
+type Gift = ReturnType<typeof donationItem>;
+
+function gift(
+  number: number,
+  receivedAt: string,
+  amountMinor: number,
+  overrides: Record<string, unknown> = {},
+): Gift {
+  return donationItem({
+    id: `0192f0f1-0000-7000-8000-${String(number).padStart(12, '0')}`,
+    receivedAt,
+    amountMinor,
+    ...overrides,
+  });
+}
+
+function donationsOf(items: readonly Gift[]): DonorApiMock {
+  const years = [...new Set(items.map((item) => Number(item.receivedAt.slice(0, 4))))];
+  const totalOf = (gifts: readonly Gift[]) =>
+    gifts.reduce((sum, item) => sum + (item.status === 'RECEIVED' ? item.amountMinor : 0), 0);
+  const totalAmountMinor = totalOf(items);
+  return {
+    summary: {
+      totalAmountMinor,
+      currency: 'CZK',
+      count: items.length,
+      lastReceivedAt: items[0].receivedAt,
+      byYear: years.map((year) => {
+        const ofYear = items.filter((item) => item.receivedAt.startsWith(`${year}-`));
+        return { year, count: ofYear.length, totalAmountMinor: totalOf(ofYear) };
+      }),
+      yearlyReceiptsAvailableThrough: 2025,
+      receiptsAvailableFrom: 2025,
+    },
+    list: { items, totalAmountMinor, currency: 'CZK', count: items.length },
+  };
+}
+
+const LARGE_GIFTS = donationsOf([
+  gift(3, '2026-03-15', 125000000),
+  gift(2, '2026-02-10', 123450),
+  gift(1, '2026-01-05', 50000),
+]);
+
+const NOTES_IN_PLACE_OF_THE_PDF = donationsOf([
+  gift(4, '2026-03-15', 50000),
+  gift(3, '2026-02-10', 100, { accountVerification: true, receiptAvailable: false }),
+  gift(2, '2026-01-05', 30000, { status: 'REFUNDED', receiptAvailable: false }),
+  gift(1, '2024-06-20', 30000, { receiptAvailable: false }),
+]);
+
+const ONE_YEAR = donationsOf([gift(1, '2026-03-15', 50000)]);
+
+const TWO_YEARS = donationsOf([gift(2, '2026-03-15', 50000), gift(1, '2025-11-05', 25000)]);
+
+const MANY_YEARS = donationsOf([
+  gift(14, '2026-03-15', 50000),
+  ...[1, 2, 3, 4, 5, 6].map((month) =>
+    gift(7 + month, `2025-0${month}-10`, month === 6 ? 25000000 : 20000000),
+  ),
+  gift(7, '2025-07-10', 100, { accountVerification: true, receiptAvailable: false }),
+  gift(6, '2025-08-10', 100, { accountVerification: true, receiptAvailable: false }),
+  gift(5, '2024-05-10', 70000, { receiptAvailable: false }),
+  gift(4, '2023-05-10', 60000, { receiptAvailable: false }),
+  gift(3, '2022-05-10', 40000, { receiptAvailable: false }),
+]);
+
+async function openReceiptsOf(page: Page, shown: () => DonorApiMock): Promise<void> {
+  await mockDonorApi(page, shown());
+  await page.route(
+    (url) => url.pathname === '/api/donations/me/summary',
+    (route) => route.fulfill({ json: shown().summary }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/donations/me',
+    (route) => route.fulfill({ json: shown().list }),
+  );
+  await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200, donor)));
+  await page.goto('/');
+  await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+  await page.goto('/darce/potvrzeni');
+}
+
+function yearsOf(data: DonorApiMock): number {
+  return (data.summary as { byYear: readonly unknown[] }).byYear.length;
+}
+
+async function amountsFromCardEnd(page: Page): Promise<number[]> {
+  return page.locator('.yearly-card').evaluate((card) => {
+    const style = getComputedStyle(card);
+    const end =
+      card.getBoundingClientRect().right -
+      parseFloat(style.borderRightWidth) -
+      parseFloat(style.paddingRight);
+    return Array.from(card.querySelectorAll('.year-total')).map((total) =>
+      Math.round(end - total.getBoundingClientRect().right),
+    );
+  });
+}
+
+async function linesOf(elements: Locator): Promise<number[]> {
+  return elements.evaluateAll((found) =>
+    found.map((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top))).size;
+    }),
+  );
+}
+
+test.describe('Given a signed-in donor whose gifts fill the tables of the portal', () => {
+  for (const width of [1280, 1920]) {
+    for (const section of ['Můj přehled', 'Moje dary']) {
+      test(`when ${section} lists gifts of a million crowns and of hellers in a ${width} px window, then every amount stays inside its column and all amounts end on one edge`, async ({
+        page,
+      }) => {
+        await mockDonorApi(page, LARGE_GIFTS);
+        await signIn(page);
+        await page.setViewportSize({ width, height: 900 });
+        await openDonorSection(page, section);
+
+        const cells = page.locator('main td.amount');
+        await expect(cells.filter({ hasText: /1\s250\s000\sKč/ }).first()).toBeVisible();
+        const head = (await page.locator('main table thead').first().boundingBox())!;
+        expect(head.height).toBeGreaterThan(1);
+        const placed = await cells.evaluateAll((found) =>
+          found.map((cell) => {
+            const box = cell.getBoundingClientRect();
+            const style = getComputedStyle(cell);
+            const start = box.left + parseFloat(style.paddingLeft);
+            const end = box.right - parseFloat(style.paddingRight);
+            const amount = cell.querySelector('.ui-amount')!.getBoundingClientRect();
+            return {
+              text: cell.textContent!.trim(),
+              inside: amount.left >= start - 0.5 && amount.right <= end + 0.5,
+              end: Math.round(amount.right),
+            };
+          }),
+        );
+        expect(placed.filter((each) => !each.inside)).toEqual([]);
+        expect(new Set(placed.map((each) => each.end)).size).toBe(1);
+      });
+    }
+
+    test(`when Moje dary shows a note in place of the PDF in a ${width} px window, then each note keeps to one line and its row is no taller than a row with the button`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, NOTES_IN_PLACE_OF_THE_PDF);
+      await signIn(page);
+      await page.setViewportSize({ width, height: 900 });
+      await openDonorSection(page, 'Moje dary');
+
+      const notes = page.locator('.payments-card td.receipt .receipt-note');
+      await expect(notes).toHaveText([
+        'Započítá se do ročního potvrzení',
+        'Vrácený dar potvrzení nemá',
+        'Potvrzení vystavujeme od roku 2025',
+      ]);
+      expect(await linesOf(notes)).toEqual([1, 1, 1]);
+
+      const heights = await page.locator('.payments-card tbody tr').evaluateAll((rows) =>
+        rows
+          .filter((row) => !row.querySelector('.verification-tag, .pairing-tag'))
+          .map((row) => ({
+            withButton: row.querySelector('.download-btn') !== null,
+            height: row.getBoundingClientRect().height,
+          })),
+      );
+      const buttonRow = heights.find((row) => row.withButton)!;
+      const noteRows = heights.filter((row) => !row.withButton);
+      expect(noteRows).toHaveLength(2);
+      for (const row of noteRows) {
+        expect(row.height).toBeLessThanOrEqual(buttonRow.height + 0.5);
+      }
+    });
+
+    test(`when Potvrzení o daru lists many years, some with a long note, in a ${width} px window, then no count of gifts runs into the amount of its year`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await openReceiptsOf(page, () => MANY_YEARS);
+
+      const rows = page.locator('.year-row');
+      await expect(rows).toHaveCount(yearsOf(MANY_YEARS));
+      await expect(rows.nth(1).locator('.year-count')).toHaveText('6 darů a 2 ověření účtu');
+      const crossings = await rows.evaluateAll((found) =>
+        found.flatMap((row) => {
+          const textBox = (selector: string) => {
+            const range = document.createRange();
+            range.selectNodeContents(row.querySelector(selector)!);
+            return range.getBoundingClientRect();
+          };
+          const count = textBox('.year-count');
+          const total = textBox('.year-total');
+          const action = row.querySelector('.year-action')!.getBoundingClientRect();
+          return count.right <= total.left && total.right <= action.left
+            ? []
+            : [row.querySelector('.year')!.textContent!.trim()];
+        }),
+      );
+      expect(crossings).toEqual([]);
+    });
+
+    test(`when Potvrzení o daru lists one, two or many years in a ${width} px window, then the yearly amounts end at the same place`, async ({
+      page,
+    }) => {
+      let shown = ONE_YEAR;
+      await page.setViewportSize({ width, height: 900 });
+      await openReceiptsOf(page, () => shown);
+
+      const ends: number[][] = [];
+      for (const data of [ONE_YEAR, TWO_YEARS, MANY_YEARS]) {
+        if (data !== shown) {
+          shown = data;
+          await page.reload();
+        }
+        await expect(page.locator('.year-row')).toHaveCount(yearsOf(data));
+        ends.push(await amountsFromCardEnd(page));
+      }
+      expect(new Set(ends.flat()).size).toBe(1);
+    });
+  }
+
+  for (const place of [
+    {
+      name: 'a year on Moje dary',
+      section: 'Moje dary',
+      row: (page: Page) => page.locator('.gift-year-head').last(),
+    },
+    {
+      name: 'a year on Potvrzení o daru',
+      section: 'Potvrzení o daru',
+      row: (page: Page) => page.locator('.year-row').last(),
+    },
+  ]) {
+    test(`when an iPad turns while the PDF of ${place.name} is being prepared, then the one status after its button stays and keeps its text`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, receiptDonations);
+      await page.clock.install();
+      await page.route(
+        (url) => url.pathname === RECEIPT_ISSUING_URL,
+        () => new Promise<void>(() => undefined),
+      );
+      await page.setViewportSize({ width: 1194, height: 834 });
+      await openReceiptsAfterSignIn(page);
+      await openDonorSection(page, place.section);
+      const row = place.row(page);
+      const button = row.locator('.yearly-pdf');
+      await expect(button).toBeVisible();
+
+      await button.click();
+      const status = row.getByRole('status');
+      await expect(status).toHaveText('Připravujeme údaje potvrzení…');
+      const followsButton = () =>
+        button.evaluate((element) => {
+          const shown = element
+            .closest('.gift-year-head, .year-row')!
+            .querySelector('[role="status"]')!;
+          return Boolean(element.compareDocumentPosition(shown) & Node.DOCUMENT_POSITION_FOLLOWING);
+        });
+      expect(await followsButton()).toBe(true);
+      await status.evaluate((element) => element.setAttribute('data-before-turn', ''));
+
+      await page.setViewportSize({ width: 834, height: 1194 });
+      await expect(row.locator('.receipt-saved')).toHaveCount(1);
+      await expect(row.locator('[role="status"][data-before-turn]')).toHaveText(
+        'Připravujeme údaje potvrzení…',
+      );
+      expect(await followsButton()).toBe(true);
+    });
+  }
+});
