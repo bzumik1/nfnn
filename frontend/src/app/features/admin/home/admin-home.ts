@@ -104,6 +104,7 @@ export class AdminHome {
   private readonly pageReads = inject(AdministrationPageReads);
   private readonly connectivity = inject(Connectivity);
   private overviewRead: Subscription | null = null;
+  private overviewYear: number | null = null;
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -277,6 +278,7 @@ export class AdminHome {
   }
 
   private loadOverview(year: number | null = null): void {
+    this.overviewYear = year;
     this.overviewState.set('loading');
     this.fetchOverview(year);
   }
@@ -284,7 +286,7 @@ export class AdminHome {
   protected retryOverview(): void {
     this.overviewRead?.unsubscribe();
     this.overviewRetrying.set(true);
-    this.fetchOverview(null);
+    this.fetchOverview(this.overviewYear);
   }
 
   private fetchOverview(year: number | null): void {

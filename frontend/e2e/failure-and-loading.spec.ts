@@ -190,6 +190,11 @@ interface FadesSeen {
   readonly rowsFading: number;
 }
 
+interface InsetFadesSeen {
+  readonly blockAnimations: number;
+  readonly rowsFading: number;
+}
+
 interface FailurePage {
   readonly name: string;
   readonly route: string;
@@ -1053,6 +1058,53 @@ test.describe('Given an administrator on a computer whose backups load slowly', 
   });
 });
 
+test.describe('Given an administrator on a computer whose payments load slowly', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', COMPUTER_ONLY);
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await mockDonorApi(page);
+    await rememberedSession(page);
+  });
+
+  test('when the inset skeleton under the shown title appears, then it fades in once and its rows do not fade again inside it', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const changes = new MutationObserver(() => {
+        const block = document.querySelector('.skeleton > .ui-skeleton--inset');
+        if (block === null) {
+          return;
+        }
+        const seen: InsetFadesSeen = {
+          blockAnimations: block.getAnimations().length,
+          rowsFading: [...block.querySelectorAll('.ui-skeleton__line')].filter((row) =>
+            row.getAnimations().some((animation) => animation instanceof CSSTransition),
+          ).length,
+        };
+        (window as unknown as { insetFadesSeen: InsetFadesSeen }).insetFadesSeen = seen;
+        changes.disconnect();
+      });
+      changes.observe(document, { childList: true, subtree: true });
+    });
+    const never = new Promise<void>(() => undefined);
+    await page.route(
+      (url) => url.pathname === PAYMENTS,
+      async () => {
+        await never;
+      },
+    );
+
+    await page.goto('/sprava/platby');
+    await expect(page.locator('app-skeleton .ui-skeleton--inset')).toHaveCount(1);
+
+    const seen = await page.evaluate(
+      () => (window as unknown as { insetFadesSeen: InsetFadesSeen }).insetFadesSeen,
+    );
+    expect(seen).toEqual({ blockAnimations: 1, rowsFading: 0 });
+  });
+});
+
 test.describe('Given an administrator at phone width with the largest text whose backups load slowly', () => {
   test.skip(({ browserName }) => browserName !== 'chromium', PHONE_WIDTH_IN_CHROMIUM);
 
@@ -1116,6 +1168,50 @@ test.describe('Given a visitor on a computer with a home indicator when a floati
         return Math.round(box.y + box.height);
       })
       .toBeLessThanOrEqual(900 - HOME_INDICATOR_INSET);
+  });
+
+  test('when the visitor reaches the end of the page or focuses its last link, then neither is covered by the notice', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', {
+      insets: { bottom: HOME_INDICATOR_INSET },
+    });
+    await withoutSessionStorage(page);
+    await openAboutThenLoseNewChunks(page);
+
+    await openPolicyFromContact(page);
+    await expect(chunkLoadNotice(page)).toBeVisible();
+    const noticeTop = async () => Math.round((await chunkLoadNotice(page).boundingBox())!.y);
+
+    await expect
+      .poll(async () => {
+        const contentBottom = await page.evaluate(() => {
+          window.scrollTo(0, document.documentElement.scrollHeight);
+          const leaves = Array.from(document.querySelectorAll('main *')).filter(
+            (element) =>
+              element.children.length === 0 &&
+              element.closest('.ui-notice--floating') === null &&
+              element.getBoundingClientRect().width > 1 &&
+              element.getBoundingClientRect().height > 1,
+          );
+          return Math.max(...leaves.map((element) => element.getBoundingClientRect().bottom));
+        });
+        return (await noticeTop()) - Math.round(contentBottom);
+      })
+      .toBeGreaterThanOrEqual(0);
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const lastLink = page.locator('main a').filter({ visible: true }).last();
+    await lastLink.focus();
+    await expect(lastLink).toBeFocused();
+    await expect
+      .poll(async () => {
+        const link = (await lastLink.boundingBox())!;
+        return (await noticeTop()) - Math.round(link.y + link.height);
+      })
+      .toBeGreaterThanOrEqual(0);
   });
 });
 

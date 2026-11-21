@@ -629,9 +629,11 @@ describe('Given an administrator on the administration home', () => {
       'Stav importu se nepodařilo načíst.',
     ]);
     await respond(importState());
+    await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('[role="alert"]:not(:empty)')).toBeNull();
     expect(dataRows()['Stažené období']).toBe('20. 7. 2026 – 17. 10. 2026');
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
   });
 
   it('when the role was taken away meanwhile, then the administrator is sent to their own overview', async () => {
@@ -760,6 +762,29 @@ describe('Given an administrator on the administration home', () => {
         'prosinec 2025 1 1 0 500 Kč 500 Kč 0 Kč',
         'Celkem 2025 1 1 0 500 Kč 500 Kč 0 Kč',
       ]);
+    });
+
+    it('when switching the year fails and Zkusit znovu is pressed, then it asks for the same year again', async () => {
+      const select = fixture.nativeElement.querySelector(
+        '.year-select select',
+      ) as HTMLSelectElement;
+      select.value = '2025';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      await respondOverview(`${OVERVIEW_URL}?year=2025`, { title: 'Server error' }, 500);
+
+      const card = fixture.nativeElement.querySelector(
+        '.ui-card[aria-labelledby="admin-overview-title"]',
+      ) as HTMLElement;
+      expect(loadFailureAlerts(card)).toEqual(['Dary po měsících se nepodařilo načíst.']);
+      pressLoadFailureRetry(card);
+      fixture.detectChanges();
+
+      http.expectNone(OVERVIEW_URL);
+      await respondOverview(`${OVERVIEW_URL}?year=2025`, overview({ year: 2025 }));
+
+      expect(card.querySelector('[role="alert"]')).toBeNull();
+      expect(text('.admin-summary')).toBe('Registrovaní dárci: 3, z toho nových v roce 2025: 3.');
     });
   });
 

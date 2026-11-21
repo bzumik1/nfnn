@@ -200,7 +200,9 @@ html:has(app-root app-tab-bar) .ui-notice--floating {
 }
 
 .has-floating-notice {
-  scroll-padding-bottom: calc(var(--floating-notice-height) + var(--space-8));
+  scroll-padding-bottom: calc(
+    var(--floating-notice-height) + var(--space-8) + env(safe-area-inset-bottom)
+  );
 
   &:has(app-root app-tab-bar) {
     scroll-padding-bottom: calc(
@@ -209,7 +211,9 @@ html:has(app-root app-tab-bar) .ui-notice--floating {
   }
 
   body:not(:has(app-root app-landing)) {
-    padding-bottom: calc(var(--floating-notice-height) + var(--space-8));
+    padding-bottom: calc(
+      var(--floating-notice-height) + var(--space-8) + env(safe-area-inset-bottom)
+    );
   }
 }
 
