@@ -42,6 +42,12 @@ export class PageFocus {
     this.focusQuietly(main.querySelector<HTMLElement>('h1') ?? main);
   }
 
+  keepOnPressed(control: HTMLElement): void {
+    if (this.document.activeElement !== control) {
+      control.focus({ preventScroll: true });
+    }
+  }
+
   keepNear(places: readonly HTMLElement[]): void {
     const connected = places.filter((place) => place.isConnected);
     if (!this.focusLostAmong(connected)) {

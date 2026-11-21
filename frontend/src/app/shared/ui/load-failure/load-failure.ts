@@ -45,6 +45,7 @@ export class LoadFailure {
 
   private readonly host: HTMLElement = inject(ElementRef<HTMLElement>).nativeElement;
   private readonly environment = inject(EnvironmentInjector);
+  private readonly pageFocus = inject(PageFocus);
   private readonly timings = inject(LOADING_TIMINGS);
   private places: readonly HTMLElement[] = [];
   private holdTimer: ReturnType<typeof setTimeout> | undefined;
@@ -54,14 +55,15 @@ export class LoadFailure {
       clearTimeout(this.holdTimer);
       const places = this.places;
       if (places.length > 0) {
-        afterNextRender(() => this.environment.get(PageFocus).keepNear(places), {
+        afterNextRender(() => this.pageFocus.keepNear(places), {
           injector: this.environment,
         });
       }
     });
   }
 
-  protected pressed(): void {
+  protected pressed(control: HTMLElement): void {
+    this.pageFocus.keepOnPressed(control);
     const places: HTMLElement[] = [];
     for (let at = this.host.parentElement; at !== null; at = at.parentElement) {
       places.push(at);

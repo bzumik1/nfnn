@@ -3,6 +3,7 @@
     <p class="ui-notice ui-notice__text load-failure-text" role="alert"><ng-content /></p>
   }
   <button
+    #retryButton
     appNeedsConnection
     type="button"
     class="load-failure-retry"
@@ -10,7 +11,7 @@
     [class.ui-cta--ghost]="!compact()"
     [class.ui-button]="compact()"
     [appBusy]="busy()"
-    (click)="pressed()"
+    (click)="pressed(retryButton)"
   >
     <app-busy-label [busy]="busy()">
       <span when-idle i18n="@@ui.loadFailure.retry">Zkusit znovu</span>

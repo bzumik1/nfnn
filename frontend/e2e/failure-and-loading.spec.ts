@@ -137,6 +137,35 @@ async function linesStartAt(text: Locator, edgeSelector: string): Promise<number
   return starts.map((start) => (Math.abs(start) <= 2 ? 0 : Math.round(start)));
 }
 
+async function pressLeavesFocusOnPageAsIos(retry: Locator): Promise<void> {
+  await retry.evaluate((button) => {
+    button.addEventListener(
+      'mousedown',
+      (event) => {
+        event.preventDefault();
+        document.getElementById('obsah')?.focus({ preventScroll: true });
+      },
+      { once: true },
+    );
+    document.addEventListener(
+      'click',
+      () => {
+        (window as unknown as { focusAtPress: string | null }).focusAtPress =
+          document.activeElement?.id ?? null;
+      },
+      { capture: true, once: true },
+    );
+  });
+}
+
+async function focusAtPress(page: Page): Promise<string | null> {
+  return page.evaluate(() => (window as unknown as { focusAtPress: string | null }).focusAtPress);
+}
+
+async function scrollTop(page: Page): Promise<number> {
+  return page.evaluate(() => Math.round(window.scrollY));
+}
+
 function failure(page: Page, text: string): Locator {
   return page.getByRole('alert').filter({ hasText: text });
 }
@@ -516,6 +545,27 @@ test.describe('Given an administrator at phone width with the largest text whose
     expect(await isRememberedAlert(alert)).toBe(false);
     await expect(retry).toBeFocused();
   });
+
+  test('when the press leaves the focus on the page as iOS does, then „Zkusit znovu“ takes it back while busy and the page does not move', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/platby');
+    await expect(failure(page, 'Platby se nepodařilo načíst.')).toBeVisible();
+    const retry = page.locator('app-load-failure button');
+    await retry.scrollIntoViewIfNeeded();
+    const before = await scrollTop(page);
+    await pressLeavesFocusOnPageAsIos(retry);
+
+    await retry.click();
+
+    await expect(retry).toHaveAttribute('aria-busy', 'true');
+    await expect(retry).toBeFocused();
+    expect(await focusAtPress(page)).toBe('obsah');
+    expect(await scrollTop(page)).toBe(before);
+    await expect(retry).not.toHaveAttribute('aria-busy', 'true');
+    await expect(retry).toBeFocused();
+    await expect.poll(() => scrollTop(page)).toBe(before);
+  });
 });
 
 test.describe('Given a visitor on a phone whose article fails to load', () => {
@@ -550,6 +600,44 @@ test.describe('Given a visitor on a phone whose article fails to load', () => {
     loads = true;
     await retry.click();
 
+    await expect(failure(page, 'Aktualitu se nepodařilo načíst.')).toHaveCount(0);
+    await expect(page.getByRole('heading', { level: 1, name: article.title })).toBeFocused();
+  });
+
+  test('when the press leaves the focus on the page as iOS does, then „Zkusit znovu“ takes it back while busy, the page does not move and the article heading then takes the focus', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockPublicContent(page);
+    let loads = false;
+    let answer: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => (answer = resolve));
+    await page.route(
+      (url) => url.pathname === `/api/content/news/${article.slug}`,
+      async (route) => {
+        if (!loads) {
+          await route.fulfill(SERVER_ERROR);
+          return;
+        }
+        await answered;
+        await route.fallback();
+      },
+    );
+    await page.goto(`/aktuality/${article.slug}`);
+    await expect(failure(page, 'Aktualitu se nepodařilo načíst.')).toBeVisible();
+    const retry = page.locator('app-load-failure button');
+    await retry.scrollIntoViewIfNeeded();
+    const before = await scrollTop(page);
+    await pressLeavesFocusOnPageAsIos(retry);
+
+    loads = true;
+    await retry.click();
+
+    await expect(retry).toHaveAttribute('aria-busy', 'true');
+    await expect(retry).toBeFocused();
+    expect(await focusAtPress(page)).toBe('obsah');
+    expect(await scrollTop(page)).toBe(before);
+    answer();
     await expect(failure(page, 'Aktualitu se nepodařilo načíst.')).toHaveCount(0);
     await expect(page.getByRole('heading', { level: 1, name: article.title })).toBeFocused();
   });
