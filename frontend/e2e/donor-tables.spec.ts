@@ -587,6 +587,76 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
     });
   });
 
+  test("when the text of an open Moje dary grows from 16 to 32 px in a 2000 px window, which keeps the table's container at 1110 px, under ledger in text widths, then the full table becomes the table without Stav, never rows or cards", async ({
+    page,
+  }) => {
+    await recordGiftTableStates(page);
+    await page.setViewportSize({ width: 2000, height: 900 });
+    await openOwnPage(page, '/darce/dary', await notesInPlaceOfThePdf());
+    const heads = page.locator('.payments-card table').first().locator('thead th');
+    await expect(heads).toHaveText(['Datum', 'Částka', 'Účel', 'Stav', 'Potvrzení']);
+    const widthBefore = await page
+      .locator('.payments-card app-donations-table')
+      .first()
+      .evaluate((host) => host.getBoundingClientRect().width);
+
+    await page.evaluate(() => (document.documentElement.style.fontSize = '32px'));
+
+    await expect(heads).toHaveText(['Datum', 'Částka', 'Účel', 'Potvrzení']);
+    await nextFrames(page);
+    expect(
+      await page
+        .locator('.payments-card app-donations-table')
+        .first()
+        .evaluate((host) => host.getBoundingClientRect().width),
+    ).toBe(widthBefore);
+    expect(await giftTableRecord(page)).toEqual({ states: ['full', 'narrow'], errors: [] });
+  });
+
+  test('when the window of an open Moje dary jumps from 1280 to 640 px, below nav, then the full table becomes rows at once, never the table without Stav or cards in between', async ({
+    page,
+  }) => {
+    await recordGiftTableStates(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openOwnPage(page, '/darce/dary', await notesInPlaceOfThePdf());
+    await expect(page.locator('.payments-card table').first().locator('thead th')).toHaveText([
+      'Datum',
+      'Částka',
+      'Účel',
+      'Stav',
+      'Potvrzení',
+    ]);
+
+    await page.setViewportSize({ width: 640, height: 900 });
+
+    await expect(page.locator('.payments-card .donation-rows').first()).toBeVisible();
+    await nextFrames(page);
+    expect(await giftTableRecord(page)).toEqual({ states: ['full', 'rows'], errors: [] });
+  });
+
+  for (const root of [16, 17]) {
+    test(`when Můj přehled shows its recent gifts in the table without Stav in a 1180 px window with a ${root} px root, then the heading Účel starts where the purposes under it start`, async ({
+      page,
+    }) => {
+      await rootTextOf(page, root);
+      await page.setViewportSize({ width: 1180, height: 900 });
+      await openOwnPage(page, '/darce/prehled', await notesInPlaceOfThePdf());
+      const heads = page.locator('app-donations-table table thead th');
+      await expect(heads).toHaveText(['Datum', 'Částka', 'Účel']);
+
+      const headingStart = await heads.nth(2).evaluate((heading) => {
+        const range = document.createRange();
+        range.selectNodeContents(heading);
+        return range.getBoundingClientRect().left;
+      });
+      const purposeStart = (await page
+        .locator('app-donations-table td.purpose-cell .purpose')
+        .first()
+        .boundingBox())!.x;
+      expect(Math.abs(headingStart - purposeStart)).toBeLessThanOrEqual(0.5);
+    });
+  }
+
   test('when Moje dary in a 900 px window lists gifts of a million crowns with long notes in place of the PDF, then Účel keeps the width it has beside buttons only, and the notes wrap inside Potvrzení', async ({
     page,
   }) => {

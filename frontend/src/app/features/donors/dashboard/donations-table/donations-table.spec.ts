@@ -110,6 +110,15 @@ describe('Given the gifts table of the donor portal', () => {
     fixture.detectChanges();
   }
 
+  function enlargeText(fixture: ComponentFixture<DonationsTable>, rootFontPx: number): void {
+    const host = fixture.nativeElement as HTMLElement;
+    root.style.fontSize = `${rootFontPx}px`;
+    watches
+      .filter((watch) => watch.target !== host)
+      .forEach((watch) => watch.callback([], watch.observer as ResizeObserver));
+    fixture.detectChanges();
+  }
+
   function headers(fixture: ComponentFixture<DonationsTable>): string[] {
     return [...(fixture.nativeElement as HTMLElement).querySelectorAll('th')].map((header) =>
       (header.textContent ?? '').trim(),
@@ -168,14 +177,27 @@ describe('Given the gifts table of the donor portal', () => {
     expect(watches.filter((watch) => watch.target === host)).toEqual([]);
   });
 
-  it('when a 2000 px window has a 32 px root, which is wider than nav in text widths, then a container of 1700 px, under ledger in text widths, shows the narrow table', () => {
+  it('when a 2000 px window has a 32 px root, which is wider than nav in text widths, then a container of 1110 px (34.7 rem), under ledger in text widths, shows the narrow table', () => {
     windowWidth = 2000;
     vi.stubGlobal('innerWidth', windowWidth);
 
-    const fixture = shown(1700, 32);
+    const fixture = shown(1110, 32);
 
     expect(isNarrow(fixture)).toBe(true);
     expect((fixture.nativeElement as HTMLElement).querySelector('table')).not.toBeNull();
+  });
+
+  it('when the root text of an open page grows from 16 to 32 px in a 2000 px window and its 1110 px container keeps its width, then the full table turns narrow without Stav', () => {
+    windowWidth = 2000;
+    vi.stubGlobal('innerWidth', windowWidth);
+    const fixture = shown(1110);
+    const fullBefore = !isNarrow(fixture);
+
+    enlargeText(fixture, 32);
+
+    expect(fullBefore).toBe(true);
+    expect(isNarrow(fixture)).toBe(true);
+    expect(headers(fixture)).toEqual(['Datum', 'Částka', 'Účel', 'Potvrzení']);
   });
 
   it('when the text is so large that the window is narrower than nav in text widths, then the list rows win over the narrow table', () => {
