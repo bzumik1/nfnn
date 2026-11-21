@@ -552,12 +552,14 @@ describe('Given an administrator and two people of the foundation', () => {
     await click(fixture, `#person-edit-${PERSON_ID}`);
     await press(fixture, 'Odebrat osobu z webu');
 
-    expect(text(fixture, '[role="group"]')).toContain('Opravdu odebrat z webu osobu Eva Vzorová?');
+    expect(text(fixture, '.confirm[role="group"]')).toContain(
+      'Opravdu odebrat z webu osobu Eva Vzorová?',
+    );
     expect(document.activeElement).toBe(element(fixture, '#person-remove-cancel'));
 
     await press(fixture, 'Zrušit');
 
-    expect(fixture.nativeElement.querySelector('[role="group"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.confirm[role="group"]')).toBeNull();
     expect(document.activeElement).toBe(element(fixture, '#person-remove'));
   });
 
