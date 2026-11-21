@@ -14,6 +14,12 @@ export function logFileQuery(name: string): { nazev: string } {
   return { nazev: name };
 }
 
+const AFTER_DOT = /(?<=\.)(?=.)/;
+
+export function logFileNameParts(name: string): string[] {
+  return name.split(AFTER_DOT);
+}
+
 const SERIES_NAME = /^(.+?\.log)(?:\.|$)/;
 const SERIES_ORDER = ['backend.log', 'nginx-access.log', 'backup.log', 'mcp.log'];
 

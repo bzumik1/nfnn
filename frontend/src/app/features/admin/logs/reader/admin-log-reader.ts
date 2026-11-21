@@ -44,6 +44,7 @@ import {
   logFormat,
 } from './log-lines';
 import { LogTimeline, mergeWindow, startTimeline } from './log-timeline';
+import { TitleBreaks } from './title-breaks';
 import { SegmentThumb } from '../../../../shared/ui/segment-thumb/segment-thumb';
 import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 
@@ -83,6 +84,7 @@ const FILTER_PARAMS: Readonly<Record<string, LevelFilter>> = {
     LevelIcon,
     RadioGroup,
     SegmentThumb,
+    TitleBreaks,
   ],
   templateUrl: './admin-log-reader.html',
   styleUrl: './admin-log-reader.scss',
@@ -123,6 +125,9 @@ export class AdminLogReader {
 
   protected readonly searchMode = computed(
     () => this.filter() !== 'all' || this.appliedQuery() !== '',
+  );
+  protected readonly showsBrowserErrors = computed(
+    () => this.appliedQuery() === BROWSER_ERRORS_PATTERN,
   );
   protected readonly searchingWithoutResults = computed(
     () => this.searchMode() && this.searching() && this.results() === null,
@@ -217,7 +222,13 @@ export class AdminLogReader {
     }
   }
 
-  protected findBrowserErrors(): void {
+  protected toggleBrowserErrors(): void {
+    if (this.showsBrowserErrors()) {
+      this.query = '';
+      this.appliedQuery.set('');
+      this.refreshResults();
+      return;
+    }
     this.query = BROWSER_ERRORS_PATTERN;
     this.filter.set('all');
     this.find();

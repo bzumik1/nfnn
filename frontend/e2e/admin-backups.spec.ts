@@ -362,3 +362,24 @@ test.describe('Given an administrator on the backups page', () => {
     await expect(page.getByText('Zatím žádná záloha.')).toBeVisible();
   });
 });
+
+test.describe('Given an administrator on Všechny zálohy on a 375 pt phone', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await rememberedSession(page);
+    await page.setViewportSize({ width: 375, height: 667 });
+  });
+
+  test('when they read the day cards, then each title starts with a capital letter like the titles beside it', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === BACKUPS,
+      (route) => route.fulfill({ json: backupsView() }),
+    );
+
+    await page.goto('/sprava/zalohy/historie');
+    const titles = page.getByRole('main').locator('.day-title');
+    await expect(titles).toHaveText([/^Pátek 23\.\s10\. 2026$/, /^Čtvrtek 22\.\s10\. 2026$/]);
+  });
+});

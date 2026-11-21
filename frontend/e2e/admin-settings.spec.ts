@@ -253,6 +253,92 @@ test.describe('Given an administrator on the settings page', () => {
     await expect(card.getByRole('figure')).toHaveCount(0);
   });
 
+  test('when the signature block is previewed in the dark appearance, then it is one piece of paper apart from the card with its lines in ink', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.route(
+      (url) => url.pathname === SETTINGS,
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.route(
+      (url) => url.pathname === SIGNATORY,
+      (route) => route.fulfill({ json: signatory({ personId: PERSON_ID }) }),
+    );
+
+    await page.goto('/sprava/nastaveni');
+    const card = page.getByRole('region', { name: 'Kdo potvrzení podepisuje' });
+    const block = card.getByRole('figure', { name: 'Náhled podpisu na potvrzení' });
+    await expect(block.locator('.signature-block-name')).toHaveText('Petr Vzorový');
+
+    const look = await block.evaluate((figure) => {
+      const channels = (colour: string) =>
+        colour
+          .match(/[\d.]+/g)!
+          .slice(0, 3)
+          .map(Number);
+      const luminance = (colour: string) => {
+        const [r, g, b] = channels(colour).map((value) => {
+          const c = value / 255;
+          return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const contrast = (a: string, b: string) => {
+        const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+        return (light + 0.05) / (dark + 0.05);
+      };
+      const paper = getComputedStyle(figure).backgroundColor;
+      const cardFill = getComputedStyle(figure.closest('.ui-card')!).backgroundColor;
+      const signature = figure.querySelector('.signature-block-signature')!;
+      return {
+        paper,
+        cardFill,
+        signatureFill: getComputedStyle(signature).backgroundColor,
+        lowestContrast: Math.min(
+          ...[
+            '.signature-block-caption',
+            '.signature-block-for',
+            '.signature-block-name',
+            '.signature-block-role',
+          ].map((selector) =>
+            contrast(getComputedStyle(figure.querySelector(selector)!).color, paper),
+          ),
+        ),
+      };
+    });
+    expect(look.paper).not.toBe(look.cardFill);
+    expect(look.signatureFill).toBe('rgba(0, 0, 0, 0)');
+    expect(look.lowestContrast).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test('when the signature block is previewed on an upright tablet, then it takes the width of the warning and the intro of its card', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await page.route(
+      (url) => url.pathname === SETTINGS,
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.route(
+      (url) => url.pathname === SIGNATORY,
+      (route) => route.fulfill({ json: signatory({ personId: PERSON_ID }) }),
+    );
+
+    await page.goto('/sprava/nastaveni');
+    const card = page.getByRole('region', { name: 'Kdo potvrzení podepisuje' });
+    const block = card.getByRole('figure', { name: 'Náhled podpisu na potvrzení' });
+    await expect(card.locator('.signatory-gaps')).toBeVisible();
+
+    const figure = (await block.boundingBox())!;
+    const warning = (await card.locator('.signatory-gaps').boundingBox())!;
+    const intro = (await card.locator('.ui-card__intro').first().boundingBox())!;
+    expect(Math.abs(figure.x - warning.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(figure.x + figure.width - (warning.x + warning.width))).toBeLessThanOrEqual(1);
+    expect(Math.abs(figure.x + figure.width - (intro.x + intro.width))).toBeLessThanOrEqual(1);
+  });
+
   test('when the signature block is previewed in a dark forced-colours mode, then it keeps the paper and shows the signature', async ({
     page,
   }) => {

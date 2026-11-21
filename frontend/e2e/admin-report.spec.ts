@@ -127,7 +127,7 @@ test.describe('Given an administrator on the monthly report page', () => {
       page.getByText('Příští přehled za říjen 2026 odejde 1. 11. 2026 v 7:00.'),
     ).toBeVisible();
     await expect(page.getByText('Nastavení jste zatím neměnili.')).toBeVisible();
-    await expect(page.locator('.sent-reports .ui-list__title')).toHaveText(['září 2026']);
+    await expect(page.locator('.sent-reports .ui-list__title')).toHaveText(['Září 2026']);
     await expect(page.locator('.sent-reports .ui-list__meta')).toHaveText([
       'Odesláno 1. 10. 2026 7:00',
     ]);
@@ -335,8 +335,8 @@ test.describe('Given an administrator on the monthly report page', () => {
       'Přehled za říjen 2026 jsme poslali na info@nfnn.cz.',
     );
     await expect(page.locator('.sent-reports .ui-list__title')).toHaveText([
-      'říjen 2026',
-      'září 2026',
+      'Říjen 2026',
+      'Září 2026',
     ]);
     await expect(page.locator('.sent-reports .ui-list__meta')).toHaveText([
       'Odesláno 23. 10. 2026 10:00',
@@ -400,7 +400,7 @@ test.describe('Given an administrator on the monthly report page', () => {
     );
 
     await page.goto('/sprava/prehledy');
-    await page.getByRole('link', { name: /září 2026/ }).click();
+    await page.getByRole('link', { name: /Září 2026/ }).click();
 
     await expect(page).toHaveURL('/sprava/prehledy/2026-09');
     await expect(
@@ -417,6 +417,39 @@ test.describe('Given an administrator on the monthly report page', () => {
     await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
     await expect(page).toHaveURL('/sprava/prehledy');
     await expect(page.getByRole('heading', { level: 1, name: 'Měsíční e-mail' })).toBeVisible();
+  });
+
+  test('when they read a sent month, then the first row of every group starts as far under its heading', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.route(
+      (url) => url.pathname === SENT,
+      (route) => route.fulfill({ json: sentReport() }),
+    );
+
+    await page.goto('/sprava/prehledy/2026-09');
+    const delivery = page.locator('.delivery').first();
+    await expect(delivery.getByRole('heading', { level: 3 })).toHaveText([
+      'Dárci',
+      'Dary',
+      'Platby bez dárce',
+      'Banka',
+    ]);
+
+    const gaps = await delivery.locator('.ui-card__group').evaluateAll((groups) =>
+      groups.map((group) => {
+        const heading = group.querySelector('.ui-card__subtitle') as HTMLElement;
+        const title = group.querySelector('.ui-list__title') as HTMLElement;
+        const range = document.createRange();
+        range.selectNodeContents(heading);
+        const headingBottom = Math.max(...[...range.getClientRects()].map((rect) => rect.bottom));
+        range.selectNodeContents(title);
+        const titleTop = Math.min(...[...range.getClientRects()].map((rect) => rect.top));
+        return titleTop - headingBottom;
+      }),
+    );
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(1);
   });
 
   test('when a month sent before the sendings were kept is opened, then today\u2019s figures come with the note and without the bank', async ({

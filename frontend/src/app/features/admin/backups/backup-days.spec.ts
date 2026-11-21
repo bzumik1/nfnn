@@ -9,11 +9,11 @@ describe('Given the backups on the server newest first', () => {
     backupFile({ fileName: 'nfnn-2026-10-25_0300.dump.age', createdAt: '2026-10-25T02:00:11Z' }),
   ];
 
-  it('when they are grouped, then each Prague day is a group with its weekday and date, newest first', () => {
+  it('when they are grouped, then each Prague day is a group titled with its capitalised weekday and date, newest first', () => {
     expect(backupDays(backups).map((day) => day.title)).toEqual([
-      'sobota 7.\u00a011. 2026',
-      'pátek 6.\u00a011. 2026',
-      'neděle 25.\u00a010. 2026',
+      'Sobota 7.\u00a011. 2026',
+      'Pátek 6.\u00a011. 2026',
+      'Neděle 25.\u00a010. 2026',
     ]);
   });
 

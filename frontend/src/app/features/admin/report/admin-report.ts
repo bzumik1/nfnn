@@ -41,7 +41,12 @@ import {
   MAX_REPORT_RECIPIENTS,
   parseEmailList,
 } from './email-list';
-import { followingMonth, formatReportMonth, previousMonths } from './report-month';
+import {
+  followingMonth,
+  formatReportMonth,
+  previousMonths,
+  reportMonthTitle,
+} from './report-month';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { BusyButton } from '../../../shared/ui/busy-button/busy-button';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
@@ -271,8 +276,8 @@ export class AdminReport {
       });
   }
 
-  protected formatMonth(isoMonth: string): string {
-    return formatReportMonth(isoMonth);
+  protected monthTitle(isoMonth: string): string {
+    return reportMonthTitle(isoMonth);
   }
 
   protected sentTime(item: SentReportResponse): string {
