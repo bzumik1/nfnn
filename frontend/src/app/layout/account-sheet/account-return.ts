@@ -15,7 +15,7 @@ export class AccountReturn {
   private steppingBack = false;
   private closing = false;
   private readonly reopenOn = signal<string | null>(null);
-  private reopenAt = 0;
+  private reopenAt: readonly number[] = [];
   readonly sectionToReopen = this.reopenOn.asReadonly();
 
   constructor() {
@@ -25,7 +25,7 @@ export class AccountReturn {
           event.navigationTrigger === 'popstate' &&
           depthIn(event.restoredState) < depthIn(this.entry);
         this.reopenOn.set(null);
-        this.reopenAt = 0;
+        this.reopenAt = [];
       } else if (event instanceof NavigationEnd) {
         this.settled();
       }
@@ -43,16 +43,16 @@ export class AccountReturn {
     return section;
   }
 
-  takeScrollToReopen(): number {
-    const top = this.reopenAt;
-    this.reopenAt = 0;
-    return top;
+  takeScrollToReopen(): readonly number[] {
+    const scrolls = this.reopenAt;
+    this.reopenAt = [];
+    return scrolls;
   }
 
   private settled(): void {
     if (this.steppingBack) {
       this.reopenOn.set(this.closing ? null : accountIn(this.entry));
-      this.reopenAt = this.closing ? 0 : scrollIn(this.entry);
+      this.reopenAt = this.closing ? [] : scrollsIn(this.entry);
       this.closing = false;
     }
     this.entry = stateOf(this.location.getState());
@@ -68,9 +68,11 @@ function depthIn(state: unknown): number {
   return typeof depth === 'number' && depth > 0 ? depth : 0;
 }
 
-function scrollIn(state: HistoryState): number {
-  const top = state[APP_ACCOUNT_SCROLL_KEY];
-  return typeof top === 'number' && top > 0 ? top : 0;
+function scrollsIn(state: HistoryState): readonly number[] {
+  const scrolls = state[APP_ACCOUNT_SCROLL_KEY];
+  return Array.isArray(scrolls)
+    ? scrolls.map((top: unknown) => (typeof top === 'number' && top > 0 ? top : 0))
+    : [];
 }
 
 function accountIn(state: HistoryState): string | null {

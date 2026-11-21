@@ -99,6 +99,7 @@ export interface PlacedPage {
 export interface SheetStep {
   readonly kind: PageTransitionKind;
   readonly depth: number;
+  readonly owner: object;
   readonly change: () => void;
   readonly placed: () => void;
 }
@@ -106,6 +107,13 @@ export interface SheetStep {
 interface KeptSheet {
   readonly sheet: HTMLElement;
   readonly width: number;
+  readonly owner: object;
+}
+
+interface StepMeasure {
+  readonly over: HTMLElement | null;
+  readonly width: number;
+  readonly fadeAt: number;
 }
 
 interface FollowedTitle {
@@ -228,6 +236,14 @@ export class PageTransitions {
     return this.drawing?.startSheetSwipe(this, under.sheet) ?? null;
   }
 
+  forgetSheetsOf(owner: object): void {
+    for (const [depth, kept] of [...this.keptSheets]) {
+      if (kept.owner === owner) {
+        this.keptSheets.delete(depth);
+      }
+    }
+  }
+
   stepInSheet(step: SheetStep): void {
     const view = this.document.defaultView;
     const handOver = this.sheetHandOver;
@@ -250,7 +266,11 @@ export class PageTransitions {
       return;
     }
     if (step.kind === 'push') {
-      this.keptSheets.set(step.depth - 1, { sheet: leaving, width: view.innerWidth });
+      this.keptSheets.set(step.depth - 1, {
+        sheet: leaving,
+        width: view.innerWidth,
+        owner: step.owner,
+      });
     }
     const overlay = this.overlay(step.kind);
     overlay.classList.add(ON_GROUND_CLASS);
@@ -683,23 +703,22 @@ export class PageTransitions {
       return;
     }
     const pushes = overlay.classList.contains(`${PAGE_TRANSITION_CLASS}--push`);
-    const fadeAt = Number.parseFloat(
-      view.getComputedStyle(this.document.documentElement).getPropertyValue(TITLE_FADE_AT),
-    );
+    titles.forEach((title) => showTitle(title, 0, 0, pushes));
+    if (typeof view.requestAnimationFrame !== 'function') {
+      return;
+    }
+    let measured: StepMeasure | null = null;
     const follow = (): void => {
       this.titleFrame = null;
       if (!overlay.isConnected) {
         return;
       }
-      const progress = stepProgress(overlay, pushes, view);
-      titles.forEach((title) =>
-        showTitle(title, progress, Number.isFinite(fadeAt) ? fadeAt : 0, pushes),
-      );
-      if (typeof view.requestAnimationFrame === 'function') {
-        this.titleFrame = view.requestAnimationFrame(follow);
-      }
+      const step = (measured ??= measureStep(overlay, this.document.documentElement, view));
+      const progress = stepProgress(overlay, step, pushes, view);
+      titles.forEach((title) => showTitle(title, progress, step.fadeAt, pushes));
+      this.titleFrame = view.requestAnimationFrame(follow);
     };
-    follow();
+    this.titleFrame = view.requestAnimationFrame(follow);
   }
 
   private stopTitles(): void {
@@ -847,15 +866,28 @@ export class PageTransitions {
   }
 }
 
-function stepProgress(overlay: HTMLElement, pushes: boolean, view: Window): number {
+function measureStep(overlay: HTMLElement, root: HTMLElement, view: Window): StepMeasure {
   const over = overlay.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`);
+  const fadeAt = Number.parseFloat(view.getComputedStyle(root).getPropertyValue(TITLE_FADE_AT));
+  return {
+    over,
+    width: over === null ? view.innerWidth : over.offsetWidth || view.innerWidth,
+    fadeAt: Number.isFinite(fadeAt) ? fadeAt : 0,
+  };
+}
+
+function stepProgress(
+  overlay: HTMLElement,
+  { over, width }: StepMeasure,
+  pushes: boolean,
+  view: Window,
+): number {
   if (over === null || (pushes && !overlay.classList.contains(MOVING_CLASS))) {
     return 0;
   }
   const transform = view.getComputedStyle(over).transform;
   const Matrix = (view as Window & { DOMMatrixReadOnly?: typeof DOMMatrixReadOnly })
     .DOMMatrixReadOnly;
-  const width = over.offsetWidth || view.innerWidth;
   const offset =
     typeof Matrix === 'function' && transform !== '' && transform !== 'none'
       ? new Matrix(transform).m41
@@ -886,6 +918,9 @@ function fadingOut(progress: number, fadeAt: number): number {
 }
 
 function fadingIn(progress: number, fadeAt: number): number {
+  if (fadeAt <= 0) {
+    return progress > 0 ? 1 : 0;
+  }
   if (fadeAt >= 1) {
     return progress >= 1 ? 1 : 0;
   }

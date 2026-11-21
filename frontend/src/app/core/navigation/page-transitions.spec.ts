@@ -1512,11 +1512,48 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     );
   }
 
-  beforeEach(() => {
+  function withLessMotion(lessMotion: boolean): void {
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
-      value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
+      value: (query: string) =>
+        ({
+          matches: query.includes('prefers-reduced-motion') && lessMotion,
+          media: query,
+        }) as MediaQueryList,
     });
+  }
+
+  function heldFrames(): FrameRequestCallback[] {
+    const frames: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
+      frames.push(frame);
+      return frames.length;
+    });
+    return frames;
+  }
+
+  function drawFrame(frames: FrameRequestCallback[]): void {
+    frames.splice(0).forEach((frame) => frame(performance.now()));
+  }
+
+  function stepBackToTheList(): void {
+    sheet.replaceChildren(headOf('Moje dary'));
+    transitions.stepInSheet({
+      kind: 'pop',
+      depth: 0,
+      owner: sheet,
+      change: () => sheet.replaceChildren(headOf('Účet')),
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+  }
+
+  function titleOpacities(): string[][] {
+    return headTitles().map((title) => [title.textContent?.trim() ?? '', title.style.opacity]);
+  }
+
+  beforeEach(() => {
+    withLessMotion(false);
     sheet = document.createElement('dialog');
     sheet.setAttribute('open', '');
     sheet.textContent = 'Účet';
@@ -1535,12 +1572,16 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     transitions.finish();
     document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}, dialog`).forEach((node) => node.remove());
     delete (window as { matchMedia?: unknown }).matchMedia;
+    delete (window as { DOMMatrixReadOnly?: unknown }).DOMMatrixReadOnly;
+    document.documentElement.style.removeProperty('--page-title-fade-at');
+    vi.restoreAllMocks();
   });
 
   it('when a section opens inside the sheet, then the page that slides in is the section over the list it leaves', () => {
     transitions.stepInSheet({
       kind: 'push',
       depth: 1,
+      owner: sheet,
       change: () => (sheet.textContent = 'Moje dary'),
       placed: () => undefined,
     });
@@ -1556,6 +1597,7 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     transitions.stepInSheet({
       kind: 'push',
       depth: 1,
+      owner: sheet,
       change: () => sheet.replaceChildren(headOf('Moje dary')),
       placed: () => undefined,
     });
@@ -1574,6 +1616,7 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     transitions.stepInSheet({
       kind: 'push',
       depth: 1,
+      owner: sheet,
       change: () => (sheet.textContent = 'Moje dary'),
       placed: () => undefined,
     });
@@ -1584,5 +1627,135 @@ describe('Given the app on a phone with a sheet open at its list', () => {
 
     expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
     expect(transitions.running).toBeNull();
+  });
+
+  it('when the head of a step back is dressed, then it reads neither the root nor the place or width of the leaving section before the next frame, and each only once for the whole step', () => {
+    const frames = heldFrames();
+    const overlay = transitions.overlay('pop');
+    sheet.replaceChildren(headOf('Moje dary'));
+    const leaving = transitions.place(
+      overlay,
+      transitions.sheetOnly(transitions.standingSheetCopy()!),
+      'over',
+    );
+    sheet.replaceChildren(headOf('Účet'));
+    const arriving = transitions.place(
+      overlay,
+      transitions.sheetOnly(transitions.standingSheetCopy()!),
+      'under',
+    );
+    const styled: Element[] = [];
+    const style = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => {
+      styled.push(element);
+      return style(element, pseudo);
+    });
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get');
+    const readRoot = (): number =>
+      styled.filter((element) => element === document.documentElement).length;
+    const readLeaving = (): number => styled.filter((element) => element === leaving.box).length;
+
+    transitions.dressChrome(overlay, leaving, arriving);
+
+    expect(readRoot()).toBe(0);
+    expect(readLeaving()).toBe(0);
+    expect(width).not.toHaveBeenCalled();
+    expect(titleOpacities()).toEqual(
+      expect.arrayContaining([
+        ['Moje dary', '1'],
+        ['Účet', '0'],
+      ]),
+    );
+
+    drawFrame(frames);
+    drawFrame(frames);
+
+    expect(readRoot()).toBe(1);
+    expect(readLeaving()).toBe(2);
+    expect(width).toHaveBeenCalledTimes(1);
+  });
+
+  it('when the theme fades the titles of the head at once, then the title a step back brings shows whole as soon as the step has begun', () => {
+    document.documentElement.style.setProperty('--page-title-fade-at', '0');
+    Object.defineProperty(window, 'DOMMatrixReadOnly', {
+      configurable: true,
+      value: class {
+        readonly m41: number;
+        constructor(transform: string) {
+          this.m41 = Number(transform.split(',')[4]);
+        }
+      },
+    });
+    const frames = heldFrames();
+    stepBackToTheList();
+    overlayPage('over')!.style.transform = `matrix(1, 0, 0, 1, ${window.innerWidth / 2}, 0)`;
+
+    drawFrame(frames);
+
+    expect(titleOpacities()).toEqual(
+      expect.arrayContaining([
+        ['Moje dary', '0'],
+        ['Účet', '1'],
+      ]),
+    );
+  });
+
+  it('when the system asks for less motion and a section opens inside the sheet, then the section stands at once with no page moving', () => {
+    withLessMotion(true);
+    const placed = vi.fn();
+
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      owner: sheet,
+      change: () => (sheet.textContent = 'Moje dary'),
+      placed,
+    });
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(sheet.textContent).toBe('Moje dary');
+    expect(placed).toHaveBeenCalledTimes(1);
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    expect(transitions.running).toBeNull();
+  });
+
+  describe('when a section opened inside the sheet with motion', () => {
+    beforeEach(async () => {
+      await transitions.loadDrawing();
+      transitions.stepInSheet({
+        kind: 'push',
+        depth: 1,
+        owner: sheet,
+        change: () => (sheet.textContent = 'Moje dary'),
+        placed: () => undefined,
+      });
+      TestBed.inject(ApplicationRef).tick();
+      transitions.finish();
+    });
+
+    it('and a finger takes the section back, then the list it left follows the finger under it', () => {
+      expect(transitions.startSheetSwipe(1)).not.toBeNull();
+      expect(overlayPage('under')?.textContent).toContain('Účet');
+    });
+
+    it('and the system then asks for less motion, then nothing follows a finger and the step back comes at once', () => {
+      withLessMotion(true);
+
+      expect(transitions.startSheetSwipe(1)).toBeNull();
+      expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    });
+
+    it('and the sheet that kept the list is gone, then no copy of that list is left for a finger to follow', () => {
+      transitions.forgetSheetsOf(sheet);
+
+      expect(transitions.startSheetSwipe(1)).toBeNull();
+      expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    });
+
+    it('and another sheet is gone, then the copy of the list stays', () => {
+      transitions.forgetSheetsOf(document.createElement('dialog'));
+
+      expect(transitions.startSheetSwipe(1)).not.toBeNull();
+    });
   });
 });

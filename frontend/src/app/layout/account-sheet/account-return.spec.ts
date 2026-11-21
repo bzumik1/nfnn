@@ -37,7 +37,11 @@ describe('Given a page the account sheet handed its entry over to', () => {
     await started;
   });
 
-  async function openFromTheSheet(url: string, section: string, scrolled = 0): Promise<void> {
+  async function openFromTheSheet(
+    url: string,
+    section: string,
+    scrolled: readonly number[] = [0],
+  ): Promise<void> {
     const location = TestBed.inject(Location);
     location.go(location.path(), '', { ...(location.getState() as object), nfnnDialogDepth: 1 });
     await router.navigateByUrl(url, {
@@ -72,12 +76,20 @@ describe('Given a page the account sheet handed its entry over to', () => {
   });
 
   it('when Zpět steps back from Správa opened from the scrolled list, then the sheet is asked to open at the scroll it was left at, and only once', async () => {
-    await openFromTheSheet('/sprava', '', 92);
+    await openFromTheSheet('/sprava', '', [92]);
 
     await stepBack(() => back.back('/'));
 
-    expect(accountReturn.takeScrollToReopen()).toBe(92);
-    expect(accountReturn.takeScrollToReopen()).toBe(0);
+    expect(accountReturn.takeScrollToReopen()).toEqual([92]);
+    expect(accountReturn.takeScrollToReopen()).toEqual([]);
+  });
+
+  it('when Zpět steps back to a section opened from the scrolled list, then the sheet is asked for the scroll of the list as well as of the section', async () => {
+    await openFromTheSheet('/overit', '/darce/potvrzeni', [92, 40]);
+
+    await stepBack(() => back.back('/'));
+
+    expect(accountReturn.takeScrollToReopen()).toEqual([92, 40]);
   });
 
   it('when the page was opened from a section of the sheet and Zpět steps back, then the sheet is asked to open on that section', async () => {

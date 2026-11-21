@@ -12,6 +12,7 @@ import { sampleDonor } from '../../core/auth/testing/donor-fixtures';
 import { SignedOutNotice } from '../../core/auth/signed-out-notice';
 import { CompactLayout } from '../../core/layout/compact-layout';
 import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
+import { PageTransitions } from '../../core/navigation/page-transitions';
 import { AccountReturn, APP_ACCOUNT_KEY, APP_ACCOUNT_SCROLL_KEY } from './account-return';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { FakeDialogHistory } from '../../shared/ui/dialog/testing/fake-dialog-history';
@@ -422,7 +423,7 @@ describe('Given the account sheet of a signed-in donor', () => {
         state: {
           [APP_DEPTH_KEY]: 1,
           [APP_ACCOUNT_KEY]: '/darce/potvrzeni',
-          [APP_ACCOUNT_SCROLL_KEY]: 0,
+          [APP_ACCOUNT_SCROLL_KEY]: [0, 0],
         },
       });
     });
@@ -519,13 +520,79 @@ describe('Given the account sheet of a signed-in donor', () => {
 
     expect(navigate).toHaveBeenCalledWith('/sprava', {
       replaceUrl: true,
-      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '', [APP_ACCOUNT_SCROLL_KEY]: 0 },
+      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '', [APP_ACCOUNT_SCROLL_KEY]: [0] },
     });
+  });
+
+  it('when a link in a section opened from the scrolled list leads elsewhere, then that page names the scroll of the list as well as of the section', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    const sheet = open();
+    const scrolled = vi.spyOn(Element.prototype, 'scrollTop', 'get').mockImplementation(function (
+      this: Element,
+    ) {
+      return this.classList.contains('dialog-panel') ? 92 : 0;
+    });
+    sheet
+      .querySelector<HTMLAnchorElement>('nav a[href="/darce/potvrzeni"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    scrolled.mockImplementation(function (this: Element) {
+      return this.classList.contains('dialog-panel') ? 40 : 0;
+    });
+
+    sheet
+      .querySelector<HTMLAnchorElement>('a.stub-elsewhere')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    scrolled.mockRestore();
+
+    expect(navigate).toHaveBeenCalledWith('/overit', {
+      replaceUrl: true,
+      state: {
+        [APP_DEPTH_KEY]: 1,
+        [APP_ACCOUNT_KEY]: '/darce/potvrzeni',
+        [APP_ACCOUNT_SCROLL_KEY]: [92, 40],
+      },
+    });
+  });
+
+  it('when a step back opens it again on a section left from the scrolled list, then the section stands at its scroll and Zpět brings the list back at its own', async () => {
+    vi.spyOn(TestBed.inject(AccountReturn), 'takeScrollToReopen').mockReturnValue([92, 40]);
+    const placed: number[] = [];
+    const scrollTop = vi.spyOn(Element.prototype, 'scrollTop', 'set');
+    scrollTop.mockImplementation(function (this: Element, top: number) {
+      if (this.classList.contains('dialog-panel')) {
+        placed.push(top);
+      }
+    });
+    fixture = TestBed.createComponent(AccountSheet);
+    fixture.componentRef.setInput('reopenedOn', '/darce/potvrzeni');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    history.listener?.stepBack();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    scrollTop.mockRestore();
+
+    expect(placed).toEqual([40, 92]);
+  });
+
+  it('when the sheet closes, then the copies of its screens kept for a finger to follow go with it', () => {
+    const forget = vi.spyOn(TestBed.inject(PageTransitions), 'forgetSheetsOf');
+    open();
+
+    fixture.destroy();
+
+    expect(forget).toHaveBeenCalledWith(fixture.componentInstance);
   });
 
   it('when a step back from the administration opens it again on its list scrolled before, then the list stands at that scroll again', async () => {
     admin.set(true);
-    vi.spyOn(TestBed.inject(AccountReturn), 'takeScrollToReopen').mockReturnValue(92);
+    vi.spyOn(TestBed.inject(AccountReturn), 'takeScrollToReopen').mockReturnValue([92]);
     const placed: number[] = [];
     const scrollTop = vi.spyOn(Element.prototype, 'scrollTop', 'set');
     scrollTop.mockImplementation(function (this: Element, top: number) {
@@ -811,7 +878,7 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(closed).toBe(1);
     expect(navigate).toHaveBeenCalledWith('/zasady-ochrany-osobnich-udaju', {
       replaceUrl: true,
-      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '', [APP_ACCOUNT_SCROLL_KEY]: 0 },
+      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '', [APP_ACCOUNT_SCROLL_KEY]: [0] },
     });
   });
 

@@ -78,6 +78,7 @@ interface StepProbe {
 declare global {
   interface Window {
     nfnnStepProbe?: StepProbe;
+    nfnnListScrolls?: number[];
     nfnnHeadTitles?: () => HeadTitle[];
   }
 }
@@ -854,6 +855,9 @@ async function walkRow(
     oneLine(row.name),
   );
   expectArrived(opening, WIDTH);
+  if (measuresFrames(page)) {
+    expectMovedSoonAfterTheTap(opening);
+  }
   if (groundBefore !== null) {
     expectSameColour(await bandColour(page), groundBefore, 'when the next screen opened');
   }
@@ -1265,6 +1269,72 @@ for (const look of LOOKS) {
       });
     });
   }
+
+  test.describe(`Given a donor in the app on the home screen of a phone with the account list scrolled, in the ${look} appearance`, () => {
+    test.use({ viewport: { width: WIDTH, height: HEIGHT }, hasTouch: true });
+
+    test.beforeEach(({ page }) => onThePhone(page, look));
+
+    test('when a section opened from the list leads out of the sheet and ‹ steps back twice, then the section and then the list come back, the list at its scroll, without a jump', async ({
+      page,
+    }) => {
+      await openAccountSheetOverTheNews(page);
+      const screens = accountScreens(page);
+      await motionsEnded(page);
+      const listTop = await screens.scrollTo(SCROLLED_BY_PX);
+      expect(listTop, 'the list of the account does not scroll').toBeGreaterThan(0);
+      await clickWithoutScrolling(accountSheet(page).locator('a[href="/darce/potvrzeni"]').first());
+      const section = accountSheet(page).getByRole('heading', {
+        level: 2,
+        name: 'Potvrzení o daru',
+        exact: true,
+      });
+      await expect(section).toBeVisible();
+      await expect(page.locator('.page-transition')).toHaveCount(0);
+      await clickWithoutScrolling(
+        accountSheet(page).getByRole('link', { name: 'Ověřit potvrzení', exact: true }),
+      );
+      await expect(page).toHaveURL(/\/overit$/);
+      await expect(page.locator('.page-transition')).toHaveCount(0);
+
+      await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+      await expect(section).toBeVisible();
+      await expect(page).toHaveURL(/\/aktuality$/);
+      await expect(page.locator('.page-transition')).toHaveCount(0);
+      await page.evaluate(() => {
+        window.nfnnListScrolls = [];
+        const look = (): void => {
+          const under = document.querySelector<HTMLElement>(
+            '.page-transition .page-transition__page--under .dialog-panel',
+          );
+          if (under !== null) {
+            window.nfnnListScrolls!.push(Math.round(under.scrollTop));
+          }
+          if (window.nfnnListScrolls!.length < 600) {
+            requestAnimationFrame(look);
+          }
+        };
+        requestAnimationFrame(look);
+      });
+      await watchTheStep(page);
+      await screens.backButton().click();
+      const probe = await stepSeen(page);
+
+      expect(probe.under ?? '', 'the list was not under the leaving section').toContain('Účet');
+      expectLeftAway(probe, WIDTH, 0);
+      await accountListShown(page);
+      await expect
+        .poll(() => activeHref(page), { message: 'the focus did not return' })
+        .toBe('/darce/potvrzeni');
+      expect(await screens.scrollTop(), 'the list did not stand at its scroll').toBe(listTop);
+      const seen = await page.evaluate(() => window.nfnnListScrolls ?? []);
+      expect(seen.length, 'no frame showed the list under the leaving section').toBeGreaterThan(0);
+      expect(
+        seen.filter((top) => top !== listTop),
+        'frames in which the list under the leaving section stood elsewhere than its scroll',
+      ).toEqual([]);
+    });
+  });
 
   test.describe(`Given a visitor on a wide screen, in the ${look} appearance`, () => {
     test.use({ viewport: { width: 1280, height: 800 } });

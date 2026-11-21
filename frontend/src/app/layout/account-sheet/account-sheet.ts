@@ -171,9 +171,10 @@ export class AccountSheet {
   constructor() {
     const followInSection = (event: MouseEvent): void => this.followInSection(event);
     this.host.addEventListener('click', followInSection, true);
-    inject(DestroyRef).onDestroy(() =>
-      this.host.removeEventListener('click', followInSection, true),
-    );
+    inject(DestroyRef).onDestroy(() => {
+      this.host.removeEventListener('click', followInSection, true);
+      this.transitions.forgetSheetsOf(this);
+    });
     afterNextRender(() => {
       if (this.reopenedOn() !== null) {
         this.standAtOnce();
@@ -267,6 +268,7 @@ export class AccountSheet {
     this.transitions.stepInSheet({
       kind,
       depth: trail.length,
+      owner: this,
       change: () => this.trail.set(trail),
       placed: () => {
         if (panel !== null) {
@@ -284,9 +286,11 @@ export class AccountSheet {
         .filter((motion) => motion.effect?.getComputedTiming().endTime !== Infinity)
         .forEach((motion) => motion.finish());
     }
+    const scrolls = this.accountReturn.takeScrollToReopen();
+    scrolls.slice(0, -1).forEach((top, depth) => this.scrolls.set(depth, top));
     const panel = this.panel();
     if (panel !== null) {
-      panel.scrollTop = this.accountReturn.takeScrollToReopen();
+      panel.scrollTop = scrolls.at(-1) ?? 0;
     }
     const left = this.backTarget.leftPath;
     const link = left === null ? null : this.linkTo(left);
@@ -369,6 +373,13 @@ export class AccountSheet {
     this.closed.emit();
   }
 
+  private scrollsToHere(): number[] {
+    return [
+      ...Array.from({ length: this.depth() }, (_, depth) => this.scrolls.get(depth) ?? 0),
+      this.panel()?.scrollTop ?? 0,
+    ];
+  }
+
   private leaveFor(url: string, returnsHere = true): void {
     if (this.router.url === url) {
       this.closed.emit();
@@ -379,7 +390,7 @@ export class AccountSheet {
       returnsHere && this.compact()
         ? {
             [APP_ACCOUNT_KEY]: this.section()?.path ?? '',
-            [APP_ACCOUNT_SCROLL_KEY]: this.panel()?.scrollTop ?? 0,
+            [APP_ACCOUNT_SCROLL_KEY]: this.scrollsToHere(),
           }
         : null;
     const handedOver = this.history.handOver(url);

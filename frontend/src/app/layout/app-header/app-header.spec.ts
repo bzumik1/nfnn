@@ -72,7 +72,7 @@ describe('Given the header of the app', () => {
           useValue: {
             sectionToReopen: sectionToReopen.asReadonly(),
             takeSectionToReopen,
-            takeScrollToReopen: () => 0,
+            takeScrollToReopen: () => [],
           },
         },
         {
