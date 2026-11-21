@@ -227,6 +227,22 @@
     grid-column: 1;
     grid-row: 1;
   }
+
+  .featured-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+  }
+
+  .featured:not(.featured--photo) .featured-foot {
+    justify-content: flex-start;
+  }
+
+  .featured:not(.featured--photo) .featured-actions {
+    margin-inline-start: 0;
+  }
 }
 
 @include bp.down(phone) {

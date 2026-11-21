@@ -102,6 +102,10 @@
 }
 
 .news-tag {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   background: var(--color-accent-soft);
   color: var(--color-accent);
   font-size: var(--text-2xs);
@@ -111,6 +115,8 @@
 }
 
 .news-date {
+  flex: none;
+  max-width: 100%;
   color: var(--color-text-subtle);
   font-size: var(--text-xs);
 }
@@ -174,6 +180,7 @@
 
 .news-share {
   position: relative;
+  margin-inline-start: auto;
   z-index: 1;
 }
 

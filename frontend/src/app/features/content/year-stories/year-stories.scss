@@ -55,7 +55,7 @@
 .story {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   min-width: 0;
   padding: var(--space-2);
@@ -96,7 +96,12 @@
 
 .story-tag {
   display: inline-block;
-  margin-bottom: var(--space-1);
+  max-width: 100%;
+  overflow: hidden;
+  margin-top: var(--space-1);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: top;
   padding: var(--space-0-75) var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--color-accent-soft);
@@ -112,7 +117,6 @@
   line-height: var(--leading-snug);
   color: var(--color-text);
   overflow-wrap: break-word;
-  hyphens: auto;
 }
 
 .story-link {
