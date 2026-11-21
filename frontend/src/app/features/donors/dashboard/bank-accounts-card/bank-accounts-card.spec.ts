@@ -154,8 +154,7 @@ describe('Given the bank accounts card in the overview', () => {
     expect(texts('.account-meta > li')).toEqual([
       'Fio banka',
       'ověřeno 12. 3. 2026',
-      '14 darů bez symbolu',
-      '7 400 Kč',
+      '14 darů bez symbolu 7 400 Kč',
     ]);
     expect(text('.account-action')).toBe('Nepřiřazovat platby z tohoto účtu');
   });
@@ -191,16 +190,14 @@ describe('Given the bank accounts card in the overview', () => {
       expect(texts('.account:nth-child(1) .account-meta > li')).toEqual([
         'Max banka',
         'ověřeno 12. 3. 2026',
-        '14 darů bez symbolu',
-        '7 400 Kč',
+        '14 darů bez symbolu 7 400 Kč',
       ]);
     });
 
     it('then a row whose bank the server does not list names no bank', () => {
       expect(texts('.account:nth-child(2) .account-meta > li')).toEqual([
         'ověřeno 12. 3. 2026',
-        '14 darů bez symbolu',
-        '7 400 Kč',
+        '14 darů bez symbolu 7 400 Kč',
       ]);
     });
   });
@@ -211,15 +208,27 @@ describe('Given the bank accounts card in the overview', () => {
     expect(texts('.account-meta > li')).toEqual([
       'Fio banka',
       'ověřeno 12. 3. 2026',
-      '1 dar bez symbolu',
-      '500,50 Kč',
+      '1 dar bez symbolu 500,50 Kč',
     ]);
   });
 
   it('when an account has three gifts without a symbol, then the count uses the Czech few form', async () => {
     await respond([bankAccount({ donationCount: 3, totalAmountMinor: 150000 })]);
 
-    expect(texts('.account-meta > li')).toContain('3 dary bez symbolu');
+    expect(texts('.account-meta > li')).toContain('3 dary bez symbolu 1 500 Kč');
+  });
+
+  it('when an account has gifts without a symbol, then their count and their total are one item, the total after a separator of its own', async () => {
+    await respond([bankAccount()]);
+
+    const gifts = element('.account-meta > li.account-gifts') as HTMLElement;
+    expect(
+      normalized(withOrdinarySpaces(gifts.querySelector('.account-gift-count')?.textContent) ?? ''),
+    ).toBe('14 darů bez symbolu');
+    expect(
+      normalized(withOrdinarySpaces(gifts.querySelector('.account-total')?.textContent) ?? ''),
+    ).toBe('7 400 Kč');
+    expect(element('.account-meta > li.account-total')).toBeNull();
   });
 
   it('when an account has no gifts without a symbol yet, then the row does not count them', async () => {
@@ -266,8 +275,7 @@ describe('Given the bank accounts card in the overview', () => {
     expect(texts('.account-meta > li')).toEqual([
       'Fio banka',
       'ověřeno 12. 3. 2026',
-      '14 darů bez symbolu',
-      '7 400 Kč',
+      '14 darů bez symbolu 7 400 Kč',
     ]);
     expect(element('.account-action')).toBeNull();
   });
@@ -360,8 +368,7 @@ describe('Given the bank accounts card in the overview', () => {
       'Fio banka',
       'ověřeno 12. 3. 2026',
       'vypnuto od 19. 10. 2026',
-      '14 darů bez symbolu',
-      '7 400 Kč',
+      '14 darů bez symbolu 7 400 Kč',
     ]);
     expect(texts('.account:nth-child(2) .account-meta > li')).toEqual([
       'Česká spořitelna',
@@ -563,8 +570,7 @@ describe('Given the bank accounts card in the overview', () => {
     expect(texts('.account-meta > li')).toEqual([
       'Fio banka',
       'ověřeno 12. 3. 2026',
-      '14 darů bez symbolu',
-      '7 400 Kč',
+      '14 darů bez symbolu 7 400 Kč',
     ]);
     expect(element('app-symbol-claim')).toBeNull();
   });
@@ -705,7 +711,8 @@ describe('Given the bank accounts card in the overview', () => {
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
       expect(panel.getAttribute('role')).toBe('region');
-      expect(text('#' + panel.getAttribute('aria-labelledby'))).toBe('Jak přiřazujeme platby');
+      expect(element('#' + panel.getAttribute('aria-labelledby'))).toBe(helpButton());
+      expect(element('#accounts-help-panel h3')).toBeNull();
       expect(texts('#accounts-help-panel .help-symbol')).toEqual([
         '9876543210',
         '9876543210',

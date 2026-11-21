@@ -76,9 +76,11 @@ describe('Given the help on how payments are paired', () => {
 
     expect(panel().hidden).toBe(false);
     expect(panel().getAttribute('role')).toBe('region');
-    expect(panel().getAttribute('aria-labelledby')).toBe('accounts-help-title');
-    expect(element('#accounts-help-title')?.tagName).toBe('H3');
-    expect(text('#accounts-help-title')).toBe('Jak přiřazujeme platby');
+    expect(panel().getAttribute('aria-labelledby')).toBe('accounts-help-toggle');
+    expect(element('#accounts-help-panel h3')).toBeNull();
+    expect(element('.accounts-help-box')?.firstElementChild?.classList.contains('help-list')).toBe(
+      true,
+    );
     expect(texts('#accounts-help-panel .help-list > li')).toEqual(
       HELP_ITEMS.map((text) => withOrdinarySpaces(text)),
     );

@@ -208,8 +208,8 @@ export class ProfileCard {
   protected readonly cityMessages = CITY_MESSAGES;
   protected readonly postalCodeMessages = POSTAL_CODE_MESSAGES;
 
-  protected address(donor: Donor): string {
-    return `${donor.address.street}, ${donor.address.postalCode} ${donor.address.city}`;
+  protected postalCode(donor: Donor): string {
+    return donor.address.postalCode.replace(/ /g, '\u00a0');
   }
 
   protected draftSavedAt(savedAt: string): string {

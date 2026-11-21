@@ -26,7 +26,14 @@
     <div class="account-row">
       <dt id="account-email-label" class="ui-word" i18n="@@donor.login.email">E-mail</dt>
       <dd class="account-value">
-        <span class="account-email">{{ donor()?.email }}</span>
+        <span class="account-email">
+          @for (segment of emailSegments(); track $index) {
+            @if (!$first) {
+              <wbr />
+            }
+            <span class="account-email-part">{{ segment }}</span>
+          }
+        </span>
         @if (pendingEmailChange(); as pending) {
           <span class="account-pending">
             <span class="account-pending-address" i18n="@@donor.account.email.pending"

@@ -138,7 +138,7 @@ test.describe('Given a donor with one account that has gifts without a symbol an
 
       expect(first.meta.height).toBeGreaterThan(second.meta.height + 1);
       if (rootPx === SYSTEM_DEFAULT_TEXT_PX) {
-        expect(first.status.y).toBeLessThan(first.number.y + first.number.height);
+        expect(first.status.y).toBeGreaterThanOrEqual(first.number.y + first.number.height);
         expect(second.status.y).toBeGreaterThanOrEqual(second.number.y + second.number.height);
       }
       expect(Math.abs(first.offset - second.offset)).toBeLessThanOrEqual(1);
