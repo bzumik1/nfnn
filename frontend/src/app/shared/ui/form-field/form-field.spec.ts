@@ -114,8 +114,26 @@ describe('Given a form built from form fields', () => {
       'Zadejte e-mail ve tvaru jan@example.cz.',
     );
     expect(input('email').getAttribute('aria-invalid')).toBe('true');
-    expect(input('email').getAttribute('aria-describedby')).toBe('email-hint email-error');
+    expect(input('email').getAttribute('aria-describedby')).toBe('email-error email-hint');
     expect(errorOf('name')).toBeNull();
+  });
+
+  it('when a field with a hint shows its error, then the error follows the control and the hint follows the error', async () => {
+    await type('email', 'jan@');
+    await leave('email');
+
+    expect(input('email').nextElementSibling).toBe(errorOf('email'));
+    expect(errorOf('email')?.nextElementSibling).toBe(host().querySelector('#email-hint'));
+  });
+
+  it('when the error of a field with a hint goes away, then the hint follows the control again', async () => {
+    await type('email', 'jan@');
+    await leave('email');
+    await type('email', 'jan@example.cz');
+
+    expect(errorOf('email')).toBeNull();
+    expect(input('email').nextElementSibling).toBe(host().querySelector('#email-hint'));
+    expect(input('email').getAttribute('aria-describedby')).toBe('email-hint');
   });
 
   describe('when the visitor passes through an empty field without typing into it', () => {

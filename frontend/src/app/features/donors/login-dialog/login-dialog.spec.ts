@@ -1601,7 +1601,7 @@ describe('Given the sign-in dialog', () => {
         'Heslo musí mít alespoň 12 znaků.',
       );
       expect(element('#register-password').getAttribute('aria-describedby')).toBe(
-        'register-password-hint register-password-error',
+        'register-password-error register-password-hint',
       );
     });
 
