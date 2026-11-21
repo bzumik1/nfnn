@@ -345,6 +345,10 @@ td .receipt-diagnostics {
     font-weight: var(--weight-bold);
   }
 
+  .ui-list__row > :is(.ui-list__title, .ui-list__value) {
+    align-self: first baseline;
+  }
+
   .pairing-tag {
     margin: var(--space-1) 0 0;
     white-space: normal;

@@ -7,6 +7,7 @@ import {
   donorSyncOf,
   mockDonorApi,
   openDonorSection,
+  rememberedDonorSession,
   session,
   signIn,
 } from './donor-session';
@@ -386,4 +387,151 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
       expect(await followsButton()).toBe(true);
     });
   }
+});
+
+const YEARS_OF_LONG_AND_SHORT_SUMMARIES = donationsOf([
+  gift(9, '2026-03-15', 125000000),
+  gift(8, '2026-02-10', 150000),
+  gift(7, '2026-01-20', 200),
+  gift(6, '2026-01-05', 100, { accountVerification: true, receiptAvailable: false }),
+  gift(5, '2025-06-10', 26000),
+  gift(4, '2025-05-02', 30000, { status: 'REFUNDED', receiptAvailable: false }),
+  gift(3, '2024-04-10', 50000),
+]);
+
+async function openOwnPage(page: Page, path: string, shown: DonorApiMock): Promise<void> {
+  await mockDonorApi(page, shown);
+  await rememberedDonorSession(page);
+  await page.goto(path);
+}
+
+async function linePitchOf(element: Locator): Promise<number> {
+  return element.evaluate((found) => {
+    const range = document.createRange();
+    range.selectNodeContents(found);
+    const tops = [...new Set(Array.from(range.getClientRects()).map((rect) => rect.top))].sort(
+      (a, b) => a - b,
+    );
+    return Math.round((tops[1] - tops[0]) * 10) / 10;
+  });
+}
+
+test.describe('Given a signed-in donor on a phone', () => {
+  test('when Moje dary heads years whose summaries are long and short on a 375 pt phone, then every year puts its summary the same way against its year', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await openOwnPage(page, '/darce/dary', YEARS_OF_LONG_AND_SHORT_SUMMARIES);
+    const heads = page.locator('.gift-year-head');
+    await expect(heads).toHaveCount(3);
+
+    const stacked = await heads.evaluateAll((found) =>
+      found.map((head) => {
+        const title = head.querySelector('.gift-year-title')!.getBoundingClientRect();
+        const sum = head.querySelector('.gift-year-sum')!.getBoundingClientRect();
+        return sum.top >= title.bottom - 1;
+      }),
+    );
+    expect(new Set(stacked).size).toBe(1);
+  });
+
+  for (const path of ['/darce/dary', '/darce/potvrzeni']) {
+    test(`when ${path} lists ordinary, refunded and verification gifts on a 390 pt phone, then every row sets its amount on the line of its date`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await openOwnPage(page, path, YEARS_OF_LONG_AND_SHORT_SUMMARIES);
+      const rows = page.locator('.donation-rows .ui-list__row');
+      await expect(rows.first()).toBeVisible();
+      await expect(page.locator('.donation-rows .ui-list__state')).toHaveCount(
+        path === '/darce/dary' ? 1 : 0,
+      );
+
+      const offsets = await rows.evaluateAll((found) =>
+        found.map((row) => {
+          const title = row.querySelector('.ui-list__title')!.getBoundingClientRect();
+          const value = row.querySelector('.ui-list__value')!.getBoundingClientRect();
+          return Math.round(value.bottom - title.bottom);
+        }),
+      );
+      expect(Math.max(...offsets) - Math.min(...offsets)).toBeLessThanOrEqual(1);
+      expect(offsets.every((offset) => offset < 12)).toBe(true);
+    });
+  }
+
+  for (const width of [390, 1280]) {
+    test(`when Potvrzení o daru lists its years at ${width} px, then the lines between the years run from edge to edge of the card like its footer's, and each year starts on the card's text edge`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await openOwnPage(page, '/darce/potvrzeni', YEARS_OF_LONG_AND_SHORT_SUMMARIES);
+      await expect(page.locator('.year-row')).toHaveCount(3);
+
+      const placed = await page.locator('.yearly-card').evaluate((card) => {
+        const edge = card.getBoundingClientRect();
+        const inner = {
+          left: edge.left + card.clientLeft,
+          right: edge.left + card.clientLeft + card.clientWidth,
+        };
+        const title = card.querySelector('.ui-card__title')!.getBoundingClientRect();
+        const footer = card.querySelector('.ui-card__footer')!.getBoundingClientRect();
+        return Array.from(card.querySelectorAll('.year-row')).map((row) => {
+          const box = row.getBoundingClientRect();
+          const year = row.querySelector('.year')!.getBoundingClientRect();
+          return {
+            divider: Math.round(box.left - inner.left) + ' ' + Math.round(inner.right - box.right),
+            footer:
+              Math.round(footer.left - inner.left) + ' ' + Math.round(inner.right - footer.right),
+            year: Math.round(year.left - title.left),
+          };
+        });
+      });
+      for (const row of placed) {
+        expect(row.divider).toBe(row.footer);
+        expect(row.year).toBe(0);
+      }
+    });
+  }
+
+  test("when Moje dary and Můj přehled show their small grey notes on a 390 pt phone, then the year note sets its lines as far apart as the notes at the card's end, and the bank hint reads the same on both pages", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openOwnPage(page, '/darce/dary', YEARS_OF_LONG_AND_SHORT_SUMMARIES);
+    const yearNote = page.locator('.gift-year-note').first();
+    await expect(yearNote).toBeVisible();
+    const footerPitch = await linePitchOf(page.locator('.gifts-tax-note'));
+    expect(await linePitchOf(yearNote)).toBe(footerPitch);
+    const giftsHint = await linePitchOf(page.locator('.bank-hint'));
+
+    await page.goto('/darce/prehled');
+    const overviewHint = page.locator('.recent-hint').first();
+    await expect(overviewHint).toBeVisible();
+    expect(await linePitchOf(overviewHint)).toBe(giftsHint);
+  });
+});
+
+test.describe('Given a signed-in donor on an upright iPad', () => {
+  test('when Moje dary heads a year that has its yearly PDF, then the button ends on the edge where the amounts under it end', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 834, height: 1194 });
+    await openOwnPage(page, '/darce/dary', YEARS_OF_LONG_AND_SHORT_SUMMARIES);
+    const year = page.locator('.gift-year').nth(1);
+    const button = year.locator('.yearly-pdf');
+    await expect(button).toBeVisible();
+
+    const buttonEnd = Math.round(
+      (await button.boundingBox())!.x + (await button.boundingBox())!.width,
+    );
+    const amountEnds = await year
+      .locator('.donation-amount')
+      .evaluateAll((found) =>
+        found.map((amount) => Math.round(amount.getBoundingClientRect().right)),
+      );
+    expect(amountEnds.length).toBeGreaterThan(0);
+    for (const end of amountEnds) {
+      expect(Math.abs(end - buttonEnd)).toBeLessThanOrEqual(1);
+    }
+  });
 });
