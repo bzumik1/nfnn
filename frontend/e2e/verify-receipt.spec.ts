@@ -626,9 +626,15 @@ test.describe('Given a visitor on /overit on an iPad held upright', () => {
     await serveReceiptKeys(page);
     await serveReceiptStatus(page, 'active');
     await page.goto(`/overit#${YEARLY_RECEIPT.fragment}`);
-    await expect(verdictHeading(page)).toBeVisible();
+    await expect(verdictHeading(page)).toHaveText(SIGNED);
+    const verdict = page.locator('.verify-card').filter({ hasText: SIGNED });
+    const gifts = page.locator('section[aria-labelledby="verify-gifts-title"]');
+    await expect(verdict).toBeVisible();
+    await expect(gifts).toBeVisible();
 
-    const card = (await page.locator('.verify-card').first().boundingBox())!;
-    expect(card.width).toBeLessThanOrEqual(READABLE_COLUMN);
+    for (const block of [verdict, gifts]) {
+      const box = (await block.boundingBox())!;
+      expect(box.width).toBeLessThanOrEqual(READABLE_COLUMN);
+    }
   });
 });
