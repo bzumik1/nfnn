@@ -10,12 +10,11 @@ const NEAR_PX = 48;
 const LONG_TAG = 'Pobyty v lázních pro celé rodiny dětí';
 const LONGEST_TITLE =
   'Nová střecha nad hlavou pro rodinu z Vysočiny, které loni v létě vyhořel dům i se vším, co měli, a teď začíná znovu';
-const COMPENSATION_TAG = 'Kompenzační pomůcky';
-const TAG_LETTERS_SHOWN = 6;
 const LARGEST_SYSTEM_TEXT_PX = 53;
 const CLAMPED_TITLE_LINES = 3;
-const TITLE_WITH_DESCENDERS_AND_ACCENTS =
-  'Příspěvek pro Řehoře, Šárku a Žofii: nový vozík, rehabilitace, jízdy a pomůcky pro celou rodinu Čápových';
+const TITLE_WITH_DESCENDERS_AND_RINGS =
+  'Příspěvek pro Řehoře, Šárku a Žofii: nový vozík a jízdy pro Ůvaly, Ůžice, Ůštěk, Ůhlejov a Ůsobí';
+const RING_LETTER = 'Ů';
 const LONG_PEREX =
   'Rodina přišla o domov i o všechno, co v něm měla. Díky dárcům má znovu střechu nad hlavou, nová okna a kamna, a děti se mohou vrátit do své školy.';
 
@@ -28,6 +27,7 @@ interface Box {
 
 interface InkAroundClip {
   readonly lines: number;
+  readonly firstCutLine: string;
   readonly keptInkOutside: number;
   readonly cutInkInside: number;
 }
@@ -140,8 +140,8 @@ function linesOf(locator: Locator): Promise<number> {
   });
 }
 
-function missingLettersOfTag(tag: Locator, letters: number): Promise<number> {
-  return tag.evaluate((element, count) => {
+function missingLettersOfTag(tag: Locator): Promise<number> {
+  return tag.evaluate((element) => {
     if (element.scrollWidth <= element.clientWidth) {
       return 0;
     }
@@ -156,7 +156,7 @@ function missingLettersOfTag(tag: Locator, letters: number): Promise<number> {
     }
     const range = document.createRange();
     range.setStart(text, 0);
-    range.setEnd(text, count);
+    range.setEnd(text, text.textContent?.length ?? 0);
     const context = document.createElement('canvas').getContext('2d');
     if (context === null) {
       return Number.POSITIVE_INFINITY;
@@ -164,7 +164,7 @@ function missingLettersOfTag(tag: Locator, letters: number): Promise<number> {
     context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
     const ellipsis = context.measureText('…').width;
     return Math.max(0, range.getBoundingClientRect().right + ellipsis - contentEnd);
-  }, letters);
+  });
 }
 
 function inkAroundClip(title: Locator, keptLines: number): Promise<InkAroundClip> {
@@ -174,6 +174,7 @@ function inkAroundClip(title: Locator, keptLines: number): Promise<InkAroundClip
     if (context === null) {
       return {
         lines: 0,
+        firstCutLine: '',
         keptInkOutside: Number.POSITIVE_INFINITY,
         cutInkInside: Number.POSITIVE_INFINITY,
       };
@@ -181,7 +182,7 @@ function inkAroundClip(title: Locator, keptLines: number): Promise<InkAroundClip
     context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
     const clip = element.getBoundingClientRect();
     const range = document.createRange();
-    const glyphs: { line: number; top: number; bottom: number }[] = [];
+    const glyphs: { line: number; letter: string; top: number; bottom: number }[] = [];
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
     for (let text = walker.nextNode(); text !== null; text = walker.nextNode()) {
       const value = text.textContent ?? '';
@@ -203,6 +204,7 @@ function inkAroundClip(title: Locator, keptLines: number): Promise<InkAroundClip
         const baseline = box.top + box.height * ascentShare;
         glyphs.push({
           line: Math.round(box.top),
+          letter,
           top: baseline - metrics.actualBoundingBoxAscent,
           bottom: baseline + metrics.actualBoundingBoxDescent,
         });
@@ -218,7 +220,11 @@ function inkAroundClip(title: Locator, keptLines: number): Promise<InkAroundClip
         cutInkInside = Math.max(cutInkInside, clip.bottom - glyph.top);
       }
     }
-    return { lines: lineTops.length, keptInkOutside, cutInkInside };
+    const firstCutLine = glyphs
+      .filter((glyph) => glyph.line === lineTops[kept])
+      .map((glyph) => glyph.letter)
+      .join('');
+    return { lines: lineTops.length, firstCutLine, keptInkOutside, cutInkInside };
   }, keptLines);
 }
 
@@ -350,16 +356,17 @@ test.describe('Given a visitor on the Aktuality tab on a computer', () => {
     });
   }
 
-  test('when the leading news title runs past three lines, then its first three lines show their accents and descenders and nothing of the fourth shows', async ({
+  test('when the leading news title runs past three lines, then its first three lines show their accents and descenders and nothing of the fourth shows, not even the ring of a capital Ů', async ({
     page,
   }) => {
-    await openNews(page, [article(1, { title: TITLE_WITH_DESCENDERS_AND_ACCENTS }), article(2)], {
+    await openNews(page, [article(1, { title: TITLE_WITH_DESCENDERS_AND_RINGS }), article(2)], {
       width: 1280,
       height: 900,
     });
 
     const ink = await inkAroundClip(page.locator('.featured-title'), CLAMPED_TITLE_LINES);
     expect(ink.lines).toBeGreaterThan(CLAMPED_TITLE_LINES);
+    expect(ink.firstCutLine).toContain(RING_LETTER);
     expect(ink.keptInkOutside).toBeLessThanOrEqual(0);
     expect(ink.cutInkInside).toBeLessThanOrEqual(0);
   });
@@ -428,27 +435,38 @@ test.describe('Given a visitor on the Aktuality tab with enlarged text', () => {
       size: 'the largest text',
     },
   ]) {
-    test(`when a news card carries a long tag at ${size} in a ${width} px window, then its tag shows at least its first letters and the card does not overflow`, async ({
+    test(`when a news card carries a long tag at ${size} in a ${width} px window, then its whole tag shows and the card does not overflow`, async ({
       page,
     }) => {
       await enlargeText(page, rootFontSize);
-      await openNews(page, [article(1), article(2, { tag: COMPENSATION_TAG }), article(3)], {
+      await openNews(page, [article(1), article(2, { tag: LONG_TAG }), article(3)], {
         width,
         height,
       });
       const card = page.locator('app-news-card').first();
       const tag = card.locator('.news-tag');
-      await expect(tag).toHaveText(COMPENSATION_TAG);
+      await expect(tag).toHaveText(LONG_TAG);
 
-      expect(await missingLettersOfTag(tag, TAG_LETTERS_SHOWN)).toBeLessThanOrEqual(
-        EDGE_TOLERANCE_PX,
-      );
+      expect(await missingLettersOfTag(tag)).toBeLessThanOrEqual(0);
       const overflow = await card
         .locator('.news-card')
         .evaluate((element) => element.scrollWidth - element.clientWidth);
       expect(overflow).toBeLessThanOrEqual(0);
     });
   }
+
+  test('when a story of the year carries a long tag at the largest text in an 834 px window, then its whole tag shows', async ({
+    page,
+  }) => {
+    await enlargeText(page, `${LARGEST_SYSTEM_TEXT_PX}px`);
+    await openNews(page, [article(1), article(2)], { width: 834, height: 1194 }, [
+      story(1, LONG_TAG, 'Rehabilitační pobyt pro jejich nejmenšího syna'),
+    ]);
+    const tag = page.locator('app-year-stories .story-tag');
+    await expect(tag).toHaveText(LONG_TAG);
+
+    expect(await missingLettersOfTag(tag)).toBeLessThanOrEqual(0);
+  });
 
   test('when the leading news has a long title at the largest text in an 834 px window, then the whole title shows', async ({
     page,

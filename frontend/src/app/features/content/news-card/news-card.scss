@@ -112,11 +112,13 @@
   border-radius: var(--radius-pill);
 
   @include bp.up(tablet) {
-    flex: 1 0 min(6em, 100%);
-    max-width: max-content;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    @include bp.container-up(news-card, pair) {
+      flex: 1 0 min(6em, 100%);
+      max-width: max-content;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
   }
 }
 
