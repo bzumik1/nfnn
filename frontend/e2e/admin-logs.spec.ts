@@ -517,7 +517,7 @@ test.describe('Given an administrator on the server state on a phone', () => {
     await page.goto('/sprava/logy/stav');
     await page.addStyleTag({ content: 'html { font-size: 53px }' });
     const row = page.getByRole('main').locator('.release .ui-list__row');
-    await expect(row.locator('.ui-list__value')).toHaveText('2026.11.109');
+    await expect(row.locator('.release-parts')).toHaveText('2026.11.109');
 
     const box = await row.evaluate((element) => {
       const value = element.querySelector('.ui-list__value') as HTMLElement;
@@ -530,6 +530,42 @@ test.describe('Given an administrator on the server state on a phone', () => {
     });
     expect(box.valueRight).toBeLessThanOrEqual(box.contentRight + 1);
     expect(box.overflows).toBe(false);
+  });
+
+  test('when they read the release 375 px wide with the largest text, then every line of its number ends after a dot or at its end', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/sprava/logy/stav');
+    await page.addStyleTag({ content: 'html { font-size: 53px }' });
+    const value = page.getByRole('main').locator('.release .release-parts');
+    await expect(value).toHaveText('2026.11.109');
+
+    const lines = await value.evaluate((element) => {
+      const found: { top: number; text: string }[] = [];
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent ?? '';
+        for (let index = 0; index < text.length; index++) {
+          const range = document.createRange();
+          range.setStart(node, index);
+          range.setEnd(node, index + 1);
+          const top = Math.round(range.getBoundingClientRect().top);
+          const line = found.at(-1);
+          if (line && Math.abs(line.top - top) <= 1) {
+            line.text += text[index];
+          } else {
+            found.push({ top, text: text[index] });
+          }
+        }
+      }
+      return found.map((line) => line.text);
+    });
+
+    expect(lines.join('')).toBe('2026.11.109');
+    for (const line of lines.slice(0, -1)) {
+      expect(line).toMatch(/\.$/);
+    }
   });
 });
 

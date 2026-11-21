@@ -225,6 +225,22 @@ describe('Given an administrator on the server state page', () => {
     expect(page.text('#vydani')).toBe('Vydání nejnovější vydání zatím neznáme dev');
   });
 
+  it('when the release loads, then its number may break only after a dot', async () => {
+    await loaded(releaseView({ running: '2026.11.109' }));
+
+    const value = page.cardTitled('Aplikace').querySelector('.release .release-parts')!;
+    const breaks = Array.from(value.childNodes)
+      .map((node) =>
+        node.nodeName === 'WBR'
+          ? '|'
+          : node.nodeType === Node.COMMENT_NODE
+            ? ''
+            : (node.textContent ?? ''),
+      )
+      .join('');
+    expect(breaks).toBe('2026.|11.|109');
+  });
+
   it('when the release cannot be read, then the application rows show without it', async () => {
     await loaded(null);
 
