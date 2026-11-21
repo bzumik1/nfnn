@@ -108,6 +108,7 @@ describe('Given the page that remembers whether the last press came from a point
         field = document.createElement('input');
         document.body.appendChild(field);
         touch();
+        field.focus();
       });
 
       afterEach(() => field.remove());

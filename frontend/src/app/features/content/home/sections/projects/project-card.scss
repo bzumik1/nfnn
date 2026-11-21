@@ -40,6 +40,12 @@
   @include lifted(focus-ring.lift-after-pointer());
 }
 
+@media (hover: hover) and (pointer: fine) {
+  :host(:has(.card-link:focus-visible):hover) {
+    @include lifted;
+  }
+}
+
 .card {
   height: 100%;
   background: var(--color-surface);

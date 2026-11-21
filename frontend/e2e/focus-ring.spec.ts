@@ -17,6 +17,8 @@ const QR_BUTTON = 'Zvětšit: QR platba na účet Nadačního fondu Nová naděj
 const PHONE_LAYOUT_MAX_WIDTH = 899;
 const MOST_TAB_STOPS = 90;
 const SUBPIXEL = 0.5;
+const HOVER_SKIP_REASON =
+  'a mouse that rests over a card exists only in the desktop Chromium project; WebKit runs as an iPhone, which has no hover';
 
 type RingShows = (element: Element | null) => boolean;
 
@@ -252,7 +254,7 @@ test.describe('Given a visitor on the Přispět page who works with the keyboard
 test.describe('Given a visitor whose system forces its own colours', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
-    'Playwright emulates forced colours only in Chromium; iOS has none, and no Safari run covers them; the simulator check does',
+    'Playwright emulates forced colours only in Chromium, and WebKit on iOS and macOS never forces them',
   );
 
   test('when they choose Jiná částka by mouse and the focus moves into its field, then the field shows its ring all the same', async ({
@@ -282,37 +284,86 @@ const ARTICLES = ['Zahrada pro děti', 'Nová dílna'].map((title, index) => ({
   createdAt: '2026-10-19T09:00:00Z',
   updatedAt: '2026-10-20T07:30:00Z',
 }));
-const CARD_ARTICLE = ARTICLES[1];
+
+const STORIES = ['Sofinka', 'Natálka'].map((title, index) => ({
+  id: `0199f3e0-0000-7000-8000-00000000f10${index + 1}`,
+  slug: `pribeh-${index + 1}`,
+  title,
+  year: 2025,
+  category: 'CHILDREN',
+  tag: 'Pomůcky',
+  perex: `Příběh ${title}.`,
+  body: 'Text příběhu.',
+  coverImage: null,
+  publishedOn: `2025-10-0${index + 1}`,
+  createdAt: '2025-09-19T09:00:00Z',
+  updatedAt: '2025-10-01T07:30:00Z',
+  live: true,
+}));
+
+interface CardKind {
+  readonly name: string;
+  readonly listPath: string;
+  readonly apiPath: string;
+  readonly host: string;
+  readonly items: readonly { readonly slug: string; readonly title: string }[];
+}
+
+const CARD_KINDS: readonly CardKind[] = [
+  {
+    name: 'an article to the news list',
+    listPath: '/aktuality',
+    apiPath: '/api/content/news',
+    host: 'app-news-card',
+    items: ARTICLES,
+  },
+  {
+    name: 'a story to the Pomáháme tab',
+    listPath: '/projekty',
+    apiPath: '/api/content/projects',
+    host: 'app-story-tile',
+    items: STORIES,
+  },
+];
 
 interface CardLift {
   readonly verticalShift: number;
   readonly shadow: number;
 }
 
-async function openCardArticleFromList(
+function cardItem(kind: CardKind): { readonly slug: string; readonly title: string } {
+  return kind.items[kind.items.length - 1];
+}
+
+async function openCardItemFromList(
   page: Page,
+  kind: CardKind,
   open: (link: Locator) => Promise<void>,
 ): Promise<void> {
-  for (const article of ARTICLES) {
+  for (const item of kind.items) {
     await page.route(
-      (url) => url.pathname === `/api/content/news/${article.slug}`,
-      (route) => route.fulfill({ json: article }),
+      (url) => url.pathname === `${kind.apiPath}/${item.slug}`,
+      (route) => route.fulfill({ json: item }),
     );
   }
   await page.route(
-    (url) => url.pathname === '/api/content/news',
+    (url) => url.pathname === kind.apiPath,
     (route) =>
       route.fulfill({
-        json: { items: ARTICLES, page: 0, size: 10, total: ARTICLES.length, hasMore: false },
+        json: { items: kind.items, page: 0, size: 50, total: kind.items.length, hasMore: false },
       }),
   );
-  await page.goto('/aktuality');
-  await open(cardLink(page));
-  await expect(page.getByRole('heading', { level: 1, name: CARD_ARTICLE.title })).toBeFocused();
+  await page.goto(kind.listPath);
+  await open(cardLink(page, kind));
+  await expect(page.getByRole('heading', { level: 1, name: cardItem(kind).title })).toBeFocused();
 }
 
-function cardLink(page: Page): Locator {
-  return page.locator('app-news-card').getByRole('link', { name: CARD_ARTICLE.title });
+function cardLink(page: Page, kind: CardKind): Locator {
+  return page.locator(kind.host).getByRole('link', { name: cardItem(kind).title });
+}
+
+function cardOf(page: Page, kind: CardKind): Locator {
+  return page.locator(kind.host).filter({ has: cardLink(page, kind) });
 }
 
 function backButton(page: Page): Locator {
@@ -335,40 +386,60 @@ function settledLiftOf(card: Locator): Promise<CardLift> {
   });
 }
 
-test.describe('Given a visitor who comes back from an article to the news list', () => {
-  test('when they press Zpět with a finger or a mouse and the site focuses the card they came from, then the card is not lifted', async ({
-    page,
-    browserName,
-  }) => {
-    await mockDonorApi(page);
-    await openCardArticleFromList(page, (link) => press(page, link, browserName));
+for (const kind of CARD_KINDS) {
+  test.describe(`Given a visitor who comes back from ${kind.name}`, () => {
+    test('when they press Zpět with a finger or a mouse and the site focuses the card they came from, then the card is not lifted', async ({
+      page,
+      browserName,
+    }) => {
+      await mockDonorApi(page);
+      await openCardItemFromList(page, kind, (link) => press(page, link, browserName));
 
-    await press(page, backButton(page), browserName);
+      await press(page, backButton(page), browserName);
 
-    await expect(cardLink(page)).toBeFocused();
-    const lift = await settledLiftOf(page.locator('app-news-card'));
-    expect(lift.verticalShift).toBeCloseTo(0);
-    expect(lift.shadow).toBe(0);
-  });
-
-  test('when they press Zpět with the keyboard and the site focuses the card they came from, then the card is lifted', async ({
-    page,
-  }) => {
-    await mockDonorApi(page);
-    await openCardArticleFromList(page, async (link) => {
-      await link.focus();
-      await page.keyboard.press('Enter');
+      await expect(cardLink(page, kind)).toBeFocused();
+      const lift = await settledLiftOf(cardOf(page, kind));
+      expect(lift.verticalShift).toBeCloseTo(0);
+      expect(lift.shadow).toBe(0);
     });
 
-    await backButton(page).focus();
-    await page.keyboard.press('Enter');
+    test('when they press Zpět with the keyboard and the site focuses the card they came from, then the card is lifted', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await openCardItemFromList(page, kind, async (link) => {
+        await link.focus();
+        await page.keyboard.press('Enter');
+      });
 
-    await expect(cardLink(page)).toBeFocused();
-    const lift = await settledLiftOf(page.locator('app-news-card'));
-    expect(lift.verticalShift).toBeLessThan(0);
-    expect(lift.shadow).toBe(1);
+      await backButton(page).focus();
+      await page.keyboard.press('Enter');
+
+      await expect(cardLink(page, kind)).toBeFocused();
+      const lift = await settledLiftOf(cardOf(page, kind));
+      expect(lift.verticalShift).toBeLessThan(0);
+      expect(lift.shadow).toBe(1);
+    });
+
+    test('when they press Zpět with a mouse and then point at the card the site focused, then the card is lifted', async ({
+      page,
+      browserName,
+    }) => {
+      test.skip(browserName !== 'chromium', HOVER_SKIP_REASON);
+      await mockDonorApi(page);
+      await openCardItemFromList(page, kind, (link) => link.click());
+      await backButton(page).click();
+      await expect(cardLink(page, kind)).toBeFocused();
+
+      await cardLink(page, kind).hover();
+
+      await expect(cardLink(page, kind)).toBeFocused();
+      const lift = await settledLiftOf(cardOf(page, kind));
+      expect(lift.verticalShift).toBeLessThan(0);
+      expect(lift.shadow).toBe(1);
+    });
   });
-});
+}
 
 function ringProblemsOfFocused(page: Page, ringShows: JSHandle<RingShows>): Promise<string[]> {
   return page.evaluate(
@@ -540,7 +611,7 @@ const AREAS = [
 test.describe('Given a keyboard user on a computer', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
-    "the side navigation and the window's bottom edge at 1280 px are a computer's layout; no Safari run covers them; the simulator check does",
+    "the side navigation and the window's bottom edge at 1280 px are a computer's layout; WebKit runs the phone cases above",
   );
   test.use({ viewport: { width: 1280, height: 640 } });
 
