@@ -48,6 +48,7 @@ td.action {
     display: block;
     inline-size: max-content;
     max-inline-size: var(--table-text-column-min);
+    overflow-wrap: anywhere;
   }
 
   td.action > .ui-button {

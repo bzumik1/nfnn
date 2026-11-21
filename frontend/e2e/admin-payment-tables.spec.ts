@@ -12,6 +12,7 @@ import { ADMINISTRATION_LOCKED, expect, test } from './fixtures';
 const WIDTHS = [1280, 1000, 900] as const;
 const LONG_MESSAGE = 'Dar na podporu rodin s dětmi po léčbě, děkujeme za vaši práci a pomoc';
 const LONG_DONOR_NAME = 'Marie Josefína Dvořáková-Procházková';
+const ONE_WORD_DONOR_NAME = 'Severomoravskáenergetika';
 
 function payment(index: number, overrides: Record<string, unknown>) {
   const suffix = String(index).padStart(4, '0');
@@ -107,7 +108,12 @@ const CLAIMS = [
   },
 ];
 
-async function openAdministration(page: Page, width: number, path: string): Promise<void> {
+async function openAdministration(
+  page: Page,
+  width: number,
+  path: string,
+  claims: readonly object[] = CLAIMS,
+): Promise<void> {
   await page.setViewportSize({ width, height: 900 });
   await mockDonorApi(page, donorWithDonations);
   await rememberedSession(page);
@@ -124,7 +130,7 @@ async function openAdministration(page: Page, width: number, path: string): Prom
   );
   await page.route(
     (url) => url.pathname === '/api/admin/donations/symbol-claims',
-    (route) => route.fulfill({ json: { items: CLAIMS } }),
+    (route) => route.fulfill({ json: { items: claims } }),
   );
   await servePetrBankAccounts(page, [
     bankAccountItem({ accountNumber: '000019-2000145399/0800', donationCount: 2 }),
@@ -166,6 +172,25 @@ async function pastItsFrame(table: Locator): Promise<number> {
     const frame = (element.closest('.ui-table-frame') ?? element).getBoundingClientRect();
     return Math.max(0, Math.round(element.getBoundingClientRect().right - frame.right));
   });
+}
+
+async function namesPastTheirCell(table: Locator): Promise<string[]> {
+  return table.evaluate((element) =>
+    [...element.querySelectorAll<HTMLElement>('tbody .claim-donor')].flatMap((name) => {
+      const cell = name.closest('td')!;
+      const style = getComputedStyle(cell);
+      const box = cell.getBoundingClientRect();
+      const right = box.right - parseFloat(style.paddingRight);
+      const range = document.createRange();
+      range.selectNodeContents(name);
+      const textRight = Math.max(...[...range.getClientRects()].map((line) => line.right));
+      return textRight > right + 0.5
+        ? [
+            `${name.textContent?.trim()}: text ends at ${Math.round(textRight)}, cell at ${Math.round(right)}`,
+          ]
+        : [];
+    }),
+  );
 }
 
 async function wordsSplitAcrossLines(locator: Locator): Promise<string[]> {
@@ -338,8 +363,8 @@ for (const { width, rootPx } of [
 ] as const) {
   const setting = rootPx === null ? `${width} px` : `${width} px with a ${rootPx} px root`;
   test.describe(`Given an administrator at ${setting}`, () => {
-    async function openAt(page: Page, path: string): Promise<void> {
-      await openAdministration(page, width, path);
+    async function openAt(page: Page, path: string, claims = CLAIMS): Promise<void> {
+      await openAdministration(page, width, path, claims);
       if (rootPx !== null) {
         await page.addStyleTag({ content: `html { font-size: ${rootPx}px; }` });
       }
@@ -363,6 +388,18 @@ for (const { width, rootPx } of [
       await openAt(page, '/sprava/starsi-symboly');
 
       expect(await pastItsFrame(page.locator('table'))).toBe(0);
+    });
+
+    test('when a donor name is one long word, then the name stays inside its cell', async ({
+      page,
+    }) => {
+      await openAt(page, '/sprava/starsi-symboly', [
+        { ...CLAIMS[0], donorName: ONE_WORD_DONOR_NAME },
+        CLAIMS[1],
+      ]);
+      await expect(page.getByRole('link', { name: ONE_WORD_DONOR_NAME })).toBeVisible();
+
+      expect(await namesPastTheirCell(page.locator('table'))).toEqual([]);
     });
   });
 }
