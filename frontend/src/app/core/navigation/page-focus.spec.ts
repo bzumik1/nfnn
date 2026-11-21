@@ -93,12 +93,14 @@ describe('Given a list of the administration that a step back returns to from th
   describe('when the list shows the link to the card at once', () => {
     const header = 64;
     let link: HTMLElement;
+    let linkTop: number;
     let focused: ReturnType<typeof vi.fn<(options?: FocusOptions) => void>>;
     let shown: ReturnType<typeof vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>>;
 
     async function returnWithTheLinkAt(top: number): Promise<void> {
+      linkTop = top;
       link = row({ href: CARD });
-      link.getBoundingClientRect = () => new DOMRect(0, top, 300, 56);
+      link.getBoundingClientRect = () => new DOMRect(0, linkTop, 300, 56);
       scope.append(link);
       await openTheCard(link);
       await stepBack();
@@ -140,6 +142,74 @@ describe('Given a list of the administration that a step back returns to from th
 
       expect(document.activeElement).toBe(link);
       expect(shown).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+    });
+
+    describe('when the page still grows after the row was brought to the bottom edge', () => {
+      const resizes = new Set<() => void>();
+      const bandBottom = () => window.innerHeight - 80;
+
+      beforeEach(() => {
+        vi.stubGlobal(
+          'ResizeObserver',
+          class {
+            private readonly resized: () => void;
+
+            constructor(callback: () => void) {
+              this.resized = () => callback();
+            }
+
+            observe(): void {
+              resizes.add(this.resized);
+            }
+
+            unobserve(): void {
+              resizes.delete(this.resized);
+            }
+
+            disconnect(): void {
+              resizes.delete(this.resized);
+            }
+          },
+        );
+      });
+
+      afterEach(() => {
+        resizes.clear();
+        vi.unstubAllGlobals();
+      });
+
+      function pageGrowsWithTheRowAt(top: number): void {
+        linkTop = top;
+        resizes.forEach((resized) => resized());
+      }
+
+      it('then the row goes back to that edge, so a page that ended short of it leaves the row neither half hidden nor adrift', async () => {
+        await returnWithTheLinkAt(window.innerHeight + 120);
+        shown.mockClear();
+
+        pageGrowsWithTheRowAt(bandBottom() - 56 + 4);
+
+        expect(shown).toHaveBeenCalledWith({ block: 'end', inline: 'nearest' });
+      });
+
+      it('then the row that already stands at that edge leaves the page where it is', async () => {
+        await returnWithTheLinkAt(window.innerHeight + 120);
+        shown.mockClear();
+
+        pageGrowsWithTheRowAt(bandBottom() - 56);
+
+        expect(shown).not.toHaveBeenCalled();
+      });
+
+      it('then a touch of the visitor ends the keeping, so the page never moves under their finger', async () => {
+        await returnWithTheLinkAt(window.innerHeight + 120);
+        shown.mockClear();
+
+        window.dispatchEvent(new Event('touchstart'));
+        pageGrowsWithTheRowAt(bandBottom() - 56 + 40);
+
+        expect(shown).not.toHaveBeenCalled();
+      });
     });
 
     it('then the row half under the head still counts as shown and the page stays', async () => {
