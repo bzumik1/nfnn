@@ -10,6 +10,8 @@ import {
 
 import { Title } from '@angular/platform-browser';
 
+import { PagePlacement } from '../../core/navigation/page-placement';
+import { ScrollHold } from '../../core/navigation/scroll-hold';
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { keepRoomForFloatingNotice } from '../../shared/ui/floating-notice/floating-notice-room';
@@ -25,6 +27,8 @@ import { LeavingNotice } from '../../shared/ui/leaving-notice/leaving-notice';
 export class ChunkLoadNotice {
   protected readonly recovery = inject(ChunkLoadRecovery);
   private readonly document = inject(DOCUMENT);
+  private readonly scrollHold = inject(ScrollHold);
+  private readonly placement = inject(PagePlacement);
   private readonly title = inject(Title);
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   private readonly barButton = viewChild<ElementRef<HTMLButtonElement>>('barButton');
@@ -56,7 +60,7 @@ export class ChunkLoadNotice {
     afterRenderEffect((onCleanup) => {
       const bar = this.bar()?.nativeElement;
       if (bar) {
-        onCleanup(keepRoomForFloatingNotice(this.document, bar));
+        onCleanup(keepRoomForFloatingNotice(this.document, bar, this.scrollHold, this.placement));
       }
     });
   }

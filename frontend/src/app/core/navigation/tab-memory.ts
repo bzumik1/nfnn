@@ -2,8 +2,10 @@ import { DOCUMENT } from '@angular/common';
 import {
   afterNextRender,
   DestroyRef,
+  ErrorHandler,
   inject,
   Injectable,
+  InjectionToken,
   Injector,
   signal,
   untracked,
@@ -16,6 +18,13 @@ import { NavigationPreview } from './navigation-preview';
 import { PagePlacement } from './page-placement';
 import { ScrollHold } from './scroll-hold';
 
+export type GrowingPageLoader = () => Promise<typeof import('./growing-page')>;
+
+export const GROWING_PAGE_LOADER = new InjectionToken<GrowingPageLoader>('GROWING_PAGE_LOADER', {
+  providedIn: 'root',
+  factory: () => () => import('./growing-page'),
+});
+
 @Injectable({ providedIn: 'root' })
 export class TabMemory {
   private readonly router = inject(Router);
@@ -25,6 +34,7 @@ export class TabMemory {
   private readonly window = inject(DOCUMENT).defaultView;
   private readonly reloadPlace = inject(ReloadPlace);
   private readonly scrollHold = inject(ScrollHold);
+  private readonly loadGrowingPage = inject(GROWING_PAGE_LOADER);
   private readonly lastUrls = new Map<AppTabId, string>(this.reloadPlace.keptTabs());
   private readonly current = signal<AppTab | null>(tabOf(this.router.url));
   readonly currentTab = this.current.asReadonly();
@@ -88,8 +98,12 @@ export class TabMemory {
     if (kept === null || kept.navigation !== event.routerEvent.id) {
       if (event.position) {
         const placed = this.injector.get(PagePlacement).pending();
-        void import('./growing-page').then((page) =>
-          page.placeOnceGrown(event, this.injector, placed),
+        void this.loadGrowingPage().then(
+          (page) => page.placeOnceGrown(event, this.injector, placed),
+          (error: unknown) => {
+            placed();
+            this.injector.get(ErrorHandler).handleError(error);
+          },
         );
       } else if (event.anchor === null && event.scrollBehavior !== 'manual') {
         this.scrollTo(0);
