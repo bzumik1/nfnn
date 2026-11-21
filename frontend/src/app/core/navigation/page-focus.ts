@@ -47,12 +47,11 @@ export class PageFocus {
     if (!this.focusLostAmong(connected)) {
       return;
     }
-    const sheet = connected.find((place) => place.localName === 'dialog');
-    if (sheet !== undefined) {
-      this.focusQuietly(sheet.querySelector<HTMLElement>(SHEET_TITLE) ?? sheet);
-      return;
-    }
     for (const at of connected) {
+      if (at.localName === 'dialog') {
+        this.focusQuietly(at.querySelector<HTMLElement>(SHEET_TITLE) ?? at);
+        return;
+      }
       const heading = at.querySelector<HTMLElement>(PAGE_HEADING);
       if (heading !== null) {
         this.focusQuietly(heading);

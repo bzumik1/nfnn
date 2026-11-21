@@ -41,7 +41,7 @@ class Page {
   template: `
     <dialog open>
       <h2 id="account-section-title" tabindex="-1">Můj přehled</h2>
-      <div class="content" tabindex="-1">
+      <div class="content">
         @if (state() === 'error') {
           <app-load-failure [retrying]="retrying()" (retry)="retrying.set(true)"
             >Přehled darů se nepodařilo načíst.</app-load-failure
@@ -55,6 +55,33 @@ class Page {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class PageInSheet {
+  readonly state = signal<PageState>('error');
+  readonly retrying = signal(false);
+}
+
+@Component({
+  imports: [LoadFailure],
+  template: `
+    <dialog open>
+      <h2 id="account-section-title" tabindex="-1">Údaje a zabezpečení</h2>
+      <div class="content" tabindex="-1">
+        <section class="passkeys" tabindex="-1" aria-label="Přístupové klíče">
+          @if (state() === 'error') {
+            <app-load-failure [retrying]="retrying()" (retry)="retrying.set(true)"
+              >Přístupové klíče se nepodařilo načíst.</app-load-failure
+            >
+          } @else {
+            <ul class="ready">
+              <li>iPhone</li>
+            </ul>
+          }
+        </section>
+      </div>
+    </dialog>
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class DetailsInSheet {
   readonly state = signal<PageState>('error');
   readonly retrying = signal(false);
 }
@@ -188,6 +215,32 @@ describe('Given a section in the account sheet whose data failed to load', () =>
     await fixture.whenStable();
 
     expect(document.activeElement).toBe(host.querySelector('#account-section-title'));
+  });
+});
+
+describe('Given the Údaje section in the account sheet whose passkeys failed to load', () => {
+  let fixture: ComponentFixture<DetailsInSheet>;
+
+  beforeEach(async () => {
+    fixture = TestBed.createComponent(DetailsInSheet);
+    document.body.append(fixture.nativeElement);
+    await fixture.whenStable();
+  });
+
+  afterEach(() => (fixture.nativeElement as HTMLElement).remove());
+
+  it('when the passkeys arrive after „Zkusit znovu“, then the focus moves to the passkeys region beside them, not to the sheet title', async () => {
+    const host = fixture.nativeElement as HTMLElement;
+    const button = host.querySelector('app-load-failure button') as HTMLButtonElement;
+    button.focus();
+    button.click();
+    await fixture.whenStable();
+
+    fixture.componentInstance.retrying.set(false);
+    fixture.componentInstance.state.set('ready');
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(host.querySelector('section.passkeys'));
   });
 });
 
