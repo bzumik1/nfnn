@@ -360,7 +360,8 @@
   @if (retriable()) {
     <button
       type="button"
-      class="ui-button ui-button--primary ui-button--block verify-retry"
+      class="ui-button ui-button--primary verify-retry"
+      [class.ui-button--block]="compact()"
       (click)="retry.emit()"
       i18n="@@donor.verify.retry"
     >
@@ -418,7 +419,7 @@
           <dt i18n="@@donor.verify.data.giftDate">Dar ze dne</dt>
           <dd>{{ data.gifts[0].receivedOn }}</dd>
         </div>
-        <div>
+        <div class="verify-total">
           <dt i18n="@@donor.verify.data.amount">Částka</dt>
           <dd class="ui-figures">{{ data.total }}</dd>
         </div>
@@ -427,7 +428,7 @@
           <dt i18n="@@donor.verify.data.year">Za rok</dt>
           <dd>{{ data.year }}</dd>
         </div>
-        <div>
+        <div class="verify-total">
           <dt i18n="@@donor.verify.data.total">Celkem</dt>
           <dd class="ui-figures">{{ data.total }}</dd>
         </div>

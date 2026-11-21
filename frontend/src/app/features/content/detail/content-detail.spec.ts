@@ -124,7 +124,8 @@ describe('Given a visitor opening a news article', () => {
     http.expectOne('/api/content/news/zahrada-pro-deti').flush(newsArticle());
     await settle(fixture);
 
-    expect(text(fixture, '.ui-intro__meta')).toBe('Projekt · 20. 10. 2026');
+    expect(text(fixture, '.ui-intro__meta .meta-tag')).toBe('Projekt');
+    expect(text(fixture, '.ui-intro__meta .meta-when')).toBe('20. 10. 2026');
     expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
     expect(text(fixture, '.ui-intro__lead')).toBe(newsArticle().perex);
     expect(
@@ -236,7 +237,8 @@ describe('Given a visitor opening a news article', () => {
       .flush(newsArticle({ tag: null, coverImage: null }));
     await settle(fixture);
 
-    expect(text(fixture, '.ui-intro__meta')).toBe('20. 10. 2026');
+    expect(fixture.nativeElement.querySelector('.ui-intro__meta .meta-tag')).toBeNull();
+    expect(text(fixture, '.ui-intro__meta .meta-when')).toBe('20. 10. 2026');
     expect(fixture.nativeElement.querySelector('.photo')).toBeNull();
   });
 
@@ -295,7 +297,8 @@ describe('Given a visitor opening a project', () => {
     http.expectOne('/api/content/projects/zahrada-pro-deti').flush(project());
     await settle(fixture);
 
-    expect(text(fixture, '.ui-intro__meta')).toBe('Projekt · 2024');
+    expect(text(fixture, '.ui-intro__meta .meta-tag')).toBe('Projekt');
+    expect(text(fixture, '.ui-intro__meta .meta-when')).toBe('2024');
     expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
     expect(fixture.nativeElement.querySelector('.crumbs')).toBeNull();
     expect(

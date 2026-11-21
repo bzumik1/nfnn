@@ -51,7 +51,12 @@
                 >
               }
             </h2>
-            <ul class="onward-list" role="list">
+            <ul
+              class="onward-list"
+              [class.onward-list--news]="onward.kind === 'news'"
+              [class.onward-list--stories]="onward.kind === 'project'"
+              role="list"
+            >
               @if (onward.kind === 'news') {
                 @for (item of onward.items; track item.id) {
                   <li><app-news-card [item]="item" /></li>
