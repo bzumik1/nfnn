@@ -10,8 +10,10 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { AdminApi } from '../../admin-api';
 import { LogPageAccess } from '../log-page-access';
 import { threadStates } from './thread-states';
@@ -20,7 +22,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 @Component({
   selector: 'app-admin-thread-dump',
-  imports: [CopyButton, NeedsConnection],
+  imports: [CopyButton, LoadFailure, NeedsConnection],
   templateUrl: './admin-thread-dump.html',
   styleUrl: './admin-thread-dump.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,6 +34,7 @@ export class AdminThreadDump {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly dump = signal('');
   protected readonly states = computed(() => threadStates(this.dump()));
   protected readonly total = computed(() =>
@@ -45,9 +48,21 @@ export class AdminThreadDump {
 
   protected load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.api
       .threadDump()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (dump) => {
           this.dump.set(dump);

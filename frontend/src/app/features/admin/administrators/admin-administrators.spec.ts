@@ -11,6 +11,11 @@ import { AdminAdministrators } from './admin-administrators';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const LIST_URL = '/api/admin/donors/administrators';
 const PEOPLE_URL = '/api/admin/content/people';
@@ -184,12 +189,17 @@ describe('Given an administrator on the administrators page', () => {
     http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
 
-    expect(text('[role="alert"]:not(:empty)')).toContain('Správce se nepodařilo načíst.');
-    element<HTMLButtonElement>('.ui-load-state--error button').click();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Správce se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
     fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Správce se nepodařilo načíst.']);
 
     await listed([jana]);
     expect(rows()).toHaveLength(1);
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
   });
 
   it('when a registered e-mail is added, then the new administrator is listed and the status says the administration waits for two-factor authentication', async () => {

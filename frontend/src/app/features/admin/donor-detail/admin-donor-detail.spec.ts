@@ -37,6 +37,11 @@ import { FORCED_REFRESH_GAP_MS } from '../device-copy/administration-reads';
 import { PHASE_SHOWN_AFTER_MS } from '../../../shared/ui/pdf-progress/pdf-progress';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const DONOR_ID = '01a18e56-bdb0-775a-bd0a-a60756831369';
 const LINK_ID = '0192f0c4-0000-7000-8000-000000000001';
@@ -1253,13 +1258,18 @@ describe('Given an administrator on a donor card', () => {
     http.expectOne(DETAIL_URL).flush(donorDetail());
     await settle();
 
-    expect(sectionText('Údaje')).toContain('Účet se nepodařilo načíst.');
-    button(section('Údaje'), 'Zkusit znovu').click();
+    expect(loadFailureAlerts(section('Údaje'))).toEqual(['Účet se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(section('Údaje'));
     fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(section('Údaje'))).toEqual(['Účet se nepodařilo načíst.']);
     http.expectOne(ACCOUNT_URL).flush(donorAccount());
     await settle();
 
     expect(text('h1')).toBe('Jana Nováková');
+    expect(document.activeElement).toBe(section('Údaje'));
   });
 
   it('when the role was taken away meanwhile, then the page goes to the overview', async () => {
@@ -1911,12 +1921,14 @@ describe('Given an administrator on a donor card opened part by part', () => {
     await open('potvrzeni', true, { detail: 'error' });
 
     expect(cardTitles()).toEqual(['Potvrzení']);
-    const alert = fixture.nativeElement.querySelector(
-      'section.ui-card [role="alert"]',
-    ) as HTMLElement;
-    expect(textOf(alert)).toBe('Účty, dary a potvrzení se nepodařilo načíst. Zkusit znovu');
-
-    (alert.querySelector('button') as HTMLButtonElement).click();
+    const card = fixture.nativeElement.querySelector('section.ui-card') as HTMLElement;
+    expect(loadFailureAlerts(card)).toEqual(['Účty, dary a potvrzení se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(card);
+    fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(card)).toEqual(['Účty, dary a potvrzení se nepodařilo načíst.']);
     http.expectOne(DETAIL_URL).flush(donorDetail());
     fixture.detectChanges();
     await fixture.whenStable();
@@ -1941,18 +1953,20 @@ describe('Given an administrator on a donor card opened part by part', () => {
     await open('prihlaseni', true, { account: 'error' });
 
     expect(cardTitles()).toEqual(['Přihlášení']);
-    const alert = fixture.nativeElement.querySelector(
-      'section.ui-card [role="alert"]',
-    ) as HTMLElement;
-    expect(textOf(alert)).toBe('Účet se nepodařilo načíst. Zkusit znovu');
-
-    (alert.querySelector('button') as HTMLButtonElement).click();
+    const card = fixture.nativeElement.querySelector('section.ui-card') as HTMLElement;
+    expect(loadFailureAlerts(card)).toEqual(['Účet se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(card);
+    fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(card)).toEqual(['Účet se nepodařilo načíst.']);
     http.expectOne(ACCOUNT_URL).flush(donorAccount());
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.ui-load-state--error')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-load-failure')).toBeNull();
     expect(cardTitles()).toEqual(['Přihlášení']);
   });
 

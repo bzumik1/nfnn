@@ -37,6 +37,11 @@ import { ShownAnswers } from '../../../core/connectivity/shown-answers';
 import { newsArticle as heldArticle } from '../../content/testing/news-fixtures';
 import { person as heldPerson } from '../../content/testing/people-fixtures';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const NEWS_URL = '/api/admin/content/news';
 const MEDIA_URL = '/api/admin/content/media';
@@ -626,6 +631,31 @@ describe('Given an administrator opening a news article that is still on its way
     expect(text(fixture, 'h1')).toBe('Úprava aktuality');
 
     http.expectOne(`${NEWS_URL}/${draftArticle().id}`).flush(draftArticle());
+    http.verify();
+  });
+});
+
+describe('Given an administrator opening a news article that does not load', () => {
+  it('when the server fails, then the page offers a retry that keeps the failure while it asks again and loads it', async () => {
+    const { fixture, http } = await setUp(draftArticle().id);
+    http
+      .expectOne(`${NEWS_URL}/${draftArticle().id}`)
+      .flush(null, { status: 500, statusText: 'Error' });
+    await settle(fixture);
+
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Aktualitu se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await settle(fixture);
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Aktualitu se nepodařilo načíst.']);
+    http.expectOne(`${NEWS_URL}/${draftArticle().id}`).flush(draftArticle());
+    await settle(fixture);
+
+    expect(fixture.nativeElement.querySelector('app-load-failure')).toBeNull();
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
     http.verify();
   });
 });

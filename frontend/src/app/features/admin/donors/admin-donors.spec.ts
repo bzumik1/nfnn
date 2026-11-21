@@ -13,6 +13,11 @@ import { person, PORTRAIT_ID } from '../../content/testing/people-fixtures';
 import { AdministrationCopy } from '../device-copy/administration-copy';
 import type { CopiedGift } from './recent-donors';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const SEARCH_URL = '/api/admin/donors';
 const PEOPLE_URL = '/api/admin/content/people';
@@ -345,16 +350,23 @@ describe('Given an administrator on the donors page', () => {
       .flush(null, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
 
-    expect(text('[role="alert"] p')).toBe('Hledání se nepodařilo. Zkuste to prosím znovu.');
-    (fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement).click();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Hledání se nepodařilo.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
     fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Hledání se nepodařilo.']);
     const again = http.expectOne((candidate) => candidate.url === SEARCH_URL);
     expect(again.request.params.get('query')).toBe('nov');
     again.flush({ items: [jana], hasMore: false });
     fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
 
     expect(rows()).toHaveLength(1);
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
   });
 
   it('when more donors match than the page shows, then the page says only the first ones are shown', async () => {

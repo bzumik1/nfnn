@@ -8,20 +8,13 @@
   >
     Od minulé návštěvy
   </h2>
-  @switch (state().kind) {
+  @switch (shownKind()) {
     @case ('failed') {
-      <div class="ui-load-state ui-load-state--error" role="alert">
-        <p i18n="@@admin.home.since.error.text">Co je od minula nového, se nepodařilo zjistit.</p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          (click)="retry()"
-          i18n="@@admin.home.since.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
+      <app-load-failure [compact]="true" [retrying]="retrying()" (retry)="retry()"
+        ><ng-container i18n="@@admin.home.since.error.text"
+          >Co je od minula nového, se nepodařilo zjistit.</ng-container
+        ></app-load-failure
+      >
     }
     @case ('ready') {
       <p class="since-lead">{{ lead() }}</p>

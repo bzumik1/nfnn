@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, of, switchMap, tap } from 'rxjs';
+import { finalize, Observable, of, switchMap, tap } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -36,6 +36,7 @@ import {
 } from '../../content/about-api';
 import { MAX_IMAGE_BYTES, NewsApi } from '../../content/news-api';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 
@@ -66,6 +67,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     LiveNotice,
     FocalPointPicker,
     NeedsConnection,
+    LoadFailure,
   ],
   templateUrl: './admin-about.html',
   styleUrl: './admin-about.scss',
@@ -91,6 +93,7 @@ export class AdminAbout {
   protected readonly maxCaptionLength = MAX_ABOUT_CAPTION_LENGTH;
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly saved = signal<AboutPhotoResponse | null>(null);
   protected readonly chosen = signal<ChosenPhoto | null>(null);
   protected readonly uploading = signal(false);
@@ -133,11 +136,23 @@ export class AdminAbout {
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.reads
       .about()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (about) => {
           this.show(about.photo);

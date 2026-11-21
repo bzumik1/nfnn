@@ -4,17 +4,15 @@ import {
   Component,
   computed,
   effect,
-  ElementRef,
   inject,
   input,
   signal,
   untracked,
-  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Connectivity } from '../../../../core/connectivity/connectivity';
 import { pluralCategory } from '../../../../core/i18n/plural-category';
-import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatBankTime } from '../../../donations/donation-date';
 import { AdministrationVisit } from '../../device-copy/administration-visit';
@@ -34,7 +32,7 @@ interface VisitFigure {
 
 @Component({
   selector: 'app-since-last-visit',
-  imports: [RouterLink, NeedsConnection, NgTemplateOutlet],
+  imports: [RouterLink, LoadFailure, NgTemplateOutlet],
   templateUrl: './since-last-visit.html',
   styleUrl: './since-last-visit.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,12 +45,16 @@ export class SinceLastVisit {
   private readonly visit = inject(AdministrationVisit);
   private readonly connectivity = inject(Connectivity);
   private readonly document = inject(DOCUMENT);
-  private readonly title = viewChild.required<ElementRef<HTMLElement>>('title');
   private readonly visible = signal(this.document.visibilityState !== 'hidden');
 
   readonly waiting = input(false);
 
   protected readonly state = this.visit.state;
+  protected readonly retrying = signal(false);
+  protected readonly shownKind = computed(() => {
+    const kind = this.state().kind;
+    return this.retrying() && kind === 'checking' ? 'failed' : kind;
+  });
   protected readonly dismissed = this.visit.dismissed;
   protected readonly lead = computed(() => {
     const state = this.state();
@@ -101,8 +103,8 @@ export class SinceLastVisit {
   }
 
   protected retry(): void {
-    this.title().nativeElement.focus();
-    void this.visit.check();
+    this.retrying.set(true);
+    void this.visit.check().finally(() => this.retrying.set(false));
   }
 
   protected close(): void {
