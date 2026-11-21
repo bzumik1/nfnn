@@ -1,96 +1,210 @@
 import { Locator, Page } from '@playwright/test';
+import { BREAKPOINTS } from '../src/app/core/layout/breakpoints';
 import { mockPublicContent } from './baseline/screen-mocks';
 import { mockDonorApi, rememberedDonorSession } from './donor-session';
-import { expect, test } from './fixtures';
+import { expect, test, testWithoutBrowser } from './fixtures';
 import {
   barsThatChanged,
+  blurMissingUnderHeader,
   blurOutOfStep,
+  Rgb,
+  ScreenFrame,
   stripOutOfStep,
   TopAreaFrame,
   topAreaFramesWhile,
+  topAreaWhile,
   veilJumps,
+  veilStepsBack,
 } from './top-area';
 
-const WHITE = [255, 255, 255] as const;
-const NAVY = [10, 15, 40] as const;
+const WHITE: Rgb = [255, 255, 255];
+const NAVY: Rgb = [10, 15, 40];
+const GREY: Rgb = [100, 116, 139];
+const FULL_BACKDROP = 0.6;
 const WEAKEST_BACKDROP = 0.5;
 const GLASS = { name: 'account-button', blur: 'blur(24px)', fill: '255 255 255 0.94', shown: true };
+
+function veiled(base: Rgb, strength: number): Rgb {
+  const under = (channel: number): number =>
+    Math.round(base[channel] * (1 - strength) + NAVY[channel] * strength);
+  return [under(0), under(1), under(2)];
+}
+
+function screens(measured: [number, number][]): ScreenFrame[] {
+  return measured.map(([lightness, edges]) => ({ lightness, edges }));
+}
+
+const BLURRED_SCREENS: [number, number][] = [
+  [253, 2.65],
+  [209.5, 1.57],
+  [175, 0.89],
+  [141.9, 0.4],
+  [128.3, 0.25],
+  [120.2, 0.17],
+  [111.4, 0.11],
+];
 
 function planted(strengths: (number | null)[], more: Partial<TopAreaFrame> = {}): TopAreaFrame[] {
   return strengths.map((veil, index) => ({
     at: (index * 1000) / 60,
-    veil: veil === null ? null : veil * 0.6,
+    veil: veil === null ? null : veil * FULL_BACKDROP,
     blur: veil ?? 0,
     tint: veil === null ? null : NAVY,
-    ground: WHITE,
-    track: null,
+    ground: veiled(WHITE, (veil ?? 0) * FULL_BACKDROP),
+    track: veiled(WHITE, (veil ?? 0) * FULL_BACKDROP),
+    thumb: veiled(GREY, (veil ?? 0) * FULL_BACKDROP),
     bars: [GLASS],
     ...more,
   }));
 }
 
-test.describe('Given frames of a backdrop planted by hand', () => {
-  test('when the backdrop grows a little in every frame with its blur, then nothing is reported', () => {
-    const frames = planted([null, 0, 0.15, 0.4, 0.6, 0.8, 0.95, 1, 1]);
+testWithoutBrowser.describe('Given frames of the top of the page planted by hand', () => {
+  testWithoutBrowser(
+    'when each check reads them, then it reports exactly the frames that are out of step and nothing for frames in step',
+    async () => {
+      await testWithoutBrowser.step(
+        'a backdrop that grows a little in every frame with its blur',
+        () => {
+          const frames = planted([null, 0, 0.15, 0.4, 0.6, 0.8, 0.95, 1, 1]);
 
-    expect(veilJumps(frames)).toEqual([]);
-    expect(blurOutOfStep(frames)).toEqual([]);
-    expect(barsThatChanged(frames)).toEqual([]);
-  });
+          expect(veilJumps(frames)).toEqual([]);
+          expect(blurOutOfStep(frames)).toEqual([]);
+          expect(barsThatChanged(frames)).toEqual([]);
+          expect(stripOutOfStep(frames)).toEqual([]);
+        },
+      );
 
-  test('when the backdrop is gone for one frame and comes back, then both steps are reported', () => {
-    expect(veilJumps(planted([1, 1, 0, 1, 1]))).toEqual([
-      'the backdrop goes from 100 % to 0 % of its strength in frame 2, 17 ms after the previous one',
-      'the backdrop goes from 0 % to 100 % of its strength in frame 3, 17 ms after the previous one',
-    ]);
-  });
+      await testWithoutBrowser.step('a backdrop gone for one frame and back', () => {
+        expect(veilJumps(planted([1, 1, 0, 1, 1]))).toEqual([
+          'the backdrop goes from 100 % to 0 % of its strength in frame 2, 17 ms after the previous one',
+          'the backdrop goes from 0 % to 100 % of its strength in frame 3, 17 ms after the previous one',
+        ]);
+      });
 
-  test('when the backdrop is cut in one frame, then the cut is reported', () => {
-    expect(veilJumps(planted([1, 1, null, null]))).toEqual([
-      'the backdrop goes from 100 % to 0 % of its strength in frame 2, 17 ms after the previous one',
-    ]);
-  });
+      await testWithoutBrowser.step('a backdrop cut in one frame', () => {
+        expect(veilJumps(planted([1, 1, null, null]))).toEqual([
+          'the backdrop goes from 100 % to 0 % of its strength in frame 2, 17 ms after the previous one',
+        ]);
+      });
 
-  test('when two frames were dropped while the backdrop left, then the longer step is allowed', () => {
-    const frames = planted([1, 0.9, 0.1, 0, null]).map((frame, index) =>
-      index < 2 ? frame : { ...frame, at: frame.at + 2000 / 60 },
-    );
+      await testWithoutBrowser.step('two frames dropped while the backdrop left', () => {
+        const frames = planted([1, 0.9, 0.1, 0, null]).map((frame, index) =>
+          index < 2 ? frame : { ...frame, at: frame.at + 2000 / 60 },
+        );
 
-    expect(veilJumps(frames)).toEqual([]);
-  });
+        expect(veilJumps(frames)).toEqual([]);
+      });
 
-  test('when the blur is missing under half a backdrop, then that frame is reported', () => {
-    const frames = planted([0, 0.5, 1]).map((frame, index) =>
-      index === 1 ? { ...frame, blur: 0 } : frame,
-    );
+      await testWithoutBrowser.step('a blur missing under half a backdrop', () => {
+        const frames = planted([0, 0.5, 1]).map((frame, index) =>
+          index === 1 ? { ...frame, blur: 0 } : frame,
+        );
 
-    expect(blurOutOfStep(frames)).toEqual([
-      'the blur shows at 0 % under a backdrop at 50 % of its strength in frame 1',
-    ]);
-  });
+        expect(blurOutOfStep(frames)).toEqual([
+          'the backdrop declares its blur at 0 % under a backdrop at 50 % of its strength in frame 1',
+        ]);
+      });
 
-  test('when a bar loses its blur for a frame, then the loss and the return are reported', () => {
-    const frames = planted([0, 0.5, 1]).map((frame, index) =>
-      index === 1 ? { ...frame, bars: [{ ...GLASS, blur: 'none' }] } : frame,
-    );
+      await testWithoutBrowser.step('a bar that loses its blur for a frame', () => {
+        const frames = planted([0, 0.5, 1]).map((frame, index) =>
+          index === 1 ? { ...frame, bars: [{ ...GLASS, blur: 'none' }] } : frame,
+        );
 
-    expect(barsThatChanged(frames)).toEqual([
-      'account-button: blur blur(24px) → none in frame 1',
-      'account-button: blur none → blur(24px) in frame 2',
-    ]);
-  });
+        expect(barsThatChanged(frames)).toEqual([
+          'account-button: blur blur(24px) → none in frame 1',
+          'account-button: blur none → blur(24px) in frame 2',
+        ]);
+      });
 
-  test('when the ground beside the backdrop stays dark after the backdrop has gone, then those frames are reported', () => {
-    const frames = planted([1, 0.5, 0, null, null]).map((frame, index) =>
-      index < 4 ? { ...frame, ground: [108, 111, 126] as const } : frame,
-    );
+      await testWithoutBrowser.step('a ground that stays dark after the backdrop has gone', () => {
+        const frames = planted([1, 0.5, 0, null, null]).map((frame, index) =>
+          index < 4 ? { ...frame, ground: [108, 111, 126] as const } : frame,
+        );
 
-    expect(stripOutOfStep(frames)).toEqual([
-      'the ground beside the backdrop is #6c6f7e where the page under it is #b6b7bf in frame 1',
-      'the ground beside the backdrop is #6c6f7e where the page under it is #ffffff in frame 2',
-      'the ground beside the backdrop is #6c6f7e where the page under it is #ffffff in frame 3',
-    ]);
-  });
+        expect(stripOutOfStep(frames)).toEqual([
+          'the ground beside the backdrop is #6c6f7e where the page under it is #b6b7bf in frame 1',
+          'the ground beside the backdrop is #6c6f7e where the page under it is #ffffff in frame 2',
+          'the ground beside the backdrop is #6c6f7e where the page under it is #ffffff in frame 3',
+        ]);
+      });
+
+      await testWithoutBrowser.step('a scrollbar track and thumb dark before the backdrop', () => {
+        const frames = planted([null, 0, 0.5, 1]).map((frame, index) =>
+          index === 0
+            ? frame
+            : { ...frame, track: veiled(WHITE, FULL_BACKDROP), thumb: veiled(GREY, FULL_BACKDROP) },
+        );
+
+        expect(stripOutOfStep(frames)).toEqual([
+          'the scrollbar track beside the backdrop is #6c6f7e where the page under it is #ffffff in frame 1',
+          'the scrollbar thumb beside the backdrop is #2e3750 where the page under it is #64748b in frame 1',
+          'the scrollbar track beside the backdrop is #6c6f7e where the page under it is #b6b7bf in frame 2',
+          'the scrollbar thumb beside the backdrop is #2e3750 where the page under it is #49566d in frame 2',
+        ]);
+      });
+
+      await testWithoutBrowser.step(
+        'a scrollbar that keeps the browser’s own colours at rest',
+        () => {
+          const frames = planted([null, 0, 0.5, 1, null]).map((frame) =>
+            frame.veil === null || frame.veil > 0
+              ? { ...frame, track: null, thumb: null }
+              : { ...frame, thumb: GREY },
+          );
+
+          expect(stripOutOfStep(frames)).toEqual([
+            'the scrollbar thumb switches from the browser’s own colour to #64748b in frame 1',
+            'the scrollbar thumb switches back to the browser’s own colour in frame 2',
+            'the scrollbar keeps the browser’s own colours beside a backdrop at 30 % in frame 2',
+            'the scrollbar keeps the browser’s own colours beside a backdrop at 60 % in frame 3',
+          ]);
+        },
+      );
+
+      await testWithoutBrowser.step('screencast frames whose blur comes with the backdrop', () => {
+        expect(
+          blurMissingUnderHeader({ frames: planted([null, 1]), screens: screens(BLURRED_SCREENS) }),
+        ).toEqual([]);
+        expect(veilStepsBack(planted([1, 1, null, null]))).toEqual([]);
+      });
+
+      await testWithoutBrowser.step('screencast frames whose backdrop never blurs', () => {
+        const unblurred = screens([
+          [253, 2.65],
+          [209.5, 2.18],
+          [175, 1.8],
+          [134, 1.35],
+          [111.4, 1.1],
+        ]);
+
+        expect(blurMissingUnderHeader({ frames: planted([null, 1]), screens: unblurred })).toEqual([
+          'the page under the header keeps 103 % of its edges under the whole backdrop in screencast frame 4, so its blur does not show',
+        ]);
+      });
+
+      await testWithoutBrowser.step('a screencast frame that loses the blur halfway', () => {
+        const lost = screens(
+          BLURRED_SCREENS.map(([lightness, edges], index) => [
+            lightness,
+            index === 3 ? 1.41 : edges,
+          ]),
+        );
+
+        expect(blurMissingUnderHeader({ frames: planted([null, 1]), screens: lost })).toEqual([
+          'the blur shows at 0 % of its share under a backdrop at 78 % of its strength in screencast frame 3',
+        ]);
+        expect(blurMissingUnderHeader({ frames: planted([null, 1]), screens: [] })).toEqual([
+          'no screencast frame shows the band under the header',
+        ]);
+      });
+
+      await testWithoutBrowser.step('frames that never rest without a backdrop', () => {
+        expect(() => stripOutOfStep(planted([1, 1]))).toThrow(
+          'no frame without a backdrop to read the resting ground from',
+        );
+      });
+    },
+  );
 });
 
 function accountButton(page: Page): Locator {
@@ -132,6 +246,9 @@ function expectTheBackdropInStep(frames: TopAreaFrame[]): void {
   expect(barsThatChanged(frames)).toEqual([]);
 }
 
+const CLASSIC_SCROLLBARS_ONLY =
+  'an iPhone draws no classic scrollbar beside the backdrop; Safari’s own strips are #1694 and the device checklist';
+
 test.describe('Given a signed-in donor reading the news on a computer that animates', () => {
   test.use({
     viewport: { width: 1280, height: 800 },
@@ -143,7 +260,7 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     await readingTheNews(page);
   });
 
-  test('when the account sheet opens, then its backdrop darkens the top of the page a little in every frame, its blur comes with it, and the buttons of the header and the tab bar keep their glass', async ({
+  test('when the account sheet opens, then its backdrop darkens the top of the page a little in every frame, declares its blur with it, and the buttons of the header and the tab bar keep their glass', async ({
     page,
   }) => {
     const frames = await whileTheSheetOpens(page);
@@ -153,7 +270,7 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     expect(frames[frames.length - 1].veil).toBeGreaterThan(WEAKEST_BACKDROP);
   });
 
-  test('when the account sheet closes, then its backdrop lightens a little in every frame, its blur goes with it, and the buttons of the header and the tab bar keep their glass', async ({
+  test('when the account sheet closes, then its backdrop lightens a little in every frame, declares its blur with it, and the buttons of the header and the tab bar keep their glass', async ({
     page,
   }) => {
     await whileTheSheetOpens(page);
@@ -165,9 +282,66 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     expect(frames[frames.length - 1].veil).toBeNull();
   });
 
-  test('when the account sheet opens and closes, then the ground beside its backdrop, which the strip of the scrollbar shows, darkens and lightens with it', async ({
+  test('when the account sheet opens and closes, then the page under the header blurs and clears with the backdrop in every frame of the screencast', async ({
     page,
+    browserName,
   }) => {
+    test.skip(
+      browserName !== 'chromium',
+      'only Chromium gives a screencast; WebKit draws the blur but only the device checklist and safari.yml see it',
+    );
+
+    const opening = await topAreaWhile(
+      page,
+      () => accountButton(page).press('Enter'),
+      () => expect(accountSheet(page)).toBeVisible(),
+    );
+    const closing = await topAreaWhile(
+      page,
+      () => page.keyboard.press('Escape'),
+      () => expect(page.getByRole('dialog')).toHaveCount(0),
+    );
+
+    expect(blurMissingUnderHeader(opening)).toEqual([]);
+    expect(blurMissingUnderHeader(closing)).toEqual([]);
+  });
+
+  test('when the backdrop loses its blur as the account sheet starts to close, then the screencast check reports the blur missing', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', 'only Chromium gives a screencast');
+    await whileTheSheetOpens(page);
+    await page.evaluate(() => {
+      const dropBlur = (): void =>
+        document.querySelectorAll('dialog.dialog--leaving').forEach((dialog) => {
+          (dialog as HTMLElement).style.setProperty('backdrop-filter', 'none', 'important');
+        });
+      new MutationObserver(dropBlur).observe(document.body, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class'],
+      });
+    });
+
+    const closing = await topAreaWhile(
+      page,
+      () => page.keyboard.press('Escape'),
+      () => expect(page.getByRole('dialog')).toHaveCount(0),
+    );
+
+    expect(blurMissingUnderHeader(closing)).toEqual([
+      expect.stringMatching(
+        / of its edges under the whole backdrop in screencast frame \d+, so its blur does not show$/,
+      ),
+    ]);
+  });
+
+  test('when the account sheet opens and closes, then the ground beside its backdrop and the scrollbar darken and lighten with it', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, CLASSIC_SCROLLBARS_ONLY);
     test.fixme(
       true,
       '#1974: the ground and the scrollbar change ahead of the backdrop on opening and only after it on closing',
@@ -200,7 +374,7 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     ).toEqual([]);
   });
 
-  test('when the donor opens Můj přehled from the account sheet, then the backdrop lightens a little in every frame', async ({
+  test('when the donor opens Můj přehled from the account sheet, then the backdrop, live or its copy over the page transition, lightens a little in every frame', async ({
     page,
   }) => {
     test.fixme(true, '#1646: the dialog and its backdrop are removed in one frame');
@@ -219,6 +393,56 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
   });
 });
 
+test.describe('Given a signed-in donor reading the news on a computer that asks for less motion', () => {
+  test.use({
+    viewport: { width: 1280, height: 800 },
+    colorScheme: 'light',
+    reducedMotion: 'reduce',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await readingTheNews(page);
+  });
+
+  test('when the account sheet opens and closes, then its short fade darkens the top of the page without a jump, it goes at once without a blink, it declares its blur all the while, and the glass stays', async ({
+    page,
+  }) => {
+    const opening = await whileTheSheetOpens(page);
+    const closing = await whileTheSheetCloses(page);
+
+    expectTheBackdropInStep(opening);
+    expect(veilStepsBack(closing)).toEqual([]);
+    expect(blurOutOfStep(closing)).toEqual([]);
+    expect(barsThatChanged(closing)).toEqual([]);
+  });
+});
+
+for (const width of [BREAKPOINTS.nav, 390]) {
+  test.describe(`Given a signed-in donor reading the news in a window ${width} px wide`, () => {
+    test.use({
+      viewport: { width, height: 844 },
+      colorScheme: 'light',
+      reducedMotion: 'no-preference',
+    });
+
+    test.beforeEach(async ({ page }) => {
+      await readingTheNews(page);
+    });
+
+    test('when the account sheet is open, then the ground beside its backdrop and the scrollbar are darkened with it', async ({
+      page,
+      isMobile,
+    }) => {
+      test.skip(isMobile, CLASSIC_SCROLLBARS_ONLY);
+      test.fixme(true, '#1974: below 900 px the strip beside the backdrop is never darkened');
+
+      const opening = await whileTheSheetOpens(page);
+
+      expect(stripOutOfStep(opening)).toEqual([]);
+    });
+  });
+}
+
 test.describe('Given a signed-in donor reading the news on a phone that animates', () => {
   test.use({
     viewport: { width: 390, height: 844 },
@@ -230,7 +454,7 @@ test.describe('Given a signed-in donor reading the news on a phone that animates
     await readingTheNews(page);
   });
 
-  test('when the account sheet comes up and goes down again, then its backdrop darkens and lightens the top of the page a little in every frame, its blur with it, and the button of the header and the tab bar keep their glass', async ({
+  test('when the account sheet comes up and goes down again, then its backdrop darkens and lightens the top of the page a little in every frame, declares its blur with it, and the button of the header and the tab bar keep their glass', async ({
     page,
   }) => {
     const opening = await whileTheSheetOpens(page);
