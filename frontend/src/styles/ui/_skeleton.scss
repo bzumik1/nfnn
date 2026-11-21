@@ -11,13 +11,9 @@
   padding: var(--space-5) var(--space-6) var(--space-6);
   font-size: var(--text-md);
   line-height: var(--leading-normal);
-  @include motion.state(opacity);
-
-  @starting-style {
-    opacity: 0;
-  }
 }
 
+.skeleton > .ui-skeleton,
 .ui-skeleton-card {
   @include motion.state(opacity);
 

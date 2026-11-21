@@ -15,6 +15,11 @@ import {
 } from '../device-copy/testing/opened-copy';
 import { AdminNews } from './admin-news';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const LIST_URL = '/api/admin/content/news';
 
@@ -121,11 +126,13 @@ describe('Given an administrator on the news list', () => {
     await settle();
 
     expect(texts('[role="alert"]:not(:empty)')).toEqual(['Aktuality se nepodařilo načíst.']);
-    expect(fixture.nativeElement.querySelector('[role="alert"] button')).toBeNull();
-    (
-      fixture.nativeElement.querySelector('.ui-load-state--error button') as HTMLButtonElement
-    ).click();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Aktuality se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
     await settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Aktuality se nepodařilo načíst.']);
     http.expectOne(LIST_URL).flush({ items: [newsArticle()] });
     await settle();
 
