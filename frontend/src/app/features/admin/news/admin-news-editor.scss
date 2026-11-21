@@ -4,6 +4,19 @@
   display: block;
 }
 
+@include bp.up(tablet) {
+  @include bp.down(nav) {
+    .ui-page--form {
+      padding-inline: max(
+          var(--space-8),
+          env(safe-area-inset-left),
+          var(--window-controls-inset-inline)
+        )
+        max(var(--space-8), env(safe-area-inset-right));
+    }
+  }
+}
+
 .ui-page-title {
   margin-bottom: var(--space-5);
 }
