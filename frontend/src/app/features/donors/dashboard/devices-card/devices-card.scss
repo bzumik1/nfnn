@@ -79,6 +79,28 @@
   @include motion.expand($closes-by: class);
 }
 
+.device-sign-out-slot {
+  display: grid;
+  grid-template-rows: 1fr;
+
+  > * {
+    min-height: 0;
+    min-inline-size: 0;
+  }
+}
+
+.device-sign-out-slot--returning {
+  @include motion.expand-on-open;
+}
+
+.device-sign-out-slot--closing {
+  @include motion.row-leave;
+
+  @media (prefers-reduced-motion: reduce) {
+    grid-template-rows: 0fr;
+  }
+}
+
 .device-confirm .devices-confirm-box {
   margin: 0 var(--space-6) var(--space-3);
 }

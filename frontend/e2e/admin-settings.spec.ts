@@ -224,6 +224,10 @@ test.describe('Given an administrator on the settings page', () => {
     );
     await expect(block.locator('.signature-block-name')).toHaveText('Petr Vzorový');
     await expect(block.locator('.signature-block-role')).toHaveText('předseda správní rady');
+    const portrait = (await block.locator('img.signature-block-portrait').boundingBox())!;
+    const text = (await block.locator('.signature-block-text').boundingBox())!;
+    expect(text.height).toBeGreaterThan(portrait.height);
+    expect(Math.abs(portrait.y - text.y)).toBeLessThanOrEqual(1);
     await card.getByRole('link', { name: 'Otevřít lidi fondu' }).click();
     await expect(page).toHaveURL(/\/sprava\/lide-fondu$/);
   });

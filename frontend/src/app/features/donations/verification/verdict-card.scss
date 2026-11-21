@@ -11,8 +11,11 @@
 
 .verify-tone {
   display: flex;
+  align-self: start;
   align-items: center;
+  font-size: var(--text-list-tile-mark);
   font-weight: var(--weight-bold);
+  line-height: var(--leading-none);
 }
 
 .verify-lead {

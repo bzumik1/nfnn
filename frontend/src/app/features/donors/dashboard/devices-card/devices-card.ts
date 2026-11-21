@@ -39,9 +39,14 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 const DEVICE_NOT_FOUND = 'donors/device-not-found';
 const ALL_OTHERS = 'others';
 const ROW_CONTROLS = '.device-sign-out, .devices-older-toggle';
+const LIVE_SIGN_OUT_BUTTON = '.device-sign-out-slot:not([inert]) .device-sign-out';
 
 function signOutButtonId(deviceId: string): string {
   return `device-sign-out-${deviceId}`;
+}
+
+function rowId(deviceId: string): string {
+  return `device-row-${deviceId}`;
 }
 
 type DeviceShape = 'phone' | 'tablet' | 'computer' | 'other';
@@ -88,6 +93,7 @@ export class DevicesCard {
   protected readonly groups = computed(() => groupDevices(this.devices() ?? []));
   protected readonly shown = computed(() => [...this.groups().current, ...this.groups().recent]);
   protected readonly confirming = signal<string | null>(null);
+  protected readonly returning = signal<string | null>(null);
   protected readonly signingOut = signal<string | null>(null);
   protected readonly signedOut = signal('');
   protected readonly hasOthers = computed(() =>
@@ -137,8 +143,9 @@ export class DevicesCard {
 
   cancelSignOut(): void {
     const target = this.confirming();
+    this.returning.set(target);
     this.confirming.set(null);
-    this.focusAfterRender(() => this.askingButton(target));
+    this.focusAfterRender(() => this.askingButton(target), { preventScroll: true });
   }
 
   signOut(device: SignedInDevice): void {
@@ -183,6 +190,7 @@ export class DevicesCard {
   }
 
   toggleOlder(): void {
+    this.returning.set(null);
     this.olderShown.update((shown) => !shown);
   }
 
@@ -215,7 +223,7 @@ export class DevicesCard {
   }
 
   protected rowId(device: SignedInDevice): string {
-    return `device-row-${device.id}`;
+    return rowId(device.id);
   }
 
   protected confirmQuestionId(device: SignedInDevice): string {
@@ -260,6 +268,7 @@ export class DevicesCard {
     if (this.signingOut() !== null) {
       return;
     }
+    this.returning.set(null);
     this.confirming.set(target);
     this.focusAfterRender(() => this.confirmCancel()?.nativeElement);
   }
@@ -268,11 +277,22 @@ export class DevicesCard {
     if (target === ALL_OTHERS) {
       return this.othersButton()?.nativeElement;
     }
-    return target === null ? null : this.document.getElementById(signOutButtonId(target));
+    return target === null ? null : this.liveSignOutButton(target);
   }
 
-  private focusAfterRender(target: () => HTMLElement | null | undefined): void {
-    afterNextRender(() => target()?.focus(), { injector: this.injector });
+  private liveSignOutButton(deviceId: string): HTMLElement | null {
+    return (
+      this.document
+        .getElementById(rowId(deviceId))
+        ?.querySelector<HTMLElement>(LIVE_SIGN_OUT_BUTTON) ?? null
+    );
+  }
+
+  private focusAfterRender(
+    target: () => HTMLElement | null | undefined,
+    options?: FocusOptions,
+  ): void {
+    afterNextRender(() => target()?.focus(options), { injector: this.injector });
   }
 
   private begin(target: string): void {
