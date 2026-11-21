@@ -687,11 +687,12 @@ test.describe('Given a visitor reading a news article or a story on a computer',
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
       const placed = await page.evaluate(() => {
+        const page = document.querySelector('main')!.getBoundingClientRect();
         const prose = document.querySelector('app-content-article .prose')!.getBoundingClientRect();
         const title = document.querySelector('app-content-article h1')!.getBoundingClientRect();
         return {
-          before: Math.round(prose.left),
-          after: Math.round(document.documentElement.clientWidth - prose.right),
+          before: Math.round(prose.left - page.left),
+          after: Math.round(page.right - prose.right),
           title: Math.round(title.left),
           text: Math.round(prose.left),
         };
@@ -710,11 +711,12 @@ test.describe('Given a visitor reading a news article or a story on a computer',
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
       const placed = await page.evaluate(() => {
+        const page = document.querySelector('main')!.getBoundingClientRect();
         const body = document.querySelector('app-content-article .body')!.getBoundingClientRect();
         const side = document.querySelector('app-content-article .side')!.getBoundingClientRect();
         return {
-          before: Math.round(body.left),
-          after: Math.round(document.documentElement.clientWidth - side.right),
+          before: Math.round(body.left - page.left),
+          after: Math.round(page.right - side.right),
         };
       });
 
