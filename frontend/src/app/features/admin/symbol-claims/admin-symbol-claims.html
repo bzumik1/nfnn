@@ -54,7 +54,7 @@
           </p>
         } @else {
           <div class="ui-table-frame">
-            <table role="table" class="ui-table">
+            <table role="table" class="ui-table ui-table--compact">
               <thead role="rowgroup">
                 <tr role="row">
                   <th role="columnheader" i18n="@@admin.symbolClaims.col.donor">Dárce</th>
@@ -79,20 +79,22 @@
                       data-label="Dárce"
                       i18n-data-label="@@admin.symbolClaims.col.donor"
                     >
-                      @if (item.donorName) {
-                        <a class="admin-name" [routerLink]="['/sprava/darci', item.donorId]">{{
-                          item.donorName
-                        }}</a>
-                      } @else {
-                        <span class="muted">{{ donorName(item) }}</span>
-                      }
+                      <span class="claim-donor">
+                        @if (item.donorName) {
+                          <a class="admin-name" [routerLink]="['/sprava/darci', item.donorId]">{{
+                            item.donorName
+                          }}</a>
+                        } @else {
+                          <span class="muted">{{ donorName(item) }}</span>
+                        }
+                      </span>
                     </td>
                     <td
                       role="cell"
                       data-label="Bankovní účet"
                       i18n-data-label="@@admin.symbolClaims.col.account"
                     >
-                      <app-bank-account [account]="item.account" />
+                      <app-bank-account class="claim-account" [account]="item.account" />
                     </td>
                     <td
                       role="cell"
