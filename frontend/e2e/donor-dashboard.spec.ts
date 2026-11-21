@@ -766,17 +766,26 @@ test.describe('Given a signed-in donor on a computer', () => {
   }
 
   const PDF_POSES = [
-    { name: '', viewport: null, rootSize: null, places: PDF_PLACES },
+    { name: '', viewport: null, resizedTo: null, rootSize: null, places: PDF_PLACES },
     {
       name: ' on an iPad held sideways',
       viewport: { width: 1180, height: 820 },
+      resizedTo: null,
       rootSize: null,
       places: PDF_PLACES.filter((place) => place.keepsHeight),
     },
     {
       name: ' with the largest text',
       viewport: null,
+      resizedTo: null,
       rootSize: '53px',
+      places: PDF_PLACES.filter((place) => place.keepsHeight),
+    },
+    {
+      name: ' on a phone 390 pt wide',
+      viewport: null,
+      resizedTo: { width: 390, height: 844 },
+      rootSize: null,
       places: PDF_PLACES.filter((place) => place.keepsHeight),
     },
   ];
@@ -799,19 +808,36 @@ test.describe('Given a signed-in donor on a computer', () => {
           await page.setViewportSize(pose.viewport);
         }
         await mockDonorApi(page, receiptDonations);
+        const synced = page.waitForResponse(
+          (response) => new URL(response.url()).pathname === '/api/donations/me/sync',
+        );
         await page.route(
           (url) => url.pathname === RECEIPT_ISSUING_URL,
           () => new Promise<void>(() => undefined),
         );
         await openReceiptsAfterSignIn(page);
         await openDonorSection(page, place.section);
+        if (pose.resizedTo !== null) {
+          await page.setViewportSize(pose.resizedTo);
+          await expect(page.getByRole('navigation', { name: 'Můj účet' })).toHaveCount(0);
+        }
         const row = place.row(page);
         const button = place.button(row);
         await expect(button).toBeVisible();
+        await synced;
+        await expect(page.locator('.first-sync')).toHaveCount(0);
         await expect(page.locator('.page-fade--leaving')).toHaveCount(0);
-        await page.clock.install();
         await page.evaluate(() => document.fonts.ready);
-        await button.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+        await expect(async () => {
+          await button.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+          const centred = await page.evaluate(() => window.scrollY);
+          await page.evaluate(
+            () =>
+              new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+          );
+          expect(await page.evaluate(() => window.scrollY)).toBe(centred);
+        }).toPass();
+        await page.clock.install();
         const resting = await placement(row, button);
 
         const kept = (values: number[]) => (place.keepsHeight ? values : values.slice(1));
