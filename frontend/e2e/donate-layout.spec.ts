@@ -330,6 +330,26 @@ test.describe('Given the payment details on Přispět', () => {
   }
 
   for (const [width, height] of [
+    [1140, 900],
+    [1180, 820],
+  ]) {
+    test(`when the amounts show at ${width} × ${height}, where all four fit beside each other, then they stand in one row`, async ({
+      page,
+    }) => {
+      await openPrispetAt(page, width, height);
+
+      const tops = await page
+        .locator('.amount-options > *')
+        .evaluateAll((options) => options.map((option) => option.getBoundingClientRect().top));
+
+      expect(tops).toHaveLength(4);
+      for (const top of tops) {
+        expect(Math.abs(top - tops[0])).toBeLessThanOrEqual(PIXEL_TOLERANCE);
+      }
+    });
+  }
+
+  for (const [width, height] of [
     [900, 800],
     [1000, 800],
     [1100, 800],
