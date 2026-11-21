@@ -3,45 +3,21 @@ export interface ViewBand {
   readonly bottom: number;
 }
 
-export type ViewEdge = 'start' | 'end';
-
-export type FocusPlacement = 'refused' | 'shown' | ViewEdge;
-
 export function focusInView(target: HTMLElement, options: FocusOptions = {}): boolean {
-  return placeFocus(target, options) !== 'refused';
-}
-
-export function placeFocus(target: HTMLElement, options: FocusOptions = {}): FocusPlacement {
   target.focus({ ...options, preventScroll: true });
   if (target.ownerDocument.activeElement !== target) {
-    return 'refused';
+    return false;
   }
-  const beyond = edgeBeyond(target);
-  if (beyond === null) {
-    return 'shown';
+  if (!liesInView(target)) {
+    target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }
-  target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
-  return beyond;
+  return true;
 }
 
 export function liesInView(target: Element): boolean {
-  return edgeBeyond(target) === null;
-}
-
-export function standsAtEdge(target: Element, edge: ViewEdge): boolean {
   const band = viewBand(target);
   const box = target.getBoundingClientRect();
-  const apart = edge === 'start' ? box.top - band.top : box.bottom - band.bottom;
-  return Math.abs(apart) <= 1;
-}
-
-function edgeBeyond(target: Element): ViewEdge | null {
-  const band = viewBand(target);
-  const box = target.getBoundingClientRect();
-  if (box.bottom <= band.top) {
-    return 'start';
-  }
-  return box.top >= band.bottom ? 'end' : null;
+  return box.bottom > band.top && box.top < band.bottom;
 }
 
 export function viewBand(target: Element): ViewBand {

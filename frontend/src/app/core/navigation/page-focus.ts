@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { NavigationStart, Router } from '@angular/router';
 import { InputModality } from '../input/input-modality';
-import { placeFocus, standsAtEdge, type ViewEdge } from '../layout/focus-in-view';
+import { focusInView } from '../layout/focus-in-view';
 import { pathOf } from './app-tabs';
 import { BackTarget } from './back-target';
 import { NavigationPreview } from './navigation-preview';
@@ -26,8 +26,6 @@ const LEADING_TO = `a[href], [${LEADS_TO_ATTRIBUTE}]`;
 const PAGE_HEADING = 'h1[tabindex="-1"]';
 const SHEET_TITLE = 'h2[tabindex="-1"]';
 const FOCUS_TARGET = '[tabindex="-1"]';
-const VISITOR_MOVES = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
-const LISTENING: AddEventListenerOptions = { capture: true, passive: true };
 
 interface Press {
   readonly control: Element;
@@ -52,14 +50,15 @@ export class PageFocus {
       const control = event.target instanceof Element ? event.target.closest(CONTROL) : null;
       this.pressed = control === null ? null : { control, at: this.now() };
     };
-    this.document.addEventListener('click', press, LISTENING);
+    const listening: AddEventListenerOptions = { capture: true, passive: true };
+    this.document.addEventListener('click', press, listening);
     const navigations = this.router.events.subscribe((event) => {
       if (event instanceof NavigationStart) {
         this.navigationStarts(event);
       }
     });
     inject(DestroyRef).onDestroy(() => {
-      this.document.removeEventListener('click', press, LISTENING);
+      this.document.removeEventListener('click', press, listening);
       navigations.unsubscribe();
       this.stopReturning?.();
     });
@@ -246,41 +245,7 @@ export class PageFocus {
     if (target === null || !this.atFallback(scope)) {
       return false;
     }
-    const placement = placeFocus(
-      target,
-      this.modality.lastPressByPointer() ? { focusVisible: false } : {},
-    );
-    if (placement === 'start' || placement === 'end') {
-      this.keepAtEdge(scope, target, placement);
-    }
-    return placement !== 'refused';
-  }
-
-  private keepAtEdge(scope: HTMLElement, target: HTMLElement, edge: ViewEdge): void {
-    const view = this.document.defaultView;
-    if (view === null || typeof view.ResizeObserver !== 'function') {
-      return;
-    }
-    const keep = (): void => {
-      if (this.document.activeElement !== target) {
-        stop();
-      } else if (!standsAtEdge(target, edge)) {
-        target.scrollIntoView?.({ block: edge, inline: 'nearest' });
-      }
-    };
-    const growth = new view.ResizeObserver(keep);
-    const timer = view.setTimeout(() => stop(), RETURNING_FOCUS_LONGEST_MS);
-    const stop = (): void => {
-      growth.disconnect();
-      view.clearTimeout(timer);
-      VISITOR_MOVES.forEach((type) => view.removeEventListener(type, stop, LISTENING));
-      if (this.stopReturning === stop) {
-        this.stopReturning = null;
-      }
-    };
-    this.stopReturning = stop;
-    VISITOR_MOVES.forEach((type) => view.addEventListener(type, stop, LISTENING));
-    [this.document.body, scope, target].forEach((element) => growth.observe(element));
+    return focusInView(target, this.modality.lastPressByPointer() ? { focusVisible: false } : {});
   }
 
   private atFallback(scope: HTMLElement): boolean {
