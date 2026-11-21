@@ -3417,6 +3417,7 @@ async function cardTitlesBelowTheirFullSize(page: Page): Promise<string[]> {
 
 interface CardsBesideEachOther {
   besideEachOther: number;
+  measured: number;
   changed: string[];
 }
 
@@ -3455,7 +3456,8 @@ async function cardsBesideEachOtherWithoutTheCardContainer(
     for (const card of newContainers) {
       card.style.removeProperty('container-type');
     }
-    const changed = beside
+    const compared = beside.length > 0 ? beside : newContainers.map((card) => cards.indexOf(card));
+    const changed = compared
       .filter(
         (index) =>
           Math.abs(withContainer[index].width - withoutContainer[index].width) > 0.5 ||
@@ -3466,7 +3468,7 @@ async function cardsBesideEachOtherWithoutTheCardContainer(
         const [now, before] = [withContainer[index], withoutContainer[index]];
         return `${title}: ${now.width.toFixed(1)}×${now.height.toFixed(1)}, without the container ${before.width.toFixed(1)}×${before.height.toFixed(1)}`;
       });
-    return { besideEachOther: beside.length, changed };
+    return { besideEachOther: beside.length, measured: compared.length, changed };
   });
 }
 
@@ -3499,7 +3501,7 @@ for (const width of [1280, 1920]) {
         expect(await cardTitlesBelowTheirFullSize(page)).toEqual([]);
       });
 
-      test('when an administrator opens Správa, then every card title takes --text-2xl and the cards beside each other keep the width and height they have without the card container, as on main', async ({
+      test('when an administrator opens Správa, then every card title takes --text-2xl and the cards beside each other, or every card container when none are, keep the width and height they have without the card container, as on main', async ({
         page,
       }) => {
         await page.setViewportSize({ width, height: 900 });
@@ -3514,11 +3516,12 @@ for (const width of [1280, 1920]) {
         const cards = await cardsBesideEachOtherWithoutTheCardContainer(page);
         test.info().annotations.push({
           type: 'cards beside each other',
-          description: `${cards.besideEachOther}`,
+          description: `${cards.besideEachOther}, measured ${cards.measured}`,
         });
         if (!rootSize) {
           expect(cards.besideEachOther).toBeGreaterThanOrEqual(2);
         }
+        expect(cards.measured).toBeGreaterThanOrEqual(1);
         expect(cards.changed).toEqual([]);
       });
     });

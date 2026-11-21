@@ -120,14 +120,23 @@ function declared(declarations, property) {
 }
 
 function containerOf(declarations) {
-  const shorthand = declared(declarations, 'container');
-  const [shortNames, shortType] = shorthand ? shorthand.split('/').map((part) => part.trim()) : [];
-  const names = declared(declarations, 'container-name') ?? shortNames;
-  const type = declared(declarations, 'container-type') ?? shortType;
-  if (names === undefined && type === undefined) {
+  const container = [
+    ...declarations.matchAll(/(?:^|[;{\s])(container(?:-name|-type)?):\s*([^;]+)/g),
+  ].reduce((cascaded, [, property, rawValue]) => {
+    const value = rawValue.trim();
+    if (property === 'container-name') {
+      return { ...cascaded, names: value };
+    }
+    if (property === 'container-type') {
+      return { ...cascaded, type: value };
+    }
+    const [names, type = 'normal'] = value.split('/').map((part) => part.trim());
+    return { names, type, shorthand: value };
+  }, null);
+  if (container === null) {
     return null;
   }
-  return { names: (names ?? '').split(/\s+/).filter(Boolean), type, shorthand };
+  return { ...container, names: (container.names ?? '').split(/\s+/).filter(Boolean) };
 }
 
 function lastCompound(selector) {
@@ -325,6 +334,21 @@ describe('Given the cards of the app, whose titles take their size from the widt
       [
         '.attention: container attention without ui-card',
         '.ui-card__group: container list-card without ui-card',
+        '.profile-card: container-type size, not inline-size',
+      ],
+    );
+  });
+
+  it('when a later declaration of a card rule overrides the name or the type, then the one that wins the cascade is checked', () => {
+    assert.deepEqual(
+      cardContainerProblems(
+        '.attention { container-name: ui-card attention; container-type: inline-size; container: attention / inline-size; }\n' +
+          '.profile-card { container: ui-card profile-card / inline-size; container-type: size; }\n' +
+          '.ok-card { container: ok-card / size; container-name: ui-card ok-card; container-type: inline-size; }',
+        ['ui-card', 'attention', 'profile-card', 'ok-card'],
+      ),
+      [
+        '.attention: container attention without ui-card',
         '.profile-card: container-type size, not inline-size',
       ],
     );
