@@ -60,6 +60,22 @@
   border-color: var(--color-danger-control-border);
 }
 
+@mixin compact-control-edge {
+  .ui-notice--alert.ui-notice--action .ui-button {
+    border-color: var(--color-danger-control-border);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance='light']) {
+    @include compact-control-edge;
+  }
+}
+
+:root[data-appearance='dark'] {
+  @include compact-control-edge;
+}
+
 @include bp.down(phone) {
   .ui-notice--alert.ui-notice--action {
     padding: var(--space-4);

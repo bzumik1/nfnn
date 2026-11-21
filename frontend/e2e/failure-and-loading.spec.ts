@@ -1008,6 +1008,27 @@ test.describe('Given an administrator on a computer whose administration pages f
       await expect(retry).toBeFocused();
     });
   }
+
+  test('when Historie záloh fails in the dark appearance, then the edge of the compact „Zkusit znovu“ stands out from the failure block', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === BACKUPS,
+      (route) => route.fulfill(SERVER_ERROR),
+    );
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto('/sprava/zalohy/historie');
+    const alert = failure(page, 'Zálohy se nepodařilo načíst.');
+    await expect(alert).toBeVisible();
+    const retry = page
+      .locator('app-load-failure')
+      .filter({ has: alert })
+      .getByRole('button', { name: 'Zkusit znovu' });
+
+    await expect
+      .poll(() => borderContrastOnBlock(retry))
+      .toBeGreaterThanOrEqual(DARK_CONTROL_EDGE_CONTRAST);
+  });
 });
 
 test.describe('Given an administrator on a computer whose backups load slowly', () => {
