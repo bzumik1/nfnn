@@ -280,33 +280,82 @@ interface DrawnFrame {
   icons: number[];
 }
 
+interface IconFade {
+  icon: number;
+  seconds: number;
+  endedAtOpacity: number;
+}
+
 interface FrameRecorder {
   drawnFrames: DrawnFrame[];
+  iconFades: IconFade[];
 }
+
+const APPEARANCE_ICONS = '.account-appearance .appearance-icon';
+const QUIET_FRAMES_BEFORE_SWITCH = 2;
+const SHORTEST_VISIBLE_FADE_SECONDS = 0.1;
 
 async function framesAroundSwitch(page: Page, press: () => Promise<void>): Promise<DrawnFrame[]> {
   for (const selector of new Set(COLOURS_OF_THE_SWITCH.map(([measured]) => measured))) {
     await expect(page.locator(selector).first()).toBeVisible();
   }
-  await page.evaluate((targets) => {
-    const recorder = window as unknown as FrameRecorder;
-    recorder.drawnFrames = [];
-    const draw = (at: number): void => {
-      recorder.drawnFrames.push({
-        at,
-        dark: document.documentElement.getAttribute('data-appearance') === 'dark',
-        colours: targets.map(([selector, property]) => {
-          const element = document.querySelector(selector);
-          return element ? getComputedStyle(element).getPropertyValue(property) : 'missing';
-        }),
-        icons: Array.from(document.querySelectorAll('.account-appearance .appearance-icon')).map(
-          (icon) => Number(getComputedStyle(icon).opacity),
-        ),
+  await page.evaluate(
+    async ([icons, quietFramesNeeded]) => {
+      const recorder = window as unknown as FrameRecorder;
+      recorder.iconFades = [];
+      document.addEventListener('transitionend', (event) => {
+        const icon = event.target as Element;
+        if (event.propertyName !== 'opacity' || !icon.matches(icons)) {
+          return;
+        }
+        recorder.iconFades.push({
+          icon: Array.from(document.querySelectorAll(icons)).indexOf(icon),
+          seconds: event.elapsedTime,
+          endedAtOpacity: Number(getComputedStyle(icon).opacity),
+        });
       });
+      const iconsStill = (): boolean =>
+        Array.from(document.querySelectorAll(icons)).every(
+          (icon) => icon.getAnimations().length === 0,
+        );
+      await new Promise<void>((settled) => {
+        let quietFrames = 0;
+        const check = (): void => {
+          quietFrames = iconsStill() ? quietFrames + 1 : 0;
+          if (quietFrames >= quietFramesNeeded) {
+            settled();
+          } else {
+            requestAnimationFrame(check);
+          }
+        };
+        requestAnimationFrame(check);
+      });
+      recorder.iconFades = [];
+    },
+    [APPEARANCE_ICONS, QUIET_FRAMES_BEFORE_SWITCH] as const,
+  );
+  await page.evaluate(
+    ([targets, icons]) => {
+      const recorder = window as unknown as FrameRecorder;
+      recorder.drawnFrames = [];
+      const draw = (at: number): void => {
+        recorder.drawnFrames.push({
+          at,
+          dark: document.documentElement.getAttribute('data-appearance') === 'dark',
+          colours: targets.map(([selector, property]) => {
+            const element = document.querySelector(selector);
+            return element ? getComputedStyle(element).getPropertyValue(property) : 'missing';
+          }),
+          icons: Array.from(document.querySelectorAll(icons)).map((icon) =>
+            Number(getComputedStyle(icon).opacity),
+          ),
+        });
+        requestAnimationFrame(draw);
+      };
       requestAnimationFrame(draw);
-    };
-    requestAnimationFrame(draw);
-  }, COLOURS_OF_THE_SWITCH);
+    },
+    [COLOURS_OF_THE_SWITCH, APPEARANCE_ICONS] as const,
+  );
   await expect
     .poll(() => page.evaluate(() => (window as unknown as FrameRecorder).drawnFrames.length))
     .toBeGreaterThan(1);
@@ -329,6 +378,14 @@ function framesBetween(frames: DrawnFrame[]): string[][] {
 
 function fadingIcons(frames: DrawnFrame[]): number[] {
   return frames.flatMap((frame) => frame.icons).filter((opacity) => opacity > 0 && opacity < 1);
+}
+
+async function iconsThatFaded(page: Page): Promise<Omit<IconFade, 'seconds'>[]> {
+  const fades = await page.evaluate(() => (window as unknown as FrameRecorder).iconFades);
+  return fades
+    .filter((fade) => fade.seconds >= SHORTEST_VISIBLE_FADE_SECONDS)
+    .map(({ icon, endedAtOpacity }) => ({ icon, endedAtOpacity }))
+    .sort((first, second) => first.icon - second.icon);
 }
 
 async function closeAccountSheet(page: Page): Promise<void> {
@@ -383,7 +440,12 @@ test.describe('Given a signed-in donor whose device shows the light appearance',
     expect(frames[frames.length - 1].colours).not.toEqual(frames[0].colours);
     expect(framesBetween(frames)).toEqual([]);
     expect(frames[0].icons).toHaveLength(3);
-    expect(fadingIcons(frames)).not.toEqual([]);
+    await expect
+      .poll(() => iconsThatFaded(page))
+      .toEqual([
+        { icon: 1, endedAtOpacity: 0 },
+        { icon: 2, endedAtOpacity: 1 },
+      ]);
   });
 
   test('when the donor chooses Tmavý and then signs out, then the site follows the light device again for whoever comes next', async ({
@@ -439,6 +501,7 @@ test.describe('Given a signed-in donor on a light device who asked the system fo
     expect(framesBetween(frames)).toEqual([]);
     expect(frames[0].icons).toHaveLength(3);
     expect(fadingIcons(frames)).toEqual([]);
+    expect(await iconsThatFaded(page)).toEqual([]);
   });
 });
 
