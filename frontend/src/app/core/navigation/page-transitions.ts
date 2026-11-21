@@ -48,6 +48,7 @@ export const PAGE_TRANSITION_LONGEST_MS = 2000;
 export const PAGE_COVER_LONGEST_MS = 5000;
 export const KEPT_PAGES = 3;
 export const FRAME_LATE_MS = 100;
+const SWIPE_HANDED_OVER_AFTER_FRAMES = 2;
 export const ACCOUNT_RETURNS_KEY = 'nfnnAppAccount';
 
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
@@ -453,18 +454,17 @@ export class PageTransitions {
       return;
     }
     running.revealed = true;
-    const opens = running.kind === 'push' && !running.swiping;
-    afterFrames(view, opens ? 0 : 2, () => {
-      if (running.swiping) {
+    if (running.swiping) {
+      afterFrames(view, SWIPE_HANDED_OVER_AFTER_FRAMES, () => {
         if (this.running === running) {
           this.finish();
         }
-        return;
-      }
-      void this.placement
-        .placed(view, this.durationOf('--duration-page'))
-        .then(() => (running.ahead ? this.arrive(running) : this.move(running, view)));
-    });
+      });
+      return;
+    }
+    void this.placement
+      .placed(view, this.durationOf('--duration-page'))
+      .then(() => (running.ahead ? this.arrive(running) : this.move(running, view)));
   }
 
   private arrive(running: Running): void {

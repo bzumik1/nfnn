@@ -818,7 +818,7 @@ describe('Given the app on the home screen of a phone, scrolling restored, on th
     expect(arriving).toEqual(['Článek']);
   });
 
-  it('when the news comes back with no copy kept of it, then its copy waits for the frames after the router has put its scroll back', async () => {
+  it('when the news comes back with no copy kept of it, then its copy joins the cover as soon as the router has put its scroll back, never waiting for a frame first', async () => {
     await router.navigateByUrl('/aktuality/clanek');
     await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
     const width = Object.getOwnPropertyDescriptor(window, 'innerWidth')!;
@@ -832,8 +832,6 @@ describe('Given the app on the home screen of a phone, scrolling restored, on th
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
     layer.textContent = 'Aktuality';
     await vi.advanceTimersByTimeAsync(FRAME_LATE_MS / 2);
-    expect(returning).toEqual([]);
-    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS * 2);
 
     expect(returning).toEqual(['Aktuality']);
   });
