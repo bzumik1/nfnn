@@ -47,7 +47,7 @@ td.action {
   .claim-donor {
     display: block;
     inline-size: max-content;
-    max-inline-size: var(--table-text-column-min);
+    max-inline-size: var(--table-text-column);
     overflow-wrap: anywhere;
   }
 

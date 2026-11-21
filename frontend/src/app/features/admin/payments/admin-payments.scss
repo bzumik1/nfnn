@@ -388,7 +388,7 @@
   }
 
   .payments-card table:not(.payments-table--paired) .message {
-    min-inline-size: var(--table-text-column-min);
+    min-inline-size: var(--table-text-column);
   }
 }
 
