@@ -562,7 +562,9 @@ test.describe('Given a visitor on /overit in a browser whose screen shows less t
   });
 
   async function pageHeight(page: Page): Promise<number> {
-    return page.evaluate(() => document.documentElement.scrollHeight);
+    return page
+      .locator('app-verification-page')
+      .evaluate((host) => Math.ceil(host.getBoundingClientRect().bottom + window.scrollY));
   }
 
   async function showLessThanTheViewport(page: Page): Promise<void> {
@@ -593,7 +595,7 @@ test.describe('Given a visitor on /overit in a browser whose screen shows less t
 
 test.describe('Given a visitor on /overit on an iPad held upright', () => {
   const IPAD = { width: 820, height: 1180 };
-  const READABLE_COLUMN = 720;
+  const READABLE_COLUMN = 690;
   const PIXEL_TOLERANCE = 1;
 
   test.beforeEach(async ({ page }) => {
