@@ -5,7 +5,7 @@
   display: block;
 
   @include bp.up(nav) {
-    --list-group-title-top: var(--safe-area-top);
+    --list-group-title-top: max(var(--safe-area-top), var(--window-controls-inset-block));
   }
 }
 
@@ -238,6 +238,10 @@
     margin-bottom: var(--space-0-5);
   }
 
+  &:not(:has(> div:nth-child(4))) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   > div:last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
@@ -385,6 +389,10 @@
 }
 
 @include bp.container-up(list-card, narrow) {
+  .payment-row > .ui-list__value {
+    grid-row: 1;
+  }
+
   .payment-row .ui-list__value {
     font-size: var(--text-lg);
     font-weight: var(--weight-bold);

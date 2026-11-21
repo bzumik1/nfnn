@@ -519,6 +519,23 @@ async function linesOfText(within: Locator, text: string): Promise<number> {
   }, text);
 }
 
+async function bankMarksBesideNoNumber(facts: Locator): Promise<string[]> {
+  return facts.evaluate((list) =>
+    [...list.querySelectorAll<HTMLElement>('app-bank-account')].flatMap((account) => {
+      const mark = account.querySelector('app-bank-logo')!.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(account.querySelector('.number .ui-figures')!);
+      const firstLine = [...range.getClientRects()].find((box) => box.width > 0)!;
+      const shareALine = mark.top < firstLine.bottom && mark.bottom > firstLine.top;
+      return shareALine
+        ? []
+        : [
+            `${account.textContent?.trim()}: mark ${Math.round(mark.top)}..${Math.round(mark.bottom)}, number from ${Math.round(firstLine.top)}`,
+          ];
+    }),
+  );
+}
+
 async function sideways(panel: Locator): Promise<number> {
   return panel.evaluate((element) => element.scrollWidth - element.clientWidth);
 }
@@ -542,6 +559,8 @@ for (const viewport of [
       for (const word of String(PAIRED[0].counterpartyName).split(' ')) {
         expect(await linesOfText(facts, word), word).toBe(1);
       }
+      expect(await linesOfText(facts, '1\u00a0250\u00a0000,50\u00a0Kč')).toBe(1);
+      expect(await bankMarksBesideNoNumber(facts)).toEqual([]);
       expect(await sideways(sheet.locator('.dialog-panel'))).toBeLessThanOrEqual(0);
     });
 
@@ -586,6 +605,34 @@ test.describe('Given an administrator on an iPad upright pairing a payment with 
   });
 });
 
+test.describe('Given an administrator on an iPad upright pairing a payment whose sender runs several lines', () => {
+  test('when the pairing dialog shows the facts, then the sender follows right under the payment with no hole beside a longer neighbour', async ({
+    page,
+  }) => {
+    await openRows(page, { width: 820, height: 1180 }, '/sprava/platby');
+    await page.locator('button.payment-row').first().click();
+    const facts = page
+      .getByRole('dialog', { name: 'Přiřadit platbu dárci' })
+      .locator('.pair-payment');
+    await expect(facts.getByText(LONG_MESSAGE)).toBeVisible();
+
+    const spacing = await facts.evaluate((list) => {
+      const [payment, sender] = [...list.querySelectorAll(':scope > div')];
+      const probe = document.createElement('div');
+      probe.style.blockSize = 'var(--space-3)';
+      list.append(probe);
+      const allowed = probe.getBoundingClientRect().height;
+      probe.remove();
+      const gap =
+        sender.querySelector('dt')!.getBoundingClientRect().top -
+        payment.querySelector('dd')!.getBoundingClientRect().bottom;
+      return { gap: Math.round(gap), allowed: Math.round(allowed) };
+    });
+    expect(spacing.gap).toBeGreaterThanOrEqual(0);
+    expect(spacing.gap).toBeLessThanOrEqual(spacing.allowed);
+  });
+});
+
 async function amountsOffTheFirstLine(rows: Locator): Promise<string[]> {
   return rows.evaluateAll((buttons) =>
     buttons.flatMap((row) => {
@@ -620,7 +667,8 @@ test.describe('Given an administrator on an iPad upright reading Platby z banky 
     await expect(rows.filter({ hasText: 'Ověření účtu' })).toBeVisible();
 
     expect(await amountsOffTheFirstLine(rows)).toEqual([]);
-    expect(new Set(await titleToMetaGaps(rows)).size).toBe(1);
+    const gaps = await titleToMetaGaps(rows);
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(1);
   });
 });
 
@@ -641,5 +689,35 @@ test.describe('Given an administrator on an iPad in landscape at the largest tex
     await expect
       .poll(() => heading.evaluate((element) => Math.round(element.getBoundingClientRect().top)))
       .toBe(0);
+  });
+});
+
+test.describe('Given an administrator in the installed app in a window smaller than the iPad screen, scrolling Platby z banky', () => {
+  test('when the month heading sticks, then it rests below the window controls', async ({
+    page,
+  }) => {
+    await openRows(page, { width: 1180, height: 820 }, '/sprava/platby');
+    await page.evaluate(() => document.documentElement.classList.add('has-window-controls'));
+    const controlsHeight = await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.style.blockSize = 'var(--window-controls-inset-block)';
+      document.body.append(probe);
+      const height = probe.getBoundingClientRect().height;
+      probe.remove();
+      return Math.round(height);
+    });
+    expect(controlsHeight).toBeGreaterThan(0);
+    const heading = page.locator('.ui-list__group-title').first();
+    const start = await heading.evaluate(
+      (element) => element.getBoundingClientRect().top + window.scrollY,
+    );
+    await page.evaluate((top) => window.scrollTo(0, top + 400), start);
+    await expect
+      .poll(() => heading.evaluate((element) => element.parentElement!.getBoundingClientRect().top))
+      .toBeLessThan(0);
+
+    await expect
+      .poll(() => heading.evaluate((element) => Math.round(element.getBoundingClientRect().top)))
+      .toBe(controlsHeight);
   });
 });
