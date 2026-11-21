@@ -1,5 +1,11 @@
 import type { Page } from '@playwright/test';
-import { mockDonorApi, session, signIn } from './donor-session';
+import {
+  administrator,
+  mockDonorApi,
+  session,
+  signIn,
+  whenAdministrationCopied,
+} from './donor-session';
 import { expect, test } from './fixtures';
 
 const SAMPLE_INSET = 4;
@@ -72,6 +78,21 @@ test.describe('Given a visitor on an iPhone, whose Safari tints its status bar f
     await page.reload();
     await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
     await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    await expect.poll(() => safariLeavesTheStatusBarUntinted(page)).toBe(true);
+  });
+
+  test('when an administrator opens /sprava at 390 px, then Safari finds no box to tint the status bar from', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
+    const copied = whenAdministrationCopied(page);
+    await page.goto('/sprava');
+    await copied();
 
     await expect.poll(() => safariLeavesTheStatusBarUntinted(page)).toBe(true);
   });
