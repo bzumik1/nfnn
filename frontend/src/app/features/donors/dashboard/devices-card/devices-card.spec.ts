@@ -218,7 +218,9 @@ describe("Given a donor's signed-in devices card", () => {
       expect(accessibleText(element('.devices-confirm-yes'))).toBe('Odhlásit');
       expect(element('.devices-confirm-yes').classList).toContain('ui-button--danger');
       expect(text(element('.devices-confirm-no'))).toBe('Zrušit');
-      expect(signOutButton(rows()[1])).toBeNull();
+      const foldedSlot = rows()[1].querySelector('.device-sign-out-slot');
+      expect(foldedSlot?.hasAttribute('inert')).toBe(true);
+      expect(foldedSlot?.getAttribute('aria-hidden')).toBe('true');
       expect(document.activeElement).toBe(element('.devices-confirm-no'));
       http.expectNone({ method: 'DELETE' });
     });

@@ -7,6 +7,7 @@ import {
   signIn,
 } from './donor-session';
 import { expect, test } from './fixtures';
+import { EdgeSample, jumpsOfTheEdges } from './segmented';
 
 interface Move {
   readonly on: string;
@@ -280,6 +281,8 @@ test.describe('Given a donor on a computer', () => {
 const PHONE = { width: 390, height: 844 };
 const DOUBLE_ROOT = '200%';
 const SUBPIXEL_PX = 1;
+const ROW_WATCHED_MS = 1000;
+const ROW_AND_QUESTION = 'row height (left edge) and the question top under it (right edge)';
 
 async function recordSlotMotion(page: Page): Promise<void> {
   await page.evaluate(() => {
@@ -334,7 +337,61 @@ function stopTitleShift(page: Page): Promise<number> {
   });
 }
 
-async function openDevicesOnAPhoneAtDoubleText(page: Page): Promise<void> {
+interface RowSample {
+  readonly at: number;
+  readonly height: number;
+  readonly questionTop: number | null;
+}
+
+interface RowWatch {
+  rowSamples: RowSample[];
+  rowWatched: boolean;
+}
+
+async function rowAndQuestionWhile(
+  page: Page,
+  rowId: string,
+  press: () => Promise<void>,
+): Promise<{ start: [number, number]; frames: EdgeSample[] }> {
+  await page.evaluate(
+    ({ rowId, watchedMs }) => {
+      const watch = window as unknown as RowWatch;
+      watch.rowSamples = [];
+      watch.rowWatched = false;
+      const slot = document.getElementById(rowId);
+      const began = performance.now();
+      const sample = (frameTime: DOMHighResTimeStamp): void => {
+        const row = slot?.querySelector('.device-row')?.getBoundingClientRect();
+        const question = slot?.querySelector('.devices-confirm')?.getBoundingClientRect();
+        watch.rowSamples.push({
+          at: frameTime,
+          height: row?.height ?? 0,
+          questionTop: question === undefined || row === undefined ? null : question.top - row.top,
+        });
+        if (performance.now() - began < watchedMs) {
+          requestAnimationFrame(sample);
+        } else {
+          watch.rowWatched = true;
+        }
+      };
+      requestAnimationFrame(sample);
+    },
+    { rowId, watchedMs: ROW_WATCHED_MS },
+  );
+  await press();
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as RowWatch).rowWatched))
+    .toBe(true);
+  const samples = await page.evaluate(() => (window as unknown as RowWatch).rowSamples);
+  let questionTop = samples.find((sample) => sample.questionTop !== null)?.questionTop ?? 0;
+  const frames = samples.map((sample): EdgeSample => {
+    questionTop = sample.questionTop ?? questionTop;
+    return { at: sample.at, edges: [sample.height, questionTop] };
+  });
+  return { start: frames[0].edges, frames };
+}
+
+async function openDevicesOnAPhone(page: Page, rootSize?: string): Promise<void> {
   await mockDonorApi(page);
   await page.route(
     (url) => url.pathname === '/api/donors/me/devices',
@@ -342,10 +399,47 @@ async function openDevicesOnAPhoneAtDoubleText(page: Page): Promise<void> {
   );
   await signIn(page);
   await page.setViewportSize(PHONE);
-  await page.evaluate((size) => (document.documentElement.style.fontSize = size), DOUBLE_ROOT);
+  if (rootSize !== undefined) {
+    await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
+  }
   await recordSlotMotion(page);
   await openDonorSection(page, 'Údaje a zabezpečení');
 }
+
+function openDevicesOnAPhoneAtDoubleText(page: Page): Promise<void> {
+  return openDevicesOnAPhone(page, DOUBLE_ROOT);
+}
+
+async function expectTheRowAndQuestionNeverToJump(page: Page): Promise<void> {
+  const devices = page.locator('.devices');
+  const rowId = `device-row-${signedInDevices.find((device) => !device.current)?.id}`;
+  const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+
+  const asking = await rowAndQuestionWhile(page, rowId, () =>
+    devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click(),
+  );
+  await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+  expect(jumpsOfTheEdges(asking.start, asking.frames), ROW_AND_QUESTION).toEqual([]);
+
+  const cancelling = await rowAndQuestionWhile(page, rowId, () =>
+    question.getByRole('button', { name: 'Zrušit' }).click(),
+  );
+  await expect(devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' })).toBeFocused();
+  await expect(question).toHaveCount(0);
+  expect(jumpsOfTheEdges(cancelling.start, cancelling.frames), ROW_AND_QUESTION).toEqual([]);
+}
+
+test.describe('Given a donor on a phone', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' });
+
+  test('when they ask to sign out the iPhone and cancel, then in no frame does its row or the question under it jump', async ({
+    page,
+  }) => {
+    await openDevicesOnAPhone(page);
+
+    await expectTheRowAndQuestionNeverToJump(page);
+  });
+});
 
 test.describe('Given a donor on a phone with the text at 200 %', () => {
   test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' });
@@ -385,7 +479,7 @@ test.describe('Given a donor on a phone with the text at 200 %', () => {
 
     const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
     await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
-    await expect(row.locator('.device-sign-out-slot')).toHaveCount(0);
+    await expect(row.locator('.device-sign-out-slot')).toHaveAttribute('inert', '');
     expect(await stopTitleShift(page)).toBeLessThanOrEqual(SUBPIXEL_PX);
 
     await recordSlotMotion(page);
@@ -394,5 +488,13 @@ test.describe('Given a donor on a phone with the text at 200 %', () => {
     await expect(signOut).toBeFocused();
     await expect.poll(() => slotMotion(page)).toContain(rowId);
     expect(new Set(await slotMotion(page))).toEqual(new Set([rowId]));
+  });
+
+  test('when they ask to sign out the iPhone and cancel, then in no frame does its row or the question under it jump', async ({
+    page,
+  }) => {
+    await openDevicesOnAPhoneAtDoubleText(page);
+
+    await expectTheRowAndQuestionNeverToJump(page);
   });
 });

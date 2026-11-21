@@ -94,6 +94,10 @@
 
 .device-sign-out-slot--closing {
   @include motion.row-leave;
+
+  @media (prefers-reduced-motion: reduce) {
+    grid-template-rows: 0fr;
+  }
 }
 
 .device-confirm .devices-confirm-box {

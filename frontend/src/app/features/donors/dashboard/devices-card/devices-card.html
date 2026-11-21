@@ -249,24 +249,27 @@
               >
                 Toto zařízení
               </span>
-            } @else if (confirming() !== device.id) {
+            } @else {
               <span
                 class="device-sign-out-slot"
+                [class.device-sign-out-slot--closing]="confirming() === device.id"
                 [class.device-sign-out-slot--returning]="returning() === device.id"
-                appDisclosure
-                animate.leave="device-sign-out-slot--closing"
+                [attr.inert]="confirming() === device.id ? '' : null"
+                [attr.aria-hidden]="confirming() === device.id ? 'true' : null"
               >
-                <button
-                  appNeedsConnection
-                  type="button"
-                  class="ui-button ui-button--danger-soft device-sign-out"
-                  [disabled]="signingOut() !== null"
-                  [id]="signOutButtonId(device)"
-                  [attr.aria-label]="signOutLabel(device)"
-                  (click)="askToSignOut(device)"
-                >
-                  <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
-                </button>
+                <span>
+                  <button
+                    appNeedsConnection
+                    type="button"
+                    class="ui-button ui-button--danger-soft device-sign-out"
+                    [disabled]="signingOut() !== null"
+                    [id]="signOutButtonId(device)"
+                    [attr.aria-label]="signOutLabel(device)"
+                    (click)="askToSignOut(device)"
+                  >
+                    <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
+                  </button>
+                </span>
               </span>
             }
           </span>
