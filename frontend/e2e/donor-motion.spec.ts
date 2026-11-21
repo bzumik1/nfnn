@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import {
   longUnusedDevices,
   mockDonorApi,
@@ -343,7 +343,7 @@ interface RowSample {
   readonly at: number;
   readonly height: number;
   readonly questionTop: number | null;
-  readonly scrollY: number;
+  readonly scrolled: number;
 }
 
 interface RowWatch {
@@ -363,6 +363,13 @@ async function rowAndQuestionWhile(
       watch.rowWatched = false;
       const slot = document.getElementById(rowId);
       const began = performance.now();
+      const scrolledAbove = (element: Element | null): number => {
+        let scrolled = 0;
+        for (let parent = element?.parentElement; parent; parent = parent.parentElement) {
+          scrolled += parent.scrollTop;
+        }
+        return scrolled;
+      };
       const sample = (frameTime: DOMHighResTimeStamp): void => {
         const row = slot?.querySelector('.device-row')?.getBoundingClientRect();
         const question = slot?.querySelector('.devices-confirm')?.getBoundingClientRect();
@@ -370,7 +377,7 @@ async function rowAndQuestionWhile(
           at: frameTime,
           height: row?.height ?? 0,
           questionTop: question === undefined || row === undefined ? null : question.top - row.top,
-          scrollY: window.scrollY,
+          scrolled: scrolledAbove(slot),
         });
         if (performance.now() - began < watchedMs) {
           requestAnimationFrame(sample);
@@ -392,7 +399,34 @@ async function rowAndQuestionWhile(
     questionTop = sample.questionTop ?? questionTop;
     return { at: sample.at, edges: [sample.height, questionTop] };
   });
-  return { start: frames[0].edges, frames, scrolls: samples.map((sample) => sample.scrollY) };
+  return { start: frames[0].edges, frames, scrolls: samples.map((sample) => sample.scrolled) };
+}
+
+async function centreInTheSheet(element: Locator): Promise<void> {
+  await element.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    element.closest('.dialog-panel')?.scrollBy({
+      top: box.top + box.height / 2 - window.innerHeight / 2,
+      behavior: 'instant',
+    });
+  });
+}
+
+async function sheetRoomAround(
+  element: Locator,
+): Promise<{ above: number; below: number; scrolled: number }> {
+  return element.evaluate((element) => {
+    const sheet = element.closest('.dialog-panel');
+    let scrolled = 0;
+    for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+      scrolled += parent.scrollTop;
+    }
+    return {
+      above: sheet?.scrollTop ?? 0,
+      below: sheet === null ? 0 : sheet.scrollHeight - sheet.clientHeight - sheet.scrollTop,
+      scrolled,
+    };
+  });
 }
 
 function largestStep(values: number[]): number {
@@ -527,13 +561,18 @@ test.describe('Given a donor on a small phone with the largest text', () => {
 
     await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
     await expect(cancel).toBeFocused();
-    await question.evaluate((element) => {
-      const box = element.getBoundingClientRect();
-      window.scrollBy({
-        top: box.top + box.height / 2 - window.innerHeight / 2,
-        behavior: 'instant',
-      });
-    });
+    await expect
+      .poll(() =>
+        question.evaluate(
+          (element) =>
+            element
+              .closest('li')
+              ?.getAnimations({ subtree: true })
+              .filter((animation) => animation.playState === 'running').length,
+        ),
+      )
+      .toBe(0);
+    await centreInTheSheet(question);
     await expect
       .poll(() =>
         question.evaluate((element) => {
@@ -542,13 +581,11 @@ test.describe('Given a donor on a small phone with the largest text', () => {
         }),
       )
       .toBeLessThanOrEqual(SUBPIXEL_PX);
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollHeight - window.innerHeight - window.scrollY,
-      ),
-    ).toBeGreaterThan(SUBPIXEL_PX);
+    const room = await sheetRoomAround(question);
+    expect(room.above).toBeGreaterThan(SUBPIXEL_PX);
+    expect(room.below).toBeGreaterThan(SUBPIXEL_PX);
 
-    const scrolledBeforeCancel = await page.evaluate(() => window.scrollY);
+    const scrolledBeforeCancel = room.scrolled;
     const cancelling = await rowAndQuestionWhile(page, rowId, () => page.keyboard.press('Enter'));
 
     await expect(devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' })).toBeFocused();
