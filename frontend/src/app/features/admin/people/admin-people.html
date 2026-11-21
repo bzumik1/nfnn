@@ -57,7 +57,14 @@
                         </li>
                       }
                       @if (member.onBoard) {
-                        <li class="ui-badge ui-badge--success">{{ boardLabel(member) }}</li>
+                        <li class="person-board">
+                          <span class="ui-badge ui-badge--success" i18n="@@admin.people.badge.board"
+                            >Ve správní radě</span
+                          >
+                          @if (member.boardNote; as note) {
+                            &ngsp;<span class="person-board-note">({{ note }})</span>
+                          }
+                        </li>
                       }
                       @if (signs(member)) {
                         <li class="ui-badge ui-badge--success" i18n="@@admin.people.badge.receipts">
