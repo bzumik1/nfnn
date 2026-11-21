@@ -84,6 +84,25 @@ describe('Given a phone whose on-screen keyboard shortens the visual viewport', 
     });
   });
 
+  it('when the focus leaves a button, as when the page that held it goes, then nothing typed means nothing to measure, so the screen is not laid out for it', async () => {
+    button.focus();
+    let measured = 0;
+    const height = viewport.height;
+    Object.defineProperty(viewport, 'height', {
+      configurable: true,
+      get: () => {
+        measured++;
+        return height;
+      },
+    });
+
+    button.blur();
+    await Promise.resolve();
+
+    expect(measured).toBe(0);
+    expect(keyboard.isOpen()).toBe(false);
+  });
+
   it('when a button has the focus and the visible part shrinks, as when the browser shows a bar, then no keyboard is assumed', () => {
     button.focus();
 
