@@ -4,7 +4,9 @@ import {
   RETIMED_WITHIN_MS,
   STEADY_FRAME_LONGEST_MS,
   STEADY_FRAME_SHORTEST_MS,
+  STEADY_GAPS_IN_MOTION,
   retimingOf,
+  steadyFrameInMotion,
   steadyFrameMs,
 } from './frame-pace';
 
@@ -77,5 +79,33 @@ describe('Given a step whose motion has begun', () => {
     expect(
       retimingOf({ gapMs: 80, steadyMs: steady, shownMs: 16, shiftedMs: RETIMED_AT_MOST_MS }),
     ).toBe(0);
+  });
+});
+
+describe('Given the steady pace of the frames before a step and the gaps of the frames its motion has drawn so far', () => {
+  const before = 16.7;
+
+  it('when the motion has drawn fewer gaps than its window holds, then the steady frame is the pace before the step', () => {
+    expect(steadyFrameInMotion(before, Array(STEADY_GAPS_IN_MOTION - 1).fill(33))).toBe(before);
+  });
+
+  it('when the motion has drawn three gaps of 33 ms after a pace of 16.7 ms before the step, then the steady frame is the 33 ms the page runs at', () => {
+    expect(steadyFrameInMotion(before, [33, 33, 33])).toBe(33);
+  });
+
+  it('when one hitch lies among the last three gaps, then the steady frame is their median, not the hitch', () => {
+    expect(steadyFrameInMotion(before, [16.7, 16.7, 50])).toBe(16.7);
+  });
+
+  it('when earlier gaps of the motion were slow, then only the last three count', () => {
+    expect(steadyFrameInMotion(before, [33, 33, 33, 16.7, 16.7, 16.7])).toBe(16.7);
+  });
+
+  it('when the motion runs faster than the pace before the step, then the steady frame stays the pace before the step', () => {
+    expect(steadyFrameInMotion(before, [8.3, 8.3, 8.3])).toBe(before);
+  });
+
+  it('when the motion runs slower than a slow device draws, then the steady frame is the longest it may be', () => {
+    expect(steadyFrameInMotion(before, [80, 90, 100])).toBe(STEADY_FRAME_LONGEST_MS);
   });
 });

@@ -10,6 +10,7 @@ import {
   withInMemoryScrolling,
 } from '@angular/router';
 import { CompactLayout } from '../layout/compact-layout';
+import { RETIMED_WITHIN_MS } from './frame-pace';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from './back-target';
 import { PagePlacement } from './page-placement';
 import { ACCOUNT_RETURNS_KEY } from './page-transitions';
@@ -2236,7 +2237,7 @@ describe('Given the motions of a step that a browser draws further along than th
     const { view, draw } = framesOf(timeline);
     retimeLateFrames(view, {
       motions: motions as unknown as Animation[],
-      steadyMs: 16,
+      steadyBeforeMs: 16,
       withinMs: 75,
       goesOn: () => true,
     });
@@ -2256,5 +2257,38 @@ describe('Given the motions of a step that a browser draws further along than th
       .slice(1)
       .forEach((current, frame) => expect(current).toBeGreaterThanOrEqual(shown[frame]));
     expect(new Set(motions.map((motion) => motion.startTime)).size).toBe(1);
+  });
+
+  function shiftsOver(gaps: readonly number[], steadyBeforeMs: number): number[] {
+    const timeline = { at: 5000 };
+    const motions = motionsOn(timeline, 2);
+    const { view, draw } = framesOf(timeline);
+    retimeLateFrames(view, {
+      motions: motions as unknown as Animation[],
+      steadyBeforeMs,
+      withinMs: RETIMED_WITHIN_MS,
+      goesOn: () => true,
+    });
+    let at = 5000;
+    let startTime = motions[0].startTime!;
+    return gaps.map((gap) => {
+      at += gap;
+      draw(at, at);
+      const shift = motions[0].startTime! - startTime;
+      startTime = motions[0].startTime!;
+      return shift;
+    });
+  }
+
+  it('when the page draws at a steady 32 ms after a pace of 16 ms before the step, then once three of its frames are drawn no frame is moved later any more, so a steady slow pace does not spend the cap', () => {
+    expect(shiftsOver([32, 32, 32, 32, 32], 16)).toEqual([16, 16, 16, 0, 0]);
+  });
+
+  it('when two frames of 48 ms come in a row on a page that draws every 16 ms, then both are moved later', () => {
+    expect(shiftsOver([16, 16, 16, 48, 48], 16)).toEqual([0, 0, 0, 32, 32]);
+  });
+
+  it('when a frame is judged, then its own gap is not part of the pace it is judged against', () => {
+    expect(shiftsOver([16, 16, 16, 32, 32, 32], 16)).toEqual([0, 0, 0, 16, 16, 0]);
   });
 });

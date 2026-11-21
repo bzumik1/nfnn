@@ -5,6 +5,7 @@ import { viewBand, type ViewBand } from '../src/app/core/layout/focus-in-view';
 import {
   LATE_FRAME_PAST_THE_STEADY_ONE,
   RETIMED_WITHIN_MS,
+  steadyFrameInMotion,
   steadyFrameMs,
 } from '../src/app/core/navigation/frame-pace';
 import { stepBack } from './app-history';
@@ -76,6 +77,24 @@ interface Motion {
   readonly startTime: number | null;
 }
 
+interface LongFrame {
+  readonly startTime: number;
+  readonly durationMs: number;
+  readonly blockingMs: number;
+  readonly styleAndLayoutMs: number;
+  readonly scripts: { readonly source: string; readonly durationMs: number }[];
+}
+
+interface LongFrameEntry extends PerformanceEntry {
+  readonly blockingDuration: number;
+  readonly styleAndLayoutStart: number;
+  readonly scripts: readonly {
+    readonly sourceURL: string;
+    readonly invoker: string;
+    readonly duration: number;
+  }[];
+}
+
 interface HeadTitle {
   readonly text: string;
   readonly sheetHead: boolean;
@@ -93,6 +112,7 @@ interface StepProbe {
   placedAt: number | null;
   loadedCode: boolean;
   busyFrameAt: number | null;
+  longFrames: LongFrame[] | null;
   steepestPerMs: number;
   curve: number[] | null;
   durationMs: number;
@@ -440,6 +460,7 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
         placedAt: null,
         loadedCode: false,
         busyFrameAt: null,
+        longFrames: null,
         steepestPerMs: steepest / durationMs,
         curve: points?.length === 4 ? [...points] : null,
         durationMs,
@@ -507,6 +528,36 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
       const fastMs = Number.parseFloat(fastText) * (fastText.endsWith('ms') ? 1 : 1000);
       window.nfnnStepProbe = probe;
       const started = performance.now();
+      const longFrames = PerformanceObserver.supportedEntryTypes.includes('long-animation-frame')
+        ? new PerformanceObserver((list) => {
+            const sourceOf = (url: string, invoker: string): string => {
+              try {
+                return url === '' ? invoker : new URL(url).pathname;
+              } catch {
+                return invoker;
+              }
+            };
+            for (const entry of list.getEntries() as LongFrameEntry[]) {
+              probe.longFrames?.push({
+                startTime: entry.startTime,
+                durationMs: entry.duration,
+                blockingMs: entry.blockingDuration,
+                styleAndLayoutMs:
+                  entry.styleAndLayoutStart > 0
+                    ? entry.startTime + entry.duration - entry.styleAndLayoutStart
+                    : 0,
+                scripts: entry.scripts.map((script) => ({
+                  source: sourceOf(script.sourceURL, script.invoker),
+                  durationMs: script.duration,
+                })),
+              });
+            }
+          })
+        : null;
+      if (longFrames !== null) {
+        probe.longFrames = [];
+        longFrames.observe({ type: 'long-animation-frame' });
+      }
       const seeLayers = (): void => {
         const under = document.querySelector('.page-transition .page-transition__page--under');
         probe.layered ||= document.querySelector('.page-transition') !== null;
@@ -688,6 +739,7 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
         if ((framesAfter > 2 && followed) || (goneAt === null && now - started > 5000)) {
           placed.disconnect();
           layers.disconnect();
+          longFrames?.disconnect();
           probe.done = true;
           return;
         }
@@ -853,16 +905,27 @@ function expectSteadyFirstHalf(
   expect(motion.curve, `no curve is known for the motion of the ${what} page`).not.toBeNull();
   const curve = motion.curve!;
   const durationMs = motion.durationMs;
-  const steadyMs = steadyFrameOf(probe);
+  const steadyBeforeMs = steadyFrameOf(probe);
+  const released = moving.findIndex((frame) => frame.motion?.startTime != null);
+  const gapAt = (at: number): number => moving[at].at - moving[at - 1].at;
+  const steadyAt = (at: number): number =>
+    steadyFrameInMotion(
+      steadyBeforeMs,
+      released < 0
+        ? []
+        : Array.from({ length: Math.max(0, at - released - 1) }, (_, index) =>
+            gapAt(released + 1 + index),
+          ),
+    );
   const onePixel = 1 / way;
   const shares = moving.map((frame) => Math.abs(frame.offset! - from) / way);
-  const firstStart = moving.find((frame) => frame.motion?.startTime != null)?.motion?.startTime;
+  const firstStart = moving[released]?.motion?.startTime;
   const paces = moving
     .slice(1)
-    .map((frame, at) => {
+    .map((frame, before) => {
       const moved = frame.motion?.startTime;
       const shifted = moved == null || firstStart == null ? '?' : (moved - firstStart).toFixed(0);
-      return `${(frame.at - moving[at].at).toFixed(0)}/${shifted}`;
+      return `${gapAt(before + 1).toFixed(0)}/${shifted}/${steadyAt(before + 1).toFixed(1)}`;
     })
     .join(' ');
   for (let at = 1; at < shares.length; at++) {
@@ -875,12 +938,37 @@ function expectSteadyFirstHalf(
     if (shownMs >= Math.min(RETIMED_WITHIN_MS, durationMs / 2)) {
       continue;
     }
+    const steadyMs = steadyAt(at);
     const oneSteadyFrame = springShareAt(curve, (shownMs + steadyMs) / durationMs) - before;
     expect(
       shares[at] - before,
-      `share of its way the ${what} page travelled in one frame at ${Math.round(shownMs)} ms of its motion, against one steady frame of ${steadyMs.toFixed(1)} ms (frame gap/start moved so far, ms: ${paces})`,
+      `share of its way the ${what} page travelled in one frame at ${Math.round(shownMs)} ms of its motion, against one steady frame of ${steadyMs.toFixed(1)} ms (${steadyBeforeMs.toFixed(1)} ms before the step; frame gap/start moved so far/steady frame, ms: ${paces})`,
     ).toBeLessThanOrEqual(LATE_FRAME_PAST_THE_STEADY_ONE * oneSteadyFrame + onePixel);
   }
+}
+
+function longFramesUntilPlaced(probe: StepProbe): string {
+  if (probe.longFrames === null) {
+    return 'Long Animation Frames are unavailable in this browser';
+  }
+  const from = probe.tappedAt!;
+  const until = probe.placedAt!;
+  const seen = probe.longFrames.filter(
+    (frame) => frame.startTime + frame.durationMs >= from && frame.startTime <= until,
+  );
+  if (seen.length === 0) {
+    return 'no Long Animation Frame between the tap and the placing';
+  }
+  const described = seen.map((frame) => {
+    const bySource = new Map<string, number>();
+    frame.scripts.forEach((script) =>
+      bySource.set(script.source, (bySource.get(script.source) ?? 0) + script.durationMs),
+    );
+    const scripts =
+      [...bySource].map(([source, ms]) => `${source} ${ms.toFixed(0)} ms`).join(', ') || 'none';
+    return `at ${(frame.startTime - from).toFixed(0)} ms for ${frame.durationMs.toFixed(0)} ms (scripts by source: ${scripts}; style and layout ${frame.styleAndLayoutMs.toFixed(0)} ms; blocking ${frame.blockingMs.toFixed(0)} ms)`;
+  });
+  return `Long Animation Frames between the tap and the placing: ${described.join('; ')}`;
 }
 
 function expectWithinTheBudget(probe: StepProbe, restingAt?: number): void {
@@ -893,7 +981,7 @@ function expectWithinTheBudget(probe: StepProbe, restingAt?: number): void {
     : PLACED_AFTER_THE_TAP_WITHIN_MS;
   expect(
     probe.placedAt! - tappedAt!,
-    `ms from the tap until both copies were placed${probe.loadedCode ? ', loading the code of the page' : ''}`,
+    `ms from the tap until both copies were placed${probe.loadedCode ? ', loading the code of the page' : ''}; ${longFramesUntilPlaced(probe)}`,
   ).toBeLessThanOrEqual(placedWithin);
   const moved = firstMovedFrame(moving, restingAt ?? moving[0].offset!);
   expect(moved, 'the page never moved').not.toBeNull();

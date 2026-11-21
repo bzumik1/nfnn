@@ -38,6 +38,7 @@ import {
   RETIMED_WITHIN_MS,
   retimingOf,
   STEADY_FRAMES_KEPT,
+  steadyFrameInMotion,
   steadyFrameMs,
 } from './frame-pace';
 
@@ -514,7 +515,7 @@ export class PageTransitions {
       released = true;
       retimeLateFrames(view, {
         motions: startHeldMotions(running.overlay, at),
-        steadyMs: this.steadyFrameMs(),
+        steadyBeforeMs: this.steadyFrameMs(),
         withinMs: RETIMED_WITHIN_MS,
         goesOn,
       });
@@ -1092,17 +1093,18 @@ export function nextFrame(view: Window, then: (now: number) => void): void {
 
 export interface RetimedMotions {
   readonly motions: readonly Animation[];
-  readonly steadyMs: number;
+  readonly steadyBeforeMs: number;
   readonly withinMs: number;
   readonly goesOn: () => boolean;
 }
 
 export function retimeLateFrames(
   view: Window,
-  { motions, steadyMs, withinMs, goesOn }: RetimedMotions,
+  { motions, steadyBeforeMs, withinMs, goesOn }: RetimedMotions,
 ): void {
   let shownMs = 0;
   let shiftedMs = 0;
+  const gapsInMotion: number[] = [];
   const frame = (): void => {
     const travelledMs = furthestOf(motions);
     if (
@@ -1113,7 +1115,10 @@ export function retimeLateFrames(
     ) {
       return;
     }
-    const shift = retimingOf({ gapMs: travelledMs - shownMs, steadyMs, shownMs, shiftedMs });
+    const gapMs = travelledMs - shownMs;
+    const steadyMs = steadyFrameInMotion(steadyBeforeMs, gapsInMotion);
+    const shift = retimingOf({ gapMs, steadyMs, shownMs, shiftedMs });
+    gapsInMotion.push(gapMs);
     if (shift > 0) {
       shiftedMs += shift;
       motions.forEach((motion) => {
