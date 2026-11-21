@@ -293,6 +293,7 @@ interface FrameRecorder {
 
 const APPEARANCE_ICONS = '.account-appearance .appearance-icon';
 const QUIET_FRAMES_BEFORE_SWITCH = 2;
+const SHORTEST_VISIBLE_FADE_SECONDS = 0.1;
 
 async function framesAroundSwitch(page: Page, press: () => Promise<void>): Promise<DrawnFrame[]> {
   for (const selector of new Set(COLOURS_OF_THE_SWITCH.map(([measured]) => measured))) {
@@ -382,7 +383,7 @@ function fadingIcons(frames: DrawnFrame[]): number[] {
 async function iconsThatFaded(page: Page): Promise<Omit<IconFade, 'seconds'>[]> {
   const fades = await page.evaluate(() => (window as unknown as FrameRecorder).iconFades);
   return fades
-    .filter((fade) => fade.seconds > 0)
+    .filter((fade) => fade.seconds >= SHORTEST_VISIBLE_FADE_SECONDS)
     .map(({ icon, endedAtOpacity }) => ({ icon, endedAtOpacity }))
     .sort((first, second) => first.icon - second.icon);
 }
@@ -500,6 +501,7 @@ test.describe('Given a signed-in donor on a light device who asked the system fo
     expect(framesBetween(frames)).toEqual([]);
     expect(frames[0].icons).toHaveLength(3);
     expect(fadingIcons(frames)).toEqual([]);
+    expect(await iconsThatFaded(page)).toEqual([]);
   });
 });
 
