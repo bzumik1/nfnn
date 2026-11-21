@@ -67,6 +67,12 @@ interface Frame {
   readonly titles: string[];
   readonly heads: string[];
   readonly live: string[];
+  readonly motion: Motion | null;
+}
+
+interface Motion {
+  readonly durationMs: number;
+  readonly curve: number[] | null;
 }
 
 interface HeadTitle {
@@ -472,6 +478,29 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
         );
       const pageHeading = (): string =>
         oneLine(document.querySelector('app-root .admin-page h1')?.textContent ?? null);
+      const curveOf = (easing: string): number[] | null => {
+        const named = curves[easing];
+        if (named !== undefined) {
+          return [...named];
+        }
+        const listed = /^cubic-bezier\((.+)\)$/
+          .exec(easing)?.[1]
+          .split(',')
+          .map((point) => Number(point.trim()));
+        return listed?.length === 4 && listed.every(Number.isFinite) ? listed : null;
+      };
+      const motionOf = (page: Element | null): Motion | null => {
+        const animation = page?.getAnimations?.()[0];
+        const timing = animation?.effect?.getComputedTiming();
+        if (animation === undefined || timing === undefined) {
+          return null;
+        }
+        const keyframed = 'animationName' in animation;
+        return {
+          durationMs: Number(timing.duration),
+          curve: keyframed ? probe.curve : curveOf(String(timing.easing ?? '')),
+        };
+      };
       const fastText = theme.getPropertyValue('--duration-fast').trim();
       const fastMs = Number.parseFloat(fastText) * (fastText.endsWith('ms') ? 1 : 1000);
       window.nfnnStepProbe = probe;
@@ -637,6 +666,7 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
           ),
           heads: titles.filter((title) => title.sheetHead).map((title) => title.text),
           live: overlay === null ? liveTitles() : [],
+          motion: motionOf(over),
         });
         if (under !== null && probe.under === null) {
           probe.under = (under.textContent ?? '').replace(/\s+/g, ' ');
@@ -813,8 +843,13 @@ function expectSteadyFirstHalf(
   if (!probe.paced || moving.length === 0) {
     return;
   }
-  expect(probe.curve, 'the theme names no curve for the page').not.toBeNull();
-  const curve = probe.curve!;
+  const motion = moving.find((frame) => frame.motion?.curve != null)?.motion ?? {
+    durationMs: probe.durationMs,
+    curve: probe.curve,
+  };
+  expect(motion.curve, `no curve is known for the motion of the ${what} page`).not.toBeNull();
+  const curve = motion.curve!;
+  const durationMs = motion.durationMs;
   const steadyMs = steadyFrameOf(probe);
   const onePixel = 1 / way;
   const shares = moving.map((frame) => Math.abs(frame.offset! - from) / way);
@@ -824,11 +859,11 @@ function expectSteadyFirstHalf(
       shares[at],
       `the ${what} page went back from ${(before * 100).toFixed(1)} % of its way`,
     ).toBeGreaterThanOrEqual(before - onePixel);
-    const shownMs = springFractionAt(curve, before) * probe.durationMs;
-    if (shownMs >= RETIMED_WITHIN_MS) {
+    const shownMs = springFractionAt(curve, before) * durationMs;
+    if (shownMs >= Math.min(RETIMED_WITHIN_MS, durationMs / 2)) {
       continue;
     }
-    const oneSteadyFrame = springShareAt(curve, (shownMs + steadyMs) / probe.durationMs) - before;
+    const oneSteadyFrame = springShareAt(curve, (shownMs + steadyMs) / durationMs) - before;
     expect(
       shares[at] - before,
       `share of its way the ${what} page travelled in one frame at ${Math.round(shownMs)} ms of its motion, against one steady frame of ${steadyMs.toFixed(1)} ms`,

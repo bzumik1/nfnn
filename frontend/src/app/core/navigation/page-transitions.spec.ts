@@ -108,6 +108,121 @@ describe('Given a phone that animates and a page of the news with an article to 
   });
 });
 
+interface HeldMotion {
+  pending: boolean;
+  startTime: number | null;
+  finished: Promise<unknown>;
+}
+
+function watchHeldMotions(): Map<Element, HeldMotion> {
+  const motions = new Map<Element, HeldMotion>();
+  const motionOf = (element: Element): HeldMotion => {
+    if (!motions.has(element)) {
+      motions.set(element, {
+        pending: true,
+        startTime: null,
+        finished: new Promise(() => undefined),
+      });
+    }
+    return motions.get(element)!;
+  };
+  const ownAnimations = Object.getOwnPropertyDescriptor(Element.prototype, 'getAnimations');
+  Object.defineProperty(Element.prototype, 'getAnimations', {
+    configurable: true,
+    value(this: Element, options?: GetAnimationsOptions) {
+      const elements = options?.subtree ? [this, ...this.querySelectorAll('*')] : [this];
+      return elements
+        .filter((element) => element.closest(`.${PAGE_TRANSITION_CLASS}`) !== null)
+        .map(motionOf);
+    },
+  });
+  onTestFinished(() => {
+    if (ownAnimations === undefined) {
+      delete (Element.prototype as { getAnimations?: unknown }).getAnimations;
+    } else {
+      Object.defineProperty(Element.prototype, 'getAnimations', ownAnimations);
+    }
+  });
+  return motions;
+}
+
+function framesOnRequest(): (at: number) => void {
+  const frames: FrameRequestCallback[] = [];
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
+    frames.push(frame);
+    return frames.length;
+  });
+  onTestFinished(() => vi.mocked(window.requestAnimationFrame).mockRestore());
+  return (at) => frames.splice(0).forEach((frame) => frame(at));
+}
+
+function moving(): Element | null {
+  return document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
+}
+describe('Given a phone that animates, whose app has drawn frames at a steady pace since it started and no press since', () => {
+  let router: Router;
+  let layer: HTMLElement;
+
+  beforeEach(async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
+    });
+    document.documentElement.style.setProperty('--duration-page', '300ms');
+    layer = document.createElement('div');
+    layer.className = PAGE_LAYER_CLASS;
+    layer.textContent = 'Aktuality';
+    document.body.append(layer);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: 'aktuality', component: Blank },
+          { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
+        ]),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+    layer.remove();
+    document.documentElement.style.removeProperty('--duration-page');
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
+  it('when a frame in the first half of a step back comes long, then the frames drawn since the app started give the steady pace it is measured against', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    router = TestBed.inject(Router);
+    TestBed.inject(PageTransitions);
+    for (let frame = 0; frame <= 10; frame++) {
+      draw(1000 + frame * 16);
+    }
+    await router.navigateByUrl('/aktuality');
+    await router.navigateByUrl('/aktuality/clanek');
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+    motions.clear();
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    for (let waited = 0; moving() === null && waited < PAGE_TRANSITION_LONGEST_MS; waited += 5) {
+      await vi.advanceTimersByTimeAsync(5);
+    }
+    draw(5000);
+    draw(5016);
+    draw(5032);
+    draw(5112);
+
+    expect(motions.size).toBeGreaterThan(1);
+    expect(new Set([...motions.values()].map((motion) => motion.startTime))).toEqual(
+      new Set([5016 + 80 - 16]),
+    );
+  });
+});
+
 describe('Given a phone that animates, an article opened from the news, and the news placed again on the way back', () => {
   let router: Router;
   let layer: HTMLElement;
@@ -192,58 +307,6 @@ describe('Given a phone that animates, an article opened from the news, and the 
 
     expect(held).toEqual([true]);
   });
-
-  interface HeldMotion {
-    pending: boolean;
-    startTime: number | null;
-    finished: Promise<unknown>;
-  }
-
-  function watchHeldMotions(): Map<Element, HeldMotion> {
-    const motions = new Map<Element, HeldMotion>();
-    const motionOf = (element: Element): HeldMotion => {
-      if (!motions.has(element)) {
-        motions.set(element, {
-          pending: true,
-          startTime: null,
-          finished: new Promise(() => undefined),
-        });
-      }
-      return motions.get(element)!;
-    };
-    const ownAnimations = Object.getOwnPropertyDescriptor(Element.prototype, 'getAnimations');
-    Object.defineProperty(Element.prototype, 'getAnimations', {
-      configurable: true,
-      value(this: Element, options?: GetAnimationsOptions) {
-        const elements = options?.subtree ? [this, ...this.querySelectorAll('*')] : [this];
-        return elements
-          .filter((element) => element.closest(`.${PAGE_TRANSITION_CLASS}`) !== null)
-          .map(motionOf);
-      },
-    });
-    onTestFinished(() => {
-      if (ownAnimations === undefined) {
-        delete (Element.prototype as { getAnimations?: unknown }).getAnimations;
-      } else {
-        Object.defineProperty(Element.prototype, 'getAnimations', ownAnimations);
-      }
-    });
-    return motions;
-  }
-
-  function framesOnRequest(): (at: number) => void {
-    const frames: FrameRequestCallback[] = [];
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
-      frames.push(frame);
-      return frames.length;
-    });
-    onTestFinished(() => vi.mocked(window.requestAnimationFrame).mockRestore());
-    return (at) => frames.splice(0).forEach((frame) => frame(at));
-  }
-
-  function moving(): Element | null {
-    return document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
-  }
 
   async function holdBegun(): Promise<void> {
     for (let waited = 0; moving() === null && waited < PAGE_TRANSITION_LONGEST_MS; waited += 5) {

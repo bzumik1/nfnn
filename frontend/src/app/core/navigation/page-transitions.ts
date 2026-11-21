@@ -167,7 +167,7 @@ export class PageTransitions {
   finishing: number | null = null;
   private titleFrame: number | null = null;
   private readonly frameGaps: number[] = [];
-  private sampling = false;
+  private samplingRound = 0;
 
   get running(): Running | null {
     return untracked(this.step);
@@ -194,6 +194,7 @@ export class PageTransitions {
     PACE_SAMPLED_ON.forEach((type) =>
       this.document.addEventListener(type, sample, { capture: true, passive: true }),
     );
+    this.sampleFramePace();
     inject(DestroyRef).onDestroy(() => {
       events.unsubscribe();
       this.document.removeEventListener('visibilitychange', hidden);
@@ -551,7 +552,6 @@ export class PageTransitions {
   private sampleFramePace(): void {
     const view = this.document.defaultView;
     if (
-      this.sampling ||
       this.running !== null ||
       view === null ||
       typeof view.requestAnimationFrame !== 'function' ||
@@ -560,12 +560,11 @@ export class PageTransitions {
     ) {
       return;
     }
-    this.sampling = true;
+    const round = ++this.samplingRound;
     let previousAt = Number.NaN;
     let frames = 0;
     const frame = (at: number): void => {
-      if (this.running !== null || frames > STEADY_FRAMES_KEPT) {
-        this.sampling = false;
+      if (round !== this.samplingRound || this.running !== null || frames > STEADY_FRAMES_KEPT) {
         return;
       }
       this.keepFrameGap(at - previousAt);
