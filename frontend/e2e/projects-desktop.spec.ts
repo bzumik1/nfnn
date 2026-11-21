@@ -147,6 +147,7 @@ test.describe('Given a visitor on the Pomáháme tab on a computer', () => {
     }) => {
       await openStories(page, '/projekty?rok=vse', width);
       const strip = yearSection(page, 2023).locator('ul.strip');
+      await strip.scrollIntoViewIfNeeded();
       const frame = await boxOf(strip);
       const links = strip.locator('.tile-link');
       const cut = await links.evaluateAll(
