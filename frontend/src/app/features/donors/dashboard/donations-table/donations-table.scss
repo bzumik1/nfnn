@@ -9,7 +9,6 @@
 table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
 }
 
 .column-date {
@@ -89,6 +88,7 @@ td.receipt {
 td.receipt .receipt-note {
   display: inline-block;
   margin-top: calc(var(--space-3-5) - var(--space-2));
+  white-space: nowrap;
 }
 
 .purpose {
@@ -247,6 +247,7 @@ td .receipt-diagnostics {
 
   td.receipt .receipt-note {
     margin-top: 0;
+    white-space: normal;
   }
 
   td.receipt.is-empty,
