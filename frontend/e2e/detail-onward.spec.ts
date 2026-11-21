@@ -165,7 +165,7 @@ test.describe('Given a visitor reading a story on a computer 1280 px wide', () =
   }) => {
     await page.goto(`/projekty/${stories[0].slug}`);
     const side = page.getByRole('complementary', { name: /^Další příběhy z\s+roku 2026$/ });
-    const tiles = side.locator('app-story-tile');
+    const tiles = side.locator('app-story-tile .tile');
     await settled(page, tiles, 3);
 
     const boxes = await tiles.evaluateAll((elements) =>
