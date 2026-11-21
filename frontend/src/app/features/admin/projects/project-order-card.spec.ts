@@ -72,6 +72,7 @@ describe('Given an administrator choosing the order of the projects', () => {
     await settle();
 
     expect(text(query('.ui-load-state--error'))).toContain('Řazení se nepodařilo načíst.');
+    expect(fixture.nativeElement.querySelector('[role="alert"] button')).toBeNull();
     expect(text(query('.ui-load-state--error button'))).toBe('Zkusit znovu');
   });
 
@@ -207,13 +208,11 @@ describe('Given an administrator choosing the order of the projects', () => {
     expect(changes).toEqual([]);
   });
 
-  it('when the order cannot be loaded, then an alert offers a retry that asks again', async () => {
+  it('when the order cannot be loaded, then an alert says only what failed and a retry beside it asks again', async () => {
     http.expectOne(ORDER_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle();
 
-    expect(text(query('[role="alert"]:not(:empty)'))).toBe(
-      'Řazení se nepodařilo načíst. Zkusit znovu',
-    );
+    expect(text(query('[role="alert"]:not(:empty)'))).toBe('Řazení se nepodařilo načíst.');
     query<HTMLButtonElement>('.ui-load-state--error button').click();
     await settle();
     await loaded('YEAR');

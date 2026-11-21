@@ -240,9 +240,18 @@ describe('Given an administrator on the bank payments page', () => {
     http.expectOne(`${PAYMENTS_URL}?${FIRST_PAGE}`).flush({}, { status: 500, statusText: 'Error' });
     await settle();
 
-    expect(text('[role="alert"]:not(:empty)')).toContain('Platby se nepodařilo načíst.');
+    const alert = fixture.nativeElement.querySelector('[role="alert"]:not(:empty)') as HTMLElement;
+    expect(rowText(alert)).toBe('Platby se nepodařilo načíst.');
+    const retry = fixture.nativeElement.querySelector(
+      'app-load-failure button',
+    ) as HTMLButtonElement;
+    expect(alert.contains(retry)).toBe(false);
 
-    button('Zkusit znovu').click();
+    retry.focus();
+    retry.click();
+    await settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
     await listResponds(paymentList([]));
 
     expect(text('.ui-card__empty')).toContain('Všechny platby z banky jsou přiřazené.');

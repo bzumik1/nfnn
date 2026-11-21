@@ -157,6 +157,7 @@
     class="ui-card payments-card"
     [class.payments-card--rows]="rows()"
     aria-labelledby="payments-title"
+    [attr.aria-busy]="loadView.busy() ? 'true' : null"
   >
     <h2 #listTitle id="payments-title" class="ui-card__title" tabindex="-1">
       @if (filter() === 'unpaired') {
@@ -167,24 +168,30 @@
         <ng-container i18n="@@admin.payments.list.pairedTitle">Přiřazené platby</ng-container>
       }
     </h2>
-    @switch (state()) {
+    @switch (loadView.state()) {
       @case ('loading') {
-        <p class="ui-load-state ui-load-state--inset" role="status" i18n="@@admin.payments.loading">
+        <p
+          class="ui-load-state visually-hidden ui-load-state--inset"
+          role="status"
+          i18n="@@admin.payments.loading"
+        >
           Načítáme platby…
         </p>
+        @if (loadView.skeleton()) {
+          <app-skeleton [rows]="5" [inset]="true" />
+        }
       }
       @case ('error') {
-        <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-          <p i18n="@@admin.payments.error.text">Platby se nepodařilo načíst.</p>
-          <button
-            type="button"
-            class="ui-button"
-            (click)="load()"
-            i18n="@@admin.payments.error.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
+        <app-load-failure
+          class="payments-failure"
+          [class.ui-skeleton-reveal]="loadView.appears()"
+          [compact]="true"
+          [retrying]="retrying()"
+          (retry)="retry()"
+          ><ng-container i18n="@@admin.payments.error.text"
+            >Platby se nepodařilo načíst.</ng-container
+          ></app-load-failure
+        >
       }
       @case ('ready') {
         @if (items().length === 0) {
@@ -225,7 +232,7 @@
         @if (items().length > 0 || rowsLeaving() > 0) {
           @if (rows()) {
             @for (month of months(); track month.key) {
-              <div class="payments-month">
+              <div class="payments-month ui-card__group">
                 <h3 class="ui-list__group-title" [id]="monthHeadingId(month.key)">
                   {{ month.label }}
                 </h3>
@@ -336,7 +343,9 @@
                       >
                         <span class="ui-date">{{ date(item.bookedOn) }}</span>
                         @if (item.unpairedByAdminAt) {
-                          &ngsp;<span class="held-tag" i18n="@@admin.payments.heldTag"
+                          &ngsp;<span
+                            class="held-tag ui-badge ui-badge--warning"
+                            i18n="@@admin.payments.heldTag"
                             >jen ručně</span
                           >
                           <span class="held-note" i18n="@@admin.payments.heldTag.title"
@@ -350,9 +359,9 @@
                         i18n-data-label="@@admin.payments.col.amount"
                         class="amount ui-figures"
                       >
-                        {{ crowns(item.amountMinor) }}&nbsp;Kč
+                        <span class="ui-amount">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
                         @if (item.accountVerification) {
-                          <span
+                          &ngsp;<span
                             class="ui-badge ui-badge--accent verification-tag"
                             i18n="@@admin.payments.verificationTag"
                             >Ověření účtu</span
@@ -403,12 +412,16 @@
                             </span>
                             <span class="donor-method">{{ method(donation.pairedBy) }}</span>
                             @if (donation.status === 'REFUNDED') {
-                              <span class="refunded-tag" i18n="@@admin.payments.refunded"
+                              <span
+                                class="refunded-tag ui-badge ui-badge--warning"
+                                i18n="@@admin.payments.refunded"
                                 >vráceno</span
                               >
                             }
                             @if (donation.receiptIssued) {
-                              <span class="receipt-tag" i18n="@@admin.payments.receiptIssued"
+                              <span
+                                class="receipt-tag ui-badge ui-badge--neutral"
+                                i18n="@@admin.payments.receiptIssued"
                                 >potvrzení vystaveno</span
                               >
                             }
@@ -747,10 +760,14 @@
             }
             <span class="muted">{{ method(donation.pairedBy) }}</span>
             @if (donation.status === 'REFUNDED') {
-              <span class="refunded-tag" i18n="@@admin.payments.refunded">vráceno</span>
+              <span class="refunded-tag ui-badge ui-badge--warning" i18n="@@admin.payments.refunded"
+                >vráceno</span
+              >
             }
             @if (donation.receiptIssued) {
-              <span class="receipt-tag" i18n="@@admin.payments.receiptIssued"
+              <span
+                class="receipt-tag ui-badge ui-badge--neutral"
+                i18n="@@admin.payments.receiptIssued"
                 >potvrzení vystaveno</span
               >
             }

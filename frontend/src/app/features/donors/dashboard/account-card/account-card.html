@@ -849,7 +849,13 @@
       <dd class="account-value">
         @switch (passkeyCount()) {
           @case (null) {
-            <span i18n="@@donor.account.passkeys.loading">Načítáme…</span>
+            @if (passkeyCountUnknown()) {
+              <span class="account-passkeys-unknown" i18n="@@donor.account.passkeys.unknown"
+                >Nepodařilo se načíst</span
+              >
+            } @else {
+              <span i18n="@@donor.account.passkeys.loading">Načítáme…</span>
+            }
           }
           @case (0) {
             <span i18n="@@donor.account.passkeys.none">Žádný</span>
@@ -890,6 +896,7 @@
               labelledBy="account-passkeys-label"
               (sessionEnded)="sessionEnded.emit()"
               (countChanged)="passkeyCount.set($event)"
+              (countUnknown)="passkeyCountUnknown.set(true)"
             />
           </div>
         </div>

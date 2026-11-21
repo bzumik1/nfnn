@@ -100,20 +100,6 @@
   margin: var(--space-4) var(--space-6) var(--space-5);
 }
 
-.accounts-load-error {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-3) var(--space-4);
-}
-
-.accounts-retry {
-  background: var(--color-surface);
-  color: var(--color-danger);
-  border: 1px solid var(--color-danger-border);
-}
-
 .account {
   container: account / inline-size;
 }

@@ -5,34 +5,26 @@
     </p>
   }
   @case ('error') {
-    <div class="dashboard-error" role="alert">
-      <p class="dashboard-error-text">
-        @switch (page()) {
-          @case ('gifts') {
-            <ng-container i18n="@@donor.gifts.error.text"
-              >Dary se nepodařilo načíst. Zkuste to znovu.</ng-container
-            >
-          }
-          @case ('receipts') {
-            <ng-container i18n="@@donor.receipts.error.text"
-              >Potvrzení o&nbsp;daru se nepodařilo načíst. Zkuste to znovu.</ng-container
-            >
-          }
-          @default {
-            <ng-container i18n="@@donor.dashboard.error.text"
-              >Přehled darů se nepodařilo načíst. Zkuste to znovu.</ng-container
-            >
-          }
+    <app-load-failure
+      class="dashboard-error"
+      [retrying]="donations.retrying()"
+      (retry)="donations.retry()"
+    >
+      @switch (page()) {
+        @case ('gifts') {
+          <ng-container i18n="@@donor.gifts.error.text">Dary se nepodařilo načíst.</ng-container>
         }
-      </p>
-      <button
-        type="button"
-        class="dashboard-error-retry"
-        (click)="donations.load()"
-        i18n="@@donor.dashboard.error.retry"
-      >
-        Zkusit znovu
-      </button>
-    </div>
+        @case ('receipts') {
+          <ng-container i18n="@@donor.receipts.error.text"
+            >Potvrzení o&nbsp;daru se nepodařilo načíst.</ng-container
+          >
+        }
+        @default {
+          <ng-container i18n="@@donor.dashboard.error.text"
+            >Přehled darů se nepodařilo načíst.</ng-container
+          >
+        }
+      }
+    </app-load-failure>
   }
 }

@@ -3,6 +3,10 @@ import { Router } from '@angular/router';
 import { BackTarget } from './back-target';
 import { NavigationPreview } from './navigation-preview';
 
+const PAGE_HEADING = 'h1[tabindex="-1"]';
+const SHEET_TITLE = 'h2[tabindex="-1"]';
+const FOCUS_TARGET = '[tabindex="-1"]';
+
 @Injectable({ providedIn: 'root' })
 export class PageFocus {
   private readonly router = inject(Router);
@@ -36,6 +40,42 @@ export class PageFocus {
       return;
     }
     this.focusQuietly(main.querySelector<HTMLElement>('h1') ?? main);
+  }
+
+  keepOnPressed(control: HTMLElement): void {
+    if (this.document.activeElement !== control) {
+      control.focus({ preventScroll: true });
+    }
+  }
+
+  keepNear(places: readonly HTMLElement[]): void {
+    const connected = places.filter((place) => place.isConnected);
+    if (!this.focusLostAmong(connected)) {
+      return;
+    }
+    for (const at of connected) {
+      if (at.localName === 'dialog') {
+        this.focusQuietly(at.querySelector<HTMLElement>(SHEET_TITLE) ?? at);
+        return;
+      }
+      const heading = at.querySelector<HTMLElement>(PAGE_HEADING);
+      if (heading !== null) {
+        this.focusQuietly(heading);
+        return;
+      }
+      if (at.matches(FOCUS_TARGET)) {
+        this.focusQuietly(at);
+        return;
+      }
+    }
+  }
+
+  private focusLostAmong(places: readonly HTMLElement[]): boolean {
+    const active = this.document.activeElement;
+    if (active === null || active === this.document.body) {
+      return true;
+    }
+    return active.localName === 'dialog' && places.includes(active as HTMLElement);
   }
 
   private linkToPageLeft(main: HTMLElement): HTMLElement | null {

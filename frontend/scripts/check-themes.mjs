@@ -320,6 +320,16 @@ const READABLE_PAIRS = [
     minimum: 4.5,
   },
   {
+    texts: ['--color-warning'],
+    grounds: [{ tintOf: '--color-warning', percent: 14 }],
+    minimum: 4.5,
+  },
+  {
+    texts: ['--color-text-muted'],
+    grounds: [{ tintOf: '--color-text-muted', percent: 14 }],
+    minimum: 4.5,
+  },
+  {
     texts: ['--color-text', '--color-text-secondary', '--color-text-muted', '--color-accent'],
     grounds: [{ pressedTintOf: '--pressed-tint-amount' }],
     minimum: 4.5,

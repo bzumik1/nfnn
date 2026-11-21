@@ -47,11 +47,7 @@ export class AdminProjects {
 
   protected readonly categoryLabel = projectCategoryLabel;
   protected readonly state = signal<LoadState>('loading');
-  protected readonly loadView = loadingView(
-    this.state,
-    (state) => state === 'loading',
-    (state) => state !== 'ready',
-  );
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly items = signal<ProjectResponse[]>([]);
   protected readonly notice = signal<Notice | null>(null);
 
