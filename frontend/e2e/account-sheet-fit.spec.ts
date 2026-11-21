@@ -34,7 +34,15 @@ test.describe('Given a signed-in donor adding a bank account on a phone', () => 
           range.selectNodeContents(row.querySelector('.bank-value')!);
           return Math.min(...Array.from(range.getClientRects(), (rect) => rect.top));
         };
+        const lineCount = (row: Element) => {
+          const range = document.createRange();
+          range.selectNodeContents(row.querySelector('.bank-value')!);
+          return new Set(Array.from(range.getClientRects(), (rect) => Math.round(rect.top))).size;
+        };
         return {
+          oneLineValueHeights: rows
+            .filter((row) => lineCount(row) === 1)
+            .map((row) => row.querySelector('dd')!.getBoundingClientRect().height),
           height: list.getBoundingClientRect().height,
           allowedGap: parseFloat(getComputedStyle(list).rowGap),
           labelToValue: rows.map(
@@ -51,6 +59,10 @@ test.describe('Given a signed-in donor adding a bank account on a phone', () => 
       });
 
       expect(measured.height).toBeLessThanOrEqual(FACTS_MAXIMUM_HEIGHT);
+      expect(measured.oneLineValueHeights.length).toBeGreaterThan(1);
+      expect(
+        Math.max(...measured.oneLineValueHeights) - Math.min(...measured.oneLineValueHeights),
+      ).toBeLessThanOrEqual(1);
       for (const gap of measured.labelToValue) {
         expect(Math.abs(gap - measured.labelToValue[0])).toBeLessThanOrEqual(1);
         expect(gap).toBeLessThanOrEqual(measured.allowedGap + 1);
