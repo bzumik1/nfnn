@@ -1,5 +1,6 @@
 import { NgComponentOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { type ReceiptDisplay, receiptDisplay } from '../receipt-format';
 import type { ReceiptStatus } from './receipt-status-api';
 import type { VerificationOutcome } from './receipt-verifier';
@@ -95,6 +96,7 @@ export class VerificationResult {
   readonly retry = output<void>();
 
   protected readonly context = inject(VERIFICATION_CONTEXT);
+  protected readonly compact = inject(CompactLayout).isCompact;
   protected readonly administration = this.context.audience === 'administration';
 
   protected readonly kind = computed(() => kindOf(this.outcome()));
