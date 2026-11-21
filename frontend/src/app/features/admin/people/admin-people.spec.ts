@@ -412,6 +412,21 @@ describe('Given an administrator and two people of the foundation', () => {
     );
   });
 
+  it('when the page opens, then the board badge names the board alone and the board note stands beside it as text', () => {
+    const board = element(fixture, '.person-row:first-child .person-board');
+
+    expect(
+      Array.from(
+        fixture.nativeElement.querySelectorAll(
+          '.person-row:first-child .person-badges .ui-badge',
+        ) as NodeListOf<HTMLElement>,
+      ).map((badge) => withOrdinarySpaces(badge.textContent)?.trim()),
+    ).toEqual(['Karta s portrétem', 'Ve správní radě', 'Propojeno s účtem na webu']);
+    expect(withOrdinarySpaces(board.querySelector('.person-board-note')?.textContent)).toBe(
+      '(předsedkyně)',
+    );
+  });
+
   it('when the page opens, then a person without a portrait shows their initials in its place, hidden from the screen reader', () => {
     const thumbs = fixture.nativeElement.querySelectorAll(
       '.person-thumb',

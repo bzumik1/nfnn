@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -9,4 +11,10 @@
 
 .muted {
   color: var(--color-text-subtle);
+}
+
+@include bp.container-up(ui-table, ledger) {
+  .updated-at {
+    white-space: nowrap;
+  }
 }

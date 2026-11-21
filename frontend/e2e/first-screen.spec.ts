@@ -228,6 +228,65 @@ async function shadeChangeOverFace(page: Page, face: Box): Promise<number> {
   );
 }
 
+interface Strip {
+  left: number;
+  right: number;
+}
+
+async function shadeStrengthIn(page: Page, strips: Strip[]): Promise<number[]> {
+  const hide = await page.addStyleTag({
+    content: '#uvod .hero-content, app-header, app-tab-bar { visibility: hidden; }',
+  });
+  const shaded = await page.screenshot({ animations: 'disabled' });
+  const unshade = await page.addStyleTag({
+    content: '#uvod .hero-overlay::before { display: none; }',
+  });
+  const unshaded = await page.screenshot({ animations: 'disabled' });
+  await unshade.evaluate((style) => style.remove());
+  await hide.evaluate((style) => style.remove());
+  return page.evaluate(
+    async ({ withShade, withoutShade, across }) => {
+      const canvas = new OffscreenCanvas(1, 1);
+      const probe = canvas.getContext('2d', { willReadFrequently: true })!;
+      probe.fillStyle = getComputedStyle(document.documentElement)
+        .getPropertyValue('--color-image-shade')
+        .trim();
+      probe.fillRect(0, 0, 1, 1);
+      const shade = [...probe.getImageData(0, 0, 1, 1).data];
+      const decode = async (base64: string) => {
+        const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+        const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+        const image = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const context = image.getContext('2d', { willReadFrequently: true })!;
+        context.drawImage(bitmap, 0, 0);
+        return { context, width: bitmap.width, height: bitmap.height };
+      };
+      const [withVeil, withoutVeil] = [await decode(withShade), await decode(withoutShade)];
+      const scale = withVeil.width / window.innerWidth;
+      return across.map((strip) => {
+        const x = Math.floor(strip.left * scale);
+        const width = Math.max(1, Math.floor(strip.right * scale) - x);
+        const veiled = withVeil.context.getImageData(x, 0, width, withVeil.height).data;
+        const clear = withoutVeil.context.getImageData(x, 0, width, withVeil.height).data;
+        let darkened = 0;
+        let darkest = 0;
+        for (let index = 0; index < veiled.length; index += 4) {
+          for (let channel = 0; channel < 3; channel++) {
+            darkened += clear[index + channel] - veiled[index + channel];
+            darkest += clear[index + channel] - shade[channel];
+          }
+        }
+        return darkest > 0 ? darkened / darkest : 0;
+      });
+    },
+    {
+      withShade: shaded.toString('base64'),
+      withoutShade: unshaded.toString('base64'),
+      across: strips,
+    },
+  );
+}
+
 async function heroControlsPartlyBehindTabBar(page: Page): Promise<string[]> {
   return page.evaluate((rounding) => {
     const tabBarTop = document.querySelector('app-tab-bar nav')!.getBoundingClientRect().top;
@@ -846,6 +905,32 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
       });
     });
   }
+
+  test.describe('when it opens on an iPad on its side (1180 × 820) with the largest system text (a root of 53 px), where the lead runs over the whole photo', () => {
+    test.use({ viewport: { width: 1180, height: 820 } });
+
+    test('then the shade behind the lead darkens the photo to its right edge as much as in the middle, so no pale strip of the photo shows beside it', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await page.addStyleTag({ content: 'html { font-size: 53px; }' });
+      await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+      await expect(page.locator('#uvod')).toHaveClass(/hero--shaded/);
+      const heroRight = await page
+        .locator('#uvod')
+        .evaluate((hero) => Math.floor(hero.getBoundingClientRect().right));
+
+      const [middle, edge] = await shadeStrengthIn(page, [
+        { left: Math.floor(heroRight / 2) - 6, right: Math.floor(heroRight / 2) + 6 },
+        { left: heroRight - 12, right: heroRight },
+      ]);
+
+      expect(middle, 'the shade does not cover the middle of the photo').toBeGreaterThan(0.5);
+      expect(edge, 'the shade fades out before the right edge of the photo').toBeGreaterThanOrEqual(
+        middle * 0.9,
+      );
+    });
+  });
 
   test.describe('when it opens on an iPhone SE with the largest system text (a root of 53 px), turns on its side and back, and Safari shows and hides its toolbar', () => {
     test.use({ viewport: { width: 375, height: 647 } });
