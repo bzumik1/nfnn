@@ -71,7 +71,7 @@
   </header>
 
   <div class="stories-body ui-container">
-    <p class="stories-state" role="status">
+    <p class="stories-state" role="status" [class.stories-state--heard]="state() !== 'loading'">
       @if (state() === 'loading') {
         <span i18n="@@content.projects.loading">Načítáme příběhy…</span>
       } @else if (announcement(); as text) {
@@ -152,7 +152,13 @@
                 Z&nbsp;tohoto roku tu zatím žádný příběh není.
               </p>
             } @else if (choice() === 'all') {
-              <ul class="strip" [appReveal]="1">
+              <ul
+                class="strip"
+                [id]="'pribehy-' + group.year"
+                [appReveal]="1"
+                appStoryStrip
+                #strip="appStoryStrip"
+              >
                 @for (item of group.items; track item.id) {
                   <li class="strip-item"><app-story-tile [item]="item" /></li>
                 }
@@ -169,6 +175,54 @@
                   >
                 </li>
               </ul>
+              @if (!compact() && strip.overflows()) {
+                <div class="strip-steps">
+                  <button
+                    type="button"
+                    class="strip-step ui-button ui-button--outline"
+                    [attr.aria-controls]="'pribehy-' + group.year"
+                    [attr.aria-disabled]="strip.canStepBack() ? null : 'true'"
+                    (click)="strip.step(-1)"
+                    i18n-aria-label="@@content.projects.strip.back"
+                    aria-label="Předchozí příběhy"
+                  >
+                    <svg
+                      class="strip-step-icon"
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.25"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="strip-step ui-button ui-button--outline"
+                    [attr.aria-controls]="'pribehy-' + group.year"
+                    [attr.aria-disabled]="strip.canStepOn() ? null : 'true'"
+                    (click)="strip.step(1)"
+                    i18n-aria-label="@@content.projects.strip.on"
+                    aria-label="Další příběhy"
+                  >
+                    <svg
+                      class="strip-step-icon"
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.25"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                </div>
+              }
             } @else {
               <ul
                 class="grid"
