@@ -80,15 +80,16 @@
                     </li>
                   }
                   @if (account.donationCount > 0) {
-                    <li i18n="@@donor.bankAccounts.donationCount">
-                      {account.donationCount, plural,
-                        one {{{ account.donationCount }} dar bez symbolu}
-                        few {{{ account.donationCount }} dary bez symbolu}
-                        other {{{ account.donationCount }} darů bez symbolu}
-                      }
-                    </li>
-                    <li class="account-total ui-figures">
-                      {{ crowns(account.totalAmountMinor) }}&nbsp;Kč
+                    <li class="account-gifts">
+                      <span class="account-gift-count" i18n="@@donor.bankAccounts.donationCount">
+                        {account.donationCount, plural,
+                          one {{{ account.donationCount }} dar bez symbolu}
+                          few {{{ account.donationCount }} dary bez symbolu}
+                          other {{{ account.donationCount }} darů bez symbolu}
+                        }</span
+                      >&ngsp;<span class="account-total ui-figures"
+                        >{{ crowns(account.totalAmountMinor) }}&nbsp;Kč</span
+                      >
                     </li>
                   }
                 </ul>
