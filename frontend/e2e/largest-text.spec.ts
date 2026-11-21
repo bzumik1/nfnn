@@ -649,7 +649,13 @@ for (const { width, height } of [
       await page.evaluate(() => document.fonts.ready);
       await expect
         .poll(() =>
-          field.evaluate((row) => row.closest('dialog')!.getAnimations({ subtree: true }).length),
+          field.evaluate(
+            (row) =>
+              row
+                .closest('dialog')!
+                .getAnimations({ subtree: true })
+                .filter((animation) => animation.playState === 'running').length,
+          ),
         )
         .toBe(0);
 
