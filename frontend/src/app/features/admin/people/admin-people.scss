@@ -9,6 +9,20 @@
   margin-top: var(--space-6);
 }
 
+.person-board {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-1-5);
+  min-width: 0;
+}
+
+.person-board-note {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
 .person-signatures {
   display: flex;
   flex-wrap: wrap;

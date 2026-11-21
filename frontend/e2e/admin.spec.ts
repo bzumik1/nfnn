@@ -213,12 +213,69 @@ function offCentreParts(page: Page, rowSelector: string): Promise<RowCentring[]>
   }, rowSelector);
 }
 
+interface StatusCard {
+  title: string;
+  top: number;
+  height: number;
+  ownHeight: number;
+}
+
+async function statusCardRows(page: Page): Promise<StatusCard[][]> {
+  await page.evaluate(() => document.fonts.ready);
+  const cards = await page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLElement>('main .admin-status > .ui-card')).map(
+      (card) => {
+        const box = card.getBoundingClientRect();
+        card.style.setProperty('align-self', 'start');
+        const ownHeight = card.getBoundingClientRect().height;
+        card.style.removeProperty('align-self');
+        return {
+          title: card.querySelector('.ui-card__title')?.textContent?.trim() ?? '',
+          top: box.top,
+          height: box.height,
+          ownHeight,
+        };
+      },
+    ),
+  );
+  return cards.reduce<StatusCard[][]>((rows, card) => {
+    const row = rows.find((cardsInRow) => Math.abs(cardsInRow[0].top - card.top) <= 1);
+    if (row) row.push(card);
+    else rows.push([card]);
+    return rows;
+  }, []);
+}
+
+function unequalHeights(row: StatusCard[]): string[] {
+  const heights = row.map((card) => card.height);
+  return Math.max(...heights) - Math.min(...heights) > 1
+    ? [row.map((card) => `${card.title}: ${card.height.toFixed(1)} px`).join(', ')]
+    : [];
+}
+
 function value(page: Page, label: string) {
   return page
     .getByRole('region', { name: 'Stav stahování plateb z banky' })
     .locator('.admin-data > div', { hasText: label })
     .locator('dd');
 }
+
+const failingImport = {
+  coveredFrom: '2026-07-20',
+  coveredTo: '2026-10-17',
+  lastAttemptedAt: '2026-10-18T09:00:00Z',
+  lastSucceededAt: '2026-10-17T10:00:00Z',
+  lastFailure: {
+    kind: 'UNAUTHORIZED',
+    message: 'HTTP 401',
+    attemptedAt: '2026-10-18T09:00:00Z',
+  },
+  consecutiveFailures: 1,
+  reportedOutage: 'UNAUTHORIZED',
+  historyImport: null,
+  defaultHistoryFrom: '2026-01-01',
+  balance: { amountMinor: 50_000, readAt: '2026-10-17T10:00:00Z' },
+};
 
 const quietImport = {
   coveredFrom: null,
@@ -614,6 +671,45 @@ test.describe('Given an administrator', () => {
     const more = await offCentreParts(page, 'nav[aria-label="Další sekce správy"] .ui-list__row');
     expect(more.length).toBeGreaterThan(0);
     expect(more.flatMap((row) => row.offCentre)).toEqual([]);
+  });
+
+  test('when they open the overview on a computer and the bank import card is the taller one, then the cards beside each other end at one height', async ({
+    page,
+  }) => {
+    await mockImportState(page, failingImport);
+    await rememberedSession(page, administrator);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/sprava');
+    await expect(page.locator('main .admin-status > .ui-card')).toHaveCount(2);
+    await expect(value(page, 'Poslední chyba')).toContainText('HTTP 401');
+
+    const rows = await statusCardRows(page);
+
+    expect(rows.some((row) => row.length > 1)).toBe(true);
+    expect(rows.flatMap(unequalHeights)).toEqual([]);
+  });
+
+  test('when they open the overview with the text twice as large and the cards stack, then each card keeps its own height', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent = 'html { font-size: 200%; }';
+        document.head.append(style);
+      });
+    });
+    await mockImportState(page, failingImport);
+    await rememberedSession(page, administrator);
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto('/sprava');
+    await expect(page.locator('main .admin-status > .ui-card')).toHaveCount(2);
+    await expect(value(page, 'Poslední chyba')).toContainText('HTTP 401');
+
+    const rows = await statusCardRows(page);
+
+    expect(rows.map((row) => row.length)).toEqual([1, 1]);
+    expect(rows.flat().filter((card) => Math.abs(card.height - card.ownHeight) > 1)).toEqual([]);
   });
 
   test('when they come back later with a remembered session, then the administration opens straight away', async ({
