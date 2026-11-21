@@ -1,6 +1,6 @@
 import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import {
-  afterNextRender,
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -9,6 +9,7 @@ import {
   inject,
   input,
   signal,
+  untracked,
 } from '@angular/core';
 import { BREAKPOINTS } from '../../../../core/layout/breakpoints';
 import { CompactLayout } from '../../../../core/layout/compact-layout';
@@ -75,7 +76,13 @@ export class DonationsTable {
       follow(entry?.contentBoxSize?.[0]?.inlineSize ?? entry?.contentRect.width ?? 0);
     });
     observer.observe(host);
-    afterNextRender({ read: () => follow(parseFloat(view.getComputedStyle(host).width)) });
+    afterRenderEffect({
+      read: () => {
+        if (!this.rows()) {
+          untracked(() => follow(parseFloat(view.getComputedStyle(host).width)));
+        }
+      },
+    });
     inject(DestroyRef).onDestroy(() => observer.disconnect());
   }
 
