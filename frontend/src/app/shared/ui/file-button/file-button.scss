@@ -7,9 +7,17 @@
   display: block;
 }
 
+.file-input:focus-visible {
+  outline: none;
+}
+
 .file-input:focus-visible + .file-label {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;
+
+  @media (forced-colors: active) {
+    outline-color: Highlight;
+  }
 }
 
 .file-input:focus-visible + .ui-list__row {

@@ -1,7 +1,13 @@
 import type { Locator, Page } from '@playwright/test';
 import { donorWithDonations } from './baseline/screen-mocks';
-import { mockDonorApi, noDonations, rememberedDonorSession } from './donor-session';
+import {
+  mockDonorApi,
+  noDonations,
+  openAccountItem,
+  rememberedDonorSession,
+} from './donor-session';
 import { expect, test } from './fixtures';
+import { donations as receiptDonations, openReceiptsAfterSignIn } from './receipt-donations';
 
 const SLOW_ANSWER_MS = 1500;
 const GIFTS_PATHS = new Set([
@@ -142,4 +148,156 @@ test.describe('Given a signed-in donor on Můj přehled', () => {
     const check = await box(card.getByRole('button', { name: 'Zkontrolovat nové platby' }));
     expect(check.top - missingGift.bottom).toBeGreaterThanOrEqual(missingGift.top - steps.bottom);
   });
+
+  for (const root of ['16px', '34px', '53px']) {
+    for (const width of [390, 1280]) {
+      test(`when they have no gift yet and the page is ${width} px wide with a root of ${root}, then every step number of Jak poslat první dar starts on the card's text edge and every line of the steps' text starts on one edge after the numbers`, async ({
+        page,
+      }) => {
+        await mockDonorApi(page, noDonations);
+        await openOverview(page);
+        await page.addStyleTag({ content: `html { font-size: ${root}; }` });
+        await page.setViewportSize({ width, height: 900 });
+        const card = page.locator('section.first-gift');
+        await expect(card.locator('.first-gift-steps li')).toHaveCount(3);
+        await page.evaluate(() => document.fonts.ready);
+
+        const { titleLeft, stepLefts, lineLefts } = await card.evaluate((section) => {
+          const title = section.querySelector('h2')!.getBoundingClientRect();
+          const steps = [...section.querySelectorAll('.first-gift-steps > li')];
+          return {
+            titleLeft: title.left,
+            stepLefts: steps.map((step) => step.getBoundingClientRect().left),
+            lineLefts: steps.flatMap((step) =>
+              [...step.querySelectorAll(':scope > span')].flatMap((text) =>
+                [...text.getClientRects()].map((line) => line.left),
+              ),
+            ),
+          };
+        });
+
+        for (const left of stepLefts) {
+          expect(Math.abs(left - titleLeft)).toBeLessThanOrEqual(1);
+        }
+        expect(lineLefts.length).toBeGreaterThanOrEqual(3);
+        for (const left of lineLefts) {
+          expect(left).toBeGreaterThan(titleLeft);
+          expect(Math.abs(left - lineLefts[0])).toBeLessThanOrEqual(0.5);
+        }
+      });
+    }
+  }
 });
+
+for (const screen of [
+  { name: 'an upright iPad, on the page', width: 820, height: 1180, inSheet: false, shares: false },
+  {
+    name: 'an upright iPad, in the account sheet',
+    width: 820,
+    height: 1180,
+    inSheet: true,
+    shares: false,
+  },
+  { name: 'a large iPad on its side', width: 1366, height: 1024, inSheet: false, shares: true },
+  { name: 'a phone', width: 390, height: 844, inSheet: false, shares: false },
+]) {
+  test.describe(`Given a donor with a ready yearly receipt on ${screen.name} with a root of 17 px`, () => {
+    test(`when Můj přehled shows the card of the receipt, then its button ${screen.shares ? 'shares the row with the title and ends on the card edge' : 'spans the text column under the title, from its edge to the card edge'}`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, receiptDonations);
+      await page.setViewportSize({ width: screen.width, height: screen.height });
+      await openReceiptsAfterSignIn(page);
+      await page.addStyleTag({ content: 'html { font-size: 17px; }' });
+      if (screen.inSheet) {
+        await openAccountItem(page, 'Můj přehled');
+      } else {
+        await page.goto('/darce/prehled');
+        await page.addStyleTag({ content: 'html { font-size: 17px; }' });
+      }
+      const card = page.locator('.receipt-ready');
+      await expect(card.locator('.receipt-ready-pdf')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      const layout = await card.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        const title = element.querySelector('.ui-card__title')!.getBoundingClientRect();
+        const button = element.querySelector('.receipt-ready-pdf')!.getBoundingClientRect();
+        return {
+          contentStart:
+            box.left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft),
+          contentEnd:
+            box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight),
+          titleStart: title.left,
+          buttonStart: button.left,
+          buttonEnd: button.right,
+          wrapped: button.top >= title.bottom,
+          axisOffset: Math.abs((button.top + button.bottom) / 2 - (title.top + title.bottom) / 2),
+        };
+      });
+
+      expect(layout.wrapped).toBe(!screen.shares);
+      expect(Math.abs(layout.titleStart - layout.contentStart)).toBeLessThanOrEqual(1);
+      expect(Math.abs(layout.buttonEnd - layout.contentEnd)).toBeLessThanOrEqual(1);
+      if (screen.shares) {
+        expect(layout.axisOffset).toBeLessThanOrEqual(2);
+      } else {
+        expect(Math.abs(layout.buttonStart - layout.contentStart)).toBeLessThanOrEqual(1);
+      }
+    });
+  });
+}
+
+for (const [width, height] of [
+  [820, 1180],
+  [1280, 900],
+]) {
+  test.describe(`Given a donor without a gift in a ${width} × ${height} window`, () => {
+    test('when Poslat dar shows the bank details, then every value starts on one edge right after the longest label and every Kopírovat follows the values', async ({
+      page,
+    }) => {
+      await mockDonorApi(page, noDonations);
+      await rememberedDonorSession(page);
+      await page.setViewportSize({ width, height });
+      await page.goto('/darce/prehled');
+      const rows = page.locator('.send-gift .bank > .bank-rows > .bank-row');
+      await expect(rows.filter({ hasText: 'IBAN' })).toBeVisible();
+      await expect(rows.filter({ hasText: 'Variabilní symbol' })).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      const places = await rows.evaluateAll((all) =>
+        all.map((row) => ({
+          keyEnd: row.querySelector('.bank-key')!.getBoundingClientRect().right,
+          valueStart: row.querySelector('.bank-value')!.getBoundingClientRect().left,
+          valueEnd: row.querySelector('.bank-value')!.getBoundingClientRect().right,
+          copyStart: row.querySelector('app-copy-button button')!.getBoundingClientRect().left,
+        })),
+      );
+      const root = await page.evaluate(() =>
+        parseFloat(getComputedStyle(document.documentElement).fontSize),
+      );
+      const longestKeyEnd = Math.max(...places.map((place) => place.keyEnd));
+      const widestValueEnd = Math.max(...places.map((place) => place.valueEnd));
+
+      for (const place of places) {
+        expect(
+          Math.abs(place.valueStart - places[0].valueStart),
+          JSON.stringify(places),
+        ).toBeLessThanOrEqual(1);
+        expect(place.valueStart - longestKeyEnd, JSON.stringify(places)).toBeGreaterThan(0);
+        expect(place.valueStart - longestKeyEnd, JSON.stringify(places)).toBeLessThanOrEqual(
+          3 * root,
+        );
+        expect(
+          Math.abs(place.copyStart - places[0].copyStart),
+          JSON.stringify(places),
+        ).toBeLessThanOrEqual(1);
+        expect(place.copyStart - widestValueEnd, JSON.stringify(places)).toBeGreaterThan(0);
+        expect(place.copyStart - widestValueEnd, JSON.stringify(places)).toBeLessThanOrEqual(
+          3 * root,
+        );
+      }
+    });
+  });
+}

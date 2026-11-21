@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/backups/backup-days.spec.ts > Given the backups on the server newest first > when they are grouped, then each Prague day is a group with its weekday and date, newest first",
+    "replacement": "src/app/features/admin/backups/backup-days.spec.ts > Given the backups on the server newest first > when they are grouped, then each Prague day is a group titled with its capitalised weekday and date, newest first",
+    "reason": "PR #1933 (#1851): a day card of Všechny zálohy is a title, so its weekday starts with a capital letter („Středa 28. 10. 2026“); the test names what it now checks",
+    "contract": "docs/frontend-overview.md, admin backups (Všechny zálohy)"
+  }
+]

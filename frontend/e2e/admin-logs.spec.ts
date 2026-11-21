@@ -2,6 +2,7 @@ import { expect, test } from './fixtures';
 import {
   DIAGNOSTICS,
   LOGGERS,
+  LOGS,
   logsApi,
   RELEASE_HISTORY,
   rememberedAdministrator,
@@ -344,5 +345,291 @@ test.describe('Given an administrator on the server state with a long Java versi
     expect(faces['Paměť']).toEqual([false, false]);
     expect(faces['Úklid paměti']).toEqual([false, false]);
     expect(faces['Java']).toEqual([true]);
+  });
+});
+
+test.describe('Given an administrator reading backend.log on a phone', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await routeLogsApi(page);
+    await rememberedAdministrator(page);
+    await page.setViewportSize({ width: 375, height: 667 });
+  });
+
+  test('when they reach the end of the entries, then Načíst starší řádky and Kopírovat stand alike in one height and look like Načíst novější řádky and Hledat', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/logy/soubor?nazev=backend.log');
+    const main = page.getByRole('main');
+    await expect(main.locator('.entry')).toHaveCount(40);
+
+    const looks = await Promise.all(
+      [
+        main.getByRole('button', { name: 'Hledat' }),
+        main.locator('.load-more'),
+        main.locator('.list-end').getByRole('button', { name: 'Načíst starší řádky' }),
+        main.locator('.list-end').getByRole('button', { name: /^Kopírovat/ }),
+      ].map((button) =>
+        button.evaluate((element) => ({
+          height: element.getBoundingClientRect().height,
+          background: getComputedStyle(element).backgroundColor,
+        })),
+      ),
+    );
+    const [search, newer, older, copy] = looks;
+    expect(new Set([newer.background, older.background, copy.background])).toEqual(
+      new Set([search.background]),
+    );
+    expect(Math.abs(older.height - copy.height)).toBeLessThanOrEqual(1);
+    expect(Math.abs(newer.height - older.height)).toBeLessThanOrEqual(1);
+  });
+
+  test('when they turn on Chyby z prohlížečů, then the filter is drawn apart from the load button and says it is on', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/logy/soubor?nazev=backend.log');
+    const main = page.getByRole('main');
+    const filter = main.getByRole('button', { name: 'Chyby z prohlížečů' });
+    await expect(filter).toHaveAttribute('aria-pressed', 'false');
+
+    const backgroundOf = (button: typeof filter) =>
+      button.evaluate((element) => getComputedStyle(element).backgroundColor);
+    expect(await backgroundOf(filter)).not.toBe(await backgroundOf(main.locator('.load-more')));
+
+    const resting = await backgroundOf(filter);
+    await filter.click();
+    await expect(filter).toHaveAttribute('aria-pressed', 'true');
+    expect(await backgroundOf(filter)).not.toBe(resting);
+  });
+
+  for (const { text, rootSize } of [
+    { text: 'the default text', rootSize: null },
+    { text: 'the largest text', rootSize: '53px' },
+  ]) {
+    test(`when they read the entries with ${text}, then every class name is shown whole and starts right after its icon`, async ({
+      page,
+    }) => {
+      await page.goto('/sprava/logy/soubor?nazev=backend.log');
+      if (rootSize !== null) {
+        await page.addStyleTag({ content: `html { font-size: ${rootSize} }` });
+      }
+      const entries = page.getByRole('main').locator('.entry');
+      await expect(entries).toHaveCount(40);
+
+      const rows = await entries.evaluateAll((elements) =>
+        elements.slice(0, 3).map((entry) => {
+          const title = entry.querySelector('.entry-title') as HTMLElement;
+          const icon = entry.querySelector('.entry-icon') as HTMLElement;
+          const meta = entry.querySelector('.entry-meta') as HTMLElement;
+          return {
+            title: title.textContent,
+            clipped: title.scrollWidth > title.clientWidth + 1,
+            titleRight: title.getBoundingClientRect().right,
+            metaRight: meta.getBoundingClientRect().right,
+            leadGap: meta.getBoundingClientRect().left - icon.getBoundingClientRect().right,
+            columnGap: parseFloat(getComputedStyle(entry).columnGap),
+          };
+        }),
+      );
+      for (const row of rows) {
+        expect(row.title).toBe('ImportBankPaymentsService');
+        expect(row.clipped).toBe(false);
+        expect(row.titleRight).toBeLessThanOrEqual(row.metaRight + 1);
+        expect(row.leadGap).toBeLessThanOrEqual(row.columnGap + 1);
+      }
+    });
+  }
+
+  test('when they read an entry whose class name has a part longer than the column with the largest text, then the name breaks inside that part and never runs past its row', async ({
+    page,
+  }) => {
+    const longName = 'AuthorizationServerConfigurationRegistration';
+    await page.route(
+      (url) => url.pathname === `${LOGS}/backend.log`,
+      (route) =>
+        route.fulfill({
+          json: {
+            name: 'backend.log',
+            sizeBytes: 200,
+            from: 0,
+            to: 200,
+            hasOlder: false,
+            hasNewer: false,
+            text: `2026-10-23T10:00:00.000+02:00  INFO 1 --- [nova-nadeje] [main] c.n.a.d.a.${longName}    : started\n`,
+          },
+        }),
+    );
+    await page.goto('/sprava/logy/soubor?nazev=backend.log');
+    await page.addStyleTag({ content: 'html { font-size: 53px }' });
+    const entry = page.getByRole('main').locator('.entry').first();
+    await expect(entry.locator('.entry-title')).toHaveText(longName);
+
+    const placed = await entry.evaluate((element) => {
+      const title = element.querySelector('.entry-title') as HTMLElement;
+      return {
+        clipped: title.scrollWidth > title.clientWidth + 1,
+        titleRight: title.getBoundingClientRect().right,
+        rowRight: element.getBoundingClientRect().right,
+      };
+    });
+    expect(placed.clipped).toBe(false);
+    expect(placed.titleRight).toBeLessThanOrEqual(placed.rowRight + 1);
+  });
+});
+
+test.describe('Given an administrator on the server state on a phone', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await routeLogsApi(page);
+    await routeReleaseApi(page);
+    await rememberedAdministrator(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  test('when they read the verdict, then it is set at least as large as the titles of the rows under it and as on Logy a diagnostika', async ({
+    page,
+  }) => {
+    const sizeOf = (element: Element) => parseFloat(getComputedStyle(element).fontSize);
+
+    await page.goto('/sprava/logy');
+    const hub = await page
+      .getByRole('main')
+      .locator('.health .ui-list__title')
+      .evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+
+    await page.goto('/sprava/logy/stav');
+    const main = page.getByRole('main');
+    await expect(main.getByRole('heading', { level: 2, name: 'Bez poruchy' })).toBeVisible();
+    const verdict = await main
+      .getByRole('heading', { level: 2, name: 'Bez poruchy' })
+      .evaluate(sizeOf);
+    const rowTitles = await main
+      .locator('.application .ui-list__title')
+      .evaluateAll((titles) => titles.map((title) => parseFloat(getComputedStyle(title).fontSize)));
+
+    expect(verdict).toBe(hub);
+    expect(verdict).toBeGreaterThanOrEqual(Math.max(...rowTitles));
+  });
+
+  test('when they read the release with the largest text, then its number stays inside the row', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/logy/stav');
+    await page.addStyleTag({ content: 'html { font-size: 53px }' });
+    const row = page.getByRole('main').locator('.release .ui-list__row');
+    await expect(row.locator('.ui-list__value')).toHaveText('2026.11.109');
+
+    const box = await row.evaluate((element) => {
+      const value = element.querySelector('.ui-list__value') as HTMLElement;
+      const style = getComputedStyle(element);
+      return {
+        valueRight: value.getBoundingClientRect().right,
+        contentRight: element.getBoundingClientRect().right - parseFloat(style.paddingRight),
+        overflows: value.scrollWidth > value.clientWidth + 1,
+      };
+    });
+    expect(box.valueRight).toBeLessThanOrEqual(box.contentRight + 1);
+    expect(box.overflows).toBe(false);
+  });
+});
+
+test.describe('Given an administrator on the log files on a 375 pt phone', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await routeLogsApi(page);
+    await rememberedAdministrator(page);
+    await page.setViewportSize({ width: 375, height: 667 });
+  });
+
+  test('when they read an older file name on Starší soubory, then every line of it ends after a dot or at its end, never at a hyphen of the date', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/logy/soubory');
+    const name = page
+      .getByRole('link', { name: /backend\.log\.2026-10-22\.0\.gz/ })
+      .locator('.file-name');
+    await expect(name).toHaveText('backend.log.2026-10-22.0.gz');
+
+    const lines = await name.evaluate((element) => {
+      const parts = Array.from(element.querySelectorAll('.file-name-part'), (part) => ({
+        text: part.textContent ?? '',
+        boxes: (() => {
+          const text = document.createRange();
+          text.selectNodeContents(part);
+          return text.getClientRects().length;
+        })(),
+        top: Math.round(part.getBoundingClientRect().top),
+      }));
+      const byLine = new Map<number, string[]>();
+      for (const part of parts) {
+        byLine.set(part.top, [...(byLine.get(part.top) ?? []), part.text]);
+      }
+      return {
+        boxes: parts.map((part) => part.boxes),
+        lines: [...byLine.values()].map((line) => line.join('')),
+      };
+    });
+
+    expect(lines.boxes.every((boxes) => boxes === 1)).toBe(true);
+    expect(lines.lines.join('')).toBe('backend.log.2026-10-22.0.gz');
+    for (const line of lines.lines.slice(0, -1)) {
+      expect(line.endsWith('.')).toBe(true);
+    }
+  });
+
+  test('when they read an older file name on Starší soubory with the largest text, then a part wider than the column wraps inside it and nothing runs past the name or under the chevron', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/logy/soubory');
+    await page.addStyleTag({ content: 'html { font-size: 53px }' });
+    const row = page.getByRole('link', { name: /backend\.log\.2026-10-22\.0\.gz/ });
+    await expect(row.locator('.file-name')).toHaveText('backend.log.2026-10-22.0.gz');
+
+    const placed = await row.evaluate((element) => {
+      const name = element.querySelector('.file-name') as HTMLElement;
+      const chevron = element.querySelector('.ui-list__chevron') as SVGElement;
+      const nameBox = name.getBoundingClientRect();
+      return {
+        clipped: name.scrollWidth > name.clientWidth + 1,
+        nameRight: nameBox.right,
+        chevronLeft: chevron.getBoundingClientRect().left,
+        partsRight: Array.from(
+          name.querySelectorAll('.file-name-part'),
+          (part) => part.getBoundingClientRect().right - nameBox.right,
+        ),
+      };
+    });
+    expect(placed.clipped).toBe(false);
+    expect(placed.nameRight).toBeLessThanOrEqual(placed.chevronLeft + 1);
+    expect(placed.partsRight.every((past) => past <= 1)).toBe(true);
+  });
+
+  test('when they go from Logy a diagnostika to Starší soubory, then a log file is the same row with its file icon at the same place', async ({
+    page,
+  }) => {
+    const placeOf = async () => {
+      const row = page
+        .getByRole('main')
+        .locator('a.ui-list__row', { has: page.locator('.file-name') });
+      await expect(row.first().locator('.ui-list__glyph svg')).toBeVisible();
+      return row.first().evaluate((element) => {
+        const icon = element.querySelector('.ui-list__glyph svg') as SVGElement;
+        const name = element.querySelector('.file-name') as HTMLElement;
+        return {
+          iconLeft: Math.round(icon.getBoundingClientRect().left),
+          iconWidth: Math.round(icon.getBoundingClientRect().width),
+          nameLeft: Math.round(name.getBoundingClientRect().left),
+        };
+      });
+    };
+
+    await page.goto('/sprava/logy');
+    const hub = await placeOf();
+    await page.getByRole('link', { name: /Starší soubory/ }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Starší soubory' })).toBeFocused();
+    const older = await placeOf();
+
+    expect(older).toEqual(hub);
+    expect(hub.iconWidth).toBe(20);
   });
 });

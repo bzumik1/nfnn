@@ -14,6 +14,7 @@ import {
 import { pluralCategory } from '../../../../core/i18n/plural-category';
 import { BusyButton } from '../../../../shared/ui/busy-button/busy-button';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { LOADING_TIMINGS, loadingView } from '../../../../shared/ui/skeleton/loading-view';
 import { formatBankTime } from '../../../donations/donation-date';
 import { BankCheckOutcome, DonorDonations } from '../donor-donations';
 
@@ -28,6 +29,13 @@ export class BankCheck {
   protected readonly donations = inject(DonorDonations);
   private readonly injector = inject(Injector);
   private readonly checkButton = viewChild.required<ElementRef<HTMLButtonElement>>('checkButton');
+  private readonly delaysLoadingLooks = inject(LOADING_TIMINGS)() !== null;
+
+  protected readonly checking = loadingView(this.donations.checkingBank, (checking) => checking);
+  protected readonly showsChecking = computed(() =>
+    this.delaysLoadingLooks ? this.checking.skeleton() : this.checking.busy(),
+  );
+  protected readonly busyUnseen = computed(() => this.checking.busy() && !this.showsChecking());
 
   protected readonly outcome = computed(() => outcomeText(this.donations.bankCheckOutcome()));
   protected readonly failed = computed(() => this.donations.bankCheckOutcome()?.kind === 'failed');

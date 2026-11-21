@@ -153,19 +153,25 @@
     <h2 id="first-gift-title" class="ui-card__title" i18n="@@donor.overview.firstGift.title">
       Jak poslat první dar
     </h2>
-    <ol class="first-gift-steps">
-      <li i18n="@@donor.overview.firstGift.chooseInCard">
-        Zvolte částku v&nbsp;kartě „Poslat dar“ a&nbsp;pošlete dar na účet nadačního fondu, převodem
-        nebo QR kódem.
+    <ol class="first-gift-steps" role="list">
+      <li>
+        <span i18n="@@donor.overview.firstGift.chooseInCard"
+          >Zvolte částku v&nbsp;kartě „Poslat dar“ a&nbsp;pošlete dar na účet nadačního fondu,
+          převodem nebo QR kódem.</span
+        >
       </li>
       @if (donor()?.variableSymbol; as symbol) {
-        <li i18n="@@donor.overview.firstGift.symbolInCard">
-          Do platby uveďte svůj variabilní symbol <strong>{{ symbol }}</strong
-          >. Údaje i&nbsp;QR kód v&nbsp;kartě „Poslat dar“ ho už obsahují.
+        <li>
+          <span i18n="@@donor.overview.firstGift.symbolInCard"
+            >Do platby uveďte svůj variabilní symbol <strong>{{ symbol }}</strong
+            >. Údaje i&nbsp;QR kód v&nbsp;kartě „Poslat dar“ ho už obsahují.</span
+          >
         </li>
       }
-      <li i18n="@@donor.overview.firstGift.appears">
-        Jakmile platba dorazí, dar se tu objeví sám.
+      <li>
+        <span i18n="@@donor.overview.firstGift.appears"
+          >Jakmile platba dorazí, dar se tu objeví sám.</span
+        >
       </li>
     </ol>
     <app-missing-gift />

@@ -5,6 +5,11 @@ export function formatReportMonth(isoMonth: string): string {
   return MONTH_NAMES.format(new Date(Date.UTC(year, month - 1, 15)));
 }
 
+export function reportMonthTitle(isoMonth: string): string {
+  const month = formatReportMonth(isoMonth);
+  return month.charAt(0).toLocaleUpperCase('cs') + month.slice(1);
+}
+
 export function previousMonths(lastIsoMonth: string, count: number): string[] {
   const [year, month] = lastIsoMonth.split('-').map(Number);
   const months: string[] = [];

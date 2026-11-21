@@ -1,6 +1,6 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { mockDonorApi, rememberedDonorSession } from './donor-session';
+import { mockDonorApi, noDonations, rememberedDonorSession } from './donor-session';
 
 interface Box {
   left: number;
@@ -18,7 +18,11 @@ function overlaps(a: Box, b: Box): boolean {
 async function ibanLines(page: Page): Promise<string[]> {
   const value = page.locator('.bank-row', { hasText: 'IBAN' }).locator('.bank-value');
   await expect(value).toBeVisible();
-  await page.evaluate(() => document.fonts.ready);
+  return ibanLinesOf(value);
+}
+
+async function ibanLinesOf(value: Locator): Promise<string[]> {
+  await value.page().evaluate(() => document.fonts.ready);
   return value.evaluate((element) => {
     const lines = new Map<number, string>();
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
@@ -63,6 +67,36 @@ test.describe('Given the bank details on Přispět', () => {
       await expect(
         page.locator('.bank-row', { hasText: 'IBAN' }).locator('.bank-value'),
       ).toHaveText('CZ26 2010 0000 0055 4433 2217');
+    });
+  }
+});
+
+test.describe("Given the bank details in the portal's Poslat dar", () => {
+  for (const root of ['16px', '17px']) {
+    test(`when a phone from 320 to 430 px wide shows them with a root of ${root}, then the IBAN stands on one line or breaks only in its middle, three groups of four to a line`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, noDonations);
+      await rememberedDonorSession(page);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto('/darce/prehled');
+      await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
+      await page.addStyleTag({ content: `html { font-size: ${root}; }` });
+      const value = page
+        .locator('.send-gift .bank-row', { hasText: 'IBAN' })
+        .locator('.bank-value');
+      const found: string[] = [];
+
+      for (let width = 320; width <= 430; width++) {
+        await page.setViewportSize({ width, height: 800 });
+        await expect(value).toBeVisible();
+        const lines = await ibanLinesOf(value);
+        if (!/^(CZ2620100000005544332217|CZ2620100000 \/ 005544332217)$/.test(lines.join(' / '))) {
+          found.push(`${width} px: ${lines.join(' / ')}`);
+        }
+      }
+
+      expect(found).toEqual([]);
     });
   }
 });

@@ -56,7 +56,30 @@
                 @for (file of group.files; track file.name) {
                   <li>
                     <a class="ui-list__row" [routerLink]="filePath" [queryParams]="query(file)">
-                      <span class="ui-list__title ui-mono file-name">{{ file.name }}</span>
+                      <span class="ui-list__lead ui-list__glyph" aria-hidden="true">
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                          <path d="M14 3v5h5M9 13h6M9 17h6" />
+                        </svg>
+                      </span>
+                      <span class="visually-hidden">{{ file.name }}</span>
+                      <span class="ui-list__title ui-mono file-name" aria-hidden="true">
+                        @for (part of nameParts(file.name); track $index) {
+                          @if (!$first) {
+                            <wbr />
+                          }
+                          <span class="file-name-part">{{ part }}</span>
+                        }
+                      </span>
                       <span class="ui-list__meta">{{ fileMeta(file) }}</span>
                       <svg
                         class="ui-list__chevron"

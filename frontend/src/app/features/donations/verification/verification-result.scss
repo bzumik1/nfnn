@@ -31,6 +31,7 @@
 }
 
 .verify-retry {
+  justify-self: start;
   margin-top: var(--space-4);
 }
 
@@ -39,6 +40,17 @@
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--space-4) var(--space-6);
   margin-top: var(--space-4);
+}
+
+.verify-total {
+  grid-column: 1 / -1;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-separator);
+
+  dd {
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+  }
 }
 
 .verify-local {

@@ -18,7 +18,13 @@ import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { formatBankTime } from '../../../donations/donation-date';
 import { AdminApi, LogFileResponse } from '../../admin-api';
 import { formatSize } from '../../backups/backup-format';
-import { LOG_FILE_PATH, logFileQuery, logSeriesLabel, olderLogFileGroups } from '../log-files';
+import {
+  LOG_FILE_PATH,
+  logFileNameParts,
+  logFileQuery,
+  logSeriesLabel,
+  olderLogFileGroups,
+} from '../log-files';
 import { LogPageAccess } from '../log-page-access';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -38,6 +44,7 @@ export class AdminLogFiles {
 
   protected readonly filePath = LOG_FILE_PATH;
   protected readonly query = (file: LogFileResponse) => logFileQuery(file.name);
+  protected readonly nameParts = logFileNameParts;
   protected readonly state = signal<LoadState>('loading');
   protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly retrying = signal(false);
