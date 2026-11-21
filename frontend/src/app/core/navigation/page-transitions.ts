@@ -514,7 +514,6 @@ export class PageTransitions {
       released = true;
       retimeLateFrames(view, {
         motions: startHeldMotions(running.overlay, at),
-        startedAt: at,
         steadyMs: this.steadyFrameMs(),
         withinMs: RETIMED_WITHIN_MS,
         goesOn,
@@ -967,7 +966,7 @@ export class PageTransitions {
     const root = this.document.documentElement;
     if (root.classList.contains(SHEET_UNDER_CLASS)) {
       root.classList.remove(SHEET_UNDER_CLASS);
-      this.drawing?.standAtOnce(this.document.querySelectorAll('dialog[open]'));
+      this.drawing?.standAtOnce(this.document.querySelectorAll(STANDING_DIALOG));
     }
     if (ran) {
       this.sampleFramePace();
@@ -1093,7 +1092,6 @@ export function nextFrame(view: Window, then: (now: number) => void): void {
 
 export interface RetimedMotions {
   readonly motions: readonly Animation[];
-  readonly startedAt: number;
   readonly steadyMs: number;
   readonly withinMs: number;
   readonly goesOn: () => boolean;
@@ -1101,26 +1099,40 @@ export interface RetimedMotions {
 
 export function retimeLateFrames(
   view: Window,
-  { motions, startedAt, steadyMs, withinMs, goesOn }: RetimedMotions,
+  { motions, steadyMs, withinMs, goesOn }: RetimedMotions,
 ): void {
-  let startAt = startedAt;
-  let shownAt = startedAt;
+  let shownMs = 0;
   let shiftedMs = 0;
-  const frame = (at: number): void => {
-    const shownMs = shownAt - startAt;
-    if (!goesOn() || shownMs >= withinMs || shiftedMs >= RETIMED_AT_MOST_MS) {
+  const frame = (): void => {
+    const travelledMs = furthestOf(motions);
+    if (
+      !goesOn() ||
+      travelledMs === null ||
+      shownMs >= withinMs ||
+      shiftedMs >= RETIMED_AT_MOST_MS
+    ) {
       return;
     }
-    const shift = retimingOf({ gapMs: at - shownAt, steadyMs, shownMs, shiftedMs });
+    const shift = retimingOf({ gapMs: travelledMs - shownMs, steadyMs, shownMs, shiftedMs });
     if (shift > 0) {
-      startAt += shift;
       shiftedMs += shift;
-      motions.forEach((motion) => (motion.startTime = startAt));
+      motions.forEach((motion) => {
+        if (typeof motion.startTime === 'number') {
+          motion.startTime += shift;
+        }
+      });
     }
-    shownAt = at;
+    shownMs = Math.max(shownMs, travelledMs - shift);
     view.requestAnimationFrame(frame);
   };
   view.requestAnimationFrame(frame);
+}
+
+function furthestOf(motions: readonly Animation[]): number | null {
+  const times = motions
+    .map((motion) => motion.currentTime)
+    .filter((time): time is number => typeof time === 'number');
+  return times.length === 0 ? null : Math.max(...times);
 }
 
 export function afterDrawn(view: Window, longestMs?: number): Promise<number> {

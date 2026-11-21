@@ -20,6 +20,7 @@ import {
   PAGE_TRANSITION_CLASS,
   PAGE_TRANSITION_LONGEST_MS,
   PageTransitions,
+  retimeLateFrames,
 } from './page-transitions';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
@@ -111,18 +112,32 @@ describe('Given a phone that animates and a page of the news with an article to 
 interface HeldMotion {
   pending: boolean;
   startTime: number | null;
+  readonly currentTime: number | null;
   finished: Promise<unknown>;
+}
+
+const frameClock = { at: 0 };
+
+function timedFromFrames<T extends { startTime: number | null }>(
+  motion: T,
+): T & { readonly currentTime: number | null } {
+  return Object.defineProperty(motion, 'currentTime', {
+    get: () => (motion.startTime === null ? null : frameClock.at - motion.startTime),
+  }) as T & { readonly currentTime: number | null };
 }
 
 function watchHeldMotions(): Map<Element, HeldMotion> {
   const motions = new Map<Element, HeldMotion>();
   const motionOf = (element: Element): HeldMotion => {
     if (!motions.has(element)) {
-      motions.set(element, {
-        pending: true,
-        startTime: null,
-        finished: new Promise(() => undefined),
-      });
+      motions.set(
+        element,
+        timedFromFrames({
+          pending: true,
+          startTime: null as number | null,
+          finished: new Promise(() => undefined),
+        }),
+      );
     }
     return motions.get(element)!;
   };
@@ -153,7 +168,10 @@ function framesOnRequest(): (at: number) => void {
     return frames.length;
   });
   onTestFinished(() => vi.mocked(window.requestAnimationFrame).mockRestore());
-  return (at) => frames.splice(0).forEach((frame) => frame(at));
+  return (at) => {
+    frameClock.at = at;
+    frames.splice(0).forEach((frame) => frame(at));
+  };
 }
 
 function moving(): Element | null {
@@ -1051,6 +1069,40 @@ describe('Given the app on the home screen of a phone, where the news led to the
     }
   });
 
+  it('when the step ends while a dialog over the sheet fades out, then that dialog keeps its fade out to its end, so it still closes as it leaves', async () => {
+    await openOverviewFromTheNews({ title: 'Aktuality', sheet: true }, { title: 'Přehled' }, true);
+    const asking = document.createElement('dialog');
+    const fadingOut = {
+      effect: { target: asking, getComputedTiming: () => ({ endTime: 300 }) },
+      finish: vi.fn(),
+    };
+    Object.defineProperty(asking, 'getAnimations', {
+      configurable: true,
+      value: () => [fadingOut],
+    });
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => motionEnding(Promise.resolve()),
+    });
+    try {
+      const swipe = swipeBack();
+      asking.setAttribute('open', '');
+      asking.className = 'dialog dialog--leaving';
+      document.body.append(asking);
+      await vi.dynamicImportSettled();
+
+      await swipe.slideBack();
+
+      expect(document.documentElement.classList).not.toContain(
+        `${PAGE_TRANSITION_CLASS}-sheet-under`,
+      );
+      expect(fadingOut.finish).not.toHaveBeenCalled();
+    } finally {
+      asking.remove();
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
   it('when both pages are sheets of the administration, then the head of the sheet stands while the pages move and its title changes in place', async () => {
     await openOverviewFromTheNews(
       { title: 'Dárci', head: 'Dárci' },
@@ -1139,12 +1191,12 @@ describe('Given the app on the home screen of a phone, where the news led to the
     Object.defineProperty(HTMLElement.prototype, 'animate', {
       configurable: true,
       value: () => {
-        const slide = {
+        const slide = timedFromFrames({
           startTime: null as number | null,
           finished: new Promise(() => undefined),
           pause: () => undefined,
           play: () => undefined,
-        };
+        });
         slides.push(slide);
         return slide;
       },
@@ -1157,6 +1209,7 @@ describe('Given the app on the home screen of a phone, where the news led to the
         return waiting.length;
       });
       const draw = async (at: number): Promise<void> => {
+        frameClock.at = at;
         waiting.splice(0).forEach((callback) => callback(at));
         await vi.dynamicImportSettled();
       };
@@ -2140,5 +2193,68 @@ describe('Given the app on a phone with a sheet open at its list', () => {
 
       expect(transitions.startSheetSwipe(1)).not.toBeNull();
     });
+  });
+});
+
+describe('Given the motions of a step that a browser draws further along than the time of the frame it hands them', () => {
+  interface TimedMotion {
+    startTime: number | null;
+    readonly currentTime: number | null;
+  }
+
+  function motionsOn(timeline: { at: number }, count: number): TimedMotion[] {
+    return Array.from({ length: count }, () => ({
+      startTime: 5000 as number | null,
+      get currentTime(): number | null {
+        return this.startTime === null ? null : timeline.at - this.startTime;
+      },
+    }));
+  }
+
+  function framesOf(timeline: { at: number }): {
+    view: Window;
+    draw: (at: number, drawnAt: number) => void;
+  } {
+    let waiting: FrameRequestCallback[] = [];
+    const view = {
+      requestAnimationFrame: (callback: FrameRequestCallback) => waiting.push(callback),
+    } as unknown as Window;
+    return {
+      view,
+      draw: (at, drawnAt) => {
+        timeline.at = drawnAt;
+        const now = waiting;
+        waiting = [];
+        now.forEach((callback) => callback(at));
+      },
+    };
+  }
+
+  it('when a late frame follows one the browser drew late against its time, then no frame shows the motions further back than the frame before', () => {
+    const timeline = { at: 5000 };
+    const motions = motionsOn(timeline, 3);
+    const { view, draw } = framesOf(timeline);
+    retimeLateFrames(view, {
+      motions: motions as unknown as Animation[],
+      steadyMs: 16,
+      withinMs: 75,
+      goesOn: () => true,
+    });
+    const shown: number[] = [];
+
+    for (const [at, drawnAt] of [
+      [5016, 5016],
+      [5032, 5148],
+      [5132, 5160],
+      [5148, 5176],
+    ]) {
+      draw(at, drawnAt);
+      shown.push(Math.max(...motions.map((motion) => motion.currentTime!)));
+    }
+
+    shown
+      .slice(1)
+      .forEach((current, frame) => expect(current).toBeGreaterThanOrEqual(shown[frame]));
+    expect(new Set(motions.map((motion) => motion.startTime)).size).toBe(1);
   });
 });

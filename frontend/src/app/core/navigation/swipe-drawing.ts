@@ -364,7 +364,6 @@ function followingFinger(
     });
     retimeLateFrames(view, {
       motions,
-      startedAt: slidFrom,
       steadyMs: stage.steadyFrameMs(),
       withinMs: Math.min(RETIMED_WITHIN_MS, end.durationMs / 2),
       goesOn: () => stage.running === running,
