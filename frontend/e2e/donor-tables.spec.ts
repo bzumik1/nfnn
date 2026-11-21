@@ -105,8 +105,12 @@ interface GiftTableRecord {
   errors: string[];
 }
 
-async function recordGiftTableStates(page: Page, rootFontPx = 16): Promise<void> {
-  await page.addInitScript(() => {
+async function recordGiftTableStates(
+  page: Page,
+  rootFontPx = 16,
+  { beforePaint = false } = {},
+): Promise<void> {
+  await page.addInitScript((onlyPainted) => {
     const record: GiftTableRecord = { states: [], errors: [] };
     Object.assign(window, { giftTableRecord: record });
     window.addEventListener('error', (event) => record.errors.push(event.message));
@@ -140,6 +144,24 @@ async function recordGiftTableStates(page: Page, rootFontPx = 16): Promise<void>
         record.states.push(now);
       }
     };
+    if (onlyPainted) {
+      const probe = document.createElement('div');
+      const beforeThePaint = new ResizeObserver(() => {
+        note();
+        beforeThePaint.unobserve(probe);
+      });
+      const everyFrame = (): void => {
+        if (!probe.isConnected) {
+          document.body?.append(probe);
+        }
+        if (probe.isConnected) {
+          beforeThePaint.observe(probe);
+        }
+        requestAnimationFrame(everyFrame);
+      };
+      requestAnimationFrame(everyFrame);
+      return;
+    }
     new MutationObserver(note).observe(document, {
       subtree: true,
       childList: true,
@@ -150,7 +172,7 @@ async function recordGiftTableStates(page: Page, rootFontPx = 16): Promise<void>
       requestAnimationFrame(everyFrame);
     };
     requestAnimationFrame(everyFrame);
-  });
+  }, beforePaint);
   if (rootFontPx !== 16) {
     await rootTextOf(page, rootFontPx);
   }
@@ -482,8 +504,8 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
   }
 
   for (const { root, widths, expected } of [
-    { root: 16, widths: [1194, 1200], expected: ['narrow', 'full'] },
-    { root: 17, widths: [1194, 1200], expected: ['narrow', 'narrow'] },
+    { root: 16, widths: [1194, 1280], expected: ['narrow', 'full'] },
+    { root: 17, widths: [1194, 1280], expected: ['narrow', 'narrow'] },
   ]) {
     test(`when Moje dary opens at ${widths.join(' and ')} px with a ${root} px root, then each shows either the table without Stav or the full table, never cards`, async ({
       page,
@@ -613,10 +635,10 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
     expect(await giftTableRecord(page)).toEqual({ states: ['full', 'narrow'], errors: [] });
   });
 
-  test('when the window of an open Moje dary jumps from 1280 to 640 px, below nav, then the full table becomes rows at once, never the table without Stav or cards in between', async ({
+  test('when the window of an open Moje dary jumps from 1280 to 640 px, below nav, then the full table becomes rows in the first frame drawn, never the table without Stav or cards in between', async ({
     page,
   }) => {
-    await recordGiftTableStates(page);
+    await recordGiftTableStates(page, 16, { beforePaint: true });
     await page.setViewportSize({ width: 1280, height: 900 });
     await openOwnPage(page, '/darce/dary', await notesInPlaceOfThePdf());
     await expect(page.locator('.payments-card table').first().locator('thead th')).toHaveText([

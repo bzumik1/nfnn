@@ -200,6 +200,23 @@ describe('Given the gifts table of the donor portal', () => {
     expect(headers(fixture)).toEqual(['Datum', 'Částka', 'Účel', 'Potvrzení']);
   });
 
+  it('when the window widens from below nav to nav and the host, as wide as the rows were, narrows under ledger before its observer reports it, then the first table is already narrow without Stav', () => {
+    windowWidth = 899;
+    vi.stubGlobal('innerWidth', windowWidth);
+    const fixture = shown(866);
+    const rowsBefore = (fixture.nativeElement as HTMLElement).querySelector('.donation-rows');
+
+    windowWidth = 900;
+    vi.stubGlobal('innerWidth', windowWidth);
+    (fixture.nativeElement as HTMLElement).style.width = '570px';
+    window.dispatchEvent(new Event('resize'));
+    fixture.detectChanges();
+
+    expect(rowsBefore).not.toBeNull();
+    expect(isNarrow(fixture)).toBe(true);
+    expect(headers(fixture)).toEqual(['Datum', 'Částka', 'Účel', 'Potvrzení']);
+  });
+
   it('when the text is so large that the window is narrower than nav in text widths, then the list rows win over the narrow table', () => {
     windowWidth = 1798;
     vi.stubGlobal('innerWidth', windowWidth);
