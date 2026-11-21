@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { provideLocationMocks, SpyLocation } from '@angular/common/testing';
-import { Component, ProviderToken } from '@angular/core';
+import { Component, ErrorHandler, ProviderToken } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   InMemoryScrollingFeature,
@@ -18,7 +18,7 @@ import { KeptTabPages } from './kept-tab-pages';
 import { PagePlacement } from './page-placement';
 import { RELOAD_PLACE_KEY, ReloadPlace } from '../reload/reload-place';
 import { ScrollHold } from './scroll-hold';
-import { TabMemory } from './tab-memory';
+import { GROWING_PAGE_LOADER, TabMemory } from './tab-memory';
 
 @Component({ template: '' })
 class Blank {}
@@ -29,6 +29,25 @@ function routerScrollerOf(scrolling: InMemoryScrollingFeature): { init(): void }
 }
 
 const [about, news, projects, donate] = APP_TABS;
+
+async function untilScrolled(act: () => unknown): Promise<void> {
+  const router = TestBed.inject(Router);
+  const shown = router.lastSuccessfulNavigation()?.id ?? 0;
+  const scrolled = new Promise<void>((done) =>
+    router.events.subscribe((event) => {
+      if (event instanceof Scroll && event.routerEvent.id > shown) {
+        queueMicrotask(done);
+      }
+    }),
+  );
+  await act();
+  await scrolled;
+  await vi.dynamicImportSettled();
+}
+
+function stepBack(): Promise<void> {
+  return untilScrolled(() => TestBed.inject(Location).back());
+}
 
 describe('Given the tabs of the app', () => {
   it('when a page lies under a tab, then it belongs to that tab', () => {
@@ -378,17 +397,19 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
   }
 
+  function scrollsTo(options?: ScrollToOptions | number): void {
+    if (typeof options === 'object') {
+      const top = Math.min(options.top ?? 0, farthestPlace());
+      scrolledBy(top);
+      scrolledTo.push(top);
+    }
+  }
+
   beforeEach(async () => {
     scrolledTo = [];
     observers = new Set();
     placed = [];
-    vi.spyOn(window, 'scrollTo').mockImplementation((options?: ScrollToOptions | number) => {
-      if (typeof options === 'object') {
-        const top = Math.min(options.top ?? 0, farthestPlace());
-        scrolledBy(top);
-        scrolledTo.push(top);
-      }
-    });
+    vi.spyOn(window, 'scrollTo').mockImplementation(scrollsTo);
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -439,25 +460,6 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     pageHeight(0);
   });
 
-  async function untilScrolled(act: () => unknown): Promise<void> {
-    const router = TestBed.inject(Router);
-    const shown = router.lastSuccessfulNavigation()?.id ?? 0;
-    const scrolled = new Promise<void>((done) =>
-      router.events.subscribe((event) => {
-        if (event instanceof Scroll && event.routerEvent.id > shown) {
-          queueMicrotask(done);
-        }
-      }),
-    );
-    await act();
-    await scrolled;
-    await vi.dynamicImportSettled();
-  }
-
-  function stepBack(): Promise<void> {
-    return untilScrolled(() => TestBed.inject(Location).back());
-  }
-
   function focusedHeadingAt(top: number): void {
     const main = document.createElement('main');
     const heading = document.createElement('h1');
@@ -493,9 +495,21 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
   });
 
   it('when the Offline pill appears at the end of the page before it grows, then the page is still put where they left it and the pill does not move it', async () => {
+    const pillRoom = 42;
+    const root = document.documentElement;
     pageHeight(1200);
     await stepBack();
+    scrolledBy(farthestPlace());
+    Object.defineProperty(root, 'scrollHeight', {
+      get: () => 1200 + (root.classList.contains('is-offline') ? pillRoom : 0),
+      configurable: true,
+    });
+    vi.mocked(window.scrollTo).mockImplementation((options?: ScrollToOptions | number) => {
+      scrollsTo(options);
+      window.dispatchEvent(new Event('scroll'));
+    });
     const pill = document.createElement('div');
+    Object.defineProperty(pill, 'offsetHeight', { value: pillRoom });
     document.body.append(pill);
     placed.push(pill);
     scrolledTo = [];
@@ -509,7 +523,7 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     releasePill();
 
     expect(scrolledTo).toEqual([900]);
-    expect(scrolledTo.at(-1)).toBe(900);
+    expect(window.scrollY).toBe(900);
   });
 
   function placedYet(): () => boolean {
@@ -642,5 +656,55 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     grows(3000);
 
     expect(scrolledTo).not.toContain(900);
+  });
+});
+
+describe('Given a visitor who steps back while the code that puts the page back cannot load', () => {
+  const failure = new TypeError(
+    'Failed to fetch dynamically imported module: /chunk-growing-page.js',
+  );
+  let handleError: ReturnType<typeof vi.fn<(error: unknown) => void>>;
+
+  function scrolledBy(top: number): void {
+    Object.defineProperty(window, 'scrollY', { value: top, configurable: true });
+  }
+
+  beforeEach(async () => {
+    handleError = vi.fn<(error: unknown) => void>();
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    const scrolling = withInMemoryScrolling({ scrollPositionRestoration: 'enabled' });
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(
+          [
+            { path: 'o-nas', component: Blank },
+            { path: 'sprava', component: Blank },
+          ],
+          scrolling,
+        ),
+        provideLocationMocks(),
+        { provide: GROWING_PAGE_LOADER, useValue: () => Promise.reject(failure) },
+        { provide: ErrorHandler, useValue: { handleError } },
+      ],
+    });
+    TestBed.inject(TabMemory);
+    routerScrollerOf(scrolling).init();
+    await RouterTestingHarness.create('/o-nas');
+    TestBed.inject(Router).setUpLocationChangeListener();
+    scrolledBy(900);
+    await untilScrolled(() => TestBed.inject(Router).navigateByUrl('/sprava'));
+    scrolledBy(0);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    scrolledBy(0);
+  });
+
+  it('when the page comes back, then the placement settles, so the Offline pill and the floating bands keep the page end again, and the failure is reported', async () => {
+    await stepBack();
+
+    expect(TestBed.inject(PagePlacement).settling).toBe(false);
+    expect(handleError).toHaveBeenCalledWith(failure);
   });
 });
