@@ -16,21 +16,15 @@
       }
     }
     @case ('error') {
-      <div
-        class="ui-load-state ui-load-state--error"
+      <app-load-failure
         [class.ui-skeleton-reveal]="loadView.appears()"
+        [compact]="true"
+        [retrying]="retrying()"
+        (retry)="retry()"
+        ><ng-container i18n="@@admin.backups.history.failed"
+          >Zálohy se nepodařilo načíst.</ng-container
+        ></app-load-failure
       >
-        <p role="alert" i18n="@@admin.backups.history.failed">Zálohy se nepodařilo načíst.</p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          (click)="load()"
-          i18n="@@admin.backups.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
     }
     @case ('ready') {
       @if (days().length === 0) {

@@ -1,3 +1,4 @@
+@use 'breakpoints' as bp;
 @use 'motion';
 
 @mixin action-block {
@@ -53,6 +54,16 @@
 .ui-notice--alert.ui-notice--action,
 .ui-load-state--error {
   border-color: var(--color-danger-border);
+}
+
+.ui-notice--alert.ui-notice--action .ui-cta--ghost {
+  border-color: var(--color-danger-control-border);
+}
+
+@include bp.down(phone) {
+  .ui-notice--alert.ui-notice--action {
+    padding: var(--space-4);
+  }
 }
 
 .ui-load-state {
@@ -150,7 +161,7 @@
 .ui-notice--floating {
   position: fixed;
   inset-inline: var(--space-4);
-  bottom: var(--space-4);
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
   z-index: 200;
   display: flex;
   flex-wrap: wrap;

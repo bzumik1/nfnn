@@ -43,18 +43,26 @@
           Načítáme stav záloh…
         </p>
         @if (loadView.skeleton()) {
-          <app-skeleton [rows]="4" title="Stav záloh" i18n-title="@@admin.backups.status.title" />
+          <app-skeleton
+            [rows]="4"
+            heading="Stav záloh"
+            i18n-heading="@@admin.backups.status.title"
+          />
           <app-skeleton
             [rows]="3"
-            title="Zálohy na serveru"
-            i18n-title="@@admin.backups.list.title"
+            heading="Zálohy na serveru"
+            i18n-heading="@@admin.backups.list.title"
           />
           <app-skeleton
             [rows]="2"
-            title="Klíč k zálohám"
-            i18n-title="@@admin.backups.key.skeletonTitle"
+            heading="Klíč k&nbsp;zálohám"
+            i18n-heading="@@admin.backups.key.skeletonTitle"
           />
-          <app-skeleton [rows]="2" title="Plán záloh" i18n-title="@@admin.backups.schedule.title" />
+          <app-skeleton
+            [rows]="2"
+            heading="Plán záloh"
+            i18n-heading="@@admin.backups.schedule.title"
+          />
         }
       }
       @case ('error') {

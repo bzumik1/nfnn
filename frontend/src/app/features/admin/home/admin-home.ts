@@ -14,7 +14,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { forkJoin, map, Observable, of, Subscription, switchMap } from 'rxjs';
+import { finalize, forkJoin, map, Observable, of, Subscription, switchMap } from 'rxjs';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import { Router, RouterLink } from '@angular/router';
 import { NgTemplateOutlet } from '@angular/common';
@@ -34,6 +34,7 @@ import {
   TallyResponse,
 } from '../admin-api';
 import { OpenAlerts } from '../../../core/push/open-alerts';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { LOADING_TIMINGS, loadingView } from '../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { formatSize } from '../backups/backup-format';
@@ -84,6 +85,7 @@ const TILE_OF_TONE: Readonly<Record<AttentionTone, string>> = {
   selector: 'app-admin-home',
   imports: [
     Skeleton,
+    LoadFailure,
     NeedsConnection,
     RouterLink,
     CopyButton,
@@ -132,6 +134,7 @@ export class AdminHome {
   protected readonly sectionsLabel = $localize`:@@admin.home.sections.nav:Sekce správy`;
   protected readonly sections = computed(() => sectionRows(this.unpaired()?.count ?? 0));
   protected readonly state = signal<LoadState>('loading');
+  protected readonly importRetrying = signal(false);
   protected readonly importState = signal<ImportStateResponse | StoredImportState | null>(null);
   private readonly importRead = signal<ImportStateRead | null>(null);
   protected readonly historyState = computed(() => {
@@ -140,6 +143,7 @@ export class AdminHome {
   });
   protected readonly overviewState = signal<LoadState>('loading');
   protected readonly overviewView = loadingView(this.overviewState, (state) => state === 'loading');
+  protected readonly overviewRetrying = signal(false);
   protected readonly overview = signal<AdminOverviewResponse | null>(null);
   protected readonly unpairedState = signal<LoadState>('loading');
   protected readonly unpaired = signal<UnpairedSummary | null>(null);
@@ -148,6 +152,7 @@ export class AdminHome {
   protected readonly signatoryState = signal<SignatoryState>('loading');
   private readonly release = signal<ReleaseResponse | null>(null);
   protected readonly backupsState = signal<LoadState>('loading');
+  protected readonly backupsRetrying = signal(false);
   protected readonly backups = signal<AdminBackupsResponse | null>(null);
   protected readonly signingKeysState = signal<LoadState>('loading');
   protected readonly unpublishedSigningKeys = signal<readonly string[]>([]);
@@ -271,12 +276,25 @@ export class AdminHome {
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
-  protected loadOverview(year: number | null = null): void {
+  private loadOverview(year: number | null = null): void {
     this.overviewState.set('loading');
+    this.fetchOverview(year);
+  }
+
+  protected retryOverview(): void {
+    this.overviewRead?.unsubscribe();
+    this.overviewRetrying.set(true);
+    this.fetchOverview(null);
+  }
+
+  private fetchOverview(year: number | null): void {
     this.overviewRead?.unsubscribe();
     this.overviewRead = this.reads
       .overview(year)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.overviewRetrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (data) => {
           this.overview.set(data);
@@ -286,11 +304,23 @@ export class AdminHome {
       });
   }
 
-  protected loadBackups(): void {
+  private loadBackups(): void {
     this.backupsState.set('loading');
+    this.fetchBackups();
+  }
+
+  protected retryBackups(): void {
+    this.backupsRetrying.set(true);
+    this.fetchBackups();
+  }
+
+  private fetchBackups(): void {
     this.pageReads
       .backupsWithoutRunErrors()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.backupsRetrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (view) => {
           this.backups.set(view);
@@ -422,11 +452,23 @@ export class AdminHome {
     }
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetchImport();
+  }
+
+  protected retryImport(): void {
+    this.importRetrying.set(true);
+    this.fetchImport();
+  }
+
+  private fetchImport(): void {
     this.reads
       .importState()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.importRetrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (read) => {
           this.importRead.set(read);
