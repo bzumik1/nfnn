@@ -4,6 +4,7 @@ import {
   donationItem,
   donor,
   DonorApiMock,
+  donorSyncOf,
   mockDonorApi,
   openDonorSection,
   session,
@@ -51,17 +52,45 @@ function donationsOf(items: readonly Gift[]): DonorApiMock {
 }
 
 const LARGE_GIFTS = donationsOf([
-  gift(3, '2026-03-15', 125000000),
-  gift(2, '2026-02-10', 123450),
-  gift(1, '2026-01-05', 50000),
+  gift(4, '2026-03-15', 125000000),
+  gift(3, '2026-02-10', 123450),
+  gift(2, '2026-01-05', 50000),
+  gift(1, '2025-05-20', 30000),
 ]);
 
 const NOTES_IN_PLACE_OF_THE_PDF = donationsOf([
   gift(4, '2026-03-15', 50000),
   gift(3, '2026-02-10', 100, { accountVerification: true, receiptAvailable: false }),
   gift(2, '2026-01-05', 30000, { status: 'REFUNDED', receiptAvailable: false }),
+  gift(5, '2025-06-10', 40000),
   gift(1, '2024-06-20', 30000, { receiptAvailable: false }),
 ]);
+
+const YEARLY_RECEIPT_OF_2025 = {
+  id: '0192f0f3-0000-7000-8000-000000002025',
+  number: '2026-000101',
+  kind: 'YEARLY',
+  status: 'ACTIVE',
+  donationId: null,
+  year: 2025,
+  issuedAt: '2026-01-15T09:30:00Z',
+  receipt: { gifts: [{ receivedOn: '2025-06-10', amountMinor: 40000 }] },
+};
+
+async function notesInPlaceOfThePdf(): Promise<DonorApiMock> {
+  const gifts = (NOTES_IN_PLACE_OF_THE_PDF.list as { items: Gift[] }).items;
+  const received = gifts.filter((item) => item.status === 'RECEIVED');
+  return {
+    ...NOTES_IN_PLACE_OF_THE_PDF,
+    sync: await donorSyncOf(
+      {
+        ...(NOTES_IN_PLACE_OF_THE_PDF.summary as object),
+        ...(donationsOf(received).summary as object),
+      },
+      { gifts, receipts: [YEARLY_RECEIPT_OF_2025] },
+    ),
+  };
+}
 
 const ONE_YEAR = donationsOf([gift(1, '2026-03-15', 50000)]);
 
@@ -159,7 +188,7 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
     test(`when Moje dary shows a note in place of the PDF in a ${width} px window, then each note keeps to one line and its row is no taller than a row with the button`, async ({
       page,
     }) => {
-      await mockDonorApi(page, NOTES_IN_PLACE_OF_THE_PDF);
+      await mockDonorApi(page, await notesInPlaceOfThePdf());
       await signIn(page);
       await page.setViewportSize({ width, height: 900 });
       await openDonorSection(page, 'Moje dary');
@@ -168,9 +197,10 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
       await expect(notes).toHaveText([
         'Započítá se do ročního potvrzení',
         'Vrácený dar potvrzení nemá',
+        'Je na ročním potvrzení za rok 2025',
         'Potvrzení vystavujeme od roku 2025',
       ]);
-      expect(await linesOf(notes)).toEqual([1, 1, 1]);
+      expect(await linesOf(notes)).toEqual([1, 1, 1, 1]);
 
       const heights = await page.locator('.payments-card tbody tr').evaluateAll((rows) =>
         rows
@@ -182,10 +212,32 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
       );
       const buttonRow = heights.find((row) => row.withButton)!;
       const noteRows = heights.filter((row) => !row.withButton);
-      expect(noteRows).toHaveLength(2);
+      expect(noteRows).toHaveLength(3);
       for (const row of noteRows) {
         expect(row.height).toBeLessThanOrEqual(buttonRow.height + 0.5);
       }
+    });
+
+    test(`when Moje dary shows notes in place of the PDF in some years in a ${width} px window, then every year's columns start at the same places`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, await notesInPlaceOfThePdf());
+      await signIn(page);
+      await page.setViewportSize({ width, height: 900 });
+      await openDonorSection(page, 'Moje dary');
+      await expect(page.locator('.payments-card table')).toHaveCount(3);
+      await expect(page.locator('.payments-card td.receipt .receipt-note')).toHaveCount(4);
+
+      const starts = await page
+        .locator('.payments-card table')
+        .evaluateAll((tables) =>
+          tables.map((table) =>
+            Array.from(table.querySelectorAll('thead th')).map((heading) =>
+              Math.round(heading.getBoundingClientRect().left),
+            ),
+          ),
+        );
+      expect(new Set(starts.map((each) => each.join(' '))).size).toBe(1);
     });
 
     test(`when Potvrzení o daru lists many years, some with a long note, in a ${width} px window, then no count of gifts runs into the amount of its year`, async ({

@@ -717,6 +717,7 @@ test.describe('Given a signed-in donor on a computer', () => {
     {
       name: 'a gift in the table of Moje dary',
       statusAfterButton: true,
+      keepsHeight: false,
       section: 'Moje dary',
       wrappedStatus: 'beside',
       row: (page: Page) => page.locator('.payments-card tbody tr').first(),
@@ -725,6 +726,7 @@ test.describe('Given a signed-in donor on a computer', () => {
     {
       name: 'a year on Moje dary',
       statusAfterButton: true,
+      keepsHeight: true,
       section: 'Moje dary',
       wrappedStatus: 'below',
       row: (page: Page) => page.locator('.gift-year-head').last(),
@@ -733,6 +735,7 @@ test.describe('Given a signed-in donor on a computer', () => {
     {
       name: 'a year on Potvrzení o daru',
       statusAfterButton: true,
+      keepsHeight: true,
       section: 'Potvrzení o daru',
       wrappedStatus: 'below',
       row: (page: Page) => page.locator('.year-row').last(),
@@ -741,6 +744,7 @@ test.describe('Given a signed-in donor on a computer', () => {
     {
       name: 'the ready receipt on Můj přehled',
       statusAfterButton: true,
+      keepsHeight: false,
       section: 'Můj přehled',
       wrappedStatus: 'below',
       row: (page: Page) => page.locator('.receipt-ready'),
@@ -751,55 +755,149 @@ test.describe('Given a signed-in donor on a computer', () => {
   async function placement(row: Locator, button: Locator): Promise<number[]> {
     const rowBox = (await row.boundingBox())!;
     const buttonBox = (await button.boundingBox())!;
-    return [rowBox.height, buttonBox.x, buttonBox.y, buttonBox.width].map((value) =>
-      Math.round(value),
+    const columnStarts = await row.evaluate((element) =>
+      Array.from(element.closest('table')?.querySelectorAll('thead th') ?? []).map(
+        (heading) => heading.getBoundingClientRect().left,
+      ),
+    );
+    return [rowBox.height, buttonBox.x, buttonBox.y, buttonBox.width, ...columnStarts].map(
+      (value) => Math.round(value),
     );
   }
 
-  for (const place of PDF_PLACES) {
-    test(`when the PDF of ${place.name} takes long to prepare, then the button stays put, the row keeps its height or the status opens under it, and Tab meets Zrušit in the order it is seen`, async ({
-      page,
-    }) => {
-      await mockDonorApi(page, receiptDonations);
-      await page.clock.install();
-      await page.route(
-        (url) => url.pathname === RECEIPT_ISSUING_URL,
-        () => new Promise<void>(() => undefined),
-      );
-      await openReceiptsAfterSignIn(page);
-      await openDonorSection(page, place.section);
-      const row = place.row(page);
-      const button = place.button(row);
-      await expect(button).toBeVisible();
-      const resting = await placement(row, button);
+  const PDF_POSES = [
+    { name: '', viewport: null, rootSize: null, places: PDF_PLACES },
+    {
+      name: ' on an iPad held sideways',
+      viewport: { width: 1180, height: 820 },
+      rootSize: null,
+      places: PDF_PLACES.filter((place) => place.keepsHeight),
+    },
+    {
+      name: ' with the largest text',
+      viewport: null,
+      rootSize: '53px',
+      places: PDF_PLACES.filter((place) => place.keepsHeight),
+    },
+  ];
 
-      const kept = (values: number[]) => (place.statusAfterButton ? values.slice(1) : values);
-
-      await button.click();
-      const status = row.getByRole('status');
-      await expect(status).toHaveText('Připravujeme údaje potvrzení…');
-      expect(kept(await placement(row, button))).toEqual(kept(resting));
-
-      await page.clock.fastForward(8000);
-      const cancel = row.getByRole('button', { name: 'Zrušit' });
-      await expect(cancel).toBeVisible();
-      expect(kept(await placement(row, button))).toEqual(kept(resting));
-
-      if (place.statusAfterButton) {
-        const buttonBox = (await button.boundingBox())!;
-        expect((await status.boundingBox())!.y).toBeGreaterThanOrEqual(
-          buttonBox.y + buttonBox.height,
+  for (const pose of PDF_POSES) {
+    for (const place of pose.places) {
+      test(`when the PDF of ${place.name} takes long to prepare${pose.name}, then the button stays put, the row keeps its height or the status opens under it, and Tab meets Zrušit in the order it is seen`, async ({
+        page,
+      }) => {
+        if (pose.rootSize !== null) {
+          await page.addInitScript((size) => {
+            document.addEventListener('DOMContentLoaded', () => {
+              const style = document.createElement('style');
+              style.textContent = `html { font-size: ${size}; }`;
+              document.head.append(style);
+            });
+          }, pose.rootSize);
+        }
+        if (pose.viewport !== null) {
+          await page.setViewportSize(pose.viewport);
+        }
+        await mockDonorApi(page, receiptDonations);
+        await page.route(
+          (url) => url.pathname === RECEIPT_ISSUING_URL,
+          () => new Promise<void>(() => undefined),
         );
-        await button.focus();
-        await page.keyboard.press('Tab');
-        await expect(cancel).toBeFocused();
-      } else {
-        await cancel.focus();
-        await page.keyboard.press('Tab');
-        await expect(button).toBeFocused();
-      }
-    });
+        await openReceiptsAfterSignIn(page);
+        await openDonorSection(page, place.section);
+        const row = place.row(page);
+        const button = place.button(row);
+        await expect(button).toBeVisible();
+        await expect(page.locator('.page-fade--leaving')).toHaveCount(0);
+        await page.clock.install();
+        await page.evaluate(() => document.fonts.ready);
+        await button.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+        const resting = await placement(row, button);
 
+        const kept = (values: number[]) => (place.keepsHeight ? values : values.slice(1));
+
+        await button.click();
+        const status = row.getByRole('status');
+        await expect(status).toHaveText('Připravujeme údaje potvrzení…');
+        expect(kept(await placement(row, button))).toEqual(kept(resting));
+
+        await page.clock.fastForward(8000);
+        const cancel = row.getByRole('button', { name: 'Zrušit' });
+        await expect(cancel).toBeVisible();
+        expect(kept(await placement(row, button))).toEqual(kept(resting));
+
+        if (place.statusAfterButton) {
+          const buttonBox = (await button.boundingBox())!;
+          expect((await status.boundingBox())!.y).toBeGreaterThanOrEqual(
+            buttonBox.y + buttonBox.height,
+          );
+          await button.focus();
+          await page.keyboard.press('Tab');
+          await expect(cancel).toBeFocused();
+        } else {
+          await cancel.focus();
+          await page.keyboard.press('Tab');
+          await expect(button).toBeFocused();
+        }
+      });
+    }
+  }
+
+  for (const { name, section, row, year } of [
+    {
+      name: 'a year on Moje dary',
+      section: 'Moje dary',
+      row: (page: Page) => page.locator('.gift-year-head').last(),
+      year: '.gift-year-title',
+    },
+    {
+      name: 'a year on Potvrzení o daru',
+      section: 'Potvrzení o daru',
+      row: (page: Page) => page.locator('.year-row').last(),
+      year: '.year',
+    },
+  ]) {
+    for (const width of [1280, 1180]) {
+      test(`when ${name} shows its PDF button in a ${width} px window, then the year stands on the line of the button's text`, async ({
+        page,
+      }) => {
+        await mockDonorApi(page, receiptDonations);
+        await page.setViewportSize({ width, height: 820 });
+        await openReceiptsAfterSignIn(page);
+        await openDonorSection(page, section);
+        const shown = row(page);
+        await expect(shown.locator('.yearly-pdf')).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+
+        const baselines = await shown.evaluate((element, yearSelector) => {
+          const baselineOf = (scope: Element) => {
+            const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+            let text = walker.nextNode();
+            while (text !== null && !text.textContent?.trim()) {
+              text = walker.nextNode();
+            }
+            const marker = document.createElement('span');
+            marker.style.cssText = 'display:inline-block;inline-size:0;block-size:0';
+            text!.parentNode!.insertBefore(marker, text);
+            const baseline = marker.getBoundingClientRect().top;
+            marker.remove();
+            return baseline;
+          };
+          return [
+            baselineOf(element.querySelector(yearSelector)!),
+            baselineOf(
+              element.querySelector(
+                '.yearly-pdf .pdf-button__layer--current .pdf-button__label:not(.pdf-button__reserve)',
+              )!,
+            ),
+          ];
+        }, year);
+        expect(Math.abs(baselines[0] - baselines[1])).toBeLessThanOrEqual(1);
+      });
+    }
+  }
+
+  for (const place of PDF_PLACES) {
     test(`when the PDF of ${place.name} waits for the second tap, then its row keeps its height and the button stays put`, async ({
       page,
     }) => {
@@ -824,7 +922,7 @@ test.describe('Given a signed-in donor on a computer', () => {
       );
       const ready = await placement(row, button);
       const settled = (values: number[]) =>
-        place.statusAfterButton
+        place.statusAfterButton && !place.keepsHeight
           ? [values[1] + values[3], values[2]]
           : [values[0], values[1] + values[3], values[2]];
       expect(settled(ready)).toEqual(settled(resting));

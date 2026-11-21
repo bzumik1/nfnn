@@ -2104,7 +2104,11 @@ describe('Given a signed-in donor in the donor area', () => {
         'bez symbolu · účet …3333/2010',
         'symbol 6123456789 · účet …5399/0800',
       ]);
-      expect(textOf('.account-ref')).toEqual(['účet …3333/2010', 'účet …5399/0800']);
+      expect(textOf('.account-ref')).toEqual([
+        'účet …3333/2010',
+        'symbol 6123456789',
+        'účet …5399/0800',
+      ]);
     });
 
     it('then donations paired by the variable symbol or by hand carry no tag', async () => {
