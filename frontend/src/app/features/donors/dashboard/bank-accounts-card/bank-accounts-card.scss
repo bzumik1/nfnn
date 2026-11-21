@@ -281,12 +281,6 @@
   padding-right: var(--space-8);
 }
 
-@include bp.container-down(dialog-panel, tabs) {
-  .add-account-title {
-    font-size: var(--text-dialog-title-large);
-  }
-}
-
 .add-account-text {
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
@@ -389,6 +383,7 @@
 .add-account-bank {
   flex: 1 1 200px;
   display: grid;
+  container: facts / inline-size;
   gap: var(--space-3);
 
   dt {
@@ -409,17 +404,19 @@
       padding-block-start: calc((var(--button-small-min-height) - 1lh) / 2);
     }
 
+    > app-copy-button {
+      justify-self: end;
+    }
+
     > app-copy-button.has-failed {
       grid-column: 1 / -1;
-      justify-self: end;
     }
   }
 }
 
-@include bp.container-down(dialog-panel, pair) {
+@container facts (width < 14rem) {
   .add-account-bank dd {
-    display: flex;
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -531,6 +528,10 @@
 }
 
 @include bp.container-down(dialog-panel, tabs) {
+  .add-account-title {
+    font-size: var(--text-dialog-title-large);
+  }
+
   .watch-title,
   .watch-detail {
     max-inline-size: min(var(--measure-prose), 100%);

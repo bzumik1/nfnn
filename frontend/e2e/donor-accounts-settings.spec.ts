@@ -45,6 +45,40 @@ async function linesOf(elements: Locator): Promise<number[]> {
   );
 }
 
+async function numbersBrokenAcrossLines(dialog: Locator): Promise<string[]> {
+  return dialog.locator('.add-account-bank').evaluate((facts) => {
+    const broken: string[] = [];
+    const walker = document.createTreeWalker(facts, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      for (const number of (node.textContent ?? '').matchAll(/[\d/-]{4,}/g)) {
+        const range = document.createRange();
+        range.setStart(node, number.index);
+        range.setEnd(node, number.index + number[0].length);
+        const tops = new Set(Array.from(range.getClientRects(), (rect) => Math.round(rect.top)));
+        if (tops.size > 1) {
+          broken.push(number[0]);
+        }
+      }
+    }
+    return broken;
+  });
+}
+
+async function copyButtonsOffTheRightEdge(dialog: Locator): Promise<string[]> {
+  return dialog.locator('.add-account-row').evaluateAll((rows) =>
+    rows.flatMap((row) => {
+      const button = row.querySelector('app-copy-button button');
+      if (!button) {
+        return [];
+      }
+      const edge = row.querySelector('dd')!.getBoundingClientRect().right;
+      return Math.abs(button.getBoundingClientRect().right - edge) > 1
+        ? [row.querySelector('dt')!.textContent!.trim()]
+        : [];
+    }),
+  );
+}
+
 const DONOR_WITH_A_LONG_ADDRESS = {
   ...donor,
   address: {
@@ -231,6 +265,24 @@ test.describe('Given a signed-in donor on a phone', () => {
   }
 });
 
+test.describe('Given a signed-in donor adding a bank account in a narrow bottom sheet', () => {
+  for (const root of [16, 17]) {
+    test(`when Přidat bankovní účet opens 490 px wide with a ${root} px root, then no number breaks across lines and every copy button ends at the right edge`, async ({
+      page,
+    }) => {
+      await signInOnPhone(page, 490);
+      await page.addStyleTag({ content: `html { font-size: ${root}px; }` });
+      await openAccountItem(page, 'Bankovní účty');
+      await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
+      await expect(dialog.locator('.add-account-bank')).toBeVisible();
+
+      await expect.poll(() => numbersBrokenAcrossLines(dialog)).toEqual([]);
+      expect(await copyButtonsOffTheRightEdge(dialog)).toEqual([]);
+    });
+  }
+});
+
 test.describe('Given a signed-in donor on a phone with the largest system text', () => {
   for (const width of [375, 390]) {
     test(`when Bankovní účty lists accounts with gifts in the account sheet ${width} px wide, then each gift count starts its line whole beside its separator and no text of the row is clipped`, async ({
@@ -323,22 +375,22 @@ test.describe('Given a signed-in donor adding a bank account on a wide screen', 
         { message: 'the payment facts start under the QR code once the sheet stands' },
       )
       .toBeGreaterThanOrEqual(0);
-    const split = await dialog.locator('.add-account-bank').evaluate((facts) => {
-      const broken: string[] = [];
-      const walker = document.createTreeWalker(facts, NodeFilter.SHOW_TEXT);
-      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        for (const number of (node.textContent ?? '').matchAll(/[\d/-]{4,}/g)) {
-          const range = document.createRange();
-          range.setStart(node, number.index);
-          range.setEnd(node, number.index + number[0].length);
-          const tops = new Set(Array.from(range.getClientRects(), (rect) => Math.round(rect.top)));
-          if (tops.size > 1) {
-            broken.push(number[0]);
-          }
-        }
-      }
-      return broken;
-    });
-    expect(split).toEqual([]);
+    expect(await numbersBrokenAcrossLines(dialog)).toEqual([]);
+  });
+
+  test('when Přidat bankovní účet opens on an upright tablet with the largest system text, then no number breaks across lines and every copy button ends at the right edge', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await signIn(page);
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await page.addStyleTag({ content: 'html { font-size: 53px; }' });
+    await openDonorSection(page, 'Bankovní účty');
+    await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
+    await expect(dialog.locator('.add-account-bank')).toBeVisible();
+
+    await expect.poll(() => numbersBrokenAcrossLines(dialog)).toEqual([]);
+    expect(await copyButtonsOffTheRightEdge(dialog)).toEqual([]);
   });
 });
