@@ -112,6 +112,10 @@
   justify-content: space-between;
   gap: var(--space-3) var(--space-5);
 
+  > .ui-card__title {
+    flex: 1000 1 auto;
+  }
+
   .receipt-error {
     flex-basis: 100%;
     margin-top: 0;
@@ -119,8 +123,8 @@
 }
 
 .receipt-ready-action {
+  flex: 1 1 auto;
   display: grid;
-  justify-items: end;
   min-width: 0;
 }
 
@@ -152,11 +156,6 @@
   .receipt-ready {
     container-name: ui-card receipt-ready;
     container-type: inline-size;
-    row-gap: 0;
-
-    .receipt-error {
-      margin-top: var(--space-3);
-    }
   }
 
   .receipt-ready > .ui-card__title {
@@ -167,77 +166,21 @@
     margin-top: 0;
     padding-top: var(--space-3);
   }
-
-  @include bp.container-up(receipt-ready, tablet) {
-    .receipt-ready > .ui-card__title {
-      flex: 1 1 0;
-      min-inline-size: 0;
-    }
-
-    .receipt-ready-action {
-      display: contents;
-    }
-
-    .receipt-ready-pdf {
-      margin-inline-start: auto;
-    }
-
-    .receipt-status {
-      flex-basis: 100%;
-    }
-  }
-
-  @include bp.container-down(receipt-ready, tablet) {
-    .receipt-ready-action {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      flex-basis: 100%;
-      margin-top: var(--space-3);
-    }
-
-    .receipt-status {
-      align-self: stretch;
-    }
-  }
 }
 
 @include bp.down(nav) {
-  .receipt-ready-action {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0 var(--space-2);
-  }
-
-  .receipt-status {
-    flex: none;
-    max-inline-size: 100%;
-  }
-
   .receipt-status__inner > .receipt-saved {
+    margin-top: 0;
     padding-block: var(--space-1-5);
   }
 
   .receipt-saved {
-    flex: none;
-    flex-wrap: nowrap;
-    inline-size: var(--pdf-status-reserve);
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    margin-top: 0;
     justify-content: flex-start;
     text-align: start;
   }
 }
 
 @include bp.down(cards) {
-  .receipt-ready-action {
-    flex-basis: 100%;
-    justify-content: flex-start;
-  }
-
   .receipt-saved {
     justify-content: flex-start;
     text-align: left;
