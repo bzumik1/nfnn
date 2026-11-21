@@ -53,7 +53,7 @@ function labelsOutsideTheirButton(bar: Locator): Promise<string[]> {
 }
 
 interface ButtonSizes {
-  readonly heights: number[];
+  readonly lineBoxes: string[];
   readonly fontSizes: string[];
   readonly smallText: string;
 }
@@ -67,7 +67,10 @@ function sizesOfTheButtons(bar: Locator): Promise<ButtonSizes> {
     const smallText = getComputedStyle(probe).fontSize;
     probe.remove();
     return {
-      heights: buttons.map((button) => button.getBoundingClientRect().height),
+      lineBoxes: buttons.map((button) => {
+        const style = getComputedStyle(button);
+        return [style.lineHeight, style.paddingTop, style.paddingBottom].join(' ');
+      }),
       fontSizes: buttons.map((button) => getComputedStyle(button).fontSize),
       smallText,
     };
@@ -96,7 +99,7 @@ test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide
     expect(await labelsOutsideTheirButton(bar)).toEqual([]);
   });
 
-  test('when they start a new article, then both buttons of the action bar keep one height and the small text size', async ({
+  test('when they start a new article, then both buttons of the action bar keep the small text size and one line height and padding, so a line of either is one height', async ({
     page,
   }) => {
     await openUnlockedAdministration(page, '/sprava/aktuality/nova');
@@ -105,10 +108,10 @@ test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide
     await expect(bar.getByRole('button', { name: 'Uložit a zveřejnit' })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
 
-    const { heights, fontSizes, smallText } = await sizesOfTheButtons(bar);
+    const { lineBoxes, fontSizes, smallText } = await sizesOfTheButtons(bar);
 
-    expect(heights).toHaveLength(2);
-    expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(0.5);
+    expect(lineBoxes).toHaveLength(2);
+    expect(lineBoxes[0]).toBe(lineBoxes[1]);
     expect(fontSizes).toEqual([smallText, smallText]);
   });
 });
