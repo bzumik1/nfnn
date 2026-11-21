@@ -16,6 +16,11 @@ import {
 } from '../device-copy/testing/opened-copy';
 import { project as heldProject } from '../../content/testing/project-fixtures';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const LIST_URL = '/api/admin/content/projects';
 const ORDER_URL = '/api/admin/content/project-order';
@@ -139,11 +144,13 @@ describe('Given an administrator on the project list', () => {
     await settle();
 
     expect(texts('[role="alert"]:not(:empty)')).toEqual(['Příběhy se nepodařilo načíst.']);
-    expect(fixture.nativeElement.querySelector('[role="alert"] button')).toBeNull();
-    (
-      fixture.nativeElement.querySelector('.ui-load-state--error button') as HTMLButtonElement
-    ).click();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Příběhy se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
     await settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Příběhy se nepodařilo načíst.']);
     http.expectOne(LIST_URL).flush({ items: [project()] });
     await settle();
 

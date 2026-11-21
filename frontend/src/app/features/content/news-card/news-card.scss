@@ -96,21 +96,35 @@
 
 .news-meta {
   display: flex;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
   align-items: center;
   margin-bottom: var(--space-2-5);
 }
 
 .news-tag {
+  min-width: 0;
   background: var(--color-accent-soft);
   color: var(--color-accent);
   font-size: var(--text-2xs);
   font-weight: var(--weight-bold);
   padding: var(--space-0-75) var(--space-2-25);
   border-radius: var(--radius-pill);
+
+  @include bp.up(tablet) {
+    @include bp.container-up(news-card, pager) {
+      flex: 1 0 min(6em, 100%);
+      max-width: max-content;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
 }
 
 .news-date {
+  flex: none;
+  max-width: 100%;
   color: var(--color-text-subtle);
   font-size: var(--text-xs);
 }
@@ -174,6 +188,7 @@
 
 .news-share {
   position: relative;
+  margin-inline-start: auto;
   z-index: 1;
 }
 

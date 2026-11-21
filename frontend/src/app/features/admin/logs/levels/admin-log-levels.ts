@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { describeProblem } from '../../../../core/auth/api-problem';
 import { Dialog } from '../../../../shared/ui/dialog/dialog';
@@ -19,6 +20,7 @@ import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { RadioGroup } from '../../../../shared/ui/radio-group/radio-group';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { loadingView } from '../../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { formatBankTime } from '../../../donations/donation-date';
@@ -51,6 +53,7 @@ const LOGGER_NAME = /^(ROOT|[A-Za-z0-9_$][A-Za-z0-9_$.]*)$/;
   imports: [
     BusyLabel,
     Skeleton,
+    LoadFailure,
     Dialog,
     FocusFirstInvalid,
     FormControlDirective,
@@ -73,6 +76,7 @@ export class AdminLogLevels {
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly retrying = signal(false);
   protected readonly loggers = signal<LoggerResponse[]>([]);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly resetting = signal<string | null>(null);
@@ -105,11 +109,23 @@ export class AdminLogLevels {
     afterNextRender(() => this.title().nativeElement.focus());
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.api
       .logLevels()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: ({ loggers }) => {
           this.loggers.set(loggers);

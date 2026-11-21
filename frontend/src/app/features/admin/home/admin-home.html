@@ -23,20 +23,11 @@
           </p>
         }
         @case ('error') {
-          <div class="ui-load-state ui-load-state--error">
-            <p role="alert" i18n="@@admin.home.import.error.text">
-              Stav importu se nepodařilo načíst.
-            </p>
-            <button
-              appNeedsConnection
-              type="button"
-              class="ui-button"
-              (click)="load()"
-              i18n="@@admin.home.import.error.retry"
-            >
-              Zkusit znovu
-            </button>
-          </div>
+          <app-load-failure [compact]="true" [retrying]="importRetrying()" (retry)="retryImport()"
+            ><ng-container i18n="@@admin.home.import.error.text"
+              >Stav importu se nepodařilo načíst.</ng-container
+            ></app-load-failure
+          >
         }
         @case ('ready') {
           @if (!lastFailure() && !neverAttempted()) {
@@ -157,20 +148,11 @@
           </p>
         }
         @case ('error') {
-          <div class="ui-load-state ui-load-state--error">
-            <p role="alert" i18n="@@admin.home.backups.error.text">
-              Stav záloh se nepodařilo načíst.
-            </p>
-            <button
-              appNeedsConnection
-              type="button"
-              class="ui-button"
-              (click)="loadBackups()"
-              i18n="@@admin.home.backups.error.retry"
-            >
-              Zkusit znovu
-            </button>
-          </div>
+          <app-load-failure [compact]="true" [retrying]="backupsRetrying()" (retry)="retryBackups()"
+            ><ng-container i18n="@@admin.home.backups.error.text"
+              >Stav záloh se nepodařilo načíst.</ng-container
+            ></app-load-failure
+          >
         }
         @case ('ready') {
           @if (backupsHealthy()) {
@@ -241,23 +223,15 @@
         }
       }
       @case ('error') {
-        <div
-          class="ui-load-state ui-load-state--error"
+        <app-load-failure
           [class.ui-skeleton-reveal]="overviewView.appears()"
+          [compact]="true"
+          [retrying]="overviewRetrying()"
+          (retry)="retryOverview()"
+          ><ng-container i18n="@@admin.home.overview.error.text"
+            >Dary po měsících se nepodařilo načíst.</ng-container
+          ></app-load-failure
         >
-          <p role="alert" i18n="@@admin.home.overview.error.text">
-            Dary po měsících se nepodařilo načíst.
-          </p>
-          <button
-            appNeedsConnection
-            type="button"
-            class="ui-button"
-            (click)="loadOverview()"
-            i18n="@@admin.home.overview.error.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
       }
       @case ('ready') {
         @if (overview(); as data) {
@@ -460,7 +434,7 @@
         Co potřebuje vaši pozornost
       </h2>
     </div>
-    <ul class="ui-list attention-list">
+    <ul class="ui-list ui-list--wide-values attention-list">
       @if (attentionLoading()) {
         <li>
           <div class="ui-list__row">

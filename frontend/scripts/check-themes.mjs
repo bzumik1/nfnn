@@ -384,6 +384,12 @@ const READABLE_PAIRS = [
   },
   { texts: ['--color-on-inverse'], grounds: ['--color-surface-quote'], minimum: 4.5 },
   { texts: ['--color-danger'], grounds: ['--color-danger-bg'], minimum: 4.5 },
+  {
+    texts: ['--color-danger-control-border'],
+    grounds: ['--color-danger-bg'],
+    minimum: 3,
+    softInTheDefaultLook: true,
+  },
   { texts: ['--color-warning'], grounds: ['--color-warning-bg'], minimum: 4.5 },
   { texts: ['--color-success'], grounds: ['--color-success-bg'], minimum: 4.5 },
   {

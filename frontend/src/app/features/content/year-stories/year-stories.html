@@ -36,14 +36,14 @@
           }
         </div>
         <div class="story-text">
-          @if (tile.project.tag) {
-            <span class="story-tag">{{ tile.project.tag }}</span>
-          }
           <h3 class="story-title">
             <a class="story-link" [routerLink]="['/projekty', tile.project.slug]">{{
               tile.project.title
             }}</a>
           </h3>
+          @if (tile.project.tag) {
+            <span class="story-tag">{{ tile.project.tag }}</span>
+          }
         </div>
       </li>
     }

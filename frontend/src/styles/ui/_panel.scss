@@ -57,8 +57,8 @@
 }
 
 .ui-status__icon {
-  width: 56px;
-  height: 56px;
+  width: var(--status-icon-size);
+  height: var(--status-icon-size);
   margin: 0 auto var(--space-4);
   border-radius: var(--radius-round);
   display: flex;

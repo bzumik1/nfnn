@@ -17,8 +17,21 @@ import { expect, test } from './fixtures';
 const SIGNED_OUT =
   'Zařízení jsme odhlásili: iPhone · Safari. Pokud jste se na něm nepřihlásili vy, změňte si heslo.';
 
+const LENGTHENED_LOADING_DELAY_MS = 10_000;
+const PAST_THE_LOADING_DELAY_MS = LENGTHENED_LOADING_DELAY_MS + 1_000;
+
 async function lengthenLoadingDelay(page: Page): Promise<void> {
-  await page.evaluate(() => document.documentElement.style.setProperty('--delay-loading', '10s'));
+  await page.evaluate(
+    (delayMs) => document.documentElement.style.setProperty('--delay-loading', `${delayMs}ms`),
+    LENGTHENED_LOADING_DELAY_MS,
+  );
+}
+
+async function openSignInDialogUnderLongLoadingDelay(page: Page): Promise<void> {
+  await page.goto('/');
+  await lengthenLoadingDelay(page);
+  await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
 }
 
 async function listenTo(status: Locator): Promise<() => Promise<string[]>> {
@@ -50,6 +63,7 @@ async function signOutTheIPhone(page: Page, answers: Promise<void>): Promise<Loc
     },
   );
   await signIn(page);
+  await lengthenLoadingDelay(page);
   await openDonorSection(page, 'Údaje a zabezpečení');
   const devices = page.locator('.devices');
   await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
@@ -70,7 +84,6 @@ test.describe('Given a donor signing out another device on Údaje a zabezpečen�
     const devices = await signOutTheIPhone(page, answered);
     const status = devices.locator('.devices-status');
     const heard = await listenTo(status);
-    await lengthenLoadingDelay(page);
     const restingHeight = (await devices.boundingBox())?.height;
     const yes = devices.getByRole('button', { name: 'Odhlásit', exact: true });
 
@@ -80,7 +93,7 @@ test.describe('Given a donor signing out another device on Údaje a zabezpečen�
     await expect(yes).toHaveAccessibleName('Odhlásit');
     await expect(status).toHaveText('');
 
-    await page.clock.fastForward(10_000);
+    await page.clock.fastForward(PAST_THE_LOADING_DELAY_MS);
 
     await expect(status).toHaveText('Odhlašujeme…');
     await expect(yes.locator('.busy-label__face--shown')).toHaveText('Odhlašujeme…');
@@ -100,7 +113,6 @@ test.describe('Given a donor signing out another device on Údaje a zabezpečen�
     const devices = await signOutTheIPhone(page, Promise.resolve());
     const status = devices.locator('.devices-status');
     const heard = await listenTo(status);
-    await lengthenLoadingDelay(page);
 
     await devices.getByRole('button', { name: 'Odhlásit', exact: true }).click();
 
@@ -129,15 +141,18 @@ test.describe('Given a donor sending the e-mail change link again on Údaje a za
       );
     });
     await signIn(page, { ...donor, pendingEmailChange: pending });
+    await lengthenLoadingDelay(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
     const row = page.locator('.account-row').filter({ hasText: 'Čeká na potvrzení' });
     const resend = row.locator('.account-resend');
     await expect(resend).toHaveAccessibleName('Poslat znovu potvrzovací odkaz');
     const status = page.locator('.account-status');
-    await lengthenLoadingDelay(page);
 
     await resend.click();
-    await page.clock.fastForward(10_000);
+
+    await expect(resend).toHaveAttribute('aria-busy', 'true');
+    await expect(status).toHaveText('');
+    await page.clock.fastForward(PAST_THE_LOADING_DELAY_MS);
 
     await expect(resend.locator('.busy-label__face--shown')).toHaveText('Posíláme…');
     await expect(status).toHaveText('Posíláme…');
@@ -310,6 +325,7 @@ async function openDetailsWithEveryBusyButton(page: Page): Promise<void> {
     (route) => route.fulfill({ json: { items: [IPHONE_PASSKEY] } }),
   );
   await signIn(page, signedIn);
+  await lengthenLoadingDelay(page);
   await openDonorSection(page, 'Údaje a zabezpečení');
 }
 
@@ -345,7 +361,6 @@ test.describe('Given an administrator on Údaje a zabezpečení pressing a busy 
         }
       });
       const button = await step.reach(page);
-      await lengthenLoadingDelay(page);
       const starting = page.locator('[role="status"]').filter({ hasText: step.busy });
       await button.focus();
 
@@ -353,7 +368,7 @@ test.describe('Given an administrator on Údaje a zabezpečení pressing a busy 
 
       await expect(button).toHaveAttribute('aria-busy', 'true');
       await expect(button).toBeFocused();
-      await page.clock.fastForward(10_000);
+      await page.clock.fastForward(PAST_THE_LOADING_DELAY_MS);
       await expect(button.locator('.busy-label__face--shown')).toHaveText(step.busy);
       await expect(starting).toHaveCount(1);
       await expect(starting).toHaveText(step.busy);
@@ -454,14 +469,13 @@ test.describe('Given a visitor signing in from the sign-in dialog', () => {
         ),
       );
     });
-    await openSignInDialog(page);
+    await openSignInDialogUnderLongLoadingDelay(page);
     const dialog = page.getByRole('dialog');
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('wrong horse battery');
     const submit = dialog.locator('.login-form .ui-button--primary');
     const status = dialog.locator('.login-form [role="status"]');
     const heard = await listenTo(status);
-    await lengthenLoadingDelay(page);
     await submit.focus();
 
     await submit.press('Enter');
@@ -470,7 +484,7 @@ test.describe('Given a visitor signing in from the sign-in dialog', () => {
     await expect(submit).toBeFocused();
     await expect(status).toHaveText('');
 
-    await page.clock.fastForward(10_000);
+    await page.clock.fastForward(PAST_THE_LOADING_DELAY_MS);
 
     await expect(status).toHaveText('Přihlašujeme…');
     await expect(submit.locator('.busy-label__face--shown')).toHaveText('Přihlašujeme…');
@@ -710,16 +724,15 @@ test.describe('Given a visitor in a step of the sign-in dialog whose answer is s
       await page.clock.install();
       await mockDonorApi(page);
       const release = await holdAnswers(page, step);
-      await openSignInDialog(page);
+      await openSignInDialogUnderLongLoadingDelay(page);
       const button = await step.reach(page);
-      await lengthenLoadingDelay(page);
       const starting = page.locator('[role="status"]').filter({ hasText: step.busy });
       await button.focus();
 
       await button.press('Enter');
 
       await expect(button).toHaveAttribute('aria-busy', 'true');
-      await page.clock.fastForward(10_000);
+      await page.clock.fastForward(PAST_THE_LOADING_DELAY_MS);
       await expect(button.locator('.busy-label__face--shown')).toHaveText(step.busy);
       await expect(starting).toHaveCount(1);
       await expect(starting).toHaveText(step.busy);

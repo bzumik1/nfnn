@@ -70,17 +70,22 @@
 }
 
 .preview {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  row-gap: var(--space-1-5);
   margin: 0;
   min-width: 0;
 
   figcaption {
-    margin-top: var(--space-1-5);
+    align-self: end;
     font-size: var(--text-xs);
     color: var(--color-text-soft);
   }
 }
 
 .preview-frame {
+  align-self: start;
   border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--color-surface-alt);

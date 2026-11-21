@@ -10,6 +10,11 @@ import { DIAGNOSTICS_URL, LogPageHarness } from '../testing/log-page-harness';
 import { AdminServerState } from './admin-server-state';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const RELEASE_URL = '/api/admin/operations/release';
 const HISTORY_URL = '/api/admin/operations/release/history';
@@ -157,9 +162,17 @@ describe('Given an administrator on the server state page', () => {
     page.http.expectOne(DIAGNOSTICS_URL).flush(null, { status: 500, statusText: 'Error' });
     await page.settle();
 
-    expect(page.text('[role="alert"]')).toContain('Stav serveru se nepodařilo zjistit.');
-
-    await page.click('Zkusit znovu');
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
+      'Stav serveru se nepodařilo zjistit.',
+    ]);
+    expect(alertsHoldingAButton(page.fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(page.fixture.nativeElement);
+    await page.settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
+      'Stav serveru se nepodařilo zjistit.',
+    ]);
     page.http.expectOne(DIAGNOSTICS_URL).flush(STATE);
     await page.settle();
 

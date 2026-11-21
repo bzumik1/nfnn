@@ -71,6 +71,11 @@ html:has(app-root app-landing) {
   overscroll-behavior: none;
 }
 
+html:has(.devices-confirm--closing),
+html:has(.devices-confirm--closing) body {
+  overflow-anchor: none;
+}
+
 html.landing-stage {
   overflow: hidden;
 }

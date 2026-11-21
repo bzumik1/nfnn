@@ -4,7 +4,7 @@
       <div class="ui-card__bar">
         <h2 class="ui-card__title" [id]="group.id">{{ group.label }}</h2>
       </div>
-      <ul class="ui-list">
+      <ul class="ui-list ui-list--centred">
         @for (row of group.rows; track row.path) {
           <li>
             <a class="ui-list__row" [routerLink]="row.path">

@@ -4,6 +4,11 @@ import { AdminLogLevels } from './admin-log-levels';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const LOGGERS = [
   loggerEntry({ logger: 'ROOT' }),
@@ -208,9 +213,17 @@ describe('Given an administrator on the log levels page', () => {
     page.http.expectOne(LOGGERS_URL).flush(null, { status: 500, statusText: 'Error' });
     await page.settle();
 
-    expect(page.text('.ui-load-state--error')).toContain('Úrovně logování se nepodařilo načíst.');
-
-    await page.click('Zkusit znovu');
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
+      'Úrovně logování se nepodařilo načíst.',
+    ]);
+    expect(alertsHoldingAButton(page.fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(page.fixture.nativeElement);
+    await page.settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
+      'Úrovně logování se nepodařilo načíst.',
+    ]);
     await load();
 
     expect(page.texts('.watched .ui-list__row')).toHaveLength(4);

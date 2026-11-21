@@ -33,10 +33,6 @@ a.admin-name {
   container: administrators / inline-size;
 }
 
-.administrator-row:last-child {
-  border-bottom: 0;
-}
-
 @include bp.container-down(administrators, tablet) {
   .administrator-row {
     grid-template-columns: auto minmax(0, 1fr);

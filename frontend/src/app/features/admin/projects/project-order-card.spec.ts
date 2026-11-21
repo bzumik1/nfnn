@@ -9,6 +9,12 @@ import { ProjectOrderCard } from './project-order-card';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  loadFailureRetry,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const ORDER_URL = '/api/admin/content/project-order';
 
@@ -71,9 +77,9 @@ describe('Given an administrator choosing the order of the projects', () => {
     http.expectOne(ORDER_URL).error(new ProgressEvent('error'), { status: 0 });
     await settle();
 
-    expect(text(query('.ui-load-state--error'))).toContain('Řazení se nepodařilo načíst.');
-    expect(fixture.nativeElement.querySelector('[role="alert"] button')).toBeNull();
-    expect(text(query('.ui-load-state--error button'))).toBe('Zkusit znovu');
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Řazení se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    expect(accessibleText(loadFailureRetry(fixture.nativeElement))).toBe('Zkusit znovu');
   });
 
   it('when the device is offline, then a status line says the order shows once online, and the card loads it when the device is back online', async () => {
@@ -81,7 +87,7 @@ describe('Given an administrator choosing the order of the projects', () => {
     http.expectOne(ORDER_URL).error(new ProgressEvent('error'), { status: 0 });
     await settle();
 
-    expect(query('.ui-load-state--error')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-load-failure')).toBeNull();
     expect(text(query('.order-offline[role="status"]'))).toBe('Řazení ukážeme, až budete online.');
 
     connectivity.set(null);
@@ -212,9 +218,13 @@ describe('Given an administrator choosing the order of the projects', () => {
     http.expectOne(ORDER_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle();
 
-    expect(text(query('[role="alert"]:not(:empty)'))).toBe('Řazení se nepodařilo načíst.');
-    query<HTMLButtonElement>('.ui-load-state--error button').click();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Řazení se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
     await settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Řazení se nepodařilo načíst.']);
     await loaded('YEAR');
 
     expect(radio('YEAR').checked).toBe(true);

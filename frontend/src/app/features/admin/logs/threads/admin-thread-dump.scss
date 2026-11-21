@@ -23,4 +23,8 @@
   line-height: var(--leading-normal);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+
+  &:focus-visible {
+    outline-offset: -3px;
+  }
 }

@@ -15,6 +15,11 @@ import {
   waitsForConnection,
 } from '../../device-copy/testing/opened-copy';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const BACKUPS_URL = '/api/admin/operations/backups';
 
@@ -103,6 +108,14 @@ describe('Given an administrator on the history of backups', () => {
     expect(text('h1')).toBe('Všechny zálohy');
     expect(text('[role="status"]:not(:empty)')).toBe('Načítáme zálohy…');
     request.flush(backupsView({ backups: BACKUPS }));
+  });
+
+  it('when the page opens, then its intro says what a backup offers without naming a gesture', async () => {
+    await respond(backupsView({ backups: BACKUPS }));
+
+    expect(text('.ui-page-intro')).toBe(
+      'Nejnovější nahoře. Vyberte zálohu a pak ji stáhnete nebo z ní web obnovíte.',
+    );
   });
 
   it('when the backups arrive, then they are grouped by Prague day with a count, each row its time, kind and size', async () => {
@@ -204,8 +217,13 @@ describe('Given an administrator on the history of backups', () => {
     http.expectOne(BACKUPS_URL).flush('boom', { status: 500, statusText: 'Server Error' });
     await settle();
 
-    expect(text('p[role="alert"]')).toBe('Zálohy se nepodařilo načíst.');
-    button('Zkusit znovu').click();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Zálohy se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Zálohy se nepodařilo načíst.']);
     await respond(backupsView({ backups: BACKUPS }));
 
     expect(texts('button.ui-list__row')).toHaveLength(3);

@@ -1,0 +1,10 @@
+:host-context(html:has(app-root app-tab-bar)) .signed-out-bar {
+  inset-inline: calc(env(safe-area-inset-left) + var(--tab-bar-gap))
+    calc(env(safe-area-inset-right) + var(--tab-bar-gap));
+}
+
+.signed-out-close {
+  min-height: var(--touch-target-size);
+  border-color: currentColor;
+  color: inherit;
+}

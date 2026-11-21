@@ -12,10 +12,11 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { pluralCategory } from '../../../../core/i18n/plural-category';
-import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { loadingView } from '../../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { formatMinorUnits } from '../../../donations/donation-amount';
@@ -58,7 +59,7 @@ const NOT_FOUND = 'donations/sent-report-not-found';
 
 @Component({
   selector: 'app-admin-sent-report',
-  imports: [Skeleton, RouterLink, NeedsConnection],
+  imports: [Skeleton, LoadFailure, RouterLink],
   templateUrl: './admin-sent-report.html',
   styleUrl: './admin-sent-report.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,6 +75,7 @@ export class AdminSentReport {
   protected readonly monthName = this.known ? formatReportMonth(this.month) : '';
   protected readonly state = signal<LoadState>(this.known ? 'loading' : 'not-found');
   protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly retrying = signal(false);
   protected readonly report = signal<SentReportDetailResponse | null>(null);
   protected readonly blocks = computed(() => {
     const report = this.report();
@@ -87,11 +89,23 @@ export class AdminSentReport {
     afterNextRender(() => this.title().nativeElement.focus());
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.api
       .sentReport(this.month)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (report) => {
           this.report.set(report);

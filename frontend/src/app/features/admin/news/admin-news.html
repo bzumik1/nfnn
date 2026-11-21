@@ -21,25 +21,23 @@
         Načítáme aktuality…
       </p>
       @if (loadView.skeleton()) {
-        <app-skeleton [rows]="5" title="Všechny aktuality" i18n-title="@@admin.news.list.title" />
+        <app-skeleton
+          [rows]="5"
+          heading="Všechny aktuality"
+          i18n-heading="@@admin.news.list.title"
+        />
       }
     }
     @case ('error') {
-      <div
-        class="ui-load-state ui-load-state--error"
+      <app-load-failure
         [class.ui-skeleton-reveal]="loadView.appears()"
+        [compact]="true"
+        [retrying]="retrying()"
+        (retry)="retry()"
+        ><ng-container i18n="@@admin.news.error.text"
+          >Aktuality se nepodařilo načíst.</ng-container
+        ></app-load-failure
       >
-        <p role="alert" i18n="@@admin.news.error.text">Aktuality se nepodařilo načíst.</p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          (click)="load()"
-          i18n="@@admin.news.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
     }
     @case ('ready') {
       <section
@@ -103,10 +101,11 @@
                     </td>
                     <td
                       role="cell"
+                      class="updated-at"
                       data-label="Upraveno"
                       i18n-data-label="@@admin.news.col.updatedAt"
                     >
-                      {{ updatedAt(item) }}
+                      <span class="ui-date">{{ updatedAt(item) }}</span>
                     </td>
                   </tr>
                 }
