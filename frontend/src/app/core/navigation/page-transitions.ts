@@ -414,7 +414,8 @@ export class PageTransitions {
       return;
     }
     running.revealed = true;
-    afterFrames(view, 2, () => {
+    const opens = running.kind === 'push' && !running.swiping;
+    afterFrames(view, opens ? 0 : 2, () => {
       if (running.swiping) {
         if (this.running === running) {
           this.finish();

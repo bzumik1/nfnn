@@ -487,6 +487,98 @@ describe('Given the app on the home screen of a phone, scrolling restored, with 
   });
 });
 
+describe('Given the app on the home screen of a phone, scrolling restored, on the news with an article to open, in a browser that gives no frame for now', () => {
+  let router: Router;
+  let layer: HTMLElement;
+
+  beforeEach(async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
+    });
+    layer = document.createElement('div');
+    layer.className = PAGE_LAYER_CLASS;
+    layer.textContent = 'Aktuality';
+    document.body.append(layer);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(
+          [
+            { path: 'aktuality', component: Blank },
+            { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
+          ],
+          withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
+        ),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    router = TestBed.inject(Router);
+    TestBed.inject(PageTransitions);
+    document.body.append(document.createElement('app-scrolled-shell'));
+    TestBed.inject(ApplicationRef).bootstrap(ScrolledShell);
+    vi.useFakeTimers();
+    await router.navigateByUrl('/aktuality');
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 0);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    document
+      .querySelectorAll(`.${PAGE_TRANSITION_CLASS}, app-scrolled-shell`)
+      .forEach((node) => node.remove());
+    layer.remove();
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
+  function copiesPlaced(position: 'over' | 'under'): string[] {
+    const placed: string[] = [];
+    const watch = new MutationObserver((records) =>
+      records
+        .flatMap((record) => Array.from(record.addedNodes))
+        .filter(
+          (node): node is HTMLElement =>
+            node instanceof HTMLElement &&
+            node.classList.contains(`${PAGE_TRANSITION_CLASS}__page--${position}`),
+        )
+        .forEach((page) => placed.push(page.textContent ?? '')),
+    );
+    watch.observe(document.body, { subtree: true, childList: true });
+    onTestFinished(() => watch.disconnect());
+    return placed;
+  }
+
+  it('when the article opens, then its copy joins the cover as soon as the router has scrolled it, never waiting for a frame first', async () => {
+    const arriving = copiesPlaced('over');
+
+    await router.navigateByUrl('/aktuality/clanek');
+    layer.textContent = 'Článek';
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS / 2);
+
+    expect(arriving).toEqual(['Článek']);
+  });
+
+  it('when the news comes back with no copy kept of it, then its copy waits for the frames after the router has put its scroll back', async () => {
+    await router.navigateByUrl('/aktuality/clanek');
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+    const width = Object.getOwnPropertyDescriptor(window, 'innerWidth')!;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 420 });
+    onTestFinished(() => {
+      Object.defineProperty(window, 'innerWidth', width);
+    });
+
+    const returning = copiesPlaced('under');
+
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    layer.textContent = 'Aktuality';
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS / 2);
+    expect(returning).toEqual([]);
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS * 2);
+
+    expect(returning).toEqual(['Aktuality']);
+  });
+});
+
 interface Painted {
   readonly title: string;
   readonly back?: boolean;
