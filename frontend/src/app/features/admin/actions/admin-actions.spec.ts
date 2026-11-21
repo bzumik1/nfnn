@@ -19,6 +19,11 @@ import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { readDetailsDisclosures } from '../../../shared/ui/disclosure/testing/details-disclosures';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const LIST_URL = '/api/admin/donors/actions';
 
@@ -461,9 +466,13 @@ describe('Given an administrator on the history page', () => {
       .flush(null, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
 
-    expect(text('[role="alert"]')).toContain('Historii se nepodařilo načíst.');
-    element<HTMLButtonElement>('.ui-load-state--error button').click();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Historii se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
     fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Historii se nepodařilo načíst.']);
 
     firstPage([paired]);
     expect(rows()).toHaveLength(1);

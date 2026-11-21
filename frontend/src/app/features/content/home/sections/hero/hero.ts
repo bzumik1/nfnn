@@ -152,7 +152,7 @@ export class Hero {
       this.leadCappedAtWidth = 0;
       this.leadWidthBesideFace.set(null);
       const leadEnd = leadLeft + lead.offsetWidth;
-      this.shade.set({ leadEnd, shadeEnd: leadEnd + fade });
+      this.shade.set(this.shadeOverFace(leadEnd, fade));
       return;
     }
     const width = this.hero().nativeElement.offsetWidth;
@@ -161,6 +161,14 @@ export class Hero {
     this.leadCappedAtWidth = width;
     this.leadWidthBesideFace.set(cap);
     this.shade.set({ leadEnd: leadLeft + cap, shadeEnd: leadLeft + cap + fade });
+  }
+
+  private shadeOverFace(leadEnd: number, fade: number): Shade {
+    if (leadEnd + fade < this.faceBox().right) {
+      return { leadEnd, shadeEnd: leadEnd + fade };
+    }
+    const width = this.hero().nativeElement.offsetWidth;
+    return { leadEnd: width, shadeEnd: width + fade };
   }
 
   private fitKey(room: number): string {

@@ -1,7 +1,7 @@
-@if (title(); as heading) {
+@if (heading(); as text) {
   <div class="ui-card ui-skeleton-card">
-    <p class="ui-card__title">{{ heading }}</p>
-    <div class="ui-skeleton ui-skeleton--inset">
+    <h2 class="ui-card__title">{{ text }}</h2>
+    <div class="ui-skeleton ui-skeleton--inset" aria-hidden="true">
       @for (line of lines(); track line) {
         <span class="ui-skeleton__line"></span>
       }

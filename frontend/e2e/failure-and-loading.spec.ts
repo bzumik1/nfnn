@@ -36,6 +36,10 @@ const DISCONNECTED = (route: Route) => route.abort('internetdisconnected');
 const SERVER_ERROR = problem(500, 'server-error', 'Chyba serveru', 'Zkuste to prosím znovu.');
 const BACKUPS = '/api/admin/operations/backups';
 const PAYMENTS = '/api/admin/donations/payments';
+const DIAGNOSTICS = '/api/admin/operations/diagnostics';
+const LOG_FILES = '/api/admin/operations/logs';
+const HOME_INDICATOR_INSET = 34;
+const DARK_CONTROL_EDGE_CONTRAST = 3;
 const LARGEST_SYSTEM_TEXT_PX = 53;
 const TRANSPARENT = 'rgba(0, 0, 0, 0)';
 const COMPUTER_ONLY =
@@ -180,6 +184,152 @@ async function administrationCopyNotStored(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
+interface FadesSeen {
+  readonly cards: number;
+  readonly cardsFading: number;
+  readonly rowsFading: number;
+}
+
+interface InsetFadesSeen {
+  readonly blockAnimations: number;
+  readonly rowsFading: number;
+}
+
+interface FailurePage {
+  readonly name: string;
+  readonly route: string;
+  readonly failing: string;
+  readonly message: string;
+}
+
+const FAILING_ADMINISTRATION_PAGES: readonly FailurePage[] = [
+  {
+    name: 'Akce správců',
+    route: '/sprava/historie',
+    failing: '/api/admin/donors/actions',
+    message: 'Historii se nepodařilo načíst.',
+  },
+  {
+    name: 'Historie záloh',
+    route: '/sprava/zalohy/historie',
+    failing: BACKUPS,
+    message: 'Zálohy se nepodařilo načíst.',
+  },
+  {
+    name: 'the import card of /sprava',
+    route: '/sprava',
+    failing: '/api/admin/donations/import-state',
+    message: 'Stav importu se nepodařilo načíst.',
+  },
+  {
+    name: 'the backups card of /sprava',
+    route: '/sprava',
+    failing: BACKUPS,
+    message: 'Stav záloh se nepodařilo načíst.',
+  },
+  {
+    name: 'Dary po měsících of /sprava',
+    route: '/sprava',
+    failing: '/api/admin/donations/overview',
+    message: 'Dary po měsících se nepodařilo načíst.',
+  },
+  {
+    name: 'the health card of Logy',
+    route: '/sprava/logy',
+    failing: DIAGNOSTICS,
+    message: 'Stav serveru se nepodařilo zjistit.',
+  },
+  {
+    name: 'the files card of Logy',
+    route: '/sprava/logy',
+    failing: LOG_FILES,
+    message: 'Soubory logu se nepodařilo načíst.',
+  },
+  {
+    name: 'Soubory logu',
+    route: '/sprava/logy/soubory',
+    failing: LOG_FILES,
+    message: 'Soubory logu se nepodařilo načíst.',
+  },
+  {
+    name: 'Úrovně logování',
+    route: '/sprava/logy/urovne',
+    failing: '/api/admin/operations/loggers',
+    message: 'Úrovně logování se nepodařilo načíst.',
+  },
+  {
+    name: 'Stav serveru',
+    route: '/sprava/logy/stav',
+    failing: DIAGNOSTICS,
+    message: 'Stav serveru se nepodařilo zjistit.',
+  },
+  {
+    name: 'Aktuality',
+    route: '/sprava/aktuality',
+    failing: '/api/admin/content/news',
+    message: 'Aktuality se nepodařilo načíst.',
+  },
+  {
+    name: 'Příběhy',
+    route: '/sprava/projekty',
+    failing: '/api/admin/content/projects',
+    message: 'Příběhy se nepodařilo načíst.',
+  },
+  {
+    name: 'Řazení příběhů',
+    route: '/sprava/projekty',
+    failing: '/api/admin/content/project-order',
+    message: 'Řazení se nepodařilo načíst.',
+  },
+  {
+    name: 'Odeslaný přehled',
+    route: '/sprava/prehledy/2026-10',
+    failing: '/api/admin/donations/report/sent',
+    message: 'Přehled se nepodařilo načíst.',
+  },
+];
+
+async function titleLineWidths(title: Locator): Promise<number[]> {
+  return title.evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const lines = new Map<number, number>();
+    for (const box of range.getClientRects()) {
+      const line = Math.round(box.top + box.height / 2);
+      lines.set(line, (lines.get(line) ?? 0) + box.width);
+    }
+    return [...lines.values()].map((width) => Math.round(width));
+  });
+}
+
+async function borderContrastOnBlock(button: Locator): Promise<number> {
+  return button.evaluate((element) => {
+    const channels = (colour: string) =>
+      (colour.match(/[\d.]+/g) ?? []).slice(0, 3).map((channel) => Number(channel) / 255);
+    const luminance = (colour: string) => {
+      const [red, green, blue] = channels(colour).map((channel) =>
+        channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+      );
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+    const block = element.closest('.ui-notice--action') ?? element;
+    const edge = luminance(getComputedStyle(element).borderTopColor);
+    const ground = luminance(getComputedStyle(block).backgroundColor);
+    return (Math.max(edge, ground) + 0.05) / (Math.min(edge, ground) + 0.05);
+  });
+}
+
+async function spaceTokenPx(page: Page, token: string): Promise<number> {
+  return page.evaluate((name) => {
+    const probe = document.createElement('div');
+    probe.style.width = `var(${name})`;
+    document.body.append(probe);
+    const width = probe.getBoundingClientRect().width;
+    probe.remove();
+    return width;
+  }, token);
+}
+
 function failure(page: Page, text: string): Locator {
   return page.getByRole('alert').filter({ hasText: text });
 }
@@ -292,6 +442,23 @@ test.describe('Given a donor on a computer whose portal data fail to load', () =
     await expect(retry).toBeFocused();
   });
 
+  test('when the overview fails in the dark appearance, then the edge of „Zkusit znovu“ stands out from the failure block', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/summary',
+      (route) => route.fulfill(SERVER_ERROR),
+    );
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto('/darce/prehled');
+    await expect(failure(page, 'Přehled darů se nepodařilo načíst.')).toBeVisible();
+    const retry = page.locator('.dashboard-error button');
+
+    await expect
+      .poll(() => borderContrastOnBlock(retry))
+      .toBeGreaterThanOrEqual(DARK_CONTROL_EDGE_CONTRAST);
+  });
+
   for (const appearance of [
     { name: 'the dark appearance', media: { colorScheme: 'dark' as const } },
     { name: 'forced colours', media: { forcedColors: 'active' as const } },
@@ -382,6 +549,12 @@ test.describe('Given an administrator on a computer whose pages load slowly', ()
 
     await page.goto('/sprava/zalohy');
     await expect(page.locator('app-skeleton .ui-card__title')).toHaveText([
+      'Stav záloh',
+      'Zálohy na serveru',
+      'Klíč k zálohám',
+      'Plán záloh',
+    ]);
+    await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText([
       'Stav záloh',
       'Zálohy na serveru',
       'Klíč k zálohám',
@@ -539,6 +712,17 @@ test.describe('Given an administrator at phone width with the largest text whose
 
     await expect(alert).toHaveText('Platby se nepodařilo načíst.');
     expect((await failureBlock(alert)).buttonInside).toBe(true);
+  });
+
+  test('when Platby show their failure, then the sentence starts a small spacing in from the edge of the block', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/platby');
+    const alert = failure(page, 'Platby se nepodařilo načíst.');
+    await expect(alert).toBeVisible();
+    const inset = await spaceTokenPx(page, '--space-4');
+
+    expect((await failureBlock(alert)).textInset).toBeLessThanOrEqual(Math.ceil(inset) + 1);
   });
 
   test('when they press „Zkusit znovu“ and it fails again, then the button is busy and keeps the focus, and a new alert says what failed', async ({
@@ -784,6 +968,271 @@ test.describe('Given a donor on a computer in a card that mixes text and actions
     await expect(consent).toBeVisible();
     const starts = await linesStartAt(consent, 'dialog .register-lead');
     expect(starts.every((start) => start === 0)).toBe(true);
+  });
+});
+
+test.describe('Given an administrator on a computer whose administration pages fail to load', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', COMPUTER_ONLY);
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await mockDonorApi(page);
+    await rememberedSession(page);
+    await mockAdministration(page);
+  });
+
+  for (const failing of FAILING_ADMINISTRATION_PAGES) {
+    test(`when ${failing.name} fails, then only its sentence is the alert and „Zkusit znovu“ beside it stays busy with the focus`, async ({
+      page,
+    }) => {
+      await page.route(
+        (url) => url.pathname === failing.failing,
+        (route) => route.fulfill(SERVER_ERROR),
+      );
+      await page.goto(failing.route);
+      const alert = failure(page, failing.message);
+      await expect(alert).toHaveText(failing.message);
+      await rememberAlert(alert);
+      const block = page.locator('app-load-failure').filter({ has: alert });
+      const retry = block.getByRole('button', { name: 'Zkusit znovu' });
+      expect(await alert.locator('button, a').count()).toBe(0);
+      expect((await failureBlock(alert)).buttonInside).toBe(true);
+
+      await retry.click();
+
+      await expect(retry).toHaveAttribute('aria-busy', 'true');
+      await expect(retry).toBeFocused();
+      await expect(retry).not.toHaveAttribute('aria-busy', 'true');
+      await expect(alert).toBeVisible();
+      expect(await isRememberedAlert(alert)).toBe(false);
+      await expect(retry).toBeFocused();
+    });
+  }
+
+  test('when Historie záloh fails in the dark appearance, then the edge of the compact „Zkusit znovu“ stands out from the failure block', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === BACKUPS,
+      (route) => route.fulfill(SERVER_ERROR),
+    );
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto('/sprava/zalohy/historie');
+    const alert = failure(page, 'Zálohy se nepodařilo načíst.');
+    await expect(alert).toBeVisible();
+    const retry = page
+      .locator('app-load-failure')
+      .filter({ has: alert })
+      .getByRole('button', { name: 'Zkusit znovu' });
+
+    await expect
+      .poll(() => borderContrastOnBlock(retry))
+      .toBeGreaterThanOrEqual(DARK_CONTROL_EDGE_CONTRAST);
+  });
+});
+
+test.describe('Given an administrator on a computer whose backups load slowly', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', COMPUTER_ONLY);
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await mockDonorApi(page);
+    await rememberedSession(page);
+  });
+
+  test('when the titled skeleton cards appear, then each card fades in once and its rows do not fade again inside it', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const changes = new MutationObserver(() => {
+        const cards = [...document.querySelectorAll('.ui-skeleton-card')];
+        if (cards.length === 0) {
+          return;
+        }
+        const seen: FadesSeen = {
+          cards: cards.length,
+          cardsFading: cards.filter((card) => card.getAnimations().length > 0).length,
+          rowsFading: cards.filter(
+            (card) => (card.querySelector('.ui-skeleton')?.getAnimations().length ?? 0) > 0,
+          ).length,
+        };
+        (window as unknown as { fadesSeen: FadesSeen }).fadesSeen = seen;
+        changes.disconnect();
+      });
+      changes.observe(document, { childList: true, subtree: true });
+    });
+    const never = new Promise<void>(() => undefined);
+    await page.route(
+      (url) => url.pathname === BACKUPS,
+      async () => {
+        await never;
+      },
+    );
+
+    await page.goto('/sprava/zalohy');
+    await expect(page.locator('app-skeleton .ui-card__title')).toHaveCount(4);
+
+    const seen = await page.evaluate(
+      () => (window as unknown as { fadesSeen: FadesSeen }).fadesSeen,
+    );
+    expect(seen).toEqual({ cards: 4, cardsFading: 4, rowsFading: 0 });
+  });
+});
+
+test.describe('Given an administrator on a computer whose payments load slowly', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', COMPUTER_ONLY);
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await mockDonorApi(page);
+    await rememberedSession(page);
+  });
+
+  test('when the inset skeleton under the shown title appears, then it fades in once and its rows do not fade again inside it', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const changes = new MutationObserver(() => {
+        const block = document.querySelector('.skeleton > .ui-skeleton--inset');
+        if (block === null) {
+          return;
+        }
+        const seen: InsetFadesSeen = {
+          blockAnimations: block.getAnimations().length,
+          rowsFading: [...block.querySelectorAll('.ui-skeleton__line')].filter((row) =>
+            row.getAnimations().some((animation) => animation instanceof CSSTransition),
+          ).length,
+        };
+        (window as unknown as { insetFadesSeen: InsetFadesSeen }).insetFadesSeen = seen;
+        changes.disconnect();
+      });
+      changes.observe(document, { childList: true, subtree: true });
+    });
+    const never = new Promise<void>(() => undefined);
+    await page.route(
+      (url) => url.pathname === PAYMENTS,
+      async () => {
+        await never;
+      },
+    );
+
+    await page.goto('/sprava/platby');
+    await expect(page.locator('app-skeleton .ui-skeleton--inset')).toHaveCount(1);
+
+    const seen = await page.evaluate(
+      () => (window as unknown as { insetFadesSeen: InsetFadesSeen }).insetFadesSeen,
+    );
+    expect(seen).toEqual({ blockAnimations: 1, rowsFading: 0 });
+  });
+});
+
+test.describe('Given an administrator at phone width with the largest text whose backups load slowly', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', PHONE_WIDTH_IN_CHROMIUM);
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await showLargestSystemText(page);
+    await mockDonorApi(page);
+    await rememberedSession(page);
+  });
+
+  test('when the key card replaces its skeleton, then „Klíč k zálohám“ keeps the lines its skeleton showed', async ({
+    page,
+  }) => {
+    let answer: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => (answer = resolve));
+    await page.route(
+      (url) => url.pathname === BACKUPS,
+      async (route) => {
+        await answered;
+        await route.fulfill({ json: backupsServed });
+      },
+    );
+
+    await page.goto('/sprava/zalohy');
+    const skeletonTitle = page
+      .locator('app-skeleton .ui-card__title')
+      .filter({ hasText: 'zálohám' });
+    await expect(skeletonTitle).toBeVisible();
+    const skeletonLines = await titleLineWidths(skeletonTitle);
+    answer();
+    const cardTitle = page.locator('#backup-key-title');
+    await expect(cardTitle).toBeVisible();
+
+    expect(await titleLineWidths(cardTitle)).toEqual(skeletonLines);
+  });
+});
+
+test.describe('Given a visitor on a computer with a home indicator when a floating notice comes', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'only Chromium emulates the safe-area insets; the Safari device runs show the real home indicator',
+  );
+
+  test('when the app offers to load a missing page again, then the notice stands clear of the bottom safe area', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', {
+      insets: { bottom: HOME_INDICATOR_INSET },
+    });
+    await withoutSessionStorage(page);
+    await openAboutThenLoseNewChunks(page);
+
+    await openPolicyFromContact(page);
+
+    await expect(chunkLoadNotice(page)).toBeVisible();
+    await expect
+      .poll(async () => {
+        const box = (await chunkLoadNotice(page).boundingBox())!;
+        return Math.round(box.y + box.height);
+      })
+      .toBeLessThanOrEqual(900 - HOME_INDICATOR_INSET);
+  });
+
+  test('when the visitor reaches the end of the page or focuses its last link, then neither is covered by the notice', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', {
+      insets: { bottom: HOME_INDICATOR_INSET },
+    });
+    await withoutSessionStorage(page);
+    await openAboutThenLoseNewChunks(page);
+
+    await openPolicyFromContact(page);
+    await expect(chunkLoadNotice(page)).toBeVisible();
+    const noticeTop = async () => Math.round((await chunkLoadNotice(page).boundingBox())!.y);
+
+    await expect
+      .poll(async () => {
+        const contentBottom = await page.evaluate(() => {
+          window.scrollTo(0, document.documentElement.scrollHeight);
+          const leaves = Array.from(document.querySelectorAll('main *')).filter(
+            (element) =>
+              element.children.length === 0 &&
+              element.closest('.ui-notice--floating') === null &&
+              element.getBoundingClientRect().width > 1 &&
+              element.getBoundingClientRect().height > 1,
+          );
+          return Math.max(...leaves.map((element) => element.getBoundingClientRect().bottom));
+        });
+        return (await noticeTop()) - Math.round(contentBottom);
+      })
+      .toBeGreaterThanOrEqual(0);
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const lastLink = page.locator('main a').filter({ visible: true }).last();
+    await lastLink.focus();
+    await expect(lastLink).toBeFocused();
+    await expect
+      .poll(async () => {
+        const link = (await lastLink.boundingBox())!;
+        return (await noticeTop()) - Math.round(link.y + link.height);
+      })
+      .toBeGreaterThanOrEqual(0);
   });
 });
 

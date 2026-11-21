@@ -12,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { Connectivity } from '../../../core/connectivity/connectivity';
@@ -24,7 +25,7 @@ import {
   type AdminActionsRead,
   AdministrationPageReads,
 } from '../device-copy/administration-page-reads';
-import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { loadingView } from '../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
@@ -107,7 +108,7 @@ const SERVER_ACTOR = '00000000-0000-0000-0000-000000000000';
 
 @Component({
   selector: 'app-admin-actions',
-  imports: [BusyLabel, Skeleton, NeedsConnection, RouterLink],
+  imports: [BusyLabel, Skeleton, LoadFailure, RouterLink],
   templateUrl: './admin-actions.html',
   styleUrl: './admin-actions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -123,6 +124,7 @@ export class AdminActions {
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly retrying = signal(false);
   protected readonly rows = inject(CompactLayout).listsAsRows;
   protected readonly items = signal<AdminActionResponse[]>([]);
   protected readonly hasMore = signal(false);
@@ -136,11 +138,23 @@ export class AdminActions {
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.reads
       .adminActions()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (page) => {
           this.readWithoutDetails.set(new Set());

@@ -1,6 +1,11 @@
 import { reportContent, sentReport } from '../../testing/admin-fixtures';
 import { LogPageHarness, problem } from '../../logs/testing/log-page-harness';
 import { AdminSentReport } from './admin-sent-report';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const SENT_URL = '/api/admin/donations/report/sent?month=2026-10';
 
@@ -168,8 +173,17 @@ describe('Given an administrator opening a sent monthly report', () => {
     page.http.expectOne(SENT_URL).flush(failed.body, failed.options);
     await page.settle();
 
-    expect(page.text('[role="alert"]')).toContain('Přehled se nepodařilo načíst.');
-    await page.click('Zkusit znovu');
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
+      'Přehled se nepodařilo načíst.',
+    ]);
+    expect(alertsHoldingAButton(page.fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(page.fixture.nativeElement);
+    await page.settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
+      'Přehled se nepodařilo načíst.',
+    ]);
     page.http.expectOne(SENT_URL).flush(sentReport());
     await page.settle();
     expect(page.text('h1')).toBe('Přehled za říjen 2026');
