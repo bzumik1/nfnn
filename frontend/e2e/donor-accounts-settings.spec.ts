@@ -278,33 +278,67 @@ test.describe('Given a signed-in donor on a phone with the largest system text',
 });
 
 test.describe('Given a signed-in donor adding a bank account on a wide screen', () => {
-  for (const width of [820, 1280]) {
-    test(`when Přidat bankovní účet opens ${width} px wide, then the QR code starts level with the first payment fact`, async ({
-      page,
-    }) => {
-      await mockDonorApi(page);
-      await signIn(page);
-      await page.setViewportSize({ width, height: 900 });
-      await openDonorSection(page, 'Bankovní účty');
-      await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+  const openAddAccount = async (page: Page, width: number) => {
+    await mockDonorApi(page);
+    await signIn(page);
+    await page.setViewportSize({ width, height: 900 });
+    await openDonorSection(page, 'Bankovní účty');
+    await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
+    await expect(dialog.locator('.add-account-bank')).toBeVisible();
+    await expect(dialog.locator('.add-account-qr')).toBeVisible();
+    return dialog;
+  };
 
-      const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
-      const qr = dialog.locator('.add-account-qr');
-      const facts = dialog.locator('.add-account-bank');
-      await expect(facts).toBeVisible();
-      await expect(qr).toBeVisible();
-      await expect
-        .poll(
-          () =>
-            dialog.evaluate((sheet) => {
-              const [qrTop, factsTop] = ['.add-account-qr', '.add-account-bank'].map(
-                (part) => sheet.querySelector(part)!.getBoundingClientRect().top,
-              );
-              return Math.abs(qrTop - factsTop);
-            }),
-          { message: 'the QR code is level with the first payment fact once the sheet stands' },
-        )
-        .toBeLessThanOrEqual(1);
+  test('when Přidat bankovní účet opens 820 px wide, then the QR code starts level with the first payment fact', async ({
+    page,
+  }) => {
+    const dialog = await openAddAccount(page, 820);
+    await expect
+      .poll(
+        () =>
+          dialog.evaluate((sheet) => {
+            const [qrTop, factsTop] = ['.add-account-qr', '.add-account-bank'].map(
+              (part) => sheet.querySelector(part)!.getBoundingClientRect().top,
+            );
+            return Math.abs(qrTop - factsTop);
+          }),
+        { message: 'the QR code is level with the first payment fact once the sheet stands' },
+      )
+      .toBeLessThanOrEqual(1);
+  });
+
+  test('when Přidat bankovní účet opens 1280 px wide, then the payment facts stand under the QR code and no number breaks across lines', async ({
+    page,
+  }) => {
+    const dialog = await openAddAccount(page, 1280);
+    await expect
+      .poll(
+        () =>
+          dialog.evaluate((sheet) => {
+            const qrBottom = sheet.querySelector('.add-account-qr')!.getBoundingClientRect().bottom;
+            const factsTop = sheet.querySelector('.add-account-bank')!.getBoundingClientRect().top;
+            return factsTop - qrBottom;
+          }),
+        { message: 'the payment facts start under the QR code once the sheet stands' },
+      )
+      .toBeGreaterThanOrEqual(0);
+    const split = await dialog.locator('.add-account-bank').evaluate((facts) => {
+      const broken: string[] = [];
+      const walker = document.createTreeWalker(facts, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        for (const number of (node.textContent ?? '').matchAll(/[\d/-]{4,}/g)) {
+          const range = document.createRange();
+          range.setStart(node, number.index);
+          range.setEnd(node, number.index + number[0].length);
+          const tops = new Set(Array.from(range.getClientRects(), (rect) => Math.round(rect.top)));
+          if (tops.size > 1) {
+            broken.push(number[0]);
+          }
+        }
+      }
+      return broken;
     });
-  }
+    expect(split).toEqual([]);
+  });
 });
