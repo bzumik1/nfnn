@@ -276,3 +276,123 @@ test.describe('Given a donor on a computer', () => {
     expect(await panel.evaluate((element) => element.contains(document.activeElement))).toBe(false);
   });
 });
+
+const PHONE = { width: 390, height: 844 };
+const DOUBLE_ROOT = '200%';
+const SUBPIXEL_PX = 1;
+
+async function recordSlotMotion(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const rows: string[] = [];
+    (window as unknown as { slotMotion: string[] }).slotMotion = rows;
+    const record = (event: Event) => {
+      if (event.target instanceof Element && event.target.matches('.device-sign-out-slot')) {
+        rows.push(event.target.closest('li')?.id ?? '');
+      }
+    };
+    document.addEventListener('transitionrun', record, true);
+    document.addEventListener('animationstart', record, true);
+  });
+}
+
+function slotMotion(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as { slotMotion: string[] }).slotMotion);
+}
+
+function motionRunningOnSlots(page: Page): Promise<number[]> {
+  return page
+    .locator('.device-sign-out-slot')
+    .evaluateAll((slots) => slots.map((slot) => slot.getAnimations().length));
+}
+
+async function recordTitleShift(page: Page, rowId: string): Promise<void> {
+  await page.evaluate((rowId) => {
+    const row = document.getElementById(rowId);
+    const title = row?.querySelector('.device-name');
+    const offset = () =>
+      (title?.getBoundingClientRect().top ?? 0) - (row?.getBoundingClientRect().top ?? 0);
+    const start = offset();
+    const shift = { largest: 0, stopped: false };
+    (window as unknown as { titleShift: typeof shift }).titleShift = shift;
+    const measure = () => {
+      if (shift.stopped || !row?.isConnected) {
+        return;
+      }
+      shift.largest = Math.max(shift.largest, Math.abs(offset() - start));
+      requestAnimationFrame(measure);
+    };
+    requestAnimationFrame(measure);
+  }, rowId);
+}
+
+function stopTitleShift(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const shift = (window as unknown as { titleShift: { largest: number; stopped: boolean } })
+      .titleShift;
+    shift.stopped = true;
+    return shift.largest;
+  });
+}
+
+async function openDevicesOnAPhoneAtDoubleText(page: Page): Promise<void> {
+  await mockDonorApi(page);
+  await page.route(
+    (url) => url.pathname === '/api/donors/me/devices',
+    (route) => route.fulfill({ json: { items: [...signedInDevices, ...longUnusedDevices] } }),
+  );
+  await signIn(page);
+  await page.setViewportSize(PHONE);
+  await page.evaluate((size) => (document.documentElement.style.fontSize = size), DOUBLE_ROOT);
+  await recordSlotMotion(page);
+  await openDonorSection(page, 'Údaje a zabezpečení');
+}
+
+test.describe('Given a donor on a phone with the text at 200 %', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' });
+
+  test('when Údaje a zabezpečení open and the older sign-ins unfold, then every Odhlásit is drawn in place, without unfolding or fading in', async ({
+    page,
+  }) => {
+    await openDevicesOnAPhoneAtDoubleText(page);
+
+    const devices = page.locator('.devices');
+    await expect(devices.locator('.device-sign-out-slot')).toHaveCount(1);
+    expect(await motionRunningOnSlots(page)).toEqual([0]);
+
+    await devices.getByRole('button', { name: /Starší \(2\)/ }).click();
+
+    await expect(devices.locator('#devices-older .device-name')).toHaveText([
+      'iPhone · aplikace',
+      'Windows · Edge',
+    ]);
+    expect(await motionRunningOnSlots(page)).toEqual([0, 0, 0]);
+    expect(await slotMotion(page)).toEqual([]);
+  });
+
+  test('when they ask to sign out the iPhone and cancel, then its title stays in place, and only its Odhlásit unfolds back and keeps the focus', async ({
+    page,
+  }) => {
+    await openDevicesOnAPhoneAtDoubleText(page);
+    const devices = page.locator('.devices');
+    await devices.getByRole('button', { name: /Starší \(2\)/ }).click();
+    await expect(devices.locator('.device-sign-out-slot')).toHaveCount(3);
+    const rowId = `device-row-${signedInDevices.find((device) => !device.current)?.id}`;
+    const row = page.locator(`#${rowId}`);
+    const signOut = devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' });
+
+    await recordTitleShift(page, rowId);
+    await signOut.click();
+
+    const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+    await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+    await expect(row.locator('.device-sign-out-slot')).toHaveCount(0);
+    expect(await stopTitleShift(page)).toBeLessThanOrEqual(SUBPIXEL_PX);
+
+    await recordSlotMotion(page);
+    await question.getByRole('button', { name: 'Zrušit' }).click();
+
+    await expect(signOut).toBeFocused();
+    await expect.poll(() => slotMotion(page)).toContain(rowId);
+    expect(new Set(await slotMotion(page))).toEqual(new Set([rowId]));
+  });
+});

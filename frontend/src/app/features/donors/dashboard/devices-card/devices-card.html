@@ -252,6 +252,7 @@
             } @else if (confirming() !== device.id) {
               <span
                 class="device-sign-out-slot"
+                [class.device-sign-out-slot--returning]="returning() === device.id"
                 appDisclosure
                 animate.leave="device-sign-out-slot--closing"
               >

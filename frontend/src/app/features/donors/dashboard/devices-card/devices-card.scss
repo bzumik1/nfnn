@@ -75,9 +75,25 @@
   padding-top: var(--space-4);
 }
 
-.devices-confirm,
-.device-sign-out-slot {
+.devices-confirm {
   @include motion.expand($closes-by: class);
+}
+
+.device-sign-out-slot {
+  display: grid;
+  grid-template-rows: 1fr;
+
+  > * {
+    min-height: 0;
+  }
+}
+
+.device-sign-out-slot--returning {
+  @include motion.expand-on-open;
+}
+
+.device-sign-out-slot--closing {
+  @include motion.row-leave;
 }
 
 .device-confirm .devices-confirm-box {
