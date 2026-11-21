@@ -36,7 +36,7 @@
     <colgroup>
       <col class="column-date" />
       <col class="column-amount" />
-      <col />
+      <col class="column-purpose" />
       <col class="column-status" />
       @if (withReceipts()) {
         <col class="column-receipt" />
@@ -76,6 +76,7 @@
             data-label="Částka"
             i18n-data-label="@@donor.dashboard.payments.col.amount"
             class="amount ui-figures"
+            [class.amount--long]="longAmount(item)"
           >
             <span class="ui-amount">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
           </td>
@@ -137,8 +138,10 @@
   @if (item.pairedBy === 'SENDER_ACCOUNT' && item.senderAccount) {
     <span class="pairing-tag">
       <span aria-hidden="true" i18n="@@donor.dashboard.payments.withoutSymbol"
-        >bez symbolu · účet
-        <span class="account-end">{{ senderAccountEnd(item.senderAccount) }}</span></span
+        >bez symbolu ·
+        <span class="account-ref"
+          >účet <span class="account-end">{{ senderAccountEnd(item.senderAccount) }}</span></span
+        ></span
       >
       <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByAccount"
         >Přiřazeno podle účtu {{ item.senderAccount }}, platba přišla bez variabilního symbolu</span
@@ -148,8 +151,10 @@
   @if (item.pairedBy === 'CONFIRMED_SYMBOL' && item.senderAccount && item.confirmedSymbol) {
     <span class="pairing-tag">
       <span aria-hidden="true" i18n="@@donor.dashboard.payments.symbolPrefix"
-        >symbol {{ item.confirmedSymbol }} · účet
-        <span class="account-end">{{ senderAccountEnd(item.senderAccount) }}</span></span
+        ><span class="account-ref">symbol {{ item.confirmedSymbol }}</span> ·
+        <span class="account-ref"
+          >účet <span class="account-end">{{ senderAccountEnd(item.senderAccount) }}</span></span
+        ></span
       >
       <span class="visually-hidden" i18n="@@donor.dashboard.payments.pairedByConfirmedSymbol"
         >Přiřazeno podle účtu {{ item.senderAccount }} a variabilního symbolu
@@ -208,7 +213,9 @@
   } @else {
     @switch (missingReceipt(item)) {
       @case ('on-yearly-receipt') {
-        <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.onYearlyReceipt"
+        <span
+          class="receipt-note receipt-note--long"
+          i18n="@@donor.dashboard.payments.noReceipt.onYearlyReceipt"
           >Je na ročním potvrzení za rok {{ yearOf(item) }}</span
         >
       }
@@ -218,12 +225,16 @@
         >
       }
       @case ('verification') {
-        <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.verification"
+        <span
+          class="receipt-note receipt-note--long"
+          i18n="@@donor.dashboard.payments.noReceipt.verification"
           >Započítá se do ročního potvrzení</span
         >
       }
       @case ('before-first-year') {
-        <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.beforeFirstYear"
+        <span
+          class="receipt-note receipt-note--long"
+          i18n="@@donor.dashboard.payments.noReceipt.beforeFirstYear"
           >Potvrzení vystavujeme od roku {{ donations.receiptsFrom() }}</span
         >
       }
