@@ -168,6 +168,30 @@ async function pastItsFrame(table: Locator): Promise<number> {
   });
 }
 
+async function wordsSplitAcrossLines(locator: Locator): Promise<string[]> {
+  return locator.evaluate((element) => {
+    const split: string[] = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      for (const word of (node.textContent ?? '').matchAll(/\S+/g)) {
+        const range = document.createRange();
+        range.setStart(node, word.index);
+        range.setEnd(node, word.index + word[0].length);
+        const tops = new Set<number>();
+        for (const box of range.getClientRects()) {
+          if (box.width > 0) {
+            tops.add(Math.round(box.top));
+          }
+        }
+        if (tops.size > 1) {
+          split.push(word[0]);
+        }
+      }
+    }
+    return split;
+  });
+}
+
 async function linesOf(locator: Locator): Promise<number> {
   return locator.evaluate((element) => {
     const range = document.createRange();
@@ -279,6 +303,106 @@ for (const width of [1000, 900] as const) {
 
       expect(await linesOf(firstPayment.locator('.sender-name'))).toBeLessThanOrEqual(2);
       expect(await linesOf(firstPayment.locator('.sender-account .number .ui-figures'))).toBe(1);
+    });
+  });
+}
+
+const OLDER_SYMBOL_ACTIONS = ['Vrátit přiřazení darů', 'Zeptat se dárce znovu'] as const;
+
+test.describe('Given an administrator at 1280 px reading the older symbols', () => {
+  for (const name of OLDER_SYMBOL_ACTIONS) {
+    test(`when the action „${name}“ stands in its column, then its label takes at most two lines`, async ({
+      page,
+    }) => {
+      await openAdministration(page, 1280, '/sprava/starsi-symboly');
+
+      expect(await linesOf(page.getByRole('button', { name }))).toBeLessThanOrEqual(2);
+    });
+
+    test(`when the text is 200 %, then no word of the action „${name}“ is broken inside`, async ({
+      page,
+    }) => {
+      await openAdministration(page, 1280, '/sprava/starsi-symboly');
+      await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+      const button = page.getByRole('button', { name });
+      await expect(button).toBeVisible();
+
+      expect(await wordsSplitAcrossLines(button)).toEqual([]);
+    });
+  }
+});
+
+for (const { width, rootPx } of [
+  { width: 1180, rootPx: null },
+  { width: 1280, rootPx: 20 },
+] as const) {
+  const setting = rootPx === null ? `${width} px` : `${width} px with a ${rootPx} px root`;
+  test.describe(`Given an administrator at ${setting}`, () => {
+    async function openAt(page: Page, path: string): Promise<void> {
+      await openAdministration(page, width, path);
+      if (rootPx !== null) {
+        await page.addStyleTag({ content: `html { font-size: ${rootPx}px; }` });
+      }
+    }
+
+    test('when they switch between the waiting and the paired payments, then each table stays inside its card', async ({
+      page,
+    }) => {
+      await openAt(page, '/sprava/platby');
+      const table = page.locator('.payments-card table');
+
+      expect(await pastItsFrame(table)).toBe(0);
+      await page.getByRole('button', { name: 'Přiřazené' }).click();
+      await expect(page.getByRole('columnheader', { name: 'Dárce' })).toBeAttached();
+      expect(await pastItsFrame(table)).toBe(0);
+    });
+
+    test('when they read the older symbols, then the table stays inside its card', async ({
+      page,
+    }) => {
+      await openAt(page, '/sprava/starsi-symboly');
+
+      expect(await pastItsFrame(page.locator('table'))).toBe(0);
+    });
+  });
+}
+
+async function badgesPastTheirCells(table: Locator): Promise<string[]> {
+  return table.evaluate((element) =>
+    [...element.querySelectorAll<HTMLElement>('td .ui-badge')].flatMap((badge) => {
+      const cell = badge.closest('td')!;
+      const style = getComputedStyle(cell);
+      const box = cell.getBoundingClientRect();
+      const left = box.left + parseFloat(style.paddingLeft);
+      const right = box.right - parseFloat(style.paddingRight);
+      const mark = badge.getBoundingClientRect();
+      return mark.left < left - 0.5 || mark.right > right + 0.5
+        ? [
+            `${badge.textContent?.trim()}: ${Math.round(mark.left)}..${Math.round(mark.right)} in ${Math.round(left)}..${Math.round(right)}`,
+          ]
+        : [];
+    }),
+  );
+}
+
+for (const { width, rootSize } of [
+  { width: 1280, rootSize: '22px' },
+  { width: 1800, rootSize: '200%' },
+] as const) {
+  test.describe(`Given an administrator at ${width} px with the root text at ${rootSize}, where payments are still a table`, () => {
+    test('when they switch between the waiting and the paired payments, then every badge stays inside its cell', async ({
+      page,
+    }) => {
+      await openAdministration(page, width, '/sprava/platby');
+      await page.addStyleTag({ content: `html { font-size: ${rootSize}; }` });
+      const table = page.locator('.payments-card table');
+      await expect(table.getByText('Ověření účtu')).toBeVisible();
+
+      expect(await badgesPastTheirCells(table)).toEqual([]);
+      await page.getByRole('button', { name: 'Přiřazené' }).click();
+      await expect(page.getByRole('columnheader', { name: 'Dárce' })).toBeAttached();
+      await expect(table.locator('td .ui-badge').first()).toBeVisible();
+      expect(await badgesPastTheirCells(table)).toEqual([]);
     });
   });
 }

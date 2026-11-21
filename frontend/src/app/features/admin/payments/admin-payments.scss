@@ -171,7 +171,7 @@
 
 .payments-card td :is(.held-tag, .verification-tag) {
   display: block;
-  inline-size: max-content;
+  inline-size: fit-content;
   margin: var(--space-1) 0 0;
 }
 
@@ -383,7 +383,11 @@
 }
 
 @include bp.container-up(ui-table, ledger) {
-  .payments-card table:not(.payments-table--donors) .message {
+  .payments-card td :is(.held-tag, .verification-tag) {
+    inline-size: max-content;
+  }
+
+  .payments-card table:not(.payments-table--paired) .message {
     min-inline-size: var(--table-text-column-min);
   }
 }

@@ -44,10 +44,14 @@ td.action {
 }
 
 @include bp.container-up(ui-table, ledger) {
-  .claim-donor,
-  .claim-account {
+  .claim-donor {
     display: block;
-    min-inline-size: var(--table-text-column-min);
+    inline-size: max-content;
+    max-inline-size: var(--table-text-column-min);
+  }
+
+  td.action > .ui-button {
+    min-inline-size: var(--table-action-column-min);
   }
 }
 

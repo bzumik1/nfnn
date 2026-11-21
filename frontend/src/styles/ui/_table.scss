@@ -114,16 +114,6 @@
     td {
       padding-inline: var(--space-3);
     }
-
-    th:first-child,
-    td:first-child {
-      padding-inline-start: var(--card-inset);
-    }
-
-    th:last-child,
-    td:last-child {
-      padding-inline-end: var(--card-inset);
-    }
   }
 }
 
