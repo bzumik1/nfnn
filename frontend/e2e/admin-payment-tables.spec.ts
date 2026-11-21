@@ -485,9 +485,22 @@ async function factsPastTheirCell(facts: Locator): Promise<string[]> {
   return facts.evaluate((list) =>
     [...list.querySelectorAll<HTMLElement>(':scope > div')].flatMap((cell) => {
       const frame = cell.getBoundingClientRect();
-      const range = document.createRange();
-      range.selectNodeContents(cell);
-      return [...range.getClientRects()]
+      const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) =>
+          node.parentElement?.closest('.ui-separated__separator')
+            ? NodeFilter.FILTER_REJECT
+            : NodeFilter.FILTER_ACCEPT,
+      });
+      const boxes: DOMRect[] = [];
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        boxes.push(...range.getClientRects());
+      }
+      for (const element of cell.querySelectorAll('app-bank-logo, .ui-badge')) {
+        boxes.push(element.getBoundingClientRect());
+      }
+      return boxes
         .filter(
           (box) => box.width > 0 && (box.left < frame.left - 1 || box.right > frame.right + 1),
         )
@@ -559,9 +572,21 @@ for (const viewport of [
       for (const word of String(PAIRED[0].counterpartyName).split(' ')) {
         expect(await linesOfText(facts, word), word).toBe(1);
       }
-      expect(await linesOfText(facts, '1\u00a0250\u00a0000,50\u00a0Kč')).toBe(1);
-      expect(await bankMarksBesideNoNumber(facts)).toEqual([]);
       expect(await sideways(sheet.locator('.dialog-panel'))).toBeLessThanOrEqual(0);
+    });
+
+    test("when they open a paired payment, then its amount stays on one line and the bank mark stands on its account number's line", async ({
+      page,
+    }) => {
+      await openRows(page, viewport, '/sprava/platby?stav=prirazene', LARGEST_SYSTEM_TEXT_PX);
+      await page.locator('button.payment-row').first().click();
+      const sheet = page.getByRole('dialog', { name: 'Přiřazená platba' });
+      await expect(sheet.getByText('potvrzení vystaveno')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const facts = sheet.locator('.pair-payment');
+
+      expect.soft(await linesOfText(facts, '1\u00a0250\u00a0000,50\u00a0Kč')).toBe(1);
+      expect.soft(await bankMarksBesideNoNumber(facts)).toEqual([]);
     });
 
     test('when they open a waiting payment to pair it, then every fact stays within its own cell and the dialog never pans sideways', async ({
@@ -696,7 +721,7 @@ test.describe('Given an administrator in the installed app in a window smaller t
   test('when the month heading sticks, then it rests below the window controls', async ({
     page,
   }) => {
-    await openRows(page, { width: 1180, height: 820 }, '/sprava/platby');
+    await openRows(page, { width: 1180, height: 820 }, '/sprava/platby', LARGEST_SYSTEM_TEXT_PX);
     await page.evaluate(() => document.documentElement.classList.add('has-window-controls'));
     const controlsHeight = await page.evaluate(() => {
       const probe = document.createElement('div');
