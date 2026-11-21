@@ -342,9 +342,9 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(qr.getAttribute('aria-label')).toBe('QR kód s nastavením pro ověřovací aplikaci');
       expect(qr.querySelector('.qr-plain')).not.toBeNull();
       expect(qr.querySelector('.qr-star')).toBeNull();
-      expect(
-        withOrdinarySpaces(card.element('.account-secret-value .visually-hidden').textContent),
-      ).toBe('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
+      expect(withOrdinarySpaces(card.element('.account-secret-spoken').textContent)).toBe(
+        'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
+      );
       expect(withOrdinarySpaces(card.element('app-copy-button button').textContent)).toContain(
         'klíč',
       );
@@ -441,9 +441,9 @@ describe('Given the sign-in and security card of the details page', () => {
           withOrdinarySpaces(card.element('.account-enrolment [role="alert"]').textContent),
         ),
       ).toBe('QR kód se nepodařilo vykreslit. Opište prosím klíč níže do ověřovací aplikace.');
-      expect(
-        withOrdinarySpaces(card.element('.account-secret-value .visually-hidden').textContent),
-      ).toBe('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
+      expect(withOrdinarySpaces(card.element('.account-secret-spoken').textContent)).toBe(
+        'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
+      );
       expect(card.element('#account-second-factor-code')).not.toBeNull();
     });
 

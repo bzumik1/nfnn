@@ -13,7 +13,7 @@ import {
   session,
   signIn,
 } from './donor-session';
-import { Locator } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import jsQR from 'jsqr';
 
 const QUIET_ZONE = 4;
@@ -219,7 +219,7 @@ test.describe('Given a donor who protects the account with an authenticator app'
     const qr = page.getByRole('img', { name: 'QR kód s nastavením pro ověřovací aplikaci' });
     await expect(qr).toBeVisible();
     await expect.poll(() => plainQrText(qr)).toBe(secondFactorEnrolment.otpauthUri);
-    await expect(page.locator('.account-secret-value .visually-hidden')).toHaveText(
+    await expect(page.locator('.account-secret-spoken')).toHaveText(
       'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
     );
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
@@ -308,21 +308,25 @@ test.describe('Given a donor who protects the account with an authenticator app'
 });
 
 test.describe('Given a donor turning on the code from an authenticator app', () => {
+  async function showKey(page: Page, width: number): Promise<void> {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/me/second-factor/setup', (route) =>
+      route.fulfill({ json: secondFactorEnrolment }),
+    );
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await page.setViewportSize({ width, height: 900 });
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
+    await page.getByLabel('Současné heslo').fill('correct horse battery');
+    await page.getByRole('button', { name: 'Pokračovat' }).click();
+  }
+
   for (const width of [1280, 390]) {
     test(`when the key shows in a ${width} px window, then it breaks only between its two halves of four groups, so no group stands alone on a line`, async ({
       page,
     }) => {
-      await mockDonorApi(page);
-      await page.route('**/api/donors/me/second-factor/setup', (route) =>
-        route.fulfill({ json: secondFactorEnrolment }),
-      );
-      await page.setViewportSize({ width: 1280, height: 900 });
-      await signIn(page);
-      await page.setViewportSize({ width, height: 900 });
-      await openDonorSection(page, 'Údaje a zabezpečení');
-      await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
-      await page.getByLabel('Současné heslo').fill('correct horse battery');
-      await page.getByRole('button', { name: 'Pokračovat' }).click();
+      await showKey(page, width);
       const key = page.locator('.account-secret-value [aria-hidden="true"]');
       await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       await page.evaluate(() => document.fonts.ready);
@@ -348,6 +352,23 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
         groupsPerLine.filter((count) => count % 4 !== 0),
         JSON.stringify(groupsPerLine),
       ).toEqual([]);
+    });
+
+    test(`when the key shows in a ${width} px window, then its spoken copy covers the visible key, so touching any of its lines finds the whole key`, async ({
+      page,
+    }) => {
+      await showKey(page, width);
+      const spoken = page.locator('.account-secret-spoken');
+      await expect(spoken).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
+      await page.evaluate(() => document.fonts.ready);
+
+      const spokenBox = (await spoken.boundingBox())!;
+      const valueBox = (await page.locator('.account-secret-value').boundingBox())!;
+
+      expect(Math.abs(spokenBox.x - valueBox.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(spokenBox.y - valueBox.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(spokenBox.width - valueBox.width)).toBeLessThanOrEqual(1);
+      expect(Math.abs(spokenBox.height - valueBox.height)).toBeLessThanOrEqual(1);
     });
   }
 });
