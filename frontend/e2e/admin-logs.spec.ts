@@ -346,3 +346,152 @@ test.describe('Given an administrator on the server state with a long Java versi
     expect(faces['Java']).toEqual([true]);
   });
 });
+
+test.describe('Given an administrator reading backend.log on a phone', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await routeLogsApi(page);
+    await rememberedAdministrator(page);
+    await page.setViewportSize({ width: 375, height: 667 });
+  });
+
+  test('when they reach the end of the entries, then Načíst starší řádky and Kopírovat stand alike in one height and look like Načíst novější řádky and Hledat', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/logy/soubor?nazev=backend.log');
+    const main = page.getByRole('main');
+    await expect(main.locator('.entry')).toHaveCount(40);
+
+    const looks = await Promise.all(
+      [
+        main.getByRole('button', { name: 'Hledat' }),
+        main.locator('.load-more'),
+        main.locator('.list-end').getByRole('button', { name: 'Načíst starší řádky' }),
+        main.locator('.list-end').getByRole('button', { name: /^Kopírovat/ }),
+      ].map((button) =>
+        button.evaluate((element) => ({
+          height: element.getBoundingClientRect().height,
+          background: getComputedStyle(element).backgroundColor,
+        })),
+      ),
+    );
+    const [search, newer, older, copy] = looks;
+    expect(new Set([newer.background, older.background, copy.background])).toEqual(
+      new Set([search.background]),
+    );
+    expect(Math.abs(older.height - copy.height)).toBeLessThanOrEqual(1);
+    expect(Math.abs(newer.height - older.height)).toBeLessThanOrEqual(1);
+  });
+
+  test('when they turn on Chyby z prohlížečů, then the filter is drawn apart from the load button and says it is on', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/logy/soubor?nazev=backend.log');
+    const main = page.getByRole('main');
+    const filter = main.getByRole('button', { name: 'Chyby z prohlížečů' });
+    await expect(filter).toHaveAttribute('aria-pressed', 'false');
+
+    const backgroundOf = (button: typeof filter) =>
+      button.evaluate((element) => getComputedStyle(element).backgroundColor);
+    expect(await backgroundOf(filter)).not.toBe(await backgroundOf(main.locator('.load-more')));
+
+    const resting = await backgroundOf(filter);
+    await filter.click();
+    await expect(filter).toHaveAttribute('aria-pressed', 'true');
+    expect(await backgroundOf(filter)).not.toBe(resting);
+  });
+
+  for (const { text, rootSize } of [
+    { text: 'the default text', rootSize: null },
+    { text: 'the largest text', rootSize: '53px' },
+  ]) {
+    test(`when they read the entries with ${text}, then every class name is shown whole and starts right after its icon`, async ({
+      page,
+    }) => {
+      await page.goto('/sprava/logy/soubor?nazev=backend.log');
+      if (rootSize !== null) {
+        await page.addStyleTag({ content: `html { font-size: ${rootSize} }` });
+      }
+      const entries = page.getByRole('main').locator('.entry');
+      await expect(entries).toHaveCount(40);
+
+      const rows = await entries.evaluateAll((elements) =>
+        elements.slice(0, 3).map((entry) => {
+          const title = entry.querySelector('.entry-title') as HTMLElement;
+          const icon = entry.querySelector('.entry-icon') as HTMLElement;
+          const meta = entry.querySelector('.entry-meta') as HTMLElement;
+          return {
+            title: title.textContent,
+            clipped: title.scrollWidth > title.clientWidth + 1,
+            titleRight: title.getBoundingClientRect().right,
+            metaRight: meta.getBoundingClientRect().right,
+            leadGap: meta.getBoundingClientRect().left - icon.getBoundingClientRect().right,
+            columnGap: parseFloat(getComputedStyle(entry).columnGap),
+          };
+        }),
+      );
+      for (const row of rows) {
+        expect(row.title).toBe('ImportBankPaymentsService');
+        expect(row.clipped).toBe(false);
+        expect(row.titleRight).toBeLessThanOrEqual(row.metaRight + 1);
+        expect(row.leadGap).toBeLessThanOrEqual(row.columnGap + 1);
+      }
+    });
+  }
+});
+
+test.describe('Given an administrator on the server state on a phone', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await routeLogsApi(page);
+    await routeReleaseApi(page);
+    await rememberedAdministrator(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  test('when they read the verdict, then it is set at least as large as the titles of the rows under it and as on Logy a diagnostika', async ({
+    page,
+  }) => {
+    const sizeOf = (element: Element) => parseFloat(getComputedStyle(element).fontSize);
+
+    await page.goto('/sprava/logy');
+    const hub = await page
+      .getByRole('main')
+      .locator('.health .ui-list__title')
+      .evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+
+    await page.goto('/sprava/logy/stav');
+    const main = page.getByRole('main');
+    await expect(main.getByRole('heading', { level: 2, name: 'Bez poruchy' })).toBeVisible();
+    const verdict = await main
+      .getByRole('heading', { level: 2, name: 'Bez poruchy' })
+      .evaluate(sizeOf);
+    const rowTitles = await main
+      .locator('.application .ui-list__title')
+      .evaluateAll((titles) => titles.map((title) => parseFloat(getComputedStyle(title).fontSize)));
+
+    expect(verdict).toBe(hub);
+    expect(verdict).toBeGreaterThanOrEqual(Math.max(...rowTitles));
+  });
+
+  test('when they read the release with the largest text, then its number stays inside the row', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/logy/stav');
+    await page.addStyleTag({ content: 'html { font-size: 53px }' });
+    const row = page.getByRole('main').locator('.release .ui-list__row');
+    await expect(row.locator('.ui-list__value')).toHaveText('2026.11.109');
+
+    const box = await row.evaluate((element) => {
+      const value = element.querySelector('.ui-list__value') as HTMLElement;
+      const style = getComputedStyle(element);
+      return {
+        valueRight: value.getBoundingClientRect().right,
+        contentRight: element.getBoundingClientRect().right - parseFloat(style.paddingRight),
+        overflows: value.scrollWidth > value.clientWidth + 1,
+      };
+    });
+    expect(box.valueRight).toBeLessThanOrEqual(box.contentRight + 1);
+    expect(box.overflows).toBe(false);
+  });
+});

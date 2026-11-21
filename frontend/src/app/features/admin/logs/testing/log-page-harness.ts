@@ -158,7 +158,7 @@ function spoken(node: Node): string {
     .map((child) =>
       child.nodeType === Node.TEXT_NODE
         ? (child.textContent ?? '')
-        : hidden(child)
+        : hidden(child) || child.nodeName === 'WBR'
           ? ''
           : ` ${spoken(child)} `,
     )
