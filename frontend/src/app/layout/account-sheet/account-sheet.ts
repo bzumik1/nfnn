@@ -6,6 +6,7 @@ import { formatBankTime } from '../../features/donations/donation-date';
 import { Location } from '@angular/common';
 import {
   afterNextRender,
+  AnimationCallbackEvent,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -82,6 +83,10 @@ export const ADMINISTRATION_ITEM: AccountItem = {
   templateUrl: './account-sheet.html',
   styleUrl: './account-sheet.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class.account-sheet--push]': "move() === 'push'",
+    '[class.account-sheet--pop]': "move() === 'pop'",
+  },
 })
 export class AccountSheet {
   private readonly auth = inject(AuthStore);
@@ -141,6 +146,11 @@ export class AccountSheet {
   });
   protected readonly section = computed(() => this.trail().at(-1) ?? null);
   protected readonly depth = computed(() => this.trail().length);
+  protected readonly steps = computed(() => {
+    const section = this.section();
+    return [{ key: section?.path ?? '', section }];
+  });
+  protected readonly move = signal<'push' | 'pop' | null>(null);
   private readonly dialog = viewChild.required(Dialog);
   protected readonly discardAsked = signal<'back' | 'close' | null>(null);
   private discarding = false;
@@ -175,6 +185,7 @@ export class AccountSheet {
     event.preventDefault();
     const item = sectionAt(url);
     if (item !== null && this.compact() && this.router.url !== url) {
+      this.move.set('push');
       this.trail.set([item]);
       this.focusSectionTitle();
       return;
@@ -219,11 +230,15 @@ export class AccountSheet {
   }
 
   private sectionHasUnsavedInput(): boolean {
-    return this.host.querySelector('.account-section-body form.ng-dirty') !== null;
+    return (
+      this.host.querySelector('.account-step:not([inert]) .account-section-body form.ng-dirty') !==
+      null
+    );
   }
 
   private leaveSection(): void {
     const left = this.section();
+    this.move.set('pop');
     this.trail.update((trail) => trail.slice(0, -1));
     afterNextRender(
       () => {
@@ -255,9 +270,14 @@ export class AccountSheet {
   private linkTo(path: string): HTMLAnchorElement | null {
     return (
       Array.from(this.host.querySelectorAll<HTMLAnchorElement>('a[href]')).find(
-        (link) => pathOf(link.getAttribute('href') ?? '') === path,
+        (link) =>
+          pathOf(link.getAttribute('href') ?? '') === path && link.closest('[inert]') === null,
       ) ?? null
     );
+  }
+
+  protected stepLeaves(event: AnimationCallbackEvent): void {
+    leaveAccountStep(event);
   }
 
   private followInSection(event: MouseEvent): void {
@@ -281,6 +301,7 @@ export class AccountSheet {
       return;
     }
     if (item !== null) {
+      this.move.set('push');
       this.trail.update((trail) => [...trail, item]);
       this.focusSectionTitle();
     } else {
@@ -347,6 +368,8 @@ export class AccountSheet {
   }
 }
 
+const STEP_LEAVE_GRACE_MS = 300;
+
 const APPEARANCE_LABELS: Record<AppearanceChoice, string> = {
   auto: $localize`:@@layout.account.appearance.auto:Vzhled: Automaticky`,
   light: $localize`:@@layout.account.appearance.light:Vzhled: Světlý`,
@@ -358,6 +381,37 @@ const NEXT_APPEARANCE: Record<AppearanceChoice, AppearanceChoice> = {
   light: 'dark',
   dark: 'auto',
 };
+
+export function leaveAccountStep(event: AnimationCallbackEvent): void {
+  const step = event.target;
+  step.setAttribute('inert', '');
+  step.setAttribute('aria-hidden', 'true');
+  step.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
+  step.classList.add('account-step--leaving');
+  const motions = Array.from(step.children).flatMap((part) =>
+    typeof part.getAnimations === 'function' ? part.getAnimations() : [],
+  );
+  if (motions.length === 0) {
+    event.animationComplete();
+    return;
+  }
+  let gone = false;
+  const leaves = (): void => {
+    if (!gone) {
+      gone = true;
+      clearTimeout(fallback);
+      event.animationComplete();
+    }
+  };
+  const longest = Math.max(
+    0,
+    ...motions
+      .map((motion) => Number(motion.effect?.getComputedTiming().endTime ?? 0))
+      .filter(Number.isFinite),
+  );
+  const fallback = setTimeout(leaves, longest + STEP_LEAVE_GRACE_MS);
+  void Promise.allSettled(motions.map((motion) => motion.finished)).then(leaves);
+}
 
 function pressedAside(event: MouseEvent): boolean {
   return event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;

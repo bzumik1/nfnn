@@ -8,188 +8,138 @@
   (steppedBack)="steppedBack()"
   (dismissed)="close()"
 >
-  @if (section(); as item) {
-    <app-sheet-head
-      class="account-section-head"
-      titleId="account-section-title"
-      [title]="item.label"
-      (backPressed)="back()"
-      (closePressed)="closeSection()"
-    />
-    <div class="account-section-body">
-      <app-account-section [path]="item.path" />
-    </div>
-  } @else {
-    <div
-      class="account-head"
-      [class.account-head--centered]="presentation() === 'centered'"
-      [class.account-head--without-logo]="!showsLogo()"
-    >
-      <h2 id="account-sheet-title" class="account-title" [class.visually-hidden]="!showsLogo()">
-        @if (showsLogo()) {
-          <img
-            class="account-logo"
-            [src]="appearance.dark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
-            alt=""
-            width="115"
-            height="40"
+  <div class="account-steps" [class.account-steps--sheet]="presentation() === 'sheet'">
+    @for (step of steps(); track step.key) {
+      <div class="account-step" (animate.leave)="stepLeaves($event)">
+        @if (step.section; as item) {
+          <app-sheet-head
+            class="account-section-head account-step-head"
+            titleId="account-section-title"
+            [title]="item.label"
+            (backPressed)="back()"
+            (closePressed)="closeSection()"
           />
-        }
-        <span class="visually-hidden" i18n="@@layout.account.title">Účet</span>
-      </h2>
-      <button
-        type="button"
-        class="account-appearance"
-        [attr.aria-label]="appearanceLabel()"
-        (click)="nextAppearance()"
-      >
-        <svg
-          class="appearance-icon"
-          [class.appearance-icon--shown]="appearance.choice() === 'auto'"
-          aria-hidden="true"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <rect x="2" y="3" width="20" height="14" rx="2" />
-          <path d="M8 21h8M12 17v4" />
-        </svg>
-        <svg
-          class="appearance-icon"
-          [class.appearance-icon--shown]="appearance.choice() === 'light'"
-          aria-hidden="true"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="12" r="4" />
-          <path
-            d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
-          />
-        </svg>
-        <svg
-          class="appearance-icon"
-          [class.appearance-icon--shown]="appearance.choice() === 'dark'"
-          aria-hidden="true"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-        </svg>
-      </button>
-    </div>
-
-    <a
-      class="account-profile"
-      [href]="detailsItem.path"
-      [attr.aria-current]="isCurrent(detailsItem) ? 'page' : null"
-      (click)="follow($event, detailsItem.path)"
-    >
-      <span class="account-initials" aria-hidden="true">
-        @if (portrait(); as source) {
-          <img class="account-portrait" [src]="source" alt="" width="50" height="50" />
-        } @else if (initials(); as letters) {
-          {{ letters }}
+          <div class="account-section-body account-step-body">
+            <app-account-section [path]="item.path" />
+          </div>
         } @else {
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <div
+            class="account-head account-step-head"
+            [class.account-head--centered]="presentation() === 'centered'"
+            [class.account-head--without-logo]="!showsLogo()"
           >
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 21a8 8 0 0 1 16 0" />
-          </svg>
-        }
-      </span>
-      <span class="account-who">
-        @if (donor()?.name; as name) {
-          <span class="account-name">{{ name }}</span>
-        }
-        <span class="account-profile-detail">{{ detailsItem.label }}</span>
-      </span>
-      <svg
-        class="ui-list__chevron"
-        aria-hidden="true"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.4"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <polyline points="9.5 6.5 15 12 9.5 17.5" />
-      </svg>
-    </a>
-
-    @if (faults().length > 0) {
-      <ul class="ui-list ui-list--grouped account-faults">
-        <li>
-          <a class="ui-list__row" [href]="faultPath()" (click)="follow($event, faultPath())">
-            <span class="ui-list__title">{{ faultTitle() }}</span>
-            <span class="ui-list__meta">{{ faultMeta() }}</span>
-            <span
-              class="ui-list__value ui-list__count ui-list__count--warning"
-              aria-hidden="true"
-              >{{ faults().length }}</span
+            <h2
+              id="account-sheet-title"
+              class="account-title"
+              [class.visually-hidden]="!showsLogo()"
             >
-            <svg
-              class="ui-list__chevron"
-              aria-hidden="true"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.4"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="9.5 6.5 15 12 9.5 17.5" />
-            </svg>
-          </a>
-        </li>
-      </ul>
-    }
-    <nav class="account-nav" aria-labelledby="account-sheet-title">
-      <ul class="ui-list ui-list--grouped">
-        @for (item of sections; track item.path) {
-          <li>
-            <a
-              class="ui-list__row"
-              [href]="item.path"
-              [attr.aria-current]="isCurrent(item) ? 'page' : null"
-              (click)="follow($event, item.path)"
-            >
-              <span class="ui-list__title">{{ item.label }}</span>
-              @if (badges.badgeOf(item.path); as badge) {
-                <span class="ui-list__value ui-list__count account-count" aria-hidden="true">{{
-                  badge.count
-                }}</span>
-                <span class="visually-hidden">{{ badge.description }}</span>
+              @if (showsLogo()) {
+                <img
+                  class="account-logo"
+                  [src]="appearance.dark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
+                  alt=""
+                  width="115"
+                  height="40"
+                />
               }
+              <span class="visually-hidden" i18n="@@layout.account.title">Účet</span>
+            </h2>
+            <button
+              type="button"
+              class="account-appearance"
+              [attr.aria-label]="appearanceLabel()"
+              (click)="nextAppearance()"
+            >
+              <svg
+                class="appearance-icon"
+                [class.appearance-icon--shown]="appearance.choice() === 'auto'"
+                aria-hidden="true"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <path d="M8 21h8M12 17v4" />
+              </svg>
+              <svg
+                class="appearance-icon"
+                [class.appearance-icon--shown]="appearance.choice() === 'light'"
+                aria-hidden="true"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="4" />
+                <path
+                  d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
+                />
+              </svg>
+              <svg
+                class="appearance-icon"
+                [class.appearance-icon--shown]="appearance.choice() === 'dark'"
+                aria-hidden="true"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="account-menu account-step-body">
+            <a
+              class="account-profile"
+              [href]="detailsItem.path"
+              [attr.aria-current]="isCurrent(detailsItem) ? 'page' : null"
+              (click)="follow($event, detailsItem.path)"
+            >
+              <span class="account-initials" aria-hidden="true">
+                @if (portrait(); as source) {
+                  <img class="account-portrait" [src]="source" alt="" width="50" height="50" />
+                } @else if (initials(); as letters) {
+                  {{ letters }}
+                } @else {
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 21a8 8 0 0 1 16 0" />
+                  </svg>
+                }
+              </span>
+              <span class="account-who">
+                @if (donor()?.name; as name) {
+                  <span class="account-name">{{ name }}</span>
+                }
+                <span
+                  class="account-profile-detail account-current-label"
+                  [attr.data-label]="detailsItem.label"
+                  >{{ detailsItem.label }}</span
+                >
+              </span>
               <svg
                 class="ui-list__chevron"
                 aria-hidden="true"
@@ -205,129 +155,221 @@
                 <polyline points="9.5 6.5 15 12 9.5 17.5" />
               </svg>
             </a>
-          </li>
-        }
-      </ul>
-      @if (donor()?.variableSymbol; as symbol) {
-        <p class="account-symbol">
-          <span i18n="@@layout.account.symbolNote">Variabilní symbol pro vaše dary:</span
-          >&ngsp;<span class="account-symbol-value">{{ symbol }}</span>
-        </p>
-      }
-      @if (isAdmin()) {
-        <ul class="ui-list ui-list--grouped account-administration">
-          <li>
-            <a
-              class="ui-list__row"
-              [href]="administrationItem.path"
-              [attr.aria-current]="isCurrent(administrationItem) ? 'page' : null"
-              (click)="follow($event, administrationItem.path)"
-            >
-              <span class="ui-list__title">{{ administrationItem.label }}</span>
-              <span class="ui-list__value account-note">{{ adminNote }}</span>
-              <svg
-                class="ui-list__chevron"
-                aria-hidden="true"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.4"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="9.5 6.5 15 12 9.5 17.5" />
-              </svg>
-            </a>
-          </li>
-        </ul>
-      }
-    </nav>
 
-    @if (installWay() !== 'none') {
-      <ul class="ui-list ui-list--grouped account-install">
-        <li>
-          <button
-            type="button"
-            class="ui-list__row ui-list__row--action"
-            [attr.aria-expanded]="installWay() === 'prompt' ? null : installHowShown()"
-            [attr.aria-controls]="installWay() === 'prompt' ? null : 'account-install-how'"
-            (click)="addToHomeScreen()"
-          >
-            <span class="ui-list__lead" aria-hidden="true">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect x="6" y="2" width="12" height="20" rx="2.5" />
-                <path d="M12 8v6M9 11h6" />
-              </svg>
-            </span>
-            <span class="ui-list__title" i18n="@@layout.account.install">Přidat na plochu</span>
-          </button>
-          @if (installWay() !== 'prompt') {
-            <div id="account-install-how" class="account-install-how" [hidden]="!installHowShown()">
-              @if (installWay() === 'ios-share') {
-                <p i18n="@@donor.overview.install.ios">
-                  Klepněte na „Sdílet“ (v&nbsp;Safari ho najdete i&nbsp;pod tlačítkem ⋯) a&nbsp;pak
-                  na „Přidat na plochu“. V&nbsp;aplikaci se přihlásíte ještě jednou.
-                </p>
-              } @else {
-                <p i18n="@@donor.overview.install.mac">
-                  V&nbsp;Safari zvolte v&nbsp;nabídce „Soubor“ položku „Přidat do Docku“.
-                  V&nbsp;aplikaci se přihlásíte ještě jednou.
+            @if (faults().length > 0) {
+              <ul class="ui-list ui-list--grouped account-faults">
+                <li>
+                  <a
+                    class="ui-list__row"
+                    [href]="faultPath()"
+                    (click)="follow($event, faultPath())"
+                  >
+                    <span class="ui-list__title">{{ faultTitle() }}</span>
+                    <span class="ui-list__meta">{{ faultMeta() }}</span>
+                    <span
+                      class="ui-list__value ui-list__count ui-list__count--warning"
+                      aria-hidden="true"
+                      >{{ faults().length }}</span
+                    >
+                    <svg
+                      class="ui-list__chevron"
+                      aria-hidden="true"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="9.5 6.5 15 12 9.5 17.5" />
+                    </svg>
+                  </a>
+                </li>
+              </ul>
+            }
+            <nav class="account-nav" aria-labelledby="account-sheet-title">
+              <ul class="ui-list ui-list--grouped">
+                @for (item of sections; track item.path) {
+                  <li>
+                    <a
+                      class="ui-list__row"
+                      [href]="item.path"
+                      [attr.aria-current]="isCurrent(item) ? 'page' : null"
+                      (click)="follow($event, item.path)"
+                    >
+                      <span
+                        class="ui-list__title account-current-label"
+                        [attr.data-label]="item.label"
+                        >{{ item.label }}</span
+                      >
+                      @if (badges.badgeOf(item.path); as badge) {
+                        <span
+                          class="ui-list__value ui-list__count account-count"
+                          aria-hidden="true"
+                          >{{ badge.count }}</span
+                        >
+                        <span class="visually-hidden">{{ badge.description }}</span>
+                      }
+                      <svg
+                        class="ui-list__chevron"
+                        aria-hidden="true"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.4"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <polyline points="9.5 6.5 15 12 9.5 17.5" />
+                      </svg>
+                    </a>
+                  </li>
+                }
+              </ul>
+              @if (donor()?.variableSymbol; as symbol) {
+                <p class="account-symbol">
+                  <span i18n="@@layout.account.symbolNote">Variabilní symbol pro vaše dary:</span
+                  >&ngsp;<span class="account-symbol-value">{{ symbol }}</span>
                 </p>
               }
+              @if (isAdmin()) {
+                <ul class="ui-list ui-list--grouped account-administration">
+                  <li>
+                    <a
+                      class="ui-list__row"
+                      [href]="administrationItem.path"
+                      [attr.aria-current]="isCurrent(administrationItem) ? 'page' : null"
+                      (click)="follow($event, administrationItem.path)"
+                    >
+                      <span
+                        class="ui-list__title account-current-label"
+                        [attr.data-label]="administrationItem.label"
+                        >{{ administrationItem.label }}</span
+                      >
+                      <span class="ui-list__value account-note">{{ adminNote }}</span>
+                      <svg
+                        class="ui-list__chevron"
+                        aria-hidden="true"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.4"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <polyline points="9.5 6.5 15 12 9.5 17.5" />
+                      </svg>
+                    </a>
+                  </li>
+                </ul>
+              }
+            </nav>
+
+            @if (installWay() !== 'none') {
+              <ul class="ui-list ui-list--grouped account-install">
+                <li>
+                  <button
+                    type="button"
+                    class="ui-list__row ui-list__row--action"
+                    [attr.aria-expanded]="installWay() === 'prompt' ? null : installHowShown()"
+                    [attr.aria-controls]="installWay() === 'prompt' ? null : 'account-install-how'"
+                    (click)="addToHomeScreen()"
+                  >
+                    <span class="ui-list__lead" aria-hidden="true">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <rect x="6" y="2" width="12" height="20" rx="2.5" />
+                        <path d="M12 8v6M9 11h6" />
+                      </svg>
+                    </span>
+                    <span class="ui-list__title" i18n="@@layout.account.install"
+                      >Přidat na plochu</span
+                    >
+                  </button>
+                  @if (installWay() !== 'prompt') {
+                    <div
+                      id="account-install-how"
+                      class="account-install-how"
+                      [hidden]="!installHowShown()"
+                    >
+                      @if (installWay() === 'ios-share') {
+                        <p i18n="@@donor.overview.install.ios">
+                          Klepněte na „Sdílet“ (v&nbsp;Safari ho najdete i&nbsp;pod tlačítkem ⋯)
+                          a&nbsp;pak na „Přidat na plochu“. V&nbsp;aplikaci se přihlásíte ještě
+                          jednou.
+                        </p>
+                      } @else {
+                        <p i18n="@@donor.overview.install.mac">
+                          V&nbsp;Safari zvolte v&nbsp;nabídce „Soubor“ položku „Přidat do Docku“.
+                          V&nbsp;aplikaci se přihlásíte ještě jednou.
+                        </p>
+                      }
+                    </div>
+                  }
+                </li>
+              </ul>
+            }
+
+            <ul class="ui-list ui-list--grouped account-sign-out-group">
+              <li>
+                <button
+                  type="button"
+                  class="ui-list__row ui-list__row--danger account-sign-out"
+                  [disabled]="signingOut()"
+                  (click)="signOut()"
+                >
+                  @if (signingOut()) {
+                    <span class="ui-list__title" i18n="@@layout.account.signingOut"
+                      >Odhlašujeme…</span
+                    >
+                  } @else {
+                    <span class="ui-list__title" i18n="@@donor.dashboard.logout">Odhlásit se</span>
+                  }
+                </button>
+              </li>
+            </ul>
+
+            <div class="account-foundation">
+              <p>
+                <a href="mailto:info&#64;nfnn.cz">info&#64;nfnn.cz</a>&ngsp;·&ngsp;<a
+                  [href]="contactUrl"
+                  (click)="follow($event, contactUrl)"
+                  i18n="@@layout.header.nav.contact"
+                  >Kontakt</a
+                >
+              </p>
+              <p class="registry ui-separated" i18n="@@layout.footer.registry">
+                <span>Zapsán u&nbsp;KS Ústí&nbsp;nad&nbsp;Labem, oddíl&nbsp;N, vložka&nbsp;78</span
+                >&ngsp;<span class="registry-id ui-separated__item"
+                  ><span class="ui-separated__separator">·&nbsp;</span>IČO&nbsp;27278794</span
+                >
+              </p>
+              <a
+                [href]="privacyUrl"
+                (click)="follow($event, privacyUrl)"
+                i18n="@@layout.footer.privacy"
+                >Zásady ochrany osobních údajů</a
+              >
             </div>
-          }
-        </li>
-      </ul>
+          </div>
+        }
+      </div>
     }
-
-    <ul class="ui-list ui-list--grouped account-sign-out-group">
-      <li>
-        <button
-          type="button"
-          class="ui-list__row ui-list__row--danger account-sign-out"
-          [disabled]="signingOut()"
-          (click)="signOut()"
-        >
-          @if (signingOut()) {
-            <span class="ui-list__title" i18n="@@layout.account.signingOut">Odhlašujeme…</span>
-          } @else {
-            <span class="ui-list__title" i18n="@@donor.dashboard.logout">Odhlásit se</span>
-          }
-        </button>
-      </li>
-    </ul>
-
-    <div class="account-foundation">
-      <p>
-        <a href="mailto:info&#64;nfnn.cz">info&#64;nfnn.cz</a>&ngsp;·&ngsp;<a
-          [href]="contactUrl"
-          (click)="follow($event, contactUrl)"
-          i18n="@@layout.header.nav.contact"
-          >Kontakt</a
-        >
-      </p>
-      <p class="registry ui-separated" i18n="@@layout.footer.registry">
-        <span>Zapsán u&nbsp;KS Ústí&nbsp;nad&nbsp;Labem, oddíl&nbsp;N, vložka&nbsp;78</span
-        >&ngsp;<span class="registry-id ui-separated__item"
-          ><span class="ui-separated__separator">·&nbsp;</span>IČO&nbsp;27278794</span
-        >
-      </p>
-      <a [href]="privacyUrl" (click)="follow($event, privacyUrl)" i18n="@@layout.footer.privacy"
-        >Zásady ochrany osobních údajů</a
-      >
-    </div>
-  }
+  </div>
 </app-dialog>
 @if (discardAsked() !== null) {
   <app-dialog

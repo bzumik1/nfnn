@@ -4,6 +4,96 @@
 @use 'sheet';
 @use 'touch-target';
 
+.account-steps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.account-steps--sheet {
+  margin-inline: calc(-1 * #{sheet.$inline-start}) calc(-1 * #{sheet.$inline-end});
+  padding-inline: sheet.$inline-start sheet.$inline-end;
+  overflow-x: clip;
+
+  .account-step-body {
+    margin-inline: calc(-1 * #{sheet.$inline-start}) calc(-1 * #{sheet.$inline-end});
+    padding-inline: sheet.$inline-start sheet.$inline-end;
+  }
+}
+
+.account-step {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.account-step-body {
+  flex: 1 0 auto;
+}
+
+.account-steps:has(> .account-step--leaving) .account-step-body {
+  background-color: var(--color-sheet-grouped);
+}
+
+:host(.account-sheet--push),
+:host(.account-sheet--pop) {
+  .account-step-head,
+  .account-step-body {
+    animation-duration: var(--duration-page);
+    animation-timing-function: var(--ease-page);
+    animation-fill-mode: both;
+  }
+
+  .account-step-head {
+    animation-name: page-dim;
+  }
+
+  .account-step--leaving > .account-step-head {
+    animation-name: page-undim;
+  }
+}
+
+:host(.account-sheet--push) {
+  .account-step-body {
+    animation-name: page-enter;
+  }
+
+  .account-step--leaving > .account-step-body {
+    animation-name: page-recede;
+  }
+}
+
+:host(.account-sheet--pop) {
+  .account-step-body {
+    animation-name: page-return;
+  }
+
+  .account-step--leaving {
+    z-index: 1;
+  }
+
+  .account-step--leaving > .account-step-body {
+    animation-name: page-leave;
+  }
+}
+
+.account-current-label {
+  display: flex;
+  flex-direction: column;
+
+  &::after {
+    content: attr(data-label) / '';
+    height: 0;
+    overflow: hidden;
+    font-weight: var(--weight-semibold);
+    visibility: hidden;
+  }
+}
+
+[aria-current='page'] .account-current-label {
+  font-weight: var(--weight-semibold);
+}
+
 .account-head {
   display: flex;
   align-items: center;
@@ -33,7 +123,7 @@
   }
 }
 
-.account-head--without-logo + .account-profile {
+.account-head--without-logo + .account-menu > .account-profile {
   margin-top: calc(
     var(--dialog-close-inset) + var(--dialog-close-size) + var(--sheet-group-gap) - var(--space-9)
   );
@@ -175,7 +265,9 @@
   a {
     display: inline-block;
     min-height: var(--space-6);
+    z-index: 1;
     color: var(--color-accent);
+    @include touch-target.reaches-finger-size;
   }
 }
 
@@ -220,7 +312,7 @@
 }
 
 .account-section-body {
-  margin-top: var(--sheet-header-gap);
+  padding-top: var(--sheet-header-gap);
 }
 
 .account-discard-lead {

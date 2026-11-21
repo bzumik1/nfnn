@@ -39,6 +39,25 @@ async function missedEdges(control: Locator): Promise<string[]> {
   }, FINGER_PX);
 }
 
+async function edgesReachingOthers(control: Locator): Promise<string[]> {
+  await control.scrollIntoViewIfNeeded();
+  return control.evaluate((element, finger) => {
+    const box = element.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    const y = box.top + box.height / 2;
+    const reach = finger / 2 - 1;
+    const edges: [string, number, number][] = [
+      ['above', x, y - reach],
+      ['below', x, y + reach],
+      ['left of', x - reach, y],
+      ['right of', x + reach, y],
+    ];
+    return edges
+      .filter(([, px, py]) => document.elementFromPoint(px, py)?.closest('a[href]') !== element)
+      .map(([edge]) => edge);
+  }, FINGER_PX);
+}
+
 async function expectFingerSized(control: Locator): Promise<void> {
   await expect(control).toBeVisible();
   expect(await missedEdges(control), await control.innerText()).toEqual([]);
@@ -193,6 +212,23 @@ test.describe('Given a visitor tapping small controls on a phone', () => {
     await expectFingerSized(
       page.locator('.notifications').getByRole('button', { name: 'Zkusit znovu' }),
     );
+  });
+
+  test('when a signed-in donor taps near the edges of the links under Odhlásit se in the account sheet, then a finger-sized area around each reaches that link alone, never its neighbour', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, twoGifts);
+    await rememberedDonorSession(page);
+    await page.goto('/darce/prehled');
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const footer = page.getByRole('dialog').locator('.account-foundation');
+    const links = footer.getByRole('link');
+    await expect(links).toHaveCount(3);
+
+    for (const link of await links.all()) {
+      await expect(link).toBeVisible();
+      expect(await edgesReachingOthers(link), await link.innerText()).toEqual([]);
+    }
   });
 
   test('when the text is large and they tap near the edges of the tabs of the tab bar, then a finger-sized area around each still reaches it, and the finger areas of neighbouring tabs never overlap', async ({

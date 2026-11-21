@@ -3,6 +3,7 @@ import {
   longUnusedDevices,
   mockDonorApi,
   openDonorSection,
+  rememberedDonorSession,
   signedInDevices,
   signIn,
 } from './donor-session';
@@ -10,6 +11,7 @@ import { expect, test } from './fixtures';
 
 interface Move {
   readonly on: string;
+  readonly name: string;
   readonly properties: readonly string[];
   readonly duration: number;
 }
@@ -36,6 +38,7 @@ async function recordMoves(page: Page, card: string): Promise<void> {
             );
       moves.push({
         on: target.className,
+        name: animation instanceof CSSAnimation ? animation.animationName : '',
         properties: [...new Set(properties)],
         duration: Number(effect?.getComputedTiming().duration ?? 0),
       });
@@ -274,5 +277,117 @@ test.describe('Given a donor on a computer', () => {
     await expect(panel).toHaveAttribute('inert', '');
     await page.keyboard.press('Tab');
     expect(await panel.evaluate((element) => element.contains(document.activeElement))).toBe(false);
+  });
+});
+
+function movesOf(moves: readonly Move[], className: RegExp): string[] {
+  return moves
+    .filter((move) => className.test(move.on) && move.duration > INSTANT_MS)
+    .map((move) => move.name);
+}
+
+function onlyFades(moves: readonly Move[], className: RegExp): boolean {
+  const own = moves.filter((move) => className.test(move.on) && move.duration > INSTANT_MS);
+  return (
+    own.length > 0 &&
+    own.every((move) =>
+      move.properties.every((property) => !MOVING.has(property) && !SIZING.has(property)),
+    )
+  );
+}
+
+async function openAccountSheetOnPhone(page: Page): Promise<void> {
+  await mockDonorApi(page);
+  await rememberedDonorSession(page);
+  await page.goto('/o-nas');
+  await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+  await expect(
+    page.getByRole('dialog').getByRole('heading', { level: 2, name: 'Účet' }),
+  ).toBeVisible();
+}
+
+async function recordStepsMadeInert(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const steps: string[] = [];
+    (window as unknown as { inertSteps: string[] }).inertSteps = steps;
+    new MutationObserver((records) => {
+      for (const { target } of records) {
+        if (target instanceof Element && target.matches('.account-step[inert]')) {
+          steps.push(target.querySelector('.account-menu') === null ? 'section' : 'menu');
+        }
+      }
+    }).observe(document.body, { attributes: true, attributeFilter: ['inert'], subtree: true });
+  });
+}
+
+function stepsMadeInert(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as { inertSteps: string[] }).inertSteps);
+}
+
+test.describe('Given a donor on a phone with the account sheet open', () => {
+  test.use({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' });
+
+  test('when they choose Moje dary, then the section is pushed in from the right over the receding list, the heads only cross-fade, the list is out of reach at once and the title takes the focus', async ({
+    page,
+  }) => {
+    await openAccountSheetOnPhone(page);
+    await recordMoves(page, 'app-account-sheet');
+    await recordStepsMadeInert(page);
+    const sheet = page.getByRole('dialog');
+
+    await sheet.getByRole('link', { name: 'Moje dary' }).click();
+
+    await expect(
+      sheet.getByRole('heading', { level: 2, name: 'Moje dary', exact: true }),
+    ).toBeFocused();
+    expect(await stepsMadeInert(page)).toEqual(['menu']);
+    await expect(page.locator('.account-step')).toHaveCount(1);
+    const moves = await recordedMoves(page);
+    expect(movesOf(moves, /account-section-body/)).toContain('page-enter');
+    expect(movesOf(moves, /account-menu/)).toContain('page-recede');
+    expect(onlyFades(moves, /account-step-head/)).toBe(true);
+  });
+
+  test('when they press Zpět in a section, then the section is popped off to the right over the returning list, the heads only cross-fade, the section is out of reach at once and its row takes the focus', async ({
+    page,
+  }) => {
+    await openAccountSheetOnPhone(page);
+    const sheet = page.getByRole('dialog');
+    await sheet.getByRole('link', { name: 'Moje dary' }).click();
+    await expect(page.locator('.account-step')).toHaveCount(1);
+    await recordMoves(page, 'app-account-sheet');
+    await recordStepsMadeInert(page);
+
+    await sheet.getByRole('button', { name: 'Zpět' }).click();
+
+    await expect(sheet.getByRole('link', { name: 'Moje dary' })).toBeFocused();
+    expect(await stepsMadeInert(page)).toEqual(['section']);
+    await expect(page.locator('.account-step')).toHaveCount(1);
+    const moves = await recordedMoves(page);
+    expect(movesOf(moves, /account-section-body/)).toContain('page-leave');
+    expect(movesOf(moves, /account-menu/)).toContain('page-return');
+    expect(onlyFades(moves, /account-step-head/)).toBe(true);
+  });
+});
+
+test.describe('Given a donor on a phone who asks for less motion, with the account sheet open', () => {
+  test.use({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+
+  test('when they choose Moje dary and go back, then each step changes at once without sliding', async ({
+    page,
+  }) => {
+    await openAccountSheetOnPhone(page);
+    await recordMoves(page, 'app-account-sheet');
+    const sheet = page.getByRole('dialog');
+
+    await sheet.getByRole('link', { name: 'Moje dary' }).click();
+    await expect(
+      sheet.getByRole('heading', { level: 2, name: 'Moje dary', exact: true }),
+    ).toBeFocused();
+    await sheet.getByRole('button', { name: 'Zpět' }).click();
+    await expect(sheet.getByRole('link', { name: 'Moje dary' })).toBeFocused();
+
+    const moves = await expectOnlyInstantChangesOrShortFades(page);
+    expect(movesOf(moves, /account-section-body|account-menu/)).toEqual([]);
   });
 });

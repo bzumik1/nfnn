@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { APPEARANCE_STORAGE_KEY } from '../../core/appearance/appearance';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { Component, signal } from '@angular/core';
@@ -19,7 +20,7 @@ import { AccountBadges } from '../../core/layout/account-badges';
 import { AppInstall, InstallWay } from '../../core/install/app-install';
 import { OpenAlerts } from '../../core/push/open-alerts';
 import { OpenAlert } from '../../core/push/open-alerts-api';
-import { AccountSheet } from './account-sheet';
+import { AccountSheet, leaveAccountStep } from './account-sheet';
 import { ACCOUNT_SECTION_PAGES, AccountSectionPages } from './account-section';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
@@ -231,6 +232,20 @@ describe('Given the account sheet of a signed-in donor', () => {
 
     it('then its title takes the focus', () => {
       expect(document.activeElement?.id).toBe('account-section-title');
+    });
+
+    it('then the sheet pushes the section in, which it does not when it opens', () => {
+      expect(fixture.nativeElement.classList).toContain('account-sheet--push');
+      expect(fixture.nativeElement.classList).not.toContain('account-sheet--pop');
+    });
+
+    it('and the visitor goes back, then the sheet pops the section off', async () => {
+      history.listener?.stepBack();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.classList).toContain('account-sheet--pop');
+      expect(fixture.nativeElement.classList).not.toContain('account-sheet--push');
     });
 
     it('and Zpět is pressed, then the sheet steps back through the history', () => {
@@ -465,6 +480,31 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(shown()[0]).not.toBe(automatic[0]);
     expect(icons().every((icon) => icon.getAttribute('aria-hidden') === 'true')).toBe(true);
     document.documentElement.removeAttribute('data-appearance');
+  });
+
+  it('when it opens, then the sheet neither pushes nor pops a step', () => {
+    open();
+
+    expect(fixture.nativeElement.classList).not.toContain('account-sheet--push');
+    expect(fixture.nativeElement.classList).not.toContain('account-sheet--pop');
+  });
+
+  it('when it opens, then each row that can be the current page carries its own wording, so its bold weight keeps the width the row reserves for it', () => {
+    admin.set(true);
+    const sheet = open();
+
+    const labels = Array.from(sheet.querySelectorAll<HTMLElement>('.account-current-label')).map(
+      (label) => [label.textContent?.trim(), label.dataset['label']],
+    );
+
+    expect(labels).toEqual([
+      ['Údaje a\u00a0zabezpečení', 'Údaje a\u00a0zabezpečení'],
+      ['Můj přehled', 'Můj přehled'],
+      ['Moje dary', 'Moje dary'],
+      ['Potvrzení o\u00a0daru', 'Potvrzení o\u00a0daru'],
+      ['Bankovní účty', 'Bankovní účty'],
+      ['Správa', 'Správa'],
+    ]);
   });
 
   it('when the card of the donor is chosen on a phone, then Údaje a zabezpečení opens inside the sheet', async () => {
@@ -810,5 +850,89 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(navigate).toHaveBeenCalledWith('/', expect.objectContaining({ replaceUrl: true }));
     expect(TestBed.inject(SignedOutNotice).shown()).toBe(true);
     expect(closed).toBe(1);
+  });
+});
+
+describe('Given a step of the account sheet that leaves', () => {
+  interface Motion {
+    readonly finished: Promise<unknown>;
+    readonly effect: { getComputedTiming: () => { endTime: number } };
+  }
+
+  let step: HTMLElement;
+  let complete: Mock<() => void>;
+
+  beforeEach(() => {
+    step = document.createElement('div');
+    step.className = 'account-step';
+    step.innerHTML = `
+      <div class="account-step-head"><h2 id="account-section-title">Moje dary</h2></div>
+      <div class="account-step-body"><div id="account-install-how"></div></div>
+    `;
+    document.body.append(step);
+    complete = vi.fn<() => void>();
+  });
+
+  afterEach(() => {
+    step.remove();
+    vi.useRealTimers();
+  });
+
+  function moving(endTime: number, finished: Promise<unknown>): void {
+    for (const part of Array.from(step.children)) {
+      (part as unknown as { getAnimations: () => Motion[] }).getAnimations = () => [
+        { finished, effect: { getComputedTiming: () => ({ endTime }) } },
+      ];
+    }
+  }
+
+  function leave(): void {
+    leaveAccountStep({ target: step, animationComplete: complete });
+  }
+
+  it('when it starts to leave, then it is out of reach and gives up its ids at once, before its motion ends', () => {
+    moving(350, new Promise(() => undefined));
+
+    leave();
+
+    expect(step.hasAttribute('inert')).toBe(true);
+    expect(step.getAttribute('aria-hidden')).toBe('true');
+    expect(step.classList).toContain('account-step--leaving');
+    expect(step.querySelectorAll('[id]')).toHaveLength(0);
+    expect(complete).not.toHaveBeenCalled();
+  });
+
+  it('when its head and body have moved away, then it is gone', async () => {
+    let finish!: () => void;
+    moving(
+      350,
+      new Promise<void>((done) => {
+        finish = done;
+      }),
+    );
+
+    leave();
+    finish();
+    await new Promise((done) => setTimeout(done));
+
+    expect(complete).toHaveBeenCalledOnce();
+  });
+
+  it('when the browser never ends its motion, then it is gone at the latest 0.3 s after its duration, so it never stays over the new step', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    moving(350, new Promise(() => undefined));
+
+    leave();
+    vi.advanceTimersByTime(649);
+    expect(complete).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+
+    expect(complete).toHaveBeenCalledOnce();
+  });
+
+  it('when nothing moves it, then it is gone at once', () => {
+    leave();
+
+    expect(complete).toHaveBeenCalledOnce();
   });
 });
