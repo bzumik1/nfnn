@@ -10,8 +10,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { RouterLink } from '@angular/router';
-import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { loadingView } from '../../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { formatBankTime } from '../../../donations/donation-date';
@@ -24,7 +25,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 @Component({
   selector: 'app-admin-log-files',
-  imports: [Skeleton, RouterLink, NeedsConnection],
+  imports: [Skeleton, LoadFailure, RouterLink],
   templateUrl: './admin-log-files.html',
   styleUrl: './admin-log-files.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,6 +40,7 @@ export class AdminLogFiles {
   protected readonly query = (file: LogFileResponse) => logFileQuery(file.name);
   protected readonly state = signal<LoadState>('loading');
   protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly retrying = signal(false);
   protected readonly available = signal(false);
   protected readonly files = signal<LogFileResponse[]>([]);
   protected readonly groups = computed(() => olderLogFileGroups(this.files()));
@@ -48,11 +50,23 @@ export class AdminLogFiles {
     afterNextRender(() => this.title().nativeElement.focus());
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.api
       .logFiles()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: ({ available, files }) => {
           this.available.set(available);

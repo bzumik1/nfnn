@@ -10,7 +10,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { loadingView } from '../../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { formatBankTime } from '../../../donations/donation-date';
@@ -30,7 +32,15 @@ const RELEASES = 'https://github.com/bzumik1/nfnn/releases/tag/';
 
 @Component({
   selector: 'app-admin-server-state',
-  imports: [BusyLabel, Skeleton, NeedsConnection, HealthIcon, Disclosure, ReleaseHistory],
+  imports: [
+    BusyLabel,
+    Skeleton,
+    LoadFailure,
+    NeedsConnection,
+    HealthIcon,
+    Disclosure,
+    ReleaseHistory,
+  ],
   templateUrl: './admin-server-state.html',
   styleUrl: './admin-server-state.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +53,7 @@ export class AdminServerState {
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly retrying = signal(false);
   protected readonly refreshing = signal(false);
   protected readonly refreshFailed = signal(false);
   protected readonly diagnostics = signal<DiagnosticsResponse | null>(null);
@@ -63,11 +74,23 @@ export class AdminServerState {
     afterNextRender(() => this.title().nativeElement.focus());
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.api
       .diagnostics()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (diagnostics) => {
           this.diagnostics.set(diagnostics);

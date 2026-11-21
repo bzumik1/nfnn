@@ -7,12 +7,14 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { describeProblem } from '../../../core/auth/api-problem';
 import { DirtyForms } from '../../../core/updates/dirty-forms';
 import { PROJECT_ORDERS, ProjectOrder, ProjectsApi } from '../../content/projects-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { projectOrderDescription, projectOrderLabel } from './project-order';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { loadingView } from '../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
@@ -23,7 +25,7 @@ type LoadState = 'loading' | 'ready' | 'error' | 'offline';
 
 @Component({
   selector: 'app-project-order-card',
-  imports: [BusyLabel, Skeleton, LiveNotice, NeedsConnection],
+  imports: [BusyLabel, Skeleton, LoadFailure, LiveNotice, NeedsConnection],
   templateUrl: './project-order-card.html',
   styleUrl: './project-order-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,6 +42,7 @@ export class ProjectOrderCard {
   protected readonly description = projectOrderDescription;
   protected readonly state = signal<LoadState>('loading');
   protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly retrying = signal(false);
   protected readonly chosen = signal<ProjectOrder | null>(null);
   private readonly saved = signal<ProjectOrder | null>(null);
   protected readonly saving = signal(false);
@@ -55,11 +58,23 @@ export class ProjectOrderCard {
     this.destroyRef.onDestroy(unregister);
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.reads
       .projectOrder()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (response) => {
           this.chosen.set(response.order);

@@ -59,6 +59,7 @@
   --color-danger-fill: #a1121a;
   --color-danger-bg: #fdf0ef;
   --color-danger-border: #f2b8b5;
+  --color-danger-control-border: var(--color-border);
   --color-on-danger: #ffffff;
   --color-warning: #7a4a00;
   --color-log-code: #1d5a52;
@@ -403,7 +404,11 @@
   --list-row-min-height: 55px;
   --list-inset-row-min-height: 2.8rem;
   --weight-list-inset-title: var(--weight-regular);
-  --list-lead-size: var(--space-7);
+  --list-lead-size: max(var(--space-7), min(2.1875rem, 11cqi));
+  --list-glyph-size: calc(var(--list-lead-size) * 24 / 35);
+  --list-tile-icon-size: calc(var(--list-lead-size) * 4 / 7);
+  --text-list-tile-mark: var(--list-tile-icon-size);
+  --status-icon-size: 4rem;
   --list-group-title-top: 0rem;
 
   --receipt-color-text: #202020;
@@ -513,6 +518,7 @@
   --color-danger: #fca5a5;
   --color-danger-bg: #3a1214;
   --color-danger-border: #b4474a;
+  --color-danger-control-border: var(--color-danger-border);
   --color-warning: #fcd34d;
   --color-log-code: #9fd8cc;
   --color-log-warn: #fcd34d;
@@ -543,5 +549,6 @@
 @media (prefers-contrast: more) {
   :root {
     --scroll-shade-amount: 21%;
+    --color-danger-control-border: var(--color-border-field);
   }
 }

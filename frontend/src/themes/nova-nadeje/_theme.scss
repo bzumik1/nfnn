@@ -128,6 +128,7 @@
   --color-danger-fill: #b91c1c;
   --color-danger-bg: #fef2f2;
   --color-danger-border: #fecaca;
+  --color-danger-control-border: var(--color-border);
   --color-on-danger: #ffffff;
   --color-warning: #92400e;
   --color-log-code: #2f4b7c;
@@ -499,7 +500,11 @@
   --list-row-min-height: 56px;
   --list-inset-row-min-height: 2.765rem;
   --weight-list-inset-title: var(--weight-regular);
-  --list-lead-size: var(--space-7);
+  --list-lead-size: max(var(--space-7), min(1.75rem, 8.75cqi));
+  --list-glyph-size: calc(var(--list-lead-size) * 5 / 7);
+  --list-tile-icon-size: calc(var(--list-lead-size) * 9 / 14);
+  --text-list-tile-mark: var(--list-tile-icon-size);
+  --status-icon-size: 3.5rem;
   --list-group-title-top: 0rem;
 
   --receipt-color-text: #1a1a2e;
@@ -640,6 +645,7 @@
   --color-danger: #f87171;
   --color-danger-bg: #2c1316;
   --color-danger-border: #b54646;
+  --color-danger-control-border: var(--color-danger-border);
   --color-warning: #fbbf24;
   --color-log-code: #a9bfe6;
   --color-log-warn: #fbbf24;
@@ -675,6 +681,7 @@
   --color-border-soft: #8a93a3;
   --color-border-accent: #6ea8ff;
   --color-border-field: #9aa3b2;
+  --color-danger-control-border: var(--color-border-field);
   --color-divider: #8a93a3;
   --color-separator: #8a93a3;
   --color-log-code: #cbdaf5;

@@ -10,8 +10,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { Router } from '@angular/router';
-import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../../shared/ui/load-failure/load-failure';
 import { loadingView } from '../../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { AdminBackupsResponse, BackupFileResponse } from '../../admin-api';
@@ -28,7 +29,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 @Component({
   selector: 'app-admin-backup-history',
-  imports: [Skeleton, NeedsConnection, BackupSheet],
+  imports: [Skeleton, LoadFailure, BackupSheet],
   templateUrl: './admin-backup-history.html',
   styleUrl: './admin-backup-history.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,6 +45,7 @@ export class AdminBackupHistory {
   protected readonly downloads = inject(BackupDownloads);
   protected readonly state = signal<LoadState>('loading');
   protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly retrying = signal(false);
   protected readonly view = signal<AdminBackupsResponse | null>(null);
   protected readonly opened = signal<BackupFileResponse | null>(null);
   protected readonly days = computed(() => backupDays(this.view()?.backups ?? []));
@@ -57,11 +59,23 @@ export class AdminBackupHistory {
     afterNextRender(() => this.title().nativeElement.focus());
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.reads
       .backupsWithoutRunErrors()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (view) => {
           this.view.set(view);

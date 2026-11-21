@@ -10,8 +10,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { RouterLink } from '@angular/router';
-import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { loadingView } from '../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { formatBankTime, pragueDay } from '../../donations/donation-date';
@@ -35,7 +36,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 @Component({
   selector: 'app-admin-logs',
-  imports: [Skeleton, RouterLink, NeedsConnection, HealthIcon, LogsToday],
+  imports: [Skeleton, LoadFailure, RouterLink, HealthIcon, LogsToday],
   templateUrl: './admin-logs.html',
   styleUrl: './admin-logs.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,10 +52,12 @@ export class AdminLogs {
   protected readonly query = (file: LogFileResponse) => logFileQuery(file.name);
   protected readonly filesState = signal<LoadState>('loading');
   protected readonly filesView = loadingView(this.filesState, (state) => state === 'loading');
+  protected readonly filesRetrying = signal(false);
   protected readonly available = signal(false);
   protected readonly files = signal<LogFileResponse[]>([]);
   protected readonly healthState = signal<LoadState>('loading');
   protected readonly healthView = loadingView(this.healthState, (state) => state === 'loading');
+  protected readonly healthRetrying = signal(false);
   protected readonly diagnostics = signal<DiagnosticsResponse | null>(null);
 
   protected readonly current = computed(() => currentLogFiles(this.files()));
@@ -87,11 +90,23 @@ export class AdminLogs {
     afterNextRender(() => this.title().nativeElement.focus());
   }
 
-  protected loadFiles(): void {
+  private loadFiles(): void {
     this.filesState.set('loading');
+    this.fetchFiles();
+  }
+
+  protected retryFiles(): void {
+    this.filesRetrying.set(true);
+    this.fetchFiles();
+  }
+
+  private fetchFiles(): void {
     this.api
       .logFiles()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.filesRetrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: ({ available, files }) => {
           this.available.set(available);
@@ -106,11 +121,23 @@ export class AdminLogs {
       });
   }
 
-  protected loadHealth(): void {
+  private loadHealth(): void {
     this.healthState.set('loading');
+    this.fetchHealth();
+  }
+
+  protected retryHealth(): void {
+    this.healthRetrying.set(true);
+    this.fetchHealth();
+  }
+
+  private fetchHealth(): void {
     this.api
       .diagnostics()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.healthRetrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (diagnostics) => {
           this.diagnostics.set(diagnostics);

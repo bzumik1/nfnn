@@ -1,3 +1,4 @@
+@use 'breakpoints' as bp;
 @use 'motion';
 
 @mixin action-block {
@@ -53,6 +54,32 @@
 .ui-notice--alert.ui-notice--action,
 .ui-load-state--error {
   border-color: var(--color-danger-border);
+}
+
+.ui-notice--alert.ui-notice--action .ui-cta--ghost {
+  border-color: var(--color-danger-control-border);
+}
+
+@mixin compact-control-edge {
+  .ui-notice--alert.ui-notice--action .ui-button {
+    border-color: var(--color-danger-control-border);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance='light']) {
+    @include compact-control-edge;
+  }
+}
+
+:root[data-appearance='dark'] {
+  @include compact-control-edge;
+}
+
+@include bp.down(phone) {
+  .ui-notice--alert.ui-notice--action {
+    padding: var(--space-4);
+  }
 }
 
 .ui-load-state {
@@ -150,7 +177,7 @@
 .ui-notice--floating {
   position: fixed;
   inset-inline: var(--space-4);
-  bottom: var(--space-4);
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
   z-index: 200;
   display: flex;
   flex-wrap: wrap;
@@ -189,7 +216,9 @@ html:has(app-root app-tab-bar) .ui-notice--floating {
 }
 
 .has-floating-notice {
-  scroll-padding-bottom: calc(var(--floating-notice-height) + var(--space-8));
+  scroll-padding-bottom: calc(
+    var(--floating-notice-height) + var(--space-8) + env(safe-area-inset-bottom)
+  );
 
   &:has(app-root app-tab-bar) {
     scroll-padding-bottom: calc(
@@ -198,7 +227,9 @@ html:has(app-root app-tab-bar) .ui-notice--floating {
   }
 
   body:not(:has(app-root app-landing)) {
-    padding-bottom: calc(var(--floating-notice-height) + var(--space-8));
+    padding-bottom: calc(
+      var(--floating-notice-height) + var(--space-8) + env(safe-area-inset-bottom)
+    );
   }
 }
 

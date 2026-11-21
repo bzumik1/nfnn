@@ -127,7 +127,8 @@ test.describe('Given an administrator managing the news', () => {
       page.getByRole('status').filter({ hasText: 'Načítáme aktuality…' }),
     ).toBeAttached();
     await expect(page.locator('app-skeleton')).toBeVisible();
-    await expect(page.locator('app-skeleton')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('app-skeleton .ui-skeleton')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.getByRole('heading', { level: 2, name: 'Všechny aktuality' })).toBeVisible();
 
     answer();
 

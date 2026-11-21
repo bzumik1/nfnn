@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -20,7 +21,7 @@ import { projectCategoryLabel } from '../../content/project-category';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { ProjectOrderCard } from './project-order-card';
-import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { loadingView } from '../../../shared/ui/skeleton/loading-view';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 
@@ -31,7 +32,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-projects',
-  imports: [Skeleton, NeedsConnection, RouterLink, LiveNotice, ProjectOrderCard],
+  imports: [Skeleton, LoadFailure, RouterLink, LiveNotice, ProjectOrderCard],
   templateUrl: './admin-projects.html',
   styleUrl: './admin-projects.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,6 +49,7 @@ export class AdminProjects {
   protected readonly categoryLabel = projectCategoryLabel;
   protected readonly state = signal<LoadState>('loading');
   protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly retrying = signal(false);
   protected readonly items = signal<ProjectResponse[]>([]);
   protected readonly notice = signal<Notice | null>(null);
 
@@ -63,15 +65,23 @@ export class AdminProjects {
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
-  protected load(): void {
+  private load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
     this.fetch();
   }
 
   private fetch(): void {
     this.reads
       .projectList()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (list) => {
           this.items.set(list.items);

@@ -25,6 +25,7 @@ function announcers(element: Element): Element[] {
 }
 
 const DEVICES_URL = '/api/donors/me/devices';
+const RETURNING_SLOT = 'device-sign-out-slot--returning';
 const THIS_MAC: SignedInDevice = {
   id: '019a5a3c-0000-7000-8000-000000000001',
   platform: 'MAC',
@@ -217,7 +218,9 @@ describe("Given a donor's signed-in devices card", () => {
       expect(accessibleText(element('.devices-confirm-yes'))).toBe('Odhlásit');
       expect(element('.devices-confirm-yes').classList).toContain('ui-button--danger');
       expect(text(element('.devices-confirm-no'))).toBe('Zrušit');
-      expect(signOutButton(rows()[1])).toBeNull();
+      const foldedSlot = rows()[1].querySelector('.device-sign-out-slot');
+      expect(foldedSlot?.hasAttribute('inert')).toBe(true);
+      expect(foldedSlot?.getAttribute('aria-hidden')).toBe('true');
       expect(document.activeElement).toBe(element('.devices-confirm-no'));
       http.expectNone({ method: 'DELETE' });
     });
@@ -244,6 +247,20 @@ describe("Given a donor's signed-in devices card", () => {
       expect(rows()).toHaveLength(3);
       expect(document.activeElement).toBe(signOutButton(rows()[1]));
       http.expectNone({ method: 'DELETE' });
+    });
+
+    it('and the donor cancels the question, then only the iPhone’s Odhlásit unfolds back, while the list drew every Odhlásit unfolded', async () => {
+      const returning = () =>
+        rows().map((row) =>
+          row.querySelector('.device-sign-out-slot')?.classList.contains(RETURNING_SLOT),
+        );
+      expect(returning()).toEqual([undefined, false, false]);
+
+      await ask(signOutButton(rows()[1]));
+      element<HTMLButtonElement>('.devices-confirm-no').click();
+      await settle();
+
+      expect(returning()).toEqual([undefined, true, false]);
     });
 
     it('and the donor signs out the iPhone, then the API is told, the row disappears, the status says so and the device below takes focus', async () => {

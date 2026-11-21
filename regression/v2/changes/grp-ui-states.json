@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/skeleton/skeleton.spec.ts > Given a skeleton for a card whose title is known before its data > when it shows, then a screen reader still hears nothing of it",
+    "replacement": "src/app/shared/ui/skeleton/skeleton.spec.ts > Given a skeleton for a card whose title is known before its data > when it shows, then a screen reader finds its title among the headings and hears nothing of the rows",
+    "reason": "grp:ui-states of the desktop polish (#1902): the title of a card's skeleton is an h2 like the card's own, so the VoiceOver headings rotor lists the cards while they load; only the skeleton rows stay aria-hidden",
+    "contract": "docs/frontend-overview.md, Shared UI (skeleton/)"
+  }
+]

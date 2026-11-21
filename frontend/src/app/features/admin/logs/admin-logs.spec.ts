@@ -4,6 +4,11 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { diagnostics, logFile, logOverride } from '../testing/admin-fixtures';
 import { AdminLogs } from './admin-logs';
 import { DIAGNOSTICS_URL, LOGS_URL, LogPageHarness, problem } from './testing/log-page-harness';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const TODAY_SEARCH = `${LOGS_URL}/backend.log/search?pattern=%5E%5CS%2B%5Cs%2B(?:WARN%7CERROR)%5Cb&limit=50`;
 const GIGABYTE = 1_000_000_000;
@@ -181,10 +186,18 @@ describe('Given an administrator on the logs hub', () => {
     page.http.expectOne(DIAGNOSTICS_URL).flush(diagnostics({ disks: MOUNTED }));
     await page.settle();
 
-    expect(page.text('.files [role="alert"]')).toContain('Soubory logu se nepodařilo načíst.');
     expect(page.text('.health a .ui-list__title')).toBe('Bez poruchy');
-
-    await page.click('Zkusit znovu');
+    expect(loadFailureAlerts(page.element('.files'))).toEqual([
+      'Soubory logu se nepodařilo načíst.',
+    ]);
+    expect(alertsHoldingAButton(page.element('.files'))).toBe(0);
+    const retry = pressLoadFailureRetry(page.element('.files'));
+    await page.settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(page.element('.files'))).toEqual([
+      'Soubory logu se nepodařilo načíst.',
+    ]);
     page.http.expectOne(LOGS_URL).flush({ available: true, files: FILES });
     await page.settle();
     await flushToday([]);
@@ -198,10 +211,18 @@ describe('Given an administrator on the logs hub', () => {
     await page.settle();
     await flushToday([]);
 
-    expect(page.text('.health [role="alert"]')).toContain('Stav serveru se nepodařilo zjistit.');
     expect(page.links('.files a')).toHaveLength(4);
-
-    await page.click('Zkusit znovu');
+    expect(loadFailureAlerts(page.element('.health'))).toEqual([
+      'Stav serveru se nepodařilo zjistit.',
+    ]);
+    expect(alertsHoldingAButton(page.element('.health'))).toBe(0);
+    const retry = pressLoadFailureRetry(page.element('.health'));
+    await page.settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(page.element('.health'))).toEqual([
+      'Stav serveru se nepodařilo zjistit.',
+    ]);
     page.http.expectOne(DIAGNOSTICS_URL).flush(diagnostics({ disks: MOUNTED }));
     await page.settle();
 
