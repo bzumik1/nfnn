@@ -10,6 +10,7 @@ import {
   rememberedSession,
   renamePetr,
   serveEmptyAdministrationCopy,
+  servePetrBankAccounts,
   serveRecentDonors,
 } from './baseline/screen-mocks';
 import {
@@ -1601,6 +1602,50 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
     const cardGap = partsBox.y - (summaryBox.y + summaryBox.height);
     expect(noticeGap).toBeGreaterThanOrEqual(8);
     expect(Math.abs(noticeGap - cardGap)).toBeLessThanOrEqual(0.5);
+  });
+});
+
+async function badgesPastTheirRow(scope: Locator): Promise<string[]> {
+  await scope.evaluate(() => document.fonts.ready);
+  return scope.locator('.ui-badge').evaluateAll((badges) =>
+    badges
+      .filter((badge) => badge.getClientRects().length > 0)
+      .filter((badge) => {
+        const row = badge.closest('tr')!;
+        const style = getComputedStyle(row);
+        const frame = row.getBoundingClientRect();
+        const left = frame.left + row.clientLeft + parseFloat(style.paddingLeft);
+        const right =
+          frame.left + row.clientLeft + row.clientWidth - parseFloat(style.paddingRight);
+        const box = badge.getBoundingClientRect();
+        return box.left < left - 0.5 || box.right > right + 0.5;
+      })
+      .map((badge) => {
+        const box = badge.getBoundingClientRect();
+        return `"${(badge.textContent ?? '').trim()}" ${Math.round(box.left)}..${Math.round(box.right)}`;
+      }),
+  );
+}
+
+test.describe('Given an administrator on an iPhone 390 pt wide whose installed app shows the largest accessibility text', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ page }) => {
+    await showLargestSystemText(page);
+    await mockDonorApi(page, donorWithDonations);
+    await mockAdministration(page);
+    await servePetrBankAccounts(page, [bankAccountItem({ shared: true, pairingExcluded: true })]);
+    await rememberedSession(page);
+  });
+
+  test('when they open the bank accounts of a donor whose account pairs only with the variable symbol, then every badge wraps within the content box of its row', async ({
+    page,
+  }) => {
+    await page.goto(`${PETR_DETAIL_PATH}/bankovni-ucty`);
+    const table = page.locator('main table');
+    await expect(table.locator('.ui-badge', { hasText: 'variabilním symbolem' })).toBeVisible();
+
+    await expect.poll(() => badgesPastTheirRow(table)).toEqual([]);
   });
 });
 
