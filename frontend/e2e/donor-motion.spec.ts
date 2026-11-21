@@ -421,11 +421,13 @@ async function expectTheRowAndQuestionNeverToJump(page: Page): Promise<void> {
   await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
   expect(jumpsOfTheEdges(asking.start, asking.frames), ROW_AND_QUESTION).toEqual([]);
 
+  const scrolledBeforeCancel = await page.evaluate(() => window.scrollY);
   const cancelling = await rowAndQuestionWhile(page, rowId, () =>
     question.getByRole('button', { name: 'Zrušit' }).click(),
   );
   await expect(devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' })).toBeFocused();
   await expect(question).toHaveCount(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrolledBeforeCancel);
   expect(jumpsOfTheEdges(cancelling.start, cancelling.frames), ROW_AND_QUESTION).toEqual([]);
 }
 

@@ -145,7 +145,7 @@ export class DevicesCard {
     const target = this.confirming();
     this.returning.set(target);
     this.confirming.set(null);
-    this.focusAfterRender(() => this.askingButton(target));
+    this.focusAfterRender(() => this.askingButton(target), { preventScroll: true });
   }
 
   signOut(device: SignedInDevice): void {
@@ -288,8 +288,11 @@ export class DevicesCard {
     );
   }
 
-  private focusAfterRender(target: () => HTMLElement | null | undefined): void {
-    afterNextRender(() => target()?.focus(), { injector: this.injector });
+  private focusAfterRender(
+    target: () => HTMLElement | null | undefined,
+    options?: FocusOptions,
+  ): void {
+    afterNextRender(() => target()?.focus(options), { injector: this.injector });
   }
 
   private begin(target: string): void {
