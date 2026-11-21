@@ -398,9 +398,9 @@
   --list-row-min-height: 55px;
   --list-inset-row-min-height: 2.8rem;
   --weight-list-inset-title: var(--weight-regular);
-  --list-lead-size: 2.1875rem;
-  --list-glyph-size: 1.5rem;
-  --list-tile-icon-size: 1.25rem;
+  --list-lead-size: max(var(--space-7), min(2.1875rem, 11cqi));
+  --list-glyph-size: calc(var(--list-lead-size) * 24 / 35);
+  --list-tile-icon-size: calc(var(--list-lead-size) * 4 / 7);
   --status-icon-size: 4rem;
   --list-group-title-top: 0rem;
 

@@ -65,6 +65,11 @@ div.ui-list__row {
   align-items: center;
 }
 
+.ui-list--centred .ui-list__lead {
+  align-self: center;
+  margin-block: 0;
+}
+
 .ui-list__title {
   grid-area: title;
   font-weight: var(--weight-semibold);
@@ -176,8 +181,8 @@ div.ui-list__row {
   padding: var(--space-4) var(--list-row-padding-inline) var(--space-1);
 }
 
-@include bp.container-down(list-card, narrow) {
-  .ui-card .ui-list__row:has(> .ui-list__value):not(:has(> .ui-switch)) {
+@mixin value-under-text($rows) {
+  .ui-card .ui-list__row:where(#{$rows}):has(> .ui-list__value):not(:has(> .ui-switch)) {
     grid-template-areas:
       'lead title title chevron'
       'lead meta meta chevron'
@@ -185,7 +190,7 @@ div.ui-list__row {
   }
 
   .ui-card
-    .ui-list__row:has(> .ui-list__value):not(
+    .ui-list__row:where(#{$rows}):has(> .ui-list__value):not(
       :has(> .ui-list__state, > .ui-list__meta, > .ui-switch)
     ) {
     grid-template-areas:
@@ -193,7 +198,10 @@ div.ui-list__row {
       'lead value value chevron';
   }
 
-  .ui-card .ui-list__row:has(> .ui-list__value):has(> .ui-list__state):not(:has(> .ui-switch)) {
+  .ui-card
+    .ui-list__row:where(#{$rows}):has(> .ui-list__value):has(> .ui-list__state):not(
+      :has(> .ui-switch)
+    ) {
     grid-template-areas:
       'lead title title chevron'
       'lead meta meta chevron'
@@ -201,7 +209,7 @@ div.ui-list__row {
   }
 
   .ui-card
-    .ui-list__row:has(> .ui-list__value):has(> .ui-list__state):not(
+    .ui-list__row:where(#{$rows}):has(> .ui-list__value):has(> .ui-list__state):not(
       :has(> .ui-list__meta, > .ui-switch)
     ) {
     grid-template-areas:
@@ -213,7 +221,7 @@ div.ui-list__row {
     }
   }
 
-  .ui-card .ui-list__row:not(:has(> .ui-switch)) > .ui-list__value {
+  .ui-card .ui-list__row:where(#{$rows}):not(:has(> .ui-switch)) > .ui-list__value {
     justify-self: start;
     margin-inline-start: 0;
     text-align: start;
@@ -221,7 +229,13 @@ div.ui-list__row {
   }
 }
 
+@include bp.container-down(list-card, narrow) {
+  @include value-under-text(':not(.ui-list--centred *)');
+}
+
 @include bp.container-down(list-card, pair) {
+  @include value-under-text('.ui-list--centred *');
+
   .ui-card > .ui-list > *,
   .ui-card__group > * {
     --list-row-padding-inline: var(--space-4);

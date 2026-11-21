@@ -322,7 +322,7 @@ test.describe('Given list rows with a wide amount, a date or a small button', ()
 });
 
 test.describe('Given a list of people', () => {
-  test('when several people with a role and badges are listed, then each avatar starts with the name and no divider follows the last person', async ({
+  test('when several people with a role and badges are listed, then each avatar centres on the lines beside it and no divider follows the last person', async ({
     page,
   }) => {
     const person = (name: string): Part => ({
@@ -354,8 +354,8 @@ test.describe('Given a list of people', () => {
 
     for (const index of [0, 1]) {
       const face = await boxOf(page, '.ui-person-row__avatar', index);
-      const name = await boxOf(page, '.ui-person-row__name', index);
-      expect(Math.abs(face.top - name.top)).toBeLessThanOrEqual(SUBPIXEL_PX);
+      const lines = await boxOf(page, '.ui-person-row > div', index);
+      expect(Math.abs(middle(face) - middle(lines))).toBeLessThanOrEqual(SUBPIXEL_PX);
     }
     const dividers = await page
       .locator('#list-rows-host .ui-person-row')
