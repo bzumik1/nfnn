@@ -87,10 +87,6 @@ export class PageFocus {
     this.returnAfterStepBack(main);
   }
 
-  returnTargetIn(scope: HTMLElement): HTMLElement | null {
-    return this.preview.drives() ? null : (this.returnTarget(scope)?.() ?? null);
-  }
-
   keepOnPressed(control: HTMLElement): void {
     if (this.document.activeElement !== control) {
       control.focus({ preventScroll: true });

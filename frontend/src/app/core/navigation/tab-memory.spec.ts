@@ -14,7 +14,6 @@ import {
 import { RouterTestingHarness } from '@angular/router/testing';
 import { APP_TABS, tabOf } from './app-tabs';
 import { KeptTabPages } from './kept-tab-pages';
-import { PageFocus } from './page-focus';
 import { PagePlacement } from './page-placement';
 import { RELOAD_PLACE_KEY, ReloadPlace } from '../reload/reload-place';
 import { ScrollHold } from './scroll-hold';
@@ -417,7 +416,6 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
       ],
     });
     TestBed.inject(TabMemory);
-    TestBed.inject(PageFocus);
     routerScrollerOf(scrolling).init();
     harness = await RouterTestingHarness.create('/o-nas');
     TestBed.inject(Router).setUpLocationChangeListener();
@@ -468,53 +466,6 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     );
     heading.focus();
   }
-
-  function pageLeftBy(path: string, headingTop: number, linkTop: number): HTMLElement {
-    const main = document.createElement('main');
-    const heading = document.createElement('h1');
-    heading.tabIndex = -1;
-    const link = document.createElement('a');
-    link.href = path;
-    link.setAttribute('href', path);
-    main.append(heading, link);
-    document.body.append(main);
-    placed.push(main);
-    vi.spyOn(heading, 'getBoundingClientRect').mockImplementation(() =>
-      DOMRect.fromRect({ x: 0, y: headingTop - window.scrollY, width: 300, height: 40 }),
-    );
-    vi.spyOn(link, 'getBoundingClientRect').mockImplementation(() =>
-      DOMRect.fromRect({ x: 0, y: linkTop - window.scrollY, width: 300, height: 44 }),
-    );
-    return heading;
-  }
-
-  it('when the page focuses its own heading while it grows and the step back will return the focus to the link the visitor left by, then it is still put where they left it', async () => {
-    const heading = pageLeftBy('/sprava', 80, 1000);
-    await stepBack();
-    heading.focus();
-    scrolledTo = [];
-    grows(3000);
-
-    expect(scrolledTo).toEqual([900]);
-  });
-
-  it('when the heading the page focused on arrival would leave the screen by the move and the step back will return the focus to the link the visitor left by, then it is put where they left it, where the link is seen', async () => {
-    pageLeftBy('/sprava', 80, 1000).focus();
-    await stepBack();
-    scrolledTo = [];
-    grows(3000);
-
-    expect(scrolledTo).toEqual([900]);
-  });
-
-  it('when the focused heading would leave the screen by the move and the link the visitor left by would leave it too, then the page stays where the heading is seen', async () => {
-    pageLeftBy('/sprava', 80, 100).focus();
-    await stepBack();
-    scrolledTo = [];
-    grows(3000);
-
-    expect(scrolledTo).toEqual([]);
-  });
 
   it('when the page grows tall enough, then it is put where they left it', async () => {
     await stepBack();
