@@ -9,6 +9,7 @@ import { pathOf } from './app-tabs';
 import { pushWithinSection } from './page-transition-kind';
 import { BackDestination } from './back-target';
 import { SwipeSettle } from './back-swipe';
+import { RETIMED_WITHIN_MS } from './frame-pace';
 import {
   afterDrawn,
   BarCurve,
@@ -23,6 +24,7 @@ import {
   PAGE_TRANSITION_LONGEST_MS,
   PageTransitions,
   PlacedPage,
+  retimeLateFrames,
   Running,
   SHOWN_DIALOG,
   SwipePreview,
@@ -355,8 +357,18 @@ function followingFinger(
       ...barMotions(bar.items, end.completes ? 1 : 0, timing),
     ];
     motions.forEach((motion) => motion.pause());
-    await afterDrawn(view);
-    motions.forEach((motion) => motion.play());
+    const slidFrom = await afterDrawn(view);
+    motions.forEach((motion) => {
+      motion.play();
+      motion.startTime = slidFrom;
+    });
+    retimeLateFrames(view, {
+      motions,
+      startedAt: slidFrom,
+      steadyMs: stage.steadyFrameMs(),
+      withinMs: Math.min(RETIMED_WITHIN_MS, end.durationMs / 2),
+      goesOn: () => stage.running === running,
+    });
     await Promise.race([
       Promise.allSettled(motions.map((motion) => motion.finished)),
       new Promise((done) => view.setTimeout(done, PAGE_TRANSITION_LONGEST_MS)),

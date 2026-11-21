@@ -33,7 +33,13 @@ import { DirtyForms } from '../updates/dirty-forms';
 import { NavigationPreview } from './navigation-preview';
 import { PagePlacement } from './page-placement';
 import { stillCopyOf } from './still-copy';
-import { RETIMED_WITHIN_MS, retimingOf, STEADY_FRAMES_KEPT, steadyFrameMs } from './frame-pace';
+import {
+  RETIMED_AT_MOST_MS,
+  RETIMED_WITHIN_MS,
+  retimingOf,
+  STEADY_FRAMES_KEPT,
+  steadyFrameMs,
+} from './frame-pace';
 
 export const PAGE_LAYER_CLASS = 'page-layer';
 export const PAGE_TRANSITION_CLASS = 'page-transition';
@@ -501,52 +507,42 @@ export class PageTransitions {
   private startMoving(running: Running, view: Window, page: HTMLElement): void {
     running.overlay.classList.add(HELD_CLASS, MOVING_CLASS);
     this.finishWhenStill(running, page, view);
-    const steadyMs = steadyFrameMs(this.frameGaps);
-    const movesForMs = Math.max(this.durationOf('--duration-page'), RETIMED_WITHIN_MS);
     let drawn = 0;
-    let motions: readonly Animation[] | null = null;
-    let startedAt = 0;
-    let shownAt = 0;
-    let shiftedMs = 0;
+    let released = false;
+    const goesOn = (): boolean => this.running === running;
     const release = (at: number): void => {
-      motions = startHeldMotions(running.overlay, at);
-      startedAt = at;
-      shownAt = at;
+      released = true;
+      retimeLateFrames(view, {
+        motions: startHeldMotions(running.overlay, at),
+        startedAt: at,
+        steadyMs: this.steadyFrameMs(),
+        withinMs: RETIMED_WITHIN_MS,
+        goesOn,
+      });
     };
     const byClock = view.setTimeout(() => {
-      if (this.running === running && motions === null) {
+      if (goesOn() && !released) {
         release(view.performance.now());
       }
     }, FRAME_LATE_MS);
     const frame = (at: number): void => {
-      if (this.running !== running) {
+      if (!goesOn()) {
         return;
       }
       view.clearTimeout(byClock);
-      if (motions === null) {
-        drawn++;
-        if (drawn === 2) {
-          release(at);
-        }
-      } else {
-        const gapMs = at - shownAt;
-        const shownMs = shownAt - startedAt;
-        const shift = retimingOf({ gapMs, steadyMs, shownMs, shiftedMs });
-        if (shift > 0) {
-          startedAt += shift;
-          shiftedMs += shift;
-          motions.forEach((motion) => (motion.startTime = startedAt));
-        } else if (shownMs >= RETIMED_WITHIN_MS) {
-          this.keepFrameGap(gapMs);
-        }
-        shownAt = at;
-        if (at - startedAt >= movesForMs) {
-          return;
-        }
+      if (!released && ++drawn === 2) {
+        release(at);
+        return;
       }
-      view.requestAnimationFrame(frame);
+      if (!released) {
+        view.requestAnimationFrame(frame);
+      }
     };
     view.requestAnimationFrame(frame);
+  }
+
+  steadyFrameMs(): number {
+    return steadyFrameMs(this.frameGaps);
   }
 
   private sampleFramePace(): void {
@@ -963,6 +959,7 @@ export class PageTransitions {
     if (this.running?.stepped) {
       this.drawing?.standAtOnce([this.layer() ?? this.document.body]);
     }
+    const ran = this.running !== null;
     this.running?.overlay.remove();
     this.running = null;
     this.handingOver = false;
@@ -971,6 +968,9 @@ export class PageTransitions {
     if (root.classList.contains(SHEET_UNDER_CLASS)) {
       root.classList.remove(SHEET_UNDER_CLASS);
       this.drawing?.standAtOnce(this.document.querySelectorAll('dialog[open]'));
+    }
+    if (ran) {
+      this.sampleFramePace();
     }
   }
 }
@@ -1091,12 +1091,47 @@ export function nextFrame(view: Window, then: (now: number) => void): void {
   view.requestAnimationFrame(once);
 }
 
-export function afterDrawn(view: Window, longestMs?: number): Promise<void> {
-  const drawn = new Promise<void>((done) => afterFrames(view, 2, done));
+export interface RetimedMotions {
+  readonly motions: readonly Animation[];
+  readonly startedAt: number;
+  readonly steadyMs: number;
+  readonly withinMs: number;
+  readonly goesOn: () => boolean;
+}
+
+export function retimeLateFrames(
+  view: Window,
+  { motions, startedAt, steadyMs, withinMs, goesOn }: RetimedMotions,
+): void {
+  let startAt = startedAt;
+  let shownAt = startedAt;
+  let shiftedMs = 0;
+  const frame = (at: number): void => {
+    const shownMs = shownAt - startAt;
+    if (!goesOn() || shownMs >= withinMs || shiftedMs >= RETIMED_AT_MOST_MS) {
+      return;
+    }
+    const shift = retimingOf({ gapMs: at - shownAt, steadyMs, shownMs, shiftedMs });
+    if (shift > 0) {
+      startAt += shift;
+      shiftedMs += shift;
+      motions.forEach((motion) => (motion.startTime = startAt));
+    }
+    shownAt = at;
+    view.requestAnimationFrame(frame);
+  };
+  view.requestAnimationFrame(frame);
+}
+
+export function afterDrawn(view: Window, longestMs?: number): Promise<number> {
+  const drawn = new Promise<number>((done) => nextFrame(view, () => nextFrame(view, done)));
   if (longestMs === undefined) {
     return drawn;
   }
-  return Promise.race([drawn, new Promise<void>((done) => view.setTimeout(done, longestMs))]);
+  return Promise.race([
+    drawn,
+    new Promise<number>((done) => view.setTimeout(() => done(view.performance.now()), longestMs)),
+  ]);
 }
 
 function afterFrames(view: Window, frames: number, then: () => void): void {
