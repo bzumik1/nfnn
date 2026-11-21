@@ -3,6 +3,10 @@
 
 :host {
   display: block;
+
+  @include bp.up(nav) {
+    --list-group-title-top: var(--safe-area-top);
+  }
 }
 
 .admin-toolbar {
@@ -216,8 +220,12 @@
 
 .pair-payment {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(max(min(100%, 10em), calc((100% - var(--space-5)) / 2)), 1fr)
+  );
   gap: var(--space-3) var(--space-5);
+  align-items: start;
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface-alt);
   border-radius: var(--radius-md);
@@ -230,10 +238,14 @@
     margin-bottom: var(--space-0-5);
   }
 
+  > div:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
   dd {
     font-size: var(--text-md);
     color: var(--color-text);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 
     .muted {
       display: block;
@@ -359,6 +371,17 @@
 
 .payments-card--rows {
   overflow: clip;
+}
+
+.payment-row {
+  > .ui-list__title,
+  > .ui-list__value {
+    align-self: baseline;
+  }
+
+  > .ui-list__meta {
+    align-self: start;
+  }
 }
 
 @include bp.container-up(list-card, narrow) {
