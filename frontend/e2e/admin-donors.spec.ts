@@ -137,6 +137,90 @@ async function separatorPlace(account: Locator): Promise<SeparatorPlace> {
   });
 }
 
+const BUSY_ACCOUNTS_DETAIL = {
+  ...petrDetail,
+  bankAccounts: [
+    bankAccountItem({
+      id: LINK_ID,
+      accountNumber: '000019-2000145399/0800',
+      verifiedOn: '2026-10-17',
+      connectedFrom: '2026-10-18',
+      donationCount: 7,
+      totalAmountMinor: 1250050,
+      lastDonationOn: '2026-10-10',
+    }),
+    bankAccountItem({
+      id: '0192f0c4-0000-7000-8000-000000000002',
+      accountNumber: '670100-2213456789/6210',
+      status: 'DISCONNECTED',
+      verifiedOn: '2026-09-03',
+      connectedFrom: '2026-09-04',
+      disconnectedOn: '2026-10-30',
+      donationCount: 1,
+      totalAmountMinor: 100,
+      lastDonationOn: '2026-10-01',
+    }),
+  ],
+};
+
+const TABLE_POSES: readonly (readonly [number, number])[] = [
+  [1280, 16],
+  [1280, 20],
+  [1100, 16],
+  [1920, 16],
+  [1920, 24],
+  [1920, 32],
+];
+
+const ACCOUNT_LIST_CELLS = 'td[data-label="Stav"], td[data-label="Dary přiřazené podle účtu"]';
+
+interface SeparatorLines {
+  readonly dangling: string[];
+  readonly itemsStartingLines: number;
+}
+
+async function separatorLines(cell: Locator): Promise<SeparatorLines> {
+  return cell.evaluate((host) => {
+    const box = host.getBoundingClientRect();
+    const contentStart = box.left + parseFloat(getComputedStyle(host).paddingLeft);
+    const glyphs: { char: string; rect: DOMRect }[] = [];
+    const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
+      for (let index = 0; index < text.length; index++) {
+        if (/\s/.test(text[index])) {
+          continue;
+        }
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + 1);
+        const rect = range.getBoundingClientRect();
+        if (rect.width > 0) {
+          glyphs.push({ char: text[index], rect });
+        }
+      }
+    }
+    const sameLine = (a: DOMRect, b: DOMRect) => a.top < b.bottom && a.bottom > b.top;
+    const dangling: string[] = [];
+    let itemsStartingLines = 0;
+    glyphs.forEach((glyph, index) => {
+      const before = glyphs[index - 1];
+      const after = glyphs[index + 1];
+      if (glyph.char !== '·' || !before || !after) {
+        return;
+      }
+      if (!sameLine(before.rect, after.rect)) {
+        itemsStartingLines++;
+      }
+      const shown = glyph.rect.right > contentStart;
+      if (shown && !(sameLine(before.rect, glyph.rect) && sameLine(glyph.rect, after.rect))) {
+        dangling.push(host.textContent!.replace(/\s+/g, ' ').trim());
+      }
+    });
+    return { dangling, itemsStartingLines };
+  });
+}
+
 async function placement(row: Locator, button: Locator): Promise<number[]> {
   const rowBox = (await row.boundingBox())!;
   const buttonBox = (await button.boundingBox())!;
@@ -736,6 +820,36 @@ test.describe('Given an administrator on the donors page', () => {
       }
     }
     expect(seenOnOneLine).toBe(true);
+  });
+
+  test('when the accounts card lists dates and totals as a table on a computer, up to 200 % text, then a separator dot always stays on the line of the item after it', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === PETR_ACCOUNT,
+      (route) => route.fulfill({ json: petrAccount }),
+    );
+    await page.route(
+      (url) => url.pathname === PETR_DONATIONS,
+      (route) => route.fulfill({ json: BUSY_ACCOUNTS_DETAIL }),
+    );
+    await page.goto(`/sprava/darci/${PETR_ID}`);
+    const accounts = page.getByRole('region', { name: 'Bankovní účty' });
+    await expect(accounts).toContainText('celkem 12 500,50 Kč');
+
+    let itemsStartingLines = 0;
+    for (const [width, px] of TABLE_POSES) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.addStyleTag({ content: `html { font-size: ${px}px; }` });
+      const cells = accounts.locator(ACCOUNT_LIST_CELLS);
+      await expect(cells).toHaveCount(BUSY_ACCOUNTS_DETAIL.bankAccounts.length * 2);
+      for (const cell of await cells.all()) {
+        const lines = await separatorLines(cell);
+        expect(lines.dangling, `${width} px, text ${px} px`).toEqual([]);
+        itemsStartingLines += lines.itemsStartingLines;
+      }
+    }
+    expect(itemsStartingLines).toBeGreaterThan(0);
   });
 
   test('when removing an account is refused because of a receipt, then the alert shows the reason and the account stays', async ({

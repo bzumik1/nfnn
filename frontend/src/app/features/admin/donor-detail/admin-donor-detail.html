@@ -732,30 +732,44 @@
                         >
                           {{ statusLabel(item) }}
                           <span class="muted">
-                            @if (item.verifiedOn) {
-                              <ng-container i18n="@@admin.donorDetail.accounts.verifiedOn"
-                                >ověřen
-                                <span class="ui-date">{{
-                                  day(item.verifiedOn)
-                                }}</span></ng-container
-                              >
-                            }
-                            @if (item.connectedFrom) {
-                              <ng-container i18n="@@admin.donorDetail.accounts.connectedFrom"
-                                >&ngsp;· od
-                                <span class="ui-date">{{
-                                  day(item.connectedFrom)
-                                }}</span></ng-container
-                              >
-                            }
-                            @if (item.disconnectedOn) {
-                              <ng-container i18n="@@admin.donorDetail.accounts.disconnectedOn"
-                                >&ngsp;· vypnuto
-                                <span class="ui-date">{{
-                                  day(item.disconnectedOn)
-                                }}</span></ng-container
-                              >
-                            }
+                            <span class="ui-separated">
+                              @if (item.verifiedOn) {
+                                <span class="ui-separated__item"
+                                  ><ng-container i18n="@@admin.donorDetail.accounts.verifiedOn"
+                                    >ověřen
+                                    <span class="ui-date">{{
+                                      day(item.verifiedOn)
+                                    }}</span></ng-container
+                                  ></span
+                                >
+                              }
+                              @if (item.connectedFrom) {
+                                &ngsp;<span class="ui-separated__item">
+                                  @if (item.verifiedOn) {
+                                    <span class="ui-separated__separator">·&nbsp;</span>
+                                  }
+                                  <ng-container i18n="@@admin.donorDetail.accounts.connectedFrom"
+                                    >od
+                                    <span class="ui-date">{{
+                                      day(item.connectedFrom)
+                                    }}</span></ng-container
+                                  ></span
+                                >
+                              }
+                              @if (item.disconnectedOn) {
+                                &ngsp;<span class="ui-separated__item">
+                                  @if (item.verifiedOn || item.connectedFrom) {
+                                    <span class="ui-separated__separator">·&nbsp;</span>
+                                  }
+                                  <ng-container i18n="@@admin.donorDetail.accounts.disconnectedOn"
+                                    >vypnuto
+                                    <span class="ui-date">{{
+                                      day(item.disconnectedOn)
+                                    }}</span></ng-container
+                                  ></span
+                                >
+                              }
+                            </span>
                           </span>
                         </td>
                         <td
@@ -766,17 +780,25 @@
                           {{ donationsCount(item.donationCount) }}
                           @if (item.donationCount > 0) {
                             <span class="muted">
-                              <ng-container i18n="@@admin.donorDetail.accounts.total"
-                                >celkem {{ crowns(item.totalAmountMinor) }}&nbsp;Kč</ng-container
-                              >
-                              @if (item.lastDonationOn) {
-                                <ng-container i18n="@@admin.donorDetail.accounts.last"
-                                  >&ngsp;· poslední
-                                  <span class="ui-date">{{
-                                    day(item.lastDonationOn)
-                                  }}</span></ng-container
+                              <span class="ui-separated">
+                                <span class="ui-separated__item"
+                                  ><ng-container i18n="@@admin.donorDetail.accounts.total"
+                                    >celkem
+                                    {{ crowns(item.totalAmountMinor) }}&nbsp;Kč</ng-container
+                                  ></span
                                 >
-                              }
+                                @if (item.lastDonationOn) {
+                                  &ngsp;<span class="ui-separated__item"
+                                    ><span class="ui-separated__separator">·&nbsp;</span
+                                    ><ng-container i18n="@@admin.donorDetail.accounts.last"
+                                      >poslední
+                                      <span class="ui-date">{{
+                                        day(item.lastDonationOn)
+                                      }}</span></ng-container
+                                    ></span
+                                  >
+                                }
+                              </span>
                             </span>
                           }
                         </td>

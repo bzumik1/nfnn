@@ -48,6 +48,14 @@ td.admin-col {
   min-width: 200px;
 }
 
+.action-col {
+  inline-size: 20%;
+}
+
+.details-col {
+  inline-size: 40%;
+}
+
 .summary {
   display: block;
   color: var(--color-text);
