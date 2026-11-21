@@ -443,7 +443,7 @@ function expectOnTheHeaderButtons(edges: ColumnEdges): void {
 
 test.describe('Given an administrator in an editor on an upright tablet', () => {
   for (const path of ['/sprava/aktuality/nova', '/sprava/projekty/nova'] as const) {
-    test(`when ${path} opens in a browser tab and in the home-screen app's ${INSTALLED_APP_ROOT_PX} px text, then the form's column ends on the back and account buttons`, async ({
+    test(`when ${path} opens in a browser tab and in the home-screen app's ${INSTALLED_APP_ROOT_PX} px text, then the form's column runs from the back button's left edge to the account button's right edge`, async ({
       page,
     }) => {
       await page.setViewportSize(TABLET);
