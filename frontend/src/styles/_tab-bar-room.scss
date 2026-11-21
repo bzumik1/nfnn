@@ -1,0 +1,8 @@
+@mixin holds-tab-bar-in-bottom-padding($padding) {
+  padding-bottom: $padding;
+
+  :host-context(.with-tab-bar) & {
+    margin-bottom: calc(-1 * var(--tab-bar-clearance));
+    padding-bottom: max(#{$padding}, calc(var(--tab-bar-clearance) + var(--space-6)));
+  }
+}

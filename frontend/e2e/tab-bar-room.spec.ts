@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
+import { mockPublicContent, servePaymentDetails } from './baseline/screen-mocks';
 import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, session, signIn } from './donor-session';
 
@@ -61,6 +62,22 @@ async function lowestContentEdge(page: Page): Promise<number> {
   });
 }
 
+async function resolvedLength(page: Page, length: string): Promise<number> {
+  return page.evaluate((value) => {
+    const probe = document.createElement('div');
+    probe.style.position = 'absolute';
+    probe.style.height = value;
+    document.body.append(probe);
+    const height = probe.getBoundingClientRect().height;
+    probe.remove();
+    return height;
+  }, length);
+}
+
+async function bottomPaddingOfTheBody(page: Page): Promise<number> {
+  return page.evaluate(() => parseFloat(getComputedStyle(document.body).paddingBottom));
+}
+
 async function scrolledToTheEnd(page: Page): Promise<void> {
   await page.evaluate(() =>
     window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }),
@@ -113,6 +130,104 @@ for (const [width, viewport] of [
     }
   });
 }
+
+test.describe('Given a visitor on a computer, where a page ends with a section that keeps its full bottom padding', () => {
+  test.use({ viewport: COMPUTER });
+
+  for (const { path, lastPart } of [
+    { path: '/o-nas', lastPart: '#kontakt form' },
+    { path: '/prispet', lastPart: '#prispet .bank' },
+  ]) {
+    test(`when they scroll ${path} to its end, then the empty band between its last line and the tab bar is no taller than the room the bar takes`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await mockPublicContent(page);
+      await servePaymentDetails(page);
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.locator(lastPart).first()).toBeVisible();
+      await scrolledToTheEnd(page);
+
+      const bar = await tabBar(page).boundingBox();
+      expect(bar).not.toBeNull();
+      const roomOfTheBar = COMPUTER.height - bar!.y;
+      const emptyBand = bar!.y - (await lowestContentEdge(page));
+
+      expect(emptyBand).toBeLessThanOrEqual(roomOfTheBar);
+    });
+  }
+});
+
+for (const [width, viewport] of [
+  ['a phone', PHONE],
+  ['a computer', COMPUTER],
+] as const) {
+  test.describe(`Given a visitor on ${width}, where a page ends with a section that holds the tab bar in its bottom padding`, () => {
+    test.use({ viewport });
+
+    for (const { path, lastPart } of [
+      { path: '/o-nas', lastPart: '#kontakt form' },
+      { path: '/prispet', lastPart: '#prispet .bank' },
+    ]) {
+      test(`when they scroll ${path} to its end, then its last line keeps at least the tab bar's room and --space-6 above the page's end`, async ({
+        page,
+      }) => {
+        await mockDonorApi(page);
+        await mockPublicContent(page);
+        await servePaymentDetails(page);
+        await page.goto(path);
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+        await expect(page.locator(lastPart).first()).toBeVisible();
+        await scrolledToTheEnd(page);
+
+        const floor = await resolvedLength(page, 'calc(var(--tab-bar-clearance) + var(--space-6))');
+        const roomUnderTheLastLine = viewport.height - (await lowestContentEdge(page));
+
+        expect(roomUnderTheLastLine).toBeGreaterThanOrEqual(floor - 1);
+      });
+    }
+  });
+}
+
+test.describe('Given a visitor on a phone who has lost the connection, so the Offline pill floats above the tab bar', () => {
+  test.use({ viewport: PHONE });
+
+  for (const { path, lastPart } of [
+    { path: '/o-nas', lastPart: '#kontakt form' },
+    { path: '/prispet', lastPart: '#prispet .bank' },
+  ]) {
+    test(`when they scroll ${path} to its end, then its last line stands above the pill, and the page adds no more room under it than the body keeps for the pill`, async ({
+      page,
+      context,
+    }) => {
+      await mockDonorApi(page);
+      await mockPublicContent(page);
+      await servePaymentDetails(page);
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.locator(lastPart).first()).toBeVisible();
+      await scrolledToTheEnd(page);
+      const roomUnderTheLastLineOnline = PHONE.height - (await lowestContentEdge(page));
+      const bodyPaddingOnline = await bottomPaddingOfTheBody(page);
+
+      await page.route('**/api/**', (route) => route.abort('internetdisconnected'));
+      await context.setOffline(true);
+      const pill = page.getByRole('button', { name: /^Offline/ });
+      await expect(pill).toBeVisible();
+      await expect(page.locator('html')).toHaveClass(/\bis-offline\b/);
+      await scrolledToTheEnd(page);
+
+      const box = await pill.boundingBox();
+      expect(box).not.toBeNull();
+      const lastLine = await lowestContentEdge(page);
+      expect(lastLine).toBeLessThanOrEqual(box!.y);
+      const roomAddedOffline = PHONE.height - lastLine - roomUnderTheLastLineOnline;
+      const bodyPaddingAddedOffline = (await bottomPaddingOfTheBody(page)) - bodyPaddingOnline;
+      expect(roomAddedOffline).toBeLessThanOrEqual(bodyPaddingAddedOffline + 1);
+    });
+  }
+});
 
 test.describe('Given a signed-in donor', () => {
   for (const [width, viewport] of [

@@ -443,3 +443,305 @@ for (const { width, rootSize } of [
     });
   });
 }
+
+const LARGEST_SYSTEM_TEXT_PX = 53;
+
+async function openRows(
+  page: Page,
+  viewport: { width: number; height: number },
+  path: string,
+  rootPx: number | null = null,
+): Promise<void> {
+  if (rootPx !== null) {
+    await page.addInitScript((px) => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent = `html { font-size: ${px}px; }`;
+        document.head.append(style);
+      });
+    }, rootPx);
+  }
+  await page.setViewportSize(viewport);
+  await mockDonorApi(page, donorWithDonations);
+  await rememberedSession(page);
+  await mockAdministration(page);
+  await page.route(
+    (url) => url.pathname === '/api/admin/donations/payments',
+    (route) => {
+      const paired = new URL(route.request().url()).searchParams.get('pairing') === 'paired';
+      const items = paired ? PAIRED : UNPAIRED;
+      return route.fulfill({
+        json: { year: null, availableYears: [2026], items, total: items.length },
+      });
+    },
+  );
+  await page.goto(path);
+  await expect(page.locator('h1').first()).not.toHaveText(ADMINISTRATION_LOCKED);
+  await expect(page.locator('button.payment-row').first()).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+}
+
+async function factsPastTheirCell(facts: Locator): Promise<string[]> {
+  return facts.evaluate((list) =>
+    [...list.querySelectorAll<HTMLElement>(':scope > div')].flatMap((cell) => {
+      const frame = cell.getBoundingClientRect();
+      const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) =>
+          node.parentElement?.closest('.ui-separated__separator')
+            ? NodeFilter.FILTER_REJECT
+            : NodeFilter.FILTER_ACCEPT,
+      });
+      const boxes: DOMRect[] = [];
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        boxes.push(...range.getClientRects());
+      }
+      for (const element of cell.querySelectorAll('app-bank-logo, .ui-badge')) {
+        boxes.push(element.getBoundingClientRect());
+      }
+      return boxes
+        .filter(
+          (box) => box.width > 0 && (box.left < frame.left - 1 || box.right > frame.right + 1),
+        )
+        .map(
+          (box) =>
+            `${cell.querySelector('dt')?.textContent?.trim()}: ${Math.round(box.left)}..${Math.round(box.right)} in ${Math.round(frame.left)}..${Math.round(frame.right)}`,
+        );
+    }),
+  );
+}
+
+async function linesOfText(within: Locator, text: string): Promise<number> {
+  return within.evaluate((element, wanted) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const index = (node.textContent ?? '').indexOf(wanted);
+      if (index >= 0) {
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + wanted.length);
+        return new Set(
+          [...range.getClientRects()]
+            .filter((box) => box.width > 0)
+            .map((box) => Math.round(box.top)),
+        ).size;
+      }
+    }
+    return 0;
+  }, text);
+}
+
+async function bankMarksBesideNoNumber(facts: Locator): Promise<string[]> {
+  return facts.evaluate((list) =>
+    [...list.querySelectorAll<HTMLElement>('app-bank-account')].flatMap((account) => {
+      const mark = account.querySelector('app-bank-logo')!.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(account.querySelector('.number .ui-figures')!);
+      const firstLine = [...range.getClientRects()].find((box) => box.width > 0)!;
+      const shareALine = mark.top < firstLine.bottom && mark.bottom > firstLine.top;
+      return shareALine
+        ? []
+        : [
+            `${account.textContent?.trim()}: mark ${Math.round(mark.top)}..${Math.round(mark.bottom)}, number from ${Math.round(firstLine.top)}`,
+          ];
+    }),
+  );
+}
+
+async function sideways(panel: Locator): Promise<number> {
+  return panel.evaluate((element) => element.scrollWidth - element.clientWidth);
+}
+
+for (const viewport of [
+  { width: 420, height: 912 },
+  { width: 820, height: 1180 },
+]) {
+  test.describe(`Given an administrator ${viewport.width} pt wide at the largest text, reading a payment's sheet`, () => {
+    test('when they open a paired payment, then every fact stays within its own cell, the sender keeps the words of the name whole and the sheet never pans sideways', async ({
+      page,
+    }) => {
+      await openRows(page, viewport, '/sprava/platby?stav=prirazene', LARGEST_SYSTEM_TEXT_PX);
+      await page.locator('button.payment-row').first().click();
+      const sheet = page.getByRole('dialog', { name: 'Přiřazená platba' });
+      await expect(sheet.getByText('potvrzení vystaveno')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const facts = sheet.locator('.pair-payment');
+
+      expect(await factsPastTheirCell(facts)).toEqual([]);
+      for (const word of String(PAIRED[0].counterpartyName).split(' ')) {
+        expect(await linesOfText(facts, word), word).toBe(1);
+      }
+      expect(await sideways(sheet.locator('.dialog-panel'))).toBeLessThanOrEqual(0);
+    });
+
+    test("when they open a paired payment, then the bank mark stands on its account number's line", async ({
+      page,
+    }) => {
+      await openRows(page, viewport, '/sprava/platby?stav=prirazene', LARGEST_SYSTEM_TEXT_PX);
+      await page.locator('button.payment-row').first().click();
+      const sheet = page.getByRole('dialog', { name: 'Přiřazená platba' });
+      await expect(sheet.getByText('potvrzení vystaveno')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const facts = sheet.locator('.pair-payment');
+
+      expect(await bankMarksBesideNoNumber(facts)).toEqual([]);
+    });
+
+    test('when they open a waiting payment to pair it, then every fact stays within its own cell and the dialog never pans sideways', async ({
+      page,
+    }) => {
+      await openRows(page, viewport, '/sprava/platby', LARGEST_SYSTEM_TEXT_PX);
+      await page.locator('button.payment-row').first().click();
+      const dialog = page.getByRole('dialog', { name: 'Přiřadit platbu dárci' });
+      const facts = dialog.locator('.pair-payment');
+      await expect(facts).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      expect(await factsPastTheirCell(facts)).toEqual([]);
+      expect(await sideways(dialog.locator('.dialog-panel'))).toBeLessThanOrEqual(0);
+    });
+  });
+}
+
+test.describe('Given an administrator on an iPad upright pairing a payment with a long message', () => {
+  test('when the pairing dialog shows the facts, then the symbol and message take the whole width of the facts box', async ({
+    page,
+  }) => {
+    await openRows(page, { width: 820, height: 1180 }, '/sprava/platby');
+    await page.locator('button.payment-row').first().click();
+    const facts = page
+      .getByRole('dialog', { name: 'Přiřadit platbu dárci' })
+      .locator('.pair-payment');
+    await expect(facts.getByText(LONG_MESSAGE)).toBeVisible();
+
+    const widths = await facts.evaluate((list) => {
+      const style = getComputedStyle(list);
+      const content =
+        list.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const message = [...list.querySelectorAll(':scope > div')].at(-1)!;
+      return {
+        content: Math.round(content),
+        message: Math.round(message.getBoundingClientRect().width),
+      };
+    });
+    expect(widths.message).toBe(widths.content);
+  });
+});
+
+test.describe('Given an administrator on an iPad upright pairing a payment whose sender runs several lines', () => {
+  test('when the pairing dialog shows the facts, then the sender follows right under the payment with no hole beside a longer neighbour', async ({
+    page,
+  }) => {
+    await openRows(page, { width: 820, height: 1180 }, '/sprava/platby');
+    await page.locator('button.payment-row').first().click();
+    const facts = page
+      .getByRole('dialog', { name: 'Přiřadit platbu dárci' })
+      .locator('.pair-payment');
+    await expect(facts.getByText(LONG_MESSAGE)).toBeVisible();
+
+    const spacing = await facts.evaluate((list) => {
+      const [payment, sender] = [...list.querySelectorAll(':scope > div')];
+      const probe = document.createElement('div');
+      probe.style.blockSize = 'var(--space-3)';
+      list.append(probe);
+      const allowed = probe.getBoundingClientRect().height;
+      probe.remove();
+      const gap =
+        sender.querySelector('dt')!.getBoundingClientRect().top -
+        payment.querySelector('dd')!.getBoundingClientRect().bottom;
+      return { gap: Math.round(gap), allowed: Math.round(allowed) };
+    });
+    expect(spacing.gap).toBeGreaterThanOrEqual(0);
+    expect(spacing.gap).toBeLessThanOrEqual(spacing.allowed);
+  });
+});
+
+async function amountsOffTheFirstLine(rows: Locator): Promise<string[]> {
+  return rows.evaluateAll((buttons) =>
+    buttons.flatMap((row) => {
+      const title = row.querySelector('.ui-list__title')!;
+      const value = row.querySelector('.ui-list__value')!;
+      const range = document.createRange();
+      range.selectNodeContents(title);
+      const first = range.getClientRects()[0];
+      const amount = value.getBoundingClientRect();
+      const offset = amount.top + amount.height / 2 - (first.top + first.height / 2);
+      return Math.abs(offset) > 3 ? [`${value.textContent?.trim()}: ${Math.round(offset)} px`] : [];
+    }),
+  );
+}
+
+async function titleToMetaGaps(rows: Locator): Promise<number[]> {
+  return rows.evaluateAll((buttons) =>
+    buttons.map((row) => {
+      const title = row.querySelector('.ui-list__title')!.getBoundingClientRect();
+      const meta = row.querySelector('.ui-list__meta')!.getBoundingClientRect();
+      return Math.round(meta.top - title.bottom);
+    }),
+  );
+}
+
+test.describe('Given an administrator on an iPad upright reading Platby z banky as rows beside their amounts', () => {
+  test('when the rows have one, two or three lines and one carries a badge, then every amount stands on the first line of its row and every date sits as close under its name', async ({
+    page,
+  }) => {
+    await openRows(page, { width: 820, height: 1180 }, '/sprava/platby');
+    const rows = page.locator('button.payment-row');
+    await expect(rows.filter({ hasText: 'Ověření účtu' })).toBeVisible();
+
+    expect(await amountsOffTheFirstLine(rows)).toEqual([]);
+    const gaps = await titleToMetaGaps(rows);
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(1);
+  });
+});
+
+test.describe('Given an administrator on an iPad in landscape at the largest text, scrolling Platby z banky', () => {
+  test('when the month heading sticks, then it rests at the top of the screen with no row of its month above it', async ({
+    page,
+  }) => {
+    await openRows(page, { width: 1180, height: 820 }, '/sprava/platby', LARGEST_SYSTEM_TEXT_PX);
+    const heading = page.locator('.ui-list__group-title').first();
+    const start = await heading.evaluate(
+      (element) => element.getBoundingClientRect().top + window.scrollY,
+    );
+    await page.evaluate((top) => window.scrollTo(0, top + 400), start);
+    await expect
+      .poll(() => heading.evaluate((element) => element.parentElement!.getBoundingClientRect().top))
+      .toBeLessThan(0);
+
+    await expect
+      .poll(() => heading.evaluate((element) => Math.round(element.getBoundingClientRect().top)))
+      .toBe(0);
+  });
+});
+
+test.describe('Given an administrator in the installed app in a window smaller than the iPad screen, scrolling Platby z banky', () => {
+  test('when the month heading sticks, then it rests below the window controls', async ({
+    page,
+  }) => {
+    await openRows(page, { width: 1180, height: 820 }, '/sprava/platby', LARGEST_SYSTEM_TEXT_PX);
+    await page.evaluate(() => document.documentElement.classList.add('has-window-controls'));
+    const controlsHeight = await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.style.blockSize = 'var(--window-controls-inset-block)';
+      document.body.append(probe);
+      const height = probe.getBoundingClientRect().height;
+      probe.remove();
+      return Math.round(height);
+    });
+    expect(controlsHeight).toBeGreaterThan(0);
+    const heading = page.locator('.ui-list__group-title').first();
+    const start = await heading.evaluate(
+      (element) => element.getBoundingClientRect().top + window.scrollY,
+    );
+    await page.evaluate((top) => window.scrollTo(0, top + 400), start);
+    await expect
+      .poll(() => heading.evaluate((element) => element.parentElement!.getBoundingClientRect().top))
+      .toBeLessThan(0);
+
+    await expect
+      .poll(() => heading.evaluate((element) => Math.round(element.getBoundingClientRect().top)))
+      .toBe(controlsHeight);
+  });
+});
