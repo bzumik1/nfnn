@@ -297,7 +297,8 @@ describe('Given a visitor opening a project', () => {
     http.expectOne('/api/content/projects/zahrada-pro-deti').flush(project());
     await settle(fixture);
 
-    expect(text(fixture, '.ui-intro__meta')).toBe('Projekt · 2024');
+    expect(text(fixture, '.ui-intro__meta .meta-tag')).toBe('Projekt');
+    expect(text(fixture, '.ui-intro__meta .meta-when')).toBe('2024');
     expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
     expect(fixture.nativeElement.querySelector('.crumbs')).toBeNull();
     expect(
