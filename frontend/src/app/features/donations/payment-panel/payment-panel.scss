@@ -518,6 +518,15 @@
   }
 }
 
+@include bp.container-up(payment-panel, pair) {
+  @include bp.container-down(payment-panel, pager) {
+    :host(:not(.split)) .bank {
+      margin-inline: calc(-1 * var(--space-2));
+      padding-inline: var(--space-3);
+    }
+  }
+}
+
 @mixin qr-above-caption {
   .qr {
     flex-direction: column;
