@@ -45,6 +45,7 @@
     <div class="previews">
       @for (preview of previews(); track preview.shape) {
         <figure class="preview">
+          <figcaption>{{ preview.label }}</figcaption>
           <div class="preview-frame" [style.aspect-ratio]="preview.ratio">
             <img
               class="real-img"
@@ -54,7 +55,6 @@
               [focalShape]="preview.shape"
             />
           </div>
-          <figcaption>{{ preview.label }}</figcaption>
         </figure>
       }
     </div>

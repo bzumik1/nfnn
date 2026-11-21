@@ -4,6 +4,7 @@ import { rememberedAdministrator, routeLogsApi } from './admin-logs-api';
 import { mockDonorApi } from './donor-session';
 
 const NEWS = '/api/admin/content/news';
+const PROJECTS = '/api/admin/content/projects';
 const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
 const ARTICLE_ID = '0199f3e0-0000-7000-8000-00000000c001';
 const TINY_PNG = Buffer.from(
@@ -52,7 +53,20 @@ async function lineTops(cell: Locator): Promise<number[]> {
   });
 }
 
-test.describe('Given an administrator editing the news on a computer', () => {
+interface Box {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
+function distance(first: Box, second: Box): number {
+  const across = Math.max(0, first.left - second.right, second.left - first.right);
+  const down = Math.max(0, first.top - second.bottom, second.top - first.bottom);
+  return Math.hypot(across, down);
+}
+
+test.describe('Given an administrator editing the news and the projects on a computer', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
     await servePhotos(page);
@@ -77,7 +91,34 @@ test.describe('Given an administrator editing the news on a computer', () => {
     }
   });
 
-  test('when an article with a photo opens in the editor, then the crop previews of each row start at one edge and their captions stand on one line', async ({
+  test('when the projects list holds long titles, then each edit time stays on one line with its date', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === PROJECTS,
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [0, 1, 2].map((index) => ({
+              ...article(index),
+              year: 2026,
+              category: 'CHILDREN',
+            })),
+          },
+        }),
+    );
+
+    await page.goto('/sprava/projekty');
+
+    const edited = page.locator('tbody td[data-label="Upraveno"]');
+    await expect(edited).toHaveCount(3);
+    for (const cell of await edited.all()) {
+      await expect(cell).toHaveText('20. 10. 2026 9:30');
+      expect(await lineTops(cell)).toHaveLength(1);
+    }
+  });
+
+  test('when an article with a photo opens in the editor, then the crop previews of each row start at one edge and each caption stands on one line right above its own preview', async ({
     page,
   }) => {
     await page.route(
@@ -90,18 +131,35 @@ test.describe('Given an administrator editing the news on a computer', () => {
     const previews = page.locator('.previews .preview');
     await expect(previews).toHaveCount(6);
     const boxes = await previews.evaluateAll((figures) =>
-      figures.map((figure) => ({
-        frame: Math.round(figure.querySelector('.preview-frame')!.getBoundingClientRect().top),
-        caption: Math.round(figure.querySelector('figcaption')!.getBoundingClientRect().top),
-      })),
+      figures.map((figure) => {
+        const box = (element: Element) => {
+          const rect = element.getBoundingClientRect();
+          return { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right };
+        };
+        return {
+          frame: box(figure.querySelector('.preview-frame')!),
+          caption: box(figure.querySelector('figcaption')!),
+        };
+      }),
     );
     const rows = new Map<number, number[]>();
     for (const box of boxes) {
-      rows.set(box.frame, [...(rows.get(box.frame) ?? []), box.caption]);
+      const top = Math.round(box.frame.top);
+      rows.set(top, [...(rows.get(top) ?? []), Math.round(box.caption.top)]);
     }
     expect(rows.size).toBeLessThan(boxes.length);
     for (const captions of rows.values()) {
       expect(new Set(captions).size).toBe(1);
+    }
+    for (const [index, { frame, caption }] of boxes.entries()) {
+      const gap = frame.top - caption.bottom;
+      expect(gap).toBeGreaterThanOrEqual(-1);
+      expect(gap).toBeLessThanOrEqual(12);
+      for (const [other, { frame: otherFrame }] of boxes.entries()) {
+        if (other !== index) {
+          expect(distance(caption, otherFrame)).toBeGreaterThan(Math.max(gap, 0));
+        }
+      }
     }
   });
 });
