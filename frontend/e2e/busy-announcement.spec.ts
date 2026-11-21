@@ -17,8 +17,14 @@ import { expect, test } from './fixtures';
 const SIGNED_OUT =
   'Zařízení jsme odhlásili: iPhone · Safari. Pokud jste se na něm nepřihlásili vy, změňte si heslo.';
 
+const LENGTHENED_LOADING_DELAY_MS = 10_000;
+const PAST_THE_LOADING_DELAY_MS = LENGTHENED_LOADING_DELAY_MS + 1_000;
+
 async function lengthenLoadingDelay(page: Page): Promise<void> {
-  await page.evaluate(() => document.documentElement.style.setProperty('--delay-loading', '10s'));
+  await page.evaluate(
+    (delayMs) => document.documentElement.style.setProperty('--delay-loading', `${delayMs}ms`),
+    LENGTHENED_LOADING_DELAY_MS,
+  );
 }
 
 async function openSignInDialogUnderLongLoadingDelay(page: Page): Promise<void> {
@@ -87,7 +93,7 @@ test.describe('Given a donor signing out another device on Údaje a zabezpečen�
     await expect(yes).toHaveAccessibleName('Odhlásit');
     await expect(status).toHaveText('');
 
-    await page.clock.fastForward(10_000);
+    await page.clock.fastForward(PAST_THE_LOADING_DELAY_MS);
 
     await expect(status).toHaveText('Odhlašujeme…');
     await expect(yes.locator('.busy-label__face--shown')).toHaveText('Odhlašujeme…');
@@ -143,7 +149,9 @@ test.describe('Given a donor sending the e-mail change link again on Údaje a za
     const status = page.locator('.account-status');
 
     await resend.click();
-    await page.clock.fastForward(10_000);
+
+    await expect(resend).toHaveAttribute('aria-busy', 'true');
+    await page.clock.fastForward(PAST_THE_LOADING_DELAY_MS);
 
     await expect(resend.locator('.busy-label__face--shown')).toHaveText('Posíláme…');
     await expect(status).toHaveText('Posíláme…');
@@ -359,7 +367,7 @@ test.describe('Given an administrator on Údaje a zabezpečení pressing a busy 
 
       await expect(button).toHaveAttribute('aria-busy', 'true');
       await expect(button).toBeFocused();
-      await page.clock.fastForward(10_000);
+      await page.clock.fastForward(PAST_THE_LOADING_DELAY_MS);
       await expect(button.locator('.busy-label__face--shown')).toHaveText(step.busy);
       await expect(starting).toHaveCount(1);
       await expect(starting).toHaveText(step.busy);
@@ -475,7 +483,7 @@ test.describe('Given a visitor signing in from the sign-in dialog', () => {
     await expect(submit).toBeFocused();
     await expect(status).toHaveText('');
 
-    await page.clock.fastForward(10_000);
+    await page.clock.fastForward(PAST_THE_LOADING_DELAY_MS);
 
     await expect(status).toHaveText('Přihlašujeme…');
     await expect(submit.locator('.busy-label__face--shown')).toHaveText('Přihlašujeme…');
@@ -723,7 +731,7 @@ test.describe('Given a visitor in a step of the sign-in dialog whose answer is s
       await button.press('Enter');
 
       await expect(button).toHaveAttribute('aria-busy', 'true');
-      await page.clock.fastForward(10_000);
+      await page.clock.fastForward(PAST_THE_LOADING_DELAY_MS);
       await expect(button.locator('.busy-label__face--shown')).toHaveText(step.busy);
       await expect(starting).toHaveCount(1);
       await expect(starting).toHaveText(step.busy);
