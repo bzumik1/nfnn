@@ -21,6 +21,7 @@ import { ADMINISTRATION_LOCKED, expect, test } from './fixtures';
 import { FOUR_DONORS, mockYearlyReceipts } from './yearly-receipts';
 
 const WIDE = { width: 1280, height: 900 } as const;
+const PHONE = { width: 390, height: 844 } as const;
 const NOTICEABLE_FILL_CONTRAST = 1.2;
 
 interface Look {
@@ -364,8 +365,10 @@ interface Rgba {
   readonly a: number;
 }
 
-async function fillContrastsOfBadges(page: Page): Promise<{ text: string; contrast: number }[]> {
-  return page.getByRole('main').evaluate((main) => {
+async function fillContrastsOfBadges(
+  scope: Locator,
+): Promise<{ text: string; contrast: number }[]> {
+  return scope.evaluate((main) => {
     const probe = document.createElement('canvas').getContext('2d', {
       willReadFrequently: true,
     })!;
@@ -457,7 +460,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await openDonorSection(page, 'Bankovní účty');
       await expect(page.locator('main .account-status')).toHaveCount(3);
 
-      const contrasts = await fillContrastsOfBadges(page);
+      const contrasts = await fillContrastsOfBadges(page.getByRole('main'));
 
       expect(contrasts.map(({ text }) => text).sort()).toEqual(
         ['Jen s\u00a0variabilním symbolem', 'Nepřiřazujeme', 'Sdílený'].sort(),
@@ -491,9 +494,37 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await openDonorSection(page, 'Moje dary');
       await expect(page.locator('main table tbody tr').first()).toBeVisible();
 
-      const contrasts = await fillContrastsOfBadges(page);
+      const contrasts = await fillContrastsOfBadges(page.getByRole('main'));
 
       expect(contrasts.length).toBeGreaterThanOrEqual(2);
+      for (const { text, contrast } of contrasts) {
+        expect(contrast, text).toBeGreaterThanOrEqual(NOTICEABLE_FILL_CONTRAST);
+      }
+    });
+  });
+
+  test.describe(`Given an administrator on a phone in the ${colorScheme} appearance`, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.emulateMedia({ colorScheme });
+    });
+
+    test('when they open a paired payment with an issued receipt, then the badge potvrzení vystaveno stands out from the grey box of Přiřazená platba', async ({
+      page,
+    }) => {
+      await mockDonorApi(page, donorWithDonations);
+      await mockAdministration(page);
+      await page.setViewportSize(PHONE);
+      await rememberedSession(page);
+      const copied = whenAdministrationCopied(page);
+      await page.goto('/sprava/platby?stav=prirazene');
+      await copied();
+      await page.locator('button.payment-row').first().click();
+      const sheet = page.getByRole('dialog', { name: 'Přiřazená platba' });
+      await expect(sheet.getByText('potvrzení vystaveno', { exact: true })).toBeVisible();
+
+      const contrasts = await fillContrastsOfBadges(sheet.locator('.pair-payment'));
+
+      expect(contrasts.map(({ text }) => text)).toEqual(['potvrzení vystaveno']);
       for (const { text, contrast } of contrasts) {
         expect(contrast, text).toBeGreaterThanOrEqual(NOTICEABLE_FILL_CONTRAST);
       }
@@ -502,7 +533,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 }
 
 test.describe('Given a signed-in donor reading values on a computer', () => {
-  test('when Přidat bankovní účet shows the payment, then the message has the same face as the account number and the symbol', async ({
+  test('when Přidat bankovní účet shows the payment, then the message has the text face of its label and not the face of values read character by character', async ({
     page,
   }) => {
     await mockDonorApi(page);
@@ -511,15 +542,25 @@ test.describe('Given a signed-in donor reading values on a computer', () => {
     await openDonorSection(page, 'Bankovní účty');
     await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
     const dialog = page.getByRole('dialog');
-    const values = dialog.locator('.bank-value');
-    await expect(values.filter({ hasText: 'Ověření účtu' })).toBeVisible();
+    const row = dialog.locator('.add-account-row', { hasText: 'Zpráva pro příjemce' });
+    const message = row.locator('.bank-value');
+    await expect(message).toContainText('Ověření účtu');
 
-    const faces = await values.evaluateAll((elements) =>
-      elements.map((element) => getComputedStyle(element).fontFamily),
-    );
+    const { messageFace, labelFace, monospaceFace } = await row.evaluate((element) => {
+      const probe = document.createElement('span');
+      probe.style.fontFamily = 'var(--font-mono)';
+      element.append(probe);
+      const faces = {
+        messageFace: getComputedStyle(element.querySelector('.bank-value')!).fontFamily,
+        labelFace: getComputedStyle(element.querySelector('dt')!).fontFamily,
+        monospaceFace: getComputedStyle(probe).fontFamily,
+      };
+      probe.remove();
+      return faces;
+    });
 
-    expect(faces.length).toBeGreaterThanOrEqual(3);
-    expect(new Set(faces).size).toBe(1);
+    expect(messageFace).toBe(labelFace);
+    expect(messageFace).not.toBe(monospaceFace);
   });
 
   test('when Údaje a zabezpečení lists a connected application, then its name has the face of the text around it', async ({

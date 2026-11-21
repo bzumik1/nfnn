@@ -10,6 +10,7 @@ import {
   rememberedSession,
   renamePetr,
   serveEmptyAdministrationCopy,
+  serveRecentDonors,
 } from './baseline/screen-mocks';
 import {
   DialogTitle,
@@ -1332,15 +1333,24 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
     await rememberedSession(page);
   });
 
-  for (const { path, heading, cards } of [
+  for (const { path, heading, cards, serve } of [
     { path: '/sprava/upozorneni', heading: 'Upozornění', cards: 'main' },
     { path: '/sprava/zalohy/historie', heading: 'Všechny zálohy', cards: 'main' },
     { path: '/sprava/prehledy/2026-09', heading: 'Přehled za září 2026', cards: 'main' },
     { path: PETR_DETAIL_PATH, heading: 'Petr Svoboda', cards: 'main nav.card-rows' },
+    ...['udaje', 'prihlaseni', 'bankovni-ucty', 'dary', 'potvrzeni', 'vymaz'].map((part) => ({
+      path: `${PETR_DETAIL_PATH}/${part}`,
+      heading: 'Petr Svoboda',
+      cards: 'main',
+    })),
+    { path: '/sprava/darci', heading: 'Dárci', cards: 'main', serve: serveRecentDonors },
+    { path: '/sprava/platby', heading: 'Platby z banky', cards: 'main' },
+    { path: '/sprava/platby?stav=prirazene', heading: 'Platby z banky', cards: 'main' },
   ]) {
     test(`when they open ${path}, then every card title and row breaks only between words or after a hyphen and no card reaches past the screen`, async ({
       page,
     }) => {
+      await serve?.(page);
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
       const scope = page.locator(cards);
