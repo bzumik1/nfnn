@@ -20,6 +20,7 @@ import { LeavingNotice } from '../../shared/ui/leaving-notice/leaving-notice';
   selector: 'app-signed-out-notice',
   imports: [LeavingNotice],
   templateUrl: './signed-out-notice.html',
+  styleUrl: './signed-out-notice.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SignedOutNotice {

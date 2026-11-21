@@ -320,6 +320,67 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page.getByText('Odhlásili jste se.')).toHaveCount(0);
   });
 
+  test.describe('when they sign out and the window narrows to an iPhone Air (420 × 912) in the dark appearance', () => {
+    test.use({ colorScheme: 'dark' });
+
+    test('then the signed-out notice stands on the edges of the tab bar under it, and its Zavřít button shows its edge against the notice at AA contrast and has a finger height', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await rememberedDonorSession(page);
+      await page.goto('/darce/prehled');
+      await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Odhlásit se' }).click();
+      await expect(page.getByRole('status').getByText('Odhlásili jste se.')).toBeVisible();
+
+      await page.setViewportSize({ width: 420, height: 912 });
+
+      const tabBar = page.locator('app-tab-bar nav');
+      const notice = page.getByRole('status').locator('.ui-notice');
+      const close = notice.getByRole('button', { name: 'Zavřít' });
+      await expect(tabBar).toBeVisible();
+      await expect
+        .poll(async () => {
+          const [bar, shown] = [(await tabBar.boundingBox())!, (await notice.boundingBox())!];
+          return [
+            Math.round(shown.x - bar.x),
+            Math.round(shown.x + shown.width - bar.x - bar.width),
+          ];
+        })
+        .toEqual([0, 0]);
+      expect((await close.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      const edgeContrast = await close.evaluate((button) => {
+        const canvas = new OffscreenCanvas(1, 1);
+        const context = canvas.getContext('2d', { willReadFrequently: true })!;
+        const rgba = (color: string) => {
+          context.clearRect(0, 0, 1, 1);
+          context.fillStyle = color;
+          context.fillRect(0, 0, 1, 1);
+          return [...context.getImageData(0, 0, 1, 1).data];
+        };
+        const channel = (value: number) => {
+          const linear = value / 255;
+          return linear <= 0.04045 ? linear / 12.92 : ((linear + 0.055) / 1.055) ** 2.4;
+        };
+        const luminance = ([red, green, blue]: number[]) =>
+          0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue);
+        const ground = rgba(getComputedStyle(button.closest('.ui-notice')!).backgroundColor);
+        const over = ([red, green, blue, alpha]: number[]) =>
+          [red, green, blue].map(
+            (value, index) => value * (alpha / 255) + ground[index] * (1 - alpha / 255),
+          );
+        const own = getComputedStyle(button);
+        const edge =
+          parseFloat(own.borderTopWidth) > 0 && rgba(own.borderTopColor)[3] > 0
+            ? over(rgba(own.borderTopColor))
+            : over(rgba(own.backgroundColor));
+        const [lighter, darker] = [luminance(edge), luminance(ground)].sort((a, b) => b - a);
+        return (lighter + 0.05) / (darker + 0.05);
+      });
+      expect(edgeContrast, 'the button does not stand out of the notice').toBeGreaterThanOrEqual(3);
+    });
+  });
+
   test('when they close the signed-out notice, then it cannot be reached from the first moment it starts leaving', async ({
     page,
   }) => {
