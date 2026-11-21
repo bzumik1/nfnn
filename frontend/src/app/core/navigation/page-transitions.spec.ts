@@ -221,6 +221,45 @@ describe('Given a phone that animates, whose app has drawn frames at a steady pa
       new Set([5016 + 80 - 16]),
     );
   });
+
+  it('when a step was drawn slowly to its end and the page then drew steadily again, then the next step is measured against the frames drawn after the step, not those of its motion', async () => {
+    document.documentElement.style.setProperty('--duration-page', '600ms');
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    router = TestBed.inject(Router);
+    TestBed.inject(PageTransitions);
+    for (let frame = 0; frame <= 10; frame++) {
+      draw(1000 + frame * 16);
+    }
+    await router.navigateByUrl('/aktuality');
+    await router.navigateByUrl('/aktuality/clanek');
+    for (let waited = 0; moving() === null && waited < PAGE_TRANSITION_LONGEST_MS; waited += 5) {
+      await vi.advanceTimersByTimeAsync(5);
+    }
+    for (let at = 2000; at <= 2000 + 700; at += 30) {
+      draw(at);
+    }
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+    for (let frame = 0; frame <= 10; frame++) {
+      draw(4000 + frame * 16);
+    }
+    motions.clear();
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    for (let waited = 0; moving() === null && waited < PAGE_TRANSITION_LONGEST_MS; waited += 5) {
+      await vi.advanceTimersByTimeAsync(5);
+    }
+    draw(5000);
+    draw(5016);
+    draw(5032);
+    draw(5082);
+
+    expect(motions.size).toBeGreaterThan(1);
+    expect(new Set([...motions.values()].map((motion) => motion.startTime))).toEqual(
+      new Set([5016 + 50 - 16]),
+    );
+  });
 });
 
 describe('Given a phone that animates, an article opened from the news, and the news placed again on the way back', () => {
@@ -1090,6 +1129,56 @@ describe('Given the app on the home screen of a phone, where the news led to the
       expect(atOnce.length).toBeGreaterThan(0);
       expect(new Set(atOnce)).toEqual(new Set(['holds']));
       expect(steps).toEqual([...atOnce, ...atOnce.map(() => 'slides')]);
+    } finally {
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
+  it('when a frame in the first half of the slide after the finger lets go comes long, then every motion of the slide starts later together by its lateness past one steady frame, so it shows one steady frame of travel', async () => {
+    const slides: { startTime: number | null }[] = [];
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => {
+        const slide = {
+          startTime: null as number | null,
+          finished: new Promise(() => undefined),
+          pause: () => undefined,
+          play: () => undefined,
+        };
+        slides.push(slide);
+        return slide;
+      },
+    });
+    try {
+      await openOverviewFromTheNews({ title: 'Aktuality' }, { title: 'Přehled' });
+      const waiting: FrameRequestCallback[] = [];
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+        waiting.push(callback);
+        return waiting.length;
+      });
+      const draw = async (at: number): Promise<void> => {
+        waiting.splice(0).forEach((callback) => callback(at));
+        await vi.dynamicImportSettled();
+      };
+      document.dispatchEvent(new Event('pointerdown'));
+      for (let frame = 0; frame <= 10; frame++) {
+        await draw(1000 + frame * 16);
+      }
+
+      void swipeBack().settle(LET_GO_PAST_HALF);
+      let at = 5000;
+      while (slides.length === 0 || slides.some((slide) => slide.startTime === null)) {
+        expect(at, 'the slide never started').toBeLessThan(5400);
+        await draw(at);
+        at += 16;
+      }
+      const slidFrom = slides[0].startTime!;
+      await draw(slidFrom + 16);
+      await draw(slidFrom + 16 + 80);
+
+      expect(new Set(slides.map((slide) => slide.startTime))).toEqual(
+        new Set([slidFrom + 80 - 16]),
+      );
     } finally {
       delete (HTMLElement.prototype as { animate?: unknown }).animate;
     }

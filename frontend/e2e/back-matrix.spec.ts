@@ -73,6 +73,7 @@ interface Frame {
 interface Motion {
   readonly durationMs: number;
   readonly curve: number[] | null;
+  readonly startTime: number | null;
 }
 
 interface HeadTitle {
@@ -499,6 +500,7 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
         return {
           durationMs: Number(timing.duration),
           curve: keyframed ? probe.curve : curveOf(String(timing.easing ?? '')),
+          startTime: animation.startTime === null ? null : Number(animation.startTime),
         };
       };
       const fastText = theme.getPropertyValue('--duration-fast').trim();
@@ -518,7 +520,7 @@ async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promise<void>
       const layers = new MutationObserver(seeLayers);
       layers.observe(document.body, { childList: true, subtree: true });
       seeLayers();
-      for (const started of ['click', 'touchmove']) {
+      for (const started of ['click', 'touchmove', 'touchend']) {
         window.addEventListener(started, () => (probe.tappedAt ??= performance.now()), {
           capture: true,
           once: true,
@@ -846,6 +848,7 @@ function expectSteadyFirstHalf(
   const motion = moving.find((frame) => frame.motion?.curve != null)?.motion ?? {
     durationMs: probe.durationMs,
     curve: probe.curve,
+    startTime: null,
   };
   expect(motion.curve, `no curve is known for the motion of the ${what} page`).not.toBeNull();
   const curve = motion.curve!;
@@ -853,6 +856,15 @@ function expectSteadyFirstHalf(
   const steadyMs = steadyFrameOf(probe);
   const onePixel = 1 / way;
   const shares = moving.map((frame) => Math.abs(frame.offset! - from) / way);
+  const firstStart = moving.find((frame) => frame.motion?.startTime != null)?.motion?.startTime;
+  const paces = moving
+    .slice(1)
+    .map((frame, at) => {
+      const moved = frame.motion?.startTime;
+      const shifted = moved == null || firstStart == null ? '?' : (moved - firstStart).toFixed(0);
+      return `${(frame.at - moving[at].at).toFixed(0)}/${shifted}`;
+    })
+    .join(' ');
   for (let at = 1; at < shares.length; at++) {
     const before = shares[at - 1];
     expect(
@@ -866,7 +878,7 @@ function expectSteadyFirstHalf(
     const oneSteadyFrame = springShareAt(curve, (shownMs + steadyMs) / durationMs) - before;
     expect(
       shares[at] - before,
-      `share of its way the ${what} page travelled in one frame at ${Math.round(shownMs)} ms of its motion, against one steady frame of ${steadyMs.toFixed(1)} ms`,
+      `share of its way the ${what} page travelled in one frame at ${Math.round(shownMs)} ms of its motion, against one steady frame of ${steadyMs.toFixed(1)} ms (frame gap/start moved so far, ms: ${paces})`,
     ).toBeLessThanOrEqual(LATE_FRAME_PAST_THE_STEADY_ONE * oneSteadyFrame + onePixel);
   }
 }
