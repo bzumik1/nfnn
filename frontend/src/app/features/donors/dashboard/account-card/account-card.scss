@@ -36,7 +36,7 @@
     }
   }
 
-  @include bp.container-down(account-card, pager) {
+  @include bp.container-down(account-card, tiny) {
     column-gap: var(--space-1);
   }
 

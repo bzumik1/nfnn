@@ -589,12 +589,11 @@
 
 @include bp.down(phone) {
   .add-account-payment {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
   }
 
   .add-account-qr {
-    align-self: center;
+    justify-self: center;
   }
 
   .add-account-bank {
