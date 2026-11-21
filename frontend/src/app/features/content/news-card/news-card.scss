@@ -96,22 +96,30 @@
 
 .news-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
   margin-bottom: var(--space-2-5);
+
+  @include bp.up(tablet) {
+    flex-wrap: nowrap;
+  }
 }
 
 .news-tag {
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
   background: var(--color-accent-soft);
   color: var(--color-accent);
   font-size: var(--text-2xs);
   font-weight: var(--weight-bold);
   padding: var(--space-0-75) var(--space-2-25);
   border-radius: var(--radius-pill);
+
+  @include bp.up(tablet) {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
 }
 
 .news-date {
