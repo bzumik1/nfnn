@@ -11,7 +11,7 @@ export interface PhotoShape {
 }
 
 export const PHOTO_SHAPES = {
-  newsCard: { ratio: 360 / 156, fallback: { x: 50, y: 30 } },
+  newsCard: { ratio: 360 / 196, fallback: { x: 50, y: 30 } },
   projectCard: { ratio: 360 / 196, fallback: { x: 50, y: 20 } },
   articleTop: { ratio: 8 / 5, fallback: { x: 50, y: 50 } },
   band: { ratio: 3, fallback: { x: 50, y: 30 } },
