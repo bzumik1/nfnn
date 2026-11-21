@@ -168,11 +168,6 @@
   padding: 0;
   font-variant-numeric: var(--numeric-figures);
 
-  > li {
-    display: flex;
-    min-width: 0;
-  }
-
   > li:not(.account-gifts)::before,
   .account-gift-count::before,
   .account-total::before {
@@ -188,6 +183,7 @@
   }
 }
 
+.account-meta > li,
 .account-gift-count,
 .account-total {
   display: flex;
@@ -223,10 +219,11 @@
   &:not(.ui-callout) {
     color: var(--color-text-muted);
   }
+}
 
-  strong {
-    color: var(--color-text);
-  }
+.account-hint strong,
+.accounts-nudge strong {
+  color: var(--color-text);
 }
 
 .account-hint--warning {
@@ -241,12 +238,10 @@
   margin-top: var(--space-0-75);
 }
 
-.accounts-footer > p + p {
+.accounts-footer > p + p,
+.account-action--apart,
+.add-account-text + .add-account-text {
   margin-top: var(--space-2-5);
-}
-
-.accounts-nudge strong {
-  color: var(--color-text);
 }
 
 .accounts-status:not(:empty) {
@@ -262,10 +257,6 @@
 .account-action {
   max-width: 100%;
   white-space: normal;
-}
-
-.account-action--apart {
-  margin-top: var(--space-2-5);
 }
 
 .account-confirm {
@@ -291,10 +282,6 @@
     font-weight: var(--weight-bold);
     white-space: nowrap;
   }
-}
-
-.add-account-text + .add-account-text {
-  margin-top: var(--space-2-5);
 }
 
 .add-account-verified {
@@ -461,7 +448,8 @@
 }
 
 .watch-arc,
-.watch-hands {
+.watch-hands,
+.watch-tick {
   fill: none;
   stroke: var(--color-accent);
   stroke-width: 3;
@@ -492,10 +480,7 @@
 }
 
 .watch-tick {
-  fill: none;
   stroke: var(--color-on-accent);
-  stroke-width: 3;
-  stroke-linecap: round;
   stroke-linejoin: round;
 }
 
