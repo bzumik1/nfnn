@@ -594,10 +594,16 @@ const ADMINISTRATION_FIRST_DOWNLOAD = 'Ukládáme správu do zařízení';
 const ADMINISTRATION_FIRST_DOWNLOAD_STORED = 'Správa je uložená v tomto zařízení.';
 const FIRST_DOWNLOAD_STORED_WAIT_MS = 10_000;
 
+function livePage(page: Page): Locator {
+  return page.locator('app-root');
+}
+
 async function administrationFirstDownloadEnded(page: Page): Promise<void> {
-  await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD, { exact: true })).toBeHidden();
   await expect(
-    page.locator('.first-download').getByText(ADMINISTRATION_FIRST_DOWNLOAD_STORED),
+    livePage(page).getByText(ADMINISTRATION_FIRST_DOWNLOAD, { exact: true }),
+  ).toBeHidden();
+  await expect(
+    livePage(page).locator('.first-download').getByText(ADMINISTRATION_FIRST_DOWNLOAD_STORED),
   ).toBeHidden({
     timeout: FIRST_DOWNLOAD_STORED_WAIT_MS,
   });
@@ -609,7 +615,7 @@ export function whenAdministrationCopied(page: Page): () => Promise<void> {
     { timeout: 10_000 },
   );
   return async () => {
-    await expect(page.locator('.admin-page h1')).toBeVisible();
+    await expect(livePage(page).locator('.admin-page h1')).toBeVisible();
     await synced;
     await administrationFirstDownloadEnded(page);
   };
