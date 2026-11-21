@@ -628,24 +628,38 @@ async function expectEndedOnTheLiveTitle(page: Page, probe: StepProbe): Promise<
   if (!probe.paced) {
     return;
   }
-  const last = probe.frames.filter((frame) => frame.overlay && frame.heads.length > 0).at(-1);
+  const last = probe.frames.filter((frame) => frame.overlay).at(-1);
   if (last === undefined) {
     return;
   }
-  const live = await page.evaluate(() =>
-    Array.from(document.querySelectorAll<HTMLElement>('.sheet-head-title'))
-      .filter(
-        (title) =>
-          title.closest('.page-transition') === null &&
-          title.checkVisibility() &&
-          title.getBoundingClientRect().width > 0,
-      )
-      .map((title) => (title.textContent ?? '').replace(/\s+/g, ' ').trim()),
+  const live = await page.evaluate(
+    (hiddenAtMost) =>
+      Array.from(document.querySelectorAll<HTMLElement>('.sheet-head-title'))
+        .filter((title) => {
+          const box = title.getBoundingClientRect();
+          let opacity =
+            title.closest('.page-transition') === null &&
+            (title.textContent ?? '').trim() !== '' &&
+            getComputedStyle(title).visibility !== 'hidden' &&
+            box.width > 0 &&
+            box.right > 0 &&
+            box.left < innerWidth &&
+            box.bottom > 0 &&
+            box.top < innerHeight
+              ? 1
+              : 0;
+          for (let node: Element | null = title; node !== null; node = node.parentElement) {
+            opacity *= Number(getComputedStyle(node).opacity);
+          }
+          return opacity > hiddenAtMost;
+        })
+        .map((title) => (title.textContent ?? '').replace(/\s+/g, ' ').trim()),
+    HIDDEN_TITLE_AT_MOST,
   );
   expect(
-    last.heads.filter((head) => !live.includes(head)),
-    `titles the step ended with that the screen after it does not show (it shows ${live.join(' | ')})`,
-  ).toEqual([]);
+    [...last.heads].sort(),
+    'titles of the head in the last frame of the step, against the screen after it',
+  ).toEqual([...live].sort());
 }
 
 async function fingerMovedThePage(page: Page): Promise<StepProbe> {
