@@ -956,6 +956,35 @@ describe('Given an administrator whose check of who signs the receipts fails', (
     expect(findButton(fixture, 'Odebrat osobu z webu')?.disabled).toBe(false);
   });
 
+  it('when the retry succeeds and its button goes away, then the focus stays on the receipt part, not the page heading', async () => {
+    await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
+    const part = fixture.nativeElement.querySelector('.receipt-part') as HTMLElement;
+
+    const retry = pressLoadFailureRetry(part);
+    await settle(fixture);
+    http.expectOne(SIGNATORY_URL).flush(receiptSignatory({ personId: PERSON_ID }));
+    await settle(fixture);
+
+    expect(retry.isConnected).toBe(false);
+    expect(part.getAttribute('aria-labelledby')).toBe('person-receipt-title');
+    expect(document.activeElement).toBe(part);
+  });
+
+  it('when the administrator moves the focus elsewhere during the retry, then the answer leaves it there', async () => {
+    await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
+    const part = fixture.nativeElement.querySelector('.receipt-part') as HTMLElement;
+
+    pressLoadFailureRetry(part);
+    await settle(fixture);
+    const elsewhere = element(fixture, 'h1');
+    elsewhere.focus();
+    http.expectOne(SIGNATORY_URL).flush(receiptSignatory({ personId: PERSON_ID }));
+    await settle(fixture);
+
+    expect(findButton(fixture, 'Odebrat osobu z webu')?.disabled).toBe(false);
+    expect(document.activeElement).toBe(elsewhere);
+  });
+
   it('when trying again fails once more, then the same button keeps the focus and a new alert says so', async () => {
     await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
     const part = fixture.nativeElement.querySelector('.receipt-part') as HTMLElement;

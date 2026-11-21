@@ -2434,4 +2434,34 @@ describe('Given an administrator on a donor card with the administration copy on
       'Bankovní účty dárce jsme načetli.',
     );
   });
+
+  it('when the device comes back online while the accounts are retried, then the read that replaces the retry still counts as it and says the accounts are loaded', async () => {
+    await open(false);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 503, statusText: 'Unavailable' }),
+    );
+    await settle();
+    const card = fixture.nativeElement.querySelector(
+      '[aria-labelledby="accounts-title"]',
+    ) as HTMLElement;
+
+    pressLoadFailureRetry(card);
+    await settle();
+    const retried = await vi.waitFor(() => http.expectOne(DETAIL_URL));
+    offline.set(true);
+    await settle();
+    offline.set(false);
+    await settle();
+
+    expect(retried.cancelled).toBe(true);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [adminBankAccount()] })),
+    );
+    await settle();
+
+    expect(accountsCard()).toContain('2900233333/2010');
+    expect(withOrdinarySpaces(card.querySelector('[role="status"]')?.textContent)).toContain(
+      'Bankovní účty dárce jsme načetli.',
+    );
+  });
 });

@@ -2,11 +2,12 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
-import { RESTART_POLL_MS } from '../../operations/setup/setup-api';
+import { RESTART_POLL_MS, SetupApi } from '../../operations/setup/setup-api';
 import { SETTINGS_VERSION, settingsView } from '../testing/admin-fixtures';
 import {
   draftWorkOf,
@@ -132,8 +133,14 @@ describe('Given an administrator on the settings page', () => {
 
   it('when the web has not started yet after a restart, then only the sentence is the alert and its retry stays beside it', async () => {
     await respond(settingsView());
-
-    fixture.componentInstance['state'].set('slow');
+    vi.spyOn(TestBed.inject(SetupApi), 'watchRestart').mockReturnValue(of('slow'));
+    await type('#setting-RECEIPT_FIRST_YEAR', '2025');
+    await submit();
+    button('Uložit a restartovat').click();
+    await settle();
+    http
+      .expectOne(SETTINGS_URL)
+      .flush({ changed: ['RECEIPT_FIRST_YEAR'], restarting: true, version: '00000000000000c2' });
     await settle();
 
     expect(texts('[role="alert"]').filter(Boolean)).toEqual([

@@ -172,6 +172,39 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
     expect(text('.signatory-missing')).toContain('nikdo nepodepisuje');
   });
 
+  it('when the retry succeeds and its button goes away, then the focus stays on the card, not the page heading', async () => {
+    http.expectOne(SIGNATORY_URL).flush(null, { status: 500, statusText: 'Error' });
+    await settle();
+    const card = fixture.nativeElement.querySelector(
+      'section[aria-labelledby="receipt-signatory-title"]',
+    ) as HTMLElement;
+
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await settle();
+    http.expectOne(SIGNATORY_URL).flush(noReceiptSignatory());
+    await settle();
+
+    expect(retry.isConnected).toBe(false);
+    expect(document.activeElement).toBe(card);
+  });
+
+  it('when the administrator moves the focus elsewhere during the retry, then the answer leaves it there', async () => {
+    http.expectOne(SIGNATORY_URL).flush(null, { status: 500, statusText: 'Error' });
+    await settle();
+
+    pressLoadFailureRetry(fixture.nativeElement);
+    await settle();
+    const elsewhere = fixture.nativeElement.querySelector(
+      '#receipt-signatory-title',
+    ) as HTMLElement;
+    elsewhere.focus();
+    http.expectOne(SIGNATORY_URL).flush(noReceiptSignatory());
+    await settle();
+
+    expect(text('.signatory-missing')).toContain('nikdo nepodepisuje');
+    expect(document.activeElement).toBe(elsewhere);
+  });
+
   it('when the retry fails once more, then the same button keeps the focus and a new alert says so', async () => {
     http.expectOne(SIGNATORY_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle();

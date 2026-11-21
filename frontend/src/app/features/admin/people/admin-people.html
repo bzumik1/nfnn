@@ -445,8 +445,17 @@
                 <app-live-notice class="card-notice" [notice]="signatureNotice()" />
               </div>
 
-              <div class="ui-card__body receipt-part">
-                <h3 class="part-title" tabindex="-1" i18n="@@admin.people.receipt.title">
+              <div
+                class="ui-card__body receipt-part"
+                role="group"
+                tabindex="-1"
+                aria-labelledby="person-receipt-title"
+              >
+                <h3
+                  id="person-receipt-title"
+                  class="part-title"
+                  i18n="@@admin.people.receipt.title"
+                >
                   Na potvrzení o&nbsp;daru
                 </h3>
                 @switch (signatoryState()) {

@@ -273,6 +273,35 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     expect(rows()['Klíč serveru']).toBe('21fe31df');
   });
 
+  it('when the retry succeeds and its button goes away, then the focus stays on the key section, not the page heading', async () => {
+    await load({}, 500);
+    const section = root().querySelector(
+      'section[aria-labelledby="klic-k-overovacim-qr"]',
+    ) as HTMLElement;
+
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await settle();
+    await load(receiptSigningKeys());
+    await settle();
+
+    expect(retry.isConnected).toBe(false);
+    expect(document.activeElement).toBe(section);
+  });
+
+  it('when the administrator moves the focus elsewhere during the retry, then the answer leaves it there', async () => {
+    await load({}, 500);
+
+    pressLoadFailureRetry(fixture.nativeElement);
+    await settle();
+    const elsewhere = root().querySelector('#klic-k-overovacim-qr') as HTMLElement;
+    elsewhere.focus();
+    await load(receiptSigningKeys());
+    await settle();
+
+    expect(rows()['Klíč serveru']).toBe('21fe31df');
+    expect(document.activeElement).toBe(elsewhere);
+  });
+
   it('when the retry of the keys fails once more, then the same button keeps the focus and a new alert says so', async () => {
     await load({}, 500);
     const first = fixture.nativeElement.querySelector('app-load-failure [role="alert"]');

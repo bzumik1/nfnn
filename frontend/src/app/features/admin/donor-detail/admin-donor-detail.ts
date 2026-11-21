@@ -470,8 +470,10 @@ export class AdminDonorDetail {
   }
 
   private readCard(retried = false): void {
+    const retry = retried || this.bankAccountsRetrying();
     this.donationsUnreachable.set(false);
     this.cardRead?.unsubscribe();
+    this.bankAccountsRetrying.set(retry);
     this.cardRead = this.reads
       .donorCard(this.donorId)
       .pipe(
@@ -489,7 +491,7 @@ export class AdminDonorDetail {
             this.bankAccountsRetrying.set(false);
           }
           this.donationsState.set('ready');
-          if (retried && bankAccounts === 'server') {
+          if (retry && bankAccounts === 'server') {
             this.cardNotice.set({
               card: 'accounts',
               notice: {
