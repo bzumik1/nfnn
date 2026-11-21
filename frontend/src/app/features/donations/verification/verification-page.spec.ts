@@ -169,7 +169,7 @@ describe('Given the verification page', () => {
 
   describe('when it runs as the installed app, which has no address bar', () => {
     const IN_APP_NOTE =
-      'Fond ověřuje potvrzení jen na adrese nfnn.cz/overit, na které tato aplikace běží. Pokud si nejste jistí, otevřete ji v prohlížeči.';
+      'Fond ověřuje potvrzení jen na adrese nfnn.cz/overit, na které tato aplikace běží. Pokud si nejste jistí, otevřete nfnn.cz/overit v prohlížeči.';
 
     beforeEach(() => {
       Object.defineProperty(window.navigator, 'standalone', { configurable: true, value: true });
