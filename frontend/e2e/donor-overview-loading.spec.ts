@@ -248,3 +248,56 @@ for (const screen of [
     });
   });
 }
+
+for (const [width, height] of [
+  [820, 1180],
+  [1280, 900],
+]) {
+  test.describe(`Given a donor without a gift in a ${width} × ${height} window`, () => {
+    test('when Poslat dar shows the bank details, then every value starts on one edge right after the longest label and every Kopírovat follows the values', async ({
+      page,
+    }) => {
+      await mockDonorApi(page, noDonations);
+      await rememberedDonorSession(page);
+      await page.setViewportSize({ width, height });
+      await page.goto('/darce/prehled');
+      const rows = page.locator('.send-gift .bank > .bank-rows > .bank-row');
+      await expect(rows.filter({ hasText: 'IBAN' })).toBeVisible();
+      await expect(rows.filter({ hasText: 'Variabilní symbol' })).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      const places = await rows.evaluateAll((all) =>
+        all.map((row) => ({
+          keyEnd: row.querySelector('.bank-key')!.getBoundingClientRect().right,
+          valueStart: row.querySelector('.bank-value')!.getBoundingClientRect().left,
+          valueEnd: row.querySelector('.bank-value')!.getBoundingClientRect().right,
+          copyStart: row.querySelector('app-copy-button button')!.getBoundingClientRect().left,
+        })),
+      );
+      const root = await page.evaluate(() =>
+        parseFloat(getComputedStyle(document.documentElement).fontSize),
+      );
+      const longestKeyEnd = Math.max(...places.map((place) => place.keyEnd));
+      const widestValueEnd = Math.max(...places.map((place) => place.valueEnd));
+
+      for (const place of places) {
+        expect(
+          Math.abs(place.valueStart - places[0].valueStart),
+          JSON.stringify(places),
+        ).toBeLessThanOrEqual(1);
+        expect(place.valueStart - longestKeyEnd, JSON.stringify(places)).toBeGreaterThan(0);
+        expect(place.valueStart - longestKeyEnd, JSON.stringify(places)).toBeLessThanOrEqual(
+          3 * root,
+        );
+        expect(
+          Math.abs(place.copyStart - places[0].copyStart),
+          JSON.stringify(places),
+        ).toBeLessThanOrEqual(1);
+        expect(place.copyStart - widestValueEnd, JSON.stringify(places)).toBeGreaterThan(0);
+        expect(place.copyStart - widestValueEnd, JSON.stringify(places)).toBeLessThanOrEqual(
+          3 * root,
+        );
+      }
+    });
+  });
+}
