@@ -342,9 +342,9 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(qr.getAttribute('aria-label')).toBe('QR kód s nastavením pro ověřovací aplikaci');
       expect(qr.querySelector('.qr-plain')).not.toBeNull();
       expect(qr.querySelector('.qr-star')).toBeNull();
-      expect(withOrdinarySpaces(card.element('.account-secret-value').textContent)?.trim()).toBe(
-        'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
-      );
+      expect(
+        withOrdinarySpaces(card.element('.account-secret-value .visually-hidden').textContent),
+      ).toBe('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       expect(withOrdinarySpaces(card.element('app-copy-button button').textContent)).toContain(
         'klíč',
       );
@@ -388,6 +388,27 @@ describe('Given the sign-in and security card of the details page', () => {
       });
     }
 
+    it('and confirms the password, then assistive technology reads the whole key as one text and not its two halves', async () => {
+      await card.fillIn('#account-second-factor-password', 'correct horse battery');
+
+      await card.submit();
+      http.expectOne('/api/donors/me/second-factor/setup').flush(secondFactorEnrolment());
+      await card.settle();
+
+      const value = card.element('.account-secret-value');
+      expect(withOrdinarySpaces(accessibleText(value))).toBe(
+        'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
+      );
+      expect(
+        withOrdinarySpaces(value.querySelector(':scope > .visually-hidden')?.textContent ?? ''),
+      ).toBe('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
+      const halves = Array.from(value.querySelectorAll('.account-secret-half'));
+      expect(halves).toHaveLength(2);
+      for (const half of halves) {
+        expect(half.closest('[aria-hidden="true"]')).not.toBeNull();
+      }
+    });
+
     it("and confirms the password, then the QR code is the browser's own encoding of the otpauth URI", async () => {
       const authenticatorCase = sharedCases('qr/totp.json').find(
         (sharedCase) => sharedCase.name === 'an address with a dot',
@@ -420,9 +441,9 @@ describe('Given the sign-in and security card of the details page', () => {
           withOrdinarySpaces(card.element('.account-enrolment [role="alert"]').textContent),
         ),
       ).toBe('QR kód se nepodařilo vykreslit. Opište prosím klíč níže do ověřovací aplikace.');
-      expect(withOrdinarySpaces(card.element('.account-secret-value').textContent)?.trim()).toBe(
-        'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
-      );
+      expect(
+        withOrdinarySpaces(card.element('.account-secret-value .visually-hidden').textContent),
+      ).toBe('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       expect(card.element('#account-second-factor-code')).not.toBeNull();
     });
 

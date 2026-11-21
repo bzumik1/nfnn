@@ -130,9 +130,13 @@ export class AccountCard {
       return null;
     }
   });
-  protected readonly secretHalves = computed(() => {
+  private readonly secretGroups = computed(() => {
     const secret = this.enrolment()?.secret ?? '';
-    const groups = secret.match(new RegExp(`.{1,${SECRET_GROUP}}`, 'g')) ?? [];
+    return secret.match(new RegExp(`.{1,${SECRET_GROUP}}`, 'g')) ?? [];
+  });
+  protected readonly groupedSecret = computed(() => this.secretGroups().join(' '));
+  protected readonly secretHalves = computed(() => {
+    const groups = this.secretGroups();
     const middle = Math.ceil(groups.length / 2);
     return { first: groups.slice(0, middle).join(' '), second: groups.slice(middle).join(' ') };
   });
