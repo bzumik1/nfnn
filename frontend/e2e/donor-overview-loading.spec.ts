@@ -142,4 +142,43 @@ test.describe('Given a signed-in donor on Můj přehled', () => {
     const check = await box(card.getByRole('button', { name: 'Zkontrolovat nové platby' }));
     expect(check.top - missingGift.bottom).toBeGreaterThanOrEqual(missingGift.top - steps.bottom);
   });
+
+  for (const root of ['16px', '34px', '53px']) {
+    for (const width of [390, 1280]) {
+      test(`when they have no gift yet and the page is ${width} px wide with a root of ${root}, then every step number of Jak poslat první dar starts on the card's text edge and every line of the steps' text starts on one edge after the numbers`, async ({
+        page,
+      }) => {
+        await mockDonorApi(page, noDonations);
+        await openOverview(page);
+        await page.addStyleTag({ content: `html { font-size: ${root}; }` });
+        await page.setViewportSize({ width, height: 900 });
+        const card = page.locator('section.first-gift');
+        await expect(card.locator('.first-gift-steps li')).toHaveCount(3);
+        await page.evaluate(() => document.fonts.ready);
+
+        const { titleLeft, stepLefts, lineLefts } = await card.evaluate((section) => {
+          const title = section.querySelector('h2')!.getBoundingClientRect();
+          const steps = [...section.querySelectorAll('.first-gift-steps > li')];
+          return {
+            titleLeft: title.left,
+            stepLefts: steps.map((step) => step.getBoundingClientRect().left),
+            lineLefts: steps.flatMap((step) =>
+              [...step.querySelectorAll(':scope > span')].flatMap((text) =>
+                [...text.getClientRects()].map((line) => line.left),
+              ),
+            ),
+          };
+        });
+
+        for (const left of stepLefts) {
+          expect(Math.abs(left - titleLeft)).toBeLessThanOrEqual(1);
+        }
+        expect(lineLefts.length).toBeGreaterThanOrEqual(3);
+        for (const left of lineLefts) {
+          expect(left).toBeGreaterThan(titleLeft);
+          expect(Math.abs(left - lineLefts[0])).toBeLessThanOrEqual(0.5);
+        }
+      });
+    }
+  }
 });
