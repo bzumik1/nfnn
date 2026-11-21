@@ -1,3 +1,5 @@
+import { keepThePageEnd } from '../../../core/layout/page-end';
+
 const ROOM_CLASS = 'has-floating-notice';
 const ROOM_HEIGHT = '--floating-notice-height';
 const barsShown = new WeakMap<Document, HTMLElement[]>();
@@ -42,7 +44,9 @@ export function keepRoomForFloatingNotice(document: Document, bar: HTMLElement):
     }
     view?.requestAnimationFrame(() => scrollAboveBar(focused));
   };
-  keepRoomForLatest(document, [...shownBars(document).filter((shown) => shown !== bar), bar]);
+  keepThePageEnd(view, () =>
+    keepRoomForLatest(document, [...shownBars(document).filter((shown) => shown !== bar), bar]),
+  );
   observer?.observe(bar);
   document.addEventListener('focusin', uncover);
   return () => {
