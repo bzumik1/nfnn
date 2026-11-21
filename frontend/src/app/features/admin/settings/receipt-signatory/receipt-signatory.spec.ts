@@ -10,6 +10,12 @@ import { person, PORTRAIT_ID } from '../../../content/testing/people-fixtures';
 import { noReceiptSignatory, receiptSignatory } from '../../testing/admin-fixtures';
 import { ReceiptSignatory } from './receipt-signatory';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  loadFailureRetry,
+  pressLoadFailureRetry,
+} from '../../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 const PEOPLE_URL = '/api/admin/content/people';
@@ -146,17 +152,43 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
     expect(text('.signatory-gaps')).toBe('Osoba nemá portrét. Potvrzení budou bez fotky.');
   });
 
-  it('when the signatory cannot be loaded, then it says so and loads again on request', async () => {
+  it('when the signatory cannot be loaded, then it says so and a busy retry keeps the focus and loads again', async () => {
     http.expectOne(SIGNATORY_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle();
 
-    expect(text('[role="alert"]')).toContain('Nepodařilo se načíst, kdo potvrzení podepisuje.');
-    (fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement).click();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual([
+      'Nepodařilo se načíst, kdo potvrzení podepisuje.',
+    ]);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
     await settle();
-    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h2'));
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual([
+      'Nepodařilo se načíst, kdo potvrzení podepisuje.',
+    ]);
     http.expectOne(SIGNATORY_URL).flush(noReceiptSignatory());
     await settle();
     expect(text('.signatory-missing')).toContain('nikdo nepodepisuje');
+  });
+
+  it('when the retry fails once more, then the same button keeps the focus and a new alert says so', async () => {
+    http.expectOne(SIGNATORY_URL).flush(null, { status: 500, statusText: 'Error' });
+    await settle();
+    const first = fixture.nativeElement.querySelector('app-load-failure [role="alert"]');
+
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await settle();
+    http.expectOne(SIGNATORY_URL).flush(null, { status: 500, statusText: 'Error' });
+    await settle();
+
+    expect(loadFailureRetry(fixture.nativeElement)).toBe(retry);
+    expect(document.activeElement).toBe(retry);
+    expect(retry.hasAttribute('aria-busy')).toBe(false);
+    expect(fixture.nativeElement.querySelector('app-load-failure [role="alert"]')).not.toBe(first);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual([
+      'Nepodařilo se načíst, kdo potvrzení podepisuje.',
+    ]);
   });
 });
 

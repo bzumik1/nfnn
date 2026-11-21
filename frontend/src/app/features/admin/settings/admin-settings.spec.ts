@@ -130,6 +130,19 @@ describe('Given an administrator on the settings page', () => {
     http.expectOne(SETTINGS_URL).flush(settingsView());
   });
 
+  it('when the web has not started yet after a restart, then only the sentence is the alert and its retry stays beside it', async () => {
+    await respond(settingsView());
+
+    fixture.componentInstance['state'].set('slow');
+    await settle();
+
+    expect(texts('[role="alert"]')).toEqual([
+      'Nastavení je uložené, ale web se po restartu zatím nespustil. Počkejte pár minut a zkuste to znovu; když to nepomůže, napište správci serveru.',
+    ]);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    expect(fixture.nativeElement.querySelector('.ui-load-state--error button')).not.toBeNull();
+  });
+
   it('when the settings fail to load, then a retry keeps the failure while it asks again and shows them', async () => {
     http.expectOne(SETTINGS_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle();
@@ -1023,7 +1036,7 @@ describe('Given an administrator offline whose device keeps the administration c
     const statuses = [...page.querySelectorAll('[role="status"]')].map((line) => textOf(line));
     expect(statuses).toContain('Klíč ukážeme, až budete online.');
     expect(statuses).toContain('Kdo potvrzení podepisuje, ukážeme, až budete online.');
-    expect(page.querySelector('.signing-key-error, .signatory-error')).toBeNull();
+    expect(page.querySelector('app-load-failure')).toBeNull();
     waitsForConnection(page, 'Uložit nastavení');
     http.verify();
   });

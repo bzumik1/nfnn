@@ -490,7 +490,6 @@ export class AdminDonorDetail {
           }
           this.donationsState.set('ready');
           if (retried && bankAccounts === 'server') {
-            this.focusAfterRender(() => this.byId(this.ids.accounts.id));
             this.cardNotice.set({
               card: 'accounts',
               notice: {

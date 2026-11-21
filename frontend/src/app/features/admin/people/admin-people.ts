@@ -148,7 +148,6 @@ export class AdminPeople {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly personForm = viewChild<NgForm>('personForm');
-  private readonly receiptTitle = viewChild<ElementRef<HTMLHeadingElement>>('receiptTitle');
   private readonly noteForm = viewChild<NgForm>('noteForm');
   private readonly footnoteForm = viewChild<NgForm>('footnoteForm');
 
@@ -181,6 +180,7 @@ export class AdminPeople {
   protected readonly noteNotice = signal<Notice | null>(null);
   protected readonly signatory = signal<ReceiptSignatoryResponse | null>(null);
   protected readonly signatoryState = signal<SignatoryState>('loading');
+  protected readonly signatoryRetrying = signal(false);
   protected readonly onlineAgain = reloadWhenOnlineAgain(
     () => this.signatoryState() === 'offline',
     () => this.loadSignatory(),
@@ -318,17 +318,24 @@ export class AdminPeople {
   }
 
   protected retrySignatory(): void {
-    this.receiptTitle()?.nativeElement.focus();
-    this.loadSignatory();
+    this.signatoryRetrying.set(true);
+    this.fetchSignatory();
   }
 
   protected loadSignatory(): void {
     if (this.signatoryState() !== 'ready') {
       this.signatoryState.set('loading');
     }
+    this.fetchSignatory();
+  }
+
+  private fetchSignatory(): void {
     this.admin
       .receiptSignatory()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.signatoryRetrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (view) => {
           this.signatory.set(view);

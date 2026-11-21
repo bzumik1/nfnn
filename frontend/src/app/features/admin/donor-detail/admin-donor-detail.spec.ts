@@ -2380,4 +2380,58 @@ describe('Given an administrator on a donor card with the administration copy on
     expect(card.querySelector('app-load-failure [role="alert"]')).not.toBe(first);
     expect(loadFailureAlerts(card)).toEqual(['Bankovní účty dárce se nepodařilo načíst.']);
   });
+
+  it('when trying the bank accounts again finds the server unreachable, then the same button keeps the focus and a new alert says the accounts come when the server answers', async () => {
+    await open(false);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 500, statusText: 'Error' }),
+    );
+    await settle();
+    const card = fixture.nativeElement.querySelector(
+      '[aria-labelledby="accounts-title"]',
+    ) as HTMLElement;
+    const first = card.querySelector('app-load-failure [role="alert"]');
+
+    const retry = pressLoadFailureRetry(card);
+    await settle();
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 0, statusText: 'Unknown Error' }),
+    );
+    await settle();
+
+    expect(loadFailureRetry(card)).toBe(retry);
+    expect(document.activeElement).toBe(retry);
+    expect(card.querySelector('app-load-failure [role="alert"]')).not.toBe(first);
+    expect(loadFailureAlerts(card)).toEqual([
+      'Bankovní účty dárce ukážeme, až server zase odpoví.',
+    ]);
+    expect(alertsHoldingAButton(card)).toBe(0);
+  });
+
+  it('when the administrator moves elsewhere while the accounts are retried, then the answer leaves the focus there and still says the accounts are loaded', async () => {
+    await open(false);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 500, statusText: 'Error' }),
+    );
+    await settle();
+    const card = fixture.nativeElement.querySelector(
+      '[aria-labelledby="accounts-title"]',
+    ) as HTMLElement;
+
+    pressLoadFailureRetry(card);
+    await settle();
+    const request = await vi.waitFor(() => http.expectOne(DETAIL_URL));
+    const elsewhere = fixture.nativeElement.querySelector('h1') as HTMLElement;
+    elsewhere.focus();
+    request.flush(donorDetail({ bankAccounts: [adminBankAccount()] }));
+    await settle();
+
+    expect(accountsCard()).toContain('2900233333/2010');
+    expect(document.activeElement).toBe(elsewhere);
+    const notices = card.querySelectorAll('app-live-notice');
+    expect(notices.length).toBe(1);
+    expect(withOrdinarySpaces(notices[0].textContent)).toContain(
+      'Bankovní účty dárce jsme načetli.',
+    );
+  });
 });

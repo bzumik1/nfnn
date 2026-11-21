@@ -491,9 +491,7 @@ describe('Given an administrator reading a log file', () => {
     await page.settle();
     expect(retry.getAttribute('aria-busy')).toBe('true');
     expect(document.activeElement).toBe(retry);
-    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual([
-      'Log se nepodařilo načíst. Zkuste to prosím znovu.',
-    ]);
+    expect(loadFailureAlerts(page.fixture.nativeElement)).toEqual(['Log se nepodařilo načíst.']);
     page.http
       .expectOne((request) => request.urlWithParams === `${LOGS_URL}/backend.log?bytes=20000`)
       .flush(null, { status: 500, statusText: 'Error' });

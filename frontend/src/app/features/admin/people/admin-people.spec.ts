@@ -35,6 +35,7 @@ import { KeptAdministrationAnswers } from '../kept-administration-answers';
 import {
   alertsHoldingAButton,
   loadFailureAlerts,
+  loadFailureRetry,
   pressLoadFailureRetry,
 } from '../../../shared/ui/load-failure/testing/load-failure-retry';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
@@ -927,9 +928,9 @@ describe('Given an administrator whose check of who signs the receipts fails', (
   it('when they edit a person, then the receipt part says the check failed, claims nobody signs, offers no choice and keeps removal off', async () => {
     await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
 
-    expect(text(fixture, '.receipt-part [role="alert"]:not(:empty)')).toContain(
-      'Nepodařilo se zjistit, kdo podepisuje potvrzení.',
-    );
+    const part = fixture.nativeElement.querySelector('.receipt-part') as HTMLElement;
+    expect(loadFailureAlerts(part)).toEqual(['Nepodařilo se zjistit, kdo podepisuje potvrzení.']);
+    expect(alertsHoldingAButton(part)).toBe(0);
     expect(withOrdinarySpaces(fixture.nativeElement.textContent)).not.toContain(
       'nikdo nepodepisuje',
     );
@@ -937,13 +938,15 @@ describe('Given an administrator whose check of who signs the receipts fails', (
     expect(findButton(fixture, 'Odebrat osobu z webu')?.disabled ?? true).toBe(true);
   });
 
-  it('when they try again, then the signatory loads and the part offers the choice', async () => {
+  it('when they try again, then the retry is busy and keeps the focus, and the signatory loads and the part offers the choice', async () => {
     await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
+    const part = fixture.nativeElement.querySelector('.receipt-part') as HTMLElement;
 
-    await press(fixture, 'Zjistit znovu');
-    expect(withOrdinarySpaces(document.activeElement?.textContent)?.trim()).toBe(
-      'Na potvrzení o daru',
-    );
+    const retry = pressLoadFailureRetry(part);
+    await settle(fixture);
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(part)).toEqual(['Nepodařilo se zjistit, kdo podepisuje potvrzení.']);
     http.expectOne(SIGNATORY_URL).flush(receiptSignatory({ personId: PERSON_ID }));
     await settle(fixture);
 
@@ -951,6 +954,23 @@ describe('Given an administrator whose check of who signs the receipts fails', (
       'Potvrzení vždy podepisuje jen jedna osoba; teď je to Eva Vzorová. Po uložení je bude podepisovat tato osoba.',
     );
     expect(findButton(fixture, 'Odebrat osobu z webu')?.disabled).toBe(false);
+  });
+
+  it('when trying again fails once more, then the same button keeps the focus and a new alert says so', async () => {
+    await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
+    const part = fixture.nativeElement.querySelector('.receipt-part') as HTMLElement;
+    const first = part.querySelector('app-load-failure [role="alert"]');
+
+    const retry = pressLoadFailureRetry(part);
+    await settle(fixture);
+    http.expectOne(SIGNATORY_URL).flush(null, { status: 500, statusText: 'Server Error' });
+    await settle(fixture);
+
+    expect(loadFailureRetry(part)).toBe(retry);
+    expect(document.activeElement).toBe(retry);
+    expect(retry.hasAttribute('aria-busy')).toBe(false);
+    expect(part.querySelector('app-load-failure [role="alert"]')).not.toBe(first);
+    expect(loadFailureAlerts(part)).toEqual(['Nepodařilo se zjistit, kdo podepisuje potvrzení.']);
   });
 });
 
@@ -1440,7 +1460,7 @@ describe('Given an administrator offline whose device keeps the administration c
     expect(textOf(page.querySelector('.receipt-offline[role="status"]'))).toBe(
       'Kdo potvrzení podepisuje, ukážeme, až budete online.',
     );
-    expect(page.querySelector('app-load-failure, .receipt-error')).toBeNull();
+    expect(page.querySelector('app-load-failure')).toBeNull();
     http.verify();
   });
 });

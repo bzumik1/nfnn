@@ -446,12 +446,7 @@
               </div>
 
               <div class="ui-card__body receipt-part">
-                <h3
-                  #receiptTitle
-                  class="part-title"
-                  tabindex="-1"
-                  i18n="@@admin.people.receipt.title"
-                >
+                <h3 class="part-title" tabindex="-1" i18n="@@admin.people.receipt.title">
                   Na potvrzení o&nbsp;daru
                 </h3>
                 @switch (signatoryState()) {
@@ -461,20 +456,14 @@
                     </p>
                   }
                   @case ('error') {
-                    <div class="receipt-error" role="alert">
-                      <p i18n="@@admin.people.receipt.loadFailed">
-                        Nepodařilo se zjistit, kdo podepisuje potvrzení.
-                      </p>
-                      <button
-                        appNeedsConnection
-                        type="button"
-                        class="ui-button ui-button--small"
-                        (click)="retrySignatory()"
-                        i18n="@@admin.people.receipt.retry"
-                      >
-                        Zjistit znovu
-                      </button>
-                    </div>
+                    <app-load-failure
+                      [compact]="true"
+                      [retrying]="signatoryRetrying()"
+                      (retry)="retrySignatory()"
+                      ><ng-container i18n="@@admin.people.receipt.loadFailed"
+                        >Nepodařilo se zjistit, kdo podepisuje potvrzení.</ng-container
+                      ></app-load-failure
+                    >
                   }
                   @case ('ready') {
                     <form

@@ -21,6 +21,12 @@ import { ReceiptSigningKey } from './receipt-signing-key';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../../shared/ui/busy-label/testing/label-faces';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  loadFailureRetry,
+  pressLoadFailureRetry,
+} from '../../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const WITHDRAW_OWN_URL = '/api/admin/donations/receipt-signing-keys/21fe31df/withdrawal';
@@ -252,15 +258,34 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     );
   });
 
-  it('when the keys cannot be loaded, then an alert offers a retry that asks again', async () => {
+  it('when the keys cannot be loaded, then an alert says so and a busy retry keeps the focus and asks again', async () => {
     await load({}, 500);
 
-    expect(text('[role="alert"]')).toContain('Klíč se nepodařilo načíst.');
-    (fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement).click();
-    fixture.detectChanges();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Klíč se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Klíč se nepodařilo načíst.']);
     await load(receiptSigningKeys());
 
     expect(rows()['Klíč serveru']).toBe('21fe31df');
+  });
+
+  it('when the retry of the keys fails once more, then the same button keeps the focus and a new alert says so', async () => {
+    await load({}, 500);
+    const first = fixture.nativeElement.querySelector('app-load-failure [role="alert"]');
+
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await settle();
+    await load({}, 500);
+
+    expect(loadFailureRetry(fixture.nativeElement)).toBe(retry);
+    expect(document.activeElement).toBe(retry);
+    expect(retry.hasAttribute('aria-busy')).toBe(false);
+    expect(fixture.nativeElement.querySelector('app-load-failure [role="alert"]')).not.toBe(first);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Klíč se nepodařilo načíst.']);
   });
 
   it('when a key fails its seal, then it offers no withdrawal of it', async () => {

@@ -601,32 +601,30 @@
               >
                 Načítáme bankovní účty…
               </p>
-            } @else if (bankAccountsSource() === 'offline') {
-              @if (serverAway()) {
-                <app-load-failure
-                  class="ui-load-state--inset"
-                  [compact]="true"
-                  [retrying]="bankAccountsRetrying()"
-                  (retry)="reloadBankAccounts()"
-                  ><ng-container i18n="@@admin.donorDetail.accounts.serverAway"
-                    >Bankovní účty dárce ukážeme, až server zase odpoví.</ng-container
-                  ></app-load-failure
-                >
-              } @else {
-                <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.offline">
-                  Bankovní účty dárce ukážeme, až budete online.
-                </p>
-              }
-            } @else if (bankAccountsSource() === 'failed') {
+            } @else if (
+              bankAccountsSource() === 'failed' ||
+              (bankAccountsSource() === 'offline' && serverAway())
+            ) {
               <app-load-failure
                 class="ui-load-state--inset"
                 [compact]="true"
                 [retrying]="bankAccountsRetrying()"
                 (retry)="reloadBankAccounts()"
-                ><ng-container i18n="@@admin.donorDetail.accounts.failed"
-                  >Bankovní účty dárce se nepodařilo načíst.</ng-container
-                ></app-load-failure
               >
+                @if (bankAccountsSource() === 'failed') {
+                  <ng-container i18n="@@admin.donorDetail.accounts.failed"
+                    >Bankovní účty dárce se nepodařilo načíst.</ng-container
+                  >
+                } @else {
+                  <ng-container i18n="@@admin.donorDetail.accounts.serverAway"
+                    >Bankovní účty dárce ukážeme, až server zase odpoví.</ng-container
+                  >
+                }
+              </app-load-failure>
+            } @else if (bankAccountsSource() === 'offline') {
+              <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.offline">
+                Bankovní účty dárce ukážeme, až budete online.
+              </p>
             } @else if (bankAccounts().length === 0) {
               <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.empty">
                 Z&nbsp;žádného účtu zatím nepřišla platba s&nbsp;variabilním symbolem dárce.

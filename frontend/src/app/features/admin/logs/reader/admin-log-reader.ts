@@ -427,15 +427,22 @@ export class AdminLogReader {
           if (this.access.leavesOn(failure)) {
             return;
           }
-          const text = describeProblem(
-            failure,
-            $localize`:@@admin.logs.window.failed:Log se nepodařilo načíst. Zkuste to prosím znovu.`,
-          );
           if (this.state() !== 'ready') {
-            this.loadError.set(text);
+            this.loadError.set(
+              describeProblem(
+                failure,
+                $localize`:@@admin.logs.tail.failed:Log se nepodařilo načíst.`,
+              ),
+            );
             this.state.set('error');
           } else {
-            this.notice.set({ kind: 'alert', text });
+            this.notice.set({
+              kind: 'alert',
+              text: describeProblem(
+                failure,
+                $localize`:@@admin.logs.window.failed:Log se nepodařilo načíst. Zkuste to prosím znovu.`,
+              ),
+            });
           }
         },
       });
