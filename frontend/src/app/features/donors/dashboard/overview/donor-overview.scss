@@ -245,14 +245,27 @@
 }
 
 .first-gift-steps {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1-5) var(--space-2);
   margin: var(--space-3) 0 var(--space-4);
-  padding-left: var(--space-5);
+  padding: 0;
+  list-style: none;
+  counter-reset: first-gift-step;
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
   color: var(--color-text-soft);
 
-  li + li {
-    margin-top: var(--space-1-5);
+  > li {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    counter-increment: first-gift-step;
+  }
+
+  > li::before {
+    content: counter(first-gift-step) '.';
+    font-variant-numeric: var(--numeric-figures);
   }
 
   strong {
