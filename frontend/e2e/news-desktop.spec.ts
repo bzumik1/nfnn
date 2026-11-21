@@ -1,4 +1,5 @@
 import { Locator, Page } from '@playwright/test';
+import { LARGE_TEXT } from './devices/poses';
 import { mockDonorApi, samplePngBase64 } from './donor-session';
 import { expect, test } from './fixtures';
 
@@ -9,6 +10,12 @@ const NEAR_PX = 48;
 const LONG_TAG = 'Pobyty v lázních pro celé rodiny dětí';
 const LONGEST_TITLE =
   'Nová střecha nad hlavou pro rodinu z Vysočiny, které loni v létě vyhořel dům i se vším, co měli, a teď začíná znovu';
+const COMPENSATION_TAG = 'Kompenzační pomůcky';
+const TAG_LETTERS_SHOWN = 6;
+const LARGEST_SYSTEM_TEXT_PX = 53;
+const CLAMPED_TITLE_LINES = 3;
+const TITLE_WITH_DESCENDERS_AND_ACCENTS =
+  'Příspěvek pro Řehoře, Šárku a Žofii: nový vozík, rehabilitace, jízdy a pomůcky pro celou rodinu Čápových';
 const LONG_PEREX =
   'Rodina přišla o domov i o všechno, co v něm měla. Díky dárcům má znovu střechu nad hlavou, nová okna a kamna, a děti se mohou vrátit do své školy.';
 
@@ -17,6 +24,12 @@ interface Box {
   readonly left: number;
   readonly right: number;
   readonly bottom: number;
+}
+
+interface InkAroundClip {
+  readonly lines: number;
+  readonly keptInkOutside: number;
+  readonly cutInkInside: number;
 }
 
 interface ArticleOptions {
@@ -68,6 +81,16 @@ function story(index: number, tag: string | null, title: string): Record<string,
   };
 }
 
+async function enlargeText(page: Page, rootFontSize: string): Promise<void> {
+  await page.addInitScript((size) => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = `html { font-size: ${size}; }`;
+      document.head.append(style);
+    });
+  }, rootFontSize);
+}
+
 async function openNews(
   page: Page,
   news: Record<string, unknown>[],
@@ -114,6 +137,101 @@ function linesOf(locator: Locator): Promise<number> {
       .filter((rect) => rect.width > 0)
       .map((rect) => Math.round(rect.top));
     return new Set(tops).size;
+  });
+}
+
+function missingLettersOfTag(tag: Locator, letters: number): Promise<number> {
+  return tag.evaluate((element, count) => {
+    if (element.scrollWidth <= element.clientWidth) {
+      return 0;
+    }
+    const style = getComputedStyle(element);
+    const contentEnd =
+      element.getBoundingClientRect().right -
+      parseFloat(style.borderRightWidth) -
+      parseFloat(style.paddingRight);
+    const text = document.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode();
+    if (text === null) {
+      return Number.POSITIVE_INFINITY;
+    }
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.setEnd(text, count);
+    const context = document.createElement('canvas').getContext('2d');
+    if (context === null) {
+      return Number.POSITIVE_INFINITY;
+    }
+    context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const ellipsis = context.measureText('…').width;
+    return Math.max(0, range.getBoundingClientRect().right + ellipsis - contentEnd);
+  }, letters);
+}
+
+function inkAroundClip(title: Locator, keptLines: number): Promise<InkAroundClip> {
+  return title.evaluate((element, kept) => {
+    const style = getComputedStyle(element);
+    const context = document.createElement('canvas').getContext('2d');
+    if (context === null) {
+      return {
+        lines: 0,
+        keptInkOutside: Number.POSITIVE_INFINITY,
+        cutInkInside: Number.POSITIVE_INFINITY,
+      };
+    }
+    context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const clip = element.getBoundingClientRect();
+    const range = document.createRange();
+    const glyphs: { line: number; top: number; bottom: number }[] = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let text = walker.nextNode(); text !== null; text = walker.nextNode()) {
+      const value = text.textContent ?? '';
+      for (let index = 0; index < value.length; index += 1) {
+        const letter = value[index];
+        if (/\s/.test(letter)) {
+          continue;
+        }
+        range.setStart(text, index);
+        range.setEnd(text, index + 1);
+        const box = range.getClientRects()[0];
+        if (box === undefined) {
+          continue;
+        }
+        const metrics = context.measureText(letter);
+        const ascentShare =
+          metrics.fontBoundingBoxAscent /
+          (metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent);
+        const baseline = box.top + box.height * ascentShare;
+        glyphs.push({
+          line: Math.round(box.top),
+          top: baseline - metrics.actualBoundingBoxAscent,
+          bottom: baseline + metrics.actualBoundingBoxDescent,
+        });
+      }
+    }
+    const lineTops = [...new Set(glyphs.map((glyph) => glyph.line))].sort((a, b) => a - b);
+    let keptInkOutside = Number.NEGATIVE_INFINITY;
+    let cutInkInside = Number.NEGATIVE_INFINITY;
+    for (const glyph of glyphs) {
+      if (lineTops.indexOf(glyph.line) < kept) {
+        keptInkOutside = Math.max(keptInkOutside, clip.top - glyph.top, glyph.bottom - clip.bottom);
+      } else {
+        cutInkInside = Math.max(cutInkInside, clip.bottom - glyph.top);
+      }
+    }
+    return { lines: lineTops.length, keptInkOutside, cutInkInside };
+  }, keptLines);
+}
+
+function lastLetterPastTheBox(locator: Locator): Promise<number> {
+  return locator.evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const rects = [...range.getClientRects()].filter((rect) => rect.width > 0);
+    const last = rects[rects.length - 1];
+    if (last === undefined) {
+      return Number.POSITIVE_INFINITY;
+    }
+    return (last.top + last.bottom) / 2 - element.getBoundingClientRect().bottom;
   });
 }
 
@@ -214,17 +332,36 @@ test.describe('Given a visitor on the Aktuality tab on a computer', () => {
     await expect(page.locator('.featured-title')).toHaveText(LONGEST_TITLE);
   });
 
-  test('when the leading news has no photo, then its buttons stand under its text at its leading edge', async ({
+  for (const { photo, look } of [
+    { photo: false, look: 'no photo' },
+    { photo: true, look: 'a photo' },
+  ]) {
+    test(`when the leading news has ${look}, then its buttons stand under its text at its leading edge`, async ({
+      page,
+    }) => {
+      await openNews(page, [article(1, { photo }), article(2)], { width: 1280, height: 900 });
+      const featured = page.locator('app-featured-news');
+
+      const title = await boxOf(featured.locator('.featured-title'));
+      const share = await boxOf(featured.locator('.featured-share').getByRole('button'));
+      const perex = await boxOf(featured.locator('.featured-perex'));
+      expect(Math.abs(share.left - title.left)).toBeLessThanOrEqual(EDGE_TOLERANCE_PX);
+      expect(share.top).toBeGreaterThanOrEqual(perex.bottom);
+    });
+  }
+
+  test('when the leading news title runs past three lines, then its first three lines show their accents and descenders and nothing of the fourth shows', async ({
     page,
   }) => {
-    await openNews(page, [article(1, { photo: false }), article(2)], { width: 1280, height: 900 });
-    const featured = page.locator('app-featured-news');
+    await openNews(page, [article(1, { title: TITLE_WITH_DESCENDERS_AND_ACCENTS }), article(2)], {
+      width: 1280,
+      height: 900,
+    });
 
-    const title = await boxOf(featured.locator('.featured-title'));
-    const share = await boxOf(featured.locator('.featured-share').getByRole('button'));
-    const perex = await boxOf(featured.locator('.featured-perex'));
-    expect(Math.abs(share.left - title.left)).toBeLessThanOrEqual(EDGE_TOLERANCE_PX);
-    expect(share.top).toBeGreaterThanOrEqual(perex.bottom);
+    const ink = await inkAroundClip(page.locator('.featured-title'), CLAMPED_TITLE_LINES);
+    expect(ink.lines).toBeGreaterThan(CLAMPED_TITLE_LINES);
+    expect(ink.keptInkOutside).toBeLessThanOrEqual(0);
+    expect(ink.cutInkInside).toBeLessThanOrEqual(0);
   });
 
   test('when the stories of the year mix long tags and none, then each tag keeps one line, no title breaks inside a word and the titles of a row line up', async ({
@@ -274,5 +411,54 @@ test.describe('Given a visitor on the Aktuality tab on a computer', () => {
     const textEnd = share.top >= signer.bottom ? signer.bottom : perex.bottom;
     expect(signer.top - perex.bottom).toBeLessThanOrEqual(NEAR_PX);
     expect(share.top - textEnd).toBeLessThanOrEqual(NEAR_PX);
+  });
+});
+
+test.describe('Given a visitor on the Aktuality tab with enlarged text', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+  });
+
+  for (const { width, height, rootFontSize, size } of [
+    { width: 390, height: 844, rootFontSize: `${LARGE_TEXT}%`, size: `${LARGE_TEXT} % text` },
+    {
+      width: 834,
+      height: 1194,
+      rootFontSize: `${LARGEST_SYSTEM_TEXT_PX}px`,
+      size: 'the largest text',
+    },
+  ]) {
+    test(`when a news card carries a long tag at ${size} in a ${width} px window, then its tag shows at least its first letters and the card does not overflow`, async ({
+      page,
+    }) => {
+      await enlargeText(page, rootFontSize);
+      await openNews(page, [article(1), article(2, { tag: COMPENSATION_TAG }), article(3)], {
+        width,
+        height,
+      });
+      const card = page.locator('app-news-card').first();
+      const tag = card.locator('.news-tag');
+      await expect(tag).toHaveText(COMPENSATION_TAG);
+
+      expect(await missingLettersOfTag(tag, TAG_LETTERS_SHOWN)).toBeLessThanOrEqual(
+        EDGE_TOLERANCE_PX,
+      );
+      const overflow = await card
+        .locator('.news-card')
+        .evaluate((element) => element.scrollWidth - element.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+    });
+  }
+
+  test('when the leading news has a long title at the largest text in an 834 px window, then the whole title shows', async ({
+    page,
+  }) => {
+    await enlargeText(page, `${LARGEST_SYSTEM_TEXT_PX}px`);
+    await openNews(page, [article(1, { title: LONGEST_TITLE }), article(2)], {
+      width: 834,
+      height: 1194,
+    });
+
+    expect(await lastLetterPastTheBox(page.locator('.featured-title'))).toBeLessThanOrEqual(0);
   });
 });

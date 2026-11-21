@@ -97,13 +97,9 @@
 .news-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-1) var(--space-2);
   align-items: center;
   margin-bottom: var(--space-2-5);
-
-  @include bp.up(tablet) {
-    flex-wrap: nowrap;
-  }
 }
 
 .news-tag {
@@ -116,6 +112,8 @@
   border-radius: var(--radius-pill);
 
   @include bp.up(tablet) {
+    flex: 1 0 min(6em, 100%);
+    max-width: max-content;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
