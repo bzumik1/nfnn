@@ -553,7 +553,11 @@ test.describe('Given an administrator on the log files on a 375 pt phone', () =>
     const lines = await name.evaluate((element) => {
       const parts = Array.from(element.querySelectorAll('.file-name-part'), (part) => ({
         text: part.textContent ?? '',
-        boxes: part.getClientRects().length,
+        boxes: (() => {
+          const text = document.createRange();
+          text.selectNodeContents(part);
+          return text.getClientRects().length;
+        })(),
         top: Math.round(part.getBoundingClientRect().top),
       }));
       const byLine = new Map<number, string[]>();

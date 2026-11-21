@@ -71,7 +71,8 @@
                           <path d="M14 3v5h5M9 13h6M9 17h6" />
                         </svg>
                       </span>
-                      <span class="ui-list__title ui-mono file-name">
+                      <span class="visually-hidden">{{ file.name }}</span>
+                      <span class="ui-list__title ui-mono file-name" aria-hidden="true">
                         @for (part of nameParts(file.name); track $index) {
                           @if (!$first) {
                             <wbr />
