@@ -120,7 +120,7 @@ export type PaymentAccountState =
   ],
   providers: [GiftArrivalWatch, RepositoryGiftFeed],
   templateUrl: './payment-panel.html',
-  styleUrl: './payment-panel.scss',
+  styleUrls: ['./payment-panel.scss', './bank-rows-table.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.split]': "layout() === 'split'" },
 })
