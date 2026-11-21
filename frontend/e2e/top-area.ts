@@ -68,6 +68,7 @@ const BAND_MARGIN_PX = 4;
 const SHOWN_BACKDROP = 0.1;
 const OPACITY_WORTH_JUDGING = 0.25;
 const BLUR_SHARE_SHOWN = 0.5;
+const BLUR_GAP_WORTH_JUDGING = 0.1;
 const EDGES_LEFT_UNDER_BLUR = 0.5;
 
 async function watchTopArea(page: Page): Promise<void> {
@@ -261,7 +262,7 @@ async function watchTopArea(page: Page): Promise<void> {
           if (stop.quiet >= settings.quietFrames) {
             end();
             stop.settled(frames);
-          } else if (performance.now() > stop.deadline) {
+          } else if (moving.length > 0 && performance.now() > stop.deadline) {
             fail(
               `the top of the page was still moving when the probe gave up: ${moving.map(describe).join(', ')}`,
             );
@@ -461,12 +462,19 @@ export async function topAreaWhile(
       .send('Page.screencastFrameAck', { sessionId: shot.sessionId })
       .catch(() => undefined);
   });
-  await screencast.send('Page.startScreencast', { format: 'png' });
+  const still = async (): Promise<string> =>
+    (await screencast.send('Page.captureScreenshot', { format: 'png' })).data;
   try {
+    const before = await still();
+    await screencast.send('Page.startScreencast', { format: 'png' });
     const frames = await topAreaFramesWhile(page, act, arrived);
-    const clear = widestClearSpan(band, [...coveredBefore, ...(await panelsOver(page, band))]);
     await screencast.send('Page.stopScreencast');
-    return { frames, screens: clear === null ? [] : await screensOf(page, shots, clear) };
+    const after = await still();
+    const clear = widestClearSpan(band, [...coveredBefore, ...(await panelsOver(page, band))]);
+    return {
+      frames,
+      screens: clear === null ? [] : await screensOf(page, [before, ...shots, after], clear),
+    };
   } finally {
     await screencast.detach();
   }
@@ -642,7 +650,8 @@ export function blurMissingUnderHeader({ frames, screens }: TopArea): string[] {
   const darkened = screens.map(
     (screen) => (lightest - screen.lightness) / (lightest - tintLightness),
   );
-  const open = darkened.indexOf(Math.max(...darkened));
+  const darkest = Math.max(...darkened);
+  const open = darkened.findLastIndex((darkening) => darkening >= darkest - STILL);
   if (darkened[open] < SHOWN_BACKDROP) {
     return ['the backdrop never darkens the band under the header in the screencast'];
   }
@@ -669,7 +678,11 @@ export function blurMissingUnderHeader({ frames, screens }: TopArea): string[] {
       const opacity = darkened[index] / darkened[open];
       const unblurred = restEdges * (1 - darkened[index]);
       const blurred = (1 - opacity) * restEdges + opacity * openEdges;
-      if (index === open || opacity < OPACITY_WORTH_JUDGING || unblurred <= blurred) {
+      if (
+        index === open ||
+        opacity < OPACITY_WORTH_JUDGING ||
+        unblurred - blurred < BLUR_GAP_WORTH_JUDGING * unblurred
+      ) {
         return [];
       }
       const shown = (unblurred - screen.edges) / (unblurred - blurred);

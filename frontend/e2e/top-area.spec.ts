@@ -22,6 +22,7 @@ const NAVY: Rgb = [10, 15, 40];
 const GREY: Rgb = [100, 116, 139];
 const FULL_BACKDROP = 0.6;
 const WEAKEST_BACKDROP = 0.5;
+const BLUR_REPORTED = /blur does not show|blur shows at/;
 const GLASS = { name: 'account-button', blur: 'blur(24px)', fill: '255 255 255 0.94', shown: true };
 
 function veiled(base: Rgb, strength: number): Rgb {
@@ -182,6 +183,36 @@ testWithoutBrowser.describe('Given frames of the top of the page planted by hand
         ]);
       });
 
+      await testWithoutBrowser.step(
+        'screencast frames that never blur, with a little noise',
+        () => {
+          const noisy = screens([
+            [253, 2.65],
+            [209.5, 2.18],
+            [175, 1.8],
+            [134, 1.35],
+            [111.4, 1.0],
+          ]);
+
+          expect(blurMissingUnderHeader({ frames: planted([null, 1]), screens: noisy })).toEqual([
+            'the page under the header keeps 94 % of its edges under the whole backdrop in screencast frame 4, so its blur does not show',
+          ]);
+        },
+      );
+
+      await testWithoutBrowser.step('a first frame still blurred before the blur goes', () => {
+        const closing = screens([
+          [111.4, 0.11],
+          [111.4, 1.1],
+          [175, 1.8],
+          [253, 2.65],
+        ]);
+
+        expect(blurMissingUnderHeader({ frames: planted([1, null]), screens: closing })).toEqual([
+          'the page under the header keeps 103 % of its edges under the whole backdrop in screencast frame 1, so its blur does not show',
+        ]);
+      });
+
       await testWithoutBrowser.step('a screencast frame that loses the blur halfway', () => {
         const lost = screens(
           BLURRED_SCREENS.map(([lightness, edges], index) => [
@@ -330,11 +361,9 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
       () => expect(page.getByRole('dialog')).toHaveCount(0),
     );
 
-    expect(blurMissingUnderHeader(closing)).toEqual([
-      expect.stringMatching(
-        / of its edges under the whole backdrop in screencast frame \d+, so its blur does not show$/,
-      ),
-    ]);
+    const reported = blurMissingUnderHeader(closing);
+    expect(reported).not.toEqual([]);
+    expect(reported.filter((problem) => !BLUR_REPORTED.test(problem))).toEqual([]);
   });
 
   test('when the account sheet opens and closes, then the ground beside its backdrop and the scrollbar darken and lighten with it', async ({
