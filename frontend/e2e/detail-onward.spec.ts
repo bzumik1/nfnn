@@ -109,6 +109,12 @@ async function columnsOf(cards: Locator): Promise<number> {
   return new Set(lefts).size;
 }
 
+async function widthsOf(cards: Locator): Promise<number[]> {
+  return cards.evaluateAll((elements) =>
+    elements.map((element) => element.getBoundingClientRect().width),
+  );
+}
+
 async function fontSizeOf(locator: Locator): Promise<string> {
   return locator.evaluate((element) => getComputedStyle(element).fontSize);
 }
@@ -121,13 +127,14 @@ test.describe('Given a visitor reading a news article on a computer 1280 px wide
     await page.setViewportSize({ width: 1280, height: 900 });
   });
 
-  test('when Další aktuality show, then their cards stand in as many columns as the list and their heading is as large as the list heading', async ({
+  test('when Další aktuality show, then their cards stand in as many columns of the same width as the list and their heading is as large as the list heading', async ({
     page,
   }) => {
     await page.goto('/aktuality');
     const listCards = page.locator('.older app-news-card');
     await settled(page, listCards, 3);
     const listColumns = await columnsOf(listCards);
+    const listWidth = (await widthsOf(listCards))[0];
     const listHeading = await fontSizeOf(
       page.getByRole('heading', { level: 2, name: 'Starší aktuality' }),
     );
@@ -138,6 +145,9 @@ test.describe('Given a visitor reading a news article on a computer 1280 px wide
     await settled(page, onwardCards, 3);
 
     expect(await columnsOf(onwardCards)).toBe(listColumns);
+    for (const width of await widthsOf(onwardCards)) {
+      expect(Math.abs(width - listWidth)).toBeLessThanOrEqual(PIXEL_TOLERANCE);
+    }
     expect(await fontSizeOf(side.getByRole('heading', { level: 2 }))).toBe(listHeading);
   });
 });

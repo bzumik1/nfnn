@@ -60,6 +60,15 @@
   }
 }
 
+@include bp.up(nav) {
+  .onward-list--news {
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(min(100%, max(20rem, (100% - 2 * var(--space-7)) / 3)), 1fr)
+    );
+  }
+}
+
 @include bp.up(wide) {
   .onward {
     padding-bottom: 0;
