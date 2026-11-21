@@ -400,7 +400,9 @@ describe('Given the sign-in and security card of the details page', () => {
         'GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ',
       );
       expect(
-        withOrdinarySpaces(value.querySelector(':scope > .visually-hidden')?.textContent ?? ''),
+        withOrdinarySpaces(
+          value.querySelector(':scope > .account-secret-spoken')?.textContent ?? '',
+        ),
       ).toBe('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       const halves = Array.from(value.querySelectorAll('.account-secret-half'));
       expect(halves).toHaveLength(2);
