@@ -550,3 +550,91 @@ function scriptsLoadedBy(page: Page): LoadedScripts {
     },
   };
 }
+
+test.describe('Given a visitor on /overit in a browser whose screen shows less than 100vh, as Safari does above its toolbar', () => {
+  const SCREEN = { width: 834, height: 1194 };
+  const SAFARI_TOOLBAR_HEIGHT = 100;
+  const visible = SCREEN.height - SAFARI_TOOLBAR_HEIGHT;
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize(SCREEN);
+    await mockDonorApi(page);
+  });
+
+  async function pageHeight(page: Page): Promise<number> {
+    return page
+      .locator('app-verification-page')
+      .evaluate((host) => Math.ceil(host.getBoundingClientRect().bottom + window.scrollY));
+  }
+
+  async function showLessThanTheViewport(page: Page): Promise<void> {
+    await page.addStyleTag({ content: `:root { --full-screen-height: ${visible}px; }` });
+  }
+
+  test('when the page waits for a code, then it ends where the screen ends, so it cannot scroll', async ({
+    page,
+  }) => {
+    await page.goto('/overit');
+    await expect(page.locator('app-proof-input')).toBeVisible();
+    await showLessThanTheViewport(page);
+
+    await expect.poll(() => pageHeight(page)).toBeLessThanOrEqual(visible);
+  });
+
+  test('when a code fails the check, then the result ends where the screen ends, so it cannot scroll', async ({
+    page,
+  }) => {
+    await serveReceiptKeys(page);
+    await page.goto('/overit#1');
+    await expect(verdictHeading(page)).toBeVisible();
+    await showLessThanTheViewport(page);
+
+    await expect.poll(() => pageHeight(page)).toBeLessThanOrEqual(visible);
+  });
+});
+
+test.describe('Given a visitor on /overit on an iPad held upright', () => {
+  const IPAD = { width: 820, height: 1180 };
+  const READABLE_COLUMN = 690;
+  const PIXEL_TOLERANCE = 1;
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize(IPAD);
+    await mockDonorApi(page);
+  });
+
+  test('when the page offers the ways to read a code, then the intro and the cards keep a readable column centred under the header', async ({
+    page,
+  }) => {
+    await page.goto('/overit');
+    const intro = page.locator('.verify-intro');
+    const link = page.locator('.proof-link-card');
+    await expect(link).toBeVisible();
+
+    for (const block of [intro, link]) {
+      const box = (await block.boundingBox())!;
+      expect(box.width).toBeLessThanOrEqual(READABLE_COLUMN);
+      expect(Math.abs(box.x - (IPAD.width - box.x - box.width))).toBeLessThanOrEqual(
+        PIXEL_TOLERANCE,
+      );
+    }
+  });
+
+  test('when a yearly receipt is verified, then its gift rows keep the same column', async ({
+    page,
+  }) => {
+    await serveReceiptKeys(page);
+    await serveReceiptStatus(page, 'active');
+    await page.goto(`/overit#${YEARLY_RECEIPT.fragment}`);
+    await expect(verdictHeading(page)).toHaveText(SIGNED);
+    const verdict = page.locator('.verify-card').filter({ hasText: SIGNED });
+    const gifts = page.locator('section[aria-labelledby="verify-gifts-title"]');
+    await expect(verdict).toBeVisible();
+    await expect(gifts).toBeVisible();
+
+    for (const block of [verdict, gifts]) {
+      const box = (await block.boundingBox())!;
+      expect(box.width).toBeLessThanOrEqual(READABLE_COLUMN);
+    }
+  });
+});

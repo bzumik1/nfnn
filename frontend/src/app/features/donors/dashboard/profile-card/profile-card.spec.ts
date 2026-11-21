@@ -95,6 +95,14 @@ describe('Given the donor data card in the overview', () => {
       expect(shown()).toEqual(['Jana Nováková', 'Dlouhá 12, 400 01 Ústí nad Labem', 'čeština']);
     });
 
+    it('then the address keeps the street and the postal code with its town as two parts, the postal code never split', () => {
+      const parts = Array.from(root().querySelectorAll('.profile-address-part')).map(
+        (part) => part.textContent,
+      );
+
+      expect(parts).toEqual(['Dlouhá 12,', '400 01 Ústí nad Labem']);
+    });
+
     it('and edits the address, then only the form is sent and the card shows the saved data', async () => {
       await click('.profile-edit');
       expect(document.activeElement).toBe(element('#profile-name'));

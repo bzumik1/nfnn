@@ -36,6 +36,10 @@
     }
   }
 
+  @include bp.container-down(account-card, tiny) {
+    column-gap: var(--space-1);
+  }
+
   @include bp.container-down(account-card, pair) {
     grid-template-columns: minmax(0, 1fr);
 

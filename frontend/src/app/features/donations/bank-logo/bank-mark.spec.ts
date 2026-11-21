@@ -38,6 +38,28 @@ describe('Given a bank with a logo', () => {
     expect(withOrdinarySpaces(host(fixture).textContent)?.trim()).toBe('');
   });
 
+  it('when the logo is still loading, then the image lays no paper ground over the mark until it has loaded, and a new logo waits again', () => {
+    const fixture = render({
+      src: '/api/donations/bank-logos/images/a',
+      name: 'Česká spořitelna',
+      size: 40,
+    });
+    const loaded = () =>
+      host(fixture).querySelector('img')!.classList.contains('bank-mark-image--loaded');
+
+    expect(loaded()).toBe(false);
+
+    host(fixture).querySelector('img')!.dispatchEvent(new Event('load'));
+    fixture.detectChanges();
+
+    expect(loaded()).toBe(true);
+
+    fixture.componentRef.setInput('src', '/api/donations/bank-logos/images/b');
+    fixture.detectChanges();
+
+    expect(loaded()).toBe(false);
+  });
+
   it('when the logo cannot be loaded, then the monogram of the bank takes its place until another logo comes', () => {
     const fixture = render({
       src: '/api/donations/bank-logos/images/a',

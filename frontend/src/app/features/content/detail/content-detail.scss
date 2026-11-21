@@ -54,9 +54,15 @@
   }
 }
 
+@include bp.down(nav) {
+  .onward {
+    padding-bottom: var(--space-16);
+  }
+}
+
 @include bp.down(tablet) {
   .onward {
-    padding-bottom: var(--space-18);
+    padding-bottom: var(--space-10);
   }
 }
 

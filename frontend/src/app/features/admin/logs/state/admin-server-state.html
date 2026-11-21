@@ -93,7 +93,17 @@
                   <div class="ui-list__row">
                     <span class="ui-list__title" i18n="@@admin.logs.state.release">Vydání</span>
                     <span class="ui-list__meta">{{ releaseMeta() }}</span>
-                    <span class="ui-list__value ui-mono">{{ release.running }}</span>
+                    <span class="ui-list__value ui-mono">
+                      <span class="visually-hidden">{{ release.running }}</span>
+                      <span class="release-parts" aria-hidden="true">
+                        @for (part of releaseParts(release.running); track $index) {
+                          @if (!$first) {
+                            <wbr />
+                          }
+                          <span>{{ part }}</span>
+                        }
+                      </span>
+                    </span>
                     @if (release.updateAvailable && release.latest; as latest) {
                       <div class="ui-list__extra">
                         <ol class="release-steps">

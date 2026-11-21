@@ -5,7 +5,7 @@ $intro-measure: calc($container-width - 2 * var(--space-6));
 
 :host {
   display: block;
-  min-height: 100vh;
+  min-height: var(--full-screen-height);
   margin-bottom: calc(-1 * var(--tab-bar-clearance));
   padding-top: calc(var(--header-height) + var(--safe-area-top));
   padding-bottom: var(--tab-bar-clearance);
@@ -54,6 +54,12 @@ $intro-measure: calc($container-width - 2 * var(--space-6));
 
   .container {
     margin-inline: 0;
+  }
+}
+
+@include bp.up(tablet) {
+  :host(:not(.verify-embedded)) .container {
+    max-width: calc(var(--measure-prose) + 2 * var(--space-6));
   }
 }
 

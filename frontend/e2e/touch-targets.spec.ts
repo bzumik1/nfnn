@@ -66,6 +66,39 @@ const twoGifts = {
   },
 };
 
+function storyOf(year: number, slug: string): Record<string, unknown> {
+  return {
+    id: `0199f3e0-0000-7000-8000-0000${year}${slug.length.toString().padStart(4, '0')}`,
+    slug,
+    title: `Příběh ${slug}`,
+    year,
+    category: 'CHILDREN',
+    tag: 'Pomůcky',
+    perex: 'Pomohli jsme s pomůckou.',
+    body: 'Text příběhu.',
+    coverImage: null,
+    publishedOn: `${year}-10-01`,
+    createdAt: `${year}-09-19T09:00:00Z`,
+    updatedAt: `${year}-10-01T07:30:00Z`,
+    live: true,
+  };
+}
+
+async function storiesOfTwoYearsServed(page: Page): Promise<void> {
+  const stories = [storyOf(2026, 'zahrada'), storyOf(2025, 'vozik')];
+  await page.route(
+    (url) => url.pathname === '/api/content/projects',
+    (route) =>
+      route.fulfill({
+        json: { items: stories, page: 0, size: 50, total: stories.length, hasMore: false },
+      }),
+  );
+  await page.route(
+    (url) => url.pathname === '/api/content/news',
+    (route) => route.fulfill({ json: { items: [], page: 0, size: 50, total: 0, hasMore: false } }),
+  );
+}
+
 async function articleServed(page: Page): Promise<void> {
   await page.route(
     (url) => url.pathname === `/api/content/news/${article.slug}`,
@@ -103,6 +136,19 @@ test.describe('Given a visitor tapping small controls on a phone', () => {
     await page.goto('/aktuality');
 
     await expectFingerSized(page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }));
+  });
+
+  test('when they tap near the edges of the year chips on Pomáháme, then a finger-sized area around each still reaches it, or the chip beside it, never empty space', async ({
+    page,
+  }) => {
+    await storiesOfTwoYearsServed(page);
+    await page.goto('/projekty');
+    const chips = page.getByRole('navigation', { name: 'Roky' }).getByRole('link');
+    await expect(chips).toHaveText(['Vše', '2026', '2025']);
+
+    for (const chip of await chips.all()) {
+      await expectFingerSized(chip);
+    }
   });
 
   test('when they tap near the edges of the controls of the sign-in dialog, then a finger-sized area around each still reaches it, or the control beside it, never empty space', async ({

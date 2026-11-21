@@ -274,7 +274,12 @@
       }
       <div class="profile-row">
         <dt i18n="@@donor.profile.address">Adresa</dt>
-        <dd>{{ address(donor) }}</dd>
+        <dd>
+          <span class="profile-address-part">{{ donor.address.street }},</span>&ngsp;<span
+            class="profile-address-part"
+            >{{ postalCode(donor) }} {{ donor.address.city }}</span
+          >
+        </dd>
       </div>
       <div class="profile-row">
         <dt i18n="@@donor.profile.locale">Jazyk potvrzení</dt>

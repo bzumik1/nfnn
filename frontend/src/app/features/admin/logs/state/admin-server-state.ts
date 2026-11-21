@@ -29,6 +29,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 const LOAD = new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 2 });
 const RELEASES = 'https://github.com/bzumik1/nfnn/releases/tag/';
+const AFTER_DOT = /(?<=\.)(?=.)/;
 
 @Component({
   selector: 'app-admin-server-state',
@@ -106,6 +107,10 @@ export class AdminServerState {
 
   protected toggleHistory(): void {
     this.historyShown.update((shown) => !shown);
+  }
+
+  protected releaseParts(version: string): string[] {
+    return version.split(AFTER_DOT);
   }
 
   protected releaseLink(version: string): string {
