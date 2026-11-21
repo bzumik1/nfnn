@@ -2,6 +2,7 @@ import { Location } from '@angular/common';
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { NavigationEnd, NavigationStart, Router } from '@angular/router';
 import { APP_DEPTH_KEY } from '../../core/navigation/back-target';
+import { PageTransitions } from '../../core/navigation/page-transitions';
 
 export const APP_ACCOUNT_KEY = 'nfnnAppAccount';
 export const APP_ACCOUNT_SCROLL_KEY = 'nfnnAppAccountScroll';
@@ -11,6 +12,7 @@ type HistoryState = Readonly<Record<string, unknown>>;
 @Injectable({ providedIn: 'root' })
 export class AccountReturn {
   private readonly location = inject(Location);
+  private readonly transitions = inject(PageTransitions);
   private entry = stateOf(this.location.getState());
   private steppingBack = false;
   private closing = false;
@@ -56,6 +58,9 @@ export class AccountReturn {
       this.closing = false;
     }
     this.entry = stateOf(this.location.getState());
+    if (this.reopenOn() === null && accountIn(this.entry) === null) {
+      this.transitions.forgetSheetsOf(this);
+    }
   }
 }
 

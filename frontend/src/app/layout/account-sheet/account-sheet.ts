@@ -157,6 +157,7 @@ export class AccountSheet {
   private readonly dialog = viewChild.required(Dialog);
   protected readonly discardAsked = signal<'back' | 'close' | null>(null);
   private discarding = false;
+  private leftWithReturn = false;
   protected readonly appearance = inject(Appearance);
   protected readonly appearanceLabel = computed(() => APPEARANCE_LABELS[this.appearance.choice()]);
   private readonly announcer = inject(DialogAnnouncer);
@@ -173,7 +174,9 @@ export class AccountSheet {
     this.host.addEventListener('click', followInSection, true);
     inject(DestroyRef).onDestroy(() => {
       this.host.removeEventListener('click', followInSection, true);
-      this.transitions.forgetSheetsOf(this);
+      if (!this.leftWithReturn) {
+        this.transitions.forgetSheetsOf(this.accountReturn);
+      }
     });
     afterNextRender(() => {
       if (this.reopenedOn() !== null) {
@@ -268,7 +271,7 @@ export class AccountSheet {
     this.transitions.stepInSheet({
       kind,
       depth: trail.length,
-      owner: this,
+      owner: this.accountReturn,
       change: () => this.trail.set(trail),
       placed: () => {
         if (panel !== null) {
@@ -393,6 +396,7 @@ export class AccountSheet {
             [APP_ACCOUNT_SCROLL_KEY]: this.scrollsToHere(),
           }
         : null;
+    this.leftWithReturn = account !== null;
     const handedOver = this.history.handOver(url);
     this.closed.emit();
     if (handedOver) {
