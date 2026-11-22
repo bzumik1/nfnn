@@ -1,6 +1,8 @@
 @use 'breakpoints' as bp;
 @use 'motion';
 
+$passkey-list-gap: var(--space-4);
+
 :host {
   display: block;
 }
@@ -42,7 +44,7 @@
 
 .passkey-list {
   list-style: none;
-  margin: 0 0 var(--space-4);
+  margin: 0 0 $passkey-list-gap;
   padding: 0;
 }
 
@@ -59,7 +61,7 @@
 }
 
 .passkey-list + .passkeys-empty--after-rows {
-  margin-top: calc(-1 * var(--space-4));
+  margin-top: calc(-1 * #{$passkey-list-gap});
 }
 
 .passkey {

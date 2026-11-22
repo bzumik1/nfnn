@@ -37,6 +37,7 @@ const COMPUTER = { width: 1280, height: 800 };
 const WATCHED_MS = 1000;
 const SUBPIXEL_PX = 0.5;
 const GONE_OPACITY = 0.01;
+const SHOWING_OPACITY = 0.05;
 const STANDING_OPACITY = 0.5;
 const ONE_LINE_PX = 2;
 
@@ -56,7 +57,8 @@ const notebookPasskey = {
   lastUsedAt: '2026-10-25T08:00:00Z',
 };
 const iphonePasskeyRow = `#passkey-row-${iphonePasskey.id}`;
-const olderAppRow = `#device-row-${longUnusedDevices[0].id}`;
+const olderInstalledAppRow = `#device-row-${longUnusedDevices[0].id}`;
+const nextOlderRow = `#device-row-${longUnusedDevices[1].id}`;
 
 const otherConnection = {
   ...claudeConnection,
@@ -106,9 +108,12 @@ async function framesWhile(
               const box = element.getBoundingClientRect();
               const above = parseFloat(style.borderTopWidth);
               const below = parseFloat(style.borderBottomWidth);
+              const after = getComputedStyle(element, '::after');
+              const belowAfter = after.content === 'none' ? 0 : parseFloat(after.borderBottomWidth);
               return [
                 ...(above > 0 ? drawnLine(element, box.top, above) : []),
                 ...(below > 0 ? drawnLine(element, box.bottom - below, below) : []),
+                ...(belowAfter > 0 ? drawnLine(element, box.bottom - belowAfter, belowAfter) : []),
               ];
             });
       const sample = (frameTime: DOMHighResTimeStamp): void => {
@@ -336,11 +341,97 @@ function linesOutlastingTheRow(frames: readonly Frame[]): string[] {
   });
 }
 
+function notOneDividerAboveTheNextRow(frames: readonly Frame[]): string[] {
+  return frames.flatMap(({ at, boxes, lines }) => {
+    const next = boxes['next'];
+    if (next === null) {
+      return [`no next row at +${Math.round(at)} ms`];
+    }
+    const standing = lines.filter(
+      (line) => line.alpha > STANDING_OPACITY && Math.abs(line.top - next.top) < ONE_LINE_PX,
+    );
+    return standing.length === 1
+      ? []
+      : [`${standing.length} dividers above the next row at +${Math.round(at)} ms`];
+  });
+}
+
+function jumpOnRemoval(frames: readonly Frame[]): string[] {
+  const removed = frames.findIndex(
+    ({ boxes }, index) =>
+      index > 0 && boxes['row'] === null && frames[index - 1].boxes['row'] !== null,
+  );
+  if (removed < 0) {
+    return ['the row was never removed while watched'];
+  }
+  const before = frames[removed - 1].boxes;
+  const after = frames[removed].boxes;
+  if (before['next'] === null || after['next'] === null || before['row'] === null) {
+    return ['no next row around the removal'];
+  }
+  const expected = before['next'].top - before['row'].height;
+  return Math.abs(after['next'].top - expected) <= SUBPIXEL_PX
+    ? []
+    : [
+        `next row ${before['next'].top} → ${after['next'].top} on removal, the row still ${before['row'].height} high, at +${Math.round(frames[removed].at)} ms`,
+      ];
+}
+
+function noDividerAtTheClipBottom(frames: readonly Frame[]): string[] {
+  return frames.flatMap(({ at, boxes, lines }) => {
+    const row = boxes['row'];
+    const clip = boxes['clip'];
+    const nextRow = boxes['nextRow'];
+    if (row === null || clip === null || nextRow === null || row.opacity <= STANDING_OPACITY) {
+      return [];
+    }
+    const bottom = clip.top + clip.height;
+    const atTheEdge = lines.some(
+      (line) => line.alpha > STANDING_OPACITY && Math.abs(line.top - bottom) < ONE_LINE_PX,
+    );
+    return [
+      ...(atTheEdge ? [] : [`no divider at the clip's bottom ${bottom} at +${Math.round(at)} ms`]),
+      ...(Math.abs(bottom - nextRow.top) <= SUBPIXEL_PX
+        ? []
+        : [
+            `clip bottom ${bottom} apart from the next row's top ${nextRow.top} at +${Math.round(at)} ms`,
+          ]),
+    ];
+  });
+}
+
+function movesFromTheFirstFrame(frames: readonly Frame[], name: string): string[] {
+  const shown = present(frames, name);
+  const first = shown[0]?.box.top;
+  return shown.flatMap(({ at, box }) =>
+    Math.abs(box.top - first) <= SUBPIXEL_PX
+      ? []
+      : [`${name} top ${first} → ${box.top} at +${Math.round(at)} ms`],
+  );
+}
+
+function movesDown(frames: readonly Frame[], name: string): string[] {
+  const shown = present(frames, name);
+  return shown.flatMap(({ at, box }, index) =>
+    index > 0 && box.top > shown[index - 1].box.top + SUBPIXEL_PX
+      ? [`${name} top ${shown[index - 1].box.top} → ${box.top} at +${Math.round(at)} ms`]
+      : [],
+  );
+}
+
+function dividersLeftAfterRemoval(frames: readonly Frame[]): string[] {
+  return frames.flatMap(({ at, boxes, lines }) =>
+    boxes['row'] === null
+      ? lines.map((line) => `divider at ${line.top} after removal at +${Math.round(at)} ms`)
+      : [],
+  );
+}
+
 function movesAfterTheEmptyTextShows(frames: readonly Frame[], name: string): string[] {
   const shown = frames.flatMap(({ at, boxes }) => {
     const card = boxes[name];
     const empty = boxes['empty'];
-    return card !== null && empty !== null && empty.opacity > GONE_OPACITY
+    return card !== null && empty !== null && empty.opacity > SHOWING_OPACITY
       ? [{ at, height: card.height }]
       : [];
   });
@@ -576,6 +667,32 @@ async function expectTheDoubleTapToReachNothingOnRemoval(page: Page): Promise<st
   return disconnected;
 }
 
+async function disconnectClaudeWatchingDividers(page: Page): Promise<Frame[]> {
+  await openSettingsWithTwoConnections(page);
+  await settled(page, '.connections');
+
+  const frames = await framesWhile(
+    page,
+    {
+      row: claudeConnectionRow,
+      clip: `${claudeConnectionRow} > div`,
+      client: `${claudeConnectionRow} .connection-client`,
+      next: `${otherConnectionRow} .connection-body`,
+      nextRow: otherConnectionRow,
+      nextClient: `${otherConnectionRow} .connection-client`,
+    },
+    () => page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click(),
+    `.connection, ${claudeConnectionRow} > div`,
+  );
+
+  await expect(page.locator('.connection-client')).toHaveText(['chatgpt.com']);
+  expect(present(frames, 'row').length).toBeGreaterThan(0);
+  expect(frames.at(-1)?.boxes['row']).toBeNull();
+  expect(linesOutlastingTheRow(frames)).toEqual([]);
+  expect(dividersLeftAfterRemoval(frames)).toEqual([]);
+  return frames;
+}
+
 async function disconnectClaude(page: Page): Promise<Frame[]> {
   const connections = page.locator('.connections');
   await settled(page, '.connections');
@@ -676,7 +793,7 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
     expect(risesAboveTheEnd(frames, 'card')).toEqual([]);
   });
 
-  test('when they sign out the first device in Starší, then one divider stands above the rows in every frame of its leave', async ({
+  test('when they sign out the first device in Starší, then one divider stands above the next row in every frame of its leave, and that row does not jump when it is removed', async ({
     page,
   }) => {
     await openSettings(page, [...signedInDevices, ...longUnusedDevices]);
@@ -687,7 +804,7 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
       'Windows · Edge',
     ]);
     await page
-      .locator(olderAppRow)
+      .locator(olderInstalledAppRow)
       .getByRole('button', { name: /^Odhlásit iPhone · aplikace/ })
       .click();
     const question = devices.getByRole('group', { name: /^Odhlásit iPhone · aplikace/ });
@@ -696,7 +813,7 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
 
     const frames = await framesWhile(
       page,
-      { row: olderAppRow },
+      { row: olderInstalledAppRow, next: nextOlderRow },
       () => question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
       '#devices-older, #devices-older .device',
     );
@@ -705,6 +822,8 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
     expect(present(frames, 'row').length).toBeGreaterThan(0);
     expect(frames.at(-1)?.boxes['row']).toBeNull();
     expect(doubledLines(frames)).toEqual([]);
+    expect(notOneDividerAboveTheNextRow(frames)).toEqual([]);
+    expect(jumpOnRemoval(frames)).toEqual([]);
   });
 
   test('when they remove their last passkey, then the card stands still once the empty text shows', async ({
@@ -740,23 +859,14 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
     expect(risesAboveTheEnd(frames, 'card')).toEqual([]);
   });
 
-  test('when they disconnect claude.ai, then the divider above chatgpt.com fades with its row and none is left once it is removed', async ({
+  test('when they disconnect claude.ai, then its row closes like every other row, the divider above chatgpt.com stands at its bottom edge and fades with it, and none is left once it is removed', async ({
     page,
   }) => {
-    await openSettingsWithTwoConnections(page);
-    await settled(page, '.connections');
+    const frames = await disconnectClaudeWatchingDividers(page);
 
-    const frames = await framesWhile(
-      page,
-      { row: claudeConnectionRow, next: `${otherConnectionRow} .connection-body` },
-      () => page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click(),
-      '.connection',
-    );
-
-    await expect(page.locator('.connection-client')).toHaveText(['chatgpt.com']);
-    expect(present(frames, 'row').length).toBeGreaterThan(0);
-    expect(frames.at(-1)?.boxes['row']).toBeNull();
-    expect(linesOutlastingTheRow(frames)).toEqual([]);
+    expect(noDividerAtTheClipBottom(frames)).toEqual([]);
+    expect(movesFromTheFirstFrame(frames, 'client')).toEqual([]);
+    expect(movesDown(frames, 'nextClient')).toEqual([]);
   });
 
   test('when the iPhone was signed out elsewhere and Údaje a zabezpečení open again, then its row is out of reach for as long as it leaves', async ({
@@ -866,6 +976,16 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
     await openSettingsWithTwoConnections(page);
 
     await disconnectClaude(page);
+  });
+
+  test('when they disconnect claude.ai, then the divider above chatgpt.com fades with its row, chatgpt.com never moves down and no divider is left once it is removed', async ({
+    page,
+  }) => {
+    const frames = await disconnectClaudeWatchingDividers(page);
+
+    expect(noDividerAtTheClipBottom(frames)).toEqual([]);
+    expect(movesFromTheFirstFrame(frames, 'client')).toEqual([]);
+    expect(movesDown(frames, 'nextClient')).toEqual([]);
   });
 
   test('when the second press of a double tap on Odpojit for claude.ai comes as its row is removed, then it reaches nothing where the first one was, and Odpojit of chatgpt.com answers again a moment later', async ({
