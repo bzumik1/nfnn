@@ -23,7 +23,7 @@
             class="passkey-slot"
             [id]="rowId(passkey)"
             [class.passkey-slot--entering]="added() === passkey.id"
-            animate.leave="passkey-slot--leaving"
+            (animate.leave)="rowLeaves($event)"
           >
             <div>
               <div class="passkey">

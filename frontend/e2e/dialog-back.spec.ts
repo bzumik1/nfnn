@@ -231,15 +231,29 @@ async function watchSheetLeave(page: Page): Promise<void> {
       removedAt: null,
     };
     (window as unknown as { sheetLeave: SheetLeave }).sheetLeave = record;
-    const targetOf = (element: Element, property: RegExp): string | null => {
-      for (const transition of element.getAnimations()) {
-        const last = (transition.effect as KeyframeEffect).getKeyframes().at(-1) ?? {};
+    const lastOf = (animations: readonly Animation[], property: RegExp): string | null => {
+      for (const animation of animations) {
+        const last = (animation.effect as KeyframeEffect).getKeyframes().at(-1) ?? {};
         const entry = Object.entries(last).find(([name]) => property.test(name));
         if (entry !== undefined) {
           return String(entry[1]);
         }
       }
       return null;
+    };
+    const targetOf = (element: Element, property: RegExp): string | null =>
+      lastOf(element.getAnimations(), property);
+    const backdropTargetOf = (element: Element, property: RegExp): string | null => {
+      const own = new Set(element.getAnimations());
+      return lastOf(
+        element
+          .getAnimations({ subtree: true })
+          .filter(
+            (animation) =>
+              (animation.effect as KeyframeEffect).target === element && !own.has(animation),
+          ),
+        property,
+      );
     };
     new MutationObserver((_, observer) => {
       if (!dialog.classList.contains('dialog--leaving')) {
@@ -256,7 +270,10 @@ async function watchSheetLeave(page: Page): Promise<void> {
       record.slideTo = String(keyframes.at(-1)?.['translate'] ?? '');
       record.slideDuration = Number(slide?.effect?.getTiming().duration ?? 0);
       const style = getComputedStyle(dialog);
-      record.veilTo = alphaOf(targetOf(dialog, /^backgroundColor$/) ?? style.backgroundColor);
+      const behind = getComputedStyle(dialog, '::backdrop');
+      record.veilTo =
+        alphaOf(behind.backgroundColor) *
+        Number(backdropTargetOf(dialog, /^opacity$/) ?? behind.opacity);
       record.blurTo = blurOf(
         targetOf(dialog, /backdropFilter$/i) ??
           (style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter')),
@@ -302,9 +319,10 @@ function veilNow(page: Page): Promise<VeilFrame & { readonly pull: number }> {
           : 1
         : Number(slash[1]);
     };
+    const behind = getComputedStyle(dialog, '::backdrop');
     return {
-      veil: alpha(getComputedStyle(dialog).backgroundColor),
-      blur: Number(getComputedStyle(dialog, '::backdrop').opacity),
+      veil: alpha(behind.backgroundColor) * Number(behind.opacity),
+      blur: Number(behind.opacity),
       pull: Number(dialog.style.getPropertyValue('--dialog-pull') || '0'),
     };
   });
@@ -312,8 +330,7 @@ function veilNow(page: Page): Promise<VeilFrame & { readonly pull: number }> {
 
 interface VeilRelease {
   readonly running: readonly string[];
-  readonly veil: { readonly property: string; readonly duration: string };
-  readonly blur: { readonly property: string; readonly duration: string };
+  readonly backdrop: { readonly property: string; readonly duration: string };
 }
 
 async function watchVeilRelease(page: Page): Promise<void> {
@@ -327,15 +344,18 @@ async function watchVeilRelease(page: Page): Promise<void> {
         return;
       }
       released.disconnect();
-      const veil = getComputedStyle(dialog);
-      const blur = getComputedStyle(dialog, '::backdrop');
+      const backdrop = getComputedStyle(dialog, '::backdrop');
+      const own = new Set(dialog.getAnimations());
       record.veilRelease = {
         running: dialog
-          .getAnimations()
+          .getAnimations({ subtree: true })
           .filter((animation): animation is CSSTransition => animation instanceof CSSTransition)
+          .filter(
+            (transition) =>
+              (transition.effect as KeyframeEffect).target === dialog && !own.has(transition),
+          )
           .map((transition) => transition.transitionProperty),
-        veil: { property: veil.transitionProperty, duration: veil.transitionDuration },
-        blur: { property: blur.transitionProperty, duration: blur.transitionDuration },
+        backdrop: { property: backdrop.transitionProperty, duration: backdrop.transitionDuration },
       };
     });
     released.observe(panel, { attributes: true, attributeFilter: ['class'] });
@@ -754,9 +774,8 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
 
     expect(whileDragging).toEqual([]);
     expect(released.blur).toBeCloseTo(1 - released.pull, 2);
-    expect(settle.running).toContain('background-color');
-    expect(transitions(settle.veil, 'background-color')).toBe(true);
-    expect(transitions(settle.blur, 'opacity')).toBe(true);
+    expect(settle.running).toContain('opacity');
+    expect(transitions(settle.backdrop, 'opacity')).toBe(true);
   });
 
   test('when a finger pulls the content of the sheet down from its top on a phone, then the sheet follows it, slides away and takes its entry back', async ({
@@ -975,7 +994,11 @@ const CANVAS_ROUNDING = 1;
 
 async function backdropOverWhiteAtRest(sheet: Locator): Promise<number[] | null> {
   return sheet.evaluate((element) => {
-    if (element.getAnimations().some((animation) => animation.playState === 'running')) {
+    if (
+      element
+        .getAnimations({ subtree: true })
+        .some((animation) => animation.playState === 'running')
+    ) {
       return null;
     }
     const canvas = document.createElement('canvas');
@@ -984,6 +1007,11 @@ async function backdropOverWhiteAtRest(sheet: Locator): Promise<number[] | null>
     const context = canvas.getContext('2d')!;
     context.fillStyle = 'white';
     context.fillRect(0, 0, 1, 1);
+    const behind = getComputedStyle(element, '::backdrop');
+    context.globalAlpha = Number(behind.opacity);
+    context.fillStyle = behind.backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    context.globalAlpha = 1;
     context.fillStyle = getComputedStyle(element).backgroundColor;
     context.fillRect(0, 0, 1, 1);
     return Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3));
