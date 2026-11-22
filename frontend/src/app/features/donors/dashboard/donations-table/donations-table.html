@@ -37,9 +37,11 @@
       <col class="column-date" />
       <col class="column-amount" />
       <col class="column-purpose" />
-      <col class="column-status" />
+      @if (!narrow()) {
+        <col class="column-status" />
+      }
       @if (withReceipts()) {
-        <col class="column-receipt" />
+        <col class="column-receipt" [class.column-receipt--fits-note]="!narrow()" />
       }
     </colgroup>
     <thead role="rowgroup">
@@ -48,8 +50,16 @@
         <th role="columnheader" class="amount" i18n="@@donor.dashboard.payments.col.amount">
           Částka
         </th>
-        <th role="columnheader" i18n="@@donor.dashboard.payments.col.purpose">Účel</th>
-        <th role="columnheader" i18n="@@donor.dashboard.payments.col.status">Stav</th>
+        <th
+          role="columnheader"
+          class="purpose-header"
+          i18n="@@donor.dashboard.payments.col.purpose"
+        >
+          Účel
+        </th>
+        @if (!narrow()) {
+          <th role="columnheader" i18n="@@donor.dashboard.payments.col.status">Stav</th>
+        }
         @if (withReceipts()) {
           <th role="columnheader" class="receipt" i18n="@@donor.dashboard.payments.col.receipt">
             Potvrzení
@@ -69,6 +79,15 @@
             {{ formatDate(item.receivedAt) }}
             @if (item.accountVerification) {
               <ng-container *ngTemplateOutlet="verificationTag" />
+            }
+            @if (narrow() && item.status === 'REFUNDED') {
+              <span class="date-status"
+                ><span class="visually-hidden" i18n="@@donor.dashboard.payments.statusUnderDate"
+                  >Stav:</span
+                >&ngsp;<span class="ui-badge ui-badge--neutral verification-tag">{{
+                  statusLabel(item.status)
+                }}</span></span
+              >
             }
           </td>
           <td
@@ -94,19 +113,21 @@
               <ng-container *ngTemplateOutlet="pairingPart; context: { $implicit: item }" />
             </div>
           </td>
-          <td
-            role="cell"
-            class="status"
-            data-label="Stav"
-            i18n-data-label="@@donor.dashboard.payments.col.status"
-          >
-            <span
-              class="ui-badge"
-              [class.ui-badge--success]="item.status !== 'REFUNDED'"
-              [class.ui-badge--neutral]="item.status === 'REFUNDED'"
-              >{{ statusLabel(item.status) }}</span
+          @if (!narrow()) {
+            <td
+              role="cell"
+              class="status"
+              data-label="Stav"
+              i18n-data-label="@@donor.dashboard.payments.col.status"
             >
-          </td>
+              <span
+                class="ui-badge"
+                [class.ui-badge--success]="item.status !== 'REFUNDED'"
+                [class.ui-badge--neutral]="item.status === 'REFUNDED'"
+                >{{ statusLabel(item.status) }}</span
+              >
+            </td>
+          }
           @if (withReceipts()) {
             <td
               role="cell"

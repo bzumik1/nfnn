@@ -109,7 +109,11 @@ describe('Given a signed-in donor in the donor area', () => {
         { provide: RECEIPT_PDF_ENVIRONMENT, useValue: receiptEnvironment },
         {
           provide: CompactLayout,
-          useValue: { isCompact: compact.asReadonly(), listsAsRows: compact.asReadonly() },
+          useValue: {
+            isCompact: compact.asReadonly(),
+            listsAsRows: compact.asReadonly(),
+            rootFontPx: signal(16).asReadonly(),
+          },
         },
         provideRouter([
           { path: 'darce', children: donorsRoutes },
@@ -230,6 +234,10 @@ describe('Given a signed-in donor in the donor area', () => {
     return [
       ...root().querySelectorAll<HTMLElement>(blocks.map((name) => `.${name}`).join(', ')),
     ].map((node) => blocks.find((name) => node.classList.contains(name)) ?? '');
+  }
+
+  function normalizedKeepingNoBreakSpaces(node: Element | null): string {
+    return (node?.textContent ?? '').replace(/[ \t\n\r]+/g, ' ').trim();
   }
 
   function normalized(value: string): string {
@@ -1600,6 +1608,81 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
     });
 
+    describe("when the window is wider than nav and the table's container is at most ledger (54 rem) wide, so the table is narrow", () => {
+      beforeEach(() => {
+        vi.stubGlobal(
+          'ResizeObserver',
+          class {
+            constructor(private readonly callback: ResizeObserverCallback) {}
+
+            observe(target: Element): void {
+              const entry = { target, contentBoxSize: [{ inlineSize: 800, blockSize: 0 }] };
+              this.callback([entry as unknown as ResizeObserverEntry], this as never);
+            }
+
+            disconnect(): void {
+              return undefined;
+            }
+          },
+        );
+      });
+
+      afterEach(() => vi.unstubAllGlobals());
+
+      it('then the table has no Stav column and every cell reads under its own header', async () => {
+        await open('/darce/dary');
+        await respond(twoYearSummary(), twoYearDonations());
+
+        const headers = [...root().querySelectorAll(`${yearSection(2025)} th`)].map((header) =>
+          normalized(header.textContent ?? ''),
+        );
+        expect(headers).toEqual(['Datum', 'Částka', 'Účel', 'Potvrzení']);
+        expect(
+          root().querySelectorAll('.payments-card td.status, .payments-card col.column-status'),
+        ).toHaveLength(0);
+        expect(
+          [...root().querySelectorAll(`${yearSection(2025)} tbody tr`)].map(
+            (row) => row.querySelectorAll('td').length,
+          ),
+        ).toEqual([4, 4]);
+      });
+
+      it('then the date of a refunded gift holds its state as a tag named Stav for a screen reader, and an ordinary gift says nothing under its date', async () => {
+        await open('/darce/dary');
+        await respond(twoYearSummary(), twoYearDonations());
+
+        const dates = [...root().querySelectorAll<HTMLElement>('.payments-card td.date')].map(
+          (cell) => normalized(withOrdinarySpaces(cell.textContent) ?? ''),
+        );
+        expect(dates).toEqual([
+          '15. 3. 2026',
+          '10. 1. 2026',
+          '5. 11. 2025',
+          '20. 8. 2025 Stav: Vráceno',
+        ]);
+        const tag = element(`${yearSection(2025)} tbody tr:nth-child(2) td.date .verification-tag`);
+        expect(normalized(tag?.textContent ?? '')).toBe('Vráceno');
+        expect(text(`${yearSection(2025)} tbody tr:nth-child(2) td.date .visually-hidden`)).toBe(
+          'Stav:',
+        );
+        expect(root().querySelector('.payments-card')?.textContent).not.toContain('Přijato');
+      });
+
+      it('then the date of an account verification holds Ověření účtu as its purpose, not named Stav, read after the date and before the amount', async () => {
+        const list = twoYearDonations();
+        list.items = [accountVerificationItem({ receivedAt: '2026-03-20' }), ...list.items];
+        await open('/darce/dary');
+        await respond(twoYearSummary(), list);
+
+        const first = element(`${yearSection(2026)} tbody tr:nth-child(1)`)!;
+        expect(
+          [...first.querySelectorAll('td')].map((cell) =>
+            normalized(withOrdinarySpaces(cell.textContent) ?? ''),
+          ),
+        ).toEqual(['20. 3. 2026 Ověření účtu', '1 Kč', '', 'Započítá se do ročního potvrzení']);
+      });
+    });
+
     it('then the dot between the count and the sum of a year is bound to the count, so a wrapped line never starts with it', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
@@ -1729,6 +1812,20 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(text(`${yearSection(2026)} .gift-year-note`)).toBe(
         'Roční potvrzení za rok 2026 stáhnete po skončení roku, od 1. ledna 2027.',
+      );
+    });
+
+    it('then the note of a year that is not over keeps the day with its month and lets the year go to the next line, on a computer and on a phone', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(element(`${yearSection(2026)} .gift-year-note`)?.textContent?.trim()).toBe(
+        'Ke stažení od 1.\u00a0ledna 2027',
+      );
+
+      compact.set(true);
+      await settle();
+      expect(element(`${yearSection(2026)} .gift-year-note`)?.textContent?.trim()).toBe(
+        'Roční potvrzení za rok 2026 stáhnete po skončení roku, od 1.\u00a0ledna 2027.',
       );
     });
 
@@ -2458,6 +2555,15 @@ describe('Given a signed-in donor in the donor area', () => {
       );
     });
 
+    it('then the line saying from when receipts are issued keeps the day with its month and lets the year go to the next line', async () => {
+      await open('/darce/dary');
+      await respond(summaryWithReceiptsFrom2026(), donationsWithoutReceiptsBefore2026());
+
+      expect(normalizedKeepingNoBreakSpaces(element('.payments-card .receipts-from'))).toContain(
+        'od 1.\u00a0ledna 2026, u\u00a0starších',
+      );
+    });
+
     it('then a payment that verified an account reads as a verification, offers no PDF and says it counts in the yearly receipt', async () => {
       const list = twoYearDonations();
       list.items = [accountVerificationItem({ receivedAt: '2026-03-20' }), ...list.items];
@@ -2741,6 +2847,13 @@ describe('Given a signed-in donor in the donor area', () => {
         ['2025', '1 dar', '250 Kč', 'Stáhnout potvrzení za rok 2025 (PDF)'],
       ]);
       expect(element('.yearly-hint')).toBeNull();
+    });
+
+    it('then the note of a year that is not over keeps the day with its month and lets the year go to the next line', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('.year-note')?.textContent?.trim()).toBe('Ke stažení od 1.\u00a0ledna 2027');
     });
 
     it('then a donor without a year before the first receipt year still reads from which year receipts are issued here and whom to write for earlier gifts', async () => {

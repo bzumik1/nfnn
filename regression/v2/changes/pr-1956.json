@@ -1,0 +1,34 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donor-dashboard.spec.ts > Given a signed-in donor on a computer > when the window leaves the gift list too narrow for its columns, then each gift is a card and Stáhnout PDF stays on one line inside it",
+    "replacement": "e2e/donor-dashboard.spec.ts > Given a signed-in donor on a computer > when a 1000 px window, from nav until the table's container reaches ledger (54 rem), leaves the gift list too narrow for all its columns, then each year stays a table without the Stav column and Stáhnout PDF stays on one line inside it",
+    "reason": "PR #1956 (#1594, variant b, both teams; the boundary by the desktop team 6 of 6): from nav until the table's container reaches ledger (54 rem) the gifts of Moje dary stay a table without the Stav column instead of turning into cards, so the 1000 px case now proves the table keeps its header and Stáhnout PDF still stays on one line inside the card",
+    "contract": "docs/frontend-overview.md, donor portal (Moje dary)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donor-dashboard.spec.ts > Given a signed-in donor on a computer > when the gifts are cards in a 900 px window, then the date, the purpose and the account tag keep whole words inside their column",
+    "replacement": "e2e/donor-dashboard.spec.ts > Given a signed-in donor on a computer > when the gifts are a table without the Stav column in a 900 px window, then the date with its state, the purpose and the account tag keep whole words inside their column",
+    "reason": "PR #1956 (#1594, variant b, both teams; the boundary by the desktop team 6 of 6): at 900 px, from nav until the table's container reaches ledger (54 rem), the gifts are a table without the Stav column, its state under the date, so the case checks the same whole words in that table, the date cell's state included",
+    "contract": "docs/frontend-overview.md, donor portal (Moje dary)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donor-dashboard.spec.ts > Given a signed-in donor on a computer > when the window is as wide as an iPad mini held sideways, then the gifts with a receipt column are cards, so neither the purpose nor the account tag has to wrap",
+    "replacement": "e2e/donor-dashboard.spec.ts > Given a signed-in donor on a computer > when the window is as wide as an iPad mini held sideways, from nav until the table's container reaches ledger (54 rem), then the gifts with a receipt column stay a table without the Stav column, never cards",
+    "reason": "PR #1956 (#1594, variant b; the boundary by the desktop team 6 of 6): the table, not the window, decides; a 1133 px window leaves the table's container under ledger (54 rem), so the gifts are a table without the Stav column and never cards above nav",
+    "contract": "docs/frontend-overview.md, donor portal (Moje dary)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donor-dashboard.spec.ts > Given a signed-in donor on a computer > when the gifts are cards at a 1180 px window with the larger text of the home-screen app, then each button keeps its whole name and no column label is read twice",
+    "replacement": "e2e/donor-dashboard.spec.ts > Given a signed-in donor on a computer > when the gifts are a table without the Stav column at a 1180 px window with the larger text of the home-screen app, then each button keeps its whole name, every cell reads under its own header and no column label is read twice",
+    "reason": "PR #1956 (#1594, variant b, finding M-L52; the boundary by the desktop team 6 of 6): an iPad on its side in the home-screen app (1180 pt, 17 px root) leaves the table's container under ledger (54 rem, 918 px there), so its gifts are a table without the Stav column instead of cards, and the case checks the button names and the cells' names in that table",
+    "contract": "docs/frontend-overview.md, donor portal (Moje dary)"
+  }
+]
