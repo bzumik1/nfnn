@@ -51,6 +51,7 @@ const BLURRED_SCREENS: [number, number][] = [
 function planted(strengths: (number | null)[], more: Partial<TopAreaFrame> = {}): TopAreaFrame[] {
   return strengths.map((veil, index) => ({
     at: (index * 1000) / 60,
+    readAt: (index * 1000) / 60,
     veil: veil === null ? null : veil * FULL_BACKDROP,
     blur: veil ?? 0,
     tint: veil === null ? null : NAVY,
@@ -94,11 +95,28 @@ testWithoutBrowser.describe('Given frames of the top of the page planted by hand
 
       await testWithoutBrowser.step('two frames dropped while the backdrop left', () => {
         const frames = planted([1, 0.9, 0.1, 0, null]).map((frame, index) =>
-          index < 2 ? frame : { ...frame, at: frame.at + 2000 / 60 },
+          index < 2
+            ? frame
+            : { ...frame, at: frame.at + 2000 / 60, readAt: frame.readAt + 2000 / 60 },
         );
 
         expect(veilJumps(frames)).toEqual([]);
       });
+
+      await testWithoutBrowser.step(
+        'a backdrop read late in a frame stamped 17 ms after the previous one',
+        () => {
+          const inStep = planted([0, 0.6, 1]);
+          const readLate = inStep.map((frame, index) =>
+            index === 0 ? frame : { ...frame, readAt: frame.readAt + 7000 / 60 },
+          );
+
+          expect(veilJumps(inStep)).toEqual([
+            'the backdrop goes from 0 % to 60 % of its strength in frame 1, 17 ms after the previous one',
+          ]);
+          expect(veilJumps(readLate)).toEqual([]);
+        },
+      );
 
       await testWithoutBrowser.step('a blur missing under half a backdrop', () => {
         const frames = planted([0, 0.5, 1]).map((frame, index) =>
