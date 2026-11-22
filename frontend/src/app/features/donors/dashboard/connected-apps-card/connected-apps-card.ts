@@ -54,7 +54,9 @@ export class ConnectedAppsCard {
   protected readonly disconnecting = signal<string | null>(null);
   protected readonly disconnected = signal('');
   protected readonly rowLeft = signal(false);
-  protected readonly rowLeaves = leaveWithClass('connection-slot--leaving');
+  protected readonly rowLeaves = leaveWithClass('connection-slot--leaving', {
+    settling: 'connection-slot--settling',
+  });
 
   constructor() {
     this.loadConnections(true);
