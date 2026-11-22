@@ -194,6 +194,86 @@ async function contentPastTheSides(dialog: Locator): Promise<string[]> {
   });
 }
 
+async function figuresPastTheirContent(card: Locator): Promise<string[]> {
+  await card.evaluate(() => document.fonts.ready);
+  return card.evaluate((element) =>
+    Array.from(element.querySelectorAll<HTMLElement>('.stat-value.ui-figures, .last-gift-amount'))
+      .filter((figure) => {
+        const holder = figure.closest<HTMLElement>('.overview-stat') ?? element;
+        const style = getComputedStyle(holder);
+        const frame = holder.getBoundingClientRect();
+        const left = frame.left + holder.clientLeft + parseFloat(style.paddingLeft);
+        const right =
+          frame.left + holder.clientLeft + holder.clientWidth - parseFloat(style.paddingRight);
+        const range = document.createRange();
+        range.selectNodeContents(figure);
+        return Array.from(range.getClientRects()).some(
+          (box) => box.width > 0 && (box.left < left - 1 || box.right > right + 1),
+        );
+      })
+      .map((figure) => (figure.textContent ?? '').replace(/\s+/g, ' ').trim()),
+  );
+}
+
+async function digitGroupsSplitAcrossLines(card: Locator): Promise<string[]> {
+  await card.evaluate(() => document.fonts.ready);
+  return card.evaluate((element) => {
+    const split: string[] = [];
+    for (const figure of element.querySelectorAll('.stat-value.ui-figures, .last-gift-amount')) {
+      const walker = document.createTreeWalker(figure, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        for (const group of (node.textContent ?? '').matchAll(/\S+/g)) {
+          const range = document.createRange();
+          range.setStart(node, group.index);
+          range.setEnd(node, group.index + group[0].length);
+          const tops = new Set(
+            Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+          );
+          if (tops.size > 1) {
+            split.push(group[0]);
+          }
+        }
+      }
+    }
+    return split;
+  });
+}
+
+async function linesOfEachFigure(page: Page): Promise<number[]> {
+  await page.evaluate(() => document.fonts.ready);
+  return page
+    .locator('.overview-stats .stat-value.ui-figures, .last-gift .last-gift-amount')
+    .evaluateAll((figures) =>
+      figures.map((figure) => {
+        const range = document.createRange();
+        range.selectNodeContents(figure);
+        return new Set(
+          Array.from(range.getClientRects())
+            .filter((rect) => rect.width > 0)
+            .map((rect) => Math.round(rect.bottom)),
+        ).size;
+      }),
+    );
+}
+
+const LONG_TOTAL_MINOR = 125206350;
+
+const donorWithALongTotal = {
+  summary: {
+    ...noDonations.summary,
+    totalAmountMinor: LONG_TOTAL_MINOR,
+    count: 1,
+    lastReceivedAt: '2026-03-15',
+    byYear: [{ year: 2026, count: 1, totalAmountMinor: LONG_TOTAL_MINOR }],
+  },
+  list: {
+    items: [donationItem({ id: 'd-1', amountMinor: LONG_TOTAL_MINOR })],
+    totalAmountMinor: LONG_TOTAL_MINOR,
+    currency: 'CZK',
+    count: 1,
+  },
+};
+
 for (const { width, height } of [
   { width: 320, height: 568 },
   { width: 375, height: 667 },
@@ -516,6 +596,24 @@ for (const { width, height } of [
           await page.addStyleTag({ content: 'html { font-size: 32px; }' });
         }
         await expect.poll(() => contentPastTheSides(bar), textSize).toEqual([]);
+      }
+    });
+
+    test('when a signed-in donor whose total is 1 252 063,50 Kč opens Můj přehled, then every amount of the figures and of Poslední dar stays within its card and breaks only between digit groups', async ({
+      page,
+    }) => {
+      await mockDonorApi(page, donorWithALongTotal);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height });
+      const stats = page.locator('.overview-stats');
+      const lastGift = page.locator('section[aria-labelledby="last-gift-title"]');
+      await expect(stats.locator('.stat-value').first()).toHaveText('1 252 063,50 Kč');
+      await expect(lastGift.locator('.last-gift-amount')).toHaveText('1 252 063,50 Kč');
+
+      for (const card of [stats, lastGift]) {
+        await expect.poll(() => figuresPastTheirContent(card)).toEqual([]);
+        await expect.poll(() => digitGroupsSplitAcrossLines(card)).toEqual([]);
       }
     });
 
@@ -3872,6 +3970,24 @@ for (const width of [320, 390]) {
       await expect.poll(() => contentPastTheSides(card)).toEqual([]);
       expect(await card.evaluate((element) => element.scrollWidth - element.clientWidth)).toBe(0);
       await expect.poll(() => pageWiderThanTheWindow(page)).toBe(0);
+    });
+  });
+}
+
+for (const width of [390, 1280]) {
+  test.describe(`Given a donor whose total is 1 252 063,50 Kč on a screen ${width} px wide at the default text size`, () => {
+    test('when they open Můj přehled, then every amount of the figures and of Poslední dar stays on one line', async ({
+      page,
+    }) => {
+      await mockDonorApi(page, donorWithALongTotal);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height: 900 });
+      await expect(page.locator('.overview-stats .stat-value').first()).toHaveText(
+        '1 252 063,50 Kč',
+      );
+
+      await expect.poll(() => linesOfEachFigure(page)).toEqual([1, 1, 1]);
     });
   });
 }

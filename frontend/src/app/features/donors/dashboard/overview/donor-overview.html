@@ -104,6 +104,15 @@
   </p>
 }
 
+<ng-template #crownGroupsOf let-amountMinor>
+  @for (group of crownGroups(amountMinor); track $index) {
+    @if (!$first) {
+      &ngsp;
+    }
+    <span>{{ group }}</span>
+  }
+</ng-template>
+
 <ng-template #bankStatus>
   <app-bank-check />
   <p class="ui-card__intro recent-hint" i18n="@@donor.dashboard.bank.hint">
@@ -117,8 +126,11 @@
     <dl class="overview-stats-list">
       <div class="overview-stat">
         <dt i18n="@@donor.dashboard.stat.total">Celkem darováno</dt>
-        <dd class="stat-value ui-figures">
-          {{ crowns(donations.summary()?.totalAmountMinor ?? 0) }}&nbsp;Kč
+        <dd class="stat-value ui-figures ui-figures--groups">
+          <ng-container
+            [ngTemplateOutlet]="crownGroupsOf"
+            [ngTemplateOutletContext]="{ $implicit: donations.summary()?.totalAmountMinor ?? 0 }"
+          />
         </dd>
       </div>
       <div class="overview-stat">
@@ -139,7 +151,12 @@
       @if (currentYear(); as year) {
         <div class="overview-stat">
           <dt i18n="@@donor.overview.stat.currentYear">Darováno v&nbsp;roce {{ year.year }}</dt>
-          <dd class="stat-value ui-figures">{{ crowns(year.totalAmountMinor) }}&nbsp;Kč</dd>
+          <dd class="stat-value ui-figures ui-figures--groups">
+            <ng-container
+              [ngTemplateOutlet]="crownGroupsOf"
+              [ngTemplateOutletContext]="{ $implicit: year.totalAmountMinor }"
+            />
+          </dd>
         </div>
       }
     </dl>
@@ -190,7 +207,10 @@
         Poslední dar
       </h2>
       <p class="last-gift-main">
-        <span class="last-gift-amount ui-figures">{{ crowns(gift.amountMinor) }}&nbsp;Kč</span
+        <span class="last-gift-amount ui-figures ui-figures--groups"
+          ><ng-container
+            [ngTemplateOutlet]="crownGroupsOf"
+            [ngTemplateOutletContext]="{ $implicit: gift.amountMinor }" /></span
         >&ngsp;<span class="last-gift-date"
           ><span class="ui-date">{{ formatDate(gift.receivedAt) }}</span></span
         >&ngsp;<span

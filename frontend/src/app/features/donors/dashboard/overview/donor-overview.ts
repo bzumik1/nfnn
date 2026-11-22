@@ -96,8 +96,8 @@ export class DonorOverview {
     inject(DestroyRef).onDestroy(() => this.refusal.clear());
   }
 
-  protected crowns(amountMinor: number): string {
-    return formatMinorUnits(amountMinor);
+  protected crownGroups(amountMinor: number): string[] {
+    return [...formatMinorUnits(amountMinor).split(/\s/u), 'Kč'];
   }
 
   protected statusLabel(status: DonationStatus): string {
