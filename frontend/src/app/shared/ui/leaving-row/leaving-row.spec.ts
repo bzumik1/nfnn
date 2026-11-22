@@ -1,4 +1,4 @@
-import { markRowsLeaving, neighbourAfterRowLeaves } from './leaving-row';
+import { leaveWithClass, markRowsLeaving, neighbourAfterRowLeaves } from './leaving-row';
 
 describe('Given a list whose row is about to leave', () => {
   let list: HTMLUListElement;
@@ -90,5 +90,58 @@ describe('Given a list whose row is about to leave', () => {
     const neighbour = neighbourAfterRowLeaves(byId('second'), actions());
 
     expect(neighbour()).toBe(byId('third-action'));
+  });
+});
+
+describe('Given a row that leaves through its leaving class', () => {
+  let row: HTMLLIElement;
+  let completions: number;
+
+  beforeEach(() => {
+    row = document.createElement('li');
+    document.body.append(row);
+    completions = 0;
+  });
+
+  afterEach(() => row.remove());
+
+  function leave(animations: Pick<Animation, 'finished'>[]): void {
+    Object.defineProperty(row, 'getAnimations', { value: () => animations });
+    leaveWithClass('row--leaving')({
+      target: row,
+      animationComplete: () => (completions += 1),
+    });
+  }
+
+  it('when it has no motion, then it carries the class and its leave is complete at once', () => {
+    leave([]);
+
+    expect(row.classList.contains('row--leaving')).toBe(true);
+    expect(completions).toBe(1);
+  });
+
+  it('when its motion finishes, then its leave is complete and it keeps the class until it is removed', async () => {
+    let finish: () => void = () => undefined;
+    const finished = new Promise<Animation>((resolve) => (finish = () => resolve({} as Animation)));
+    leave([{ finished }]);
+
+    await Promise.resolve();
+    expect(completions).toBe(0);
+    finish();
+    await finished;
+    await Promise.resolve();
+
+    expect(completions).toBe(1);
+    expect(row.classList.contains('row--leaving')).toBe(true);
+  });
+
+  it('when its motion is cancelled, then its leave is complete all the same', async () => {
+    const finished = Promise.reject(new DOMException('cancelled', 'AbortError'));
+    leave([{ finished }]);
+
+    await finished.catch(() => undefined);
+    await Promise.resolve();
+
+    expect(completions).toBe(1);
   });
 });
