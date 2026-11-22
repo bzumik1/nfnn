@@ -611,7 +611,7 @@ describe("Given a donor's signed-in devices card", () => {
       row.getAnimations = () =>
         [
           {
-            effect: { getComputedTiming: () => ({ endTime: 300 }) },
+            effect: { getComputedTiming: () => ({ endTime: 60_000 }) },
             playState: 'running',
             finished,
           },

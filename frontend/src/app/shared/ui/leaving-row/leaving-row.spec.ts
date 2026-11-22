@@ -1,4 +1,9 @@
-import { leaveWithClass, markRowsLeaving, neighbourAfterRowLeaves } from './leaving-row';
+import {
+  afterRemoval,
+  leaveWithClass,
+  markRowsLeaving,
+  neighbourAfterRowLeaves,
+} from './leaving-row';
 
 describe('Given a list whose row is about to leave', () => {
   let list: HTMLUListElement;
@@ -373,5 +378,68 @@ describe('Given a list whose row leaves while the rows below it settle into its 
     leaveWithClass('row--leaving')({ target: byId('second'), animationComplete: () => undefined });
 
     expect(list.querySelectorAll('[class]')).toHaveLength(1);
+  });
+});
+
+describe('Given a row watched until it is removed', () => {
+  let section: HTMLElement;
+  let list: HTMLUListElement;
+  let row: HTMLLIElement;
+  let other: HTMLLIElement;
+  let releases: boolean[];
+
+  beforeEach(() => {
+    section = document.createElement('section');
+    list = document.createElement('ul');
+    row = document.createElement('li');
+    other = document.createElement('li');
+    list.append(row, other);
+    section.append(list);
+    document.body.append(section);
+    releases = [];
+    afterRemoval(row, () => releases.push(row.isConnected));
+  });
+
+  afterEach(() => section.remove());
+
+  async function settle(): Promise<void> {
+    for (let turn = 0; turn < 5; turn += 1) {
+      await Promise.resolve();
+    }
+  }
+
+  it('when it is removed from its list, then it is released once, only after the removal', async () => {
+    row.remove();
+    expect(releases).toEqual([]);
+
+    await settle();
+
+    expect(releases).toEqual([false]);
+  });
+
+  it('when another row of its list is removed, then it is not released', async () => {
+    other.remove();
+    await settle();
+
+    expect(releases).toEqual([]);
+  });
+
+  it('when its list leaves with the section around it, then it is not released, because only its own list is watched', async () => {
+    expect(() => section.remove()).not.toThrow();
+    await settle();
+
+    expect(releases).toEqual([]);
+  });
+
+  it('when it is put back and removed again after its release, then it is not released a second time', async () => {
+    row.remove();
+    await settle();
+
+    list.append(row);
+    await settle();
+    row.remove();
+    await settle();
+
+    expect(releases).toEqual([false]);
   });
 });
