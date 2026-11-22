@@ -1,3 +1,5 @@
+import { AnimationCallbackEvent } from '@angular/core';
+
 export function markRowsLeaving(rows: Iterable<Element | null>): void {
   for (const row of rows) {
     row?.setAttribute('inert', '');
@@ -32,4 +34,16 @@ function canTakeFocus(control: HTMLElement): boolean {
   return (
     control.isConnected && !control.matches(':disabled') && control.closest('[inert]') === null
   );
+}
+
+export function leaveWithClass(className: string): (event: AnimationCallbackEvent) => void {
+  return ({ target, animationComplete }) => {
+    target.classList.add(className);
+    const motions = target.getAnimations?.() ?? [];
+    if (motions.length === 0) {
+      animationComplete();
+      return;
+    }
+    Promise.allSettled(motions.map((motion) => motion.finished)).then(() => animationComplete());
+  };
 }

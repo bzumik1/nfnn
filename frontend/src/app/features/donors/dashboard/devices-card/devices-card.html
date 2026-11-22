@@ -181,7 +181,7 @@
 </section>
 
 <ng-template #row let-device>
-  <li class="device-slot" [id]="rowId(device)" animate.leave="device-slot--leaving">
+  <li class="device-slot" [id]="rowId(device)" (animate.leave)="rowLeaves($event)">
     <div>
       <div class="device">
         <div class="ui-list__row device-row">

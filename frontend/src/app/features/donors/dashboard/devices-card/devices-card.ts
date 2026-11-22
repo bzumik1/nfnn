@@ -16,6 +16,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
 } from '../../../../shared/ui/leaving-row/leaving-row';
@@ -102,6 +103,7 @@ export class DevicesCard {
   protected readonly signingOutOthers = computed(() => this.signingOut() === ALL_OTHERS);
   protected readonly confirmingOthers = computed(() => this.confirming() === ALL_OTHERS);
   protected readonly rowLeft = signal(false);
+  protected readonly rowLeaves = leaveWithClass('device-slot--leaving');
 
   constructor() {
     this.loadDevices(true);
