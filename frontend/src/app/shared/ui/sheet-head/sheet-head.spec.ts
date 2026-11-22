@@ -1,6 +1,19 @@
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SheetHead } from './sheet-head';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+
+@Component({
+  imports: [SheetHead],
+  template: `<div class="dialog-panel">
+    @if (shown()) {
+      <app-sheet-head title="Údaje a zabezpečení" />
+    }
+  </div>`,
+})
+class SheetPanel {
+  readonly shown = signal(true);
+}
 
 describe('Given the head of a page inside a sheet', () => {
   let fixture: ComponentFixture<SheetHead>;
@@ -69,5 +82,45 @@ describe('Given the head of a page inside a sheet', () => {
     button('Zavřít')!.click();
 
     expect(steps).toEqual(['close']);
+  });
+});
+
+describe('Given the head of a page standing in the scrolling panel of a sheet', () => {
+  let fixture: ComponentFixture<SheetPanel>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [SheetPanel] }).compileComponents();
+    fixture = TestBed.createComponent(SheetPanel);
+    await fixture.whenStable();
+  });
+
+  const panel = () =>
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.dialog-panel')!;
+  const head = () =>
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('app-sheet-head');
+
+  it('when it is shown, then the panel knows its height, so a control scrolled into view stops below it', () => {
+    expect(panel().style.getPropertyValue('--sheet-head-height')).toBe(`${head()!.offsetHeight}px`);
+  });
+
+  it('when it leaves, then the panel forgets its height', async () => {
+    fixture.componentInstance.shown.set(false);
+    await fixture.whenStable();
+
+    expect(head()).toBeNull();
+    expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('');
+  });
+});
+
+describe('Given the head of a page that stands in no sheet panel', () => {
+  it('when it is shown, then no element around it takes its height', async () => {
+    await TestBed.configureTestingModule({ imports: [SheetHead] }).compileComponents();
+    const fixture = TestBed.createComponent(SheetHead);
+    fixture.componentRef.setInput('title', 'Dárci');
+    await fixture.whenStable();
+
+    const around = (fixture.nativeElement as HTMLElement).parentElement!;
+    expect(around.style.getPropertyValue('--sheet-head-height')).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--sheet-head-height')).toBe('');
   });
 });

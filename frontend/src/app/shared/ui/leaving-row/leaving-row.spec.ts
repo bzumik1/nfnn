@@ -443,3 +443,70 @@ describe('Given a row watched until it is removed', () => {
     expect(releases).toEqual([false]);
   });
 });
+
+describe('Given a row in a fold, watched from the list around the fold until it is removed', () => {
+  let card: HTMLUListElement;
+  let fold: HTMLLIElement;
+  let row: HTMLLIElement;
+  let releases: boolean[];
+
+  beforeEach(() => {
+    card = document.createElement('ul');
+    fold = document.createElement('li');
+    const folded = document.createElement('ul');
+    row = document.createElement('li');
+    folded.append(row);
+    fold.append(folded);
+    card.append(fold);
+    document.body.append(card);
+    releases = [];
+    afterRemoval(row, () => releases.push(row.isConnected), card);
+  });
+
+  afterEach(() => card.remove());
+
+  async function settle(): Promise<void> {
+    for (let turn = 0; turn < 5; turn += 1) {
+      await Promise.resolve();
+    }
+  }
+
+  it('when the whole fold leaves with the row still in it, then it is released once, after the removal', async () => {
+    fold.remove();
+    expect(releases).toEqual([]);
+
+    await settle();
+
+    expect(releases).toEqual([false]);
+  });
+
+  it('when only the row leaves its fold, then it is released once', async () => {
+    row.remove();
+    await settle();
+
+    expect(releases).toEqual([false]);
+  });
+
+  it('when another row of the list around the fold is removed, then it is not released', async () => {
+    const other = document.createElement('li');
+    card.append(other);
+    await settle();
+    other.remove();
+    await settle();
+
+    expect(releases).toEqual([]);
+  });
+});
+
+describe('Given a row that has already left the document', () => {
+  it('when it is watched until it is removed, then it is released at once', () => {
+    const list = document.createElement('ul');
+    const row = document.createElement('li');
+    list.append(row);
+    const releases: boolean[] = [];
+
+    afterRemoval(row, () => releases.push(row.isConnected));
+
+    expect(releases).toEqual([false]);
+  });
+});

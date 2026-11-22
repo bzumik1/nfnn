@@ -740,6 +740,44 @@ describe("Given a donor's signed-in devices card", () => {
     });
   });
 
+  describe('when the donor signs out the last older device while Starší is open', () => {
+    let scrolled: HTMLElement[];
+
+    beforeEach(async () => {
+      scrolled = [];
+      HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
+        scrolled.push(this);
+      };
+      await signIn();
+      await listed([THIS_MAC, IPHONE, UNKNOWN, OLD_IPAD]);
+      element<HTMLButtonElement>('.devices-older-toggle').click();
+      await settle();
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+    });
+
+    it('then the fold leaves with the row still in it, and the control that took the focus is brought into view once the fold is gone', async () => {
+      const row = document.getElementById(`device-row-${OLD_IPAD.id}`)!;
+      const fold = element('.devices-older');
+      await ask(signOutButton(rows()[3]));
+      await confirmSignOut();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${OLD_IPAD.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+      await vi.waitFor(() => expect(fold.isConnected).toBe(false));
+      await settle();
+
+      expect(row.isConnected).toBe(false);
+      expect(element('.devices-older-toggle')).toBeNull();
+      const focused = document.activeElement;
+      expect(focused).toBe(signOutButton(rows()[2]));
+      expect(scrolled).toEqual([focused]);
+    });
+  });
+
   it('when the donor signs out the only other device, then the heading takes focus and the card says no other device is', async () => {
     await signIn();
     await listed([THIS_MAC, IPHONE]);

@@ -25,6 +25,11 @@ $inline-start: max(
   font-family: var(--font-sheet);
 }
 
+.sheet-head-button,
+.sheet-head-title {
+  scroll-margin-block: calc(-1 * var(--sheet-head-height)) var(--sheet-head-height);
+}
+
 .sheet-head-button {
   display: grid;
   place-items: center;

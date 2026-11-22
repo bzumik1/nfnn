@@ -69,7 +69,7 @@ async function anchorNoScrollAsSafariDoes(page: Page): Promise<void> {
   await page.addInitScript(() => {
     document.addEventListener('DOMContentLoaded', () => {
       const style = document.createElement('style');
-      style.textContent = 'html, body { overflow-anchor: none; }';
+      style.textContent = 'html, body, .dialog-panel { overflow-anchor: none; }';
       document.head.append(style);
     });
   });
@@ -714,7 +714,7 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
       await anchorNoScrollAsSafariDoes(page);
     });
 
-    test('when they sign out the iPhone, then Starší takes the focus and stands between the header and the tab bar', async ({
+    test('when they sign out the iPhone, then Starší takes the focus and stands between the header and whatever covers the bottom of the window', async ({
       page,
     }) => {
       const iphone = signedInDevices.find((device) => !device.current);
@@ -755,10 +755,75 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
               .map((element) => element.getBoundingClientRect().bottom)
               .filter((bottom) => bottom > 0);
             const headerBottom = Math.max(0, ...header);
-            const tabBarTop =
-              document.querySelector('app-tab-bar nav')?.getBoundingClientRect().top ??
-              window.innerHeight;
-            return box.top >= headerBottom && box.bottom <= tabBarTop;
+            const coveringTops = [
+              ...document.querySelectorAll<HTMLElement>(
+                'app-tab-bar nav, .ui-notice--floating, app-offline-status .offline-pill',
+              ),
+            ]
+              .map((element) => element.getBoundingClientRect())
+              .filter((cover) => cover.height > 0 && cover.top > window.innerHeight / 2)
+              .map((cover) => cover.top);
+            const lowerEdge = Math.min(window.innerHeight, ...coveringTops);
+            return box.top >= headerBottom && box.bottom <= lowerEdge;
+          }),
+        )
+        .toBe(true);
+    });
+  });
+}
+
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  test.describe(`Given a donor on an iPhone 390 pt wide whose phone shows the largest accessibility text, asks for ${reducedMotion} motion and has older devices in Údaje a zabezpečení inside the account sheet`, () => {
+    test.use({ viewport: { width: 390, height: 844 }, reducedMotion });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await anchorNoScrollAsSafariDoes(page);
+    });
+
+    test('when they sign out the iPhone, then Starší takes the focus and stands below the sheet head, inside the sheet', async ({
+      page,
+    }) => {
+      const iphone = signedInDevices.find((device) => !device.current);
+      let listed = [...signedInDevices, ...longUnusedDevices];
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/devices',
+        (route) => route.fulfill({ json: { items: listed } }),
+      );
+      await page.route(
+        (url) => url.pathname.startsWith('/api/donors/me/devices/'),
+        async (route) => {
+          listed = listed.filter((device) => device.id !== iphone?.id);
+          await route.fulfill({ status: 204 });
+        },
+      );
+      await rememberedDonorSession(page);
+      await page.goto('/darce/prehled');
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      const sheet = page.locator('app-account-sheet');
+      await expect(sheet.locator('app-sheet-head')).toBeVisible();
+      await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+      const devices = sheet.locator('.devices');
+      await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+      const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+      await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+
+      await question.getByRole('button', { name: 'Odhlásit', exact: true }).click();
+
+      await expect(devices.getByRole('button', { name: /Starší \(2\)/ })).toBeFocused();
+      await expect(sheet.locator(`#device-row-${iphone?.id}`)).toHaveCount(0);
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const box = document.activeElement!.getBoundingClientRect();
+            const head = document
+              .querySelector('app-account-sheet app-sheet-head')!
+              .getBoundingClientRect();
+            const panel = document
+              .querySelector('app-account-sheet .dialog-panel')!
+              .getBoundingClientRect();
+            return box.top >= head.bottom && box.bottom <= panel.bottom;
           }),
         )
         .toBe(true);

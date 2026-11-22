@@ -23,9 +23,12 @@ export function neighbourAfterRowLeaves(
   return () => nearestFirst.find(canTakeFocus) ?? null;
 }
 
-export function afterRemoval(row: Element, released: () => void): void {
-  const parent = row.parentNode;
-  if (parent === null) {
+export function afterRemoval(
+  row: Element,
+  released: () => void,
+  within: Node | null = row.parentNode,
+): void {
+  if (within === null || !row.isConnected) {
     released();
     return;
   }
@@ -35,7 +38,7 @@ export function afterRemoval(row: Element, released: () => void): void {
       released();
     }
   });
-  watch.observe(parent, { childList: true });
+  watch.observe(within, { childList: true, subtree: true });
 }
 
 function followsRow(row: Element, control: HTMLElement): boolean {

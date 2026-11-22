@@ -276,7 +276,11 @@ export class DevicesCard {
       return;
     }
     this.rowSignedOut = null;
-    afterRemoval(row, () => this.scrollIntoViewIfFocused(signedOut.focused));
+    afterRemoval(
+      row,
+      () => this.scrollIntoViewIfFocused(signedOut.focused),
+      this.deviceList()?.nativeElement ?? null,
+    );
   }
 
   private scrollIntoViewIfFocused(focused: HTMLElement | null): void {
