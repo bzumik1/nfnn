@@ -38,6 +38,10 @@
   @include motion.row-leave;
 }
 
+.connection-slot--settling {
+  @include motion.row-settling;
+}
+
 .connections-empty--after-rows {
   @include motion.after-rows-left;
 }
