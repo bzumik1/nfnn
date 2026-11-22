@@ -371,6 +371,7 @@ function expectTheBackdropInStep(frames: TopAreaFrame[]): void {
 const STATUS_BAR_PX = 59;
 const HOLD_MS = 100;
 const HOLD_SLACK_MS = 50;
+const FRAME_START_BEFORE_CHECK_MS = 1;
 const PULL_DOWNS = [0, 20, 80, 400];
 const CLASSIC_SCROLLBARS_ONLY =
   'an iPhone draws no classic scrollbar beside the backdrop; Safari’s own strips are #1694 and the device checklist';
@@ -469,13 +470,16 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     expect(reported.filter((problem) => !BLUR_REPORTED.test(problem))).toEqual([]);
   });
 
-  test('when a test holds the app’s frames back for 100 ms through nfnnLateFrames, then the sampler reads none of the held frames, its frames skip just the hold, and the backdrop raises no false alarm', async ({
+  test('when a test holds the sampler’s reads back for 100 ms through a planted nfnnLateFrames, then the sampler samples only after the frame callback returns, reads none of the held frames, its frames skip just the hold, and the backdrop raises no false alarm', async ({
     page,
   }) => {
     await page.evaluate((holdMs) => {
       const held = window as unknown as {
         nfnnLateFrames: { until: number; read(reader: FrameRequestCallback): void };
+        topAreaFrames: unknown[];
+        nfnnGrewInside: number[];
       };
+      held.nfnnGrewInside = [];
       held.nfnnLateFrames = {
         until: 0,
         read(reader) {
@@ -483,7 +487,9 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
             if (performance.now() < held.nfnnLateFrames.until) {
               requestAnimationFrame(tick);
             } else {
+              const before = held.topAreaFrames.length;
               reader(now);
+              held.nfnnGrewInside.push(held.topAreaFrames.length - before);
             }
           };
           requestAnimationFrame(tick);
@@ -500,8 +506,13 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
 
     const frames = await whileTheSheetOpens(page);
 
+    const grew = await page.evaluate(
+      () => (window as unknown as { nfnnGrewInside: number[] }).nfnnGrewInside,
+    );
+    expect(grew.length).toBeGreaterThan(0);
+    expect(grew.filter((count) => count > 0)).toEqual([]);
     const gaps = frames.slice(1).map((frame, index) => frame.at - frames[index].at);
-    expect(Math.max(...gaps)).toBeGreaterThanOrEqual(HOLD_MS);
+    expect(Math.max(...gaps)).toBeGreaterThanOrEqual(HOLD_MS - FRAME_START_BEFORE_CHECK_MS);
     expect(Math.max(...gaps)).toBeLessThan(HOLD_MS + HOLD_SLACK_MS);
     expect(veilJumps(frames)).toEqual([]);
   });
