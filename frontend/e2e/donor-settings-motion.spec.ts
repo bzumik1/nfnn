@@ -702,11 +702,15 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
     await disconnectClaude(page);
   });
 
-  test('when the second press of a double tap on Odpojit for claude.ai comes as its row is removed, then it reaches nothing where the first one was', async ({
+  test('when the second press of a double tap on Odpojit for claude.ai comes as its row is removed, then it reaches nothing where the first one was, and Odpojit of chatgpt.com answers again a moment later', async ({
     page,
   }) => {
     const disconnected = await expectTheDoubleTapToReachNothingOnRemoval(page);
-
     expect(disconnected).toEqual([claudeConnection.id]);
+
+    await page.locator(otherConnectionRow).getByRole('button', { name: 'Odpojit' }).click();
+
+    await expect(page.locator('.connection-client')).toHaveCount(0);
+    expect(disconnected).toEqual([claudeConnection.id, otherConnection.id]);
   });
 });

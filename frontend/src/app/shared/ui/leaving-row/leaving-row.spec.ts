@@ -352,6 +352,23 @@ describe('Given a list whose row leaves while the rows below it settle into its 
     expect(settling()).toEqual([]);
   });
 
+  it('when a row with no motion of its own leaves, as with less motion, then the rows below still settle for a double tap of 300 ms, and then take presses again', () => {
+    const row = byId('second');
+    Object.defineProperty(row, 'getAnimations', { value: () => [] });
+
+    leaveWithClass('row--leaving', { settling: 'row--settling' })({
+      target: row,
+      animationComplete: () => row.remove(),
+    });
+
+    expect(byId('second')).toBeNull();
+    vi.advanceTimersByTime(299);
+    expect(settling()).toEqual(['third', 'fourth']);
+    vi.advanceTimersByTime(1);
+
+    expect(settling()).toEqual([]);
+  });
+
   it('when a row leaves without settling the rows below, then none of them carries a class', () => {
     leaveWithClass('row--leaving')({ target: byId('second'), animationComplete: () => undefined });
 
