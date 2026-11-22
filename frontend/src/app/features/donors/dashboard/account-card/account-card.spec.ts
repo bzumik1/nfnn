@@ -360,35 +360,7 @@ describe('Given the sign-in and security card of the details page', () => {
       );
     });
 
-    for (const { key, groups, first, second } of [
-      {
-        key: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ',
-        groups: 'eight groups',
-        first: 'GEZD GNBV GY3T QOJQ',
-        second: 'GEZD GNBV GY3T QOJQ',
-      },
-      {
-        key: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3T',
-        groups: 'seven groups',
-        first: 'GEZD GNBV GY3T QOJQ',
-        second: 'GEZD GNBV GY3T',
-      },
-      { key: 'GEZDGN', groups: 'a short key', first: 'GEZD', second: 'GN' },
-    ]) {
-      it(`and confirms the password for a key of ${groups}, then the key shows in two halves that each keep their groups together`, async () => {
-        await card.fillIn('#account-second-factor-password', 'correct horse battery');
-
-        await card.submit();
-        http
-          .expectOne('/api/donors/me/second-factor/setup')
-          .flush({ ...secondFactorEnrolment(), secret: key });
-        await card.settle();
-
-        expect(card.texts('.account-secret-value .account-secret-half')).toEqual([first, second]);
-      });
-    }
-
-    it('and confirms the password, then the key is one text with ordinary spaces that assistive technology reads whole and nothing in it is hidden', async () => {
+    it('and confirms the password, then the key is one text node of its groups with ordinary spaces that assistive technology reads whole and nothing in it is hidden', async () => {
       await card.fillIn('#account-second-factor-password', 'correct horse battery');
 
       await card.submit();
@@ -396,6 +368,7 @@ describe('Given the sign-in and security card of the details page', () => {
       await card.settle();
 
       const value = card.element('.account-secret-value');
+      expect(Array.from(value.childNodes).map((node) => node.nodeType)).toEqual([Node.TEXT_NODE]);
       expect(accessibleText(value)).toBe('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       expect(value.textContent).toBe('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       expect(value.closest('[aria-hidden]')).toBeNull();

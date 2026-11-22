@@ -181,7 +181,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1-5) var(--space-2-5);
-  max-width: max(320px, 12rem);
+  max-width: 320px;
   font-size: var(--text-sm);
 }
 
@@ -196,12 +196,7 @@
   letter-spacing: var(--tracking-slight);
   color: var(--color-text);
   overflow-wrap: anywhere;
-}
-
-@container ui-card (min-width: 12rem) {
-  .account-secret-half {
-    white-space: nowrap;
-  }
+  text-wrap: balance;
 }
 
 .account-form {

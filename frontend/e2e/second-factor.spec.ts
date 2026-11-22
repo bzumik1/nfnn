@@ -21,6 +21,14 @@ const PIXELS_PER_MODULE = 4;
 const LARGEST_SYSTEM_TEXT_PX = 53;
 const DARK_SQUARE = /M(\d+) (\d+)h1v1h-1z/g;
 
+interface GroupLine {
+  start: number;
+  lines: number;
+  top: number;
+  left: number;
+  middle: number;
+}
+
 async function plainQrText(qr: Locator): Promise<string | undefined> {
   const side = Number((await qr.getAttribute('viewBox'))?.split(' ')[2]);
   const path = (await qr.locator('.qr-plain').getAttribute('d')) ?? '';
@@ -323,8 +331,28 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
     await page.getByRole('button', { name: 'Pokračovat' }).click();
   }
 
+  async function groupLines(key: Locator): Promise<GroupLine[]> {
+    return key.evaluate((value) => {
+      const text = value.firstChild!;
+      return [...(text.textContent ?? '').matchAll(/\S+/g)].map((group) => {
+        const range = document.createRange();
+        const start = group.index ?? 0;
+        range.setStart(text, start);
+        range.setEnd(text, start + group[0].length);
+        const box = range.getBoundingClientRect();
+        return {
+          start,
+          lines: range.getClientRects().length,
+          top: Math.round(box.top),
+          left: box.left,
+          middle: box.top + box.height / 2,
+        };
+      });
+    });
+  }
+
   for (const width of [1280, 390]) {
-    test(`when the key shows in a ${width} px window, then it breaks only between its two halves of four groups, so no group stands alone on a line`, async ({
+    test(`when the key shows in a ${width} px window, then its one text breaks into two balanced lines of four whole groups`, async ({
       page,
     }) => {
       await showKey(page, width);
@@ -332,27 +360,47 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
       await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       await page.evaluate(() => document.fonts.ready);
 
-      const groupsPerLine = await key.evaluate((value) => {
-        const lines = new Map<number, number>();
-        const walker = document.createTreeWalker(value, NodeFilter.SHOW_TEXT);
-        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-          for (const group of (node.textContent ?? '').matchAll(/\S+/g)) {
-            const range = document.createRange();
-            const start = group.index ?? 0;
-            range.setStart(node, start);
-            range.setEnd(node, start + group[0].length);
-            const top = Math.round(range.getBoundingClientRect().top);
-            lines.set(top, (lines.get(top) ?? 0) + 1);
-          }
-        }
-        return [...lines.values()];
-      });
+      const groups = await groupLines(key);
+      const groupsPerLine = [...new Set(groups.map((group) => group.top))].map(
+        (top) => groups.filter((group) => group.top === top).length,
+      );
 
-      expect(groupsPerLine.length).toBeGreaterThan(0);
-      expect(
-        groupsPerLine.filter((count) => count % 4 !== 0),
-        JSON.stringify(groupsPerLine),
-      ).toEqual([]);
+      expect(groups.map((group) => group.lines)).toEqual(groups.map(() => 1));
+      expect(groupsPerLine).toEqual([4, 4]);
+    });
+  }
+
+  for (const width of [1280, 390, 320]) {
+    test(`when the donor selects from the start of the first group on the key's second line in a ${width} px window, then the selection starts in that group, not on the first line`, async ({
+      page,
+    }) => {
+      await showKey(page, width);
+      const key = page.locator('.account-secret-value');
+      await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
+      await page.evaluate(() => document.fonts.ready);
+
+      const groups = await groupLines(key);
+      const firstOnSecondLine = groups.find((group) => group.top !== groups[0].top)!;
+      expect(firstOnSecondLine).toBeDefined();
+
+      const caret = await page.evaluate(
+        ({ x, y }) => {
+          const range = document.caretRangeFromPoint(x, y);
+          return {
+            inKey: range?.startContainer.parentElement?.classList.contains('account-secret-value'),
+            offset: range?.startOffset,
+          };
+        },
+        { x: firstOnSecondLine.left + 1, y: firstOnSecondLine.middle },
+      );
+      expect(caret).toEqual({ inKey: true, offset: firstOnSecondLine.start });
+
+      await page.mouse.dblclick(firstOnSecondLine.left + 1, firstOnSecondLine.middle);
+      const selection = await page.evaluate(() => {
+        const range = window.getSelection()!.getRangeAt(0);
+        return { start: range.startOffset, text: range.toString().trim() };
+      });
+      expect(selection).toEqual({ start: firstOnSecondLine.start, text: 'GEZD' });
     });
   }
 
