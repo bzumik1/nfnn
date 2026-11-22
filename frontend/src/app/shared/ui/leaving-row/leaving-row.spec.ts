@@ -96,52 +96,160 @@ describe('Given a list whose row is about to leave', () => {
 describe('Given a row that leaves through its leaving class', () => {
   let row: HTMLLIElement;
   let completions: number;
+  let left: HTMLElement[];
+
+  interface FakeMotion {
+    readonly finished: Promise<Animation>;
+    playState: AnimationPlayState;
+    readonly effect: { getComputedTiming: () => { endTime: number } };
+    finish: () => void;
+  }
 
   beforeEach(() => {
     row = document.createElement('li');
     document.body.append(row);
     completions = 0;
+    left = [];
   });
 
-  afterEach(() => row.remove());
+  afterEach(() => {
+    row.remove();
+    vi.useRealTimers();
+  });
 
-  function leave(animations: Pick<Animation, 'finished'>[]): void {
-    Object.defineProperty(row, 'getAnimations', { value: () => animations });
-    leaveWithClass('row--leaving')({
+  function motion(endTime: number): FakeMotion {
+    let resolve: (value: Animation) => void = () => undefined;
+    const finished = new Promise<Animation>((done) => (resolve = done));
+    const fake: FakeMotion = {
+      finished,
+      playState: 'running',
+      effect: { getComputedTiming: () => ({ endTime }) },
+      finish: () => {
+        fake.playState = 'finished';
+        resolve({} as Animation);
+      },
+    };
+    return fake;
+  }
+
+  function cancelled(): FakeMotion {
+    const fake = motion(150);
+    Object.assign(fake, { finished: Promise.reject(new DOMException('cancelled', 'AbortError')) });
+    fake.finished.catch(() => undefined);
+    return fake;
+  }
+
+  function leave(motions: FakeMotion[], leaves?: (target: HTMLElement) => boolean): void {
+    Object.defineProperty(row, 'getAnimations', {
+      value: () => motions.filter((one) => one.playState !== 'idle'),
+    });
+    leaveWithClass('row--leaving', { leaves, left: (target) => left.push(target) })({
       target: row,
       animationComplete: () => (completions += 1),
     });
   }
 
-  it('when it has no motion, then it carries the class and its leave is complete at once', () => {
+  async function settle(): Promise<void> {
+    for (let turn = 0; turn < 5; turn += 1) {
+      await Promise.resolve();
+    }
+  }
+
+  it('when it does not really leave, then its leave is complete at once, without the class and without inert', () => {
+    leave([motion(150)], () => false);
+
+    expect(completions).toBe(1);
+    expect(row.classList.contains('row--leaving')).toBe(false);
+    expect(row.hasAttribute('inert')).toBe(false);
+    expect(left).toEqual([]);
+  });
+
+  it('when it has no motion, then it is inert, carries the class and its leave is complete at once', () => {
     leave([]);
 
+    expect(row.hasAttribute('inert')).toBe(true);
     expect(row.classList.contains('row--leaving')).toBe(true);
+    expect(completions).toBe(1);
+    expect(left).toEqual([row]);
+  });
+
+  it('when it was made inert before it leaves, then its inert is not written again', async () => {
+    row.setAttribute('inert', '');
+    const writes: string[] = [];
+    const watch = new MutationObserver((records) =>
+      writes.push(...records.map((record) => record.attributeName ?? '')),
+    );
+    watch.observe(row, { attributes: true, attributeFilter: ['inert'] });
+
+    leave([]);
+    await settle();
+    watch.disconnect();
+
+    expect(writes).toEqual([]);
+    expect(row.hasAttribute('inert')).toBe(true);
+  });
+
+  it('when it has several motions, then its leave is complete only once all of them finished, and it keeps the class', async () => {
+    const short = motion(150);
+    const long = motion(200);
+    leave([short, long]);
+
+    short.finish();
+    row.dispatchEvent(new Event('animationend'));
+    await settle();
+    expect(completions).toBe(0);
+    expect(row.hasAttribute('inert')).toBe(true);
+
+    long.finish();
+    await settle();
+    expect(completions).toBe(1);
+    expect(left).toEqual([row]);
+    expect(row.classList.contains('row--leaving')).toBe(true);
+  });
+
+  it('when the end of its last motion arrives as an animationend, then its leave is complete once', async () => {
+    const only = motion(150);
+    leave([only]);
+    only.playState = 'finished';
+
+    row.dispatchEvent(new Event('animationend'));
+    expect(completions).toBe(1);
+    only.finish();
+    await settle();
+
     expect(completions).toBe(1);
   });
 
-  it('when its motion finishes, then its leave is complete and it keeps the class until it is removed', async () => {
-    let finish: () => void = () => undefined;
-    const finished = new Promise<Animation>((resolve) => (finish = () => resolve({} as Animation)));
-    leave([{ finished }]);
+  it('when an animationend of something inside it arrives, then its leave goes on', () => {
+    const inside = document.createElement('span');
+    row.append(inside);
+    leave([motion(150)]);
 
-    await Promise.resolve();
+    inside.dispatchEvent(new Event('animationend', { bubbles: true }));
+
     expect(completions).toBe(0);
-    finish();
-    await finished;
-    await Promise.resolve();
-
-    expect(completions).toBe(1);
-    expect(row.classList.contains('row--leaving')).toBe(true);
   });
 
   it('when its motion is cancelled, then its leave is complete all the same', async () => {
-    const finished = Promise.reject(new DOMException('cancelled', 'AbortError'));
-    leave([{ finished }]);
+    const motions = [cancelled()];
+    leave(motions);
+    motions[0].playState = 'idle';
 
-    await finished.catch(() => undefined);
-    await Promise.resolve();
+    row.dispatchEvent(new Event('animationcancel'));
+    await settle();
 
     expect(completions).toBe(1);
+  });
+
+  it('when no end of its motion ever arrives, then its leave is complete 300 ms after the longest one would have ended', () => {
+    vi.useFakeTimers();
+    leave([motion(150), motion(200)]);
+
+    vi.advanceTimersByTime(499);
+    expect(completions).toBe(0);
+    vi.advanceTimersByTime(1);
+
+    expect(completions).toBe(1);
+    expect(left).toEqual([row]);
   });
 });

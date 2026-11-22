@@ -103,7 +103,9 @@ export class DevicesCard {
   protected readonly signingOutOthers = computed(() => this.signingOut() === ALL_OTHERS);
   protected readonly confirmingOthers = computed(() => this.confirming() === ALL_OTHERS);
   protected readonly rowLeft = signal(false);
-  protected readonly rowLeaves = leaveWithClass('device-slot--leaving');
+  protected readonly rowLeaves = leaveWithClass('device-slot--leaving', {
+    leaves: (row) => this.olderShown() || row.closest('.device-list--older') === null,
+  });
 
   constructor() {
     this.loadDevices(true);

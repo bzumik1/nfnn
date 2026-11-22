@@ -125,6 +125,42 @@ function rowsShownAgain(page: Page): Promise<Box[]> {
   return page.evaluate(() => (window as unknown as { rowsShownAgain: Box[] }).rowsShownAgain);
 }
 
+interface LeavingRow {
+  readonly id: string;
+  readonly inert: boolean;
+}
+
+async function recordLeavingRows(page: Page, rows: string, leaving: string): Promise<void> {
+  await page.evaluate(
+    ({ rows, leaving }) => {
+      const seen: LeavingRow[] = [];
+      (window as unknown as { leavingRows: LeavingRow[] }).leavingRows = seen;
+      new MutationObserver((records) => {
+        for (const { target, oldValue } of records) {
+          if (
+            target instanceof Element &&
+            target.matches(rows) &&
+            !(oldValue ?? '').split(' ').includes(leaving) &&
+            target.classList.contains(leaving)
+          ) {
+            seen.push({ id: target.id, inert: target.hasAttribute('inert') });
+          }
+        }
+      }).observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class'],
+        attributeOldValue: true,
+        subtree: true,
+      });
+    },
+    { rows, leaving },
+  );
+}
+
+function leavingRows(page: Page): Promise<LeavingRow[]> {
+  return page.evaluate(() => (window as unknown as { leavingRows: LeavingRow[] }).leavingRows);
+}
+
 interface EndWatch {
   closeEnd: number | null;
 }
@@ -199,7 +235,12 @@ function risesAboveTheEnd(frames: readonly Frame[], name: string): string[] {
     .map(({ at, box }) => `${name} ${box.height} above its end ${end} at +${Math.round(at)} ms`);
 }
 
-async function openSettings(page: Page, devices = signedInDevices): Promise<void> {
+type DeviceList = typeof signedInDevices;
+
+async function openSettings(
+  page: Page,
+  devices: DeviceList = signedInDevices,
+): Promise<(devices: DeviceList) => void> {
   await mockDonorApi(page);
   let listed = devices;
   await page.route(
@@ -220,9 +261,35 @@ async function openSettings(page: Page, devices = signedInDevices): Promise<void
   await openDonorSection(page, 'Údaje a zabezpečení');
   await synced;
   await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+  return (devices) => (listed = devices);
 }
 
-test.describe('Given a donor in Údaje a zabezpečení on a device that animates', () => {
+async function confirmSigningOutTheIPhone(page: Page): Promise<Frame[]> {
+  const devices = page.locator('.devices');
+  await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+  const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+  await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+  await settled(page, '.devices');
+  await recordRowsShownAgain(page, '.device-slot', 'device-slot--leaving');
+
+  const frames = await framesWhile(page, { row: otherRow, card: '.devices' }, () =>
+    question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
+  );
+
+  await expect(devices.locator('.device-name')).toHaveText(['Mac · Safari']);
+  await expect(devices.getByRole('heading', { name: 'Přihlášená zařízení' })).toBeFocused();
+  expect(present(frames, 'row').length).toBeGreaterThan(0);
+  expect(frames.at(-1)?.boxes['row']).toBeNull();
+  expect(
+    (await rowsShownAgain(page)).filter(
+      (box) => box.opacity > GONE_OPACITY || box.height > SUBPIXEL_PX,
+    ),
+  ).toEqual([]);
+  expect(growths(frames, 'row', 'opacity')).toEqual([]);
+  return frames;
+}
+
+test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () => {
   test.use({ reducedMotion: 'no-preference' });
 
   test.beforeEach(async ({ page, isMobile }) => {
@@ -235,24 +302,10 @@ test.describe('Given a donor in Údaje a zabezpečení on a device that animates
     page,
   }) => {
     await openSettings(page);
-    const devices = page.locator('.devices');
-    await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
-    const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
-    await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
-    await settled(page, '.devices');
-    await recordRowsShownAgain(page, '.device-slot', 'device-slot--leaving');
 
-    const frames = await framesWhile(page, { row: otherRow, card: '.devices' }, () =>
-      question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
-    );
+    const frames = await confirmSigningOutTheIPhone(page);
 
-    await expect(devices.locator('.device-name')).toHaveText(['Mac · Safari']);
-    expect(
-      (await rowsShownAgain(page)).filter(
-        (box) => box.opacity > GONE_OPACITY || box.height > SUBPIXEL_PX,
-      ),
-    ).toEqual([]);
-    expect([...growths(frames, 'row', 'height'), ...growths(frames, 'row', 'opacity')]).toEqual([]);
+    expect(growths(frames, 'row', 'height')).toEqual([]);
     expect(risesAboveTheEnd(frames, 'card')).toEqual([]);
   });
 
@@ -280,7 +333,7 @@ test.describe('Given a donor in Údaje a zabezpečení on a device that animates
     expect(Math.abs(end - closed)).toBeLessThanOrEqual(SUBPIXEL_PX);
   });
 
-  test('when they fold the older sign-ins away, then the card only shrinks and its last frame already stands at the height it ends at', async ({
+  test('when they fold Starší away, then the card only shrinks and its last frame already stands at the height it ends at', async ({
     page,
   }) => {
     await openSettings(page, [...signedInDevices, ...longUnusedDevices]);
@@ -295,6 +348,7 @@ test.describe('Given a donor in Údaje a zabezpečení on a device that animates
     };
 
     await unfold();
+    await recordLeavingRows(page, '.device-slot', 'device-slot--leaving');
     const frames = await framesWhile(page, { card: '.devices' }, () => older.click());
     await expect(page.locator('#devices-older')).toHaveCount(0);
     await settled(page, '.devices');
@@ -306,5 +360,39 @@ test.describe('Given a donor in Údaje a zabezpečení on a device that animates
 
     expect(growths(frames, 'card', 'height')).toEqual([]);
     expect(Math.abs(end - folded)).toBeLessThanOrEqual(SUBPIXEL_PX);
+    expect(await leavingRows(page)).toEqual([]);
+  });
+
+  test('when the iPhone was signed out elsewhere and Údaje a zabezpečení open again, then its row is out of reach for as long as it leaves', async ({
+    page,
+  }) => {
+    const list = await openSettings(page);
+    await expect(page.locator(otherRow)).toBeVisible();
+    await openDonorSection(page, 'Můj přehled');
+    list(signedInDevices.filter((device) => device.current));
+    await recordLeavingRows(page, '.device-slot', 'device-slot--leaving');
+
+    await openDonorSection(page, 'Údaje a zabezpečení');
+
+    await expect(page.locator('.devices .device-name')).toHaveText(['Mac · Safari']);
+    expect(await leavingRows(page)).toEqual([{ id: otherRow.slice(1), inert: true }]);
+  });
+});
+
+test.describe('Given a donor in Údaje a zabezpečení who asks for less motion', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test.beforeEach(async ({ page, isMobile }) => {
+    if (!isMobile) {
+      await page.setViewportSize(COMPUTER);
+    }
+  });
+
+  test('when they confirm Odhlásit for the iPhone, then its row only fades until it is removed and never comes back', async ({
+    page,
+  }) => {
+    await openSettings(page);
+
+    await confirmSigningOutTheIPhone(page);
   });
 });

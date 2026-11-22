@@ -2,7 +2,6 @@
 
 import {
   afterNextRender,
-  AnimationCallbackEvent,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -44,6 +43,7 @@ import { loadingView } from '../../../shared/ui/skeleton/loading-view';
 import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import {
+  leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
 } from '../../../shared/ui/leaving-row/leaving-row';
@@ -136,7 +136,6 @@ const METHOD_LABELS: Record<PairingMethod, string> = {
 };
 
 const ROW_LEAVING = 'payment-row--leaving';
-const ROW_LEAVE_GRACE_MS = 300;
 const ROW_CONTROLS =
   'button[data-payment-row], [data-payment-row] td.action button, [data-payment-row] a[href]';
 
@@ -194,6 +193,10 @@ export class AdminPayments {
   protected readonly items = signal<AdminPaymentResponse[]>([]);
   protected readonly total = signal(0);
   protected readonly rowsLeaving = signal(0);
+  protected readonly leaveRow = leaveWithClass(ROW_LEAVING, {
+    leaves: (row) => row.hasAttribute('inert'),
+    left: (row) => this.afterRowLeaves(row),
+  });
   protected readonly rowLeft = signal(false);
   protected readonly loadingMore = signal(false);
   protected readonly moreFailed = signal(false);
@@ -876,50 +879,14 @@ export class AdminPayments {
     return `payment-row-${payment.id.replace(/[^A-Za-z0-9_-]/g, '_')}`;
   }
 
-  protected leaveRow(event: AnimationCallbackEvent): void {
-    const row = event.target as HTMLElement;
-    if (!row.hasAttribute('inert')) {
-      event.animationComplete();
-      return;
-    }
-    row.classList.add(ROW_LEAVING);
-    const longest = Math.max(
-      0,
-      ...(row.getAnimations?.() ?? []).map((motion) =>
-        Number(motion.effect?.getComputedTiming().endTime ?? 0),
-      ),
-    );
+  private afterRowLeaves(row: HTMLElement): void {
     const month = row.dataset['month'];
-    const released = (): void => {
+    afterRemoval(row, () => {
       this.rowsLeaving.update((count) => Math.max(0, count - 1));
       if (month !== undefined) {
         this.leavingMonths.update((months) => new Set([...months].filter((key) => key !== month)));
       }
-    };
-    const left = (): void => {
-      afterRemoval(row, released);
-      event.animationComplete();
-    };
-    if (longest === 0) {
-      left();
-      return;
-    }
-    let done = false;
-    const leaves = (): void => {
-      if (!done) {
-        done = true;
-        clearTimeout(fallback);
-        left();
-      }
-    };
-    const fallback = setTimeout(leaves, longest + ROW_LEAVE_GRACE_MS);
-    for (const type of ['animationend', 'animationcancel']) {
-      row.addEventListener(type, (ended) => {
-        if (ended.target === row) {
-          leaves();
-        }
-      });
-    }
+    });
   }
 
   private leaveList(payment: AdminPaymentResponse): void {
