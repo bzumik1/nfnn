@@ -154,7 +154,7 @@ describe("Given the donor's overview while the gifts load", () => {
     expect(root().querySelector('.last-gift')?.classList).not.toContain('ui-skeleton-reveal');
   });
 
-  it('when gifts with a long total arrive, then every amount is its digit groups as separate pieces, the last one bound to Kč, that still read as one figure', async () => {
+  it('when gifts with a long total arrive, then every amount is its digit groups and Kč as separate pieces that still read as one figure', async () => {
     await open();
     items.set(twoYearDonations().items);
     summary.set({
@@ -168,7 +168,11 @@ describe("Given the donor's overview while the gifts load", () => {
 
     const figures = all('.stat-value.ui-figures, .last-gift-amount');
     expect(figures.map((figure) => [...figure.children].map((piece) => piece.textContent))).toEqual(
-      [['1', '252', '063,50\u00a0Kč'], ['1', '000', '000,50\u00a0Kč'], ['500\u00a0Kč']],
+      [
+        ['1', '252', '063,50', 'Kč'],
+        ['1', '000', '000,50', 'Kč'],
+        ['500', 'Kč'],
+      ],
     );
     expect(figures.map((figure) => figure.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
       '1 252 063,50 Kč',

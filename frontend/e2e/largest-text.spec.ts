@@ -215,28 +215,49 @@ async function figuresPastTheirContent(card: Locator): Promise<string[]> {
   );
 }
 
-async function currencyAloneOnItsLine(card: Locator): Promise<string[]> {
+async function currencyAloneThoughItFitsBesideTheLastGroup(card: Locator): Promise<string[]> {
   await card.evaluate(() => document.fonts.ready);
-  return card.evaluate((element) => {
-    const alone: string[] = [];
-    for (const figure of element.querySelectorAll('.stat-value.ui-figures, .last-gift-amount')) {
-      const tops: { text: string; top: number }[] = [];
-      const walker = document.createTreeWalker(figure, NodeFilter.SHOW_TEXT);
-      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        for (const group of (node.textContent ?? '').matchAll(/\S+/g)) {
-          const range = document.createRange();
-          range.setStart(node, group.index);
-          range.setEnd(node, group.index + group[0].length);
-          tops.push({ text: group[0], top: Math.round(range.getBoundingClientRect().top) });
-        }
+  return card.evaluate((element) =>
+    Array.from(
+      element.querySelectorAll<HTMLElement>('.stat-value.ui-figures, .last-gift-amount'),
+    ).flatMap((figure) => {
+      const text = (figure.textContent ?? '').replace(/\s+/g, ' ').trim();
+      const [lastGroup, currency] = Array.from(figure.children).slice(-2);
+      if (!lastGroup || currency?.textContent !== 'Kč') {
+        return [`${text}: no piece Kč after a digit group`];
       }
-      const currency = tops.findIndex((group) => group.text === 'Kč');
-      if (currency > 0 && tops[currency].top !== tops[currency - 1].top) {
-        alone.push(tops.map((group) => group.text).join(' '));
+      const groupBox = lastGroup.getBoundingClientRect();
+      const currencyBox = currency.getBoundingClientRect();
+      if (Math.round(currencyBox.top) === Math.round(groupBox.top)) {
+        return [];
       }
-    }
-    return alone;
-  });
+      const space = document.createElement('span');
+      space.style.position = 'absolute';
+      space.style.visibility = 'hidden';
+      space.style.whiteSpace = 'pre';
+      space.textContent = ' ';
+      figure.append(space);
+      const spaceWidth = space.getBoundingClientRect().width;
+      space.remove();
+      const holder = figure.parentElement!;
+      const holderStyle = getComputedStyle(holder);
+      const figureStyle = getComputedStyle(figure);
+      const line =
+        holder.clientWidth -
+        parseFloat(holderStyle.paddingLeft) -
+        parseFloat(holderStyle.paddingRight) -
+        parseFloat(figureStyle.paddingLeft) -
+        parseFloat(figureStyle.paddingRight) -
+        parseFloat(figureStyle.borderLeftWidth) -
+        parseFloat(figureStyle.borderRightWidth);
+      const needed = groupBox.width + spaceWidth + currencyBox.width;
+      return needed > line
+        ? []
+        : [
+            `${text}: Kč alone although its last group and Kč need ${needed.toFixed(1)} of ${line.toFixed(1)} px`,
+          ];
+    }),
+  );
 }
 
 async function digitGroupsSplitAcrossLines(card: Locator): Promise<string[]> {
@@ -295,6 +316,34 @@ const donorWithALongTotal = {
     totalAmountMinor: LONG_TOTAL_MINOR,
     currency: 'CZK',
     count: 1,
+  },
+};
+
+const GIVEN_IN_2026_MINOR = 125150300;
+
+const donorWhoGaveAMillionIn2026 = {
+  summary: {
+    ...noDonations.summary,
+    totalAmountMinor: LONG_TOTAL_MINOR,
+    count: 2,
+    lastReceivedAt: '2026-03-15',
+    byYear: [
+      { year: 2026, count: 1, totalAmountMinor: GIVEN_IN_2026_MINOR },
+      { year: 2025, count: 1, totalAmountMinor: LONG_TOTAL_MINOR - GIVEN_IN_2026_MINOR },
+    ],
+  },
+  list: {
+    items: [
+      donationItem({ id: 'd-1', amountMinor: GIVEN_IN_2026_MINOR }),
+      donationItem({
+        id: 'd-2',
+        receivedAt: '2025-11-20',
+        amountMinor: LONG_TOTAL_MINOR - GIVEN_IN_2026_MINOR,
+      }),
+    ],
+    totalAmountMinor: LONG_TOTAL_MINOR,
+    currency: 'CZK',
+    count: 2,
   },
 };
 
@@ -623,24 +672,38 @@ for (const { width, height } of [
       }
     });
 
-    test('when a signed-in donor whose total is 1 252 063,50 Kč opens Můj přehled, then every amount of the figures and of Poslední dar stays within its card, breaks only between digit groups and keeps Kč on the line of its last group', async ({
-      page,
-    }) => {
-      await mockDonorApi(page, donorWithALongTotal);
-      await page.setViewportSize({ width: 1280, height: 900 });
-      await signIn(page);
-      await page.setViewportSize({ width, height });
-      const stats = page.locator('.overview-stats');
-      const lastGift = page.locator('section[aria-labelledby="last-gift-title"]');
-      await expect(stats.locator('.stat-value').first()).toHaveText('1 252 063,50 Kč');
-      await expect(lastGift.locator('.last-gift-amount')).toHaveText('1 252 063,50 Kč');
+    for (const { who, donor, amounts } of [
+      {
+        who: 'whose total is 1 252 063,50 Kč',
+        donor: donorWithALongTotal,
+        amounts: ['1 252 063,50 Kč', '1 252 063,50 Kč', '1 252 063,50 Kč'],
+      },
+      {
+        who: 'who gave 1 251 503 Kč in 2026',
+        donor: donorWhoGaveAMillionIn2026,
+        amounts: ['1 252 063,50 Kč', '1 251 503 Kč', '1 251 503 Kč'],
+      },
+    ]) {
+      test(`when a signed-in donor ${who} opens Můj přehled, then every amount of the figures and of Poslední dar stays within its card, breaks only between digit groups and leaves Kč alone on a line only where its last group and Kč do not fit one line`, async ({
+        page,
+      }) => {
+        await mockDonorApi(page, donor);
+        await page.setViewportSize({ width: 1280, height: 900 });
+        await signIn(page);
+        await page.setViewportSize({ width, height });
+        const stats = page.locator('.overview-stats');
+        const lastGift = page.locator('section[aria-labelledby="last-gift-title"]');
+        await expect(
+          page.locator('.overview-stats .stat-value.ui-figures, .last-gift .last-gift-amount'),
+        ).toHaveText(amounts);
 
-      for (const card of [stats, lastGift]) {
-        await expect.poll(() => figuresPastTheirContent(card)).toEqual([]);
-        await expect.poll(() => digitGroupsSplitAcrossLines(card)).toEqual([]);
-        await expect.poll(() => currencyAloneOnItsLine(card)).toEqual([]);
-      }
-    });
+        for (const card of [stats, lastGift]) {
+          await expect.poll(() => figuresPastTheirContent(card)).toEqual([]);
+          await expect.poll(() => digitGroupsSplitAcrossLines(card)).toEqual([]);
+          await expect.poll(() => currencyAloneThoughItFitsBesideTheLastGroup(card)).toEqual([]);
+        }
+      });
+    }
 
     test('when a signed-in donor opens Můj přehled and the standing order guide, then every bank detail of Poslat dar stays whole within its row and the bank code of the account number stays on one line', async ({
       page,

@@ -22,6 +22,11 @@
   color: var(--color-text);
 }
 
+.last-gift-amount,
+.stat-value.ui-figures--groups {
+  text-wrap: balance;
+}
+
 .last-gift-date {
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);

@@ -97,9 +97,7 @@ export class DonorOverview {
   }
 
   protected crownGroups(amountMinor: number): string[] {
-    const groups = formatMinorUnits(amountMinor).split(/\s/u);
-    const last = groups.pop() ?? '';
-    return [...groups, `${last}\u00a0Kč`];
+    return [...formatMinorUnits(amountMinor).split(/\s/u), 'Kč'];
   }
 
   protected statusLabel(status: DonationStatus): string {
