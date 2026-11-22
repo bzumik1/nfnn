@@ -594,10 +594,21 @@ describe("Given a donor's signed-in devices card", () => {
       })) as typeof window.matchMedia;
     }
 
-    function slowToLeave(device: SignedInDevice): () => Promise<void> {
+    function rowOf(device: SignedInDevice): HTMLElement {
+      return document.getElementById(`device-row-${device.id}`)!;
+    }
+
+    function leavesAsInTheBrowser(
+      device: SignedInDevice,
+      completes: (row: HTMLElement) => void,
+    ): () => void {
+      const row = rowOf(device);
+      const list = row.parentNode!;
+      const siblings = Array.from(list.childNodes);
+      const following = siblings.slice(siblings.indexOf(row) + 1);
       let finish: () => void = () => undefined;
       const finished = new Promise<void>((resolve) => (finish = resolve));
-      document.getElementById(`device-row-${device.id}`)!.getAnimations = () =>
+      row.getAnimations = () =>
         [
           {
             effect: { getComputedTiming: () => ({ endTime: 300 }) },
@@ -605,10 +616,28 @@ describe("Given a donor's signed-in devices card", () => {
             finished,
           },
         ] as never;
+      const removal = new MutationObserver(() => {
+        if (row.isConnected) {
+          return;
+        }
+        removal.disconnect();
+        list.insertBefore(row, following.find((node) => node.parentNode === list) ?? null);
+        fixture.componentInstance['rowLeaves']({
+          target: row,
+          animationComplete: () => completes(row),
+        });
+      });
+      removal.observe(list, { childList: true });
+      return finish;
+    }
+
+    function slowToLeave(device: SignedInDevice): () => Promise<void> {
+      const row = rowOf(device);
+      const finish = leavesAsInTheBrowser(device, () => row.remove());
       return async () => {
         finish();
         await settle();
-        await new Promise((done) => requestAnimationFrame(() => done(undefined)));
+        await vi.waitFor(() => expect(row.isConnected).toBe(false));
       };
     }
 
@@ -658,6 +687,27 @@ describe("Given a donor's signed-in devices card", () => {
       const focused = document.activeElement;
 
       await leave();
+
+      expect(scrolled).toEqual([
+        { element: focused, options: { block: 'nearest', behavior: 'instant' } },
+      ]);
+    });
+
+    it('and the device asks for less motion and the faded row stays in the list until its question has closed, then the control that took the focus jumps into view only once the row is gone', async () => {
+      deviceAsksForLessMotion(true);
+      const row = rowOf(UNKNOWN);
+      let completed = false;
+      const finish = leavesAsInTheBrowser(UNKNOWN, () => (completed = true));
+      await signOutUnknown();
+      const focused = document.activeElement;
+
+      finish();
+      await vi.waitFor(() => expect(completed).toBe(true));
+      await settle();
+      expect(row.isConnected).toBe(true);
+      expect(scrolled).toEqual([]);
+      row.remove();
+      await settle();
 
       expect(scrolled).toEqual([
         { element: focused, options: { block: 'nearest', behavior: 'instant' } },

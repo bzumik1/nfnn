@@ -43,6 +43,7 @@ import { loadingView } from '../../../shared/ui/skeleton/loading-view';
 import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import {
+  afterRemoval,
   leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
@@ -927,21 +928,6 @@ export class AdminPayments {
       this.loginDialog.open('login', { returnTo });
     });
   }
-}
-
-function afterRemoval(row: HTMLElement, released: () => void): void {
-  const parent = row.parentNode;
-  if (parent === null) {
-    released();
-    return;
-  }
-  const watch = new MutationObserver(() => {
-    if (!row.isConnected) {
-      watch.disconnect();
-      released();
-    }
-  });
-  watch.observe(parent, { childList: true });
 }
 
 function monthOf(item: AdminPaymentResponse): string {

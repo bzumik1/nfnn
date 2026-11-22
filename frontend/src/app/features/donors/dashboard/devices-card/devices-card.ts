@@ -16,6 +16,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  afterRemoval,
   leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
@@ -275,18 +276,16 @@ export class DevicesCard {
       return;
     }
     this.rowSignedOut = null;
-    const { focused } = signedOut;
-    const view = this.document.defaultView;
-    if (focused === null || view === null) {
+    afterRemoval(row, () => this.scrollIntoViewIfFocused(signedOut.focused));
+  }
+
+  private scrollIntoViewIfFocused(focused: HTMLElement | null): void {
+    if (focused === null || this.document.activeElement !== focused) {
       return;
     }
-    view.requestAnimationFrame(() => {
-      if (this.document.activeElement !== focused) {
-        return;
-      }
-      const reduced = view.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-      focused.scrollIntoView?.({ block: 'nearest', behavior: reduced ? 'instant' : 'smooth' });
-    });
+    const reduced =
+      this.document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    focused.scrollIntoView?.({ block: 'nearest', behavior: reduced ? 'instant' : 'smooth' });
   }
 
   private otherDevices(): SignedInDevice[] {
