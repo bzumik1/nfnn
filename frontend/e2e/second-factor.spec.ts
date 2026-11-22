@@ -352,9 +352,9 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
   }
 
   async function settledGroupLines(key: Locator): Promise<GroupLine[]> {
-    await key.scrollIntoViewIfNeeded();
     let groups: GroupLine[] = [];
     await expect(async () => {
+      await key.scrollIntoViewIfNeeded();
       const before = await groupLines(key);
       await key.evaluate(
         () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
