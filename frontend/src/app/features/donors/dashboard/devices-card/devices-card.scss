@@ -14,6 +14,11 @@
   padding-inline: var(--space-6);
 }
 
+.devices-intro,
+.devices-inset.devices-empty {
+  box-sizing: content-box;
+}
+
 .devices-empty {
   max-inline-size: var(--measure-prose);
   font-size: var(--text-sm);
@@ -139,6 +144,12 @@
 
 .devices-status {
   max-inline-size: var(--measure-prose);
+}
+
+@include bp.container-down(devices, tabs) {
+  .device-action {
+    grid-column: 1 / -1;
+  }
 }
 
 @include bp.container-down(ui-card, tabs) {

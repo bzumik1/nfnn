@@ -371,3 +371,41 @@ test.describe('Given a visitor who wants an account without a password', () => {
     expect(options).toEqual([{ token: 'abc' }, { token: 'abc', code: '287082' }]);
   });
 });
+
+test.describe('Given a donor with seven passkeys on a computer', () => {
+  const passkeys = Array.from({ length: 7 }, (_, index) => ({
+    id: `019a1b2c-3d4e-7f00-8000-00000000000${index + 1}`,
+    name: `Klíč ${index + 1}`,
+    createdAt: '2026-10-17T10:00:00Z',
+    lastUsedAt: '2026-10-22T09:00:00Z',
+  }));
+
+  for (const width of [1280, 1920]) {
+    test(`when they open Přístupové klíče in a ${width} px window, then every passkey's buttons end at the card's edge where Spravovat ends`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/passkeys',
+        (route) => route.fulfill({ json: { items: passkeys } }),
+      );
+      await signIn(page);
+      await page.setViewportSize({ width, height: 900 });
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      const manage = page.getByRole('button', { name: 'Spravovat přístupové klíče' });
+      await manage.click();
+      const panel = page.getByRole('region', { name: 'Přístupové klíče' });
+      const lastButtons = panel.locator('.passkey-actions > .ui-button:last-child');
+      await expect(lastButtons).toHaveCount(passkeys.length);
+
+      const manageRight = await manage.evaluate((button) => button.getBoundingClientRect().right);
+      const rights = await lastButtons.evaluateAll((buttons) =>
+        buttons.map((button) => button.getBoundingClientRect().right),
+      );
+
+      for (const right of rights) {
+        expect(Math.abs(right - manageRight)).toBeLessThanOrEqual(1);
+      }
+    });
+  }
+});

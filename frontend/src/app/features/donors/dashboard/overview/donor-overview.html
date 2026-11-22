@@ -113,35 +113,37 @@
 </ng-template>
 
 @if (loadView.state() === 'ready' && hasGift()) {
-  <dl class="ui-card overview-stats" [class.ui-skeleton-reveal]="loadView.appears()">
-    <div class="overview-stat">
-      <dt i18n="@@donor.dashboard.stat.total">Celkem darováno</dt>
-      <dd class="stat-value ui-figures">
-        {{ crowns(donations.summary()?.totalAmountMinor ?? 0) }}&nbsp;Kč
-      </dd>
-    </div>
-    <div class="overview-stat">
-      <dt i18n="@@donor.dashboard.stat.count">Počet darů</dt>
-      <dd class="stat-value">
-        {{ giftCount() }}
-        @if (verifications() > 0) {
-          <span class="stat-note" i18n="@@donor.overview.stat.andVerifications">
-            {verifications(), plural,
-              one {a&nbsp;ověření účtu}
-              few {a&nbsp;{{ verifications() }} ověření účtu}
-              other {a&nbsp;{{ verifications() }} ověření účtu}
-            }
-          </span>
-        }
-      </dd>
-    </div>
-    @if (currentYear(); as year) {
+  <div class="ui-card overview-stats" [class.ui-skeleton-reveal]="loadView.appears()">
+    <dl class="overview-stats-list">
       <div class="overview-stat">
-        <dt i18n="@@donor.overview.stat.currentYear">Darováno v&nbsp;roce {{ year.year }}</dt>
-        <dd class="stat-value ui-figures">{{ crowns(year.totalAmountMinor) }}&nbsp;Kč</dd>
+        <dt i18n="@@donor.dashboard.stat.total">Celkem darováno</dt>
+        <dd class="stat-value ui-figures">
+          {{ crowns(donations.summary()?.totalAmountMinor ?? 0) }}&nbsp;Kč
+        </dd>
       </div>
-    }
-  </dl>
+      <div class="overview-stat">
+        <dt i18n="@@donor.dashboard.stat.count">Počet darů</dt>
+        <dd class="stat-value">
+          {{ giftCount() }}
+          @if (verifications() > 0) {
+            <span class="stat-note" i18n="@@donor.overview.stat.andVerifications">
+              {verifications(), plural,
+                one {a&nbsp;ověření účtu}
+                few {a&nbsp;{{ verifications() }} ověření účtu}
+                other {a&nbsp;{{ verifications() }} ověření účtu}
+              }
+            </span>
+          }
+        </dd>
+      </div>
+      @if (currentYear(); as year) {
+        <div class="overview-stat">
+          <dt i18n="@@donor.overview.stat.currentYear">Darováno v&nbsp;roce {{ year.year }}</dt>
+          <dd class="stat-value ui-figures">{{ crowns(year.totalAmountMinor) }}&nbsp;Kč</dd>
+        </div>
+      }
+    </dl>
+  </div>
 }
 
 @if (loadView.state() === 'ready' && !hasGift()) {

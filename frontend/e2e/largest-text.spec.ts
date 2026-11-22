@@ -3719,6 +3719,48 @@ test.describe('Given a phone 320 pt wide with the text at its default size', () 
   });
 });
 
+test.describe('Given a donor on an iPhone SE 320 pt wide with the largest accessibility text on Údaje a zabezpečení', () => {
+  test('when the card Přihlášená zařízení lists its devices, then Odhlásit and Toto zařízení start under the device icon and stay inside the row', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await signIn(page);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.evaluate(
+      (size) => (document.documentElement.style.fontSize = size),
+      `${LARGEST_SYSTEM_TEXT_PX}px`,
+    );
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await expect(page.locator('app-devices-card .device-sign-out').first()).toHaveText('Odhlásit');
+    await expect(page.locator('app-devices-card .device-current')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const actions = await page.locator('app-devices-card .device-action').evaluateAll((slots) =>
+      slots.map((slot) => {
+        const row = slot.closest('.device-row')!;
+        const box = row.getBoundingClientRect();
+        const icon = row.querySelector('.device-icon')!.getBoundingClientRect();
+        const content = slot.firstElementChild!.getBoundingClientRect();
+        return {
+          current: slot.querySelector('.device-current') !== null,
+          fromIcon: Math.round(content.left - icon.left),
+          pastTheRow: Math.max(
+            0,
+            Math.round(content.right - box.right),
+            Math.round(box.left - content.left),
+          ),
+        };
+      }),
+    );
+
+    expect(actions.some((action) => action.current)).toBe(true);
+    expect(actions.some((action) => !action.current)).toBe(true);
+    expect(actions.map(({ fromIcon, pastTheRow }) => ({ fromIcon, pastTheRow }))).toEqual(
+      actions.map(() => ({ fromIcon: 0, pastTheRow: 0 })),
+    );
+  });
+});
+
 const GIFTS_OF_TWO_YEARS = [
   donationItem({ id: 'g-4', receivedAt: '2026-03-15', amountMinor: 125000000 }),
   donationItem({

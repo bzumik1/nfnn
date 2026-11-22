@@ -13,12 +13,21 @@ import {
   session,
   signIn,
 } from './donor-session';
-import { Locator } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import jsQR from 'jsqr';
 
 const QUIET_ZONE = 4;
 const PIXELS_PER_MODULE = 4;
+const LARGEST_SYSTEM_TEXT_PX = 53;
 const DARK_SQUARE = /M(\d+) (\d+)h1v1h-1z/g;
+
+interface GroupLine {
+  start: number;
+  lines: number;
+  top: number;
+  left: number;
+  middle: number;
+}
 
 async function plainQrText(qr: Locator): Promise<string | undefined> {
   const side = Number((await qr.getAttribute('viewBox'))?.split(' ')[2]);
@@ -304,5 +313,132 @@ test.describe('Given a donor who protects the account with an authenticator app'
       'Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete kód z aplikace',
     );
     await expect(page.getByRole('link', { name: 'Správa' })).toHaveCount(0);
+  });
+});
+
+test.describe('Given a donor turning on the code from an authenticator app', () => {
+  async function showKey(page: Page, width: number): Promise<void> {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/me/second-factor/setup', (route) =>
+      route.fulfill({ json: secondFactorEnrolment }),
+    );
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await page.setViewportSize({ width, height: 900 });
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
+    await page.getByLabel('Současné heslo').fill('correct horse battery');
+    await page.getByRole('button', { name: 'Pokračovat' }).click();
+  }
+
+  async function groupLines(key: Locator): Promise<GroupLine[]> {
+    return key.evaluate((value) => {
+      const text = value.firstChild!;
+      return [...(text.textContent ?? '').matchAll(/\S+/g)].map((group) => {
+        const range = document.createRange();
+        const start = group.index ?? 0;
+        range.setStart(text, start);
+        range.setEnd(text, start + group[0].length);
+        const box = range.getBoundingClientRect();
+        return {
+          start,
+          lines: range.getClientRects().length,
+          top: Math.round(box.top),
+          left: box.left,
+          middle: box.top + box.height / 2,
+        };
+      });
+    });
+  }
+
+  for (const width of [1280, 390]) {
+    test(`when the key shows in a ${width} px window, then its one text breaks into two balanced lines of four whole groups`, async ({
+      page,
+    }) => {
+      await showKey(page, width);
+      const key = page.locator('.account-secret-value');
+      await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
+      await page.evaluate(() => document.fonts.ready);
+
+      const groups = await groupLines(key);
+      const groupsPerLine = [...new Set(groups.map((group) => group.top))].map(
+        (top) => groups.filter((group) => group.top === top).length,
+      );
+
+      expect(groups.map((group) => group.lines)).toEqual(groups.map(() => 1));
+      expect(groupsPerLine).toEqual([4, 4]);
+    });
+  }
+
+  for (const width of [1280, 390, 320]) {
+    test(`when the donor selects from the start of the first group on the key's second line in a ${width} px window, then the selection starts in that group, not on the first line`, async ({
+      page,
+    }) => {
+      await showKey(page, width);
+      const key = page.locator('.account-secret-value');
+      await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
+      await page.evaluate(() => document.fonts.ready);
+
+      const groups = await groupLines(key);
+      const firstOnSecondLine = groups.find((group) => group.top !== groups[0].top)!;
+      expect(firstOnSecondLine).toBeDefined();
+
+      const caret = await page.evaluate(
+        ({ x, y }) => {
+          const range = document.caretRangeFromPoint(x, y);
+          return {
+            inKey: range?.startContainer.parentElement?.classList.contains('account-secret-value'),
+            offset: range?.startOffset,
+          };
+        },
+        { x: firstOnSecondLine.left + 1, y: firstOnSecondLine.middle },
+      );
+      expect(caret).toEqual({ inKey: true, offset: firstOnSecondLine.start });
+
+      await page.mouse.dblclick(firstOnSecondLine.left + 1, firstOnSecondLine.middle);
+      const selection = await page.evaluate(() => {
+        const range = window.getSelection()!.getRangeAt(0);
+        return { start: range.startOffset, text: range.toString().trim() };
+      });
+      expect(selection).toEqual({ start: firstOnSecondLine.start, text: 'GEZD' });
+    });
+  }
+
+  test('when the key shows in a 375 px window with the largest system text, then no part of it reaches past its card', async ({
+    page,
+  }) => {
+    await page.addInitScript((px) => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent = `html { font-size: ${px}px; }`;
+        document.head.append(style);
+      });
+    }, LARGEST_SYSTEM_TEXT_PX);
+    await showKey(page, 375);
+    const key = page.locator('.account-secret-value');
+    await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
+    await page.evaluate(() => document.fonts.ready);
+
+    const outside = await key.evaluate((value) => {
+      const card = value.closest('.ui-card')!.getBoundingClientRect();
+      const reaching: string[] = [];
+      const walker = document.createTreeWalker(value, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent ?? '';
+        for (let index = 0; index < text.length; index++) {
+          const range = document.createRange();
+          range.setStart(node, index);
+          range.setEnd(node, index + 1);
+          for (const rect of Array.from(range.getClientRects())) {
+            if (rect.left < card.left - 0.5 || rect.right > card.right + 0.5) {
+              reaching.push(text[index]);
+            }
+          }
+        }
+      }
+      return reaching;
+    });
+
+    expect(outside).toEqual([]);
   });
 });
