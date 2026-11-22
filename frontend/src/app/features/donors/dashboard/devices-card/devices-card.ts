@@ -105,7 +105,9 @@ export class DevicesCard {
   protected readonly rowLeft = signal(false);
   protected readonly rowLeaves = leaveWithClass('device-slot--leaving', {
     leaves: (row) => this.olderShown() || row.closest('.device-list--older') === null,
+    left: () => this.revealFocusAfterRowLeft(),
   });
+  private focusedAfterRowLeaves: HTMLElement | null = null;
 
   constructor() {
     this.loadDevices(true);
@@ -256,8 +258,27 @@ export class DevicesCard {
     this.signedOut.set(
       $localize`:@@donor.account.devices.signedOut:Zařízení jsme odhlásili: ${this.nameInSentence(device)}:device:. Pokud jste se na něm nepřihlásili vy, změňte si heslo.`,
     );
-    this.focusAfterRender(() => neighbour() ?? this.title().nativeElement);
+    this.focusAfterRender(() => {
+      this.focusedAfterRowLeaves = neighbour() ?? this.title().nativeElement;
+      return this.focusedAfterRowLeaves;
+    });
     this.changes.changed();
+  }
+
+  private revealFocusAfterRowLeft(): void {
+    const focused = this.focusedAfterRowLeaves;
+    const view = this.document.defaultView;
+    this.focusedAfterRowLeaves = null;
+    if (focused === null || view === null) {
+      return;
+    }
+    view.requestAnimationFrame(() => {
+      if (this.document.activeElement !== focused) {
+        return;
+      }
+      const reduced = view.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      focused.scrollIntoView({ block: 'nearest', behavior: reduced ? 'instant' : 'smooth' });
+    });
   }
 
   private otherDevices(): SignedInDevice[] {
@@ -300,6 +321,7 @@ export class DevicesCard {
   }
 
   private begin(target: string): void {
+    this.focusedAfterRowLeaves = null;
     this.changes.changing();
     this.signingOut.set(target);
     this.actionError.set('');

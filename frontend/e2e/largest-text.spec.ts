@@ -26,6 +26,7 @@ import {
   claudeConnection,
   connectionRequest,
   donationItem,
+  longUnusedDevices,
   mockConnectApi,
   mockDonorApi,
   noDonations,
@@ -34,6 +35,7 @@ import {
   rememberedDonorSession,
   secondFactorRequired,
   showAccountList,
+  signedInDevices,
   signIn,
   whenAdministrationCopied,
 } from './donor-session';
@@ -61,6 +63,16 @@ async function showLargestSystemText(page: Page): Promise<void> {
       document.head.append(style);
     });
   }, LARGEST_SYSTEM_TEXT_PX);
+}
+
+async function anchorNoScrollAsSafariDoes(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = 'html, body { overflow-anchor: none; }';
+      document.head.append(style);
+    });
+  });
 }
 
 async function linesOf(control: Locator): Promise<number> {
@@ -692,6 +704,56 @@ for (const { width, height } of [
     });
   });
 }
+
+test.describe('Given a donor on an iPhone 375 pt wide whose installed app shows the largest accessibility text and who has older devices', () => {
+  test.use({ viewport: { width: 375, height: 667 } });
+
+  test.beforeEach(async ({ page }) => {
+    await showLargestSystemText(page);
+    await anchorNoScrollAsSafariDoes(page);
+  });
+
+  test('when they sign out the iPhone, then Starší takes the focus and stands within the window', async ({
+    page,
+  }) => {
+    const iphone = signedInDevices.find((device) => !device.current);
+    let listed = [...signedInDevices, ...longUnusedDevices];
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/devices',
+      (route) => route.fulfill({ json: { items: listed } }),
+    );
+    await page.route(
+      (url) => url.pathname.startsWith('/api/donors/me/devices/'),
+      async (route) => {
+        listed = listed.filter((device) => device.id !== iphone?.id);
+        await route.fulfill({ status: 204 });
+      },
+    );
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+    await page.setViewportSize({ width: 375, height: 667 });
+    const devices = page.locator('.devices');
+    await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+    const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+    await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+
+    await question.getByRole('button', { name: 'Odhlásit', exact: true }).click();
+
+    await expect(devices.getByRole('button', { name: /Starší \(2\)/ })).toBeFocused();
+    await expect(page.locator(`#device-row-${iphone?.id}`)).toHaveCount(0);
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const box = document.activeElement!.getBoundingClientRect();
+          return box.top >= 0 && box.bottom <= window.innerHeight;
+        }),
+      )
+      .toBe(true);
+  });
+});
 
 test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows the largest accessibility text', () => {
   test.use({ viewport: { width: 390, height: 844 } });
