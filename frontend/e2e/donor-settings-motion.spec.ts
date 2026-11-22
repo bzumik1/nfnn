@@ -19,6 +19,7 @@ interface Box {
 
 interface Line {
   readonly top: number;
+  readonly bottom: number;
   readonly alpha: number;
 }
 
@@ -26,6 +27,7 @@ interface Frame {
   readonly at: number;
   readonly boxes: Readonly<Record<string, Box | null>>;
   readonly lines: readonly Line[];
+  readonly afters: readonly string[];
 }
 
 interface FrameWatch {
@@ -98,24 +100,34 @@ async function framesWhile(
             bottom = Math.min(bottom, clip.bottom);
           }
         }
-        return bottom > top ? [{ top, alpha }] : [];
+        return bottom > top ? [{ top, bottom, alpha }] : [];
       };
+      const dividerElements = (): Element[] =>
+        dividers === null ? [] : [...document.querySelectorAll(dividers)];
       const drawnLines = (): Line[] =>
-        dividers === null
-          ? []
-          : [...document.querySelectorAll(dividers)].flatMap((element) => {
-              const style = getComputedStyle(element);
-              const box = element.getBoundingClientRect();
-              const above = parseFloat(style.borderTopWidth);
-              const below = parseFloat(style.borderBottomWidth);
-              const after = getComputedStyle(element, '::after');
-              const belowAfter = after.content === 'none' ? 0 : parseFloat(after.borderBottomWidth);
-              return [
-                ...(above > 0 ? drawnLine(element, box.top, above) : []),
-                ...(below > 0 ? drawnLine(element, box.bottom - below, below) : []),
-                ...(belowAfter > 0 ? drawnLine(element, box.bottom - belowAfter, belowAfter) : []),
+        dividerElements().flatMap((element) => {
+          const style = getComputedStyle(element);
+          const box = element.getBoundingClientRect();
+          const above = parseFloat(style.borderTopWidth);
+          const below = parseFloat(style.borderBottomWidth);
+          const after = getComputedStyle(element, '::after');
+          const belowAfter =
+            after.borderBottomStyle === 'none' ? 0 : parseFloat(after.borderBottomWidth) || 0;
+          return [
+            ...(above > 0 ? drawnLine(element, box.top, above) : []),
+            ...(below > 0 ? drawnLine(element, box.bottom - below, below) : []),
+            ...(belowAfter > 0 ? drawnLine(element, box.bottom - belowAfter, belowAfter) : []),
+          ];
+        });
+      const drawnAfters = (): string[] =>
+        dividerElements().flatMap((element) => {
+          const after = getComputedStyle(element, '::after');
+          return after.content === 'none' && after.borderBottomStyle === 'none'
+            ? []
+            : [
+                `${element.id || element.className} ::after content ${after.content} border-bottom ${after.borderBottomStyle} ${after.borderBottomWidth}`,
               ];
-            });
+        });
       const sample = (frameTime: DOMHighResTimeStamp): void => {
         const boxes: Record<string, Box | null> = {};
         for (const [name, selector] of Object.entries(watched)) {
@@ -129,7 +141,12 @@ async function framesWhile(
                   opacity: Number(getComputedStyle(element).opacity),
                 };
         }
-        watch.settingsFrames.push({ at: frameTime - began, boxes, lines: drawnLines() });
+        watch.settingsFrames.push({
+          at: frameTime - began,
+          boxes,
+          lines: drawnLines(),
+          afters: drawnAfters(),
+        });
         if (performance.now() - began < watchedMs) {
           requestAnimationFrame(sample);
         } else {
@@ -377,44 +394,62 @@ function jumpOnRemoval(frames: readonly Frame[]): string[] {
       ];
 }
 
-function noDividerAtTheClipBottom(frames: readonly Frame[]): string[] {
-  return frames.flatMap(({ at, boxes, lines }) => {
+function notOneDividerOnTheRowsBottom(frames: readonly Frame[]): string[] {
+  return frames.flatMap(({ at, boxes, lines, afters }) => {
     const row = boxes['row'];
-    const clip = boxes['clip'];
     const nextRow = boxes['nextRow'];
-    if (row === null || clip === null || nextRow === null || row.opacity <= STANDING_OPACITY) {
+    if (row === null || nextRow === null) {
       return [];
     }
-    const bottom = clip.top + clip.height;
-    const atTheEdge = lines.some(
-      (line) => line.alpha > STANDING_OPACITY && Math.abs(line.top - bottom) < ONE_LINE_PX,
-    );
+    const when = `at +${Math.round(at)} ms (${afters.join('; ') || 'no ::after style'})`;
+    const rowBottom = row.top + row.height;
+    const onTheNextRow = lines.filter((line) => Math.abs(line.bottom - nextRow.top) <= SUBPIXEL_PX);
+    const standing = onTheNextRow.filter((line) => line.alpha > STANDING_OPACITY);
     return [
-      ...(atTheEdge ? [] : [`no divider at the clip's bottom ${bottom} at +${Math.round(at)} ms`]),
-      ...(Math.abs(bottom - nextRow.top) <= SUBPIXEL_PX
+      ...(Math.abs(rowBottom - nextRow.top) <= SUBPIXEL_PX
         ? []
-        : [
-            `clip bottom ${bottom} apart from the next row's top ${nextRow.top} at +${Math.round(at)} ms`,
-          ]),
+        : [`row bottom ${rowBottom} apart from the next row's top ${nextRow.top} ${when}`]),
+      ...(onTheNextRow.length === 1
+        ? []
+        : [`${onTheNextRow.length} dividers on the next row's top ${nextRow.top} ${when}`]),
+      ...(row.opacity > STANDING_OPACITY && standing.length !== 1
+        ? [`no standing divider on the next row's top while the row is at ${row.opacity} ${when}`]
+        : []),
     ];
   });
 }
 
-function movesFromTheFirstFrame(frames: readonly Frame[], name: string): string[] {
-  const shown = present(frames, name);
-  const first = shown[0]?.box.top;
-  return shown.flatMap(({ at, box }) =>
-    Math.abs(box.top - first) <= SUBPIXEL_PX
+function topsWithin(
+  frames: readonly Frame[],
+  name: string,
+  within: string,
+): { at: number; top: number }[] {
+  return frames.flatMap(({ at, boxes }) => {
+    const box = boxes[name];
+    const container = boxes[within];
+    return box === null || container === null ? [] : [{ at, top: box.top - container.top }];
+  });
+}
+
+function movesWithinFromTheFirstFrame(
+  frames: readonly Frame[],
+  name: string,
+  within: string,
+): string[] {
+  const shown = topsWithin(frames, name, within);
+  const first = shown[0]?.top;
+  return shown.flatMap(({ at, top }) =>
+    Math.abs(top - first) <= SUBPIXEL_PX
       ? []
-      : [`${name} top ${first} → ${box.top} at +${Math.round(at)} ms`],
+      : [`${name} top in ${within} ${first} → ${top} at +${Math.round(at)} ms`],
   );
 }
 
-function movesDown(frames: readonly Frame[], name: string): string[] {
-  const shown = present(frames, name);
-  return shown.flatMap(({ at, box }, index) =>
-    index > 0 && box.top > shown[index - 1].box.top + SUBPIXEL_PX
-      ? [`${name} top ${shown[index - 1].box.top} → ${box.top} at +${Math.round(at)} ms`]
+function movesDownWithin(frames: readonly Frame[], name: string, within: string): string[] {
+  const shown = topsWithin(frames, name, within);
+  return shown.flatMap(({ at, top }, index) =>
+    index > 0 && top > shown[index - 1].top + SUBPIXEL_PX
+      ? [`${name} top in ${within} ${shown[index - 1].top} → ${top} at +${Math.round(at)} ms`]
       : [],
   );
 }
@@ -675,14 +710,14 @@ async function disconnectClaudeWatchingDividers(page: Page): Promise<Frame[]> {
     page,
     {
       row: claudeConnectionRow,
-      clip: `${claudeConnectionRow} > div`,
+      card: '.connections',
       client: `${claudeConnectionRow} .connection-client`,
       next: `${otherConnectionRow} .connection-body`,
       nextRow: otherConnectionRow,
       nextClient: `${otherConnectionRow} .connection-client`,
     },
     () => page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click(),
-    `.connection, ${claudeConnectionRow} > div`,
+    '.connection, .connection-slot',
   );
 
   await expect(page.locator('.connection-client')).toHaveText(['chatgpt.com']);
@@ -864,9 +899,9 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
   }) => {
     const frames = await disconnectClaudeWatchingDividers(page);
 
-    expect(noDividerAtTheClipBottom(frames)).toEqual([]);
-    expect(movesFromTheFirstFrame(frames, 'client')).toEqual([]);
-    expect(movesDown(frames, 'nextClient')).toEqual([]);
+    expect(notOneDividerOnTheRowsBottom(frames)).toEqual([]);
+    expect(movesWithinFromTheFirstFrame(frames, 'client', 'card')).toEqual([]);
+    expect(movesDownWithin(frames, 'nextClient', 'card')).toEqual([]);
   });
 
   test('when the iPhone was signed out elsewhere and Údaje a zabezpečení open again, then its row is out of reach for as long as it leaves', async ({
@@ -983,9 +1018,9 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
   }) => {
     const frames = await disconnectClaudeWatchingDividers(page);
 
-    expect(noDividerAtTheClipBottom(frames)).toEqual([]);
-    expect(movesFromTheFirstFrame(frames, 'client')).toEqual([]);
-    expect(movesDown(frames, 'nextClient')).toEqual([]);
+    expect(notOneDividerOnTheRowsBottom(frames)).toEqual([]);
+    expect(movesWithinFromTheFirstFrame(frames, 'client', 'card')).toEqual([]);
+    expect(movesDownWithin(frames, 'nextClient', 'card')).toEqual([]);
   });
 
   test('when the second press of a double tap on Odpojit for claude.ai comes as its row is removed, then it reaches nothing where the first one was, and Odpojit of chatgpt.com answers again a moment later', async ({
