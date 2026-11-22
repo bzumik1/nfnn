@@ -105,12 +105,15 @@
 }
 
 <ng-template #crownGroupsOf let-amountMinor>
-  @for (group of crownGroups(amountMinor); track $index) {
-    @if (!$first) {
-      &ngsp;
-    }
-    <span>{{ group }}</span>
+  @let groups = crownGroups(amountMinor);
+  @for (group of groups.leading; track $index) {
+    <span>{{ group }}</span
+    >&ngsp;
   }
+  <span class="amount-tail"
+    ><span>{{ groups.last }}</span
+    >&ngsp;<span>Kč</span></span
+  >
 </ng-template>
 
 <ng-template #bankStatus>

@@ -222,7 +222,9 @@ async function currencyAloneThoughItFitsBesideTheLastGroup(card: Locator): Promi
       element.querySelectorAll<HTMLElement>('.stat-value.ui-figures, .last-gift-amount'),
     ).flatMap((figure) => {
       const text = (figure.textContent ?? '').replace(/\s+/g, ' ').trim();
-      const [lastGroup, currency] = Array.from(figure.children).slice(-2);
+      const [lastGroup, currency] = Array.from(figure.querySelectorAll('span'))
+        .filter((piece) => piece.children.length === 0)
+        .slice(-2);
       if (!lastGroup || currency?.textContent !== 'Kč') {
         return [`${text}: no piece Kč after a digit group`];
       }
@@ -314,6 +316,24 @@ const donorWithALongTotal = {
   list: {
     items: [donationItem({ id: 'd-1', amountMinor: LONG_TOTAL_MINOR })],
     totalAmountMinor: LONG_TOTAL_MINOR,
+    currency: 'CZK',
+    count: 1,
+  },
+};
+
+const SHORT_TOTAL_MINOR = 2515030;
+
+const donorWithAShortTotal = {
+  summary: {
+    ...noDonations.summary,
+    totalAmountMinor: SHORT_TOTAL_MINOR,
+    count: 1,
+    lastReceivedAt: '2026-03-15',
+    byYear: [{ year: 2026, count: 1, totalAmountMinor: SHORT_TOTAL_MINOR }],
+  },
+  list: {
+    items: [donationItem({ id: 'd-1', amountMinor: SHORT_TOTAL_MINOR })],
+    totalAmountMinor: SHORT_TOTAL_MINOR,
     currency: 'CZK',
     count: 1,
   },
@@ -682,6 +702,11 @@ for (const { width, height } of [
         who: 'who gave 1 251 503 Kč in 2026',
         donor: donorWhoGaveAMillionIn2026,
         amounts: ['1 252 063,50 Kč', '1 251 503 Kč', '1 251 503 Kč'],
+      },
+      {
+        who: 'whose total is 25 150,30 Kč',
+        donor: donorWithAShortTotal,
+        amounts: ['25 150,30 Kč', '25 150,30 Kč', '25 150,30 Kč'],
       },
     ]) {
       test(`when a signed-in donor ${who} opens Můj přehled, then every amount of the figures and of Poslední dar stays within its card, breaks only between digit groups and leaves Kč alone on a line only where its last group and Kč do not fit one line`, async ({
