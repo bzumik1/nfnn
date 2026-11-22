@@ -352,7 +352,7 @@ describe('Given a list whose row leaves while the rows below it settle into its 
     expect(settling()).toEqual([]);
   });
 
-  it('when a row with no motion of its own leaves, as with less motion, then the rows below still settle for a double tap of 300 ms, and then take presses again', () => {
+  it('when a row with no motion of its own leaves, then the rows below still settle for a double tap of 300 ms, and then take presses again', () => {
     const row = byId('second');
     Object.defineProperty(row, 'getAnimations', { value: () => [] });
 
