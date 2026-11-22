@@ -1477,19 +1477,54 @@ test.describe('Given a donor whose summary counts gifts and an account verificat
 
       const rows = await stats.evaluateAll((elements) =>
         elements.map((element) => {
+          interface Line {
+            left: number;
+            right: number;
+            top: number;
+            bottom: number;
+          }
+          const linesOf = (rects: DOMRect[]): Line[] => {
+            const lines: Line[] = [];
+            for (const rect of [...rects].sort((a, b) => a.top - b.top)) {
+              const middle = (rect.top + rect.bottom) / 2;
+              const line = lines.find(
+                (candidate) =>
+                  (middle >= candidate.top && middle <= candidate.bottom) ||
+                  ((candidate.top + candidate.bottom) / 2 >= rect.top &&
+                    (candidate.top + candidate.bottom) / 2 <= rect.bottom),
+              );
+              if (line) {
+                line.left = Math.min(line.left, rect.left);
+                line.right = Math.max(line.right, rect.right);
+                line.top = Math.min(line.top, rect.top);
+                line.bottom = Math.max(line.bottom, rect.bottom);
+              } else {
+                lines.push({
+                  left: rect.left,
+                  right: rect.right,
+                  top: rect.top,
+                  bottom: rect.bottom,
+                });
+              }
+            }
+            return lines;
+          };
           const value = element.querySelector('dd')!;
-          const range = document.createRange();
-          range.selectNodeContents(value);
-          const lines = Array.from(range.getClientRects()).filter((rect) => rect.width > 0);
-          const firstLine = lines[0];
           const note = value.querySelector('.stat-note');
+          const valueRange = document.createRange();
+          valueRange.selectNodeContents(value);
+          const valueRects = Array.from(valueRange.getClientRects()).filter(
+            (rect) => rect.width > 0,
+          );
           const noteRange = document.createRange();
           if (note) {
             noteRange.selectNodeContents(note);
           }
-          const noteLines = note
+          const noteRects = note
             ? Array.from(noteRange.getClientRects()).filter((rect) => rect.width > 0)
             : [];
+          const firstLine = linesOf(valueRects)[0];
+          const noteLines = linesOf(noteRects);
           const label = element.querySelector('dt')!.getBoundingClientRect();
           return {
             firstLine: { top: firstLine.top, bottom: firstLine.bottom, right: firstLine.right },
