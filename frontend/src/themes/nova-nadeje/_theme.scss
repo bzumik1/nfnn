@@ -389,6 +389,7 @@
   --content-max: 1200px;
   --content-max-wide: 1440px;
   --measure-prose: 65ch;
+  --measure-admin-prose: 54ch;
   --page-form-max: 45rem;
   --table-text-column: 11rem;
   --table-action-column-min: 7rem;
@@ -400,6 +401,9 @@
   );
   --text-account-number: min(var(--text-lg), 7vw);
   --text-account-number-in-text: min(1em, 7vw);
+  --text-gift-amount: min(var(--text-lg), (100cqi - 2 * var(--card-inset)) / 7);
+  --text-gift-year-total: min(var(--text-md), (100cqi - 2 * var(--card-inset)) / 7);
+  --text-receipt-year-total: min(var(--text-2xl), (100cqi - 2 * var(--card-inset)) / 7);
   --text-sheet-account-number: min(var(--text-md), 7vw);
   --side-nav-width: 240px;
   --floating-notice-height: 0rem;

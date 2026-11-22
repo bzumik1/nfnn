@@ -1,5 +1,6 @@
 import { Page, Request, Response } from '@playwright/test';
 import { mockDonorApi, openDonorSection, signIn } from './donor-session';
+import { expectErrorRightUnderItsControl } from './field-messages';
 import { expect, test } from './fixtures';
 import { requestsInFlight, settled } from './settled';
 import { fakeCameraShowing, pdfWithLink, pngDataUrl, qrCodePng } from './receipt-code-files';
@@ -636,5 +637,22 @@ test.describe('Given a visitor on /overit on an iPad held upright', () => {
       const box = (await block.boundingBox())!;
       expect(box.width).toBeLessThanOrEqual(READABLE_COLUMN);
     }
+  });
+});
+
+test.describe('Given a visitor on /overit on a computer', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await mockDonorApi(page);
+  });
+
+  test('when they verify the link field empty, then its error sits right under the field and the hint follows it', async ({
+    page,
+  }) => {
+    await page.goto('/overit');
+    await page.getByRole('button', { name: 'Ověřit odkaz' }).click();
+
+    await expect(page.locator('#proof-link')).toBeFocused();
+    await expectErrorRightUnderItsControl(page, 'proof-link');
   });
 });

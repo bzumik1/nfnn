@@ -228,7 +228,9 @@
                   <app-file-button
                     inputId="news-image"
                     accept="image/jpeg,image/png,image/webp"
-                    describedBy="news-image-hint"
+                    [describedBy]="
+                      uploadError() ? 'news-image-error news-image-hint' : 'news-image-hint'
+                    "
                     [disabled]="uploading()"
                     (chosen)="upload($event)"
                   >
@@ -254,6 +256,9 @@
                     </button>
                   }
                 </div>
+                @if (uploadError(); as error) {
+                  <p id="news-image-error" class="field-error" role="alert">{{ error }}</p>
+                }
                 <p id="news-image-hint" class="field-hint" i18n="@@admin.newsEditor.image.hint">
                   Ukáže se na kartě v&nbsp;seznamu a&nbsp;nahoře v&nbsp;článku. JPEG, PNG nebo WebP
                   do 10 MB; web si z&nbsp;fotky vyrobí zmenšené kopie.
@@ -269,9 +274,6 @@
                     </p>
                   }
                 </div>
-                @if (uploadError(); as error) {
-                  <p class="field-error" role="alert">{{ error }}</p>
-                }
                 @if (coverImage()) {
                   <app-form-field
                     class="alt-field"

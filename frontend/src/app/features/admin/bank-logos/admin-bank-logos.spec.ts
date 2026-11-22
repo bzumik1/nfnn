@@ -15,6 +15,11 @@ import { AdminBankLogos } from './admin-bank-logos';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const LIST_URL = '/api/admin/donations/bank-logos';
 const NEW_SOURCE = 'https://is2-ssl.mzstatic.com/image/thumb/Purple/csas-new/512x512bb.jpg';
@@ -233,9 +238,7 @@ describe('Given an administrator on the bank logos page', () => {
     await settle();
 
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
-    expect(
-      (fixture.nativeElement as HTMLElement).querySelector('.ui-load-state--error'),
-    ).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-load-failure')).toBeNull();
   });
 
   it('when no bank has a logo, then the card says so and the form to add one stays', async () => {
@@ -267,12 +270,31 @@ describe('Given an administrator on the bank logos page', () => {
     http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
     await settle();
 
-    expect(text('.ui-load-state--error')).toContain('Loga bank se nepodařilo načíst.');
-    element<HTMLButtonElement>('.ui-load-state--error button').click();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Loga bank se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
     await settle();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Loga bank se nepodařilo načíst.']);
 
     await listed([csas]);
     expect(row('0800')).toBeTruthy();
+    expect(document.activeElement).toBe(element('h1'));
+  });
+
+  it('when the retry of the list fails again, then a new alert says so', async () => {
+    http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
+    await settle();
+    const first = element('app-load-failure [role="alert"]');
+
+    pressLoadFailureRetry(fixture.nativeElement);
+    await settle();
+    http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
+    await settle();
+
+    expect(element('app-load-failure [role="alert"]')).not.toBe(first);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Loga bank se nepodařilo načíst.']);
   });
 
   it('when a new address is saved, then it goes with the version the page holds, the row shows the answer and the status says so', async () => {

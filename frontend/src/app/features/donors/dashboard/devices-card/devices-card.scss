@@ -34,11 +34,21 @@
 .device-list--older {
   margin-top: 0;
   border-block: 0;
+  border-top: 1px solid var(--color-divider);
   background: var(--color-surface-alt);
 }
 
-.devices-older {
+.device-list > .devices-older {
+  border-top: 0;
   @include motion.expand($closes-by: class);
+}
+
+.device-list > li + .device-slot {
+  border-top: 0;
+
+  .device {
+    border-top: 1px solid var(--color-divider);
+  }
 }
 
 .device-slot--leaving {

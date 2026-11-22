@@ -2,18 +2,22 @@ import { Injectable } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class ScrollHold {
-  private holding = false;
+  private holds = false;
   private held: (() => void) | null = null;
   private readonly waiting = new Set<() => void>();
 
+  get holding(): boolean {
+    return this.holds;
+  }
+
   hold(): void {
-    this.holding = true;
+    this.holds = true;
   }
 
   release(): void {
     const held = this.held;
     const waiting = [...this.waiting];
-    this.holding = false;
+    this.holds = false;
     this.held = null;
     this.waiting.clear();
     held?.();
@@ -21,7 +25,7 @@ export class ScrollHold {
   }
 
   run(scroll: () => void): void {
-    if (this.holding) {
+    if (this.holds) {
       this.held = scroll;
     } else {
       scroll();
@@ -29,7 +33,7 @@ export class ScrollHold {
   }
 
   whenReleased(then: () => void): () => void {
-    if (!this.holding) {
+    if (!this.holds) {
       then();
       return () => undefined;
     }

@@ -10,6 +10,8 @@ const NO_WIDTH = 1;
 export class CompactLayout {
   private readonly compact = signal(false);
   private readonly narrowForText = signal(false);
+  private readonly rootFont = signal(DEFAULT_ROOT_FONT_PX);
+  readonly rootFontPx: Signal<number> = this.rootFont.asReadonly();
   readonly isCompact: Signal<boolean> = this.compact.asReadonly();
   readonly listsAsRows: Signal<boolean> = computed(() => this.compact() || this.narrowForText());
 
@@ -24,12 +26,13 @@ export class CompactLayout {
       parseFloat(view.getComputedStyle?.(document.documentElement).fontSize ?? '') ||
       DEFAULT_ROOT_FONT_PX;
     const follow = (): void => {
+      this.rootFont.set(rootFontPx());
       if (view.innerWidth <= NO_WIDTH) {
         return;
       }
       this.compact.set(query.matches);
       this.narrowForText.set(
-        view.innerWidth <= (BREAKPOINTS.nav * rootFontPx()) / DEFAULT_ROOT_FONT_PX,
+        view.innerWidth <= (BREAKPOINTS.nav * this.rootFont()) / DEFAULT_ROOT_FONT_PX,
       );
     };
     follow();

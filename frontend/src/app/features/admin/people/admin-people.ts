@@ -15,7 +15,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { finalize, Observable } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -44,6 +44,7 @@ import {
 } from '../../content/people-api';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { FormDraft, formDraft } from '../../../core/drafts/form-draft';
 import {
   currentInRefusal,
@@ -124,6 +125,7 @@ const TEXT_RELOAD_FAILED = $localize`:@@admin.people.text.reloadFailed:Uložený
     FocusFirstInvalid,
     FileButton,
     LiveNotice,
+    LoadFailure,
     NeedsConnection,
     DraftOffer,
     ChangedMeanwhileDialog,
@@ -146,7 +148,6 @@ export class AdminPeople {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly personForm = viewChild<NgForm>('personForm');
-  private readonly receiptTitle = viewChild<ElementRef<HTMLHeadingElement>>('receiptTitle');
   private readonly noteForm = viewChild<NgForm>('noteForm');
   private readonly footnoteForm = viewChild<NgForm>('footnoteForm');
 
@@ -160,6 +161,7 @@ export class AdminPeople {
   protected readonly emailShape = EMAIL_SHAPE;
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly retrying = signal(false);
   protected readonly members = signal<PersonResponse[]>([]);
   protected readonly editing = signal<string | null>(null);
   protected readonly portrait = signal<PersonImageResponse | null>(null);
@@ -178,6 +180,7 @@ export class AdminPeople {
   protected readonly noteNotice = signal<Notice | null>(null);
   protected readonly signatory = signal<ReceiptSignatoryResponse | null>(null);
   protected readonly signatoryState = signal<SignatoryState>('loading');
+  protected readonly signatoryRetrying = signal(false);
   protected readonly onlineAgain = reloadWhenOnlineAgain(
     () => this.signatoryState() === 'offline',
     () => this.loadSignatory(),
@@ -272,9 +275,21 @@ export class AdminPeople {
 
   protected load(): void {
     this.state.set('loading');
+    this.fetch();
+  }
+
+  protected retry(): void {
+    this.retrying.set(true);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.reads
       .people()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.retrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (people) => {
           this.members.set(people.members);
@@ -303,17 +318,24 @@ export class AdminPeople {
   }
 
   protected retrySignatory(): void {
-    this.receiptTitle()?.nativeElement.focus();
-    this.loadSignatory();
+    this.signatoryRetrying.set(true);
+    this.fetchSignatory();
   }
 
   protected loadSignatory(): void {
     if (this.signatoryState() !== 'ready') {
       this.signatoryState.set('loading');
     }
+    this.fetchSignatory();
+  }
+
+  private fetchSignatory(): void {
     this.admin
       .receiptSignatory()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.signatoryRetrying.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (view) => {
           this.signatory.set(view);

@@ -1,5 +1,6 @@
 @use 'motion';
 @use 'pressed';
+@use 'focus-ring';
 
 :host {
   display: block;
@@ -116,7 +117,7 @@
   }
 
   &:focus-visible {
-    outline-offset: -3px;
+    @include focus-ring.ring(inside);
   }
 
   &.is-focused {

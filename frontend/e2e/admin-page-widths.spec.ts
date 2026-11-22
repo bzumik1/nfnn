@@ -400,3 +400,105 @@ test.describe('Given an administrator on Správci on a narrow computer', () => {
     });
   }
 });
+
+const TABLET = { width: 820, height: 1180 } as const;
+const PHONE = { width: 390, height: 844 } as const;
+const INSTALLED_APP_ROOT_PX = 17;
+
+interface ColumnEdges {
+  readonly contentLeft: number;
+  readonly contentRight: number;
+  readonly cardLeft: number;
+  readonly cardRight: number;
+  readonly backLeft: number;
+  readonly accountRight: number;
+}
+
+async function columnAgainstTheHeader(page: Page): Promise<ColumnEdges> {
+  const banner = page.getByRole('banner');
+  const back = await banner.getByRole('button', { name: 'Zpět' }).boundingBox();
+  const account = await banner.getByRole('button', { name: /^Účet/ }).boundingBox();
+  const column = await pageBox(page).evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    const card = element.querySelector('form .ui-card')!.getBoundingClientRect();
+    return {
+      contentLeft: box.left + parseFloat(style.paddingLeft),
+      contentRight: box.right - parseFloat(style.paddingRight),
+      cardLeft: card.left,
+      cardRight: card.right,
+    };
+  });
+  return { ...column, backLeft: back!.x, accountRight: account!.x + account!.width };
+}
+
+function expectOnTheHeaderButtons(edges: ColumnEdges): void {
+  for (const left of [edges.contentLeft, edges.cardLeft]) {
+    expect(Math.abs(left - edges.backLeft)).toBeLessThanOrEqual(1);
+  }
+  for (const right of [edges.contentRight, edges.cardRight]) {
+    expect(Math.abs(right - edges.accountRight)).toBeLessThanOrEqual(1);
+  }
+}
+
+test.describe('Given an administrator in an editor on an upright tablet', () => {
+  for (const path of ['/sprava/aktuality/nova', '/sprava/projekty/nova'] as const) {
+    test(`when ${path} opens in a browser tab and in the home-screen app's ${INSTALLED_APP_ROOT_PX} px text, then the form's column runs from the back button's left edge to the account button's right edge`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(TABLET);
+      await openUnlocked(page, path);
+      await expect(
+        page.locator('.admin-frame:not(.admin-sheet) .admin-page form .ui-card').first(),
+      ).toBeVisible();
+
+      expectOnTheHeaderButtons(await columnAgainstTheHeader(page));
+
+      await page.addStyleTag({ content: `html { font-size: ${INSTALLED_APP_ROOT_PX}px; }` });
+      await expect
+        .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).fontSize))
+        .toBe(`${INSTALLED_APP_ROOT_PX}px`);
+      expectOnTheHeaderButtons(await columnAgainstTheHeader(page));
+    });
+  }
+
+  test('when a story opens, then its year stays a short field narrower than half its title', async ({
+    page,
+  }) => {
+    await page.setViewportSize(TABLET);
+    await openUnlocked(page, '/sprava/projekty/nova');
+    const year = await page.locator('#projects-year').boundingBox();
+    const title = await page.locator('#projects-title').boundingBox();
+
+    expect(year!.width).toBeLessThan(title!.width / 2);
+  });
+});
+
+async function gapsAroundTheIntro(page: Page): Promise<{ above: number; below: number }> {
+  return page.locator('.admin-page .ui-page-intro').evaluate((intro) => {
+    const head = intro.previousElementSibling!.getBoundingClientRect();
+    const box = intro.getBoundingClientRect();
+    const next = intro.parentElement!.querySelector('.ui-card')!.getBoundingClientRect();
+    return { above: box.top - head.bottom, below: next.top - box.bottom };
+  });
+}
+
+test.describe('Given an administrator on a content list in the sheet', () => {
+  for (const viewport of [PHONE, TABLET]) {
+    for (const [path, action] of [
+      ['/sprava/aktuality', 'Nová aktualita'],
+      ['/sprava/projekty', 'Nový příběh'],
+    ] as const) {
+      test(`when ${path} opens at ${viewport.width} px, then ${action} keeps the page's gap above the intro`, async ({
+        page,
+      }) => {
+        await page.setViewportSize(viewport);
+        await openUnlocked(page, path);
+        await expect(page.locator('.admin-sheet .ui-card').first()).toBeVisible();
+
+        const gaps = await gapsAroundTheIntro(page);
+        expect(gaps.above).toBeCloseTo(gaps.below, 0);
+      });
+    }
+  }
+});

@@ -2,6 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import { mockPublicContent, servePaymentDetails } from './baseline/screen-mocks';
 import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, session, signIn } from './donor-session';
+import { lowestContentEdge, scrolledToTheEnd } from './page-end';
 
 const PHONE = { width: 390, height: 844 };
 const COMPUTER = { width: 1280, height: 800 };
@@ -27,41 +28,6 @@ function tabBar(page: Page): Locator {
   return page.getByRole('navigation', { name: 'Hlavní sekce' });
 }
 
-async function lowestContentEdge(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    const underFixedChrome = (element: Element): boolean => {
-      for (let node: Element | null = element; node !== null; node = node.parentElement) {
-        const position = getComputedStyle(node).position;
-        if (position === 'fixed' || position === 'sticky') {
-          return true;
-        }
-      }
-      return false;
-    };
-    const holdsContent = (element: Element): boolean =>
-      element.matches('a[href], button, input, select, textarea, img') ||
-      [...element.childNodes].some(
-        (child) => child.nodeType === Node.TEXT_NODE && child.textContent!.trim() !== '',
-      );
-    let lowest = 0;
-    for (const element of document.querySelectorAll('main *')) {
-      const box = element.getBoundingClientRect();
-      const style = getComputedStyle(element);
-      if (
-        box.height === 0 ||
-        style.visibility === 'hidden' ||
-        element.closest('[aria-hidden="true"], .visually-hidden') !== null ||
-        !holdsContent(element) ||
-        underFixedChrome(element)
-      ) {
-        continue;
-      }
-      lowest = Math.max(lowest, box.bottom);
-    }
-    return lowest;
-  });
-}
-
 async function resolvedLength(page: Page, length: string): Promise<number> {
   return page.evaluate((value) => {
     const probe = document.createElement('div');
@@ -76,16 +42,6 @@ async function resolvedLength(page: Page, length: string): Promise<number> {
 
 async function bottomPaddingOfTheBody(page: Page): Promise<number> {
   return page.evaluate(() => parseFloat(getComputedStyle(document.body).paddingBottom));
-}
-
-async function scrolledToTheEnd(page: Page): Promise<void> {
-  await page.evaluate(() =>
-    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }),
-  );
-  await page.waitForFunction(
-    () =>
-      Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1,
-  );
 }
 
 async function expectTheEndAboveTheTabBar(page: Page): Promise<void> {

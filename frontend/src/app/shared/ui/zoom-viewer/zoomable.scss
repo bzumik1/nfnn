@@ -1,3 +1,5 @@
+@use 'focus-ring';
+
 :host {
   display: block;
 }
@@ -14,6 +16,6 @@
   cursor: zoom-in;
 
   &:focus-visible {
-    outline-offset: calc(-1 * var(--space-1));
+    @include focus-ring.ring(inside);
   }
 }

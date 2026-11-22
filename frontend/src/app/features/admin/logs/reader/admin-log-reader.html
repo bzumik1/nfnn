@@ -125,18 +125,9 @@
       </p>
     }
     @case ('error') {
-      <div class="ui-load-state ui-load-state--error" role="alert">
-        <p>{{ loadError() }}</p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          (click)="loadTail()"
-          i18n="@@admin.logs.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
+      <app-load-failure [compact]="true" [retrying]="retrying()" (retry)="retry()">{{
+        loadError()
+      }}</app-load-failure>
     }
     @case ('ready') {
       @if (!searchMode()) {

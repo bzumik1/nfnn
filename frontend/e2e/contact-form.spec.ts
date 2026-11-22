@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { mockDonorApi, openSection, signIn } from './donor-session';
+import { expectErrorRightUnderItsControl } from './field-messages';
 
 test.describe('Given a visitor on the About page', () => {
   test('when they send a contact message, then the site posts it to the API and thanks them', async ({
@@ -101,7 +102,7 @@ test.describe('Given a visitor on the About page', () => {
       'Napište nám prosím své jméno.',
     );
     await expect(page.locator('#contact-email')).toHaveAccessibleDescription(
-      'Odpovíme vám na zadaný e-mail. Zadejte e-mail ve tvaru jan@example.com.',
+      'Zadejte e-mail ve tvaru jan@example.com. Odpovíme vám na zadaný e-mail.',
     );
     await expect(page.locator('#contact-message')).toHaveAttribute('aria-invalid', 'true');
     expect(posted).toEqual([]);
@@ -152,6 +153,16 @@ test.describe('Given a visitor on the About page', () => {
       await expect(
         page.locator('#kontakt').getByRole('link', { name: 'zásady ochrany osobních údajů' }),
       ).toHaveCount(1);
+    });
+
+    test('when the e-mail they typed is not an address, then its error sits right under the field and the hint follows it', async ({
+      page,
+    }) => {
+      await page.goto('/o-nas');
+      await page.locator('#contact-email').fill('jana@');
+      await page.locator('#contact-email').blur();
+
+      await expectErrorRightUnderItsControl(page, 'contact-email');
     });
   });
 

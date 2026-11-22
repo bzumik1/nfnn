@@ -11,6 +11,11 @@ import { AdminSymbolClaims } from './admin-symbol-claims';
 import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 import { labelFaces } from '../../../shared/ui/busy-label/testing/label-faces';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import {
+  alertsHoldingAButton,
+  loadFailureAlerts,
+  pressLoadFailureRetry,
+} from '../../../shared/ui/load-failure/testing/load-failure-retry';
 
 const LIST_URL = '/api/admin/donations/symbol-claims';
 const YES_ID = '019a1c00-0000-7000-8000-00000000c001';
@@ -159,12 +164,35 @@ describe('Given an administrator on the older symbols page', () => {
     http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
 
-    expect(text('[role="alert"]:not(:empty)')).toContain('Odpovědi se nepodařilo načíst.');
-    element<HTMLButtonElement>('.ui-load-state--error button').click();
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Odpovědi se nepodařilo načíst.']);
+    expect(alertsHoldingAButton(fixture.nativeElement)).toBe(0);
+    const retry = pressLoadFailureRetry(fixture.nativeElement);
+    await fixture.whenStable();
     fixture.detectChanges();
+    expect(retry.getAttribute('aria-busy')).toBe('true');
+    expect(document.activeElement).toBe(retry);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Odpovědi se nepodařilo načíst.']);
 
     await listed([yes]);
     expect(rows()).toHaveLength(1);
+    expect(document.activeElement).toBe(element('h1'));
+  });
+
+  it('when the retry of the list fails again, then a new alert says so', async () => {
+    http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const first = element('app-load-failure [role="alert"]');
+
+    pressLoadFailureRetry(fixture.nativeElement);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    http.expectOne(LIST_URL).flush(null, { status: 500, statusText: 'Error' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(element('app-load-failure [role="alert"]')).not.toBe(first);
+    expect(loadFailureAlerts(fixture.nativeElement)).toEqual(['Odpovědi se nepodařilo načíst.']);
   });
 
   it('when a "Yes" is reversed after the confirmation, then the list reloads and the status says what happened', async () => {
