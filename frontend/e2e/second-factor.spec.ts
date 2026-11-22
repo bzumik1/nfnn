@@ -351,6 +351,20 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
     });
   }
 
+  async function settledGroupLines(key: Locator): Promise<GroupLine[]> {
+    await key.scrollIntoViewIfNeeded();
+    let groups: GroupLine[] = [];
+    await expect(async () => {
+      const before = await groupLines(key);
+      await key.evaluate(
+        () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+      );
+      groups = await groupLines(key);
+      expect(groups).toEqual(before);
+    }).toPass();
+    return groups;
+  }
+
   for (const width of [1280, 390]) {
     test(`when the key shows in a ${width} px window, then its one text breaks into two balanced lines of four whole groups`, async ({
       page,
@@ -360,7 +374,7 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
       await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       await page.evaluate(() => document.fonts.ready);
 
-      const groups = await groupLines(key);
+      const groups = await settledGroupLines(key);
       const groupsPerLine = [...new Set(groups.map((group) => group.top))].map(
         (top) => groups.filter((group) => group.top === top).length,
       );
@@ -379,7 +393,7 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
       await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       await page.evaluate(() => document.fonts.ready);
 
-      const groups = await groupLines(key);
+      const groups = await settledGroupLines(key);
       const firstOnSecondLine = groups.find((group) => group.top !== groups[0].top)!;
       expect(firstOnSecondLine).toBeDefined();
 
