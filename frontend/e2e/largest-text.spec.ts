@@ -215,6 +215,30 @@ async function figuresPastTheirContent(card: Locator): Promise<string[]> {
   );
 }
 
+async function currencyAloneOnItsLine(card: Locator): Promise<string[]> {
+  await card.evaluate(() => document.fonts.ready);
+  return card.evaluate((element) => {
+    const alone: string[] = [];
+    for (const figure of element.querySelectorAll('.stat-value.ui-figures, .last-gift-amount')) {
+      const tops: { text: string; top: number }[] = [];
+      const walker = document.createTreeWalker(figure, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        for (const group of (node.textContent ?? '').matchAll(/\S+/g)) {
+          const range = document.createRange();
+          range.setStart(node, group.index);
+          range.setEnd(node, group.index + group[0].length);
+          tops.push({ text: group[0], top: Math.round(range.getBoundingClientRect().top) });
+        }
+      }
+      const currency = tops.findIndex((group) => group.text === 'Kč');
+      if (currency > 0 && tops[currency].top !== tops[currency - 1].top) {
+        alone.push(tops.map((group) => group.text).join(' '));
+      }
+    }
+    return alone;
+  });
+}
+
 async function digitGroupsSplitAcrossLines(card: Locator): Promise<string[]> {
   await card.evaluate(() => document.fonts.ready);
   return card.evaluate((element) => {
@@ -599,7 +623,7 @@ for (const { width, height } of [
       }
     });
 
-    test('when a signed-in donor whose total is 1 252 063,50 Kč opens Můj přehled, then every amount of the figures and of Poslední dar stays within its card and breaks only between digit groups', async ({
+    test('when a signed-in donor whose total is 1 252 063,50 Kč opens Můj přehled, then every amount of the figures and of Poslední dar stays within its card, breaks only between digit groups and keeps Kč on the line of its last group', async ({
       page,
     }) => {
       await mockDonorApi(page, donorWithALongTotal);
@@ -614,6 +638,7 @@ for (const { width, height } of [
       for (const card of [stats, lastGift]) {
         await expect.poll(() => figuresPastTheirContent(card)).toEqual([]);
         await expect.poll(() => digitGroupsSplitAcrossLines(card)).toEqual([]);
+        await expect.poll(() => currencyAloneOnItsLine(card)).toEqual([]);
       }
     });
 
