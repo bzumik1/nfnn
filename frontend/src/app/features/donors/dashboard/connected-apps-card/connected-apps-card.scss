@@ -38,6 +38,22 @@
   @include motion.row-leave;
 }
 
+.connection-slot--leaving:first-child:not(:last-child) {
+  > div {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .connection {
+    border-bottom: 1px solid var(--color-divider);
+  }
+
+  + .connection-slot .connection {
+    border-top-width: 0;
+  }
+}
+
 .connection-slot--settling {
   @include motion.row-settling;
 }

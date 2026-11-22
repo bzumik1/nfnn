@@ -58,6 +58,10 @@
   @include motion.after-rows-left;
 }
 
+.passkey-list + .passkeys-empty--after-rows {
+  margin-top: calc(-1 * var(--space-4));
+}
+
 .passkey {
   display: flex;
   flex-wrap: wrap;

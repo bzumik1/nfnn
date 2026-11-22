@@ -34,8 +34,11 @@
 .device-list--older {
   margin-top: 0;
   border-block: 0;
-  border-top: 1px solid var(--color-divider);
   background: var(--color-surface-alt);
+
+  > .device-slot .device {
+    border-top: 1px solid var(--color-divider);
+  }
 }
 
 .device-list > .devices-older {

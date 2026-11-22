@@ -12,13 +12,20 @@ import {
 import { expect, test } from './fixtures';
 
 interface Box {
+  readonly top: number;
   readonly height: number;
   readonly opacity: number;
+}
+
+interface Line {
+  readonly top: number;
+  readonly alpha: number;
 }
 
 interface Frame {
   readonly at: number;
   readonly boxes: Readonly<Record<string, Box | null>>;
+  readonly lines: readonly Line[];
 }
 
 interface FrameWatch {
@@ -30,6 +37,8 @@ const COMPUTER = { width: 1280, height: 800 };
 const WATCHED_MS = 1000;
 const SUBPIXEL_PX = 0.5;
 const GONE_OPACITY = 0.01;
+const STANDING_OPACITY = 0.5;
+const ONE_LINE_PX = 2;
 
 const otherDevice = signedInDevices.find((device) => !device.current);
 const otherRow = `#device-row-${otherDevice?.id}`;
@@ -47,6 +56,7 @@ const notebookPasskey = {
   lastUsedAt: '2026-10-25T08:00:00Z',
 };
 const iphonePasskeyRow = `#passkey-row-${iphonePasskey.id}`;
+const olderAppRow = `#device-row-${longUnusedDevices[0].id}`;
 
 const otherConnection = {
   ...claudeConnection,
@@ -65,13 +75,42 @@ async function framesWhile(
   page: Page,
   watched: Record<string, string>,
   act: () => Promise<void>,
+  dividers: string | null = null,
 ): Promise<Frame[]> {
   await page.evaluate(
-    ({ watched, watchedMs }) => {
+    ({ watched, watchedMs, dividers }) => {
       const watch = window as unknown as FrameWatch;
       watch.settingsFrames = [];
       watch.settingsWatched = false;
       const began = performance.now();
+      const drawnLine = (element: Element, from: number, width: number): Line[] => {
+        let top = from;
+        let bottom = from + width;
+        let alpha = 1;
+        for (let node: Element | null = element; node !== null; node = node.parentElement) {
+          const style = getComputedStyle(node);
+          alpha *= Number(style.opacity);
+          if (node !== element && style.overflowY !== 'visible') {
+            const clip = node.getBoundingClientRect();
+            top = Math.max(top, clip.top);
+            bottom = Math.min(bottom, clip.bottom);
+          }
+        }
+        return bottom > top ? [{ top, alpha }] : [];
+      };
+      const drawnLines = (): Line[] =>
+        dividers === null
+          ? []
+          : [...document.querySelectorAll(dividers)].flatMap((element) => {
+              const style = getComputedStyle(element);
+              const box = element.getBoundingClientRect();
+              const above = parseFloat(style.borderTopWidth);
+              const below = parseFloat(style.borderBottomWidth);
+              return [
+                ...(above > 0 ? drawnLine(element, box.top, above) : []),
+                ...(below > 0 ? drawnLine(element, box.bottom - below, below) : []),
+              ];
+            });
       const sample = (frameTime: DOMHighResTimeStamp): void => {
         const boxes: Record<string, Box | null> = {};
         for (const [name, selector] of Object.entries(watched)) {
@@ -80,11 +119,12 @@ async function framesWhile(
             element === null
               ? null
               : {
+                  top: element.getBoundingClientRect().top,
                   height: element.getBoundingClientRect().height,
                   opacity: Number(getComputedStyle(element).opacity),
                 };
         }
-        watch.settingsFrames.push({ at: frameTime - began, boxes });
+        watch.settingsFrames.push({ at: frameTime - began, boxes, lines: drawnLines() });
         if (performance.now() - began < watchedMs) {
           requestAnimationFrame(sample);
         } else {
@@ -93,7 +133,7 @@ async function framesWhile(
       };
       requestAnimationFrame(sample);
     },
-    { watched, watchedMs: WATCHED_MS },
+    { watched, watchedMs: WATCHED_MS, dividers },
   );
   await act();
   await expect
@@ -135,6 +175,7 @@ async function recordRowsShownAgain(page: Page, rows: string, leaving: string): 
             !target.classList.contains(leaving)
           ) {
             shownAgain.push({
+              top: target.getBoundingClientRect().top,
               height: target.getBoundingClientRect().height,
               opacity: Number(getComputedStyle(target).opacity),
             });
@@ -265,6 +306,51 @@ function risesAboveTheEnd(frames: readonly Frame[], name: string): string[] {
     .map(({ at, box }) => `${name} ${box.height} above its end ${end} at +${Math.round(at)} ms`);
 }
 
+function doubledLines(frames: readonly Frame[]): string[] {
+  return frames.flatMap(({ at, lines }) => {
+    const standing = lines
+      .filter((line) => line.alpha > STANDING_OPACITY)
+      .map((line) => line.top)
+      .sort((above, below) => above - below);
+    return standing.flatMap((top, index) =>
+      index > 0 && top - standing[index - 1] < ONE_LINE_PX
+        ? [`two dividers at ${standing[index - 1]} and ${top} at +${Math.round(at)} ms`]
+        : [],
+    );
+  });
+}
+
+function linesOutlastingTheRow(frames: readonly Frame[]): string[] {
+  return frames.flatMap(({ at, boxes, lines }) => {
+    const next = boxes['next'];
+    if (next === null) {
+      return [];
+    }
+    const fading = boxes['row']?.opacity ?? 0;
+    return lines
+      .filter((line) => line.top < next.top && line.alpha > fading + GONE_OPACITY)
+      .map(
+        (line) =>
+          `divider above the next row at alpha ${line.alpha} while the row is at ${fading} at +${Math.round(at)} ms`,
+      );
+  });
+}
+
+function movesAfterTheEmptyTextShows(frames: readonly Frame[], name: string): string[] {
+  const shown = frames.flatMap(({ at, boxes }) => {
+    const card = boxes[name];
+    const empty = boxes['empty'];
+    return card !== null && empty !== null && empty.opacity > GONE_OPACITY
+      ? [{ at, height: card.height }]
+      : [];
+  });
+  return shown.flatMap(({ at, height }, index) =>
+    index > 0 && Math.abs(height - shown[index - 1].height) > SUBPIXEL_PX
+      ? [`${name} ${shown[index - 1].height} → ${height} at +${Math.round(at)} ms`]
+      : [],
+  );
+}
+
 type DeviceList = typeof signedInDevices;
 
 async function openSettings(
@@ -283,7 +369,8 @@ async function openSettings(
   await page.route(
     (url) => url.pathname.startsWith('/api/donors/me/devices/'),
     async (route) => {
-      listed = listed.filter((device) => device.id !== otherDevice?.id);
+      const id = new URL(route.request().url()).pathname.split('/').pop();
+      listed = listed.filter((device) => device.id !== id);
       await route.fulfill({ status: 204 });
     },
   );
@@ -324,8 +411,11 @@ async function confirmSigningOutTheIPhone(page: Page): Promise<Frame[]> {
   return frames;
 }
 
-async function openSettingsWithTwoPasskeys(page: Page): Promise<() => void> {
-  let listed = [iphonePasskey, notebookPasskey];
+async function openSettingsWithPasskeys(
+  page: Page,
+  passkeys: readonly (typeof iphonePasskey | typeof notebookPasskey)[],
+): Promise<() => void> {
+  let listed = [...passkeys];
   const removeTheIPhone = (): void => {
     listed = listed.filter((passkey) => passkey.id !== iphonePasskey.id);
   };
@@ -343,8 +433,12 @@ async function openSettingsWithTwoPasskeys(page: Page): Promise<() => void> {
     );
   });
   await page.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
-  await expect(page.locator('.passkey-name')).toHaveText(['iPhone', 'Pracovní notebook']);
+  await expect(page.locator('.passkey-name')).toHaveText(passkeys.map((passkey) => passkey.name));
   return removeTheIPhone;
+}
+
+function openSettingsWithTwoPasskeys(page: Page): Promise<() => void> {
+  return openSettingsWithPasskeys(page, [iphonePasskey, notebookPasskey]);
 }
 
 async function confirmRemovingTheIPhonePasskey(page: Page): Promise<Frame[]> {
@@ -582,6 +676,59 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
     expect(risesAboveTheEnd(frames, 'card')).toEqual([]);
   });
 
+  test('when they sign out the first device in Starší, then one divider stands above the rows in every frame of its leave', async ({
+    page,
+  }) => {
+    await openSettings(page, [...signedInDevices, ...longUnusedDevices]);
+    const devices = page.locator('.devices');
+    await devices.getByRole('button', { name: /Starší \(2\)/ }).click();
+    await expect(page.locator('#devices-older .device-name')).toHaveText([
+      'iPhone · aplikace',
+      'Windows · Edge',
+    ]);
+    await page
+      .locator(olderAppRow)
+      .getByRole('button', { name: /^Odhlásit iPhone · aplikace/ })
+      .click();
+    const question = devices.getByRole('group', { name: /^Odhlásit iPhone · aplikace/ });
+    await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+    await settled(page, '.devices');
+
+    const frames = await framesWhile(
+      page,
+      { row: olderAppRow },
+      () => question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
+      '#devices-older, #devices-older .device',
+    );
+
+    await expect(page.locator('#devices-older .device-name')).toHaveText(['Windows · Edge']);
+    expect(present(frames, 'row').length).toBeGreaterThan(0);
+    expect(frames.at(-1)?.boxes['row']).toBeNull();
+    expect(doubledLines(frames)).toEqual([]);
+  });
+
+  test('when they remove their last passkey, then the card stands still once the empty text shows', async ({
+    page,
+  }) => {
+    await openSettingsWithPasskeys(page, [iphonePasskey]);
+    const row = page.locator(iphonePasskeyRow);
+    await row.getByRole('button', { name: 'Odebrat' }).click();
+    const confirm = row.getByRole('button', { name: 'Ano, odebrat' });
+    await expect(confirm).toBeVisible();
+    await settled(page, 'app-account-card .ui-card');
+
+    const frames = await framesWhile(
+      page,
+      { row: iphonePasskeyRow, card: 'app-account-card .ui-card', empty: '.passkeys-empty' },
+      () => confirm.click(),
+    );
+
+    await expect(page.locator('.passkey-name')).toHaveCount(0);
+    expect(present(frames, 'empty').some(({ box }) => box.opacity > GONE_OPACITY)).toBe(true);
+    expect(frames.at(-1)?.boxes['row']).toBeNull();
+    expect(movesAfterTheEmptyTextShows(frames, 'card')).toEqual([]);
+  });
+
   test('when they disconnect claude.ai, then its row only closes and fades until it is removed, and the card never rises above the height it ends at', async ({
     page,
   }) => {
@@ -591,6 +738,25 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
 
     expect(growths(frames, 'row', 'height')).toEqual([]);
     expect(risesAboveTheEnd(frames, 'card')).toEqual([]);
+  });
+
+  test('when they disconnect claude.ai, then the divider above chatgpt.com fades with its row and none is left once it is removed', async ({
+    page,
+  }) => {
+    await openSettingsWithTwoConnections(page);
+    await settled(page, '.connections');
+
+    const frames = await framesWhile(
+      page,
+      { row: claudeConnectionRow, next: `${otherConnectionRow} .connection-body` },
+      () => page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click(),
+      '.connection',
+    );
+
+    await expect(page.locator('.connection-client')).toHaveText(['chatgpt.com']);
+    expect(present(frames, 'row').length).toBeGreaterThan(0);
+    expect(frames.at(-1)?.boxes['row']).toBeNull();
+    expect(linesOutlastingTheRow(frames)).toEqual([]);
   });
 
   test('when the iPhone was signed out elsewhere and Údaje a zabezpečení open again, then its row is out of reach for as long as it leaves', async ({
