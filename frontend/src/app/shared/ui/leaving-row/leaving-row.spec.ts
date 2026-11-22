@@ -307,10 +307,12 @@ describe('Given a list whose row leaves while the rows below it settle into its 
     }
   }
 
-  it('when a row in the middle starts to leave, then only the rows below it settle', () => {
+  it('when a row in the middle starts to leave, then only the rows below it settle, and they stay out of the reach of presses only, never inert', () => {
     leave('second');
 
     expect(settling()).toEqual(['third', 'fourth']);
+    expect(byId('third').hasAttribute('inert')).toBe(false);
+    expect(byId('fourth').hasAttribute('inert')).toBe(false);
   });
 
   it('when its leave is complete, then the rows below keep settling for a double tap of 300 ms, and then take presses again', async () => {
