@@ -21,6 +21,7 @@ export interface TopArea {
 
 export interface TopAreaFrame {
   readonly at: number;
+  readonly readAt: number;
   readonly veil: number | null;
   readonly blur: number;
   readonly tint: Rgb | null;
@@ -182,6 +183,14 @@ export async function sampleFrames(
           readonly blur: number;
           readonly tint: [number, number, number];
         }
+        const layerOf = (style: CSSStyleDeclaration, share: number): Veil => {
+          const [red, green, blue, alpha] = painted(style.backgroundColor);
+          return {
+            strength: alpha * share,
+            blur: backdropFilterOf(style) !== 'none' ? share : 0,
+            tint: [red, green, blue],
+          };
+        };
         const liveVeil = (): Veil | null => {
           const modals = document.querySelectorAll('dialog:modal');
           if (modals.length === 0) {
@@ -190,16 +199,12 @@ export async function sampleFrames(
           const dialog = modals[modals.length - 1];
           const own = getComputedStyle(dialog);
           const behind = getComputedStyle(dialog, '::backdrop');
-          const [red, green, blue, alpha] = painted(own.backgroundColor);
+          const layers = [layerOf(own, ownShare(own)), layerOf(behind, ownShare(behind))];
+          const stronger = layers[1].strength > layers[0].strength ? layers[1] : layers[0];
           return {
-            strength: alpha * ownShare(own),
-            blur:
-              backdropFilterOf(own) !== 'none'
-                ? ownShare(own)
-                : backdropFilterOf(behind) !== 'none'
-                  ? ownShare(own) * Number(behind.opacity)
-                  : 0,
-            tint: [red, green, blue],
+            strength: 1 - layers.reduce((through, layer) => through * (1 - layer.strength), 1),
+            blur: Math.max(...layers.map((layer) => layer.blur)),
+            tint: stronger.tint,
           };
         };
         const point = { x: innerWidth / 2, y: 1 };
@@ -222,16 +227,7 @@ export async function sampleFrames(
         const copyVeils = (): Veil[] =>
           Array.from(document.querySelectorAll(regions.veilCopies))
             .filter((copy) => coversPoint(copy) && !pageAbove(copy))
-            .map((copy) => {
-              const style = getComputedStyle(copy);
-              const share = shownShare(copy);
-              const [red, green, blue, alpha] = painted(style.backgroundColor);
-              return {
-                strength: alpha * share,
-                blur: backdropFilterOf(style) !== 'none' ? share : 0,
-                tint: [red, green, blue],
-              };
-            });
+            .map((copy) => layerOf(getComputedStyle(copy), shownShare(copy)));
         const barsOf = (): BarLook[] => {
           const named = new Map<string, Element[]>();
           for (const bar of document.querySelectorAll(`${regions.glass}, ${regions.glassCopies}`)) {
@@ -322,6 +318,7 @@ export async function sampleFrames(
             );
             frames.push({
               at,
+              readAt: Number(document.timeline.currentTime ?? at),
               veil: strongest === null ? null : strongest.strength,
               blur: Math.max(
                 0,
@@ -559,7 +556,7 @@ function strengthOf(frame: TopAreaFrame): number {
 }
 
 function framesPassed(from: TopAreaFrame, to: TopAreaFrame): number {
-  return Math.max(1, Math.round((to.at - from.at) / FRAME_MS));
+  return Math.max(1, Math.round((to.readAt - from.readAt) / FRAME_MS));
 }
 
 function percent(value: number): string {
@@ -582,7 +579,7 @@ function veilSteps(frames: readonly TopAreaFrame[], cutsAllowed: boolean): strin
     const tooLong = !cutsAllowed && Math.abs(step) > longestStep + STILL;
     if (back || tooLong) {
       jumps.push(
-        `the backdrop goes from ${percent(strengthOf(previous) / strongest)} to ${percent(strengthOf(frame) / strongest)} of its strength in frame ${index}, ${Math.round(frame.at - previous.at)} ms after the previous one`,
+        `the backdrop goes from ${percent(strengthOf(previous) / strongest)} to ${percent(strengthOf(frame) / strongest)} of its strength in frame ${index}, ${Math.round(frame.readAt - previous.readAt)} ms after the previous one`,
       );
     }
   }

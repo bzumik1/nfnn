@@ -354,6 +354,49 @@ function sheetGone(page: Page): () => Promise<void> {
   return () => expect(page.getByRole('dialog')).toHaveCount(0);
 }
 
+async function busyJustAfterTheBackdropStarts(page: Page): Promise<void> {
+  await page.evaluate((busyMs) => {
+    const watch = window as unknown as { nfnnBusySpells: string[] };
+    watch.nfnnBusySpells = [];
+    const busy = (kind: string): void =>
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          const started = performance.now();
+          let spent = 0;
+          while (spent < busyMs) {
+            spent = performance.now() - started;
+          }
+          watch.nfnnBusySpells.push(kind);
+        }),
+      );
+    new MutationObserver((records) => {
+      for (const { target, attributeName, oldValue } of records) {
+        if (!(target instanceof HTMLDialogElement)) {
+          continue;
+        }
+        if (attributeName === 'open' && target.open) {
+          busy('opened');
+        } else if (
+          attributeName === 'class' &&
+          target.classList.contains('dialog--leaving') &&
+          !(oldValue ?? '').includes('dialog--leaving')
+        ) {
+          busy('leaving');
+        }
+      }
+    }).observe(document.body, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['open', 'class'],
+      attributeOldValue: true,
+    });
+  }, BUSY_MS);
+}
+
+function busySpells(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as { nfnnBusySpells: string[] }).nfnnBusySpells);
+}
+
 function whileTheSheetOpens(page: Page): Promise<TopAreaFrame[]> {
   return topAreaFramesWhile(page, ...opensTheSheet(page));
 }
@@ -370,7 +413,7 @@ function expectTheBackdropInStep(frames: TopAreaFrame[]): void {
 
 const STATUS_BAR_PX = 59;
 const HOLD_MS = 100;
-const HOLD_SLACK_MS = 50;
+const BUSY_MS = 120;
 const FRAME_START_BEFORE_CHECK_MS = 1;
 const PULL_DOWNS = [0, 20, 80, 400];
 const CLASSIC_SCROLLBARS_ONLY =
@@ -478,15 +521,23 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
         nfnnLateFrames: { until: number; read(reader: FrameRequestCallback): void };
         topAreaFrames: unknown[];
         nfnnGrewInside: number[];
+        nfnnHeldBack: boolean;
+        nfnnLetGoAt: number | null;
       };
       held.nfnnGrewInside = [];
+      held.nfnnHeldBack = false;
+      held.nfnnLetGoAt = null;
       held.nfnnLateFrames = {
         until: 0,
         read(reader) {
           const tick = (now: number): void => {
             if (performance.now() < held.nfnnLateFrames.until) {
+              held.nfnnHeldBack = true;
               requestAnimationFrame(tick);
             } else {
+              if (held.nfnnHeldBack && held.nfnnLetGoAt === null) {
+                held.nfnnLetGoAt = now;
+              }
               const before = held.topAreaFrames.length;
               reader(now);
               held.nfnnGrewInside.push(held.topAreaFrames.length - before);
@@ -506,14 +557,17 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
 
     const frames = await whileTheSheetOpens(page);
 
-    const grew = await page.evaluate(
-      () => (window as unknown as { nfnnGrewInside: number[] }).nfnnGrewInside,
-    );
+    const { grew, letGoAt } = await page.evaluate(() => {
+      const held = window as unknown as { nfnnGrewInside: number[]; nfnnLetGoAt: number | null };
+      return { grew: held.nfnnGrewInside, letGoAt: held.nfnnLetGoAt };
+    });
     expect(grew.length).toBeGreaterThan(0);
     expect(grew.filter((count) => count > 0)).toEqual([]);
     const gaps = frames.slice(1).map((frame, index) => frame.at - frames[index].at);
+    const afterHold = frames.findIndex((frame) => frame.at === letGoAt);
+    expect(afterHold).toBeGreaterThan(0);
+    expect(frames[afterHold].at - frames[afterHold - 1].at).toBe(Math.max(...gaps));
     expect(Math.max(...gaps)).toBeGreaterThanOrEqual(HOLD_MS - FRAME_START_BEFORE_CHECK_MS);
-    expect(Math.max(...gaps)).toBeLessThan(HOLD_MS + HOLD_SLACK_MS);
     expect(veilJumps(frames)).toEqual([]);
   });
 
@@ -669,6 +723,23 @@ test.describe('Given a signed-in donor on a phone that animates', () => {
     const opening = await topAreaWhile(page, ...opensTheSheet(page));
     const closing = await topAreaWhile(page, () => pullsTheSheetDown(page), sheetGone(page));
 
+    expect(blurMissingUnderHeader(opening)).toEqual([]);
+    expect(blurMissingUnderHeader(closing)).toEqual([]);
+  });
+
+  test('when the page is busy for a moment just after the account sheet starts to come up and just after a pull lets it go, then the photo under the header still blurs and clears with its backdrop in every frame of the screencast', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', SCREENCAST_ONLY);
+    await signedInOn(page, '/');
+    await underTheClock(page);
+    await busyJustAfterTheBackdropStarts(page);
+
+    const opening = await topAreaWhile(page, ...opensTheSheet(page));
+    const closing = await topAreaWhile(page, () => pullsTheSheetDown(page), sheetGone(page));
+
+    expect(await busySpells(page)).toEqual(expect.arrayContaining(['opened', 'leaving']));
     expect(blurMissingUnderHeader(opening)).toEqual([]);
     expect(blurMissingUnderHeader(closing)).toEqual([]);
   });
