@@ -25,7 +25,7 @@ import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
-import { markRowsLeaving } from '../../../../shared/ui/leaving-row/leaving-row';
+import { leaveWithClass, markRowsLeaving } from '../../../../shared/ui/leaving-row/leaving-row';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 
@@ -54,6 +54,7 @@ export class ConnectedAppsCard {
   protected readonly disconnecting = signal<string | null>(null);
   protected readonly disconnected = signal('');
   protected readonly rowLeft = signal(false);
+  protected readonly rowLeaves = leaveWithClass('connection-slot--leaving');
 
   constructor() {
     this.loadConnections(true);

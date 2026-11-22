@@ -23,7 +23,7 @@
     @if (apps.length > 0) {
       <ul class="connection-list">
         @for (app of apps; track app.id) {
-          <li class="connection-slot" [id]="rowId(app)" animate.leave="connection-slot--leaving">
+          <li class="connection-slot" [id]="rowId(app)" (animate.leave)="rowLeaves($event)">
             <div>
               <div class="connection">
                 <div class="connection-body">

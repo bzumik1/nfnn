@@ -1,5 +1,8 @@
 import { Page } from '@playwright/test';
 import {
+  administrator,
+  claudeConnection,
+  donor,
   longUnusedDevices,
   mockDonorApi,
   openDonorSection,
@@ -30,6 +33,27 @@ const GONE_OPACITY = 0.01;
 
 const otherDevice = signedInDevices.find((device) => !device.current);
 const otherRow = `#device-row-${otherDevice?.id}`;
+
+const iphonePasskey = {
+  id: '019a1b2c-3d4e-7f00-8000-000000000001',
+  name: 'iPhone',
+  createdAt: '2026-10-23T10:00:00Z',
+  lastUsedAt: null,
+};
+const notebookPasskey = {
+  id: '019a1b2c-3d4e-7f00-8000-000000000002',
+  name: 'Pracovní notebook',
+  createdAt: '2026-10-24T10:00:00Z',
+  lastUsedAt: '2026-10-25T08:00:00Z',
+};
+const iphonePasskeyRow = `#passkey-row-${iphonePasskey.id}`;
+
+const otherConnection = {
+  ...claudeConnection,
+  id: '0192f0f1-0000-7000-8000-000000000012',
+  client: 'chatgpt.com',
+};
+const claudeConnectionRow = `#connection-row-${claudeConnection.id}`;
 
 async function framesWhile(
   page: Page,
@@ -240,8 +264,11 @@ type DeviceList = typeof signedInDevices;
 async function openSettings(
   page: Page,
   devices: DeviceList = signedInDevices,
+  user: typeof donor = donor,
+  routes: () => Promise<void> = async () => undefined,
 ): Promise<(devices: DeviceList) => void> {
   await mockDonorApi(page);
+  await routes();
   let listed = devices;
   await page.route(
     (url) => url.pathname === '/api/donors/me/devices',
@@ -257,11 +284,20 @@ async function openSettings(
   const synced = page.waitForResponse(
     (response) => new URL(response.url()).pathname === '/api/donations/me/sync',
   );
-  await signIn(page);
+  await signIn(page, user);
   await openDonorSection(page, 'Údaje a zabezpečení');
   await synced;
   await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
   return (devices) => (listed = devices);
+}
+
+function expectOnlyClosedUntilRemoved(frames: readonly Frame[], shownAgain: readonly Box[]): void {
+  expect(present(frames, 'row').length).toBeGreaterThan(0);
+  expect(frames.at(-1)?.boxes['row']).toBeNull();
+  expect(
+    shownAgain.filter((box) => box.opacity > GONE_OPACITY || box.height > SUBPIXEL_PX),
+  ).toEqual([]);
+  expect(growths(frames, 'row', 'opacity')).toEqual([]);
 }
 
 async function confirmSigningOutTheIPhone(page: Page): Promise<Frame[]> {
@@ -278,14 +314,87 @@ async function confirmSigningOutTheIPhone(page: Page): Promise<Frame[]> {
 
   await expect(devices.locator('.device-name')).toHaveText(['Mac · Safari']);
   await expect(devices.getByRole('heading', { name: 'Přihlášená zařízení' })).toBeFocused();
-  expect(present(frames, 'row').length).toBeGreaterThan(0);
-  expect(frames.at(-1)?.boxes['row']).toBeNull();
-  expect(
-    (await rowsShownAgain(page)).filter(
-      (box) => box.opacity > GONE_OPACITY || box.height > SUBPIXEL_PX,
-    ),
-  ).toEqual([]);
-  expect(growths(frames, 'row', 'opacity')).toEqual([]);
+  expectOnlyClosedUntilRemoved(frames, await rowsShownAgain(page));
+  return frames;
+}
+
+async function openSettingsWithTwoPasskeys(page: Page): Promise<() => void> {
+  let listed = [iphonePasskey, notebookPasskey];
+  const removeTheIPhone = (): void => {
+    listed = listed.filter((passkey) => passkey.id !== iphonePasskey.id);
+  };
+  await openSettings(page, signedInDevices, donor, async () => {
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/passkeys',
+      (route) => route.fulfill({ json: { items: listed } }),
+    );
+    await page.route(
+      (url) => url.pathname === `/api/donors/me/passkeys/${iphonePasskey.id}`,
+      async (route) => {
+        removeTheIPhone();
+        await route.fulfill({ status: 204 });
+      },
+    );
+  });
+  await page.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
+  await expect(page.locator('.passkey-name')).toHaveText(['iPhone', 'Pracovní notebook']);
+  return removeTheIPhone;
+}
+
+async function confirmRemovingTheIPhonePasskey(page: Page): Promise<Frame[]> {
+  const row = page.locator(iphonePasskeyRow);
+  await row.getByRole('button', { name: 'Odebrat' }).click();
+  const confirm = row.getByRole('button', { name: 'Ano, odebrat' });
+  await expect(confirm).toBeVisible();
+  await settled(page, 'app-account-card .ui-card');
+  await recordRowsShownAgain(page, '.passkey-slot', 'passkey-slot--leaving');
+
+  const frames = await framesWhile(
+    page,
+    { row: iphonePasskeyRow, card: 'app-account-card .ui-card' },
+    () => confirm.click(),
+  );
+
+  await expect(page.locator('.passkey-name')).toHaveText(['Pracovní notebook']);
+  await expect(page.locator(`#passkey-rename-button-${notebookPasskey.id}`)).toBeFocused();
+  expectOnlyClosedUntilRemoved(frames, await rowsShownAgain(page));
+  return frames;
+}
+
+async function openSettingsWithTwoConnections(page: Page): Promise<() => void> {
+  let listed = [claudeConnection, otherConnection];
+  const disconnectClaudeElsewhere = (): void => {
+    listed = listed.filter((connection) => connection.id !== claudeConnection.id);
+  };
+  await openSettings(page, signedInDevices, administrator, async () => {
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/connections',
+      (route) => route.fulfill({ json: { items: listed } }),
+    );
+    await page.route(
+      (url) => url.pathname === `/api/donors/me/connections/${claudeConnection.id}`,
+      async (route) => {
+        disconnectClaudeElsewhere();
+        await route.fulfill({ status: 204 });
+      },
+    );
+  });
+  await expect(page.locator('.connection-client')).toHaveText(['claude.ai', 'chatgpt.com']);
+  return disconnectClaudeElsewhere;
+}
+
+async function disconnectClaude(page: Page): Promise<Frame[]> {
+  const connections = page.locator('.connections');
+  await settled(page, '.connections');
+  await recordRowsShownAgain(page, '.connection-slot', 'connection-slot--leaving');
+
+  const frames = await framesWhile(page, { row: claudeConnectionRow, card: '.connections' }, () =>
+    page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click(),
+  );
+
+  await expect(connections.locator('.connection-client')).toHaveText(['chatgpt.com']);
+  await expect(connections.getByRole('heading', { name: 'Připojené aplikace' })).toBeFocused();
+  expectOnlyClosedUntilRemoved(frames, await rowsShownAgain(page));
   return frames;
 }
 
@@ -363,6 +472,28 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
     expect(await leavingRows(page)).toEqual([]);
   });
 
+  test('when they confirm Ano, odebrat for the iPhone passkey, then its row only closes and fades until it is removed, and the card never rises above the height it ends at', async ({
+    page,
+  }) => {
+    await openSettingsWithTwoPasskeys(page);
+
+    const frames = await confirmRemovingTheIPhonePasskey(page);
+
+    expect(growths(frames, 'row', 'height')).toEqual([]);
+    expect(risesAboveTheEnd(frames, 'card')).toEqual([]);
+  });
+
+  test('when they disconnect claude.ai, then its row only closes and fades until it is removed, and the card never rises above the height it ends at', async ({
+    page,
+  }) => {
+    await openSettingsWithTwoConnections(page);
+
+    const frames = await disconnectClaude(page);
+
+    expect(growths(frames, 'row', 'height')).toEqual([]);
+    expect(risesAboveTheEnd(frames, 'card')).toEqual([]);
+  });
+
   test('when the iPhone was signed out elsewhere and Údaje a zabezpečení open again, then its row is out of reach for as long as it leaves', async ({
     page,
   }) => {
@@ -376,6 +507,34 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
 
     await expect(page.locator('.devices .device-name')).toHaveText(['Mac · Safari']);
     expect(await leavingRows(page)).toEqual([{ id: otherRow.slice(1), inert: true }]);
+  });
+
+  test('when the iPhone passkey was removed elsewhere and Údaje a zabezpečení open again, then its row is out of reach for as long as it leaves', async ({
+    page,
+  }) => {
+    const removeTheIPhone = await openSettingsWithTwoPasskeys(page);
+    await openDonorSection(page, 'Můj přehled');
+    removeTheIPhone();
+    await recordLeavingRows(page, '.passkey-slot', 'passkey-slot--leaving');
+
+    await openDonorSection(page, 'Údaje a zabezpečení');
+
+    await expect(page.locator('.passkey-name')).toHaveText(['Pracovní notebook']);
+    expect(await leavingRows(page)).toEqual([{ id: iphonePasskeyRow.slice(1), inert: true }]);
+  });
+
+  test('when claude.ai was disconnected elsewhere and Údaje a zabezpečení open again, then its row is out of reach for as long as it leaves', async ({
+    page,
+  }) => {
+    const disconnectClaudeElsewhere = await openSettingsWithTwoConnections(page);
+    await openDonorSection(page, 'Můj přehled');
+    disconnectClaudeElsewhere();
+    await recordLeavingRows(page, '.connection-slot', 'connection-slot--leaving');
+
+    await openDonorSection(page, 'Údaje a zabezpečení');
+
+    await expect(page.locator('.connection-client')).toHaveText(['chatgpt.com']);
+    expect(await leavingRows(page)).toEqual([{ id: claudeConnectionRow.slice(1), inert: true }]);
   });
 });
 
@@ -394,5 +553,21 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
     await openSettings(page);
 
     await confirmSigningOutTheIPhone(page);
+  });
+
+  test('when they confirm Ano, odebrat for the iPhone passkey, then its row only fades until it is removed and never comes back', async ({
+    page,
+  }) => {
+    await openSettingsWithTwoPasskeys(page);
+
+    await confirmRemovingTheIPhonePasskey(page);
+  });
+
+  test('when they disconnect claude.ai, then its row only fades until it is removed and never comes back', async ({
+    page,
+  }) => {
+    await openSettingsWithTwoConnections(page);
+
+    await disconnectClaude(page);
   });
 });

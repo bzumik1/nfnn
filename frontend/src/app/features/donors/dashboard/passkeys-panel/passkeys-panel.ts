@@ -30,6 +30,7 @@ import {
 import { deviceName } from '../../../../core/auth/device-name';
 import { deviceAccountOf, SESSION_DEVICE } from '../../../../core/auth/session-device';
 import {
+  leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
 } from '../../../../shared/ui/leaving-row/leaving-row';
@@ -123,6 +124,7 @@ export class PasskeysPanel {
   protected readonly status = signal('');
   protected readonly added = signal<string | null>(null);
   protected readonly rowLeft = signal(false);
+  protected readonly rowLeaves = leaveWithClass('passkey-slot--leaving');
   protected readonly nameMaxLength = PASSKEY_NAME_MAX_LENGTH;
 
   protected readonly nameHint = $localize`:@@donor.passkeys.name.hint:Podle názvu klíč později poznáte, třeba „iPhone“ nebo „Pracovní notebook“.`;
