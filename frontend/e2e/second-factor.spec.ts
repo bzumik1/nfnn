@@ -51,6 +51,34 @@ async function plainQrText(qr: Locator): Promise<string | undefined> {
     : undefined;
 }
 
+async function pressHandsFocusToPageAsIos(button: Locator): Promise<void> {
+  await button.evaluate((pressed) => {
+    pressed.setAttribute('data-pressed', 'copy');
+    pressed.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      pressed.parentElement
+        ?.closest<HTMLElement>('[tabindex="-1"]')
+        ?.focus({ preventScroll: true });
+    });
+    document.addEventListener(
+      'click',
+      () => {
+        (window as unknown as { focusAtPress: string | null }).focusAtPress =
+          document.activeElement?.id ?? null;
+      },
+      { capture: true },
+    );
+  });
+}
+
+async function focusAtPress(page: Page): Promise<string | null> {
+  return page.evaluate(() => (window as unknown as { focusAtPress: string | null }).focusAtPress);
+}
+
+async function scrollTop(page: Page): Promise<number> {
+  return page.evaluate(() => Math.round(window.scrollY));
+}
+
 const protectedDonor = {
   ...donor,
   secondFactor: { enabled: true, neededForAdministration: false },
@@ -417,6 +445,32 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
       expect(selection).toEqual({ start: firstOnSecondLine.start, text: 'GEZD' });
     });
   }
+
+  test('when they press Kopírovat klíč and the press hands the focus to the page around it as iOS does, then the focus stays on that button, the page keeps its place and Zkopírováno is said once', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: () => Promise.resolve() },
+        configurable: true,
+      });
+    });
+    await showKey(page, 1280);
+    await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
+    const copy = page.getByRole('button', { name: 'Kopírovat klíč' });
+    await copy.scrollIntoViewIfNeeded();
+    await pressHandsFocusToPageAsIos(copy);
+    const before = await scrollTop(page);
+
+    await copy.click();
+
+    await expect(page.getByRole('status').filter({ hasText: 'Zkopírováno.' })).toHaveCount(1);
+    expect(await focusAtPress(page)).toBe('obsah');
+    expect(await page.evaluate(() => document.activeElement?.getAttribute('data-pressed'))).toBe(
+      'copy',
+    );
+    expect(await scrollTop(page)).toBe(before);
+  });
 
   test('when the key shows in a 375 px window with the largest system text, then no part of it reaches past its card', async ({
     page,
