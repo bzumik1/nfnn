@@ -583,6 +583,113 @@ describe("Given a donor's signed-in devices card", () => {
     });
   });
 
+  describe('when the signed-out row takes a while to leave', () => {
+    let scrolled: { element: HTMLElement; options: unknown }[];
+    const realMatchMedia = window.matchMedia;
+
+    function deviceAsksForLessMotion(less: boolean): void {
+      window.matchMedia = ((query: string) => ({
+        matches: less && query === '(prefers-reduced-motion: reduce)',
+        media: query,
+      })) as typeof window.matchMedia;
+    }
+
+    function slowToLeave(device: SignedInDevice): () => Promise<void> {
+      let finish: () => void = () => undefined;
+      const finished = new Promise<void>((resolve) => (finish = resolve));
+      document.getElementById(`device-row-${device.id}`)!.getAnimations = () =>
+        [
+          {
+            effect: { getComputedTiming: () => ({ endTime: 300 }) },
+            playState: 'running',
+            finished,
+          },
+        ] as never;
+      return async () => {
+        finish();
+        await settle();
+        await new Promise((done) => requestAnimationFrame(() => done(undefined)));
+      };
+    }
+
+    async function signOutUnknown(): Promise<void> {
+      await ask(signOutButton(rows()[2]));
+      await confirmSignOut();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${UNKNOWN.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+    }
+
+    beforeEach(async () => {
+      scrolled = [];
+      HTMLElement.prototype.scrollIntoView = function (this: HTMLElement, options?: unknown) {
+        scrolled.push({ element: this, options });
+      };
+      await signIn();
+      await listed([THIS_MAC, IPHONE, UNKNOWN, OLD_IPAD, OLD_WINDOWS]);
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
+      window.matchMedia = realMatchMedia;
+    });
+
+    it('and the device asks for no less motion, then the control that took the focus glides into view once the row has left', async () => {
+      deviceAsksForLessMotion(false);
+      const leave = slowToLeave(UNKNOWN);
+      await signOutUnknown();
+      const focused = document.activeElement;
+
+      expect(focused).toBe(element('.devices-older-toggle'));
+      expect(scrolled).toEqual([]);
+
+      await leave();
+
+      expect(scrolled).toEqual([
+        { element: focused, options: { block: 'nearest', behavior: 'smooth' } },
+      ]);
+    });
+
+    it('and the device asks for less motion, then the control that took the focus jumps into view once the row has left', async () => {
+      deviceAsksForLessMotion(true);
+      const leave = slowToLeave(UNKNOWN);
+      await signOutUnknown();
+      const focused = document.activeElement;
+
+      await leave();
+
+      expect(scrolled).toEqual([
+        { element: focused, options: { block: 'nearest', behavior: 'instant' } },
+      ]);
+    });
+
+    it('and the donor moves the focus elsewhere before the row has left, then nothing scrolls', async () => {
+      const leave = slowToLeave(UNKNOWN);
+      await signOutUnknown();
+      element<HTMLButtonElement>('.devices-sign-out-others').focus();
+
+      await leave();
+
+      expect(scrolled).toEqual([]);
+    });
+
+    it('and another row leaves through a quiet refresh meanwhile, then nothing scrolls', async () => {
+      const leaveUnknown = slowToLeave(UNKNOWN);
+      await signOutUnknown();
+      const leaveIphone = slowToLeave(IPHONE);
+      fixture.componentInstance.loadDevices(false, true);
+      http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC, OLD_IPAD, OLD_WINDOWS] });
+      await settle();
+
+      await leaveIphone();
+
+      expect(document.activeElement).toBe(element('.devices-older-toggle'));
+      expect(scrolled).toEqual([]);
+      await leaveUnknown();
+    });
+  });
+
   it('when the donor signs out the only other device, then the heading takes focus and the card says no other device is', async () => {
     await signIn();
     await listed([THIS_MAC, IPHONE]);

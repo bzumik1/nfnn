@@ -105,9 +105,9 @@ export class DevicesCard {
   protected readonly rowLeft = signal(false);
   protected readonly rowLeaves = leaveWithClass('device-slot--leaving', {
     leaves: (row) => this.olderShown() || row.closest('.device-list--older') === null,
-    left: () => this.revealFocusAfterRowLeft(),
+    left: (row) => this.revealFocusAfterRowLeft(row),
   });
-  private focusedAfterRowLeaves: HTMLElement | null = null;
+  private rowSignedOut: { row: HTMLElement; focused: HTMLElement | null } | null = null;
 
   constructor() {
     this.loadDevices(true);
@@ -251,6 +251,7 @@ export class DevicesCard {
       this.deviceList()?.nativeElement.querySelectorAll<HTMLElement>(ROW_CONTROLS) ?? [],
     );
     markRowsLeaving([row]);
+    this.rowSignedOut = row === null ? null : { row, focused: null };
     this.signingOut.set(null);
     this.confirming.set(null);
     this.rowLeft.set(true);
@@ -259,16 +260,23 @@ export class DevicesCard {
       $localize`:@@donor.account.devices.signedOut:Zařízení jsme odhlásili: ${this.nameInSentence(device)}:device:. Pokud jste se na něm nepřihlásili vy, změňte si heslo.`,
     );
     this.focusAfterRender(() => {
-      this.focusedAfterRowLeaves = neighbour() ?? this.title().nativeElement;
-      return this.focusedAfterRowLeaves;
+      const focused = neighbour() ?? this.title().nativeElement;
+      if (this.rowSignedOut !== null && this.rowSignedOut.row === row) {
+        this.rowSignedOut.focused = focused;
+      }
+      return focused;
     });
     this.changes.changed();
   }
 
-  private revealFocusAfterRowLeft(): void {
-    const focused = this.focusedAfterRowLeaves;
+  private revealFocusAfterRowLeft(row: HTMLElement): void {
+    const signedOut = this.rowSignedOut;
+    if (signedOut === null || signedOut.row !== row) {
+      return;
+    }
+    this.rowSignedOut = null;
+    const { focused } = signedOut;
     const view = this.document.defaultView;
-    this.focusedAfterRowLeaves = null;
     if (focused === null || view === null) {
       return;
     }
@@ -276,8 +284,8 @@ export class DevicesCard {
       if (this.document.activeElement !== focused) {
         return;
       }
-      const reduced = view.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      focused.scrollIntoView({ block: 'nearest', behavior: reduced ? 'instant' : 'smooth' });
+      const reduced = view.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+      focused.scrollIntoView?.({ block: 'nearest', behavior: reduced ? 'instant' : 'smooth' });
     });
   }
 
@@ -321,7 +329,7 @@ export class DevicesCard {
   }
 
   private begin(target: string): void {
-    this.focusedAfterRowLeaves = null;
+    this.rowSignedOut = null;
     this.changes.changing();
     this.signingOut.set(target);
     this.actionError.set('');
