@@ -1668,7 +1668,7 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(root().querySelector('.payments-card')?.textContent).not.toContain('Přijato');
       });
 
-      it('then the date of an account verification holds Ověření účtu as its state, read after the date and before the amount', async () => {
+      it('then the date of an account verification holds Ověření účtu as its purpose, not named Stav, read after the date and before the amount', async () => {
         const list = twoYearDonations();
         list.items = [accountVerificationItem({ receivedAt: '2026-03-20' }), ...list.items];
         await open('/darce/dary');
@@ -1679,12 +1679,7 @@ describe('Given a signed-in donor in the donor area', () => {
           [...first.querySelectorAll('td')].map((cell) =>
             normalized(withOrdinarySpaces(cell.textContent) ?? ''),
           ),
-        ).toEqual([
-          '20. 3. 2026 Stav: Ověření účtu',
-          '1 Kč',
-          '',
-          'Započítá se do ročního potvrzení',
-        ]);
+        ).toEqual(['20. 3. 2026 Ověření účtu', '1 Kč', '', 'Započítá se do ročního potvrzení']);
       });
     });
 

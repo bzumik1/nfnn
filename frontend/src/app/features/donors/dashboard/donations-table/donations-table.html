@@ -77,24 +77,17 @@
             i18n-data-label="@@donor.dashboard.payments.col.date"
           >
             {{ formatDate(item.receivedAt) }}
-            @if (!narrow()) {
-              @if (item.accountVerification) {
-                <ng-container *ngTemplateOutlet="verificationTag" />
-              }
-            } @else if (item.status === 'REFUNDED' || item.accountVerification) {
+            @if (item.accountVerification) {
+              <ng-container *ngTemplateOutlet="verificationTag" />
+            }
+            @if (narrow() && item.status === 'REFUNDED') {
               <span class="date-status"
                 ><span class="visually-hidden" i18n="@@donor.dashboard.payments.statusUnderDate"
                   >Stav:</span
-                >&ngsp;
-                @if (item.status === 'REFUNDED') {
-                  <span class="ui-badge ui-badge--neutral verification-tag">{{
-                    statusLabel(item.status)
-                  }}</span>
-                }
-                @if (item.accountVerification) {
-                  <ng-container *ngTemplateOutlet="verificationTag" />
-                }
-              </span>
+                >&ngsp;<span class="ui-badge ui-badge--neutral verification-tag">{{
+                  statusLabel(item.status)
+                }}</span></span
+              >
             }
           </td>
           <td

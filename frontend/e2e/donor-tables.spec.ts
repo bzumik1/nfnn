@@ -414,7 +414,7 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
   }
 
   for (const width of [900, 1000, 1100, 1150, 1180, 1194]) {
-    test(`when Moje dary lists gifts in a ${width} px window, from nav until the table's container reaches ledger (54 rem), then each year stays a table without the Stav column, no cell runs past the card and only a refunded gift or an account verification names its state under the date`, async ({
+    test(`when Moje dary lists gifts in a ${width} px window, from nav until the table's container reaches ledger (54 rem), then each year stays a table without the Stav column, no cell runs past the card, only a refunded gift names its state under the date and an account verification shows its purpose there without Stav`, async ({
       page,
     }) => {
       await mockDonorApi(page, await notesInPlaceOfThePdf());
@@ -460,6 +460,10 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
       const cells = refunded.getByRole('cell');
       await expect(cells.first()).toHaveAccessibleName(/^5\.\s1\.\s2026 Stav: Vráceno$/);
       await expect(cells.nth(1)).toHaveAccessibleName(/^300\sKč$/);
+      const verification = card.locator('tbody tr', { hasText: 'Ověření účtu' });
+      await expect(verification.getByRole('cell').first()).toHaveAccessibleName(
+        /^\d{1,2}\.\s\d{1,2}\.\s\d{4} Ověření účtu$/,
+      );
     });
   }
 
