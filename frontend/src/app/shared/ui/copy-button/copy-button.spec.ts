@@ -214,7 +214,7 @@ describe('Given a copy button in a row whose other actions are small tinted butt
   });
 });
 
-describe('Given a copy button whose press the browser hands to the page around it', () => {
+describe('Given a copy button on a page that holds the focus, as after a tap on iOS', () => {
   let page: HTMLElement;
   let fixture: ComponentFixture<CopyButton>;
 

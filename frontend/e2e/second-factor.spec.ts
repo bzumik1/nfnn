@@ -63,8 +63,9 @@ async function pressHandsFocusToPageAsIos(button: Locator): Promise<void> {
     document.addEventListener(
       'click',
       () => {
+        const focused = document.activeElement;
         (window as unknown as { focusAtPress: string | null }).focusAtPress =
-          document.activeElement?.id ?? null;
+          focused === null ? null : focused.id || focused.localName;
       },
       { capture: true },
     );
@@ -77,6 +78,12 @@ async function focusAtPress(page: Page): Promise<string | null> {
 
 async function scrollTop(page: Page): Promise<number> {
   return page.evaluate(() => Math.round(window.scrollY));
+}
+
+async function sheetScrollTop(page: Page): Promise<number> {
+  return page
+    .locator('dialog[open] .dialog-panel')
+    .evaluate((panel) => Math.round(panel.scrollTop));
 }
 
 const protectedDonor = {
@@ -470,6 +477,33 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
       'copy',
     );
     expect(await scrollTop(page)).toBe(before);
+  });
+
+  test('when they press Kopírovat klíč in the account sheet of a 390 px window after typing in Kód z aplikace and the press hands the focus to the sheet as iOS does, then the focus moves to that button, the sheet keeps its place and Zkopírováno is said once', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: () => Promise.resolve() },
+        configurable: true,
+      });
+    });
+    await showKey(page, 390);
+    const sheet = page.getByRole('dialog');
+    const code = sheet.getByLabel('Kód z aplikace');
+    await code.focus();
+    await expect(code).toBeFocused();
+    const copy = sheet.getByRole('button', { name: 'Kopírovat klíč' });
+    await copy.scrollIntoViewIfNeeded();
+    await pressHandsFocusToPageAsIos(copy);
+    const before = await sheetScrollTop(page);
+
+    await copy.click();
+
+    await expect(page.getByRole('status').filter({ hasText: 'Zkopírováno.' })).toHaveCount(1);
+    expect(await focusAtPress(page)).toBe('dialog');
+    await expect(copy).toBeFocused();
+    expect(await sheetScrollTop(page)).toBe(before);
   });
 
   test('when the key shows in a 375 px window with the largest system text, then no part of it reaches past its card', async ({
