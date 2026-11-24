@@ -326,6 +326,9 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
     await signIn(page);
     if (rootPx !== undefined) {
       await page.addStyleTag({ content: `html { font-size: ${rootPx}px; }` });
+      await expect
+        .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).fontSize))
+        .toBe(`${rootPx}px`);
     }
     await page.setViewportSize({ width, height: 900 });
     await openDonorSection(page, 'Údaje a zabezpečení');
