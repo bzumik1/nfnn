@@ -65,9 +65,10 @@ async function framesWhile(
   page: Page,
   watched: Record<string, string>,
   act: () => Promise<void>,
+  removed?: string,
 ): Promise<Frame[]> {
   await page.evaluate(
-    ({ watched, watchedMs }) => {
+    ({ watched, watchedMs, removed }) => {
       const watch = window as unknown as FrameWatch;
       watch.settingsFrames = [];
       watch.settingsWatched = false;
@@ -85,7 +86,8 @@ async function framesWhile(
                 };
         }
         watch.settingsFrames.push({ at: frameTime - began, boxes });
-        if (performance.now() - began < watchedMs) {
+        const stillThere = removed !== null && document.querySelector(removed) !== null;
+        if (performance.now() - began < watchedMs || stillThere) {
           requestAnimationFrame(sample);
         } else {
           watch.settingsWatched = true;
@@ -93,7 +95,7 @@ async function framesWhile(
       };
       requestAnimationFrame(sample);
     },
-    { watched, watchedMs: WATCHED_MS },
+    { watched, watchedMs: WATCHED_MS, removed: removed ?? null },
   );
   await act();
   await expect
@@ -314,8 +316,11 @@ async function confirmSigningOutTheIPhone(page: Page): Promise<Frame[]> {
   await settled(page, '.devices');
   await recordRowsShownAgain(page, '.device-slot', 'device-slot--leaving');
 
-  const frames = await framesWhile(page, { row: otherRow, card: '.devices' }, () =>
-    question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
+  const frames = await framesWhile(
+    page,
+    { row: otherRow, card: '.devices' },
+    () => question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
+    otherRow,
   );
 
   await expect(devices.locator('.device-name')).toHaveText(['Mac · Safari']);
@@ -359,6 +364,7 @@ async function confirmRemovingTheIPhonePasskey(page: Page): Promise<Frame[]> {
     page,
     { row: iphonePasskeyRow, card: 'app-account-card .ui-card' },
     () => confirm.click(),
+    iphonePasskeyRow,
   );
 
   await expect(page.locator('.passkey-name')).toHaveText(['Pracovní notebook']);
@@ -487,8 +493,11 @@ async function disconnectClaude(page: Page): Promise<Frame[]> {
   await settled(page, '.connections');
   await recordRowsShownAgain(page, '.connection-slot', 'connection-slot--leaving');
 
-  const frames = await framesWhile(page, { row: claudeConnectionRow, card: '.connections' }, () =>
-    page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click(),
+  const frames = await framesWhile(
+    page,
+    { row: claudeConnectionRow, card: '.connections' },
+    () => page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click(),
+    claudeConnectionRow,
   );
 
   await expect(connections.locator('.connection-client')).toHaveText(['chatgpt.com']);
