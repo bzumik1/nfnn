@@ -6,10 +6,11 @@ import { PageFocus } from './page-focus';
 describe('Given a pressed button whose focus the browser handed to the page around it', () => {
   let page: HTMLElement;
   let button: HTMLButtonElement;
+  let pageFocus: PageFocus;
 
   beforeEach(() => {
     TestBed.configureTestingModule({ providers: [provideRouter([])] });
-    const pageFocus = TestBed.inject(PageFocus);
+    pageFocus = TestBed.inject(PageFocus);
     page = document.createElement('main');
     page.tabIndex = -1;
     button = document.createElement('button');
@@ -26,5 +27,22 @@ describe('Given a pressed button whose focus the browser handed to the page arou
     button.click();
 
     expect(document.activeElement).toBe(button);
+  });
+
+  it('when the button is kept on press, then it is focused without scrolling', () => {
+    const focus = vi.spyOn(button, 'focus');
+
+    pageFocus.keepOnPressed(button);
+
+    expect(focus).toHaveBeenCalledExactlyOnceWith({ preventScroll: true });
+  });
+
+  it('when the button already has the focus and is kept on press, then it is not focused again', () => {
+    button.focus();
+    const focus = vi.spyOn(button, 'focus');
+
+    pageFocus.keepOnPressed(button);
+
+    expect(focus).not.toHaveBeenCalled();
   });
 });
