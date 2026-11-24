@@ -820,7 +820,13 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
       await expect(sheet.locator(`#device-row-${iphone?.id}`)).toHaveCount(0);
       await expect(async () => {
         const place = await page.evaluate(() => {
-          const box = document.activeElement!.getBoundingClientRect();
+          const control = document.activeElement!;
+          const box = control.getBoundingClientRect();
+          const ring = getComputedStyle(control);
+          const ringReach = Math.max(
+            0,
+            parseFloat(ring.outlineWidth) + parseFloat(ring.outlineOffset),
+          );
           const head = document
             .querySelector('app-account-sheet app-sheet-head')!
             .getBoundingClientRect();
@@ -828,14 +834,14 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
             .querySelector('app-account-sheet .dialog-panel')!
             .getBoundingClientRect();
           return {
-            top: box.top,
-            bottom: box.bottom,
+            ringTop: box.top - ringReach,
+            ringBottom: box.bottom + ringReach,
             headBottom: head.bottom,
             panelBottom: panel.bottom,
           };
         });
-        expect(place.top).toBeGreaterThanOrEqual(place.headBottom);
-        expect(place.bottom).toBeLessThanOrEqual(place.panelBottom);
+        expect(place.ringTop).toBeGreaterThanOrEqual(place.headBottom);
+        expect(place.ringBottom).toBeLessThanOrEqual(place.panelBottom);
       }).toPass();
     });
   });

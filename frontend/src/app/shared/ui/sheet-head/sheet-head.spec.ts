@@ -87,10 +87,10 @@ describe('Given the head of a page inside a sheet', () => {
 
 describe('Given the head of a page standing in the scrolling panel of a sheet', () => {
   let fixture: ComponentFixture<SheetPanel>;
-  let resized: (() => void)[];
+  let resized: ResizeObserverCallback[];
 
   class WatchedSizes {
-    constructor(private readonly callback: () => void) {}
+    constructor(private readonly callback: ResizeObserverCallback) {}
 
     observe(): void {
       resized.push(this.callback);
@@ -121,10 +121,23 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
   const head = () =>
     (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('app-sheet-head');
 
-  it('when it is measured 64 px tall, then the panel knows its height, so a control scrolled into view stops below it', () => {
-    Object.defineProperty(head()!, 'offsetHeight', { value: 64, configurable: true });
+  const resizeTo = (blockSize: number) => {
+    const entry = { borderBoxSize: [{ blockSize, inlineSize: 390 }] };
+    resized.forEach((callback) =>
+      callback([entry as unknown as ResizeObserverEntry], {} as ResizeObserver),
+    );
+  };
 
-    resized.forEach((callback) => callback());
+  it('when its border box is measured 63.2 px tall, then the panel knows its height rounded up, so a control scrolled into view stops below it', () => {
+    resizeTo(63.2);
+
+    expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('64px');
+  });
+
+  it('when its offset height reads 58 px while its border box is 64 px tall, then the panel takes the border box', () => {
+    Object.defineProperty(head()!, 'offsetHeight', { value: 58, configurable: true });
+
+    resizeTo(64);
 
     expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('64px');
   });
@@ -134,6 +147,16 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
     await fixture.whenStable();
 
     expect(head()).toBeNull();
+    expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('');
+  });
+
+  it('when it leaves and the panel is resized afterwards, then nothing watches it any more and the panel keeps no height', async () => {
+    fixture.componentInstance.shown.set(false);
+    await fixture.whenStable();
+
+    resizeTo(64);
+
+    expect(resized).toEqual([]);
     expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('');
   });
 });

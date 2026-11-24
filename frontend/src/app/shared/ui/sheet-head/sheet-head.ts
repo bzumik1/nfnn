@@ -40,10 +40,16 @@ export class SheetHead {
       if (panel === null) {
         return;
       }
-      const publish = () => panel.style.setProperty(HEIGHT, `${head.offsetHeight}px`);
-      publish();
-      if (Observer !== null) {
-        const observer = new Observer(publish);
+      const publish = (height: number) => panel.style.setProperty(HEIGHT, `${height}px`);
+      if (Observer === null) {
+        publish(head.offsetHeight);
+      } else {
+        const observer = new Observer((entries) => {
+          const size = entries.at(-1)?.borderBoxSize[0];
+          if (size !== undefined) {
+            publish(Math.ceil(size.blockSize));
+          }
+        });
         observer.observe(head);
         destroyRef.onDestroy(() => observer.disconnect());
       }

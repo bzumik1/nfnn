@@ -95,6 +95,21 @@ describe('Given a dialog with a form on a phone whose keyboard covers the lower 
     expect(scrolled).toEqual([269 - (102 + 101 - 16)]);
   });
 
+  it('when the sheet scrolls its panel under a sticky head 57 px tall and the field sits under that head, then the panel scrolls the field down below the head', () => {
+    const panelScrolled: number[] = [];
+    panel().style.overflowY = 'auto';
+    panel().style.scrollPaddingTop = '57px';
+    panel().scrollBy = ((options: ScrollToOptions) =>
+      panelScrolled.push(options.top ?? 0)) as never;
+    box(panel(), 0, 549);
+    box(find('#form-email'), 30, 74);
+
+    openKeyboardFor('#form-email');
+
+    expect(panelScrolled).toEqual([-(57 + 16 - 30)]);
+    expect(30 - panelScrolled[0]).toBeGreaterThanOrEqual(57);
+  });
+
   it('when the keyboard comes up for a field that is already in sight with the button, then the dialog stays where it is', () => {
     box(find('#form-email'), 100, 144);
     box(find('#form-submit'), 160, 200);
