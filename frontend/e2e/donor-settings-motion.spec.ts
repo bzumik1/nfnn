@@ -24,6 +24,7 @@ interface Frame {
 interface FrameWatch {
   settingsFrames: Frame[];
   settingsWatched: boolean;
+  settingsActed: boolean;
 }
 
 const COMPUTER = { width: 1280, height: 800 };
@@ -72,7 +73,13 @@ async function framesWhile(
       const watch = window as unknown as FrameWatch;
       watch.settingsFrames = [];
       watch.settingsWatched = false;
+      watch.settingsActed = false;
       const began = performance.now();
+      let sampledAfterAct = false;
+      const cardSettled = (): boolean =>
+        (document.querySelector(watched['card'])?.getAnimations({ subtree: true }) ?? []).every(
+          (animation) => animation.playState === 'finished',
+        );
       const sample = (frameTime: DOMHighResTimeStamp): void => {
         const boxes: Record<string, Box | null> = {};
         for (const [name, selector] of Object.entries(watched)) {
@@ -86,8 +93,14 @@ async function framesWhile(
                 };
         }
         watch.settingsFrames.push({ at: frameTime - began, boxes });
+        sampledAfterAct ||= watch.settingsActed;
         const stillThere = removed !== null && document.querySelector(removed) !== null;
-        if (performance.now() - began < watchedMs || stillThere) {
+        if (
+          performance.now() - began < watchedMs ||
+          !sampledAfterAct ||
+          stillThere ||
+          !cardSettled()
+        ) {
           requestAnimationFrame(sample);
         } else {
           watch.settingsWatched = true;
@@ -98,6 +111,9 @@ async function framesWhile(
     { watched, watchedMs: WATCHED_MS, removed: removed ?? null },
   );
   await act();
+  await page.evaluate(() => {
+    (window as unknown as FrameWatch).settingsActed = true;
+  });
   await expect
     .poll(() => page.evaluate(() => (window as unknown as FrameWatch).settingsWatched))
     .toBe(true);
@@ -566,7 +582,12 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
 
     await unfold();
     await recordLeavingRows(page, '.device-slot', 'device-slot--leaving');
-    const frames = await framesWhile(page, { card: '.devices' }, () => older.click());
+    const frames = await framesWhile(
+      page,
+      { card: '.devices' },
+      () => older.click(),
+      '#devices-older',
+    );
     await expect(page.locator('#devices-older')).toHaveCount(0);
     await settled(page, '.devices');
     const folded = await heightOf(page, '.devices');
