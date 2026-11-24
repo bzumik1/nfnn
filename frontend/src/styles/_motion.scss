@@ -350,6 +350,10 @@ $_pressed: (--pressed-tint, filter);
   }
 }
 
+@mixin row-settling {
+  pointer-events: none;
+}
+
 @mixin after-rows-left {
   animation: motion-after-rows var(--duration-base) var(--ease-out) var(--duration-fast) backwards;
 
