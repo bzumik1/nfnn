@@ -745,29 +745,34 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
 
       await expect(devices.getByRole('button', { name: /Starší \(2\)/ })).toBeFocused();
       await expect(page.locator(`#device-row-${iphone?.id}`)).toHaveCount(0);
-      await expect
-        .poll(() =>
-          page.evaluate(() => {
-            const box = document.activeElement!.getBoundingClientRect();
-            const header = [
-              ...document.querySelectorAll<HTMLElement>('app-header a, app-header button'),
-            ]
-              .map((element) => element.getBoundingClientRect().bottom)
-              .filter((bottom) => bottom > 0);
-            const headerBottom = Math.max(0, ...header);
-            const coveringTops = [
-              ...document.querySelectorAll<HTMLElement>(
-                'app-tab-bar nav, .ui-notice--floating, app-offline-status .offline-pill',
-              ),
-            ]
-              .map((element) => element.getBoundingClientRect())
-              .filter((cover) => cover.height > 0 && cover.top > window.innerHeight / 2)
-              .map((cover) => cover.top);
-            const lowerEdge = Math.min(window.innerHeight, ...coveringTops);
-            return box.top >= headerBottom && box.bottom <= lowerEdge;
-          }),
-        )
-        .toBe(true);
+      await expect(async () => {
+        const place = await page.evaluate(() => {
+          const box = document.activeElement!.getBoundingClientRect();
+          const header = [
+            ...document.querySelectorAll<HTMLElement>('app-header a, app-header button'),
+          ]
+            .filter((element) => getComputedStyle(element).visibility !== 'hidden')
+            .map((element) => element.getBoundingClientRect())
+            .filter((control) => control.width > 0 && control.height > 0 && control.bottom > 0)
+            .map((control) => control.bottom);
+          const coveringTops = [
+            ...document.querySelectorAll<HTMLElement>(
+              'app-tab-bar nav, .ui-notice--floating, app-offline-status .offline-pill',
+            ),
+          ]
+            .map((element) => element.getBoundingClientRect())
+            .filter((cover) => cover.height > 0 && cover.top > window.innerHeight / 2)
+            .map((cover) => cover.top);
+          return {
+            top: box.top,
+            bottom: box.bottom,
+            headerBottom: Math.max(0, ...header),
+            lowerEdge: Math.min(window.innerHeight, ...coveringTops),
+          };
+        });
+        expect(place.top).toBeGreaterThanOrEqual(place.headerBottom);
+        expect(place.bottom).toBeLessThanOrEqual(place.lowerEdge);
+      }).toPass();
     });
   });
 }
@@ -813,20 +818,25 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
 
       await expect(devices.getByRole('button', { name: /Starší \(2\)/ })).toBeFocused();
       await expect(sheet.locator(`#device-row-${iphone?.id}`)).toHaveCount(0);
-      await expect
-        .poll(() =>
-          page.evaluate(() => {
-            const box = document.activeElement!.getBoundingClientRect();
-            const head = document
-              .querySelector('app-account-sheet app-sheet-head')!
-              .getBoundingClientRect();
-            const panel = document
-              .querySelector('app-account-sheet .dialog-panel')!
-              .getBoundingClientRect();
-            return box.top >= head.bottom && box.bottom <= panel.bottom;
-          }),
-        )
-        .toBe(true);
+      await expect(async () => {
+        const place = await page.evaluate(() => {
+          const box = document.activeElement!.getBoundingClientRect();
+          const head = document
+            .querySelector('app-account-sheet app-sheet-head')!
+            .getBoundingClientRect();
+          const panel = document
+            .querySelector('app-account-sheet .dialog-panel')!
+            .getBoundingClientRect();
+          return {
+            top: box.top,
+            bottom: box.bottom,
+            headBottom: head.bottom,
+            panelBottom: panel.bottom,
+          };
+        });
+        expect(place.top).toBeGreaterThanOrEqual(place.headBottom);
+        expect(place.bottom).toBeLessThanOrEqual(place.panelBottom);
+      }).toPass();
     });
   });
 }

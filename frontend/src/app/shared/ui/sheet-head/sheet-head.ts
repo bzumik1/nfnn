@@ -3,14 +3,21 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  DOCUMENT,
   ElementRef,
   inject,
+  InjectionToken,
   input,
   output,
 } from '@angular/core';
 
 const SHEET_PANEL = '.dialog-panel';
 const HEIGHT = '--sheet-head-height';
+
+export const SHEET_HEAD_RESIZE_OBSERVER = new InjectionToken<typeof ResizeObserver | null>(
+  'SHEET_HEAD_RESIZE_OBSERVER',
+  { providedIn: 'root', factory: () => inject(DOCUMENT).defaultView?.ResizeObserver ?? null },
+);
 
 @Component({
   selector: 'app-sheet-head',
@@ -27,6 +34,7 @@ export class SheetHead {
   constructor() {
     const head = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
     const destroyRef = inject(DestroyRef);
+    const Observer = inject(SHEET_HEAD_RESIZE_OBSERVER);
     afterNextRender(() => {
       const panel = head.closest<HTMLElement>(SHEET_PANEL);
       if (panel === null) {
@@ -34,8 +42,8 @@ export class SheetHead {
       }
       const publish = () => panel.style.setProperty(HEIGHT, `${head.offsetHeight}px`);
       publish();
-      if (typeof ResizeObserver === 'function') {
-        const observer = new ResizeObserver(publish);
+      if (Observer !== null) {
+        const observer = new Observer(publish);
         observer.observe(head);
         destroyRef.onDestroy(() => observer.disconnect());
       }

@@ -1,3 +1,4 @@
+@use 'focus-ring';
 @use 'pressed';
 @use 'sheet';
 @use 'touch-target';
@@ -27,7 +28,8 @@ $inline-start: max(
 
 .sheet-head-button,
 .sheet-head-title {
-  scroll-margin-block: calc(-1 * var(--sheet-head-height)) var(--sheet-head-height);
+  scroll-margin-block: calc(#{focus-ring.$reach} - var(--sheet-head-height))
+    calc(#{focus-ring.$reach} + var(--sheet-head-height));
 }
 
 .sheet-head-button {

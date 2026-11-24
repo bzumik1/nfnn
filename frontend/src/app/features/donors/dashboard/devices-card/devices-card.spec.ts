@@ -758,9 +758,33 @@ describe("Given a donor's signed-in devices card", () => {
       Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
     });
 
+    function leavesWithTheFoldAsInTheBrowser(row: HTMLElement, fold: HTMLElement): () => boolean {
+      let rowInTheFoldAsItLeaves = false;
+      const list = fold.parentNode!;
+      const following = Array.from(list.childNodes).slice(
+        Array.from(list.childNodes).indexOf(fold) + 1,
+      );
+      row.getAnimations = () => [];
+      const removal = new MutationObserver(() => {
+        if (fold.isConnected) {
+          return;
+        }
+        removal.disconnect();
+        list.insertBefore(fold, following.find((node) => node.parentNode === list) ?? null);
+        rowInTheFoldAsItLeaves = fold.contains(row);
+        fixture.componentInstance['rowLeaves']({
+          target: row,
+          animationComplete: () => fold.remove(),
+        });
+      });
+      removal.observe(list, { childList: true });
+      return () => rowInTheFoldAsItLeaves;
+    }
+
     it('then the fold leaves with the row still in it, and the control that took the focus is brought into view once the fold is gone', async () => {
       const row = document.getElementById(`device-row-${OLD_IPAD.id}`)!;
       const fold = element('.devices-older');
+      const rowLeftInTheFold = leavesWithTheFoldAsInTheBrowser(row, fold);
       await ask(signOutButton(rows()[3]));
       await confirmSignOut();
       http
@@ -770,6 +794,7 @@ describe("Given a donor's signed-in devices card", () => {
       await vi.waitFor(() => expect(fold.isConnected).toBe(false));
       await settle();
 
+      expect(rowLeftInTheFold()).toBe(true);
       expect(row.isConnected).toBe(false);
       expect(element('.devices-older-toggle')).toBeNull();
       const focused = document.activeElement;

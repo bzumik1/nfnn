@@ -68,6 +68,8 @@
 }
 
 .dialog-panel {
+  --sheet-head-height: 0rem;
+
   container: dialog-panel / inline-size;
   position: relative;
   background: var(--color-surface-elevated);

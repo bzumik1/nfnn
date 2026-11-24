@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { SheetHead } from './sheet-head';
+import { SHEET_HEAD_RESIZE_OBSERVER, SheetHead } from './sheet-head';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 @Component({
@@ -87,9 +87,31 @@ describe('Given the head of a page inside a sheet', () => {
 
 describe('Given the head of a page standing in the scrolling panel of a sheet', () => {
   let fixture: ComponentFixture<SheetPanel>;
+  let resized: (() => void)[];
+
+  class WatchedSizes {
+    constructor(private readonly callback: () => void) {}
+
+    observe(): void {
+      resized.push(this.callback);
+    }
+
+    disconnect(): void {
+      resized = resized.filter((callback) => callback !== this.callback);
+    }
+  }
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [SheetPanel] }).compileComponents();
+    resized = [];
+    await TestBed.configureTestingModule({
+      imports: [SheetPanel],
+      providers: [
+        {
+          provide: SHEET_HEAD_RESIZE_OBSERVER,
+          useValue: WatchedSizes as unknown as typeof ResizeObserver,
+        },
+      ],
+    }).compileComponents();
     fixture = TestBed.createComponent(SheetPanel);
     await fixture.whenStable();
   });
@@ -99,8 +121,12 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
   const head = () =>
     (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('app-sheet-head');
 
-  it('when it is shown, then the panel knows its height, so a control scrolled into view stops below it', () => {
-    expect(panel().style.getPropertyValue('--sheet-head-height')).toBe(`${head()!.offsetHeight}px`);
+  it('when it is measured 64 px tall, then the panel knows its height, so a control scrolled into view stops below it', () => {
+    Object.defineProperty(head()!, 'offsetHeight', { value: 64, configurable: true });
+
+    resized.forEach((callback) => callback());
+
+    expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('64px');
   });
 
   it('when it leaves, then the panel forgets its height', async () => {
