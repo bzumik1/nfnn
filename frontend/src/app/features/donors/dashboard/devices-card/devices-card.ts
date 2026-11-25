@@ -5,6 +5,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   DOCUMENT,
   effect,
   ElementRef,
@@ -114,6 +115,7 @@ export class DevicesCard {
   );
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.focusAfterRowLeaves.forget());
     this.loadDevices(true);
     effect(() => {
       const devices = this.devices();

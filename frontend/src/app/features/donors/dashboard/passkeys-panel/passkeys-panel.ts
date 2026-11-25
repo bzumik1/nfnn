@@ -6,6 +6,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   ElementRef,
   inject,
@@ -183,6 +184,7 @@ export class PasskeysPanel {
   protected newName = '';
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.focusAfterRowLeaves.forget());
     this.load(true);
     effect(() => {
       const list = this.passkeys();

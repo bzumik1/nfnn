@@ -1,4 +1,5 @@
 import { AnimationCallbackEvent } from '@angular/core';
+import { LONE_MODIFIERS } from '../../../core/input/input-modality';
 
 export function markRowsLeaving(rows: Iterable<Element | null>): void {
   for (const row of rows) {
@@ -55,6 +56,7 @@ interface PendingReveal {
   reveal: (() => void) | null;
   gone: boolean;
   holds: boolean;
+  follower: HTMLElement | null;
   cancelled: boolean;
   stopWatching: () => void;
   stopHolding: () => void;
@@ -71,6 +73,7 @@ interface VisibleBand {
 
 export class FocusAfterRowLeaves {
   private pending: PendingReveal | null = null;
+  private stopHolding: () => void = () => undefined;
 
   constructor(
     private readonly document: Document,
@@ -87,12 +90,14 @@ export class FocusAfterRowLeaves {
         reveal: null,
         gone: false,
         holds: true,
+        follower: null,
         cancelled: false,
         stopWatching: () => undefined,
         stopHolding: () => undefined,
       };
       this.pending = pending;
       pending.stopHolding = this.holdBelowTheTop(pending);
+      this.stopHolding = pending.stopHolding;
     }
   }
 
@@ -104,6 +109,7 @@ export class FocusAfterRowLeaves {
     }
     control.focus({ preventScroll: true });
     pending.focused = control;
+    this.noteWhetherItFollows(pending, control);
     pending.reveal = () => this.scrollIntoViewFitting(control);
     this.revealOnceRowGone(pending);
   }
@@ -164,7 +170,8 @@ export class FocusAfterRowLeaves {
 
   forget(): void {
     this.pending?.stopWatching();
-    this.pending?.stopHolding();
+    this.stopHolding();
+    this.stopHolding = () => undefined;
     this.pending = null;
   }
 
@@ -204,7 +211,10 @@ export class FocusAfterRowLeaves {
 
   private untilVisitorMoves(moved: () => void): () => void {
     let listening = true;
-    const heard = (): void => {
+    const heard = (event: Event): void => {
+      if (event instanceof KeyboardEvent && LONE_MODIFIERS.has(event.key)) {
+        return;
+      }
       stop();
       moved();
     };
@@ -233,6 +243,10 @@ export class FocusAfterRowLeaves {
     ) {
       return;
     }
+    this.noteWhetherItFollows(pending, held);
+    if (pending.follower !== held) {
+      return;
+    }
     const scroller = this.scrollerOf(held, view);
     const floor =
       this.visibleBand(scroller, view).top +
@@ -246,6 +260,12 @@ export class FocusAfterRowLeaves {
       view.scrollBy(back);
     } else {
       scroller.scrollBy(back);
+    }
+  }
+
+  private noteWhetherItFollows(pending: PendingReveal, control: HTMLElement): void {
+    if (pending.row.isConnected) {
+      pending.follower = followsRow(pending.row, control) ? control : null;
     }
   }
 
