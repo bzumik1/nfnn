@@ -1091,9 +1091,18 @@ const notebookPasskey = {
   lastUsedAt: '2026-10-25T08:00:00Z',
 };
 
-async function mockPasskeysTheIPhoneOneRemovable(
+type ListedPasskey = typeof iphonePasskey | typeof notebookPasskey;
+
+const CONTENT_RISE_PER_FRAME_PX = 64;
+
+interface SheetScrollRecord {
+  tops: number[];
+  recording: boolean;
+}
+
+async function mockRemovablePasskeys(
   page: Page,
-  passkeys: readonly (typeof iphonePasskey | typeof notebookPasskey)[],
+  passkeys: readonly ListedPasskey[],
 ): Promise<void> {
   let listed = [...passkeys];
   await page.route(
@@ -1101,20 +1110,31 @@ async function mockPasskeysTheIPhoneOneRemovable(
     (route) => route.fulfill({ json: { items: listed } }),
   );
   await page.route(
-    (url) => url.pathname === `/api/donors/me/passkeys/${iphonePasskey.id}`,
+    (url) => passkeys.some((passkey) => url.pathname === `/api/donors/me/passkeys/${passkey.id}`),
     async (route) => {
-      listed = listed.filter((passkey) => passkey.id !== iphonePasskey.id);
+      const removed = new URL(route.request().url()).pathname.split('/').pop();
+      listed = listed.filter((passkey) => passkey.id !== removed);
       await route.fulfill({ status: 204 });
     },
   );
 }
 
-async function removeTheIPhonePasskey(scope: Locator): Promise<Locator> {
-  const passkeys = await openThePasskeys(scope);
-  await confirmRemovingTheIPhonePasskey(passkeys);
-  return passkeys
-    .locator(`#passkey-row-${notebookPasskey.id}`)
-    .getByRole('button', { name: 'Přejmenovat' });
+async function offerPasskeysAsAnIPhoneDoes(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const refused = () => Promise.reject(new DOMException('Not in this test', 'NotAllowedError'));
+    if (typeof window.PublicKeyCredential !== 'function') {
+      Object.defineProperty(window, 'PublicKeyCredential', {
+        configurable: true,
+        value: class {},
+      });
+    }
+    if (typeof navigator.credentials?.create !== 'function') {
+      Object.defineProperty(navigator, 'credentials', {
+        configurable: true,
+        value: { create: refused, get: refused },
+      });
+    }
+  });
 }
 
 async function openThePasskeys(scope: Locator): Promise<Locator> {
@@ -1122,15 +1142,73 @@ async function openThePasskeys(scope: Locator): Promise<Locator> {
   return scope.getByRole('region', { name: 'Přístupové klíče' });
 }
 
-async function confirmRemovingTheIPhonePasskey(passkeys: Locator): Promise<void> {
-  const iphoneRow = passkeys.locator(`#passkey-row-${iphonePasskey.id}`);
-  await iphoneRow.getByRole('button', { name: 'Odebrat', exact: true }).click();
-  const confirm = iphoneRow.getByRole('button', { name: 'Ano, odebrat' });
+async function askToRemove(passkeys: Locator, passkey: ListedPasskey): Promise<Locator> {
+  const row = passkeys.locator(`#passkey-row-${passkey.id}`);
+  await row.getByRole('button', { name: 'Odebrat', exact: true }).click();
+  const confirm = row.getByRole('button', { name: 'Ano, odebrat' });
   await expect(confirm).toBeVisible();
+  return confirm;
+}
+
+async function removeThePasskey(passkeys: Locator, passkey: ListedPasskey): Promise<void> {
+  const confirm = await askToRemove(passkeys, passkey);
 
   await confirm.click();
 
-  await expect(iphoneRow).toHaveCount(0);
+  await expect(passkeys.locator(`#passkey-row-${passkey.id}`)).toHaveCount(0);
+}
+
+function renameButtonOf(passkeys: Locator, passkey: ListedPasskey): Locator {
+  return passkeys
+    .locator(`#passkey-row-${passkey.id}`)
+    .getByRole('button', { name: 'Přejmenovat' });
+}
+
+async function expectTheResultInViewWithTheAddButton(passkeys: Locator): Promise<void> {
+  await expect(passkeys).toBeFocused();
+  const result = passkeys.getByText('Zatím nemáte žádný přístupový klíč.');
+  await expectTopBetweenHeaderAndWhatCoversTheBottom(result);
+  await expect(result).toBeInViewport();
+  await expect(passkeys.getByRole('button', { name: 'Přidat přístupový klíč' })).toBeInViewport();
+}
+
+async function recordSheetScrollEachFrameFromTheNextClick(
+  page: Page,
+): Promise<() => Promise<number[]>> {
+  await page.evaluate(() => {
+    const panel = document.querySelector('app-account-sheet .dialog-panel')!;
+    const record: SheetScrollRecord = { tops: [], recording: true };
+    (window as unknown as { sheetScroll: SheetScrollRecord }).sheetScroll = record;
+    const sample = () => {
+      if (record.recording) {
+        record.tops.push(panel.scrollTop);
+        requestAnimationFrame(sample);
+      }
+    };
+    document.addEventListener(
+      'click',
+      () => {
+        record.tops.push(panel.scrollTop);
+        requestAnimationFrame(sample);
+      },
+      { capture: true, once: true },
+    );
+  });
+  return () =>
+    page.evaluate(() => {
+      const record = (window as unknown as { sheetScroll: SheetScrollRecord }).sheetScroll;
+      record.recording = false;
+      return record.tops;
+    });
+}
+
+async function signInOnTheAccountPageWithLargestText(page: Page): Promise<Locator> {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page);
+  await openDonorSection(page, 'Údaje a zabezpečení');
+  await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+  await page.setViewportSize({ width: 375, height: 667 });
+  return openThePasskeys(page.locator('app-account-card'));
 }
 
 for (const reducedMotion of ['no-preference', 'reduce'] as const) {
@@ -1140,51 +1218,45 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
     test.beforeEach(async ({ page }) => {
       await showLargestSystemText(page);
       await anchorNoScrollAsSafariDoes(page);
+      await offerPasskeysAsAnIPhoneDoes(page);
+      await mockDonorApi(page);
     });
 
     test('when they remove the first passkey, then Přejmenovat of the key below takes the focus and stands between the header and whatever covers the bottom of the window', async ({
       page,
     }) => {
-      await mockDonorApi(page);
-      await mockPasskeysTheIPhoneOneRemovable(page, [iphonePasskey, notebookPasskey]);
-      await page.setViewportSize({ width: 1280, height: 900 });
-      await signIn(page);
-      await openDonorSection(page, 'Údaje a zabezpečení');
-      await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
-      await page.setViewportSize({ width: 375, height: 667 });
+      await mockRemovablePasskeys(page, [iphonePasskey, notebookPasskey]);
+      const passkeys = await signInOnTheAccountPageWithLargestText(page);
 
-      const neighbour = await removeTheIPhonePasskey(page.locator('app-account-card'));
+      await removeThePasskey(passkeys, iphonePasskey);
 
-      await expect(neighbour).toBeFocused();
+      await expect(renameButtonOf(passkeys, notebookPasskey)).toBeFocused();
       await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
     });
 
     test('when they remove their only passkey, then the panel takes the focus and the result is brought into view with Přidat přístupový klíč, its top between the header and whatever covers the bottom of the window', async ({
       page,
     }) => {
-      await mockDonorApi(page);
-      await mockPasskeysTheIPhoneOneRemovable(page, [iphonePasskey]);
-      await page.setViewportSize({ width: 1280, height: 900 });
-      await signIn(page);
-      await openDonorSection(page, 'Údaje a zabezpečení');
-      await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
-      await page.setViewportSize({ width: 375, height: 667 });
-      const passkeys = await openThePasskeys(page.locator('app-account-card'));
-      const iphoneRow = passkeys.locator(`#passkey-row-${iphonePasskey.id}`);
-      await iphoneRow.getByRole('button', { name: 'Odebrat', exact: true }).click();
-      const confirm = iphoneRow.getByRole('button', { name: 'Ano, odebrat' });
-      await expect(confirm).toBeVisible();
+      await mockRemovablePasskeys(page, [iphonePasskey]);
+      const passkeys = await signInOnTheAccountPageWithLargestText(page);
 
-      await confirm.click();
+      await removeThePasskey(passkeys, iphonePasskey);
 
-      await expect(iphoneRow).toHaveCount(0);
-      await expect(passkeys).toBeFocused();
-      const result = passkeys.getByText('Zatím nemáte žádný přístupový klíč.');
-      await expectTopBetweenHeaderAndWhatCoversTheBottom(result);
-      await expect(result).toBeInViewport();
-      await expect(
-        passkeys.getByRole('button', { name: 'Přidat přístupový klíč' }),
-      ).toBeInViewport();
+      await expectTheResultInViewWithTheAddButton(passkeys);
+    });
+
+    test('when they remove one passkey and then the last one left, then the panel takes the focus and the result is brought into view with Přidat přístupový klíč, its top between the header and whatever covers the bottom of the window', async ({
+      page,
+    }) => {
+      await mockRemovablePasskeys(page, [iphonePasskey, notebookPasskey]);
+      const passkeys = await signInOnTheAccountPageWithLargestText(page);
+      await removeThePasskey(passkeys, iphonePasskey);
+      await expect(renameButtonOf(passkeys, notebookPasskey)).toBeFocused();
+      await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
+
+      await removeThePasskey(passkeys, notebookPasskey);
+
+      await expectTheResultInViewWithTheAddButton(passkeys);
     });
   });
 }
@@ -1196,24 +1268,33 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
     test.beforeEach(async ({ page }) => {
       await showLargestSystemText(page);
       await anchorNoScrollAsSafariDoes(page);
+      await offerPasskeysAsAnIPhoneDoes(page);
     });
 
-    test('when they remove the first passkey, then Přejmenovat of the key below takes the focus and stands below the sheet head, inside the sheet', async ({
+    test('when they remove the first passkey, then the sheet never jumps by more than one frame of motion and Přejmenovat of the key below takes the focus and stands below the sheet head, inside the sheet', async ({
       page,
     }) => {
       await mockDonorApi(page);
-      await mockPasskeysTheIPhoneOneRemovable(page, [iphonePasskey, notebookPasskey]);
+      await mockRemovablePasskeys(page, [iphonePasskey, notebookPasskey]);
       await rememberedDonorSession(page);
       await page.goto('/darce/prehled');
       await openDonorSection(page, 'Údaje a zabezpečení');
       const sheet = page.locator('app-account-sheet');
       await expect(sheet.locator('app-sheet-head')).toBeVisible();
       await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+      const passkeys = await openThePasskeys(sheet.locator('app-account-card'));
+      const confirm = await askToRemove(passkeys, iphonePasskey);
+      const scrollTops = await recordSheetScrollEachFrameFromTheNextClick(page);
 
-      const neighbour = await removeTheIPhonePasskey(sheet.locator('app-account-card'));
+      await confirm.click();
 
-      await expect(neighbour).toBeFocused();
+      await expect(passkeys.locator(`#passkey-row-${iphonePasskey.id}`)).toHaveCount(0);
+      await expect(renameButtonOf(passkeys, notebookPasskey)).toBeFocused();
       await expectFocusBelowTheSheetHeadInsideTheSheet(page);
+      const tops = await scrollTops();
+      const rises = tops.slice(1).map((top, frame) => top - tops[frame]);
+      expect(tops.length).toBeGreaterThan(1);
+      expect(Math.max(0, ...rises)).toBeLessThanOrEqual(CONTENT_RISE_PER_FRAME_PX);
     });
   });
 }

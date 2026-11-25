@@ -643,6 +643,38 @@ describe('Given a row whose leave moves the focus to a control below it', () => 
     expect(scrolled).toEqual([]);
   });
 
+  function focusesAsked(control: HTMLElement): (FocusOptions | undefined)[] {
+    const asked: (FocusOptions | undefined)[] = [];
+    const focusControl = control.focus.bind(control);
+    control.focus = (options?: FocusOptions) => {
+      asked.push(options);
+      focusControl(options);
+    };
+    return asked;
+  }
+
+  it('when the control below takes the focus while the row it will be revealed after still stands, then the browser is told not to scroll it there first', () => {
+    const focus = focusAfter();
+    const row = byId('leaving');
+    const asked = focusesAsked(byId('below'));
+    focus.rowLeaving(row);
+
+    focus.moveFocus(row, byId('below'));
+
+    expect(asked).toEqual([{ preventScroll: true }]);
+    expect(document.activeElement).toBe(byId('below'));
+  });
+
+  it('when the control takes the focus after a row it was not told about, then the browser scrolls it into view as usual', () => {
+    const focus = focusAfter();
+    const asked = focusesAsked(byId('below'));
+    focus.rowLeaving(byId('leaving'));
+
+    focus.moveFocus(byId('other'), byId('below'));
+
+    expect(asked).toEqual([undefined]);
+  });
+
   it('when the focus goes in place to the heading, then the browser is told not to scroll it into view either', () => {
     const focus = focusAfter();
     const asked: (FocusOptions | undefined)[] = [];

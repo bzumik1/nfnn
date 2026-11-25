@@ -606,6 +606,29 @@ describe('Given the passkeys panel of the sign-in card', () => {
         expect(regionScrolled).toEqual([]);
         expect(emptyTextScrolled).toEqual([{ block: 'start', behavior: 'smooth' }]);
       });
+
+      it('and the donor then removes the last key left, so the list leaves with it, then the empty text far above the window is brought into view once the list is gone', async () => {
+        await renderOnPage();
+        const leaveIphone = leavesSlowly(IPHONE);
+        await removeThe(IPHONE);
+        await leaveIphone();
+        const region = element('.passkeys');
+        const regionScrolled = scrollsOf(region);
+        const leaveWindows = leavesSlowly(WINDOWS, (row) => row.parentElement!);
+        await removeThe(WINDOWS);
+        const emptyText = element('.passkeys-empty');
+        emptyText.getBoundingClientRect = () => new DOMRect(0, -2000, 300, 40);
+        const emptyTextScrolled = scrollsOf(emptyText);
+
+        expect(document.activeElement).toBe(region);
+        expect(emptyTextScrolled).toEqual([]);
+
+        await leaveWindows();
+
+        expect(document.activeElement).toBe(region);
+        expect(regionScrolled).toEqual([]);
+        expect(emptyTextScrolled).toEqual([{ block: 'start', behavior: 'smooth' }]);
+      });
     });
   });
 

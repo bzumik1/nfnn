@@ -72,13 +72,15 @@ export class FocusAfterRowLeaves {
   }
 
   moveFocus(row: HTMLElement | null, control: HTMLElement): void {
-    control.focus();
     const pending = this.pending;
-    if (pending !== null && pending.row === row) {
-      pending.focused = control;
-      pending.reveal = () => this.scrollIntoViewFitting(control);
-      this.revealOnceRowGone(pending);
+    if (pending === null || pending.row !== row) {
+      control.focus();
+      return;
     }
+    control.focus({ preventScroll: true });
+    pending.focused = control;
+    pending.reveal = () => this.scrollIntoViewFitting(control);
+    this.revealOnceRowGone(pending);
   }
 
   focusInPlace(control: HTMLElement, reveal: RevealInPlace | null = null): void {
