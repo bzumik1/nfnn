@@ -377,7 +377,7 @@ export class PasskeysPanel {
         );
         markRowsLeaving([row]);
         this.holdEmptyTextBehind(row);
-        this.focusAfterRowLeaves.rowLeaving(row);
+        this.focusAfterRowLeaves.rowLeaving(row, neighbour);
         this.removing.set(null);
         this.confirming.set(null);
         this.rowLeft.set(true);

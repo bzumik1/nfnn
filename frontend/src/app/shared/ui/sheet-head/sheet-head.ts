@@ -33,6 +33,7 @@ function keepFocusClearOfHead(
   head: HTMLElement,
   view: Window,
   pressedByPointer: () => boolean,
+  asksForLessMotion: () => boolean,
 ): () => void {
   let pending = 0;
   let restoring = 0;
@@ -44,7 +45,7 @@ function keepFocusClearOfHead(
     const covered =
       head.getBoundingClientRect().bottom - (focused.getBoundingClientRect().top - margin);
     if (covered > 0) {
-      panel.scrollBy({ top: -covered, behavior: 'instant' });
+      panel.scrollBy({ top: -covered, behavior: asksForLessMotion() ? 'instant' : 'smooth' });
     }
   };
   const holdStillForTwoFrames = (focused: HTMLElement) => {
@@ -110,6 +111,17 @@ export const SHEET_HEAD_RESIZE_OBSERVER = new InjectionToken<typeof ResizeObserv
   { providedIn: 'root', factory: () => inject(DOCUMENT).defaultView?.ResizeObserver ?? null },
 );
 
+export const SHEET_HEAD_ASKS_FOR_LESS_MOTION = new InjectionToken<() => boolean>(
+  'SHEET_HEAD_ASKS_FOR_LESS_MOTION',
+  {
+    providedIn: 'root',
+    factory: () => {
+      const view = inject(DOCUMENT).defaultView;
+      return () => view?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    },
+  },
+);
+
 @Component({
   selector: 'app-sheet-head',
   templateUrl: './sheet-head.html',
@@ -128,6 +140,7 @@ export class SheetHead {
     const Observer = inject(SHEET_HEAD_RESIZE_OBSERVER);
     const view = inject(DOCUMENT).defaultView;
     const modality = inject(InputModality);
+    const asksForLessMotion = inject(SHEET_HEAD_ASKS_FOR_LESS_MOTION);
     afterNextRender(() => {
       const panel = head.closest<HTMLElement>(SHEET_PANEL);
       if (panel === null) {
@@ -154,7 +167,13 @@ export class SheetHead {
       destroyRef.onDestroy(() => panel.style.removeProperty(HEIGHT));
       if (view !== null) {
         destroyRef.onDestroy(
-          keepFocusClearOfHead(panel, head, view, () => modality.lastPressByPointer()),
+          keepFocusClearOfHead(
+            panel,
+            head,
+            view,
+            () => modality.lastPressByPointer(),
+            asksForLessMotion,
+          ),
         );
       }
     });

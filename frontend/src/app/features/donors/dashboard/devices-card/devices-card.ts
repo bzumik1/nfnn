@@ -255,7 +255,7 @@ export class DevicesCard {
       this.deviceList()?.nativeElement.querySelectorAll<HTMLElement>(ROW_CONTROLS) ?? [],
     );
     markRowsLeaving([row]);
-    this.focusAfterRowLeaves.rowLeaving(row);
+    this.focusAfterRowLeaves.rowLeaving(row, neighbour);
     if (row !== null && !this.leavesInView(row)) {
       this.focusAfterRowLeaves.rowLeaveEnded(row);
     }

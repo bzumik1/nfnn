@@ -50,11 +50,19 @@ export interface RevealInPlace {
 
 interface PendingReveal {
   readonly row: HTMLElement;
+  readonly neighbour: () => HTMLElement | null;
   focused: HTMLElement | null;
   reveal: (() => void) | null;
   gone: boolean;
+  holds: boolean;
+  cancelled: boolean;
   stopWatching: () => void;
+  stopHolding: () => void;
 }
+
+const VISITOR_MOVES = ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown'] as const;
+const VISITOR_MOVE_LISTENING: AddEventListenerOptions = { capture: true, passive: true };
+const SUBPIXEL_PX = 0.5;
 
 interface VisibleBand {
   readonly top: number;
@@ -69,16 +77,22 @@ export class FocusAfterRowLeaves {
     private readonly watched: () => Node | null,
   ) {}
 
-  rowLeaving(row: HTMLElement | null): void {
+  rowLeaving(row: HTMLElement | null, neighbour: () => HTMLElement | null = () => null): void {
     this.forget();
     if (row !== null) {
-      this.pending = {
+      const pending: PendingReveal = {
         row,
+        neighbour,
         focused: null,
         reveal: null,
         gone: false,
+        holds: true,
+        cancelled: false,
         stopWatching: () => undefined,
+        stopHolding: () => undefined,
       };
+      this.pending = pending;
+      pending.stopHolding = this.holdBelowTheTop(pending);
     }
   }
 
@@ -102,7 +116,8 @@ export class FocusAfterRowLeaves {
       return;
     }
     pending.focused = control;
-    pending.reveal = () => this.revealOnceSettled(control, reveal.from, reveal.to);
+    pending.holds = false;
+    pending.reveal = () => this.revealOnceSettled(pending, control, reveal.from, reveal.to);
     this.revealOnceRowGone(pending);
   }
 
@@ -112,13 +127,17 @@ export class FocusAfterRowLeaves {
       return;
     }
     pending.stopWatching();
+    const watched = this.watched();
     pending.stopWatching = afterRemoval(
       row,
       () => {
         pending.gone = true;
+        this.afterMotions(this.motionsWithin(watched), () =>
+          this.afterTheNextFrameLaidOut(() => pending.stopHolding()),
+        );
         this.revealOnceRowGone(pending);
       },
-      this.watched(),
+      watched,
     );
   }
 
@@ -127,8 +146,12 @@ export class FocusAfterRowLeaves {
     motions: readonly Animation[],
     pressedByPointer: boolean,
   ): void {
+    let moved = false;
+    const stopListening = this.untilVisitorMoves(() => (moved = true));
     this.afterMotions(motions, () => {
+      stopListening();
       if (
+        moved ||
         this.document.activeElement !== control ||
         !control.isConnected ||
         (pressedByPointer && this.partlyInView(control))
@@ -141,7 +164,102 @@ export class FocusAfterRowLeaves {
 
   forget(): void {
     this.pending?.stopWatching();
+    this.pending?.stopHolding();
     this.pending = null;
+  }
+
+  private holdBelowTheTop(pending: PendingReveal): () => void {
+    const view = this.document.defaultView;
+    const Observer = view?.ResizeObserver;
+    if (view === null || view === undefined || Observer === undefined) {
+      return () => undefined;
+    }
+    const scroller = this.scrollerOf(pending.row, view);
+    const observer = new Observer(() => this.keepBelowTheTop(pending, view));
+    observer.observe(pending.row);
+    for (let node = pending.row.parentElement; node !== null; node = node.parentElement) {
+      observer.observe(node);
+      if (node === scroller || node === this.document.body) {
+        break;
+      }
+    }
+    let stopped = false;
+    const stop = (): void => {
+      if (stopped) {
+        return;
+      }
+      stopped = true;
+      observer.disconnect();
+      stopListening();
+    };
+    const stopListening = this.untilVisitorMoves(() => {
+      pending.cancelled = true;
+      stop();
+      if (this.pending === pending) {
+        this.forget();
+      }
+    });
+    return stop;
+  }
+
+  private untilVisitorMoves(moved: () => void): () => void {
+    let listening = true;
+    const heard = (): void => {
+      stop();
+      moved();
+    };
+    const stop = (): void => {
+      if (!listening) {
+        return;
+      }
+      listening = false;
+      for (const type of VISITOR_MOVES) {
+        this.document.removeEventListener(type, heard, VISITOR_MOVE_LISTENING);
+      }
+    };
+    for (const type of VISITOR_MOVES) {
+      this.document.addEventListener(type, heard, VISITOR_MOVE_LISTENING);
+    }
+    return stop;
+  }
+
+  private keepBelowTheTop(pending: PendingReveal, view: Window): void {
+    const held = pending.focused ?? pending.neighbour();
+    if (
+      !pending.holds ||
+      held === null ||
+      !held.isConnected ||
+      (pending.focused !== null && this.document.activeElement !== pending.focused)
+    ) {
+      return;
+    }
+    const scroller = this.scrollerOf(held, view);
+    const floor =
+      this.visibleBand(scroller, view).top +
+      (parseFloat(view.getComputedStyle(held).scrollMarginTop) || 0);
+    const above = floor - held.getBoundingClientRect().top;
+    if (above <= SUBPIXEL_PX) {
+      return;
+    }
+    const back: ScrollToOptions = { top: -above, behavior: 'instant' };
+    if (scroller === this.document.documentElement) {
+      view.scrollBy(back);
+    } else {
+      scroller.scrollBy(back);
+    }
+  }
+
+  private afterTheNextFrameLaidOut(then: () => void): void {
+    const view = this.document.defaultView;
+    if (typeof view?.requestAnimationFrame !== 'function') {
+      then();
+      return;
+    }
+    view.requestAnimationFrame(() => view.requestAnimationFrame(() => then()));
+  }
+
+  private motionsWithin(watched: Node | null): Animation[] {
+    return watched instanceof Element ? (watched.getAnimations?.({ subtree: true }) ?? []) : [];
   }
 
   private revealOnceRowGone(pending: PendingReveal): void {
@@ -161,14 +279,19 @@ export class FocusAfterRowLeaves {
     });
   }
 
-  private revealOnceSettled(focused: HTMLElement, from: HTMLElement, to: HTMLElement | null): void {
+  private revealOnceSettled(
+    pending: PendingReveal,
+    focused: HTMLElement,
+    from: HTMLElement,
+    to: HTMLElement | null,
+  ): void {
     const motions = [from, to].flatMap((element) => element?.getAnimations?.() ?? []);
     if (motions.length === 0) {
       this.revealSpan(from, to);
       return;
     }
     this.afterMotions(motions, () => {
-      if (this.document.activeElement === focused && from.isConnected) {
+      if (!pending.cancelled && this.document.activeElement === focused && from.isConnected) {
         this.revealSpan(from, to);
       }
     });

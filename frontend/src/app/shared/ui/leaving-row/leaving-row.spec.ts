@@ -561,6 +561,8 @@ describe('Given a row whose leave moves the focus to a control below it', () => 
       },
       body: document.body,
       documentElement: document.documentElement,
+      addEventListener: document.addEventListener.bind(document),
+      removeEventListener: document.removeEventListener.bind(document),
       defaultView: {
         innerHeight,
         matchMedia: (query: string) => ({
@@ -795,6 +797,8 @@ describe('Given the only row whose leave leaves no control to move the focus to'
       },
       body: document.body,
       documentElement: document.documentElement,
+      addEventListener: document.addEventListener.bind(document),
+      removeEventListener: document.removeEventListener.bind(document),
       defaultView: {
         innerHeight: 600,
         matchMedia: (query: string) => ({
@@ -1022,6 +1026,8 @@ describe('Given a control that takes the focus back while the panel below it clo
       },
       body: document.body,
       documentElement: document.documentElement,
+      addEventListener: document.addEventListener.bind(document),
+      removeEventListener: document.removeEventListener.bind(document),
       defaultView: {
         innerHeight: 600,
         matchMedia: (query: string) => ({
@@ -1115,5 +1121,278 @@ describe('Given a control that takes the focus back while the panel below it clo
     new FocusAfterRowLeaves(pageAsking(false), () => null).keepInViewOnceSettled(control, [], true);
 
     expect(scrolled).toEqual([{ block: 'nearest', behavior: 'smooth' }]);
+  });
+});
+
+describe('Given a row whose leave carries the control below it toward the top of what shows the page', () => {
+  let list: HTMLUListElement;
+  let row: HTMLElement;
+  let below: HTMLElement;
+  let other: HTMLButtonElement;
+  let watchers: WatchedSizes[];
+  let scrolledBy: ScrollToOptions[];
+  let revealed: unknown[];
+  let margins: Map<Element, Partial<CSSStyleDeclaration>>;
+  let focus: FocusAfterRowLeaves;
+
+  class WatchedSizes {
+    readonly targets = new Set<Element>();
+
+    constructor(readonly callback: ResizeObserverCallback) {
+      watchers.push(this);
+    }
+
+    observe(target: Element): void {
+      this.targets.add(target);
+    }
+
+    disconnect(): void {
+      watchers = watchers.filter((watcher) => watcher !== this);
+    }
+  }
+
+  beforeEach(() => {
+    watchers = [];
+    scrolledBy = [];
+    revealed = [];
+    margins = new Map();
+    list = document.createElement('ul');
+    list.innerHTML = `
+      <li id="leaving"><button>Odhlásit</button></li>
+      <li id="staying"><button id="below">Starší</button></li>
+    `;
+    other = document.createElement('button');
+    document.body.append(list, other);
+    row = document.getElementById('leaving')!;
+    below = document.getElementById('below')!;
+    below.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+      revealed.push(options);
+    };
+    standAt(below, 200);
+    focus = new FocusAfterRowLeaves(page(), () => list);
+  });
+
+  afterEach(() => {
+    focus.forget();
+    list.remove();
+    other.remove();
+  });
+
+  function page(): Document {
+    return {
+      get activeElement() {
+        return document.activeElement;
+      },
+      body: document.body,
+      documentElement: document.documentElement,
+      addEventListener: document.addEventListener.bind(document),
+      removeEventListener: document.removeEventListener.bind(document),
+      defaultView: {
+        innerHeight: 600,
+        matchMedia: () => ({ matches: false }),
+        getComputedStyle: (element: Element) => ({
+          ...getComputedStyle(element),
+          scrollMarginTop: '',
+          scrollPaddingTop: '',
+          scrollPaddingBottom: '',
+          overflowY: '',
+          ...margins.get(element),
+        }),
+        ResizeObserver: WatchedSizes,
+        requestAnimationFrame: (callback: FrameRequestCallback) => requestAnimationFrame(callback),
+        scrollBy: (options: ScrollToOptions) => scrolledBy.push(options),
+      },
+    } as unknown as Document;
+  }
+
+  function standAt(element: HTMLElement, top: number): void {
+    element.getBoundingClientRect = () => new DOMRect(0, top, 300, 40);
+  }
+
+  function aFrameOfTheClose(): void {
+    for (const watcher of [...watchers]) {
+      watcher.callback([], watcher as unknown as ResizeObserver);
+    }
+  }
+
+  async function removed(): Promise<void> {
+    row.remove();
+    await Promise.resolve();
+    await Promise.resolve();
+  }
+
+  it('when a frame of the close carries the control 30 px above the top of the window, then the page scrolls back by those 30 px in that frame, at once', () => {
+    focus.rowLeaving(row, () => below);
+    standAt(below, -30);
+
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([{ top: -30, behavior: 'instant' }]);
+  });
+
+  it('when the close is watched, then it is watched on the row and on every box around it up to the page, so a change above the list holds the control too', () => {
+    focus.rowLeaving(row, () => below);
+
+    expect([...watchers[0].targets]).toEqual([row, list, document.body]);
+  });
+
+  it('when a frame of the close leaves the control below the top, then nothing scrolls', () => {
+    focus.rowLeaving(row, () => below);
+    standAt(below, 4);
+
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([]);
+  });
+
+  it('when the control keeps a scroll margin of 12 px, then it is held 12 px below the top', () => {
+    margins.set(below, { scrollMarginTop: '12px' });
+    focus.rowLeaving(row, () => below);
+    standAt(below, 5);
+
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([{ top: -7, behavior: 'instant' }]);
+  });
+
+  it('when the page keeps 58 px under its header as scroll padding, then the control is held below the header', () => {
+    margins.set(document.documentElement, { scrollPaddingTop: '58px' });
+    focus.rowLeaving(row, () => below);
+    standAt(below, 40);
+
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([{ top: -18, behavior: 'instant' }]);
+  });
+
+  it('when the control stands in a scrolling panel, then the panel scrolls back, not the page', () => {
+    const panel = document.createElement('div');
+    const panelScrolls: ScrollToOptions[] = [];
+    panel.scrollBy = ((options: ScrollToOptions) => panelScrolls.push(options)) as never;
+    panel.getBoundingClientRect = () => new DOMRect(0, 100, 375, 500);
+    margins.set(panel, { overflowY: 'auto', scrollPaddingTop: '57px' });
+    document.body.append(panel);
+    panel.append(list);
+    onTestFinished(() => panel.remove());
+    focus.rowLeaving(row, () => below);
+    standAt(below, 150);
+
+    aFrameOfTheClose();
+
+    expect(panelScrolls).toEqual([{ top: -7, behavior: 'instant' }]);
+    expect(scrolledBy).toEqual([]);
+    expect([...watchers[0].targets]).toEqual([row, list, panel]);
+  });
+
+  it('when the control has taken the focus and the focus has moved on since, then nothing scrolls', () => {
+    focus.rowLeaving(row, () => below);
+    focus.moveFocus(row, below);
+    other.focus();
+    standAt(below, -30);
+
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([]);
+  });
+
+  it('when another control takes the focus in its place, then that one is held', () => {
+    focus.rowLeaving(row, () => below);
+    focus.moveFocus(row, other);
+    standAt(other, -12);
+
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([{ top: -12, behavior: 'instant' }]);
+  });
+
+  it('when the focus goes in place to a region taller than the window, then the region is not held, so its result can be brought into view', () => {
+    const region = document.createElement('section');
+    region.tabIndex = -1;
+    document.body.append(region);
+    onTestFinished(() => region.remove());
+    focus.rowLeaving(row);
+    focus.focusInPlace(region, { row, from: below, to: null });
+    standAt(region, -900);
+
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([]);
+  });
+
+  it('when no control is left to take the focus, then nothing is held', () => {
+    focus.rowLeaving(row);
+    standAt(below, -30);
+
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([]);
+  });
+
+  for (const move of ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown']) {
+    it(`when the visitor's own ${move} comes during the close, then later frames scroll nothing and the control is not brought into view once the row is gone`, async () => {
+      focus.rowLeaving(row, () => below);
+      focus.moveFocus(row, below);
+      focus.rowLeaveEnded(row);
+
+      document.dispatchEvent(new Event(move, { bubbles: true }));
+      standAt(below, -30);
+      aFrameOfTheClose();
+      await removed();
+
+      expect(scrolledBy).toEqual([]);
+      expect(revealed).toEqual([]);
+      expect(watchers).toEqual([]);
+    });
+  }
+
+  it('when the row is gone and nothing in its list moves any more, then the frame of the removal is still held, and only after it the close is no longer watched', async () => {
+    focus.rowLeaving(row, () => below);
+    focus.moveFocus(row, below);
+    focus.rowLeaveEnded(row);
+
+    await removed();
+    standAt(below, -40);
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([{ top: -40, behavior: 'instant' }]);
+    await vi.waitFor(() => expect(watchers).toEqual([]));
+  });
+
+  it('when another action begins before the row is gone, then the close is no longer watched', () => {
+    focus.rowLeaving(row, () => below);
+
+    focus.forget();
+
+    expect(watchers).toEqual([]);
+  });
+});
+
+describe('Given a control that takes the focus back while the panel below it closes, and a visitor who scrolls meanwhile', () => {
+  it('when the visitor turns the wheel before the panel has closed, then the control is left where they scrolled it', async () => {
+    const card = document.createElement('section');
+    const control = document.createElement('button');
+    const scrolled: unknown[] = [];
+    card.append(control);
+    document.body.append(card);
+    onTestFinished(() => card.remove());
+    control.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+      scrolled.push(options);
+    };
+    control.getBoundingClientRect = () => new DOMRect(0, -1759, 300, 40);
+    control.focus();
+    let finish: () => void = () => undefined;
+    const finished = new Promise<void>((resolve) => (finish = resolve));
+    const motion = {
+      finished,
+      effect: { getComputedTiming: () => ({ endTime: 60_000 }) },
+    } as unknown as Animation;
+    new FocusAfterRowLeaves(document, () => null).keepInViewOnceSettled(control, [motion], false);
+
+    document.dispatchEvent(new Event('wheel', { bubbles: true }));
+    finish();
+    await finished;
+    await Promise.resolve();
+
+    expect(scrolled).toEqual([]);
   });
 });
