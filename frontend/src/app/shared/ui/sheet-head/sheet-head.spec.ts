@@ -10,7 +10,9 @@ import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
       <app-sheet-head title="Údaje a zabezpečení" />
     }
     <input id="below" aria-label="E-mail" />
-    <div class="dialog-panel"><input id="nested" aria-label="Číslo účtu" /></div>
+    <dialog id="opened-inside" tabindex="-1" open>
+      <div class="dialog-panel"><input id="nested" aria-label="Číslo účtu" /></div>
+    </dialog>
   </div>`,
 })
 class SheetPanel {
@@ -282,6 +284,16 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
       standAt(control('#nested'), 0, 40);
 
       control('#nested').focus();
+      await nextFrame();
+
+      expect(scrolled).toEqual([]);
+      expect(padding()).toBe('');
+    });
+
+    it('when a dialog opened inside the sheet takes it itself as it closes, then the panel of the sheet leaves it alone', async () => {
+      standAt(control('#opened-inside'), 0, 800);
+
+      control('#opened-inside').focus();
       await nextFrame();
 
       expect(scrolled).toEqual([]);

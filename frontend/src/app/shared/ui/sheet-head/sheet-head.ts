@@ -44,7 +44,10 @@ function keepFocusClearOfHead(panel: HTMLElement, head: HTMLElement, view: Windo
       panel.style.setProperty(PADDING_TOP, '0px');
       return;
     }
-    if (focused.closest(SHEET_PANEL) === panel) {
+    if (
+      focused.closest(SHEET_PANEL) === panel &&
+      focused.closest('dialog') === panel.closest('dialog')
+    ) {
       view.cancelAnimationFrame(pending);
       pending = view.requestAnimationFrame(() => uncover(focused));
     }
