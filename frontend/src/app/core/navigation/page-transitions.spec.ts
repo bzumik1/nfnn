@@ -2116,31 +2116,40 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
-  function onePageClock(): () => number {
-    const own = performance.now.bind(performance);
-    const origin = own();
-    const clock = vi.spyOn(performance, 'now').mockImplementation(() => own() - origin);
+  function oneFakePageClock(): () => number {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const origin = Date.now();
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => Date.now() - origin);
     onTestFinished(() => clock.mockRestore());
     return () => performance.now();
   }
 
+  async function drawnUnderOnTheFakeClock(): Promise<void> {
+    await vi.dynamicImportSettled();
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.dynamicImportSettled();
+  }
+
   async function screenStepsOfACloseIn(gapsAfterTwoFramesMs: readonly number[]): Promise<number[]> {
-    const now = onePageClock();
+    const now = oneFakePageClock();
     const frames = framesByHand();
     try {
       const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
       await vi.dynamicImportSettled();
       swipe.follow(220);
       finishVisit();
-      await drawnUnder();
+      await drawnUnderOnTheFakeClock();
       const offsets = [offsetOf(over())];
       frames.run(now());
       offsets.push(offsetOf(over()));
-      await new Promise((done) => setTimeout(done, 16));
+      await vi.advanceTimersByTimeAsync(16);
       frames.run(now());
       offsets.push(offsetOf(over()));
       for (const gapMs of gapsAfterTwoFramesMs) {
-        await new Promise((done) => setTimeout(done, gapMs));
+        await vi.advanceTimersByTimeAsync(gapMs);
         frames.run(now());
         offsets.push(offsetOf(over()));
       }
@@ -2238,17 +2247,17 @@ describe('Given the app on the home screen of a phone opened straight on the don
     onTestFinished(() => {
       document.documentElement.style.removeProperty('--duration-fast');
     });
-    const now = onePageClock();
+    const now = oneFakePageClock();
     const frames = framesByHand();
     try {
       const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
       await vi.dynamicImportSettled();
       swipe.follow(220);
       finishVisit();
-      await drawnUnder();
+      await drawnUnderOnTheFakeClock();
       const before = offsetOf(over());
 
-      await new Promise((done) => setTimeout(done, 2 * FRAME_LATE_MS + 20));
+      await vi.advanceTimersByTimeAsync(2 * FRAME_LATE_MS + 20);
       expect(offsetOf(over()), 'the page moved while no frame was drawn').toBe(before);
       frames.run(now());
 
