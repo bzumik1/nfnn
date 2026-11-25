@@ -2,6 +2,7 @@ import { HeldScroll, keepThePageEnd, SettlingPlacement } from '../../../core/lay
 
 const ROOM_CLASS = 'has-floating-notice';
 const ROOM_HEIGHT = '--floating-notice-height';
+const FOCUS_CATCHER = '[tabindex="-1"]:not(button, a[href], input, select, textarea, [role])';
 const barsShown = new WeakMap<Document, HTMLElement[]>();
 
 function shownBars(document: Document): HTMLElement[] {
@@ -42,12 +43,22 @@ export function keepRoomForFloatingNotice(
       view?.scrollBy({ top: hidden + gap, behavior: 'instant' });
     }
   };
+  const mayHideUnderBar = (focused: unknown): focused is Element =>
+    focused instanceof Element &&
+    focused !== document.body &&
+    !focused.matches(FOCUS_CATCHER) &&
+    !bar.contains(focused) &&
+    focused.closest('dialog[open]') === null;
   const uncover = (event: FocusEvent) => {
-    const focused = event.target;
-    if (!(focused instanceof Element) || bar.contains(focused) || focused.closest('dialog[open]')) {
+    if (!mayHideUnderBar(event.target)) {
       return;
     }
-    view?.requestAnimationFrame(() => scrollAboveBar(focused));
+    view?.requestAnimationFrame(() => {
+      const focused = document.activeElement;
+      if (mayHideUnderBar(focused)) {
+        scrollAboveBar(focused);
+      }
+    });
   };
   keepThePageEnd(view, scrollHold, placement, () =>
     keepRoomForLatest(document, [...shownBars(document).filter((shown) => shown !== bar), bar]),
