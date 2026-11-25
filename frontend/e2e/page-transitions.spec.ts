@@ -1065,6 +1065,7 @@ const BAND_READ_INSIDE_PX = 40;
 async function onTheHomeScreenWithBottomInset(page: Page, inset: string): Promise<void> {
   await page.addInitScript((bottom) => {
     Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+    Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
     const setInset = (root: HTMLElement): void =>
       root.style.setProperty('--safe-area-bottom', bottom);
     if (document.documentElement !== null) {
