@@ -174,6 +174,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     if (dialog.open) {
       dialog.close();
     }
+    this.restackOthers();
     if (this.opener instanceof HTMLElement && this.opener.isConnected) {
       focusInView(this.opener);
     } else {
@@ -193,6 +194,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   protected onClose(): void {
+    this.restackOthers();
     if (this.steppedAside) {
       return;
     }
@@ -385,6 +387,13 @@ export class Dialog implements AfterViewInit, OnDestroy {
     const covered = target.getBoundingClientRect().bottom - actions.getBoundingClientRect().top;
     if (covered > 0) {
       panel.scrollBy({ top: covered + ROOM_ABOVE_STICKY_ACTIONS_PX });
+    }
+  }
+
+  private restackOthers(): void {
+    const open = liveDialogs(this.document, 'dialog[open]');
+    if (open.length === 1) {
+      open[0].classList.remove(STACKED_DIALOG_CLASS);
     }
   }
 
