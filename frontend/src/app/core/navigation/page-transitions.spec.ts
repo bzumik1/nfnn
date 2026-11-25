@@ -2635,6 +2635,90 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
+  it('when the finger lets go past half while no frame is drawn for 520 ms as the page closes in on it, then the first frame drawn after shows the page no further from where the last drawn frame showed it than it was moving or an eighth of the gap, never the moves the page clock made unseen', async () => {
+    const now = oneFakePageClock();
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnderOnTheFakeClock();
+      const drawn = [offsetOf(over())];
+      for (let frame = 0; frame < 2; frame++) {
+        await vi.advanceTimersByTimeAsync(16);
+        frames.run(now());
+        drawn.push(offsetOf(over()));
+      }
+      await vi.advanceTimersByTimeAsync(520);
+      void swipe.settle({
+        completes: true,
+        from: 220,
+        to: 390,
+        durationMs: 150,
+        easing: 'cubic-bezier(0.25, 0.5, 0.25, 1)',
+        speed: 3,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      frames.run(now());
+      await vi.advanceTimersByTimeAsync(0);
+      const lastDrawn = drawn.at(-1)!;
+      const moved = offsetOf(over()) - lastDrawn;
+
+      expect(moved, 'the page stood still in the first frame after the lift').toBeGreaterThan(0);
+      expect(moved, 'the first frame after the freeze').toBeLessThanOrEqual(
+        Math.max(lastDrawn - drawn.at(-2)!, 220 / 8) + 1e-6,
+      );
+    } finally {
+      frames.restore();
+    }
+  });
+
+  it('when the finger lets go once the page has closed in on it, then the page slides on in the next frame drawn, never holding still for frames, since the close-in has drawn the page beneath already', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => ({
+        pause: () => undefined,
+        play: () => undefined,
+        cancel: () => undefined,
+        finished: new Promise(() => undefined),
+      }),
+    });
+    const now = oneFakePageClock();
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnderOnTheFakeClock();
+      for (let frame = 0; frame < 60 && offsetOf(over()) < 220; frame++) {
+        await vi.advanceTimersByTimeAsync(16);
+        frames.run(now());
+      }
+      expect(offsetOf(over()), 'the page closed in on the finger').toBe(220);
+
+      void swipe.settle({
+        completes: true,
+        from: 220,
+        to: 390,
+        durationMs: 150,
+        easing: 'cubic-bezier(0.25, 0.5, 0.25, 1)',
+        speed: 1,
+      });
+      await vi.advanceTimersByTimeAsync(16);
+      frames.run(now());
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(offsetOf(over()), 'the page stood still in the frame after the lift').toBeGreaterThan(
+        220,
+      );
+    } finally {
+      frames.restore();
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
   it('when the finger lets the page go back while the page still closes in on it, then the slide that settles it owns the page, and the close-in never moves it towards the finger again', async () => {
     const frames = framesByHand();
     try {

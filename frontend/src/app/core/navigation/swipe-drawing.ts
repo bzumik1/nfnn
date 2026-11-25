@@ -50,7 +50,7 @@ export interface CatchUp {
   readonly frameMs: number;
   readonly finger: () => number;
   readonly from: number;
-  readonly show: (offset: number) => void;
+  readonly show: (offset: number, drawn: boolean) => void;
   readonly goesOn: () => boolean;
   readonly caughtUp: () => void;
 }
@@ -85,7 +85,7 @@ export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp):
       const target = left < 1 ? 0 : left;
       behind = Math.max(target, behind - stepAtMost);
       const finger = Math.max(0, catchUp.finger());
-      catchUp.show(Math.min(finger, Math.max(0, finger - behind)));
+      catchUp.show(Math.min(finger, Math.max(0, finger - behind)), drawn);
     }
     if (behind === 0) {
       catchUp.caughtUp();
@@ -391,13 +391,17 @@ function followingFinger(
   let offset = 0;
   let ready = start.ready;
   let shown = 0;
-  let lastStep = 0;
+  let presented = 0;
+  let presentedStep = 0;
   let stepAtMost = 0;
   let closedIn = false;
   let catchingUp = false;
-  const place = (at: number): void => {
-    lastStep = at - shown;
+  const place = (at: number, drawn = true): void => {
     shown = at;
+    if (drawn) {
+      presentedStep = at - presented;
+      presented = at;
+    }
     follow();
   };
   const follow = (): void => {
@@ -422,9 +426,9 @@ function followingFinger(
       frameMs: measuredFrameMs(stage),
       finger: () => offset,
       from: shown,
-      show: (at) => {
-        closedIn = true;
-        place(at);
+      show: (at, drawn) => {
+        closedIn ||= drawn;
+        place(at, drawn);
       },
       goesOn: () => catchingUp && stage.running === running,
       caughtUp: () => (catchingUp = false),
@@ -447,15 +451,19 @@ function followingFinger(
       }
       return false;
     }
+    if (shown !== presented) {
+      shown = presented;
+      follow();
+    }
     const lags = shown !== wanted.from && stepAtMost > 0;
     const end = lags ? settleFrom(wanted, shown, width) : wanted;
-    await (lags
+    await (lags || (closedIn && stepAtMost > 0)
       ? (closedIn ? Promise.resolve() : afterTwoDrawnFrames()).then(() =>
           trackSettle(view, {
             plan: end,
             finger: wanted,
             frameMs: measuredFrameMs(stage),
-            firstStepAtMost: Math.max(Math.sign(end.to - shown) * lastStep, stepAtMost),
+            firstStepAtMost: Math.max(Math.sign(end.to - shown) * presentedStep, stepAtMost),
             show: place,
             goesOn: () => stage.running === running,
           }),
