@@ -121,6 +121,36 @@ async function tapAsSafariDoes(sheet: Locator, opener: Locator): Promise<void> {
   await opener.dispatchEvent('click');
 }
 
+async function swipeDown(dialog: Locator): Promise<void> {
+  const panel = dialog.locator(':scope > .dialog-panel');
+  const grabber = panel.locator(':scope > .dialog-grabber');
+  await expect(grabber).toBeVisible();
+  await expect
+    .poll(() =>
+      panel.evaluate(
+        (element) =>
+          element
+            .getAnimations()
+            .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+            .filter((animation) => animation.playState === 'running').length,
+      ),
+    )
+    .toBe(0);
+  const box = (await grabber.boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  const mouse = dialog.page().mouse;
+  await mouse.move(x, y);
+  await mouse.down();
+  await mouse.move(x, y + 400, { steps: 20 });
+  await mouse.up();
+}
+
+const CLOSES_BY_FINGER = [
+  { way: 'Zavřít', close: CLOSES[0].close },
+  { way: 'a swipe down', close: swipeDown },
+] as const;
+
 async function watchScrolls(panel: Locator): Promise<void> {
   await panel.evaluate((element) => {
     element.dataset['scrolledTo'] = '';
@@ -201,6 +231,35 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
           await expect(dialog).toBeVisible();
           await watchScrolls(panel);
           await CLOSES[0].close(dialog);
+
+          await expect(dialog).toHaveCount(0);
+          await expect(opener).toBeFocused();
+          expect(await scrollTopAfterTwoFrames(panel)).toBe(scrolledTo);
+          expect(await scrollsSeen(panel)).toEqual([]);
+        });
+      }
+
+      for (const { way, close } of CLOSES_BY_FINGER) {
+        test(`when ${nested.opener} kept the focus from an earlier close, its visible half under the sticky head of the sheet is tapped as Safari taps it and the dialog is closed with ${way}, then the sheet stays where it was and the focus is back on ${nested.opener}`, async ({
+          page,
+        }) => {
+          await openAccountItem(page, nested.section);
+          const sheet = page.getByRole('dialog', { name: nested.section });
+          const panel = sheet.locator(':scope > .dialog-panel');
+          const opener = panel.getByRole('button', { name: nested.opener, exact: true });
+          await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+          await expect(opener).toBeEnabled({ timeout: 10_000 });
+          await nested.settled(page);
+          await opener.evaluate((button: HTMLElement) => button.focus({ preventScroll: true }));
+          await expect(opener).toBeFocused();
+          const scrolledTo = await cutInHalfBy('head', panel, opener);
+
+          await tapAsSafariDoes(sheet, opener);
+          await expect(opener).toBeFocused();
+          const dialog = nested.dialog(page);
+          await expect(dialog).toBeVisible();
+          await watchScrolls(panel);
+          await close(dialog);
 
           await expect(dialog).toHaveCount(0);
           await expect(opener).toBeFocused();

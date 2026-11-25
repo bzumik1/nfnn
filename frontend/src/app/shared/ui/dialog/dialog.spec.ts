@@ -12,6 +12,7 @@ import { DialogAnnouncer } from './dialog-announcer';
 import { DialogHistory } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { FakeDialogHistory } from './testing/fake-dialog-history';
+import { FocusReturn } from './focus-return';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const realMatchMedia = window.matchMedia;
@@ -1368,6 +1369,29 @@ describe('Given a dialog opened by a finger from a button inside a sheet, in a b
     modality?.stop();
     fixture?.nativeElement.remove();
   });
+
+  for (const less of [false, true]) {
+    it(`when the browser hands the focus back to the button that opened it as it closes the dialog${less ? ' with less motion' : ''}, then that focus counts as returned, so the sheet head leaves the button where it is`, async () => {
+      deviceAsksForLessMotion(less);
+      const focusReturn = TestBed.inject(FocusReturn);
+      const native = nested();
+      const close = native.close.bind(native);
+      native.close = () => {
+        close();
+        opener().focus({ preventScroll: true });
+      };
+      let restoredAsReturned: boolean | null = null;
+      opener().addEventListener('focusin', () => {
+        restoredAsReturned ??= focusReturn.isReturning(opener());
+      });
+
+      closeNested();
+      await settle();
+
+      expect(dialogs()).toHaveLength(1);
+      expect(restoredAsReturned).toBe(true);
+    });
+  }
 
   it('when its close button starts it leaving, then it parks the focus on itself without scrolling and the sheet behind it stays where it was', () => {
     const parked = focusOptionsOf(nested());
