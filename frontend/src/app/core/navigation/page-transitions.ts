@@ -685,6 +685,7 @@ export class PageTransitions {
           this.sheetStandsOn(leaving) !== this.sheetStandsOn(arriving),
       );
     }
+    this.decideCorners(overlay, leaving, arriving);
     overlay.querySelector(`.${PAGE_TRANSITION_CLASS}__bar`)?.remove();
     const bar = this.document.createElement('div');
     bar.className = `${PAGE_TRANSITION_CLASS}__bar`;
@@ -778,6 +779,23 @@ export class PageTransitions {
       this.lent.push(giveBack);
     }
     return kept;
+  }
+
+  private decideCorners(
+    overlay: HTMLElement,
+    leaving: PlacedPage | null,
+    arriving: PlacedPage | null,
+  ): void {
+    if (
+      overlay.dataset['corners'] === undefined &&
+      overlay.querySelector(`.${PAGE_TRANSITION_CLASS}__page--over`) !== null
+    ) {
+      overlay.dataset['corners'] = String(
+        leaving?.copy != null &&
+          arriving?.copy != null &&
+          !overlay.classList.contains(ON_GROUND_CLASS),
+      );
+    }
   }
 
   private barPart(bar: HTMLElement, page: PlacedPage | null): HTMLElement | null {

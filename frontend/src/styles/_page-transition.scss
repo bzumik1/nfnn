@@ -28,7 +28,7 @@
   box-shadow: var(--shadow-page-edge);
 }
 
-.page-transition--home-screen:not(.page-transition--on-ground) .page-transition__page--over {
+.page-transition--home-screen[data-corners='true'] .page-transition__page--over {
   @include bp.down(nav) {
     border-radius: var(--radius-page-card);
   }
