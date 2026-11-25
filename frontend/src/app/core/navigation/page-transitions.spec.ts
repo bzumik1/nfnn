@@ -19,7 +19,7 @@ import { PagePlacement } from './page-placement';
 import { ACCOUNT_RETURNS_KEY } from './page-transitions';
 import { NavigationPreview } from './navigation-preview';
 import {
-  afterTwoFrames,
+  afterDrawnFrames,
   FRAME_LATE_MS,
   HELD_WITHOUT_A_FRAME_MS,
   PAGE_LAYER_CLASS,
@@ -30,7 +30,7 @@ import {
 } from './page-transitions';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 import { closeOnceCovered, SHEET_STEPPING, sheetOnly, swipeBackInSheet } from './sheet-stepping';
-import { dressChrome } from './step-chrome';
+import { STEP_CHROME } from './step-chrome';
 
 @Component({ template: '' })
 class Blank {}
@@ -3217,7 +3217,7 @@ describe('Given a page that waits for two drawn frames before it starts a motion
   it('when both frames are drawn, then it goes on in the second', () => {
     const { view, draw } = framesOf();
     let wentOn = 0;
-    afterTwoFrames(view, document, () => wentOn++);
+    afterDrawnFrames(view, document, 2, () => wentOn++);
 
     draw(5000);
     expect(wentOn).toBe(0);
@@ -3230,7 +3230,7 @@ describe('Given a page that waits for two drawn frames before it starts a motion
     vi.useFakeTimers();
     const { view, draw } = framesOf();
     let wentOn = 0;
-    afterTwoFrames(view, document, () => wentOn++);
+    afterDrawnFrames(view, document, 2, () => wentOn++);
     draw(5000);
 
     await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS + 100);
@@ -3246,7 +3246,7 @@ describe('Given a page that waits for two drawn frames before it starts a motion
     onTestFinished(() => visibility.mockRestore());
     const { view, draw } = framesOf();
     let wentOn = 0;
-    afterTwoFrames(view, document, () => wentOn++);
+    afterDrawnFrames(view, document, 2, () => wentOn++);
 
     await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS);
     expect(wentOn).toBe(1);
@@ -3321,7 +3321,7 @@ describe('Given a step of the app, whose top page has the display’s corners on
 
 function dressedTransitions(): PageTransitions {
   const transitions = TestBed.inject(PageTransitions);
-  transitions.dressing = dressChrome;
+  transitions.dressing = STEP_CHROME;
   return transitions;
 }
 

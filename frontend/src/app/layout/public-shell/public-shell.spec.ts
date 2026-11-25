@@ -18,7 +18,7 @@ import { BackTarget } from '../../core/navigation/back-target';
 import { KeptTabPages } from '../../core/navigation/kept-tab-pages';
 import { keepRoomForTabBar } from '../tab-bar/tab-bar-room';
 import { PageTransitions } from '../../core/navigation/page-transitions';
-import { dressChrome } from '../../core/navigation/step-chrome';
+import { STEP_CHROME } from '../../core/navigation/step-chrome';
 import { PublicShell } from './public-shell';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
@@ -44,7 +44,7 @@ describe('Given the public shell', () => {
   it('when it is made, then it hands the chrome of a step to the page transitions, so its pages step with their bar and titles', () => {
     render();
 
-    expect(TestBed.inject(PageTransitions).dressing).toBe(dressChrome);
+    expect(TestBed.inject(PageTransitions).dressing).toBe(STEP_CHROME);
   });
 
   it('when it renders, then the skip link is the first thing a keyboard reaches', () => {

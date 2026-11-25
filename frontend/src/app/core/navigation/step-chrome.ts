@@ -1,6 +1,8 @@
+import { ActivatedRouteSnapshot } from '@angular/router';
 import {
   BarCurve,
   BarItem,
+  DISPLAY_FRAME_MS,
   FollowedTitle,
   IN_SHEET_CLASS,
   MOVING_CLASS,
@@ -8,8 +10,12 @@ import {
   PAGE_TRANSITION_CLASS,
   PageTransitions,
   PlacedPage,
+  StepChrome,
 } from './page-transitions';
 
+const PLACED_WITHIN_FRAMES = 9;
+const FIRST_OPENING_PLACED_WITHIN_FRAMES = 18;
+const FRAMES_TO_PLACE = 2;
 const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
 const BAR_ITEMS = ['.back-button', '.account-button'];
 const GROUND_CHANGES_CLASS = `${PAGE_TRANSITION_CLASS}--ground-changes`;
@@ -27,6 +33,26 @@ interface StepMeasure {
   readonly over: HTMLElement | null;
   readonly width: number;
   readonly fadeAt: number;
+}
+
+export const STEP_CHROME: StepChrome = { dress: dressChrome, readsWaitLeftMs };
+
+function readsWaitLeftMs(stage: PageTransitions): number {
+  const frames = loadedItsCode(stage) ? FIRST_OPENING_PLACED_WITHIN_FRAMES : PLACED_WITHIN_FRAMES;
+  const frameMs = Math.min(stage.steadyFrameMs(), DISPLAY_FRAME_MS);
+  const now = stage.document.defaultView?.performance.now() ?? 0;
+  return stage.tappedAt + (frames - FRAMES_TO_PLACE) * frameMs - now;
+}
+
+function loadedItsCode(stage: PageTransitions): boolean {
+  let route: ActivatedRouteSnapshot | null = stage.router.routerState.snapshot.root;
+  while (route !== null) {
+    if (route.routeConfig !== null && stage.loadedRoutes.has(route.routeConfig)) {
+      return true;
+    }
+    route = route.firstChild;
+  }
+  return false;
 }
 
 export function dressChrome(

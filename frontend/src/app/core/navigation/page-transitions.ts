@@ -13,7 +13,6 @@ import {
   untracked,
 } from '@angular/core';
 import {
-  ActivatedRouteSnapshot,
   Event as RouterEvent,
   GuardsCheckEnd,
   NavigationCancel,
@@ -47,9 +46,6 @@ export const FRAME_LATE_MS = 100;
 export const HELD_WITHOUT_A_FRAME_MS = PAGE_TRANSITION_LONGEST_MS / 4;
 const LONG_TASK_MS = 50;
 const SWIPE_HANDED_OVER_AFTER_FRAMES = 2;
-const PLACED_WITHIN_FRAMES = 9;
-const FIRST_OPENING_PLACED_WITHIN_FRAMES = 18;
-const FRAMES_TO_PLACE = 2;
 export const DISPLAY_FRAME_MS = 1000 / 60;
 const PRESS_LEADS_WITHIN_MS = 1000;
 export const ACCOUNT_RETURNS_KEY = 'nfnnAppAccount';
@@ -125,12 +121,15 @@ export interface BarItem {
 
 type SwipeDrawing = typeof import('./swipe-drawing');
 
-export type DressChrome = (
-  stage: PageTransitions,
-  overlay: HTMLElement,
-  leaving: PlacedPage | null,
-  arriving: PlacedPage | null,
-) => BarItem[];
+export interface StepChrome {
+  dress(
+    stage: PageTransitions,
+    overlay: HTMLElement,
+    leaving: PlacedPage | null,
+    arriving: PlacedPage | null,
+  ): BarItem[];
+  readsWaitLeftMs(stage: PageTransitions): number;
+}
 
 export interface SheetLooks {
   stepInSheet(stage: PageTransitions, step: SheetStep): void;
@@ -164,7 +163,7 @@ export class PageTransitions {
   private readonly injector = inject(Injector);
   drawing: SwipeDrawing | null = null;
   sheets: SheetLooks | null = null;
-  dressing: DressChrome | null = null;
+  dressing: StepChrome | null = null;
   private readonly lent: (() => void)[] = [];
   private readonly kept = new Map<number, KeptPage>();
   readonly keptSheets = new Map<number, KeptSheet>();
@@ -179,11 +178,11 @@ export class PageTransitions {
   readonly stepping = computed(() => this.step() !== null);
   finishing: number | null = null;
   titleFrame: number | null = null;
-  private readonly frameGaps: number[] = [];
+  readonly frameGaps: number[] = [];
   private samplingRound = 0;
   private pressedAt = Number.NEGATIVE_INFINITY;
-  private tappedAt = 0;
-  private readonly loadedRoutes = new Set<Route>();
+  tappedAt = 0;
+  readonly loadedRoutes = new Set<Route>();
   private drawnSincePress = true;
 
   get running(): Running | null {
@@ -433,9 +432,7 @@ export class PageTransitions {
   }
 
   private moveOnceAnswered(running: Running, view: Window): void {
-    const frames = this.loadedItsCode() ? FIRST_OPENING_PLACED_WITHIN_FRAMES : PLACED_WITHIN_FRAMES;
-    const frameMs = Math.min(this.steadyFrameMs(), DISPLAY_FRAME_MS);
-    const left = this.tappedAt + (frames - FRAMES_TO_PLACE) * frameMs - this.now();
+    const left = this.dressing?.readsWaitLeftMs(this) ?? 0;
     if (this.placement.isAnswered() || left <= 0) {
       this.move(running, view);
       return;
@@ -502,23 +499,8 @@ export class PageTransitions {
     afterDrawnFrames(view, this.document, inFrame ? 1 : 2, release, () => !this.drawnSincePress);
   }
 
-  private loadedItsCode(): boolean {
-    let route: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
-    while (route !== null) {
-      if (route.routeConfig !== null && this.loadedRoutes.has(route.routeConfig)) {
-        return true;
-      }
-      route = route.firstChild;
-    }
-    return false;
-  }
-
   private now(): number {
     return this.document.defaultView?.performance.now() ?? 0;
-  }
-
-  measuredFrameMs(): number | null {
-    return this.frameGaps.length === 0 ? null : this.steadyFrameMs();
   }
 
   steadyFrameMs(): number {
@@ -690,7 +672,7 @@ export class PageTransitions {
     leaving: PlacedPage | null,
     arriving: PlacedPage | null,
   ): BarItem[] {
-    return this.dressing?.(this, overlay, leaving, arriving) ?? [];
+    return this.dressing?.dress(this, overlay, leaving, arriving) ?? [];
   }
 
   stopTitles(): void {
@@ -810,10 +792,6 @@ export function nextFrame(view: Window, then: (now: number, drawn: boolean) => v
   };
   const late = view.setTimeout(() => once(view.performance.now(), false), FRAME_LATE_MS);
   view.requestAnimationFrame((now) => once(now, true));
-}
-
-export function afterTwoFrames(view: Window, document: Document, then: () => void): void {
-  afterDrawnFrames(view, document, 2, then);
 }
 
 export function afterDrawnFrames(

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, DOCUMENT, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { PageTransitions } from '../../core/navigation/page-transitions';
-import { dressChrome } from '../../core/navigation/step-chrome';
+import { STEP_CHROME } from '../../core/navigation/step-chrome';
 
 @Component({
   selector: 'app-donor-shell',
@@ -15,7 +15,7 @@ export class DonorShell {
   private readonly document = inject(DOCUMENT);
 
   constructor() {
-    inject(PageTransitions).dressing ??= dressChrome;
+    inject(PageTransitions).dressing ??= STEP_CHROME;
   }
 
   skipToContent(event: Event): void {

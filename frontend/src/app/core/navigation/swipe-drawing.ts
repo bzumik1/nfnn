@@ -11,7 +11,7 @@ import { BackDestination } from './back-target';
 import { curveOf, easedAt, settleFrom, steepestStepOver, SwipeSettle } from './back-swipe';
 import {
   BarCurve,
-  afterTwoFrames,
+  afterDrawnFrames,
   BarItem,
   DISPLAY_FRAME_MS,
   FRAME_LATE_MS,
@@ -41,6 +41,10 @@ const STANDING_PARTS = 'app-header, .side-nav-panel, app-tab-bar';
 const CATCH_UP_SPANS = 3;
 const CLOSE_IN_FRAMES_AT_LEAST = 8;
 const ARRIVED_WITHIN_PX = 0.5;
+
+function measuredFrameMs(stage: PageTransitions): number {
+  return stage.frameGaps.length === 0 ? DISPLAY_FRAME_MS : stage.steadyFrameMs();
+}
 
 export interface CatchUp {
   readonly frameMs: number;
@@ -414,7 +418,7 @@ function followingFinger(
     catchingUp = true;
     stepAtMost = Math.max(0, offset - shown) / CLOSE_IN_FRAMES_AT_LEAST;
     closeInOnFinger(view, stage.durationOf('--duration-fast'), {
-      frameMs: stage.measuredFrameMs() ?? DISPLAY_FRAME_MS,
+      frameMs: measuredFrameMs(stage),
       finger: () => offset,
       from: shown,
       show: place,
@@ -446,7 +450,7 @@ function followingFinger(
           trackSettle(view, {
             plan: end,
             finger: wanted,
-            frameMs: stage.measuredFrameMs() ?? DISPLAY_FRAME_MS,
+            frameMs: measuredFrameMs(stage),
             firstStepAtMost: Math.max(Math.sign(end.to - shown) * lastStep, stepAtMost),
             show: place,
             goesOn: () => stage.running === running,
@@ -470,7 +474,7 @@ function followingFinger(
     return end.completes;
   };
   const afterTwoDrawnFrames = (): Promise<void> =>
-    new Promise<void>((drawn) => afterTwoFrames(view, stage.document, drawn));
+    new Promise<void>((drawn) => afterDrawnFrames(view, stage.document, 2, drawn));
   const slide = async (end: SwipeSettle): Promise<void> => {
     const timing: KeyframeAnimationOptions = {
       duration: end.durationMs,

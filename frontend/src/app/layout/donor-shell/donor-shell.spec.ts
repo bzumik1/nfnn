@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { SideNav } from '../../shared/ui/side-nav/side-nav';
 import { PageTransitions } from '../../core/navigation/page-transitions';
-import { dressChrome } from '../../core/navigation/step-chrome';
+import { STEP_CHROME } from '../../core/navigation/step-chrome';
 import { DonorShell } from './donor-shell';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
@@ -32,7 +32,7 @@ describe('Given the shell of the donor area and the administration', () => {
   it('when it is made, then it hands the chrome of a step to the page transitions, so its pages step with their bar and titles', async () => {
     const host = await render();
 
-    expect(TestBed.inject(PageTransitions).dressing).toBe(dressChrome);
+    expect(TestBed.inject(PageTransitions).dressing).toBe(STEP_CHROME);
     host.remove();
   });
 
