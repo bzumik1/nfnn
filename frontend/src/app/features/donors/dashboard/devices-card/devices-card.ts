@@ -36,6 +36,7 @@ import { DonorNotifiedDevices } from '../../../operations/donor-notified-devices
 import { groupDevices } from './device-groups';
 import { deviceName, deviceNameInSentence, sessionKindName } from './device-labels';
 import { Disclosure } from '../../../../shared/ui/disclosure/disclosure';
+import { InputModality } from '../../../../core/input/input-modality';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const DEVICE_NOT_FOUND = 'donors/device-not-found';
@@ -81,6 +82,7 @@ export class DevicesCard {
   private readonly changes = new ListChanges(() => this.loadDevices(false, true));
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
+  private readonly inputModality = inject(InputModality);
   private readonly title = viewChild.required<ElementRef<HTMLElement>>('title');
   private readonly deviceList = viewChild<ElementRef<HTMLElement>>('deviceList');
   private readonly othersButton = viewChild<ElementRef<HTMLButtonElement>>('othersButton');
@@ -203,8 +205,9 @@ export class DevicesCard {
 
   toggleOlder(): void {
     this.returning.set(null);
-    if (this.olderFold()?.nativeElement.contains(this.document.activeElement)) {
-      this.olderToggle()?.nativeElement.focus({ preventScroll: true });
+    const toggle = this.olderToggle()?.nativeElement;
+    if (toggle !== undefined && this.closingFoldHoldsThePress(toggle)) {
+      toggle.focus({ preventScroll: true });
     }
     this.olderShown.update((shown) => !shown);
   }
@@ -295,6 +298,19 @@ export class DevicesCard {
     }
     control.focus({ preventScroll: true });
     this.focusAfterRowLeaves.keepInViewOnceSettled(control, [], false);
+  }
+
+  private closingFoldHoldsThePress(toggle: HTMLElement): boolean {
+    const fold = this.olderFold()?.nativeElement;
+    if (fold === undefined) {
+      return false;
+    }
+    const pressed = this.inputModality.lastPressedControl();
+    return (
+      fold.contains(this.document.activeElement) ||
+      pressed === toggle ||
+      (pressed !== null && fold.contains(pressed))
+    );
   }
 
   private isOlder(device: SignedInDevice): boolean {
