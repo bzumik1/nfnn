@@ -196,3 +196,67 @@ describe('Given a dialog with a form on a phone whose keyboard covers the lower 
     expect(document.activeElement).toBe(find('#form-password'));
   });
 });
+
+@Component({
+  imports: [Dialog],
+  template: `
+    <app-dialog labelledBy="sheet-title">
+      <h2 id="sheet-title">Bankovní účty</h2>
+      <app-dialog labelledBy="nested-title">
+        <h2 id="nested-title">Přidat bankovní účet</h2>
+        <label for="nested-field">Číslo účtu</label>
+        <input id="nested-field" />
+      </app-dialog>
+    </app-dialog>
+  `,
+})
+class NestedFormDialogHost {}
+
+describe('Given a dialog with a field opened inside another dialog, on a phone whose keyboard covers the lower part of the screen', () => {
+  let fixture: ComponentFixture<NestedFormDialogHost>;
+  let keyboard: FakeSoftKeyboard;
+  let outerScrolled: number[];
+
+  const dialogs = () =>
+    fixture.nativeElement.querySelectorAll('dialog') as NodeListOf<HTMLDialogElement>;
+  const box = (element: Element, top: number, bottom: number): void => {
+    element.getBoundingClientRect = () => ({ top, bottom, height: bottom - top }) as DOMRect;
+  };
+
+  beforeEach(async () => {
+    keyboard = new FakeSoftKeyboard();
+    TestBed.configureTestingModule({
+      imports: [NestedFormDialogHost],
+      providers: [
+        { provide: DialogHistory, useClass: FakeDialogHistory },
+        provideFakeSoftKeyboard(keyboard),
+      ],
+    });
+    fixture = TestBed.createComponent(NestedFormDialogHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    outerScrolled = [];
+    const outer = dialogs()[0];
+    const outerPanel = outer.querySelector(':scope > .dialog-panel') as HTMLElement;
+    outer.scrollBy = ((options: ScrollToOptions) => outerScrolled.push(options.top ?? 0)) as never;
+    outerPanel.scrollBy = ((options: ScrollToOptions) =>
+      outerScrolled.push(options.top ?? 0)) as never;
+    dialogs()[1].scrollBy = (() => undefined) as never;
+    (dialogs()[1].querySelector('.dialog-panel') as HTMLElement).scrollBy = (() =>
+      undefined) as never;
+    box(outer, 0, 549);
+    box(dialogs()[1], 0, 549);
+    box(fixture.nativeElement.querySelector('#nested-field'), 400, 444);
+  });
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('when the keyboard comes up for the field of the inner dialog, then the outer dialog does not scroll for it', () => {
+    (fixture.nativeElement.querySelector('#nested-field') as HTMLInputElement).focus();
+    keyboard.show();
+    fixture.detectChanges();
+
+    expect(outerScrolled).toEqual([]);
+  });
+});

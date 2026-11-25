@@ -56,6 +56,35 @@ async function bringIntoMiddle(panel: Locator, opener: Locator): Promise<number>
   return settled;
 }
 
+async function cutInHalfByBottomEdge(panel: Locator, opener: Locator): Promise<number> {
+  let settled = 0;
+  await expect(async () => {
+    const cut = await opener.evaluate((button) => {
+      const scroller = button.closest<HTMLElement>('.dialog-panel')!;
+      const visibleBottom = () =>
+        Math.min(
+          window.innerHeight,
+          scroller.getBoundingClientRect().top + scroller.clientTop + scroller.clientHeight,
+        );
+      const box = button.getBoundingClientRect();
+      scroller.scrollBy(0, box.top + box.height / 2 - visibleBottom());
+      const placed = button.getBoundingClientRect();
+      return placed.top < visibleBottom() && placed.bottom > visibleBottom();
+    });
+    expect(cut).toBe(true);
+    const first = await scrollTopAfterTwoFrames(panel);
+    settled = await scrollTopAfterTwoFrames(panel);
+    expect(settled).toBe(first);
+  }).toPass();
+  return settled;
+}
+
+async function tapAsSafariDoes(sheet: Locator, opener: Locator): Promise<void> {
+  await opener.dispatchEvent('pointerdown', { pointerType: 'touch', isPrimary: true });
+  await sheet.evaluate((dialog: HTMLElement) => dialog.focus({ preventScroll: true }));
+  await opener.dispatchEvent('click');
+}
+
 async function watchScrolls(panel: Locator): Promise<void> {
   await panel.evaluate((element) => {
     element.dataset['scrolledTo'] = '';
@@ -113,6 +142,29 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
           expect(await scrollsSeen(panel)).toEqual([]);
         });
       }
+
+      test(`when the visible half of ${nested.opener}, cut by the bottom edge of the sheet, is tapped as Safari taps it and the dialog is closed with Zavřít, then the sheet stays where it was and the focus is back on ${nested.opener}`, async ({
+        page,
+      }) => {
+        await openAccountItem(page, nested.section);
+        const sheet = page.getByRole('dialog', { name: nested.section });
+        const panel = sheet.locator(':scope > .dialog-panel');
+        const opener = panel.getByRole('button', { name: nested.opener, exact: true });
+        await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+        await expect(opener).toBeEnabled({ timeout: 10_000 });
+        const scrolledTo = await cutInHalfByBottomEdge(panel, opener);
+
+        await tapAsSafariDoes(sheet, opener);
+        const dialog = nested.dialog(page);
+        await expect(dialog).toBeVisible();
+        await watchScrolls(panel);
+        await CLOSES[0].close(dialog);
+
+        await expect(dialog).toHaveCount(0);
+        await expect(opener).toBeFocused();
+        expect(await scrollTopAfterTwoFrames(panel)).toBe(scrolledTo);
+        expect(await scrollsSeen(panel)).toEqual([]);
+      });
     }
   });
 }

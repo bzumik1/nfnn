@@ -27,6 +27,7 @@ import { Appearance } from '../../../core/appearance/appearance';
 import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { EDGE_SWIPE_DRAGGING_CLASS } from '../../../core/navigation/edge-swipe-back';
+import { scrollIntoViewFitting } from '../leaving-row/leaving-row';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
@@ -408,10 +409,15 @@ export class Dialog implements AfterViewInit, OnDestroy {
 
   private returnFocusTo(opener: HTMLElement): void {
     const panel = opener.closest<HTMLElement>(PANEL);
-    if (panel !== null && shownWithin(panel, opener)) {
-      opener.focus({ preventScroll: true });
-    } else {
+    if (panel === null) {
       opener.focus();
+      return;
+    }
+    opener.focus({ preventScroll: true });
+    if (this.document.activeElement !== opener) {
+      opener.closest('dialog')?.focus({ preventScroll: true });
+    } else if (!this.modality.lastPressByPointer() && !shownWithin(panel, opener)) {
+      scrollIntoViewFitting(opener);
     }
   }
 
@@ -607,11 +613,16 @@ function shownWithin(panel: HTMLElement, element: HTMLElement): boolean {
   const room = panel.getBoundingClientRect();
   const frame = panel.closest('dialog')?.getBoundingClientRect() ?? room;
   const padding = getComputedStyle(panel);
+  const margin = getComputedStyle(element);
   const top = Math.max(room.top, frame.top) + (parseFloat(padding.scrollPaddingTop) || 0);
   const bottom =
     Math.min(room.bottom, frame.bottom) - (parseFloat(padding.scrollPaddingBottom) || 0);
   const box = element.getBoundingClientRect();
-  return box.height > 0 && box.top >= top && box.bottom <= bottom;
+  return (
+    box.height > 0 &&
+    box.top - (parseFloat(margin.scrollMarginTop) || 0) >= top &&
+    box.bottom + (parseFloat(margin.scrollMarginBottom) || 0) <= bottom
+  );
 }
 
 function endsLeaving(animation: Animation): boolean {

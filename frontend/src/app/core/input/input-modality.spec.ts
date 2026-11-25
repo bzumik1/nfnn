@@ -49,8 +49,13 @@ describe('Given the page that remembers whether the last press came from a point
 
   describe('Given a button with a label inside it', () => {
     let button: HTMLButtonElement;
-    const pressLabel = () =>
-      button.querySelector('span')!.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    const label = () => button.querySelector('span')!;
+    const dispatchOn = (target: EventTarget, type: string) =>
+      target.dispatchEvent(new Event(type, { bubbles: true }));
+    const tapLabel = () => {
+      dispatchOn(label(), 'pointerdown');
+      dispatchOn(label(), 'click');
+    };
 
     beforeEach(() => {
       button = document.createElement('button');
@@ -64,42 +69,80 @@ describe('Given the page that remembers whether the last press came from a point
       expect(modality.lastPressedControl()).toBeNull();
     });
 
-    it('when a finger presses its label, then the button is the control pressed last', () => {
-      pressLabel();
+    it('when a finger taps its label, then the button is the control pressed last', () => {
+      tapLabel();
 
       expect(modality.lastPressedControl()).toBe(button);
     });
 
-    it('when a key is pressed after the finger, then no control was pressed last', () => {
-      pressLabel();
+    it('when a finger goes down on it but the press is cancelled, then no control was pressed last', () => {
+      tapLabel();
+      dispatchOn(label(), 'pointerdown');
+      dispatchOn(label(), 'pointercancel');
+
+      expect(modality.lastPressedControl()).toBeNull();
+    });
+
+    it('when the keyboard activates it, then the button is the control pressed last and the last press came from the keyboard', () => {
+      button.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+      dispatchOn(button, 'click');
+
+      expect(modality.lastPressedControl()).toBe(button);
+      expect(modality.lastPressByPointer()).toBe(false);
+    });
+
+    it('when VoiceOver activates it after an earlier tap elsewhere, with no pointer press of its own, then the button is the control pressed last and the input is unchanged', () => {
+      const earlier = document.createElement('button');
+      document.body.appendChild(earlier);
+      dispatchOn(earlier, 'pointerdown');
+      dispatchOn(earlier, 'click');
+
+      dispatchOn(label(), 'click');
+      earlier.remove();
+
+      expect(modality.lastPressedControl()).toBe(button);
+      expect(modality.lastPressByPointer()).toBe(true);
+    });
+
+    it('when a key is pressed after the tap, then no control was pressed last', () => {
+      tapLabel();
       document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Tab' }));
 
       expect(modality.lastPressedControl()).toBeNull();
     });
 
-    it('when the pressed button has left the page, then no control was pressed last', () => {
-      pressLabel();
+    it('when the tapped button has left the page, then no control was pressed last', () => {
+      tapLabel();
       button.remove();
 
       expect(modality.lastPressedControl()).toBeNull();
     });
 
-    it('when a finger presses outside any control, then no control was pressed last', () => {
-      pressLabel();
-      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    it('when a finger taps outside any control, then no control was pressed last', () => {
+      tapLabel();
+      dispatchOn(document.body, 'pointerdown');
+      dispatchOn(document.body, 'click');
+
+      expect(modality.lastPressedControl()).toBeNull();
+    });
+
+    it('when it is stopped, then a later tap leaves no control pressed last', () => {
+      modality.stop();
+
+      tapLabel();
 
       expect(modality.lastPressedControl()).toBeNull();
     });
   });
 
   for (const role of ['switch', 'tab', 'menuitem']) {
-    it(`when a finger presses the label inside a ${role} that is not a button, then that ${role} is the control pressed last`, () => {
+    it(`when a finger taps the label inside a ${role} that is not a button, then that ${role} is the control pressed last`, () => {
       const control = document.createElement('div');
       control.setAttribute('role', role);
       control.append(document.createElement('span'));
       document.body.appendChild(control);
 
-      control.querySelector('span')!.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      control.querySelector('span')!.dispatchEvent(new Event('click', { bubbles: true }));
       const pressed = modality.lastPressedControl();
       control.remove();
 
