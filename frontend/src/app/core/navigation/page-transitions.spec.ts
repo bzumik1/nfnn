@@ -2116,8 +2116,16 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
-  it('when the page clock ticks before a frame that comes 120 ms late, as when an iPhone SE paints for 120 ms, then that tick advances the close-in by one frame of the display too, so the late frame moves the page no more than an eighth of the gap', async () => {
-    document.documentElement.style.setProperty('--duration-fast', '150ms');
+  function onePageClock(): () => number {
+    const own = performance.now.bind(performance);
+    const origin = own();
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => own() - origin);
+    onTestFinished(() => clock.mockRestore());
+    return () => performance.now();
+  }
+
+  async function screenStepsOfACloseIn(gapsAfterTwoFramesMs: readonly number[]): Promise<number[]> {
+    const now = onePageClock();
     const frames = framesByHand();
     try {
       const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
@@ -2126,21 +2134,42 @@ describe('Given the app on the home screen of a phone opened straight on the don
       finishVisit();
       await drawnUnder();
       const offsets = [offsetOf(over())];
-      for (const at of [16, 32]) {
-        frames.run(at);
+      frames.run(now());
+      offsets.push(offsetOf(over()));
+      await new Promise((done) => setTimeout(done, 16));
+      frames.run(now());
+      offsets.push(offsetOf(over()));
+      for (const gapMs of gapsAfterTwoFramesMs) {
+        await new Promise((done) => setTimeout(done, gapMs));
+        frames.run(now());
         offsets.push(offsetOf(over()));
       }
-
-      await new Promise((done) => setTimeout(done, FRAME_LATE_MS + 20));
-      frames.run(152);
-      offsets.push(offsetOf(over()));
-      const steps = offsets.slice(1).map((offset, frame) => offset - offsets[frame]);
-
-      expect(Math.max(...steps), 'the longest step on the screen').toBeLessThanOrEqual(220 / 8);
+      return offsets.slice(1).map((offset, frame) => offset - offsets[frame]);
     } finally {
       frames.restore();
-      document.documentElement.style.removeProperty('--duration-fast');
     }
+  }
+
+  it('when the page clock ticks before a frame that comes 120 ms late, as when an iPhone SE paints for 120 ms, with the frames and the clock on one timeline, then the tick moves nothing and the late frame moves the page by one frame, no more than an eighth of the gap', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    onTestFinished(() => {
+      document.documentElement.style.removeProperty('--duration-fast');
+    });
+
+    const steps = await screenStepsOfACloseIn([FRAME_LATE_MS + 20]);
+
+    expect(Math.max(...steps), 'the longest step on the screen').toBeLessThanOrEqual(220 / 8);
+  });
+
+  it('when the frames stop for 250 ms during the close-in and come again, so the page clock ticks twice in between, then the first frame drawn again moves the page by one frame, no more than an eighth of the gap', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    onTestFinished(() => {
+      document.documentElement.style.removeProperty('--duration-fast');
+    });
+
+    const steps = await screenStepsOfACloseIn([2 * FRAME_LATE_MS + 50]);
+
+    expect(Math.max(...steps), 'the longest step on the screen').toBeLessThanOrEqual(220 / 8);
   });
 
   it('when the app draws steadily at 30 frames a second, as in Low Power Mode, then the close-in advances by its own frame of 33 ms, so the page is with the finger within 12 of its frames', async () => {
@@ -2169,7 +2198,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
-  it('when a flick lets the page go before the page Zpět leads to is drawn, then its slide starts only after two drawn frames, never by the page clock in a visible page, so the copy just placed is painted before the slide’s clock runs', async () => {
+  it('when a flick lets the page go before the page Zpět leads to is drawn, then its slide starts only after two drawn frames, never by the page clock in a visible page within 250 ms, so the copy just placed is painted before the slide’s clock runs (the clock’s 500 ms bound is the afterTwoFrames rows’)', async () => {
     let played = 0;
     Object.defineProperty(HTMLElement.prototype, 'animate', {
       configurable: true,

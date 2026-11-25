@@ -55,17 +55,21 @@ export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp):
   let last: number | null = null;
   let elapsed = 0;
   let undrawnInARow = 0;
+  let drawnOnce = false;
   const closeIn = (now: number, drawn: boolean): void => {
     if (!catchUp.goesOn()) {
       return;
     }
     undrawnInARow = drawn ? 0 : undrawnInARow + 1;
-    const sinceLast = last === null ? catchUp.frameMs : Math.max(0, now - last);
-    elapsed +=
-      undrawnInARow >= FRAMES_STOPPED_AFTER_UNDRAWN_TICKS
-        ? sinceLast
-        : Math.min(catchUp.frameMs, sinceLast);
-    last = now;
+    drawnOnce ||= drawn;
+    if (drawn || !drawnOnce) {
+      const sinceLast = last === null ? catchUp.frameMs : Math.max(0, now - last);
+      elapsed +=
+        undrawnInARow >= FRAMES_STOPPED_AFTER_UNDRAWN_TICKS
+          ? sinceLast
+          : Math.min(catchUp.frameMs, sinceLast);
+      last = now;
+    }
     const spans = elapsed / closing;
     const left = startGap * (1 + spans) * Math.exp(-spans);
     const gap = Math.abs(left) < 1 ? 0 : left;
