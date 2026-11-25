@@ -81,7 +81,7 @@ export function viewBand(target: Element): ViewBand {
   if (view === null) {
     return { top: Number.NEGATIVE_INFINITY, bottom: Number.POSITIVE_INFINITY };
   }
-  const { documentElement } = target.ownerDocument;
+  const { body, documentElement } = target.ownerDocument;
   const pixels = (value: string): number => {
     const parsed = Number.parseFloat(value);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -93,6 +93,25 @@ export function viewBand(target: Element): ViewBand {
       bottom: edges.bottom - pixels(style.scrollPaddingBottom),
     };
   };
+  const scrollerOf = (element: Element): Element | null => {
+    for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
+      if (parent === documentElement) {
+        return null;
+      }
+      const overflow = view.getComputedStyle(parent).overflowY;
+      if (parent !== body && (overflow === 'auto' || overflow === 'scroll')) {
+        return parent;
+      }
+    }
+    return null;
+  };
+  const inPageBanner = (): boolean => {
+    const header = target.closest('header');
+    return (
+      header !== null &&
+      header.parentElement?.closest('main, article, section, aside, nav, dialog') == null
+    );
+  };
   const inFixedLayer = (): boolean => {
     for (let element: Element | null = target; element; element = element.parentElement) {
       const position = view.getComputedStyle(element).position;
@@ -103,14 +122,9 @@ export function viewBand(target: Element): ViewBand {
     return false;
   };
   const whole: ViewBand = { top: 0, bottom: view.innerHeight };
-  const underPageChrome =
-    target.closest('dialog') === null && !liesInPageBanner(target) && !inFixedLayer();
+  const underPageChrome = target.closest('dialog') === null && !inPageBanner() && !inFixedLayer();
   let band = underPageChrome ? paddedBy(documentElement, whole) : whole;
-  for (
-    let scroller = scrollerAround(view, target);
-    scroller;
-    scroller = scrollerAround(view, scroller)
-  ) {
+  for (let scroller = scrollerOf(target); scroller; scroller = scrollerOf(scroller)) {
     const inner = paddedBy(scroller, scroller.getBoundingClientRect());
     band = { top: Math.max(band.top, inner.top), bottom: Math.min(band.bottom, inner.bottom) };
   }
