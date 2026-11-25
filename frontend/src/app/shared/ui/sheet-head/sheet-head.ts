@@ -192,6 +192,8 @@ export class SheetHead {
 
   private follow(late: string | null, stepping: boolean, compact: boolean): void {
     if (late === null) {
+      this.letFadeGo();
+      this.shown.set(this.title());
       return;
     }
     if (!compact) {
