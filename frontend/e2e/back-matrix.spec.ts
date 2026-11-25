@@ -641,7 +641,7 @@ test.describe(`Given an administrator in the app on the home screen of a phone w
     );
   });
 
-  test(`when the screen first shows the page's ${SHOWN_LATE_STEP_MS} ms step back already ${SHOWN_LATE_SHARE * 100} % of its way, as an iPhone showed a step in round 29 while it still painted the copies after the motion's clock had started, then the judge on the screen reports the jump at the start, as long as the screencast's gap before that frame stays under 450 ms at 30 frames a second and the p99 lag of 3 frames, three times its p90 gap`, async ({
+  test(`when the screen first shows the page's ${SHOWN_LATE_STEP_MS} ms step back already ${SHOWN_LATE_SHARE * 100} % of its way, as an iPhone showed a step in round 29 while it still painted the copies after the motion's clock had started, then the judge on the screen reports the jump at the start, as long as the screencast's gap before that frame stays under 440 ms at 30 frames a second and the p99 lag of 3 frames, about three times its p90 gap`, async ({
     page,
   }) => {
     expect(await steppedBackFromPayments(page, 'shown-late')).toEqual(
