@@ -510,6 +510,11 @@ describe('Given the head of a page inside a sheet whose title arrives only after
     return (withOrdinarySpaces(title?.textContent) ?? '').trim();
   }
 
+  async function aFrameLater(): Promise<void> {
+    await new Promise((done) => requestAnimationFrame(done));
+    await fixture.whenStable();
+  }
+
   async function arrives(title: string): Promise<void> {
     fixture.componentRef.setInput('lateTitle', title);
     await fixture.whenStable();
@@ -584,8 +589,23 @@ describe('Given the head of a page inside a sheet whose title arrives only after
 
     fixture.componentRef.setInput('lateTitle', null);
     await fixture.whenStable();
+    await aFrameLater();
 
     expect(shown()).toBe('Dárce');
+  });
+
+  it('when the page lets the late title go and gives the same name again a render later with no step moving, as Správa does when a step back returns to a donor’s card, then the head keeps the name and never shows its own title', async () => {
+    await arrives('Petr Svoboda');
+    await fades[0].end();
+
+    fixture.componentRef.setInput('lateTitle', null);
+    await fixture.whenStable();
+    expect(shown()).toBe('Petr Svoboda');
+    await arrives('Petr Svoboda');
+    await aFrameLater();
+
+    expect(shown()).toBe('Petr Svoboda');
+    expect(fades).toHaveLength(2);
   });
 
   it('when a step back to a page under the same title lets the late title go and the page gives the same name again while the step moves, as a donor’s card does after one of its sections, then the head keeps the name throughout and never fades', async () => {
@@ -614,6 +634,7 @@ describe('Given the head of a page inside a sheet whose title arrives only after
     await fixture.whenStable();
     stepping.set(false);
     await fixture.whenStable();
+    await aFrameLater();
 
     expect(shown()).toBe('Dárce');
   });
@@ -623,6 +644,7 @@ describe('Given the head of a page inside a sheet whose title arrives only after
 
     fixture.componentRef.setInput('lateTitle', null);
     await fixture.whenStable();
+    await aFrameLater();
     await fades[0].end();
 
     expect(fades[0].cancelled).toBe(true);
