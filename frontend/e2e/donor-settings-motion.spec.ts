@@ -38,6 +38,7 @@ interface FrameWatch {
 
 const COMPUTER = { width: 1280, height: 800 };
 const ROOM_FOR_THREE_CONNECTIONS = 1600;
+const ROOM_FOR_THE_OLDER_QUESTION = 1600;
 const WATCHED_MS = 1000;
 const SUBPIXEL_PX = 0.5;
 const GONE_OPACITY = 0.01;
@@ -523,6 +524,72 @@ function notOneDividerAboveTheLastRow(frames: readonly Frame[]): string[] {
   });
 }
 
+function standingDividerLeavesItsPlace(frames: readonly Frame[]): string[] {
+  const placed = frames.flatMap(({ at, boxes, lines }) => {
+    const row = boxes['row'];
+    const card = boxes['card'];
+    return row === null || card === null || row.opacity <= STANDING_OPACITY
+      ? []
+      : [
+          {
+            at,
+            tops: lines
+              .filter((line) => line.alpha > STANDING_OPACITY)
+              .map((line) => line.top - card.top),
+          },
+        ];
+  });
+  const first = placed[0]?.tops[0];
+  return placed.flatMap(({ at, tops }) =>
+    tops.length === 1 && Math.abs(tops[0] - first) <= SUBPIXEL_PX
+      ? []
+      : [
+          `standing dividers at ${tops.join(', ')} in the card, the first at ${first}, at +${Math.round(at)} ms`,
+        ],
+  );
+}
+
+function dividersOffTheTopOf(frames: readonly Frame[], name: string): string[] {
+  return frames.flatMap(({ at, boxes, lines }) => {
+    const row = boxes[name];
+    return row === null
+      ? []
+      : lines
+          .filter(
+            (line) =>
+              line.alpha > GONE_OPACITY &&
+              (line.bottom < row.top - SUBPIXEL_PX || line.top > row.top + SUBPIXEL_PX),
+          )
+          .map(
+            (line) =>
+              `divider ${line.top}–${line.bottom} off ${name}'s top ${row.top} at +${Math.round(at)} ms`,
+          );
+  });
+}
+
+function dividersBrighterThanTheRow(frames: readonly Frame[]): string[] {
+  return frames.flatMap(({ at, boxes, lines }) => {
+    const row = boxes['row'];
+    return row === null
+      ? []
+      : lines
+          .filter((line) => line.alpha > row.opacity + GONE_OPACITY)
+          .map(
+            (line) =>
+              `divider at alpha ${line.alpha} while the row is at ${row.opacity} at +${Math.round(at)} ms`,
+          );
+  });
+}
+
+function moreThanOneStandingDivider(frames: readonly Frame[]): string[] {
+  return frames.flatMap(({ at, lines }) => {
+    const standing = lines.filter((line) => line.alpha > STANDING_OPACITY);
+    return standing.length <= 1
+      ? []
+      : [`${standing.length} standing dividers at +${Math.round(at)} ms`];
+  });
+}
+
 function risesAboveItsEndWithin(frames: readonly Frame[], name: string, within: string): string[] {
   const shown = topsWithin(frames, name, within);
   const end = shown[shown.length - 1]?.top;
@@ -665,10 +732,10 @@ async function confirmRemovingTheIPhonePasskey(page: Page): Promise<Frame[]> {
 async function openSettingsWithConnections(
   page: Page,
   connections: readonly (typeof claudeConnection)[],
-): Promise<() => void> {
+): Promise<(ids?: readonly string[]) => void> {
   let listed = [...connections];
-  const disconnectClaudeElsewhere = (): void => {
-    listed = listed.filter((connection) => connection.id !== claudeConnection.id);
+  const disconnectElsewhere = (ids: readonly string[] = [claudeConnection.id]): void => {
+    listed = listed.filter((connection) => !ids.includes(connection.id));
   };
   await openSettings(page, signedInDevices, administrator, async () => {
     await page.route(
@@ -676,9 +743,9 @@ async function openSettingsWithConnections(
       (route) => route.fulfill({ json: { items: listed } }),
     );
     await page.route(
-      (url) => url.pathname === `/api/donors/me/connections/${claudeConnection.id}`,
+      (url) => url.pathname.startsWith('/api/donors/me/connections/'),
       async (route) => {
-        disconnectClaudeElsewhere();
+        disconnectElsewhere([new URL(route.request().url()).pathname.split('/').pop() ?? '']);
         await route.fulfill({ status: 204 });
       },
     );
@@ -686,10 +753,10 @@ async function openSettingsWithConnections(
   await expect(page.locator('.connection-client')).toHaveText(
     connections.map((connection) => connection.client),
   );
-  return disconnectClaudeElsewhere;
+  return disconnectElsewhere;
 }
 
-function openSettingsWithTwoConnections(page: Page): Promise<() => void> {
+function openSettingsWithTwoConnections(page: Page): Promise<(ids?: readonly string[]) => void> {
   return openSettingsWithConnections(page, [claudeConnection, otherConnection]);
 }
 
@@ -814,6 +881,141 @@ async function disconnectClaudeWatchingDividers(page: Page): Promise<Frame[]> {
   return frames;
 }
 
+async function disconnectChatGptWatchingDividers(page: Page): Promise<Frame[]> {
+  await openSettingsWithTwoConnections(page);
+  const disconnect = page.locator(otherConnectionRow).getByRole('button', { name: 'Odpojit' });
+  await disconnect.scrollIntoViewIfNeeded();
+  await settled(page, '.connections');
+  await expect(page.locator(claudeConnectionRow)).toBeInViewport({ ratio: 1 });
+  await expect(page.locator(otherConnectionRow)).toBeInViewport({ ratio: 1 });
+
+  const frames = await framesWhile(
+    page,
+    {
+      row: otherConnectionRow,
+      card: '.connections',
+      client: `${claudeConnectionRow} .connection-client`,
+      leavingClient: `${otherConnectionRow} .connection-client`,
+    },
+    () => disconnect.click(),
+    { removed: otherConnectionRow, dividers: '.connection, .connection-slot' },
+  );
+
+  await expect(page.locator('.connection-client')).toHaveText(['claude.ai']);
+  expect(present(frames, 'row').length).toBeGreaterThan(0);
+  expect(frames.at(-1)?.boxes['row']).toBeNull();
+  expect(standingDividerLeavesItsPlace(frames)).toEqual([]);
+  expect(dividersOffTheTopOf(frames, 'row')).toEqual([]);
+  expect(dividersBrighterThanTheRow(frames)).toEqual([]);
+  expect(dividersLeftAfterRemoval(frames)).toEqual([]);
+  expect(movesWithinFromTheFirstFrame(frames, 'client', 'card')).toEqual([]);
+  expect(movesWithinFromTheFirstFrame(frames, 'leavingClient', 'card')).toEqual([]);
+  return frames;
+}
+
+async function bothConnectionsLeaveOnReturnWatchingDividers(page: Page): Promise<Frame[]> {
+  const disconnectElsewhere = await openSettingsWithTwoConnections(page);
+  await openDonorSection(page, 'Můj přehled');
+  disconnectElsewhere([claudeConnection.id, otherConnection.id]);
+  await recordLeavingRows(page, '.connection-slot', 'connection-slot--leaving');
+
+  const frames = await framesWhile(
+    page,
+    { row: claudeConnectionRow, nextRow: otherConnectionRow, card: '.connections' },
+    () => openDonorSection(page, 'Údaje a zabezpečení'),
+    { removed: '.connection-list', dividers: '.connection, .connection-slot' },
+  );
+
+  await expect(page.locator('.connection-client')).toHaveCount(0);
+  expect((await leavingRows(page)).map(({ id }) => id).sort()).toEqual(
+    [claudeConnectionRow.slice(1), otherConnectionRow.slice(1)].sort(),
+  );
+  expect(present(frames, 'nextRow').length).toBeGreaterThan(0);
+  expect(frames.at(-1)?.boxes['row']).toBeNull();
+  expect(frames.at(-1)?.boxes['nextRow']).toBeNull();
+  expect(moreThanOneStandingDivider(frames)).toEqual([]);
+  expect(dividersOffTheTopOf(frames, 'nextRow')).toEqual([]);
+  expect(dividersThickerThanOnePx(frames)).toEqual([]);
+  expect(dividersLeftAfterRemoval(frames)).toEqual([]);
+  return frames;
+}
+
+async function signOutTheFirstOlderDeviceWatchingDividers(page: Page): Promise<Frame[]> {
+  const { width } = page.viewportSize()!;
+  await page.setViewportSize({ width, height: ROOM_FOR_THE_OLDER_QUESTION });
+  await openSettings(page, [...signedInDevices, ...longUnusedDevices]);
+  const devices = page.locator('.devices');
+  await devices.getByRole('button', { name: /Starší \(2\)/ }).click();
+  await expect(page.locator('#devices-older .device-name')).toHaveText([
+    'iPhone · aplikace',
+    'Windows · Edge',
+  ]);
+  await page
+    .locator(olderInstalledAppRow)
+    .getByRole('button', { name: /^Odhlásit iPhone · aplikace/ })
+    .click();
+  const question = devices.getByRole('group', { name: /^Odhlásit iPhone · aplikace/ });
+  await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+  await page.locator(nextOlderRow).scrollIntoViewIfNeeded();
+  await settled(page, '.devices');
+  await expect(page.locator(olderInstalledAppRow)).toBeInViewport({ ratio: 1 });
+  await expect(page.locator(nextOlderRow)).toBeInViewport({ ratio: 1 });
+
+  const frames = await framesWhile(
+    page,
+    { row: olderInstalledAppRow, next: nextOlderRow },
+    () => question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
+    { removed: olderInstalledAppRow, dividers: '#devices-older, #devices-older .device' },
+  );
+
+  await expect(page.locator('#devices-older .device-name')).toHaveText(['Windows · Edge']);
+  expect(present(frames, 'row').length).toBeGreaterThan(0);
+  expect(frames.at(-1)?.boxes['row']).toBeNull();
+  expect(doubledLines(frames)).toEqual([]);
+  expect(notOneDividerAboveTheNextRow(frames)).toEqual([]);
+  expect(jumpOnRemoval(frames)).toEqual([]);
+  return frames;
+}
+
+function ringPointsCoveredBy(page: Page, row: string): Promise<string[]> {
+  return page.evaluate(
+    ({ row }) => {
+      const focused = document.activeElement;
+      const covering = document.querySelector(row);
+      if (!(focused instanceof HTMLElement) || covering === null) {
+        return [`no focused control or no ${row}`];
+      }
+      const style = getComputedStyle(focused);
+      const width = parseFloat(style.outlineWidth);
+      if (style.outlineStyle === 'none' || !(width > 0)) {
+        return ['the focused control shows no ring'];
+      }
+      const middle = parseFloat(style.outlineOffset) + width / 2;
+      const box = focused.getBoundingClientRect();
+      const left = box.left - middle;
+      const right = box.right + middle;
+      const top = box.top - middle;
+      const bottom = box.bottom + middle;
+      const along = [0.1, 0.3, 0.5, 0.7, 0.9];
+      const points = [
+        ...along.map((share) => [left + (right - left) * share, top]),
+        ...along.map((share) => [left + (right - left) * share, bottom]),
+        ...along.map((share) => [left, top + (bottom - top) * share]),
+        ...along.map((share) => [right, top + (bottom - top) * share]),
+      ];
+      return points.flatMap(([x, y]) => {
+        const hit = document.elementFromPoint(x, y);
+        return hit === null
+          ? [`nothing at ${x}, ${y} on the ring`]
+          : covering.contains(hit)
+            ? [`${row} covers the ring at ${x}, ${y}`]
+            : [];
+      });
+    },
+    { row },
+  );
+}
+
 async function disconnectClaude(page: Page): Promise<Frame[]> {
   const connections = page.locator('.connections');
   await settled(page, '.connections');
@@ -922,34 +1124,7 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
   test('when they sign out the first device in Starší, then one divider stands above the next row in every frame of its leave, and that row does not jump when it is removed', async ({
     page,
   }) => {
-    await openSettings(page, [...signedInDevices, ...longUnusedDevices]);
-    const devices = page.locator('.devices');
-    await devices.getByRole('button', { name: /Starší \(2\)/ }).click();
-    await expect(page.locator('#devices-older .device-name')).toHaveText([
-      'iPhone · aplikace',
-      'Windows · Edge',
-    ]);
-    await page
-      .locator(olderInstalledAppRow)
-      .getByRole('button', { name: /^Odhlásit iPhone · aplikace/ })
-      .click();
-    const question = devices.getByRole('group', { name: /^Odhlásit iPhone · aplikace/ });
-    await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
-    await settled(page, '.devices');
-
-    const frames = await framesWhile(
-      page,
-      { row: olderInstalledAppRow, next: nextOlderRow },
-      () => question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
-      { removed: olderInstalledAppRow, dividers: '#devices-older, #devices-older .device' },
-    );
-
-    await expect(page.locator('#devices-older .device-name')).toHaveText(['Windows · Edge']);
-    expect(present(frames, 'row').length).toBeGreaterThan(0);
-    expect(frames.at(-1)?.boxes['row']).toBeNull();
-    expect(doubledLines(frames)).toEqual([]);
-    expect(notOneDividerAboveTheNextRow(frames)).toEqual([]);
-    expect(jumpOnRemoval(frames)).toEqual([]);
+    await signOutTheFirstOlderDeviceWatchingDividers(page);
   });
 
   test('when they remove their last passkey, then the card stands still once the empty text shows', async ({
@@ -995,6 +1170,18 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
     expect(movesDownWithin(frames, 'nextClient', 'card')).toEqual([]);
   });
 
+  test('when they disconnect chatgpt.com below claude.ai, then the one divider between them stays in its place while chatgpt.com stands, fades with it and is gone once it is removed, and neither name moves', async ({
+    page,
+  }) => {
+    await disconnectChatGptWatchingDividers(page);
+  });
+
+  test("when claude.ai and chatgpt.com were both disconnected elsewhere and Údaje a zabezpečení open again, then both rows leave at once with at most one divider between them, on chatgpt.com's top, and none is left", async ({
+    page,
+  }) => {
+    await bothConnectionsLeaveOnReturnWatchingDividers(page);
+  });
+
   test('when the iPhone was signed out elsewhere and Údaje a zabezpečení open again, then its row is out of reach for as long as it leaves', async ({
     page,
   }) => {
@@ -1027,9 +1214,9 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
   test('when claude.ai was disconnected elsewhere and Údaje a zabezpečení open again, then its row is out of reach for as long as it leaves', async ({
     page,
   }) => {
-    const disconnectClaudeElsewhere = await openSettingsWithTwoConnections(page);
+    const disconnectElsewhere = await openSettingsWithTwoConnections(page);
     await openDonorSection(page, 'Můj přehled');
-    disconnectClaudeElsewhere();
+    disconnectElsewhere();
     await recordLeavingRows(page, '.connection-slot', 'connection-slot--leaving');
 
     await openDonorSection(page, 'Údaje a zabezpečení');
@@ -1114,6 +1301,24 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
     expect(movesDownWithin(frames, 'nextClient', 'card')).toEqual([]);
   });
 
+  test('when they sign out the first device in Starší, then one divider stands above the next row in every frame of its fade, and that row moves up by exactly the faded row when it is removed', async ({
+    page,
+  }) => {
+    await signOutTheFirstOlderDeviceWatchingDividers(page);
+  });
+
+  test('when they disconnect chatgpt.com below claude.ai, then the one divider between them stays in its place while chatgpt.com stands, fades with it and is gone once it is removed, and neither name moves', async ({
+    page,
+  }) => {
+    await disconnectChatGptWatchingDividers(page);
+  });
+
+  test("when claude.ai and chatgpt.com were both disconnected elsewhere and Údaje a zabezpečení open again, then both rows fade at once with at most one 1 px divider between them, on chatgpt.com's top, and none is left", async ({
+    page,
+  }) => {
+    await bothConnectionsLeaveOnReturnWatchingDividers(page);
+  });
+
   test('when they disconnect claude.ai above chatgpt.com and cursor.com, then every divider stays 1 px thick and exactly one stands between chatgpt.com and cursor.com in every frame, the one after the removal included', async ({
     page,
   }) => {
@@ -1178,5 +1383,31 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
 
     await expect(page.locator('.connection-client')).toHaveCount(0);
     expect(disconnected).toEqual([claudeConnection.id, otherConnection.id]);
+  });
+});
+
+test.describe('Given a keyboard user in Údaje a zabezpečení with two connected applications', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    "Tab stops are a computer's keyboard; the phone's keyboard focus is on Jakub's device checklist",
+  );
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize(COMPUTER);
+  });
+
+  test("when Tab moves from Odpojit of claude.ai to Odpojit of chatgpt.com, then claude.ai's row covers no part of the ring", async ({
+    page,
+  }) => {
+    await openSettingsWithTwoConnections(page);
+    const next = page.locator(otherConnectionRow).getByRole('button', { name: 'Odpojit' });
+    await next.scrollIntoViewIfNeeded();
+    await page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).focus();
+
+    await page.keyboard.press('Tab');
+
+    await expect(next).toBeFocused();
+    await expect(next).toBeInViewport({ ratio: 1 });
+    expect(await ringPointsCoveredBy(page, claudeConnectionRow)).toEqual([]);
   });
 });
