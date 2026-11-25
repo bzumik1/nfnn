@@ -64,7 +64,7 @@ export class FocusAfterRowLeaves {
 
   focusInPlace(control: HTMLElement): void {
     this.pending = null;
-    control.focus();
+    control.focus({ preventScroll: true });
   }
 
   rowLeaveEnded(row: HTMLElement): void {

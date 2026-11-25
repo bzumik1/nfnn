@@ -643,6 +643,20 @@ describe('Given a row whose leave moves the focus to a control below it', () => 
     expect(scrolled).toEqual([]);
   });
 
+  it('when the focus goes in place to the heading, then the browser is told not to scroll it into view either', () => {
+    const focus = focusAfter();
+    const asked: (FocusOptions | undefined)[] = [];
+    const focusHeading = heading.focus.bind(heading);
+    heading.focus = (options?: FocusOptions) => {
+      asked.push(options);
+      focusHeading(options);
+    };
+
+    focus.focusInPlace(heading);
+
+    expect(asked).toEqual([{ preventScroll: true }]);
+  });
+
   it('when the focus moved elsewhere before the row is gone, then nothing scrolls', async () => {
     const focus = focusAfter();
     const row = byId('leaving');
