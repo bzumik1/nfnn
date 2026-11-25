@@ -15,6 +15,7 @@ import {
   BarItem,
   DISPLAY_FRAME_MS,
   FRAME_LATE_MS,
+  HELD_WITHOUT_A_FRAME_MS,
   liveDialogs,
   motionAllowed,
   nextFrame,
@@ -38,7 +39,6 @@ const SIDE_NAVIGATION = '.side-nav-panel';
 const TAB_BAR = 'app-tab-bar .tab-bar';
 const STANDING_PARTS = 'app-header, .side-nav-panel, app-tab-bar';
 const CATCH_UP_SPANS = 3;
-const FRAMES_STOPPED_AFTER_UNDRAWN_TICKS = 2;
 
 export interface CatchUp {
   readonly frameMs: number;
@@ -53,21 +53,21 @@ export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp):
   const closing = Math.max(1, fastMs / CATCH_UP_SPANS);
   const startGap = catchUp.finger() - catchUp.from;
   let last: number | null = null;
+  let lastDrawnAt = view.performance.now();
   let elapsed = 0;
-  let undrawnInARow = 0;
-  let drawnOnce = false;
   const closeIn = (now: number, drawn: boolean): void => {
     if (!catchUp.goesOn()) {
       return;
     }
-    undrawnInARow = drawn ? 0 : undrawnInARow + 1;
-    drawnOnce ||= drawn;
-    if (drawn || !drawnOnce) {
-      const sinceLast = last === null ? catchUp.frameMs : Math.max(0, now - last);
-      elapsed +=
-        undrawnInARow >= FRAMES_STOPPED_AFTER_UNDRAWN_TICKS
-          ? sinceLast
-          : Math.min(catchUp.frameMs, sinceLast);
+    if (drawn) {
+      elapsed += Math.min(
+        catchUp.frameMs,
+        last === null ? DISPLAY_FRAME_MS : Math.max(0, now - last),
+      );
+      last = now;
+      lastDrawnAt = now;
+    } else if (now - lastDrawnAt >= HELD_WITHOUT_A_FRAME_MS) {
+      elapsed += Math.max(0, now - (last ?? lastDrawnAt));
       last = now;
     }
     const spans = elapsed / closing;

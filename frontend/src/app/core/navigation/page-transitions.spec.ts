@@ -2172,6 +2172,62 @@ describe('Given the app on the home screen of a phone opened straight on the don
     expect(Math.max(...steps), 'the longest step on the screen').toBeLessThanOrEqual(220 / 8);
   });
 
+  it('when the app was opened straight on the article and swiped at once, so the frames it measured were its first slow frames of 34 ms, then the close-in still moves by the frames it draws, no more than a twentieth of the gap in its first frame nor an eighth in any', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    onTestFinished(() => {
+      document.documentElement.style.removeProperty('--duration-fast');
+    });
+    const frames = framesByHand();
+    try {
+      const transitions = dressedTransitions();
+      document.dispatchEvent(new Event('pointerdown'));
+      for (let frame = 0; frame <= 11; frame++) {
+        frames.run(1000 + frame * 34);
+      }
+      const swipe = transitions.startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnder();
+      const offsets = [offsetOf(over())];
+      for (let frame = 0; frame < 4; frame++) {
+        frames.run(3000 + (frame * 1000) / 60);
+        offsets.push(offsetOf(over()));
+      }
+      const steps = offsets.slice(1).map((offset, frame) => offset - offsets[frame]);
+
+      expect(steps[0], 'the first frame of the close-in').toBeLessThanOrEqual(220 * 0.05);
+      expect(Math.max(...steps), 'the longest step on the screen').toBeLessThanOrEqual(220 / 8);
+    } finally {
+      frames.restore();
+    }
+  });
+
+  it('when two long tasks in a row hold back the first frame of the close-in, so the page clock ticks twice before it, then the ticks move nothing and that frame moves the page by one frame, no more than an eighth of the gap', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    onTestFinished(() => {
+      document.documentElement.style.removeProperty('--duration-fast');
+    });
+    const now = onePageClock();
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnder();
+      const before = offsetOf(over());
+
+      await new Promise((done) => setTimeout(done, 2 * FRAME_LATE_MS + 20));
+      expect(offsetOf(over()), 'the page moved while no frame was drawn').toBe(before);
+      frames.run(now());
+
+      expect(offsetOf(over()) - before, 'the step of the first frame').toBeLessThanOrEqual(220 / 8);
+    } finally {
+      frames.restore();
+    }
+  });
+
   it('when the app draws steadily at 30 frames a second, as in Low Power Mode, then the close-in advances by its own frame of 33 ms, so the page is with the finger within 12 of its frames', async () => {
     document.documentElement.style.setProperty('--duration-fast', '150ms');
     const frames = framesByHand();
