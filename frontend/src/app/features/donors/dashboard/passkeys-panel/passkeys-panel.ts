@@ -95,6 +95,7 @@ export class PasskeysPanel {
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
   private readonly renameField = viewChild<ElementRef<HTMLInputElement>>('renameField');
   private readonly passkeyList = viewChild<ElementRef<HTMLElement>>('passkeyList');
+  private readonly emptyText = viewChild<ElementRef<HTMLElement>>('emptyText');
 
   protected readonly supported = this.authenticator.supported();
   protected readonly passkeys = signal<Passkey[] | null>(null);
@@ -406,9 +407,16 @@ export class PasskeysPanel {
       return;
     }
     const region = this.region()?.nativeElement;
-    if (region !== undefined) {
-      this.focusAfterRowLeaves.focusInPlace(region);
+    if (region === undefined) {
+      return;
     }
+    const emptyText = this.emptyText()?.nativeElement;
+    this.focusAfterRowLeaves.focusInPlace(
+      region,
+      emptyText === undefined
+        ? null
+        : { row, from: emptyText, to: this.addButton()?.nativeElement ?? null },
+    );
   }
 
   protected formatDate(isoInstant: string): string {

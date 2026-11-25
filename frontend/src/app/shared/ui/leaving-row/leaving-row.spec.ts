@@ -696,3 +696,211 @@ describe('Given a row whose leave moves the focus to a control below it', () => 
     expect(scrolled).toEqual([]);
   });
 });
+
+describe('Given the only row whose leave leaves no control to move the focus to', () => {
+  let list: HTMLUListElement;
+  let region: HTMLElement;
+  let result: HTMLParagraphElement;
+  let add: HTMLButtonElement;
+  let scrolled: { element: HTMLElement; options: unknown }[];
+
+  beforeEach(() => {
+    scrolled = [];
+    region = document.createElement('section');
+    region.tabIndex = -1;
+    list = document.createElement('ul');
+    list.innerHTML = '<li id="only"><button>Odebrat</button></li>';
+    result = document.createElement('p');
+    add = document.createElement('button');
+    region.append(list, result, add);
+    document.body.append(region);
+    for (const element of [region, result, add]) {
+      element.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+        scrolled.push({ element, options });
+      };
+    }
+  });
+
+  afterEach(() => region.remove());
+
+  function standing(element: HTMLElement, top: number, height: number): void {
+    element.getBoundingClientRect = () => new DOMRect(0, top, 300, height);
+  }
+
+  function pageAsking(reducedMotion: boolean): Document {
+    return {
+      get activeElement() {
+        return document.activeElement;
+      },
+      body: document.body,
+      documentElement: document.documentElement,
+      defaultView: {
+        innerHeight: 600,
+        matchMedia: (query: string) => ({
+          matches: reducedMotion && query === '(prefers-reduced-motion: reduce)',
+        }),
+        getComputedStyle: (element: Element) => getComputedStyle(element),
+      },
+    } as unknown as Document;
+  }
+
+  function focusAfter(reducedMotion = false): FocusAfterRowLeaves {
+    return new FocusAfterRowLeaves(pageAsking(reducedMotion), () => region);
+  }
+
+  async function removed(row: HTMLElement): Promise<void> {
+    row.remove();
+    await Promise.resolve();
+  }
+
+  function only(): HTMLElement {
+    return document.getElementById('only') as HTMLElement;
+  }
+
+  it('when the region takes the focus in place before the row is removed, then the result above the window glides in from its top only once the row is gone', async () => {
+    const focus = focusAfter();
+    const row = only();
+    standing(result, -300, 40);
+    standing(add, -250, 40);
+    focus.rowLeaving(row);
+
+    focus.focusInPlace(region, { row, from: result, to: add });
+    focus.rowLeaveEnded(row);
+
+    expect(document.activeElement).toBe(region);
+    expect(scrolled).toEqual([]);
+    await removed(row);
+    expect(scrolled).toEqual([
+      { element: result, options: { block: 'start', behavior: 'smooth' } },
+    ]);
+  });
+
+  it('when the row is removed before the region takes the focus in place, then the result is revealed as the region takes the focus', async () => {
+    const focus = focusAfter();
+    const row = only();
+    standing(result, -300, 40);
+    standing(add, -250, 40);
+    focus.rowLeaving(row);
+    focus.rowLeaveEnded(row);
+    await removed(row);
+    expect(scrolled).toEqual([]);
+
+    focus.focusInPlace(region, { row, from: result, to: add });
+
+    expect(scrolled).toEqual([
+      { element: result, options: { block: 'start', behavior: 'smooth' } },
+    ]);
+  });
+
+  it('when the result and the button below it stand under the window, then the button is brought up to its bottom edge', async () => {
+    const focus = focusAfter();
+    const row = only();
+    standing(result, 550, 40);
+    standing(add, 620, 40);
+    focus.rowLeaving(row);
+    focus.focusInPlace(region, { row, from: result, to: add });
+    focus.rowLeaveEnded(row);
+
+    await removed(row);
+
+    expect(scrolled).toEqual([{ element: add, options: { block: 'end', behavior: 'smooth' } }]);
+  });
+
+  it('when the result and the button together are taller than the window, then the result wins and is brought into view nearest', async () => {
+    const focus = focusAfter();
+    const row = only();
+    standing(result, -700, 500);
+    standing(add, -150, 100);
+    focus.rowLeaving(row);
+    focus.focusInPlace(region, { row, from: result, to: add });
+    focus.rowLeaveEnded(row);
+
+    await removed(row);
+
+    expect(scrolled).toEqual([
+      { element: result, options: { block: 'nearest', behavior: 'smooth' } },
+    ]);
+  });
+
+  it('when the result and the button already stand in the window, then nothing scrolls', async () => {
+    const focus = focusAfter();
+    const row = only();
+    standing(result, 200, 40);
+    standing(add, 250, 40);
+    focus.rowLeaving(row);
+    focus.focusInPlace(region, { row, from: result, to: add });
+    focus.rowLeaveEnded(row);
+
+    await removed(row);
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when the device asks for less motion, then the result jumps into view', async () => {
+    const focus = focusAfter(true);
+    const row = only();
+    standing(result, -300, 40);
+    standing(add, -250, 40);
+    focus.rowLeaving(row);
+    focus.focusInPlace(region, { row, from: result, to: add });
+    focus.rowLeaveEnded(row);
+
+    await removed(row);
+
+    expect(scrolled).toEqual([
+      { element: result, options: { block: 'start', behavior: 'instant' } },
+    ]);
+  });
+
+  it('when the result still moves in as the row is gone, then it is revealed only once its motion has finished', async () => {
+    const focus = focusAfter();
+    const row = only();
+    standing(result, -300, 40);
+    standing(add, -250, 40);
+    let finish: () => void = () => undefined;
+    const finished = new Promise<void>((resolve) => (finish = resolve));
+    result.getAnimations = () => [{ finished }] as never;
+    focus.rowLeaving(row);
+    focus.focusInPlace(region, { row, from: result, to: add });
+    focus.rowLeaveEnded(row);
+    await removed(row);
+    expect(scrolled).toEqual([]);
+
+    finish();
+
+    await vi.waitFor(() =>
+      expect(scrolled).toEqual([
+        { element: result, options: { block: 'start', behavior: 'smooth' } },
+      ]),
+    );
+  });
+
+  it('when the reveal names a row it was not told about, then nothing scrolls', async () => {
+    const focus = focusAfter();
+    const row = only();
+    standing(result, -300, 40);
+    standing(add, -250, 40);
+    focus.rowLeaving(row);
+
+    focus.focusInPlace(region, { row: list, from: result, to: add });
+    focus.rowLeaveEnded(row);
+    await removed(row);
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when the focus moved elsewhere before the row is gone, then nothing scrolls', async () => {
+    const focus = focusAfter();
+    const row = only();
+    standing(result, -300, 40);
+    standing(add, -250, 40);
+    focus.rowLeaving(row);
+    focus.focusInPlace(region, { row, from: result, to: add });
+    focus.rowLeaveEnded(row);
+
+    add.focus();
+    await removed(row);
+
+    expect(scrolled).toEqual([]);
+  });
+});

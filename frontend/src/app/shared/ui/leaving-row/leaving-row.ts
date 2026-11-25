@@ -41,8 +41,26 @@ export function afterRemoval(
   watch.observe(within, { childList: true, subtree: true });
 }
 
+export interface RevealInPlace {
+  readonly row: HTMLElement | null;
+  readonly from: HTMLElement;
+  readonly to: HTMLElement | null;
+}
+
+interface PendingReveal {
+  readonly row: HTMLElement;
+  focused: HTMLElement | null;
+  reveal: (() => void) | null;
+  gone: boolean;
+}
+
+interface VisibleBand {
+  readonly top: number;
+  readonly bottom: number;
+}
+
 export class FocusAfterRowLeaves {
-  private pending: { row: HTMLElement; focused: HTMLElement | null; gone: boolean } | null = null;
+  private pending: PendingReveal | null = null;
 
   constructor(
     private readonly document: Document,
@@ -50,7 +68,7 @@ export class FocusAfterRowLeaves {
   ) {}
 
   rowLeaving(row: HTMLElement | null): void {
-    this.pending = row === null ? null : { row, focused: null, gone: false };
+    this.pending = row === null ? null : { row, focused: null, reveal: null, gone: false };
   }
 
   moveFocus(row: HTMLElement | null, control: HTMLElement): void {
@@ -58,13 +76,21 @@ export class FocusAfterRowLeaves {
     const pending = this.pending;
     if (pending !== null && pending.row === row) {
       pending.focused = control;
+      pending.reveal = () => this.scrollIntoViewFitting(control);
       this.revealOnceRowGone(pending);
     }
   }
 
-  focusInPlace(control: HTMLElement): void {
-    this.pending = null;
+  focusInPlace(control: HTMLElement, reveal: RevealInPlace | null = null): void {
     control.focus({ preventScroll: true });
+    const pending = this.pending;
+    if (reveal === null || pending === null || pending.row !== reveal.row) {
+      this.pending = null;
+      return;
+    }
+    pending.focused = control;
+    pending.reveal = () => this.revealOnceSettled(control, reveal.from, reveal.to);
+    this.revealOnceRowGone(pending);
   }
 
   rowLeaveEnded(row: HTMLElement): void {
@@ -86,24 +112,63 @@ export class FocusAfterRowLeaves {
     this.pending = null;
   }
 
-  private revealOnceRowGone(pending: { focused: HTMLElement | null; gone: boolean }): void {
+  private revealOnceRowGone(pending: PendingReveal): void {
     if (this.pending !== pending || !pending.gone || pending.focused === null) {
       return;
     }
     this.pending = null;
-    this.scrollIntoViewIfFocused(pending.focused);
+    if (this.document.activeElement === pending.focused) {
+      pending.reveal?.();
+    }
   }
 
-  private scrollIntoViewIfFocused(focused: HTMLElement): void {
-    if (this.document.activeElement !== focused) {
+  private scrollIntoViewFitting(control: HTMLElement): void {
+    control.scrollIntoView?.({
+      block: this.fitsItsScroller(control) ? 'nearest' : 'start',
+      behavior: this.behavior(),
+    });
+  }
+
+  private revealOnceSettled(focused: HTMLElement, from: HTMLElement, to: HTMLElement | null): void {
+    const motions = [from, to].flatMap((element) => element?.getAnimations?.() ?? []);
+    if (motions.length === 0) {
+      this.revealSpan(from, to);
       return;
     }
+    void Promise.allSettled(motions.map((motion) => motion.finished)).then(() => {
+      if (this.document.activeElement === focused && from.isConnected) {
+        this.revealSpan(from, to);
+      }
+    });
+  }
+
+  private revealSpan(from: HTMLElement, to: HTMLElement | null): void {
+    const view = this.document.defaultView;
+    const last = to ?? from;
+    if (view === null) {
+      from.scrollIntoView?.({ block: 'nearest', behavior: this.behavior() });
+      return;
+    }
+    const band = this.visibleBand(this.scrollerOf(from, view), view);
+    const top =
+      from.getBoundingClientRect().top -
+      (parseFloat(view.getComputedStyle(from).scrollMarginTop) || 0);
+    const bottom =
+      last.getBoundingClientRect().bottom +
+      (parseFloat(view.getComputedStyle(last).scrollMarginBottom) || 0);
+    if (bottom - top > band.bottom - band.top) {
+      from.scrollIntoView?.({ block: 'nearest', behavior: this.behavior() });
+    } else if (top < band.top) {
+      from.scrollIntoView?.({ block: 'start', behavior: this.behavior() });
+    } else if (bottom > band.bottom) {
+      last.scrollIntoView?.({ block: 'end', behavior: this.behavior() });
+    }
+  }
+
+  private behavior(): ScrollBehavior {
     const reduced =
       this.document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    focused.scrollIntoView?.({
-      block: this.fitsItsScroller(focused) ? 'nearest' : 'start',
-      behavior: reduced ? 'instant' : 'smooth',
-    });
+    return reduced ? 'instant' : 'smooth';
   }
 
   private fitsItsScroller(control: HTMLElement): boolean {
@@ -111,19 +176,24 @@ export class FocusAfterRowLeaves {
     if (view === null) {
       return true;
     }
-    const scroller = this.scrollerOf(control, view);
-    const page = scroller === this.document.documentElement;
-    const padding = view.getComputedStyle(scroller);
+    const band = this.visibleBand(this.scrollerOf(control, view), view);
     const margin = view.getComputedStyle(control);
-    const room =
-      (page ? view.innerHeight : scroller.clientHeight) -
-      (parseFloat(padding.scrollPaddingTop) || 0) -
-      (parseFloat(padding.scrollPaddingBottom) || 0);
     const needed =
       control.getBoundingClientRect().height +
       (parseFloat(margin.scrollMarginTop) || 0) +
       (parseFloat(margin.scrollMarginBottom) || 0);
-    return needed <= room;
+    return needed <= band.bottom - band.top;
+  }
+
+  private visibleBand(scroller: HTMLElement, view: Window): VisibleBand {
+    const padding = view.getComputedStyle(scroller);
+    const paddingTop = parseFloat(padding.scrollPaddingTop) || 0;
+    const paddingBottom = parseFloat(padding.scrollPaddingBottom) || 0;
+    if (scroller === this.document.documentElement) {
+      return { top: paddingTop, bottom: view.innerHeight - paddingBottom };
+    }
+    const top = scroller.getBoundingClientRect().top + scroller.clientTop;
+    return { top: top + paddingTop, bottom: top + scroller.clientHeight - paddingBottom };
   }
 
   private scrollerOf(control: HTMLElement, view: Window): HTMLElement {

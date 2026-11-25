@@ -587,17 +587,24 @@ describe('Given the passkeys panel of the sign-in card', () => {
         expect(scrolled).toEqual([]);
       });
 
-      it('and it was the only key, so the list leaves with it, then the panel takes the focus and nothing scrolls once the list is gone', async () => {
+      it('and it was the only key, so the list leaves with it, then the panel takes the focus in place and only the empty text above the window is brought into view, once the list is gone', async () => {
         await renderOnPage([IPHONE]);
         const region = element('.passkeys');
-        const scrolled = scrollsOf(region);
+        const regionScrolled = scrollsOf(region);
         const leave = leavesSlowly(IPHONE, (row) => row.parentElement!);
         await removeThe(IPHONE);
+        const emptyText = element('.passkeys-empty');
+        emptyText.getBoundingClientRect = () => new DOMRect(0, -300, 300, 40);
+        const emptyTextScrolled = scrollsOf(emptyText);
+
+        expect(document.activeElement).toBe(region);
+        expect(emptyTextScrolled).toEqual([]);
 
         await leave();
 
         expect(document.activeElement).toBe(region);
-        expect(scrolled).toEqual([]);
+        expect(regionScrolled).toEqual([]);
+        expect(emptyTextScrolled).toEqual([{ block: 'start', behavior: 'smooth' }]);
       });
     });
   });

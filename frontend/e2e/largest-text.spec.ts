@@ -40,7 +40,6 @@ import {
   whenAdministrationCopied,
 } from './donor-session';
 import { ADMINISTRATION_LOCKED, ADMINISTRATION_UNLOCK_PATH, expect, test } from './fixtures';
-import { waitWhileNothingMayHappen } from './fixed-waits';
 import {
   LongestKeptWord,
   longestKeptWord,
@@ -76,32 +75,49 @@ async function anchorNoScrollAsSafariDoes(page: Page): Promise<void> {
   });
 }
 
+async function placeBetweenHeaderAndWhatCoversTheBottom(target: Locator): Promise<{
+  top: number;
+  bottom: number;
+  headerBottom: number;
+  lowerEdge: number;
+}> {
+  return target.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const header = [...document.querySelectorAll<HTMLElement>('app-header a, app-header button')]
+      .filter((control) => getComputedStyle(control).visibility !== 'hidden')
+      .map((control) => control.getBoundingClientRect())
+      .filter((control) => control.width > 0 && control.height > 0 && control.bottom > 0)
+      .map((control) => control.bottom);
+    const coveringTops = [
+      ...document.querySelectorAll<HTMLElement>(
+        'app-tab-bar nav, .ui-notice--floating, app-offline-status .offline-pill',
+      ),
+    ]
+      .map((cover) => cover.getBoundingClientRect())
+      .filter((cover) => cover.height > 0 && cover.top > window.innerHeight / 2)
+      .map((cover) => cover.top);
+    return {
+      top: box.top,
+      bottom: box.bottom,
+      headerBottom: Math.max(0, ...header),
+      lowerEdge: Math.min(window.innerHeight, ...coveringTops),
+    };
+  });
+}
+
 async function expectFocusBetweenHeaderAndWhatCoversTheBottom(page: Page): Promise<void> {
   await expect(async () => {
-    const place = await page.evaluate(() => {
-      const box = document.activeElement!.getBoundingClientRect();
-      const header = [...document.querySelectorAll<HTMLElement>('app-header a, app-header button')]
-        .filter((element) => getComputedStyle(element).visibility !== 'hidden')
-        .map((element) => element.getBoundingClientRect())
-        .filter((control) => control.width > 0 && control.height > 0 && control.bottom > 0)
-        .map((control) => control.bottom);
-      const coveringTops = [
-        ...document.querySelectorAll<HTMLElement>(
-          'app-tab-bar nav, .ui-notice--floating, app-offline-status .offline-pill',
-        ),
-      ]
-        .map((element) => element.getBoundingClientRect())
-        .filter((cover) => cover.height > 0 && cover.top > window.innerHeight / 2)
-        .map((cover) => cover.top);
-      return {
-        top: box.top,
-        bottom: box.bottom,
-        headerBottom: Math.max(0, ...header),
-        lowerEdge: Math.min(window.innerHeight, ...coveringTops),
-      };
-    });
+    const place = await placeBetweenHeaderAndWhatCoversTheBottom(page.locator(':focus'));
     expect(place.top).toBeGreaterThanOrEqual(place.headerBottom);
     expect(place.bottom).toBeLessThanOrEqual(place.lowerEdge);
+  }).toPass();
+}
+
+async function expectTopBetweenHeaderAndWhatCoversTheBottom(target: Locator): Promise<void> {
+  await expect(async () => {
+    const place = await placeBetweenHeaderAndWhatCoversTheBottom(target);
+    expect(place.top).toBeGreaterThanOrEqual(place.headerBottom);
+    expect(place.top).toBeLessThanOrEqual(place.lowerEdge);
   }).toPass();
 }
 
@@ -1143,7 +1159,7 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
       await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
     });
 
-    test('when they remove their only passkey, then the panel takes the focus, the page does not scroll up, and the result and Přidat přístupový klíč stay in view', async ({
+    test('when they remove their only passkey, then the panel takes the focus and the result is brought into view with Přidat přístupový klíč, its top between the header and whatever covers the bottom of the window', async ({
       page,
     }) => {
       await mockDonorApi(page);
@@ -1158,25 +1174,14 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
       await iphoneRow.getByRole('button', { name: 'Odebrat', exact: true }).click();
       const confirm = iphoneRow.getByRole('button', { name: 'Ano, odebrat' });
       await expect(confirm).toBeVisible();
-      await page.evaluate(() =>
-        document.addEventListener(
-          'click',
-          () => (document.documentElement.dataset['scrolledAtClick'] = String(window.scrollY)),
-          { capture: true, once: true },
-        ),
-      );
 
       await confirm.click();
 
       await expect(iphoneRow).toHaveCount(0);
       await expect(passkeys).toBeFocused();
-      await waitWhileNothingMayHappen(page, 1_000);
-      const scroll = await page.evaluate(() => ({
-        atClick: Number(document.documentElement.dataset['scrolledAtClick']),
-        now: window.scrollY,
-      }));
-      expect(scroll.now).toBeGreaterThanOrEqual(scroll.atClick);
-      await expect(passkeys.getByText('Zatím nemáte žádný přístupový klíč.')).toBeInViewport();
+      const result = passkeys.getByText('Zatím nemáte žádný přístupový klíč.');
+      await expectTopBetweenHeaderAndWhatCoversTheBottom(result);
+      await expect(result).toBeInViewport();
       await expect(
         passkeys.getByRole('button', { name: 'Přidat přístupový klíč' }),
       ).toBeInViewport();
