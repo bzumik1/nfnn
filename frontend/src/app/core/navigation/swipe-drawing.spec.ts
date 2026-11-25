@@ -176,48 +176,6 @@ describe('Given the page closing in on a finger 220 px ahead once the page Zpět
 const WIDTH = 390;
 const PAGE_STEP_MS = 350;
 
-function curveOf(easing: string): [number, number, number, number] {
-  if (easing === 'ease-out') {
-    return [0, 0, 0.58, 1];
-  }
-  const [x1, y1, x2, y2] = /cubic-bezier\(([^)]*)\)/
-    .exec(easing)![1]
-    .split(',')
-    .map((value) => Number(value));
-  return [x1, y1, x2, y2];
-}
-
-function easedAt(easing: string, x: number): number {
-  const [x1, y1, x2, y2] = curveOf(easing);
-  const curve = (t: number, one: number, two: number): number =>
-    3 * (1 - t) ** 2 * t * one + 3 * (1 - t) * t ** 2 * two + t ** 3;
-  let low = 0;
-  let high = 1;
-  for (let step = 0; step < 60; step++) {
-    const middle = (low + high) / 2;
-    if (curve(middle, x1, x2) < x) {
-      low = middle;
-    } else {
-      high = middle;
-    }
-  }
-  return curve((low + high) / 2, y1, y2);
-}
-
-function curveSteps(settle: SwipeSettle, frameMs: number): number[] {
-  const way = settle.to - settle.from;
-  const at = (frame: number): number =>
-    settle.durationMs === 0
-      ? settle.to
-      : settle.from +
-        way * easedAt(settle.easing, Math.min(1, (frame * frameMs) / settle.durationMs));
-  const steps: number[] = [];
-  for (let frame = 1; (frame - 1) * frameMs < settle.durationMs; frame++) {
-    steps.push(at(frame) - at(frame - 1));
-  }
-  return steps;
-}
-
 type Finger = 'still' | 'cancel' | number;
 
 function releasedAt(fingerAt: number, finger: Finger): SwipeSettle {

@@ -382,6 +382,24 @@ describe('Given a phone that animates, whose router puts the scroll back, and ar
     expect(arrived).toBe('Načítáme stránku…');
   });
 
+  it('when the step waits for the page’s text and so places its copies inside a frame, then its motions are let go in the frame after it, since the frame that placed them already draws them', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    await opensPlacedAfter('/aktuality/zahrada-pro-deti', 40);
+    await vi.advanceTimersByTimeAsync(5);
+    layer.textContent = 'Zahrada pro děti';
+    readsInFlight[0]();
+    await vi.advanceTimersByTimeAsync(0);
+
+    draw(1000);
+    expect(moving()?.classList, 'held in the frame that placed the copies').toContain(
+      `${PAGE_TRANSITION_CLASS}--held`,
+    );
+    draw(1016);
+
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
   it('when the page is placed so late that waiting for its text would place the step later than 9 frames after the tap, then the article slides in at once with its waiting line', async () => {
     await opensPlacedAfter('/aktuality/zahrada-pro-deti', 250);
     await vi.advanceTimersByTimeAsync(5);
@@ -750,6 +768,36 @@ describe('Given a phone that animates, an article opened from the news, and the 
     await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS - 10);
     expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
     await vi.advanceTimersByTimeAsync(10);
+
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
+  it('when the browser has drawn no frame since the press, as when it gives no more frames at all, and the page clock’s wait runs on time, then the clock lets the held motions go after the time a frame may be late, in a visible page too', async () => {
+    watchHeldMotions();
+    framesOnRequest();
+    document.dispatchEvent(new Event('pointerdown'));
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS + 5);
+
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
+  it('when the browser has drawn no frame since the press but the page clock’s wait ran late, as after a long task, then the hold still waits for its frames', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    document.dispatchEvent(new Event('pointerdown'));
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    const own = performance.now.bind(performance);
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => own() + 200);
+    onTestFinished(() => clock.mockRestore());
+
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS + 5);
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(5000);
+    draw(5016);
 
     expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
   });
