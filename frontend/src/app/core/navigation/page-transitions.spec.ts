@@ -671,6 +671,24 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(moving(), 'the motion was cut before its end').not.toBeNull();
   });
 
+  it('when a visible page keeps the step held for 1800 ms before its frames come, then the longest time of the step counts from the moment its motion is let go, so the slide runs its whole length and still ends within that length and 200 ms', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    await vi.advanceTimersByTimeAsync(1800);
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(6800);
+    draw(6816);
+    draw(6832);
+
+    await vi.advanceTimersByTimeAsync(300 - 10);
+    expect(moving(), 'the motion was cut before its end').not.toBeNull();
+    await vi.advanceTimersByTimeAsync(2 * FRAME_LATE_MS + 20);
+
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+  });
+
   it('when the second frame of the hold comes 270 ms late, then the motions are let go only in it, the step is not cut before the motion has run its whole length from the frame after, and it ends within that length and 200 ms', async () => {
     watchHeldMotions();
     const draw = framesOnRequest();

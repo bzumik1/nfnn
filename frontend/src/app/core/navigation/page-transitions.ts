@@ -488,6 +488,10 @@ export class PageTransitions {
         return;
       }
       released = true;
+      if (this.finishing !== null) {
+        view.clearTimeout(this.finishing);
+      }
+      this.finishing = view.setTimeout(() => this.finish(), PAGE_TRANSITION_LONGEST_MS);
       startHeldMotions(running.overlay);
       publishSteadyFrame(view, this.steadyFrameMs());
       view.requestAnimationFrame(() =>
