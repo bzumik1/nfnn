@@ -1458,6 +1458,26 @@ test.describe('Given the probe that watches a step of the back matrix', () => {
     expect(() => expectNoJump(probeOf(false), readLater, width)).toThrow(/the page jumped/);
   });
 
+  const slideFrame = (at: number, offset: number): Frame =>
+    ({
+      ...frameAt(at, at, offset),
+      motion: { durationMs: 50, curve: [0, 0, 1, 1], startTime: 1000, name: 'script', toPx: 390 },
+    }) as Frame;
+
+  test('when a finger lets go with a flick and the page slides on by its own running animation, steeper than the page’s curve, then frames on that slide’s own curve are no jump', () => {
+    const slide = [slideFrame(1000, 200), slideFrame(1010, 238), slideFrame(1020, 276)];
+
+    expect(() => expectNoJump(probeOf(false), slide, width)).not.toThrow();
+  });
+
+  test('when a page’s slide after a lift outruns the curve of its own running animation, a regression planted to prove the judge, then the judge reports the jump', () => {
+    const outrunning = [slideFrame(1000, 200), slideFrame(1010, 260), slideFrame(1020, 320)];
+
+    expect(() => expectNoJump(probeOf(false), outrunning, width)).toThrow(
+      /the page jumped 60 px in 10 ms, faster than its own slide/,
+    );
+  });
+
   test('when a browser whose clock counts whole milliseconds reads two frames in the same millisecond, then a page moved by what one millisecond allows is no jump', () => {
     const sameMillisecond = [frameAt(1000, 1000, 100), frameAt(1001, 1000, 100 + offsetIn(1) + 1)];
 

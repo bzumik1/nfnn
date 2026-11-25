@@ -166,6 +166,7 @@ interface Motion {
   readonly playState?: string;
   readonly easing?: string;
   readonly name?: string;
+  readonly toPx?: number | null;
 }
 
 interface LongFrameScript {
@@ -784,6 +785,14 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
           return null;
         }
         const keyframed = 'animationName' in animation;
+        const endsAt = (): number | null => {
+          try {
+            const end = (animation.effect as KeyframeEffect).getKeyframes().at(-1)?.['transform'];
+            return typeof end === 'string' ? new DOMMatrixReadOnly(end).m41 : null;
+          } catch {
+            return null;
+          }
+        };
         return {
           durationMs: Number(timing.duration),
           curve: keyframed ? probe.curve : curveOf(String(timing.easing ?? '')),
@@ -792,6 +801,7 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
           playState: animation.playState,
           easing: String(timing.easing ?? ''),
           name: keyframed ? (animation as CSSAnimation).animationName : 'script',
+          toPx: keyframed ? null : endsAt(),
         };
       };
       const fastText = theme.getPropertyValue('--duration-fast').trim();
@@ -1279,14 +1289,48 @@ export function expectNoJump(probe: StepProbe, frames: readonly Frame[], width: 
   ).toBe(true);
   const shownAt = (frame: Frame): number => (probe.liveClock ? frame.readAt : frame.at);
   const clockStepMs = probe.liveClock ? LIVE_CLOCK_STEP_MS : 0;
+  const slideFrom = frames.findIndex((frame) => slidePxPerMs(frame) !== null);
+  const slidePerMs = slideFrom < 0 ? null : slidePxPerMs(frames[slideFrom]);
   for (let at = 1; at < frames.length; at++) {
     const gap = Math.abs(frames[at].offset! - frames[at - 1].offset!);
     const elapsed = shownAt(frames[at]) - shownAt(frames[at - 1]);
+    const ownSlide = slidePerMs !== null && at > slideFrom && slidePxPerMs(frames[at]) !== null;
+    const perMs = ownSlide
+      ? Math.max(width * probe.steepestPerMs, slidePerMs)
+      : width * probe.steepestPerMs;
     expect(
       gap,
-      `the page jumped ${Math.round(gap)} px in ${Math.round(elapsed)} ms, faster than its curve`,
-    ).toBeLessThanOrEqual(width * probe.steepestPerMs * (elapsed + clockStepMs) + 2);
+      `the page jumped ${Math.round(gap)} px in ${Math.round(elapsed)} ms, faster than ${ownSlide ? 'its own slide' : 'its curve'}`,
+    ).toBeLessThanOrEqual(perMs * (elapsed + clockStepMs) + 2);
   }
+}
+
+function slidePxPerMs(frame: Frame): number | null {
+  const motion = frame.motion;
+  if (
+    motion?.name !== 'script' ||
+    motion.curve == null ||
+    motion.toPx == null ||
+    frame.offset === null ||
+    !(motion.durationMs > 0)
+  ) {
+    return null;
+  }
+  return (Math.abs(motion.toPx - frame.offset) * steepestSlopeOf(motion.curve)) / motion.durationMs;
+}
+
+function steepestSlopeOf([x1, y1, x2, y2]: readonly number[]): number {
+  const along = (from: number, to: number, t: number): number =>
+    3 * (1 - t) * (1 - t) * t * from + 3 * (1 - t) * t * t * to + t * t * t;
+  let steepest = 0;
+  for (let step = 0; step < 1000; step++) {
+    const dx = along(x1, x2, (step + 1) / 1000) - along(x1, x2, step / 1000);
+    const dy = along(y1, y2, (step + 1) / 1000) - along(y1, y2, step / 1000);
+    if (dx > 0) {
+      steepest = Math.max(steepest, Math.abs(dy) / dx);
+    }
+  }
+  return steepest;
 }
 
 function expectOneTitleAtATime(probe: StepProbe): void {
