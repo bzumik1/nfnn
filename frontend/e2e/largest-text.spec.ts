@@ -33,6 +33,7 @@ import {
   openDonorSection,
   openSignInDialog,
   rememberedDonorSession,
+  samplePngBase64,
   secondFactorRequired,
   showAccountList,
   signedInDevices,
@@ -2100,6 +2101,100 @@ test.describe('Given a visitor verifying a receipt on a phone 320 pt wide with t
     });
   }
 });
+
+for (const width of [375, 420]) {
+  test.describe(`Given a visitor verifying a receipt on an iPhone ${width} pt wide whose installed app shows the largest accessibility text`, () => {
+    test.use({ viewport: { width, height: 800 } });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await mockDonorApi(page);
+      await serveReceiptKeys(page);
+      await serveReceiptStatus(page, 'active');
+    });
+
+    test('when they open the code of a yearly receipt, then the verdict Podepsáno fondem Nová naděje keeps each of its words whole', async ({
+      page,
+    }) => {
+      await page.goto(`/overit#${YEARLY_RECEIPT.fragment}`);
+      const verdict = page.getByRole('heading', { level: 2, name: 'Podepsáno fondem Nová naděje' });
+      await expect(verdict).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      expect(await wordsSplitAcrossLines(verdict)).toEqual([]);
+    });
+  });
+}
+
+const FEATURED_PHOTO_ID = '0199f3e0-0000-7000-8000-00000000f001';
+
+async function featuredNewsWithAPhoto(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/content/news',
+    (route) =>
+      route.fulfill({
+        json: {
+          items: [
+            {
+              id: '0199f3e0-0000-7000-8000-00000000f002',
+              slug: 'zahrada-pro-deti',
+              title: 'Zahrada pro děti',
+              tag: 'Projekt',
+              perex: 'Stavíme zahradu, kde si děti budou hrát celé léto.',
+              body: 'Text.',
+              coverImage: {
+                id: FEATURED_PHOTO_ID,
+                url: `/api/content/media/${FEATURED_PHOTO_ID}`,
+                alt: null,
+                focalPoint: null,
+              },
+              publishedOn: '2026-10-20',
+              createdAt: '2026-10-19T09:00:00Z',
+              updatedAt: '2026-10-20T07:30:00Z',
+              signer: null,
+              lookBackYear: null,
+              live: true,
+            },
+          ],
+          page: 0,
+          size: 10,
+          total: 1,
+          hasMore: false,
+        },
+      }),
+  );
+  await page.route(
+    (url) => url.pathname.startsWith('/api/content/media/'),
+    (route) =>
+      route.fulfill({ contentType: 'image/png', body: Buffer.from(samplePngBase64, 'base64') }),
+  );
+}
+
+for (const width of [375, 420]) {
+  test.describe(`Given a visitor on Aktuality on an iPhone ${width} pt wide whose installed app shows the largest accessibility text`, () => {
+    test.use({ viewport: { width, height: 800 } });
+
+    test('when the featured article has a photo, then the photo keeps its own shape above the text instead of stretching over the whole card', async ({
+      page,
+    }) => {
+      await showLargestSystemText(page);
+      await mockDonorApi(page);
+      await featuredNewsWithAPhoto(page);
+      await page.goto('/aktuality');
+      const card = page.locator('app-featured-news article');
+      const photo = card.locator('img');
+      await expect(photo).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      const photoBox = (await photo.boundingBox())!;
+      const cardBox = (await card.boundingBox())!;
+      const titleBox = (await card.getByRole('heading').boundingBox())!;
+      expect(photoBox.height).toBeLessThan(photoBox.width);
+      expect(photoBox.height).toBeLessThan(cardBox.height / 2);
+      expect(titleBox.y).toBeGreaterThanOrEqual(photoBox.y + photoBox.height - 1);
+    });
+  });
+}
 
 async function wordsBrokenInside(element: Locator): Promise<string[]> {
   return element.evaluate((root) => {
@@ -4748,6 +4843,48 @@ for (const width of [390, 1280]) {
       );
 
       await expect.poll(() => linesOfEachFigure(page)).toEqual([1, 1, 1]);
+    });
+  });
+}
+
+async function gapsBetweenAccountingRows(card: Locator): Promise<number[]> {
+  await card.evaluate(() => document.fonts.ready);
+  return card.evaluate((element) => {
+    const parts =
+      '.accounting-item > dt, .accounting-value, .accounting-link, app-copy-button button';
+    const rows = Array.from(element.querySelectorAll<HTMLElement>('.accounting-item')).map(
+      (row) => {
+        const boxes = Array.from(row.querySelectorAll<HTMLElement>(parts)).map((part) =>
+          part.getBoundingClientRect(),
+        );
+        return {
+          top: Math.min(...boxes.map((box) => box.top)),
+          bottom: Math.max(...boxes.map((box) => box.bottom)),
+        };
+      },
+    );
+    return rows.slice(1).map((row, index) => Math.round(row.top - rows[index].bottom));
+  });
+}
+
+for (const { screen, viewport } of [
+  { screen: 'an iPhone SE', viewport: { width: 375, height: 667 } },
+  { screen: 'an iPhone Air', viewport: { width: 420, height: 912 } },
+]) {
+  test.describe(`Given an accountant on ${screen} whose text is at its default size`, () => {
+    test.use({ viewport });
+
+    test('when they open Údaje pro účetní on O nás, then every copy button stays clear of its value and the rows stand one gap apart, whether a value takes one line or two and whether its button drops under it', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.goto('/o-nas');
+      const card = page.locator('app-accounting-details .accounting');
+      await expect(card).toContainText('CZ26 2010 0000 0055 4433 2217');
+
+      expect(await valuesUnderTheirCopyButtons(card)).toEqual([]);
+      const gaps = await gapsBetweenAccountingRows(card);
+      expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(1);
     });
   });
 }

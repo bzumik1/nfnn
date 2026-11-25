@@ -314,3 +314,13 @@ $clamped-title-lines: 3;
     content: '→' / '';
   }
 }
+
+@include bp.container-down(featured, pair) {
+  .featured-photo {
+    block-size: calc(100cqi * 2 / 3);
+  }
+
+  .featured--photo .featured-text {
+    padding-block-start: calc(100cqi * 2 / 3 + var(--space-6));
+  }
+}
