@@ -926,10 +926,7 @@ for (const { phone, dppx, inset, radius } of [
     });
 
     test.beforeEach(async ({ page }) => {
-      await page.addInitScript((bottom) => {
-        Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
-        document.documentElement.style.setProperty('--safe-area-bottom', bottom);
-      }, inset);
+      await onTheHomeScreenWithBottomInset(page, inset);
       await mockDonorApi(page);
       await publishedArticle(page);
     });
@@ -973,10 +970,7 @@ test.describe('Given the app on the home screen of an iPhone with Face ID, the a
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
-      document.documentElement.style.setProperty('--safe-area-bottom', '34px');
-    });
+    await onTheHomeScreenWithBottomInset(page, '34px');
     await mockDonorApi(page);
     await publishedArticle(page);
   });
@@ -1019,3 +1013,22 @@ test.describe('Given the app on the home screen of an iPhone with Face ID, the a
     });
   }
 });
+
+async function onTheHomeScreenWithBottomInset(page: Page, inset: string): Promise<void> {
+  await page.addInitScript((bottom) => {
+    Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+    const setInset = (root: HTMLElement): void =>
+      root.style.setProperty('--safe-area-bottom', bottom);
+    if (document.documentElement !== null) {
+      setInset(document.documentElement);
+      return;
+    }
+    const rooted = new MutationObserver(() => {
+      if (document.documentElement !== null) {
+        rooted.disconnect();
+        setInset(document.documentElement);
+      }
+    });
+    rooted.observe(document, { childList: true });
+  }, inset);
+}
