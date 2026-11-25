@@ -1550,6 +1550,38 @@ describe('Given an open sheet and a question that may open over it', () => {
     expect(dialogNamed('question-title').classList).toContain('dialog--stacked');
     expect(dialogNamed('sheet-title').classList).not.toContain('dialog--stacked');
   });
+
+  it('when the sheet under the question closes first and the question stays, then the question no longer counts as standing over another', async () => {
+    fixture.componentInstance.questionOpen.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.componentInstance.sheetOpen.set(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(dialogNamed('question-title').open).toBe(true);
+    expect(dialogNamed('question-title').classList).not.toContain('dialog--stacked');
+  });
+
+  it('when only a still copy of a sheet stands in the layer of a step and a new sheet opens, then the new sheet does not count as standing over another', async () => {
+    fixture.componentInstance.sheetOpen.set(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const layer = document.createElement('div');
+    layer.className = 'page-transition';
+    const copy = document.createElement('dialog');
+    layer.append(copy);
+    document.body.append(layer);
+    copy.setAttribute('open', '');
+    onTestFinished(() => layer.remove());
+
+    fixture.componentInstance.sheetOpen.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(dialogNamed('sheet-title').classList).not.toContain('dialog--stacked');
+  });
 });
 
 @Component({ template: '' })
