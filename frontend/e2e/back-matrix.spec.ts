@@ -444,7 +444,8 @@ type Planted =
   | 'still-page'
   | 'shown-late';
 
-const SHOWN_LATE_SHARE = 0.6;
+const SHOWN_LATE_SHARE = 0.9;
+const SHOWN_LATE_STEP_MS = 1600;
 
 const PLANTED_STEP_MS = 1000;
 
@@ -595,7 +596,7 @@ test.describe(`Given an administrator in the app on the home screen of a phone w
     await motionsEnded(page);
     await page.evaluate(
       (stepMs) => document.documentElement.style.setProperty('--duration-page', `${stepMs}ms`),
-      PLANTED_STEP_MS,
+      planted === 'shown-late' ? SHOWN_LATE_STEP_MS : PLANTED_STEP_MS,
     );
     await watchTheStep(page);
     await plant(page, planted);
@@ -640,7 +641,7 @@ test.describe(`Given an administrator in the app on the home screen of a phone w
     );
   });
 
-  test(`when the screen first shows the page's step back already ${SHOWN_LATE_SHARE * 100} % of its way, as an iPhone showed it in round 29 while it still painted the copies after the motion's clock had started, then the judge on the screen reports the jump at the start`, async ({
+  test(`when the screen first shows the page's ${SHOWN_LATE_STEP_MS} ms step back already ${SHOWN_LATE_SHARE * 100} % of its way, as an iPhone showed a step in round 29 while it still painted the copies after the motion's clock had started, then the judge on the screen reports the jump at the start, as long as the screencast's gap before that frame stays under 450 ms at 30 frames a second and the p99 lag of 3 frames, three times its p90 gap`, async ({
     page,
   }) => {
     expect(await steppedBackFromPayments(page, 'shown-late')).toEqual(

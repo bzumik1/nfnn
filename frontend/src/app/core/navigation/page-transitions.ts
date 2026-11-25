@@ -13,6 +13,7 @@ import {
   untracked,
 } from '@angular/core';
 import {
+  ActivatedRouteSnapshot,
   Event as RouterEvent,
   GuardsCheckEnd,
   NavigationCancel,
@@ -20,6 +21,7 @@ import {
   NavigationError,
   NavigationSkipped,
   NavigationStart,
+  Route,
   RouteConfigLoadStart,
   Router,
   Scroll,
@@ -181,7 +183,7 @@ export class PageTransitions {
   private samplingRound = 0;
   private pressedAt = Number.NEGATIVE_INFINITY;
   private tappedAt = 0;
-  private loadsCode = false;
+  private readonly loadedRoutes = new Set<Route>();
 
   get running(): Running | null {
     return untracked(this.step);
@@ -234,8 +236,9 @@ export class PageTransitions {
     }
     if (event instanceof NavigationStart) {
       const now = this.now();
-      this.tappedAt = now - this.pressedAt <= PRESS_LEADS_WITHIN_MS ? this.pressedAt : now;
-      this.loadsCode = false;
+      const sincePress = now - this.pressedAt;
+      this.tappedAt = sincePress >= 0 && sincePress <= PRESS_LEADS_WITHIN_MS ? this.pressedAt : now;
+      this.loadedRoutes.clear();
       const stepsBack =
         event.navigationTrigger === 'popstate' ||
         untracked(this.router.currentNavigation)?.extras.info === BACK_NAVIGATION;
@@ -249,7 +252,7 @@ export class PageTransitions {
         event.navigationTrigger === 'popstate' ? depthIn(event.restoredState) : null;
       this.standingSheet = this.standingSheetCopy();
     } else if (event instanceof RouteConfigLoadStart) {
-      this.loadsCode = true;
+      this.loadedRoutes.add(event.route);
     } else if (event instanceof GuardsCheckEnd && event.shouldActivate) {
       this.cover(event);
       this.closeCoveredSheet();
@@ -427,7 +430,7 @@ export class PageTransitions {
   }
 
   private moveOnceAnswered(running: Running, view: Window): void {
-    const frames = this.loadsCode ? FIRST_OPENING_PLACED_WITHIN_FRAMES : PLACED_WITHIN_FRAMES;
+    const frames = this.loadedItsCode() ? FIRST_OPENING_PLACED_WITHIN_FRAMES : PLACED_WITHIN_FRAMES;
     const frameMs = Math.min(this.steadyFrameMs(), DISPLAY_FRAME_MS);
     const left = this.tappedAt + (frames - FRAMES_TO_PLACE) * frameMs - this.now();
     if (this.placement.isAnswered() || left <= 0) {
@@ -492,15 +495,31 @@ export class PageTransitions {
         view.setTimeout(still, this.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
       );
     };
-    const byClock = view.setTimeout(() => {
+    const releaseIfHidden = (): void => {
       if (this.document.visibilityState === 'hidden') {
         release();
       }
-    }, HELD_WITHOUT_A_FRAME_MS);
+    };
+    const byClock = view.setTimeout(releaseIfHidden, HELD_WITHOUT_A_FRAME_MS);
     view.requestAnimationFrame(() => {
       view.clearTimeout(byClock);
-      view.requestAnimationFrame(release);
+      const secondByClock = view.setTimeout(releaseIfHidden, HELD_WITHOUT_A_FRAME_MS);
+      view.requestAnimationFrame(() => {
+        view.clearTimeout(secondByClock);
+        release();
+      });
     });
+  }
+
+  private loadedItsCode(): boolean {
+    let route: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
+    while (route !== null) {
+      if (route.routeConfig !== null && this.loadedRoutes.has(route.routeConfig)) {
+        return true;
+      }
+      route = route.firstChild;
+    }
+    return false;
   }
 
   private now(): number {

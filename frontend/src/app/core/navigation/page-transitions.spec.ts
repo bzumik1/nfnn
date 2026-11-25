@@ -1,10 +1,13 @@
 import { Location } from '@angular/common';
 import { ApplicationRef, Component, inject, signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Subject } from 'rxjs';
 import {
+  Event as RouterEvent,
   GuardsCheckEnd,
   NavigationEnd,
   provideRouter,
+  RouteConfigLoadStart,
   Router,
   RouterOutlet,
   withInMemoryScrolling,
@@ -344,15 +347,40 @@ describe('Given a phone that animates, whose router puts the scroll back, and ar
     delete (window as { matchMedia?: unknown }).matchMedia;
   });
 
-  async function opensPlacedAfter(url: string, placedAfterMs: number): Promise<void> {
+  async function opensPlacedAfter(
+    url: string,
+    placedAfterMs: number,
+    { pressStampedAheadMs = 0, preloadedMeanwhile = false } = {},
+  ): Promise<void> {
     const placed = TestBed.inject(PagePlacement).pending();
-    document.dispatchEvent(new Event('pointerdown'));
+    const press = new Event('pointerdown');
+    if (pressStampedAheadMs > 0) {
+      Object.defineProperty(press, 'timeStamp', { value: Date.now() + pressStampedAheadMs });
+    }
+    document.dispatchEvent(press);
     void router.navigateByUrl(url);
+    if (preloadedMeanwhile) {
+      (router.events as Subject<RouterEvent>).next(new RouteConfigLoadStart({ path: 'jinde' }));
+    }
     await vi.advanceTimersByTimeAsync(0);
     layer.textContent = 'Načítáme stránku…';
     await vi.advanceTimersByTimeAsync(placedAfterMs);
     placed();
   }
+
+  it('when the press carries a time stamp ahead of the page’s clock, as from another clock, then the tap budget counts from the navigation instead and never grants the whole wait', async () => {
+    await opensPlacedAfter('/aktuality/zahrada-pro-deti', 150, { pressStampedAheadMs: 10_000 });
+    await vi.advanceTimersByTimeAsync(5);
+
+    expect(arrived).toBe('Načítáme stránku…');
+  });
+
+  it('when the router preloads another page’s code during the step, as the tab pages are preloaded, then the step keeps the budget of 9 frames, since its own page loaded no code', async () => {
+    await opensPlacedAfter('/aktuality/zahrada-pro-deti', 150, { preloadedMeanwhile: true });
+    await vi.advanceTimersByTimeAsync(5);
+
+    expect(arrived).toBe('Načítáme stránku…');
+  });
 
   it('when the page is placed so late that waiting for its text would place the step later than 9 frames after the tap, then the article slides in at once with its waiting line', async () => {
     await opensPlacedAfter('/aktuality/zahrada-pro-deti', 250);
@@ -689,6 +717,21 @@ describe('Given a phone that animates, an article opened from the news, and the 
     draw(5600);
     expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
     draw(5616);
+
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
+  it('when the page is hidden after the first frame of the hold and no frame comes after it, then the page clock lets the held motions go after HELD_WITHOUT_A_FRAME_MS, as when no frame came at all', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    draw(5000);
+    hiddenWithoutTellingThePage();
+
+    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS - 10);
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    await vi.advanceTimersByTimeAsync(10);
 
     expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
   });
@@ -2903,18 +2946,22 @@ function dressedTransitions(): PageTransitions {
 
 function transformsOf(page: HTMLElement): () => string[] {
   const seen: string[] = [];
-  const watch = new MutationObserver(() => {
-    if (page.style.transform !== '') {
+  const note = (records: readonly MutationRecord[]): void => {
+    for (const record of records) {
+      const before = /transform:\s*([^;]+)/.exec(record.oldValue ?? '')?.[1]?.trim();
+      if (before !== undefined && before !== '') {
+        seen.push(before);
+      }
+    }
+    if (records.length > 0 && page.style.transform !== '') {
       seen.push(page.style.transform);
     }
-  });
-  watch.observe(page, { attributes: true, attributeFilter: ['style'] });
+  };
+  const watch = new MutationObserver(note);
+  watch.observe(page, { attributes: true, attributeFilter: ['style'], attributeOldValue: true });
   onTestFinished(() => watch.disconnect());
   return () => {
-    watch.takeRecords();
-    if (page.style.transform !== '' && !seen.includes(page.style.transform)) {
-      seen.push(page.style.transform);
-    }
+    note(watch.takeRecords());
     return seen;
   };
 }
