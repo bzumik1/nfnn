@@ -306,6 +306,24 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
       expect(behaviours).toEqual(['instant']);
     });
 
+    it('when code moves the focus without scrolling to a control standing wholly above what the panel shows, then the panel stays where it is, so the code that moved it brings it into view', async () => {
+      standAt(control('#toggle'), -900, 40);
+
+      control('#toggle').focus({ preventScroll: true });
+      await nextFrame();
+
+      expect(scrolled).toEqual([]);
+    });
+
+    it('when the browser leaves a field it focused with its top above the panel and its bottom inside it, then the panel still scrolls the field down below the head', async () => {
+      standAt(control('#below'), 80, 40);
+
+      control('#below').focus();
+      await nextFrame();
+
+      expect(scrolled).toEqual([-77]);
+    });
+
     describe('when a finger pressed last', () => {
       const pressByFinger = (element: HTMLElement) =>
         element.dispatchEvent(new Event('pointerdown', { bubbles: true }));

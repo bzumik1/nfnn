@@ -1454,6 +1454,17 @@ describe('Given a row whose leave carries the control below it toward the top of
     await vi.waitFor(() => expect(watchers).toEqual([]));
   });
 
+  it('when the row is gone before the first frame and before the focus moves, as under reduced motion, then the control below is still held in the frame of the removal', async () => {
+    focus.rowLeaving(row, () => below);
+    await removed();
+    focus.moveFocus(row, below);
+    standAt(below, -40);
+
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([{ top: -40, behavior: 'instant' }]);
+  });
+
   it('when another action begins before the row is gone, then the close is no longer watched', () => {
     focus.rowLeaving(row, () => below);
 
