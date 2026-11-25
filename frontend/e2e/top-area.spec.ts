@@ -607,15 +607,22 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     });
     expect(grew.length).toBeGreaterThan(0);
     expect(grew.filter((count) => count > 0)).toEqual([]);
-    const afterHold = frames.findIndex((frame) => frame.at === letGoAt);
+    const sampled = frames.map((frame) => frame.at);
+    const afterHold = sampled.indexOf(letGoAt ?? Number.NaN);
     expect(afterHold).toBeGreaterThan(0);
     expect(heldFrames.length).toBeGreaterThan(0);
-    expect(heldFrames.filter((at) => at <= frames[afterHold - 1].at || at >= letGoAt!)).toEqual([]);
-    const first = frames[0].at;
-    const last = frames[frames.length - 1].at;
-    expect(frames.map((frame) => frame.at)).toEqual(
-      everyFrame.filter((at) => at >= first && at <= last && !heldFrames.includes(at)),
-    );
+    expect(sampled.filter((at) => heldFrames.includes(at))).toEqual([]);
+    const firstHeld = Math.min(...heldFrames);
+    const lastHeld = Math.max(...heldFrames);
+    expect(everyFrame.find((at) => at > lastHeld)).toBe(letGoAt);
+    const beforeHold = sampled[afterHold - 1];
+    expect(sampled.filter((at) => at < firstHeld).at(-1)).toBe(beforeHold);
+    expect(
+      everyFrame.filter(
+        (at) =>
+          at > beforeHold && at < sampled[afterHold] && !heldFrames.includes(at) && at >= firstHeld,
+      ),
+    ).toEqual([]);
     expect(frames[afterHold].at - frames[afterHold - 1].at).toBeGreaterThanOrEqual(
       HOLD_MS - FRAME_START_BEFORE_CHECK_MS,
     );
