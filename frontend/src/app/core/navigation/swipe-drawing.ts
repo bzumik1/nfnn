@@ -8,7 +8,7 @@ import {
 import { pathOf } from './app-tabs';
 import { pushWithinSection } from './page-transition-kind';
 import { BackDestination } from './back-target';
-import { SwipeSettle } from './back-swipe';
+import { settleFrom, SwipeSettle } from './back-swipe';
 import {
   BarCurve,
   afterTwoFrames,
@@ -78,7 +78,7 @@ export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp):
       const spans = elapsed / closing;
       const left = startGap * (1 + spans) * Math.exp(-spans);
       const target = left < 1 ? 0 : left;
-      behind = stopped ? target : Math.max(target, behind - stepAtMost);
+      behind = Math.max(target, behind - stepAtMost);
       const finger = Math.max(0, catchUp.finger());
       catchUp.show(Math.min(finger, Math.max(0, finger - behind)));
     }
@@ -320,7 +320,14 @@ function followingFinger(
   let offset = 0;
   let ready = start.ready;
   let shown = 0;
+  let lastStep = 0;
+  let stepAtMost = 0;
   let catchingUp = false;
+  const place = (at: number): void => {
+    lastStep = at - shown;
+    shown = at;
+    follow();
+  };
   const follow = (): void => {
     progress = shown / width;
     over.style.transform = `translateX(${shown}px)`;
@@ -338,20 +345,18 @@ function followingFinger(
     }
     ready = true;
     catchingUp = true;
+    stepAtMost = Math.max(0, offset - shown) / CLOSE_IN_FRAMES_AT_LEAST;
     closeInOnFinger(view, stage.durationOf('--duration-fast'), {
       frameMs: stage.measuredFrameMs() ?? DISPLAY_FRAME_MS,
       finger: () => offset,
       from: shown,
-      show: (at) => {
-        shown = at;
-        follow();
-      },
+      show: place,
       goesOn: () => catchingUp && stage.running === running,
       caughtUp: () => (catchingUp = false),
     });
   };
   const drawn = draw(bar, takeOver);
-  const settle = async (end: SwipeSettle): Promise<boolean> => {
+  const settle = async (wanted: SwipeSettle): Promise<boolean> => {
     catchingUp = false;
     if (stage.running !== running) {
       return false;
@@ -367,6 +372,13 @@ function followingFinger(
       }
       return false;
     }
+    const end = settleFrom(wanted, {
+      at: shown,
+      stepPx: lastStep,
+      frameMs: stage.measuredFrameMs() ?? DISPLAY_FRAME_MS,
+      stepAtMostPx: stepAtMost,
+      width,
+    });
     const timing: KeyframeAnimationOptions = {
       duration: end.durationMs,
       easing: end.easing,
@@ -409,8 +421,7 @@ function followingFinger(
     follow: (to) => {
       offset = Math.min(width, Math.max(0, to));
       if (ready && !catchingUp) {
-        shown = offset;
-        follow();
+        place(offset);
       }
     },
     settle,
