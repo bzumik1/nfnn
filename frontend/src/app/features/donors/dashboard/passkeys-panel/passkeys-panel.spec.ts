@@ -616,6 +616,40 @@ describe('Given the passkeys panel of the sign-in card', () => {
         expect(emptyTextScrolled).toEqual([{ block: 'start', behavior: 'smooth' }]);
       });
 
+      it('and it was the only key, so the list leaves with it, then the empty text stays out of the flow while the list stands and enters before anything else runs once the list is removed', async () => {
+        await renderOnPage([IPHONE]);
+        const row = document.getElementById(`passkey-row-${IPHONE.id}`)!;
+        const list = row.parentElement!;
+        let emptyText: HTMLElement | null = null;
+        let heldOnceTheListWasRemoved: boolean | null = null;
+        const finish = leavesAsInTheBrowser(
+          row,
+          (event) => fixture.componentInstance['rowLeaves'](event),
+          () => {
+            list.remove();
+            queueMicrotask(() => {
+              heldOnceTheListWasRemoved =
+                emptyText?.classList.contains('passkeys-empty--behind-leaving-row') ?? null;
+            });
+          },
+          list,
+        );
+        await removeThe(IPHONE);
+        emptyText = element('.passkeys-empty');
+
+        expect(list.isConnected).toBe(true);
+        expect(emptyText.classList).toContain('passkeys-empty--behind-leaving-row');
+
+        finish();
+        await settle();
+        await vi.waitFor(() => expect(list.isConnected).toBe(false));
+
+        expect(heldOnceTheListWasRemoved).toBe(false);
+        expect(element('.passkeys-empty').classList).not.toContain(
+          'passkeys-empty--behind-leaving-row',
+        );
+      });
+
       it('and the donor then removes the last key left, so the list leaves with it, then the empty text far above the window is brought into view once the list is gone', async () => {
         await renderOnPage();
         const leaveIphone = leavesSlowly(IPHONE);
