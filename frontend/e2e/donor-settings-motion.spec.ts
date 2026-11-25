@@ -665,7 +665,12 @@ async function openSettings(
   await openDonorSection(page, 'Údaje a zabezpečení');
   await synced;
   await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+  await untilThePageFadeHasEnded(page);
   return (devices) => (listed = devices);
+}
+
+async function untilThePageFadeHasEnded(page: Page): Promise<void> {
+  await expect(page.locator('html')).not.toHaveClass(/(^|\s)page-fade-(hidden|arriving)(\s|$)/);
 }
 
 function expectOnlyClosedUntilRemoved(frames: readonly Frame[], shownAgain: readonly Box[]): void {

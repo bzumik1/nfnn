@@ -1308,6 +1308,18 @@ interface StatusLineChange {
   readonly end: number;
 }
 
+async function untilStill(element: Locator): Promise<void> {
+  await expect
+    .poll(() =>
+      element.evaluate(
+        (node) =>
+          node.getAnimations({ subtree: true }).filter((motion) => motion.playState !== 'finished')
+            .length,
+      ),
+    )
+    .toBe(0);
+}
+
 function whenStatusLine(wrapper: Locator, opens: boolean): Promise<StatusLineChange> {
   return wrapper.evaluate(
     (element, opening) =>
@@ -1393,6 +1405,7 @@ test.describe('Given a signed-in donor with gift receipts on a 390 px phone', ()
     await expect(rows.first().locator('.receipt-status')).not.toHaveClass(
       /receipt-status--closing/,
     );
+    await untilStill(rows.first().locator('.receipt-status'));
     await holdIssuing(page);
 
     const closing = whenStatusLine(rows.first().locator('.receipt-status'), false);
