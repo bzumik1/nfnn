@@ -86,10 +86,6 @@
 
   .ui-segmented--thumb-glides > & {
     @include motion.move((translate, scale), slow, spring);
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
   }
 
   @media (forced-colors: active) {
