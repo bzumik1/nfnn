@@ -14,6 +14,13 @@ import {
 const SHEET_PANEL = '.dialog-panel';
 const HEIGHT = '--sheet-head-height';
 
+function offsetWithin(panel: HTMLElement, head: HTMLElement): number {
+  const panelBox = panel.getBoundingClientRect();
+  const scale =
+    panelBox.height > 0 && panel.offsetHeight > 0 ? panelBox.height / panel.offsetHeight : 1;
+  return (head.getBoundingClientRect().top - panelBox.top) / scale - panel.clientTop;
+}
+
 export const SHEET_HEAD_RESIZE_OBSERVER = new InjectionToken<typeof ResizeObserver | null>(
   'SHEET_HEAD_RESIZE_OBSERVER',
   { providedIn: 'root', factory: () => inject(DOCUMENT).defaultView?.ResizeObserver ?? null },
@@ -40,17 +47,22 @@ export class SheetHead {
       if (panel === null) {
         return;
       }
-      const publish = (height: number) => panel.style.setProperty(HEIGHT, `${height}px`);
+      let headHeight = head.offsetHeight;
+      const publish = () =>
+        panel.style.setProperty(HEIGHT, `${Math.ceil(offsetWithin(panel, head) + headHeight)}px`);
       if (Observer === null) {
-        publish(head.offsetHeight);
+        publish();
       } else {
         const observer = new Observer((entries) => {
-          const size = entries.at(-1)?.borderBoxSize[0];
-          if (size !== undefined) {
-            publish(Math.ceil(size.blockSize));
+          const measured = entries.filter((entry) => entry.target === head).at(-1)
+            ?.borderBoxSize?.[0];
+          if (measured !== undefined) {
+            headHeight = measured.blockSize;
           }
+          publish();
         });
         observer.observe(head);
+        observer.observe(panel);
         destroyRef.onDestroy(() => observer.disconnect());
       }
       destroyRef.onDestroy(() => panel.style.removeProperty(HEIGHT));

@@ -122,7 +122,7 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
     (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('app-sheet-head');
 
   const resizeTo = (blockSize: number) => {
-    const entry = { borderBoxSize: [{ blockSize, inlineSize: 390 }] };
+    const entry = { target: head(), borderBoxSize: [{ blockSize, inlineSize: 390 }] };
     resized.forEach((callback) =>
       callback([entry as unknown as ResizeObserverEntry], {} as ResizeObserver),
     );
@@ -140,6 +140,68 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
     resizeTo(64);
 
     expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('64px');
+  });
+
+  const standAt = (element: HTMLElement, top: number, height: number) =>
+    Object.defineProperty(element, 'getBoundingClientRect', {
+      value: () => ({ top, bottom: top + height, height }) as DOMRect,
+      configurable: true,
+    });
+
+  it('when it stands 19 px below the top of the panel, then the panel knows where its bottom ends, so a control scrolled into view stops below it', () => {
+    standAt(panel(), 100, 600);
+    standAt(head()!, 119, 57);
+
+    resizeTo(57);
+
+    expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('76px');
+  });
+
+  it('when it stands at the top of the panel, then the panel knows its own height', () => {
+    standAt(panel(), 100, 600);
+    standAt(head()!, 100, 57);
+
+    resizeTo(57);
+
+    expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('57px');
+  });
+
+  it('when the panel is still growing in from a smaller scale, then the offset is read at the full size of the panel', () => {
+    Object.defineProperty(panel(), 'offsetHeight', { value: 600, configurable: true });
+    standAt(panel(), 100, 450);
+    standAt(head()!, 114.25, 42.75);
+
+    resizeTo(57);
+
+    expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('76px');
+  });
+
+  it('when the panel moves while the head keeps its size, then the panel takes the new bottom of the head', () => {
+    standAt(panel(), 100, 600);
+    standAt(head()!, 100, 57);
+    resizeTo(57);
+    standAt(head()!, 119, 57);
+
+    resized.forEach((callback) =>
+      callback(
+        [{ target: panel(), borderBoxSize: [] } as unknown as ResizeObserverEntry],
+        {} as ResizeObserver,
+      ),
+    );
+
+    expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('76px');
+  });
+
+  it('when an entry carries no box sizes, then the head keeps the height it had', () => {
+    standAt(panel(), 100, 600);
+    standAt(head()!, 100, 57);
+    resizeTo(57);
+
+    resized.forEach((callback) =>
+      callback([{ target: head() } as unknown as ResizeObserverEntry], {} as ResizeObserver),
+    );
+
+    expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('57px');
   });
 
   it('when it leaves, then the panel forgets its height', async () => {
