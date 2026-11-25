@@ -2470,3 +2470,59 @@ describe('Given a page that waits for two drawn frames before it starts a motion
     await expect(drawn).resolves.toEqual({ at: expect.any(Number), drawn: false });
   });
 });
+
+describe('Given a step of the app, whose top page has the display’s corners only in the app opened from the home screen', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+  });
+
+  function homeScreen(standalone: boolean, displayMode: boolean): void {
+    Object.defineProperty(Navigator.prototype, 'standalone', {
+      configurable: true,
+      get: () => standalone,
+    });
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) =>
+        ({
+          matches: displayMode && query === '(display-mode: standalone)',
+          media: query,
+        }) as MediaQueryList,
+    });
+    onTestFinished(() => {
+      delete (Navigator.prototype as { standalone?: boolean }).standalone;
+    });
+  }
+
+  it('when it runs from the home screen of an iPhone, then its layer says so, so only there the top page gets the corners', () => {
+    homeScreen(true, false);
+
+    const overlay = TestBed.inject(PageTransitions).overlay('push');
+
+    expect(overlay.classList).toContain(`${PAGE_TRANSITION_CLASS}--home-screen`);
+    overlay.remove();
+  });
+
+  it('when it runs as an installed app on another system, then its layer says so too', () => {
+    homeScreen(false, true);
+
+    const overlay = TestBed.inject(PageTransitions).overlay('pop');
+
+    expect(overlay.classList).toContain(`${PAGE_TRANSITION_CLASS}--home-screen`);
+    overlay.remove();
+  });
+
+  it('when it runs in a browser tab, then its layer does not, so no page of the step is rounded', () => {
+    homeScreen(false, false);
+
+    const overlay = TestBed.inject(PageTransitions).overlay('push');
+
+    expect(overlay.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--home-screen`);
+    overlay.remove();
+  });
+});
