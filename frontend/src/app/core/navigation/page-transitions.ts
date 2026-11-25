@@ -436,7 +436,17 @@ export class PageTransitions {
     }
     void this.placement
       .placed(view, this.durationOf('--duration-page'))
-      .then(() => (running.ahead ? this.arrive(running) : this.move(running, view)));
+      .then(() => (running.ahead ? this.arrive(running) : this.moveOnceAnswered(running, view)));
+  }
+
+  private moveOnceAnswered(running: Running, view: Window): void {
+    if (this.placement.isAnswered()) {
+      this.move(running, view);
+      return;
+    }
+    void this.placement
+      .answered(view, FRAME_LATE_MS)
+      .then(() => nextFrame(view, () => this.move(running, view)));
   }
 
   private arrive(running: Running): void {
