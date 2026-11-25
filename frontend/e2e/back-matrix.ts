@@ -145,6 +145,9 @@ export interface Frame {
   readonly tinted: boolean;
   readonly overRounded: number;
   readonly underRounded: number;
+  readonly overPlaced: boolean;
+  readonly underDrawn: boolean;
+  readonly underDimmed: boolean;
   readonly onGround: boolean;
   readonly titles: string[];
   readonly heads: string[];
@@ -1055,6 +1058,15 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
             layerStyle !== null && (filter === undefined || filter === '' || filter === 'none'),
           overRounded: cornerOf(over),
           underRounded: cornerOf(under),
+          overPlaced: over !== null,
+          underDrawn:
+            (under?.querySelector('.page-transition__scroller')?.childElementCount ?? 0) > 0 ||
+            under?.querySelector('.page-transition__sheet') != null,
+          underDimmed: (() => {
+            const dim = under?.querySelector('.page-transition__dim');
+            const style = dim == null ? null : getComputedStyle(dim);
+            return style !== null && style.visibility !== 'hidden' && style.display !== 'none';
+          })(),
           onGround: overlay?.classList.contains('page-transition--on-ground') ?? false,
           titles: titles.map(
             (title) =>
@@ -1186,10 +1198,27 @@ function travelled(probe: StepProbe): Frame[] {
     Math.max(...shown.filter((frame) => frame.onGround).map((frame) => frame.overRounded), 0),
     'a step on the ground of a sheet, with no shadow and no dim beneath, rounded its top page',
   ).toBe(0);
-  if (probe.paced) {
+  const topped = shown.filter((frame) => frame.overPlaced);
+  expect(
+    [...new Set(topped.map((frame) => frame.overRounded))],
+    'the top page changed its corners within the step',
+  ).toHaveLength(Math.min(1, topped.length));
+  expect(
+    topped.filter((frame) => frame.overRounded > 0 && !(frame.underDrawn && frame.underDimmed))
+      .length,
+    'frames in which the top page had corners without a drawn, dimmed page beneath',
+  ).toBe(0);
+  const first = topped[0];
+  if (
+    probe.paced &&
+    first !== undefined &&
+    !first.onGround &&
+    first.underDrawn &&
+    first.underDimmed
+  ) {
     expect(
-      Math.min(...shown.filter((frame) => !frame.onGround).map((frame) => frame.overRounded), 1),
-      'the top page of a step in the app on the home screen of a phone had no corners like the display',
+      first.overRounded,
+      'the top page of a page step over a drawn, dimmed page in the app on the home screen of a phone had no corners like the display',
     ).toBeGreaterThan(0);
   }
   return shown.filter((frame) => frame.offset !== null);
@@ -2962,4 +2991,81 @@ export async function openAdministrationAt(page: Page, trail: readonly string[])
     await expect(page).toHaveURL((url) => url.pathname === href);
     await expect(page.locator('.page-transition')).toHaveCount(0);
   }
+}
+
+export interface CornerFrame {
+  readonly over: boolean;
+  readonly radius: number;
+  readonly drawnBeneath: boolean;
+  readonly dimmedBeneath: boolean;
+}
+
+type CornersWatched = Window & { nfnnCornerFrames?: CornerFrame[]; nfnnCornersDone?: boolean };
+
+export async function watchCorners(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const watched = window as CornersWatched;
+    const frames: CornerFrame[] = [];
+    watched.nfnnCornerFrames = frames;
+    watched.nfnnCornersDone = false;
+    const started = performance.now();
+    let seen = false;
+    let framesAfter = 0;
+    const read = (): void => {
+      const overlay = document.querySelector('.page-transition');
+      if (overlay !== null) {
+        seen = true;
+        const over = overlay.querySelector('.page-transition__page--over');
+        const under = overlay.querySelector('.page-transition__page--under');
+        const dim = under?.querySelector('.page-transition__dim') ?? null;
+        const dimStyle = dim === null ? null : getComputedStyle(dim);
+        frames.push({
+          over: over !== null,
+          radius:
+            over === null ? 0 : Number.parseFloat(getComputedStyle(over).borderTopLeftRadius) || 0,
+          drawnBeneath:
+            (under?.querySelector('.page-transition__scroller')?.childElementCount ?? 0) > 0 ||
+            under?.querySelector('.page-transition__sheet') != null,
+          dimmedBeneath:
+            dimStyle !== null && dimStyle.visibility !== 'hidden' && dimStyle.display !== 'none',
+        });
+      } else if (seen) {
+        framesAfter++;
+      }
+      if ((seen && framesAfter > 2) || performance.now() - started > 8000) {
+        watched.nfnnCornersDone = true;
+        return;
+      }
+      requestAnimationFrame(read);
+    };
+    requestAnimationFrame(read);
+  });
+}
+
+export async function seenCorners(page: Page): Promise<CornerFrame[]> {
+  await expect
+    .poll(() => page.evaluate(() => (window as CornersWatched).nfnnCornersDone ?? false))
+    .toBe(true);
+  return page.evaluate(() => (window as CornersWatched).nfnnCornerFrames ?? []);
+}
+
+export function cornerProblems(frames: readonly CornerFrame[]): string[] {
+  const placed = frames.filter((frame) => frame.over);
+  if (placed.length === 0) {
+    return ['no frame showed a page on top of the step'];
+  }
+  const radii = [...new Set(placed.map((frame) => frame.radius))];
+  const bare = placed.filter(
+    (frame) => frame.radius > 0 && !(frame.drawnBeneath && frame.dimmedBeneath),
+  );
+  return [
+    ...(radii.length > 1
+      ? [`the top page changed its corners within the step: ${radii.join(' px, ')} px`]
+      : []),
+    ...(bare.length > 0
+      ? [
+          `the top page had corners in ${bare.length} of ${placed.length} frames without a drawn, dimmed page beneath`,
+        ]
+      : []),
+  ];
 }

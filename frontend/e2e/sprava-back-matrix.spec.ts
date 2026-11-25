@@ -1,6 +1,9 @@
 import type { Page } from '@playwright/test';
 import {
   administrationScreens,
+  cornerProblems,
+  seenCorners,
+  watchCorners,
   administrationScreensOf,
   HEIGHT,
   LOOKS,
@@ -131,3 +134,26 @@ for (const gate of MOTION_GATES) {
     }
   }
 }
+
+test.describe('Given an administrator in the app on the home screen of a phone who reloaded the app on a donor’s card', () => {
+  test.use({ viewport: { width: WIDTH, height: HEIGHT }, hasTouch: true });
+
+  test.beforeEach(({ page }) => onThePhone(page, 'light'));
+
+  test('when ‹ steps back to the list of donors, never drawn since the reload, then the leaving card keeps one look of its corners through the whole step and never shows a corner without a drawn, dimmed page beneath', async ({
+    page,
+  }) => {
+    await openAdministrationAt(page, ['/sprava', '/sprava/darci', DONOR]);
+    await page.reload();
+    await expect(page).toHaveURL((url) => url.pathname === DONOR);
+    await expect(page.locator('.admin-frame h1')).toBeVisible();
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    await watchCorners(page);
+
+    await administrationScreensOf(page).backButton().click();
+
+    await expect(page).toHaveURL((url) => url.pathname === '/sprava/darci');
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    expect(cornerProblems(await seenCorners(page))).toEqual([]);
+  });
+});

@@ -10,6 +10,7 @@ import {
   whenAdministrationCopied,
 } from './donor-session';
 import { expect, test } from './fixtures';
+import { cornerProblems, seenCorners, watchCorners } from './back-matrix';
 
 const article = {
   id: '0199f3e0-0000-7000-8000-00000000c011',
@@ -1016,6 +1017,47 @@ test.describe('Given the app on the home screen of an iPhone with Face ID, the a
       ).toBe(true);
     });
   }
+});
+
+test.describe('Given the app on the home screen of an iPhone with Face ID, opened straight on an article, so the news before it was never drawn', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await onTheHomeScreenWithBottomInset(page, '34px');
+    await mockDonorApi(page);
+    await publishedArticle(page);
+    await page.goto(`/aktuality/${article.slug}`);
+    await expect(page.getByRole('heading', { level: 1, name: article.title })).toBeVisible();
+  });
+
+  test('when Zpět steps back to the news, then the leaving article keeps one look of its corners through the whole step and never shows a corner without the news drawn and dimmed beneath it', async ({
+    page,
+  }) => {
+    await watchCorners(page);
+
+    await back(page).click();
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(overlays(page)).toHaveCount(0);
+    expect(cornerProblems(await seenCorners(page))).toEqual([]);
+  });
+
+  test('when a finger takes the article back past half while the news is still being drawn under it, then the article keeps one look of its corners through the whole step and never shows a corner over the bare ground', async ({
+    page,
+  }) => {
+    await watchCorners(page);
+
+    await fingerFromEdge(page.getByRole('main'), [...DRAGGED_ACROSS, 300]);
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(overlays(page)).toHaveCount(0);
+    expect(cornerProblems(await seenCorners(page))).toEqual([]);
+  });
 });
 
 const BAND_READ_INSIDE_PX = 40;
