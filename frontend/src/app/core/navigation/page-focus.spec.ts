@@ -1,5 +1,5 @@
 import { Location } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   type Event as RouterEvent,
@@ -10,6 +10,7 @@ import {
 } from '@angular/router';
 import { Subject } from 'rxjs';
 import { InputModality } from '../input/input-modality';
+import { CompactLayout } from '../layout/compact-layout';
 import { PageFocus, RETURNING_FOCUS_LONGEST_MS } from './page-focus';
 import { PagePlacement } from './page-placement';
 
@@ -38,6 +39,8 @@ async function drawn(): Promise<void> {
   TestBed.tick();
 }
 
+const compact = signal(true);
+
 describe('Given a list of the administration that a step back returns to from the card it opened', () => {
   let router: Router;
   let focus: PageFocus;
@@ -46,7 +49,10 @@ describe('Given a list of the administration that a step back returns to from th
 
   beforeEach(async () => {
     TestBed.configureTestingModule({
-      providers: [provideRouter([{ path: '**', component: Blank }])],
+      providers: [
+        provideRouter([{ path: '**', component: Blank }]),
+        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+      ],
     });
     router = TestBed.inject(Router);
     router.setUpLocationChangeListener();
@@ -265,6 +271,23 @@ describe('Given a list of the administration that a step back returns to from th
 
         expect(root.style.scrollPaddingBottom).toBe('0px');
         expect(shown).not.toHaveBeenCalled();
+      });
+
+      describe('on a window as wide as a computer’s, past the bar of tabs', () => {
+        beforeEach(() => {
+          compact.set(false);
+          onTestFinished(() => compact.set(true));
+        });
+
+        it('then the row takes the focus and the page moves the least it can to show it whole at once, as before the steps moved, and no band is lifted', async () => {
+          await returnWithTheLinkAt(underTheBottomBand);
+
+          expect(document.activeElement).toBe(link);
+          expect(shown).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+          expect(root.style.scrollPaddingBottom).toBe('80px');
+          browserScrollsBy(31);
+          expect(putBack).not.toHaveBeenCalled();
+        });
       });
 
       it('then the bands stay as they are for a row that shows whole', async () => {
