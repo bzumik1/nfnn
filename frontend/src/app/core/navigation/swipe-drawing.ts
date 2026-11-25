@@ -39,6 +39,8 @@ const SIDE_NAVIGATION = '.side-nav-panel';
 const TAB_BAR = 'app-tab-bar .tab-bar';
 const STANDING_PARTS = 'app-header, .side-nav-panel, app-tab-bar';
 const CATCH_UP_SPANS = 3;
+const DRAWN_GAPS_TO_TRUST = 2;
+const SHORTEST_DISPLAY_FRAME_MS = 1000 / 120;
 
 export interface CatchUp {
   readonly frameMs: number;
@@ -56,6 +58,7 @@ export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp):
   let lastDrawnAt = view.performance.now();
   let drawnBefore: number | null = null;
   let shortestDrawnGap = Number.POSITIVE_INFINITY;
+  let drawnGaps = 0;
   let elapsed = 0;
   const closeIn = (now: number, drawn: boolean): void => {
     if (!catchUp.goesOn()) {
@@ -64,10 +67,15 @@ export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp):
     if (drawn) {
       if (drawnBefore !== null && now > drawnBefore) {
         shortestDrawnGap = Math.min(shortestDrawnGap, now - drawnBefore);
+        drawnGaps++;
       }
+      const displayFrame =
+        drawnGaps < DRAWN_GAPS_TO_TRUST
+          ? DISPLAY_FRAME_MS
+          : Math.max(SHORTEST_DISPLAY_FRAME_MS, shortestDrawnGap);
       elapsed += Math.min(
         catchUp.frameMs,
-        shortestDrawnGap,
+        displayFrame,
         last === null ? DISPLAY_FRAME_MS : Math.max(0, now - last),
       );
       drawnBefore = now;

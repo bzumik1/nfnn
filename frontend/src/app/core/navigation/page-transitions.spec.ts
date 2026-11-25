@@ -2242,6 +2242,76 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
+  async function coldCloseInSteps(stamps: readonly number[]): Promise<number[]> {
+    const frames = framesByHand();
+    try {
+      const transitions = dressedTransitions();
+      document.dispatchEvent(new Event('pointerdown'));
+      for (let frame = 0; frame <= 11; frame++) {
+        frames.run(1000 + frame * 34);
+      }
+      const swipe = transitions.startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnder();
+      const offsets = [offsetOf(over())];
+      for (const at of stamps) {
+        frames.run(at);
+        offsets.push(offsetOf(over()));
+      }
+      return offsets.slice(1).map((offset, frame) => offset - offsets[frame]);
+    } finally {
+      frames.restore();
+    }
+  }
+
+  function framesFrom(start: number, gaps: readonly number[]): number[] {
+    return gaps.reduce<number[]>((stamps, gap) => [...stamps, stamps.at(-1)! + gap], [start]);
+  }
+
+  for (const { missed, stamps } of [
+    { missed: 'one vsync', stamps: framesFrom(3000, [33.3, 16.7, 16.7, 16.7, 16.7]) },
+    { missed: 'two vsyncs', stamps: framesFrom(3000, [50, 16.7, 16.7, 16.7, 16.7]) },
+  ]) {
+    it(`when the app was opened straight on the article and swiped at once, and the second frame of the close-in comes after ${missed} missed, then that frame moves the page by one frame of a 60 Hz display, no more than an eighth of the gap, since two drawn gaps are not yet known`, async () => {
+      document.documentElement.style.setProperty('--duration-fast', '150ms');
+      onTestFinished(() => {
+        document.documentElement.style.removeProperty('--duration-fast');
+      });
+
+      const steps = await coldCloseInSteps(stamps);
+
+      expect(Math.max(...steps), 'the longest step on the screen').toBeLessThanOrEqual(220 / 8);
+    });
+  }
+
+  it('when Safari stamps two frames 3.5 ms apart, as when a late update is followed by one on time, then the close-in never takes that for the display’s frame, and the page is with the finger within 45 frames, not after 1.9 s', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    onTestFinished(() => {
+      document.documentElement.style.removeProperty('--duration-fast');
+    });
+
+    await coldCloseInSteps(framesFrom(3000, [16.7, 3.5, ...Array<number>(42).fill(16.7)]));
+
+    expect(offsetOf(over())).toBe(220);
+  });
+
+  it('when the close-in after a cold start meets late, missed, on-time and early frames in turn, then no frame moves the page more than an eighth of the gap', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    onTestFinished(() => {
+      document.documentElement.style.removeProperty('--duration-fast');
+    });
+
+    const steps = await coldCloseInSteps(
+      framesFrom(3000, [33.3, 16.7, 50, 16.7, 8.3, 16.7, 33.3, 16.7, 16.7, 50, 16.7, 16.7]),
+    );
+
+    steps.forEach((step, frame) =>
+      expect(step, `the step of frame ${frame + 1}`).toBeLessThanOrEqual(220 / 8),
+    );
+  });
+
   it('when two long tasks in a row hold back the first frame of the close-in, so the page clock ticks twice before it, then the ticks move nothing and that frame moves the page by one frame, no more than an eighth of the gap', async () => {
     document.documentElement.style.setProperty('--duration-fast', '150ms');
     onTestFinished(() => {
@@ -2267,7 +2337,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
-  it('when the app draws steadily at 30 frames a second, as in Low Power Mode, then the close-in advances by its own frame of 33 ms, so the page is with the finger within 12 of its frames', async () => {
+  it('when the app draws steadily at 30 frames a second, as in Low Power Mode, then the close-in advances by its own frame of 33 ms once two of its gaps are known, its first two at the pace of a 60 Hz display, so the page is with the finger within 13 of its frames', async () => {
     document.documentElement.style.setProperty('--duration-fast', '150ms');
     const frames = framesByHand();
     try {
@@ -2282,7 +2352,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
       finishVisit();
       await drawnUnder();
 
-      for (let frame = 1; frame <= 12; frame++) {
+      for (let frame = 1; frame <= 13; frame++) {
         frames.run(2000 + frame * 33);
       }
 
