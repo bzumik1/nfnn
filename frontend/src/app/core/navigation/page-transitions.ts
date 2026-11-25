@@ -20,6 +20,7 @@ import {
   NavigationError,
   NavigationSkipped,
   NavigationStart,
+  RouteConfigLoadStart,
   Router,
   Scroll,
 } from '@angular/router';
@@ -42,6 +43,10 @@ export const PAGE_COVER_LONGEST_MS = 5000;
 export const KEPT_PAGES = 3;
 export const FRAME_LATE_MS = 100;
 const SWIPE_HANDED_OVER_AFTER_FRAMES = 2;
+const PLACED_WITHIN_FRAMES = 9;
+const FIRST_OPENING_PLACED_WITHIN_FRAMES = 18;
+const FRAMES_TO_PLACE = 2;
+const PRESS_LEADS_WITHIN_MS = 1000;
 export const ACCOUNT_RETURNS_KEY = 'nfnnAppAccount';
 
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
@@ -172,6 +177,9 @@ export class PageTransitions {
   titleFrame: number | null = null;
   private readonly frameGaps: number[] = [];
   private samplingRound = 0;
+  private pressedAt = Number.NEGATIVE_INFINITY;
+  private tappedAt = 0;
+  private loadsCode = false;
 
   get running(): Running | null {
     return untracked(this.step);
@@ -193,7 +201,10 @@ export class PageTransitions {
     });
     const events = this.router.events.subscribe((event) => this.follow(event));
     const hidden = (): void => this.endWhenHidden();
-    const sample = (): void => this.sampleFramePace();
+    const sample = (): void => {
+      this.pressedAt = this.now();
+      this.sampleFramePace();
+    };
     this.document.addEventListener('visibilitychange', hidden);
     PACE_SAMPLED_ON.forEach((type) =>
       this.document.addEventListener(type, sample, { capture: true, passive: true }),
@@ -220,6 +231,9 @@ export class PageTransitions {
       return;
     }
     if (event instanceof NavigationStart) {
+      const now = this.now();
+      this.tappedAt = now - this.pressedAt <= PRESS_LEADS_WITHIN_MS ? this.pressedAt : now;
+      this.loadsCode = false;
       const stepsBack =
         event.navigationTrigger === 'popstate' ||
         untracked(this.router.currentNavigation)?.extras.info === BACK_NAVIGATION;
@@ -232,6 +246,8 @@ export class PageTransitions {
       this.restoredDepth =
         event.navigationTrigger === 'popstate' ? depthIn(event.restoredState) : null;
       this.standingSheet = this.standingSheetCopy();
+    } else if (event instanceof RouteConfigLoadStart) {
+      this.loadsCode = true;
     } else if (event instanceof GuardsCheckEnd && event.shouldActivate) {
       this.cover(event);
       this.closeCoveredSheet();
@@ -409,12 +425,14 @@ export class PageTransitions {
   }
 
   private moveOnceAnswered(running: Running, view: Window): void {
-    if (this.placement.isAnswered()) {
+    const frames = this.loadsCode ? FIRST_OPENING_PLACED_WITHIN_FRAMES : PLACED_WITHIN_FRAMES;
+    const left = this.tappedAt + (frames - FRAMES_TO_PLACE) * this.steadyFrameMs() - this.now();
+    if (this.placement.isAnswered() || left <= 0) {
       this.move(running, view);
       return;
     }
     void this.placement
-      .answered(view, FRAME_LATE_MS)
+      .answered(view, Math.min(FRAME_LATE_MS, left))
       .then(() => nextFrame(view, () => this.move(running, view)));
   }
 
@@ -470,6 +488,10 @@ export class PageTransitions {
       );
     };
     nextFrame(view, (_, drawn) => (drawn ? nextFrame(view, release) : release()));
+  }
+
+  private now(): number {
+    return this.document.defaultView?.performance.now() ?? 0;
   }
 
   steadyFrameMs(): number {

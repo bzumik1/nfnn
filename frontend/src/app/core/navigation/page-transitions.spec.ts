@@ -274,19 +274,18 @@ function framesOnRequest(): (at: number) => void {
 function moving(): Element | null {
   return document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
 }
-describe('Given a phone that animates and the news, with an article whose page asks the server for its text as it opens', () => {
+describe('Given a phone that animates, whose router puts the scroll back, and articles whose pages ask the server for their text as they open', () => {
   let router: Router;
   let layer: HTMLElement;
-
   let arrived: string | null;
   let watch: MutationObserver;
-  const arriving = (): string | null => arrived;
 
   beforeEach(async () => {
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
       value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
     });
+    document.documentElement.style.setProperty('--duration-page', '400ms');
     readsInFlight.length = 0;
     layer = document.createElement('div');
     layer.className = PAGE_LAYER_CLASS;
@@ -294,21 +293,35 @@ describe('Given a phone that animates and the news, with an article whose page a
     document.body.append(layer);
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([
-          { path: 'aktuality', component: Blank },
-          {
-            path: 'aktuality/:slug',
-            component: Blank,
-            canActivate: [asksForItsText],
-            data: { parent: '/aktuality' },
-          },
-        ]),
+        provideRouter(
+          [
+            { path: 'aktuality', component: Blank },
+            {
+              path: 'aktuality/:slug',
+              component: Blank,
+              canActivate: [asksForItsText],
+              data: { parent: '/aktuality' },
+            },
+            {
+              path: 'pomahame/:slug',
+              loadComponent: () => Promise.resolve(Blank),
+              canActivate: [asksForItsText],
+              data: { parent: '/aktuality' },
+            },
+          ],
+          withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
+        ),
         { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
       ],
     });
     router = TestBed.inject(Router);
-    dressedTransitions().sheets = SHEET_STEPPING;
+    dressedTransitions();
+    document.body.append(document.createElement('app-scrolled-shell'));
+    TestBed.inject(ApplicationRef).bootstrap(ScrolledShell);
     await router.navigateByUrl('/aktuality');
+    vi.useFakeTimers();
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => Date.now());
+    onTestFinished(() => clock.mockRestore());
     arrived = null;
     watch = new MutationObserver(() => {
       const over = document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--over`);
@@ -317,39 +330,67 @@ describe('Given a phone that animates and the news, with an article whose page a
       }
     });
     watch.observe(document.body, { childList: true, subtree: true });
-    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     watch.disconnect();
-    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+    vi.useRealTimers();
+    document
+      .querySelectorAll(`.${PAGE_TRANSITION_CLASS}, app-scrolled-shell`)
+      .forEach((node) => node.remove());
     layer.remove();
+    document.documentElement.style.removeProperty('--duration-page');
     delete (window as { matchMedia?: unknown }).matchMedia;
   });
 
-  it('when the text comes while the step is about to show the article, then the article slides in filled, never with its waiting line', async () => {
-    await router.navigateByUrl('/aktuality/zahrada-pro-deti');
+  async function opensPlacedAfter(url: string, placedAfterMs: number): Promise<void> {
+    const placed = TestBed.inject(PagePlacement).pending();
+    document.dispatchEvent(new Event('pointerdown'));
+    void router.navigateByUrl(url);
+    await vi.advanceTimersByTimeAsync(0);
     layer.textContent = 'Načítáme stránku…';
-    expect(readsInFlight).toHaveLength(1);
-    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 10);
-    expect(arriving(), 'the article was copied before its text came').toBeNull();
+    await vi.advanceTimersByTimeAsync(placedAfterMs);
+    placed();
+  }
+
+  it('when the page is placed so late that waiting for its text would place the step later than 9 frames after the tap, then the article slides in at once with its waiting line', async () => {
+    await opensPlacedAfter('/aktuality/zahrada-pro-deti', 250);
+    await vi.advanceTimersByTimeAsync(5);
+
+    expect(arrived).toBe('Načítáme stránku…');
+  });
+
+  it('when the page is placed early, then the step still waits for its text as long as the step can be placed within 9 frames of the tap, and the article slides in filled', async () => {
+    await opensPlacedAfter('/aktuality/zahrada-pro-deti', 40);
+    await vi.advanceTimersByTimeAsync(5);
+    expect(arrived).toBeNull();
 
     layer.textContent = 'Zahrada pro děti';
     readsInFlight[0]();
     await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
 
-    expect(arriving()).toBe('Zahrada pro děti');
+    expect(arrived).toBe('Zahrada pro děti');
   });
 
   it('when the text never comes, then the article still slides in within the time a frame may be late, with its waiting line', async () => {
-    await router.navigateByUrl('/aktuality/zahrada-pro-deti');
-    layer.textContent = 'Načítáme stránku…';
-    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + FRAME_LATE_MS - 10);
-    expect(arriving(), 'the article was copied before the time a frame may be late').toBeNull();
+    await opensPlacedAfter('/aktuality/zahrada-pro-deti', 40);
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS - 10);
+    expect(arrived, 'the article was copied before the time a frame may be late').toBeNull();
     await vi.advanceTimersByTimeAsync(10 + FRAME_LATE_MS);
 
-    expect(arriving()).toBe('Načítáme stránku…');
+    expect(arrived).toBe('Načítáme stránku…');
+  });
+
+  it('when the page’s code loads first, as on its first opening, then the step may wait for its text within 18 frames of the tap, and the article slides in filled', async () => {
+    await opensPlacedAfter('/pomahame/zahrada-pro-deti', 250);
+    await vi.advanceTimersByTimeAsync(5);
+    expect(arrived).toBeNull();
+
+    layer.textContent = 'Zahrada pro děti';
+    readsInFlight[0]();
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+
+    expect(arrived).toBe('Zahrada pro děti');
   });
 });
 
