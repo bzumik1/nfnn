@@ -1,5 +1,6 @@
 import {
   afterRemoval,
+  FocusAfterRowLeaves,
   leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
@@ -508,5 +509,176 @@ describe('Given a row that has already left the document', () => {
     afterRemoval(row, () => releases.push(row.isConnected));
 
     expect(releases).toEqual([false]);
+  });
+});
+
+describe('Given a row whose leave moves the focus to a control below it', () => {
+  let list: HTMLUListElement;
+  let heading: HTMLHeadingElement;
+  let scrolled: { element: HTMLElement; options: unknown }[];
+
+  beforeEach(() => {
+    scrolled = [];
+    heading = document.createElement('h2');
+    heading.tabIndex = -1;
+    list = document.createElement('ul');
+    list.innerHTML = `
+      <li id="other"><button>Odebrat</button></li>
+      <li id="leaving"><button>Odebrat</button></li>
+      <li id="staying"><button id="below">Přejmenovat</button></li>
+    `;
+    document.body.append(heading, list);
+    for (const element of [heading, byId('below')]) {
+      element.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+        scrolled.push({ element, options });
+      };
+    }
+  });
+
+  afterEach(() => {
+    heading.remove();
+    list.remove();
+  });
+
+  function byId(id: string): HTMLElement {
+    return document.getElementById(id) as HTMLElement;
+  }
+
+  function pageAsking(reducedMotion: boolean, innerHeight = 600): Document {
+    return {
+      get activeElement() {
+        return document.activeElement;
+      },
+      body: document.body,
+      documentElement: document.documentElement,
+      defaultView: {
+        innerHeight,
+        matchMedia: (query: string) => ({
+          matches: reducedMotion && query === '(prefers-reduced-motion: reduce)',
+        }),
+        getComputedStyle: (element: Element) => getComputedStyle(element),
+      },
+    } as unknown as Document;
+  }
+
+  function focusAfter(reducedMotion = false): FocusAfterRowLeaves {
+    return new FocusAfterRowLeaves(pageAsking(reducedMotion), () => list);
+  }
+
+  async function removed(row: HTMLElement): Promise<void> {
+    row.remove();
+    await Promise.resolve();
+  }
+
+  it('when the control takes the focus before the row is removed, then it glides into view only once the row is gone', async () => {
+    const focus = focusAfter();
+    const row = byId('leaving');
+    focus.rowLeaving(row);
+
+    focus.moveFocus(row, byId('below'));
+    focus.rowLeaveEnded(row);
+
+    expect(document.activeElement).toBe(byId('below'));
+    expect(scrolled).toEqual([]);
+    await removed(row);
+    expect(scrolled).toEqual([
+      { element: byId('below'), options: { block: 'nearest', behavior: 'smooth' } },
+    ]);
+  });
+
+  it('when the row is removed before the control takes the focus, then the control glides into view as it takes the focus', async () => {
+    const focus = focusAfter();
+    const row = byId('leaving');
+    focus.rowLeaving(row);
+    focus.rowLeaveEnded(row);
+    await removed(row);
+    expect(scrolled).toEqual([]);
+
+    focus.moveFocus(row, byId('below'));
+
+    expect(scrolled).toEqual([
+      { element: byId('below'), options: { block: 'nearest', behavior: 'smooth' } },
+    ]);
+  });
+
+  it('when the device asks for less motion, then the control jumps into view', async () => {
+    const focus = focusAfter(true);
+    const row = byId('leaving');
+    focus.rowLeaving(row);
+    focus.moveFocus(row, byId('below'));
+    focus.rowLeaveEnded(row);
+
+    await removed(row);
+
+    expect(scrolled).toEqual([
+      { element: byId('below'), options: { block: 'nearest', behavior: 'instant' } },
+    ]);
+  });
+
+  it('when the control is taller than the room the window leaves it, then it is brought into view from its top', async () => {
+    const focus = focusAfter();
+    const row = byId('leaving');
+    byId('below').getBoundingClientRect = () => new DOMRect(0, -700, 300, 601);
+    focus.rowLeaving(row);
+    focus.moveFocus(row, byId('below'));
+    focus.rowLeaveEnded(row);
+
+    await removed(row);
+
+    expect(scrolled).toEqual([
+      { element: byId('below'), options: { block: 'start', behavior: 'smooth' } },
+    ]);
+  });
+
+  it('when no control is left and the focus goes in place to the heading, then nothing scrolls once the row is gone', async () => {
+    const focus = focusAfter();
+    const row = byId('leaving');
+    focus.rowLeaving(row);
+
+    focus.focusInPlace(heading);
+    focus.rowLeaveEnded(row);
+    await removed(row);
+
+    expect(document.activeElement).toBe(heading);
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when the focus moved elsewhere before the row is gone, then nothing scrolls', async () => {
+    const focus = focusAfter();
+    const row = byId('leaving');
+    focus.rowLeaving(row);
+    focus.moveFocus(row, byId('below'));
+    focus.rowLeaveEnded(row);
+
+    heading.focus();
+    await removed(row);
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when another action began before the row is gone, then the stale row scrolls nothing', async () => {
+    const focus = focusAfter();
+    const row = byId('leaving');
+    focus.rowLeaving(row);
+    focus.moveFocus(row, byId('below'));
+    focus.rowLeaveEnded(row);
+
+    focus.forget();
+    await removed(row);
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when a row it was not told about leaves, then nothing scrolls', async () => {
+    const focus = focusAfter();
+    const row = byId('leaving');
+    const other = byId('other');
+    focus.rowLeaving(row);
+    focus.moveFocus(row, byId('below'));
+
+    focus.rowLeaveEnded(other);
+    await removed(other);
+
+    expect(scrolled).toEqual([]);
   });
 });

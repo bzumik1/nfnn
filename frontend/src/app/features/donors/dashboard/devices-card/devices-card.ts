@@ -106,7 +106,7 @@ export class DevicesCard {
   protected readonly rowLeft = signal(false);
   protected readonly rowLeaves = leaveWithClass('device-slot--leaving', {
     leaves: (row) => this.olderShown() || row.closest('.device-list--older') === null,
-    left: (row) => this.focusAfterRowLeaves.rowLeft(row),
+    left: (row) => this.focusAfterRowLeaves.rowLeaveEnded(row),
   });
   private readonly focusAfterRowLeaves = new FocusAfterRowLeaves(
     this.document,

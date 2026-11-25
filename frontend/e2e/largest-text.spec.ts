@@ -40,6 +40,7 @@ import {
   whenAdministrationCopied,
 } from './donor-session';
 import { ADMINISTRATION_LOCKED, ADMINISTRATION_UNLOCK_PATH, expect, test } from './fixtures';
+import { waitWhileNothingMayHappen } from './fixed-waits';
 import {
   LongestKeptWord,
   longestKeptWord,
@@ -1074,8 +1075,11 @@ const notebookPasskey = {
   lastUsedAt: '2026-10-25T08:00:00Z',
 };
 
-async function mockTwoPasskeysTheIPhoneOneRemovable(page: Page): Promise<void> {
-  let listed = [iphonePasskey, notebookPasskey];
+async function mockPasskeysTheIPhoneOneRemovable(
+  page: Page,
+  passkeys: readonly (typeof iphonePasskey | typeof notebookPasskey)[],
+): Promise<void> {
+  let listed = [...passkeys];
   await page.route(
     (url) => url.pathname === '/api/donors/me/passkeys',
     (route) => route.fulfill({ json: { items: listed } }),
@@ -1090,8 +1094,19 @@ async function mockTwoPasskeysTheIPhoneOneRemovable(page: Page): Promise<void> {
 }
 
 async function removeTheIPhonePasskey(scope: Locator): Promise<Locator> {
+  const passkeys = await openThePasskeys(scope);
+  await confirmRemovingTheIPhonePasskey(passkeys);
+  return passkeys
+    .locator(`#passkey-row-${notebookPasskey.id}`)
+    .getByRole('button', { name: 'Přejmenovat' });
+}
+
+async function openThePasskeys(scope: Locator): Promise<Locator> {
   await scope.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
-  const passkeys = scope.getByRole('region', { name: 'Přístupové klíče' });
+  return scope.getByRole('region', { name: 'Přístupové klíče' });
+}
+
+async function confirmRemovingTheIPhonePasskey(passkeys: Locator): Promise<void> {
   const iphoneRow = passkeys.locator(`#passkey-row-${iphonePasskey.id}`);
   await iphoneRow.getByRole('button', { name: 'Odebrat', exact: true }).click();
   const confirm = iphoneRow.getByRole('button', { name: 'Ano, odebrat' });
@@ -1100,13 +1115,10 @@ async function removeTheIPhonePasskey(scope: Locator): Promise<Locator> {
   await confirm.click();
 
   await expect(iphoneRow).toHaveCount(0);
-  return passkeys
-    .locator(`#passkey-row-${notebookPasskey.id}`)
-    .getByRole('button', { name: 'Přejmenovat' });
 }
 
 for (const reducedMotion of ['no-preference', 'reduce'] as const) {
-  test.describe(`Given a donor on an iPhone 375 pt wide whose installed app shows the largest accessibility text, asks for ${reducedMotion} motion and has two passkeys`, () => {
+  test.describe(`Given a donor on an iPhone 375 pt wide whose installed app shows the largest accessibility text, asks for ${reducedMotion} motion and has passkeys`, () => {
     test.use({ viewport: { width: 375, height: 667 }, reducedMotion });
 
     test.beforeEach(async ({ page }) => {
@@ -1118,7 +1130,7 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
       page,
     }) => {
       await mockDonorApi(page);
-      await mockTwoPasskeysTheIPhoneOneRemovable(page);
+      await mockPasskeysTheIPhoneOneRemovable(page, [iphonePasskey, notebookPasskey]);
       await page.setViewportSize({ width: 1280, height: 900 });
       await signIn(page);
       await openDonorSection(page, 'Údaje a zabezpečení');
@@ -1129,6 +1141,45 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
 
       await expect(neighbour).toBeFocused();
       await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
+    });
+
+    test('when they remove their only passkey, then the panel takes the focus, the page does not scroll up, and the result and Přidat přístupový klíč stay in view', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await mockPasskeysTheIPhoneOneRemovable(page, [iphonePasskey]);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+      await page.setViewportSize({ width: 375, height: 667 });
+      const passkeys = await openThePasskeys(page.locator('app-account-card'));
+      const iphoneRow = passkeys.locator(`#passkey-row-${iphonePasskey.id}`);
+      await iphoneRow.getByRole('button', { name: 'Odebrat', exact: true }).click();
+      const confirm = iphoneRow.getByRole('button', { name: 'Ano, odebrat' });
+      await expect(confirm).toBeVisible();
+      await page.evaluate(() =>
+        document.addEventListener(
+          'click',
+          () => (document.documentElement.dataset['scrolledAtClick'] = String(window.scrollY)),
+          { capture: true, once: true },
+        ),
+      );
+
+      await confirm.click();
+
+      await expect(iphoneRow).toHaveCount(0);
+      await expect(passkeys).toBeFocused();
+      await waitWhileNothingMayHappen(page, 1_000);
+      const scroll = await page.evaluate(() => ({
+        atClick: Number(document.documentElement.dataset['scrolledAtClick']),
+        now: window.scrollY,
+      }));
+      expect(scroll.now).toBeGreaterThanOrEqual(scroll.atClick);
+      await expect(passkeys.getByText('Zatím nemáte žádný přístupový klíč.')).toBeInViewport();
+      await expect(
+        passkeys.getByRole('button', { name: 'Přidat přístupový klíč' }),
+      ).toBeInViewport();
     });
   });
 }
@@ -1146,7 +1197,7 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
       page,
     }) => {
       await mockDonorApi(page);
-      await mockTwoPasskeysTheIPhoneOneRemovable(page);
+      await mockPasskeysTheIPhoneOneRemovable(page, [iphonePasskey, notebookPasskey]);
       await rememberedDonorSession(page);
       await page.goto('/darce/prehled');
       await openDonorSection(page, 'Údaje a zabezpečení');

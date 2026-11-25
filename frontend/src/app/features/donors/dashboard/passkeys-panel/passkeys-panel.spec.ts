@@ -19,6 +19,7 @@ import {
 } from '../../../../core/auth/testing/donor-fixtures';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { PasskeysPanel } from './passkeys-panel';
+import { leavesAsInTheBrowser } from '../../../../shared/ui/leaving-row/testing/leaves-as-in-the-browser';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 function expectLockedInPlace(button: HTMLButtonElement): void {
@@ -530,33 +531,18 @@ describe('Given the passkeys panel of the sign-in card', () => {
     });
 
     describe('and the removed row takes a while to leave', () => {
-      function leavesSlowly(passkey: typeof IPHONE): () => Promise<void> {
+      function leavesSlowly(
+        passkey: typeof IPHONE,
+        leavingWith: (row: HTMLElement) => HTMLElement = (row) => row,
+      ): () => Promise<void> {
         const row = document.getElementById(`passkey-row-${passkey.id}`)!;
-        const list = row.parentNode!;
-        const siblings = Array.from(list.childNodes);
-        const following = siblings.slice(siblings.indexOf(row) + 1);
-        let finish: () => void = () => undefined;
-        const finished = new Promise<void>((resolve) => (finish = resolve));
-        row.getAnimations = () =>
-          [
-            {
-              effect: { getComputedTiming: () => ({ endTime: 60_000 }) },
-              playState: 'running',
-              finished,
-            },
-          ] as never;
-        const removal = new MutationObserver(() => {
-          if (row.isConnected) {
-            return;
-          }
-          removal.disconnect();
-          list.insertBefore(row, following.find((node) => node.parentNode === list) ?? null);
-          fixture.componentInstance['rowLeaves']({
-            target: row,
-            animationComplete: () => row.remove(),
-          });
-        });
-        removal.observe(list, { childList: true });
+        const leaving = leavingWith(row);
+        const finish = leavesAsInTheBrowser(
+          row,
+          (event) => fixture.componentInstance['rowLeaves'](event),
+          () => leaving.remove(),
+          leaving,
+        );
         return async () => {
           finish();
           await settle();
@@ -598,6 +584,19 @@ describe('Given the passkeys panel of the sign-in card', () => {
         element('.passkeys').focus();
         await leave();
 
+        expect(scrolled).toEqual([]);
+      });
+
+      it('and it was the only key, so the list leaves with it, then the panel takes the focus and nothing scrolls once the list is gone', async () => {
+        await renderOnPage([IPHONE]);
+        const region = element('.passkeys');
+        const scrolled = scrollsOf(region);
+        const leave = leavesSlowly(IPHONE, (row) => row.parentElement!);
+        await removeThe(IPHONE);
+
+        await leave();
+
+        expect(document.activeElement).toBe(region);
         expect(scrolled).toEqual([]);
       });
     });

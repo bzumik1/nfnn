@@ -90,7 +90,7 @@ export class PasskeysPanel {
   readonly countChanged = output<number>();
   readonly countUnknown = output<void>();
 
-  private readonly region = viewChild.required<ElementRef<HTMLElement>>('region');
+  private readonly region = viewChild<ElementRef<HTMLElement>>('region');
   private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
   private readonly renameField = viewChild<ElementRef<HTMLInputElement>>('renameField');
@@ -126,11 +126,11 @@ export class PasskeysPanel {
   protected readonly added = signal<string | null>(null);
   protected readonly rowLeft = signal(false);
   protected readonly rowLeaves = leaveWithClass('passkey-slot--leaving', {
-    left: (row) => this.focusAfterRowLeaves.rowLeft(row),
+    left: (row) => this.focusAfterRowLeaves.rowLeaveEnded(row),
   });
   private readonly focusAfterRowLeaves = new FocusAfterRowLeaves(
     this.document,
-    () => this.region().nativeElement,
+    () => this.region()?.nativeElement ?? null,
   );
   protected readonly nameMaxLength = PASSKEY_NAME_MAX_LENGTH;
 
@@ -194,8 +194,8 @@ export class PasskeysPanel {
     });
   }
 
-  focusTarget(): HTMLElement {
-    return this.region().nativeElement;
+  focusTarget(): HTMLElement | null {
+    return this.region()?.nativeElement ?? null;
   }
 
   collapse(): void {
@@ -379,10 +379,9 @@ export class PasskeysPanel {
         this.status.set(
           $localize`:@@donor.passkeys.removed:Přístupový klíč ${passkey.name}:name: je odebraný. Tímto klíčem se už nepřihlásíte; v\u00a0zařízení ho můžete smazat.`,
         );
-        afterNextRender(
-          () => this.focusAfterRowLeaves.moveFocus(row, neighbour() ?? this.region().nativeElement),
-          { injector: this.injector },
-        );
+        afterNextRender(() => this.focusAfterRemoval(row, neighbour()), {
+          injector: this.injector,
+        });
         this.changes.changed();
       },
       error: (failure: unknown) => {
@@ -399,6 +398,17 @@ export class PasskeysPanel {
         );
       },
     });
+  }
+
+  private focusAfterRemoval(row: HTMLElement | null, neighbour: HTMLElement | null): void {
+    if (neighbour !== null) {
+      this.focusAfterRowLeaves.moveFocus(row, neighbour);
+      return;
+    }
+    const region = this.region()?.nativeElement;
+    if (region !== undefined) {
+      this.focusAfterRowLeaves.focusInPlace(region);
+    }
   }
 
   protected formatDate(isoInstant: string): string {

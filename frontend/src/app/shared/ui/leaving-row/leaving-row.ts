@@ -62,7 +62,12 @@ export class FocusAfterRowLeaves {
     }
   }
 
-  rowLeft(row: HTMLElement): void {
+  focusInPlace(control: HTMLElement): void {
+    this.pending = null;
+    control.focus();
+  }
+
+  rowLeaveEnded(row: HTMLElement): void {
     const pending = this.pending;
     if (pending === null || pending.row !== row) {
       return;
