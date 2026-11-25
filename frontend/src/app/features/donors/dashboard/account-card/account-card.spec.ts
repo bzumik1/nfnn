@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
+import { InputModality } from '../../../../core/input/input-modality';
 import { Donor, Passkey } from '../../../../core/auth/donor';
 import { PasskeyAuthenticator } from '../../../../core/auth/passkey-authenticator';
 import {
@@ -292,6 +293,71 @@ describe('Given the sign-in and security card of the details page', () => {
     await card.settle();
 
     expect(card.values()[3]).toBe('1 klíč');
+  });
+
+  describe('when the donor collapses the passkeys panel right after removing a key, while its row still leaves', () => {
+    let scrolled: unknown[];
+    let finishClosing: () => void;
+    let manage: HTMLButtonElement;
+
+    beforeEach(async () => {
+      await render([IPHONE, WINDOWS]);
+      await card.clickButton('Spravovat přístupové klíče');
+      await card.clickButton('Odebrat');
+      await card.clickButton('Ano, odebrat');
+      http
+        .expectOne({ method: 'DELETE', url: `${PASSKEYS_URL}/${IPHONE.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await card.settle();
+      scrolled = [];
+      manage = card.button('Spravovat přístupové klíče')!;
+      manage.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+        scrolled.push(options);
+      };
+      const panel = card.element('#account-passkeys-panel');
+      const finished = new Promise<void>((resolve) => (finishClosing = resolve));
+      card.root().getAnimations = () =>
+        [
+          {
+            finished,
+            effect: { target: panel, getComputedTiming: () => ({ endTime: 60_000 }) },
+          },
+        ] as never;
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(card.root(), 'getAnimations');
+    });
+
+    it('then Spravovat přístupové klíče takes the focus and glides into view only once the panel has closed', async () => {
+      await card.clickButton('Spravovat přístupové klíče');
+
+      expect(document.activeElement).toBe(manage);
+      expect(manage.getAttribute('aria-expanded')).toBe('false');
+      expect(scrolled).toEqual([]);
+
+      finishClosing();
+
+      await vi.waitFor(() => expect(scrolled).toEqual([{ block: 'nearest', behavior: 'smooth' }]));
+    });
+
+    it('and a finger pressed Spravovat přístupové klíče where it stands in the window, then it is left where it is', async () => {
+      const modality = TestBed.inject(InputModality);
+      modality.start();
+      try {
+        manage.getBoundingClientRect = () => new DOMRect(0, 100, 300, 40);
+        manage.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+        await card.clickButton('Spravovat přístupové klíče');
+        finishClosing();
+        await card.settle();
+
+        expect(document.activeElement).toBe(manage);
+        expect(scrolled).toEqual([]);
+      } finally {
+        modality.stop();
+      }
+    });
   });
 
   describe('when the donor turns the second factor on', () => {

@@ -388,6 +388,7 @@ describe('Given a row watched until it is removed', () => {
   let row: HTMLLIElement;
   let other: HTMLLIElement;
   let releases: boolean[];
+  let stopWatching: () => void;
 
   beforeEach(() => {
     section = document.createElement('section');
@@ -398,7 +399,7 @@ describe('Given a row watched until it is removed', () => {
     section.append(list);
     document.body.append(section);
     releases = [];
-    afterRemoval(row, () => releases.push(row.isConnected));
+    stopWatching = afterRemoval(row, () => releases.push(row.isConnected));
   });
 
   afterEach(() => section.remove());
@@ -420,6 +421,15 @@ describe('Given a row watched until it is removed', () => {
 
   it('when another row of its list is removed, then it is not released', async () => {
     other.remove();
+    await settle();
+
+    expect(releases).toEqual([]);
+  });
+
+  it('when its watch is stopped before it is removed, then it is never released', async () => {
+    stopWatching();
+
+    row.remove();
     await settle();
 
     expect(releases).toEqual([]);
@@ -960,5 +970,131 @@ describe('Given the only row whose leave leaves no control to move the focus to'
     await removed(row);
 
     expect(scrolled).toEqual([]);
+  });
+});
+
+describe('Given a control that takes the focus back while the panel below it closes', () => {
+  let card: HTMLElement;
+  let control: HTMLButtonElement;
+  let scrolled: unknown[];
+
+  beforeEach(() => {
+    scrolled = [];
+    card = document.createElement('section');
+    control = document.createElement('button');
+    card.append(control);
+    document.body.append(card);
+    control.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+      scrolled.push(options);
+    };
+    control.focus();
+  });
+
+  afterEach(() => card.remove());
+
+  function standing(top: number): void {
+    control.getBoundingClientRect = () => new DOMRect(0, top, 300, 40);
+  }
+
+  function pageAsking(reducedMotion: boolean): Document {
+    return {
+      get activeElement() {
+        return document.activeElement;
+      },
+      body: document.body,
+      documentElement: document.documentElement,
+      defaultView: {
+        innerHeight: 600,
+        matchMedia: (query: string) => ({
+          matches: reducedMotion && query === '(prefers-reduced-motion: reduce)',
+        }),
+        getComputedStyle: (element: Element) => getComputedStyle(element),
+      },
+    } as unknown as Document;
+  }
+
+  function closing(): { motion: Animation; finish: () => void } {
+    let finish: () => void = () => undefined;
+    const finished = new Promise<void>((resolve) => (finish = resolve));
+    const motion = {
+      finished,
+      effect: { getComputedTiming: () => ({ endTime: 60_000 }) },
+    } as unknown as Animation;
+    return { motion, finish };
+  }
+
+  it('when the panel is still closing, then nothing scrolls until it has closed, and then the control glides into view', async () => {
+    standing(-1759);
+    const { motion, finish } = closing();
+    new FocusAfterRowLeaves(pageAsking(false), () => null).keepInViewOnceSettled(
+      control,
+      [motion],
+      false,
+    );
+    await Promise.resolve();
+    expect(scrolled).toEqual([]);
+
+    finish();
+
+    await vi.waitFor(() => expect(scrolled).toEqual([{ block: 'nearest', behavior: 'smooth' }]));
+  });
+
+  it('when the device asks for less motion, then the control jumps into view once the panel has closed', async () => {
+    standing(-1759);
+    const { motion, finish } = closing();
+    new FocusAfterRowLeaves(pageAsking(true), () => null).keepInViewOnceSettled(
+      control,
+      [motion],
+      false,
+    );
+
+    finish();
+
+    await vi.waitFor(() => expect(scrolled).toEqual([{ block: 'nearest', behavior: 'instant' }]));
+  });
+
+  it('when nothing closes any more, then the control is brought into view at once', () => {
+    standing(-1759);
+
+    new FocusAfterRowLeaves(pageAsking(false), () => null).keepInViewOnceSettled(
+      control,
+      [],
+      false,
+    );
+
+    expect(scrolled).toEqual([{ block: 'nearest', behavior: 'smooth' }]);
+  });
+
+  it('when the focus moved elsewhere before the panel has closed, then nothing scrolls', async () => {
+    standing(-1759);
+    const { motion, finish } = closing();
+    new FocusAfterRowLeaves(pageAsking(false), () => null).keepInViewOnceSettled(
+      control,
+      [motion],
+      false,
+    );
+
+    control.blur();
+    finish();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when a finger pressed the control and it still stands in the window, then it is left where it is', () => {
+    standing(580);
+
+    new FocusAfterRowLeaves(pageAsking(false), () => null).keepInViewOnceSettled(control, [], true);
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when a finger pressed the control and it ended above the window, then it is brought into view', () => {
+    standing(-1759);
+
+    new FocusAfterRowLeaves(pageAsking(false), () => null).keepInViewOnceSettled(control, [], true);
+
+    expect(scrolled).toEqual([{ block: 'nearest', behavior: 'smooth' }]);
   });
 });

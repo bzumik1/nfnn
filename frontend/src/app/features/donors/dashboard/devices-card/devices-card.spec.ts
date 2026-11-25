@@ -820,6 +820,28 @@ describe("Given a donor's signed-in devices card", () => {
       expect(focused).toBe(signOutButton(rows()[2]));
       expect(scrolled).toEqual([focused]);
     });
+
+    it('and the donor closes Starší while the device signs out, then the control that took the focus is brought into view once the fold is gone, without waiting for another sign-out', async () => {
+      const row = document.getElementById(`device-row-${OLD_IPAD.id}`)!;
+      const fold = element('.devices-older');
+      const rowLeftInTheFold = leavesWithTheFoldAsInTheBrowser(row, fold);
+      await ask(signOutButton(rows()[3]));
+      await confirmSignOut();
+      fixture.componentInstance.toggleOlder();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${OLD_IPAD.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+      await vi.waitFor(() => expect(fold.isConnected).toBe(false));
+      await settle();
+
+      expect(rowLeftInTheFold()).toBe(true);
+      expect(row.isConnected).toBe(false);
+      expect(row.classList.contains('device-slot--leaving')).toBe(false);
+      const focused = document.activeElement;
+      expect(focused).toBe(signOutButton(rows()[2]));
+      expect(scrolled).toEqual([focused]);
+    });
   });
 
   it('when the donor signs out the only other device, then the heading takes focus and the card says no other device is', async () => {

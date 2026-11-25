@@ -105,7 +105,7 @@ export class DevicesCard {
   protected readonly confirmingOthers = computed(() => this.confirming() === ALL_OTHERS);
   protected readonly rowLeft = signal(false);
   protected readonly rowLeaves = leaveWithClass('device-slot--leaving', {
-    leaves: (row) => this.olderShown() || row.closest('.device-list--older') === null,
+    leaves: (row) => this.leavesInView(row),
     left: (row) => this.focusAfterRowLeaves.rowLeaveEnded(row),
   });
   private readonly focusAfterRowLeaves = new FocusAfterRowLeaves(
@@ -268,6 +268,14 @@ export class DevicesCard {
       { injector: this.injector },
     );
     this.changes.changed();
+  }
+
+  private leavesInView(row: HTMLElement): boolean {
+    const leaves = this.olderShown() || row.closest('.device-list--older') === null;
+    if (!leaves) {
+      this.focusAfterRowLeaves.rowLeaveEnded(row);
+    }
+    return leaves;
   }
 
   private otherDevices(): SignedInDevice[] {
