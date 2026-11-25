@@ -438,7 +438,13 @@ for (const gate of MOTION_GATES) {
 }
 
 type Planted =
-  'start-moved-later' | 'start-in-the-past' | 'start-before-the-placing' | 'still-page';
+  | 'start-moved-later'
+  | 'start-in-the-past'
+  | 'start-before-the-placing'
+  | 'still-page'
+  | 'shown-late';
+
+const SHOWN_LATE_SHARE = 0.6;
 
 const PLANTED_STEP_MS = 1000;
 
@@ -454,7 +460,7 @@ test.describe(`Given an administrator in the app on the home screen of a phone w
 
   const plant = (page: Page, planted: Planted): Promise<void> =>
     page.evaluate(
-      ({ how, framesBefore, pastMs }) => {
+      ({ how, framesBefore, pastMs, shownLateShare }) => {
         const motionsOf = (): Animation[] =>
           document.querySelector('.page-transition')?.getAnimations({ subtree: true }) ?? [];
         const started = (): boolean => {
@@ -470,6 +476,33 @@ test.describe(`Given an administrator in the app on the home screen of a phone w
               motion.startTime += ms;
             }
           });
+        if (how === 'shown-late') {
+          const hidden = new MutationObserver(() => {
+            const overlay = document.querySelector<HTMLElement>('.page-transition--moving');
+            if (overlay === null) {
+              return;
+            }
+            hidden.disconnect();
+            overlay.style.visibility = 'hidden';
+            const showOnceFar = (): void => {
+              const over = document.querySelector('.page-transition__page--over');
+              const transform = over === null ? 'none' : getComputedStyle(over).transform;
+              const offset = transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m41;
+              if (offset >= shownLateShare * innerWidth) {
+                overlay.style.visibility = '';
+              } else if (overlay.isConnected) {
+                requestAnimationFrame(showOnceFar);
+              }
+            };
+            requestAnimationFrame(showOnceFar);
+          });
+          hidden.observe(document.body, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class'],
+          });
+          return;
+        }
         if (how === 'still-page') {
           const stopped = new MutationObserver(() => {
             const overlay = document.querySelector('.page-transition--moving');
@@ -534,6 +567,7 @@ test.describe(`Given an administrator in the app on the home screen of a phone w
         how: planted,
         framesBefore: plantedStartFramesBeforeThePlacing(STAMP_LAG_P99_FRAMES),
         pastMs: plantedPastMs(STAMP_LAG_P99_FRAMES),
+        shownLateShare: SHOWN_LATE_SHARE,
       },
     );
 
@@ -595,6 +629,16 @@ test.describe(`Given an administrator in the app on the home screen of a phone w
         expect.stringMatching(
           /^the motion on the screen started \d+ ms before both copies were placed|^the page ran ahead of its curve on the screen/,
         ),
+      ]),
+    );
+  });
+
+  test(`when the screen first shows the page's step back already ${SHOWN_LATE_SHARE * 100} % of its way, as an iPhone showed it in round 29 while it still painted the copies after the motion's clock had started, then the judge on the screen reports the jump at the start`, async ({
+    page,
+  }) => {
+    expect(await steppedBackFromPayments(page, 'shown-late')).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^the first frame the screen showed of the step was already/),
       ]),
     );
   });
@@ -838,6 +882,55 @@ test.describe('Given the probe that watches a step of the back matrix', () => {
           }),
         ),
       ).toEqual([]);
+    },
+  );
+
+  const shownLate = (firstShare: number, shownBeforeAt: number | null) =>
+    motionOf(
+      [firstShare, 0.72, 0.8, 0.86, 0.98, 1].map((share, index) => ({
+        at: 1017 + index * 17,
+        offset: Math.round(share * 390),
+      })),
+      {
+        to: 390,
+        curve: [0.32, 0.72, 0, 1],
+        durationMs: 350,
+        placedAt: 900,
+        startTime: 950,
+        anchor: 'first-moved',
+        lagFrames: 3,
+        shownBeforeAt,
+      },
+    );
+  const firstShownJump = /^the first frame the screen showed of the step was already/;
+
+  testWithoutBrowser(
+    'when the first frame the screen shows of a step is already 60 % of its way one frame after the frame before it, as the iPhone SE showed the step back from an article in round 29 (219 to 240 of 375 px), then the judge reports the jump at the start, though every frame lies on the curve from the start the browser set',
+    () => {
+      expect(judgedOnTheScreen(shownLate(0.6, 1000))).toEqual(
+        expect.arrayContaining([expect.stringMatching(firstShownJump)]),
+      );
+    },
+  );
+
+  testWithoutBrowser(
+    'when the first frame the screen shows of a step lies within the travel of its curve’s first 2 steady frames, as main showed the same step (48 of 375 px), then the judge reports no jump at the start',
+    () => {
+      expect(judgedOnTheScreen(shownLate(0.13, 1000))).not.toEqual(
+        expect.arrayContaining([expect.stringMatching(firstShownJump)]),
+      );
+    },
+  );
+
+  testWithoutBrowser(
+    'when the screencast drew nothing for longer than 1.5 steady frames before the first frame it shows of a step, then that frame says nothing of where the step was first shown and the judge leaves its start to the other checks',
+    () => {
+      expect(judgedOnTheScreen(shownLate(0.6, 1017 - 40))).not.toEqual(
+        expect.arrayContaining([expect.stringMatching(firstShownJump)]),
+      );
+      expect(judgedOnTheScreen(shownLate(0.6, null))).not.toEqual(
+        expect.arrayContaining([expect.stringMatching(firstShownJump)]),
+      );
     },
   );
 

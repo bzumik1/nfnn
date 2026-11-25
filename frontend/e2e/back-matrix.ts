@@ -1301,9 +1301,11 @@ export interface ScreenMotion {
   readonly anchor: ScreenAnchor;
   readonly lagFrames: number;
   readonly measurePx: number;
+  readonly shownBeforeAt?: number | null;
 }
 
 const BACK_AT_MOST = 0.005;
+const FIRST_SHOWN_WITHIN_FRAMES = 2;
 const FROZEN_AFTER_MS = 100;
 
 function progressOf(motion: ScreenMotion): { at: number; share: number }[] {
@@ -1410,7 +1412,7 @@ export function judgedOnTheScreen(motion: ScreenMotion): string[] {
       : motion.anchor === 'first-moved'
         ? Math.min(backComputed, motion.startTime + motion.lagFrames * motion.steadyMs)
         : motion.startTime;
-  const problems: string[] = [];
+  const problems: string[] = [...shownFirstProblems(motion, shown)];
   if (start < motion.placedAt - motion.steadyMs) {
     problems.push(
       `the motion on the screen started ${(motion.placedAt - start).toFixed(0)} ms before both copies were placed (anchored at ${motion.anchor === 'first-moved' ? 'its first moved frame' : 'the start the browser set'}), a jump at the start`,
@@ -1447,6 +1449,29 @@ export function judgedOnTheScreen(motion: ScreenMotion): string[] {
     }
   });
   return problems;
+}
+
+function shownFirstProblems(
+  motion: ScreenMotion,
+  shown: readonly { at: number; share: number }[],
+): string[] {
+  const first = shown[0];
+  if (
+    first === undefined ||
+    motion.shownBeforeAt == null ||
+    first.at - motion.shownBeforeAt > LATE_FRAME_PAST_THE_STEADY_ONE * motion.steadyMs
+  ) {
+    return [];
+  }
+  const allowed = springShareAt(
+    motion.curve,
+    Math.min(1, (FIRST_SHOWN_WITHIN_FRAMES * motion.steadyMs) / motion.durationMs),
+  );
+  return first.share > allowed + BACK_AT_MOST
+    ? [
+        `the first frame the screen showed of the step was already ${percentOf(first.share)} of its way, ${(first.at - motion.shownBeforeAt).toFixed(0)} ms after the frame before it, more than the ${percentOf(allowed)} its curve covers in its first ${FIRST_SHOWN_WITHIN_FRAMES} steady frames, a jump at the start`,
+      ]
+    : [];
 }
 
 export function frozenOnTheScreen(motion: ScreenMotion): string[] {
@@ -1540,7 +1565,16 @@ function screenMotionOf(
     anchor: SCREEN_ANCHOR,
     lagFrames: lagFramesOf(probe),
     measurePx: SCREEN_READS_DIFFER_BY_DEVICE_PX * (probe.screen?.[0]?.devicePx ?? 1),
+    shownBeforeAt: shownBefore(probe.screen ?? [], moving[0]?.at),
   };
+}
+
+function shownBefore(shots: readonly ScreenShot[], firstAt: number | undefined): number | null {
+  if (firstAt === undefined) {
+    return null;
+  }
+  const before = shots.filter((shot) => shot.at < firstAt).map((shot) => shot.at);
+  return before.length === 0 ? null : Math.max(...before);
 }
 
 function attachScreenEvidence(
