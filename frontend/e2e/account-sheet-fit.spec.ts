@@ -138,8 +138,10 @@ test.describe('Given a signed-in donor whose phone shows the largest accessibili
   const panelOf = (page: Page) => sheetOf(page).locator(':scope > .dialog-panel');
 
   async function scrollTo(panel: Locator, top: number): Promise<void> {
-    await panel.evaluate((element, to) => element.scrollTo(0, to), top);
-    await expect.poll(() => scrollTopAfterTwoFrames(panel)).toBe(top);
+    await expect(async () => {
+      await panel.evaluate((element, to) => element.scrollTo(0, to), top);
+      expect(await scrollTopAfterTwoFrames(panel)).toBe(top);
+    }).toPass();
   }
 
   test('when each control of the sheet head takes the focus through focus(), then the sheet stays where it was scrolled', async ({
