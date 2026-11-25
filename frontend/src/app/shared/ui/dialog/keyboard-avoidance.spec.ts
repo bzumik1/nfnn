@@ -128,6 +128,15 @@ describe('Given a dialog with a form on a phone whose keyboard covers the lower 
     expect(scrolled).toEqual([428 - (287 - 16)]);
   });
 
+  it('when the keyboard is still up and a button below its top edge takes the focus, as an opener does when a dialog inside closes, then the dialog stays where it is', () => {
+    openKeyboardFor('#form-email');
+    scrolled.length = 0;
+
+    find<HTMLButtonElement>('#form-submit').focus();
+
+    expect(scrolled).toEqual([]);
+  });
+
   it('when no keyboard is up, then focusing a field leaves the dialog where it is', () => {
     find<HTMLInputElement>('#form-password').focus();
 

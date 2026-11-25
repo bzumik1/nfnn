@@ -60,7 +60,7 @@ export class KeyboardAvoidance {
     const panel = this.panel();
     if (
       !this.keyboard.isOpen() ||
-      !(focused instanceof HTMLElement) ||
+      !isTextEntry(focused) ||
       !panel?.contains(focused) ||
       focused.closest('dialog') !== this.dialog
     ) {

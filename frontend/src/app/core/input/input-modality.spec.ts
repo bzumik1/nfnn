@@ -104,6 +104,27 @@ describe('Given the page that remembers whether the last press came from a point
       expect(modality.lastPressByPointer()).toBe(true);
     });
 
+    it('when a letter is typed into a field after the tap, then no control was pressed last', () => {
+      const field = document.createElement('input');
+      document.body.appendChild(field);
+      tapLabel();
+
+      field.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'a' }));
+      field.remove();
+
+      expect(modality.lastPressedControl()).toBeNull();
+      expect(modality.lastPressByPointer()).toBe(true);
+    });
+
+    it('when the pressed button is taken, then it is given once and no control was pressed last', () => {
+      tapLabel();
+
+      const taken = modality.takePressedControl();
+
+      expect(taken).toBe(button);
+      expect(modality.lastPressedControl()).toBeNull();
+    });
+
     it('when a key is pressed after the tap, then no control was pressed last', () => {
       tapLabel();
       document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Tab' }));

@@ -1497,6 +1497,56 @@ describe('Given a dialog opened by a finger from a button inside a sheet, in a b
   });
 });
 
+describe('Given a dialog opened inside a sheet by VoiceOver or Switch Control, which activate a button without moving the focus off the sheet title', () => {
+  let fixture: ComponentFixture<NestedDialogHost>;
+  let modality: InputModality;
+
+  const dialogs = () =>
+    fixture.nativeElement.querySelectorAll('dialog') as NodeListOf<HTMLDialogElement>;
+  const opener = () => fixture.nativeElement.querySelector('#nested-opener') as HTMLButtonElement;
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [NestedDialogHost],
+      providers: [
+        { provide: DialogHistory, useClass: FakeDialogHistory },
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    modality = TestBed.inject(InputModality);
+    modality.start();
+    deviceAsksForLessMotion(true);
+    fixture = TestBed.createComponent(NestedDialogHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const title = fixture.nativeElement.querySelector('#outer-title') as HTMLElement;
+    title.setAttribute('tabindex', '-1');
+    title.focus();
+    opener().click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    window.matchMedia = realMatchMedia;
+    modality?.stop();
+    fixture?.nativeElement.remove();
+  });
+
+  it('when it has gone, then the focus returns to the activated button, not to the title', () => {
+    (dialogs()[1].querySelector('.dialog-close') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(dialogs()).toHaveLength(1);
+    expect(document.activeElement).toBe(opener());
+  });
+
+  it('when it has opened, then the activation it took as its opener is not left for a dialog that opens later', () => {
+    expect(modality.lastPressedControl()).toBeNull();
+  });
+});
+
 describe('Given a dialog opened inside a sheet after a finger pressed a control outside the sheet, in a browser that leaves the focus on the sheet itself', () => {
   let fixture: ComponentFixture<NestedDialogHost>;
   let modality: InputModality;

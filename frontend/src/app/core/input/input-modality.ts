@@ -42,6 +42,7 @@ export class InputModality {
     this.pressed = event.target instanceof Element ? event.target : null;
   };
   private readonly keyPressed = (event: Event) => {
+    this.pressed = null;
     if (event instanceof KeyboardEvent && namesTheKeyboard(event)) {
       this.record('keyboard');
     }
@@ -68,6 +69,12 @@ export class InputModality {
   lastPressedControl(): HTMLElement | null {
     const control = this.pressed?.closest<HTMLElement>(PRESSABLE_CONTROL) ?? null;
     return control?.isConnected ? control : null;
+  }
+
+  takePressedControl(): HTMLElement | null {
+    const control = this.lastPressedControl();
+    this.pressed = null;
+    return control;
   }
 
   private record(input: LastInput): void {

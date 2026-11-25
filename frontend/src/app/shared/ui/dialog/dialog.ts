@@ -403,10 +403,9 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   private openerOf(focused: Element | null): Element | null {
-    const pressed = this.modality.lastPressedControl();
-    return focused instanceof HTMLDialogElement && pressed !== null && focused.contains(pressed)
-      ? pressed
-      : focused;
+    const pressed = this.modality.takePressedControl();
+    const holder = focused?.closest('dialog') ?? null;
+    return pressed !== null && holder !== null && holder.contains(pressed) ? pressed : focused;
   }
 
   private returnFocusTo(opener: HTMLElement): void {
