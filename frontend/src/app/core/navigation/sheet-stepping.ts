@@ -78,7 +78,7 @@ function stepInSheet(stage: PageTransitions, step: SheetStep): void {
   };
   stage.running = running;
   stage.sheetUnder(leaving);
-  stage.finishing = view.setTimeout(() => stage.finish(), PAGE_COVER_LONGEST_MS);
+  stage.finishAfter(view, PAGE_COVER_LONGEST_MS);
   step.change();
   stage.afterRender(() => {
     step.placed();

@@ -390,7 +390,7 @@ export class PageTransitions {
     }
     this.running = running;
     this.sheetUnder(sheet ?? left.sheet);
-    this.finishing = view.setTimeout(() => this.finish(), PAGE_COVER_LONGEST_MS);
+    this.finishAfter(view, PAGE_COVER_LONGEST_MS);
     if (ahead) {
       this.moveOver(running, view, left, behind);
     }
@@ -488,10 +488,7 @@ export class PageTransitions {
         return;
       }
       released = true;
-      if (this.finishing !== null) {
-        view.clearTimeout(this.finishing);
-      }
-      this.finishing = view.setTimeout(() => this.finish(), PAGE_TRANSITION_LONGEST_MS);
+      this.finishAfter(view, PAGE_TRANSITION_LONGEST_MS);
       startHeldMotions(running.overlay);
       publishSteadyFrame(view, this.steadyFrameMs());
       view.requestAnimationFrame(() =>
@@ -557,11 +554,15 @@ export class PageTransitions {
     }
   }
 
-  private finishWhenStill(running: Running, page: HTMLElement, view: Window): () => void {
+  finishAfter(view: Window, ms: number): void {
     if (this.finishing !== null) {
       view.clearTimeout(this.finishing);
     }
-    this.finishing = view.setTimeout(() => this.finish(), PAGE_TRANSITION_LONGEST_MS);
+    this.finishing = view.setTimeout(() => this.finish(), ms);
+  }
+
+  private finishWhenStill(running: Running, page: HTMLElement, view: Window): () => void {
+    this.finishAfter(view, PAGE_TRANSITION_LONGEST_MS);
     view.getComputedStyle(page).getPropertyValue('animation-name');
     const motions = typeof page.getAnimations === 'function' ? page.getAnimations() : [];
     const still = (): void => {

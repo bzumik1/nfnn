@@ -388,7 +388,7 @@ function followingFinger(
     if (end.completes) {
       running.stepped = true;
       handOver();
-      stage.finishing = view.setTimeout(() => stage.finish(), PAGE_COVER_LONGEST_MS);
+      stage.finishAfter(view, PAGE_COVER_LONGEST_MS);
     } else {
       stage.finish();
     }
