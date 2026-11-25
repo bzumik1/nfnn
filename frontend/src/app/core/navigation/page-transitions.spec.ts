@@ -1,5 +1,5 @@
 import { Location } from '@angular/common';
-import { ApplicationRef, Component, signal, WritableSignal } from '@angular/core';
+import { ApplicationRef, Component, inject, signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   GuardsCheckEnd,
@@ -29,6 +29,13 @@ import { afterDrawn } from './swipe-drawing';
 
 @Component({ template: '' })
 class Blank {}
+
+const readsInFlight: (() => void)[] = [];
+
+function asksForItsText(): boolean {
+  readsInFlight.push(inject(PagePlacement).reading());
+  return true;
+}
 
 @Component({
   selector: 'app-scrolled-shell',
@@ -266,6 +273,81 @@ function framesOnRequest(): (at: number) => void {
 function moving(): Element | null {
   return document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
 }
+describe('Given a phone that animates and the news, with an article whose page asks the server for its text as it opens', () => {
+  let router: Router;
+  let layer: HTMLElement;
+
+  let arrived: string | null;
+  let watch: MutationObserver;
+  const arriving = (): string | null => arrived;
+  const later = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms));
+
+  beforeEach(async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
+    });
+    readsInFlight.length = 0;
+    layer = document.createElement('div');
+    layer.className = PAGE_LAYER_CLASS;
+    layer.textContent = 'Aktuality';
+    document.body.append(layer);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: 'aktuality', component: Blank },
+          {
+            path: 'aktuality/:slug',
+            component: Blank,
+            canActivate: [asksForItsText],
+            data: { parent: '/aktuality' },
+          },
+        ]),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    router = TestBed.inject(Router);
+    TestBed.inject(PageTransitions).sheets = SHEET_STEPPING;
+    await router.navigateByUrl('/aktuality');
+    arrived = null;
+    watch = new MutationObserver(() => {
+      const over = document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--over`);
+      if (arrived === null && over !== null && over.textContent?.trim() !== 'Aktuality') {
+        arrived = over.textContent?.trim() ?? '';
+      }
+    });
+    watch.observe(document.body, { childList: true, subtree: true });
+  });
+
+  afterEach(() => {
+    watch.disconnect();
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+    layer.remove();
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
+  it('when the text comes while the step is about to show the article, then the article slides in filled, never with its waiting line', async () => {
+    await router.navigateByUrl('/aktuality/zahrada-pro-deti');
+    layer.textContent = 'Načítáme stránku…';
+    expect(readsInFlight).toHaveLength(1);
+    await later(PAGE_TRANSITION_LONGEST_MS / 4 + 20);
+
+    layer.textContent = 'Zahrada pro děti';
+    readsInFlight[0]();
+    await later(FRAME_LATE_MS + 50);
+
+    expect(arriving()).toBe('Zahrada pro děti');
+  });
+
+  it('when the text never comes, then the article still slides in within the time a frame may be late, with its waiting line', async () => {
+    await router.navigateByUrl('/aktuality/zahrada-pro-deti');
+    layer.textContent = 'Načítáme stránku…';
+    await later(PAGE_TRANSITION_LONGEST_MS / 4 + FRAME_LATE_MS + 50);
+
+    expect(arriving()).toBe('Načítáme stránku…');
+  });
+});
+
 describe('Given a phone that animates, whose app has drawn frames at a steady pace since it started and no press since', () => {
   let router: Router;
   let layer: HTMLElement;
