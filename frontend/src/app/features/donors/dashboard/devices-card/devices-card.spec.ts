@@ -10,6 +10,7 @@ import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessi
 import { deviceNameInSentence } from './device-labels';
 import { DevicesCard } from './devices-card';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
+import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
 import { leavesAsInTheBrowser } from '../../../../shared/ui/leaving-row/testing/leaves-as-in-the-browser';
 
 function expectLockedInPlace(button: HTMLButtonElement): void {
@@ -160,6 +161,20 @@ describe("Given a donor's signed-in devices card", () => {
     beforeEach(async () => {
       await signIn();
       await listed([THIS_MAC, IPHONE, UNKNOWN]);
+    });
+
+    it('and the card is destroyed while a signed-out row leaves, then the leave it follows is forgotten, so no watch of it outlives the card', async () => {
+      await ask(signOutButton(rows()[1]));
+      await confirmSignOut();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      const forget = vi.spyOn(FocusAfterRowLeaves.prototype, 'forget');
+      onTestFinished(() => forget.mockRestore());
+
+      fixture.destroy();
+
+      expect(forget).toHaveBeenCalledOnce();
     });
 
     it('then each row names the device, the browser, the kind of sign-in and the times in Prague', () => {

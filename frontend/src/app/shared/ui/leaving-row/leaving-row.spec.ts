@@ -1133,6 +1133,7 @@ describe('Given a row whose leave carries the control below it toward the top of
   let scrolledBy: ScrollToOptions[];
   let revealed: unknown[];
   let margins: Map<Element, Partial<CSSStyleDeclaration>>;
+  let listening: number;
   let focus: FocusAfterRowLeaves;
 
   class WatchedSizes {
@@ -1156,6 +1157,7 @@ describe('Given a row whose leave carries the control below it toward the top of
     scrolledBy = [];
     revealed = [];
     margins = new Map();
+    listening = 0;
     list = document.createElement('ul');
     list.innerHTML = `
       <li id="leaving"><button>Odhlásit</button></li>
@@ -1178,18 +1180,24 @@ describe('Given a row whose leave carries the control below it toward the top of
     other.remove();
   });
 
-  function page(): Document {
+  function page(reducedMotion = false): Document {
     return {
       get activeElement() {
         return document.activeElement;
       },
       body: document.body,
       documentElement: document.documentElement,
-      addEventListener: document.addEventListener.bind(document),
-      removeEventListener: document.removeEventListener.bind(document),
+      addEventListener: (...listener: Parameters<Document['addEventListener']>) => {
+        listening++;
+        document.addEventListener(...listener);
+      },
+      removeEventListener: (...listener: Parameters<Document['removeEventListener']>) => {
+        listening--;
+        document.removeEventListener(...listener);
+      },
       defaultView: {
         innerHeight: 600,
-        matchMedia: () => ({ matches: false }),
+        matchMedia: () => ({ matches: reducedMotion }),
         getComputedStyle: (element: Element) => ({
           ...getComputedStyle(element),
           scrollMarginTop: '',
@@ -1326,6 +1334,94 @@ describe('Given a row whose leave carries the control below it toward the top of
     aFrameOfTheClose();
 
     expect(scrolledBy).toEqual([]);
+  });
+
+  for (const [reducedMotion, behavior, how] of [
+    [false, 'smooth', 'glides'],
+    [true, 'instant', 'jumps'],
+  ] as const) {
+    it(`when the focus goes to the heading standing 300 px above the window${reducedMotion ? ' on a device that asks for less motion' : ''}, then no frame of the close scrolls and the heading ${how} into view once the row is gone`, async () => {
+      const heading = document.createElement('h2');
+      heading.tabIndex = -1;
+      list.before(heading);
+      onTestFinished(() => heading.remove());
+      heading.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+        revealed.push(options);
+      };
+      focus = new FocusAfterRowLeaves(page(reducedMotion), () => list);
+      focus.rowLeaving(row, () => null);
+      focus.moveFocus(row, heading);
+      focus.rowLeaveEnded(row);
+      standAt(heading, -300);
+
+      aFrameOfTheClose();
+      await removed();
+      aFrameOfTheClose();
+
+      expect(scrolledBy).toEqual([]);
+      expect(revealed).toEqual([{ block: 'nearest', behavior }]);
+    });
+  }
+
+  it('when the nearest control left stands above the row, then no frame of the close scrolls', async () => {
+    const above = document.createElement('button');
+    list.before(above);
+    onTestFinished(() => above.remove());
+    focus.rowLeaving(row, () => above);
+    focus.rowLeaveEnded(row);
+    standAt(above, -300);
+
+    aFrameOfTheClose();
+    await removed();
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([]);
+  });
+
+  for (const key of ['Shift', 'Control', 'Alt', 'Meta']) {
+    it(`when the visitor presses ${key} alone during the close, then the control is still held`, () => {
+      focus.rowLeaving(row, () => below);
+      focus.moveFocus(row, below);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      standAt(below, -30);
+      aFrameOfTheClose();
+
+      expect(scrolledBy).toEqual([{ top: -30, behavior: 'instant' }]);
+    });
+  }
+
+  it('when the visitor presses Shift with Tab during the close, then the hold ends', () => {
+    focus.rowLeaving(row, () => below);
+    focus.moveFocus(row, below);
+
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }),
+    );
+    standAt(below, -30);
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([]);
+  });
+
+  it('when it is forgotten after the control was brought into view while the list still moves, then no watcher and no listener is left', async () => {
+    list.getAnimations = () =>
+      [
+        {
+          effect: { getComputedTiming: () => ({ endTime: 60_000 }) },
+          finished: new Promise(() => undefined),
+        },
+      ] as never;
+    focus.rowLeaving(row, () => below);
+    focus.moveFocus(row, below);
+    focus.rowLeaveEnded(row);
+    await removed();
+
+    focus.forget();
+
+    expect(revealed).toHaveLength(1);
+    expect(watchers).toEqual([]);
+    expect(listening).toBe(0);
   });
 
   for (const move of ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown']) {

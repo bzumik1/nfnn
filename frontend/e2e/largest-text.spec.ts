@@ -4778,3 +4778,57 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
     });
   }
 }
+
+function framesThatMovedItWhileTheRowStood(frames: readonly NeighbourFrame[]): string[] {
+  const first = frames[0];
+  return frames.flatMap((frame, index) =>
+    frame.rowThere && Math.abs(frame.top - first.top) > SUBPIXEL_PX
+      ? [`frame ${index}: top ${frame.top.toFixed(1)}, ${first.top.toFixed(1)} at the press`]
+      : [],
+  );
+}
+
+for (const inSheet of [false, true]) {
+  const where = inSheet ? 'inside the account sheet' : 'on the account page';
+  test.describe(`Given a donor on an iPhone SE 375 × 667 pt with the largest accessibility text who allows motion, in Údaje a zabezpečení ${where}`, () => {
+    test.use({ viewport: { width: 375, height: 667 }, reducedMotion: 'no-preference' });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await anchorNoScrollAsSafariDoes(page);
+    });
+
+    test('when they remove the second of two passkeys with its Ano, odebrat at the top of what shows the page, then Přejmenovat of the key above stays where it stood while the row closes and is brought into view only once the row is gone', async ({
+      page,
+    }) => {
+      await offerPasskeysAsAnIPhoneDoes(page);
+      await mockDonorApi(page);
+      await mockRemovablePasskeys(page, [iphonePasskey, notebookPasskey]);
+      const scope = await openTheSettingsAt(page, inSheet);
+      const passkeys = await openThePasskeys(scope.locator('app-account-card'));
+      const confirm = await askToRemove(passkeys, notebookPasskey);
+      await settledWithin(scope.locator('app-account-card'));
+      await confirm.evaluate((button) => button.scrollIntoView({ block: 'start' }));
+      await expect(confirm).toBeInViewport({ ratio: 1 });
+      const above = renameButtonOf(passkeys, iphonePasskey);
+      await expect(above).not.toBeInViewport();
+      const row = `#passkey-row-${notebookPasskey.id}`;
+      const frames = await recordTheNeighbourFromTheNextClick(
+        page,
+        `#passkey-rename-button-${iphonePasskey.id}`,
+        row,
+        inSheet,
+      );
+
+      await confirm.click();
+
+      await expect(above).toBeFocused();
+      await expect(page.locator(row)).toHaveCount(0);
+      await settledWithin(scope);
+      await expect(above).toBeInViewport({ ratio: 1 });
+      const recorded = await frames();
+      expect(framesThatMovedItWhileTheRowStood(recorded)).toEqual([]);
+      expectTheLastFrameInView(recorded);
+    });
+  });
+}
