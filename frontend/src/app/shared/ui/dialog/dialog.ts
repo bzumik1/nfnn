@@ -34,6 +34,7 @@ const CLOSING_GRACE_MS = 300;
 const SHEET_DURATION = '--duration-sheet';
 const REPAINTING = 'dialog--repainting';
 const PANEL = '.dialog-panel';
+const ACTIONS = '.ui-dialog__actions';
 
 type Exit = 'open' | 'leaving' | 'gone';
 
@@ -379,8 +380,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     ) {
       return;
     }
-    const panel = this.panel().nativeElement;
-    const actions = panel.querySelector<HTMLElement>('.ui-dialog__actions');
+    const actions = this.ownActions();
     if (actions === null || actions.contains(target)) {
       return;
     }
@@ -389,8 +389,14 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
     const covered = target.getBoundingClientRect().bottom - actions.getBoundingClientRect().top;
     if (covered > 0) {
-      panel.scrollBy({ top: covered + ROOM_ABOVE_STICKY_ACTIONS_PX });
+      this.panel().nativeElement.scrollBy({ top: covered + ROOM_ABOVE_STICKY_ACTIONS_PX });
     }
+  }
+
+  private ownActions(): HTMLElement | null {
+    const dialog = this.element().nativeElement;
+    const rows = this.panel().nativeElement.querySelectorAll<HTMLElement>(ACTIONS);
+    return Array.from(rows).find((row) => row.closest('dialog') === dialog) ?? null;
   }
 
   private openerOf(focused: Element | null): Element | null {

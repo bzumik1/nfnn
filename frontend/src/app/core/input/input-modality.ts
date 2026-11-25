@@ -13,7 +13,8 @@ const LONE_MODIFIERS: ReadonlySet<string> = new Set(['Shift', 'Control', 'Alt', 
 const COMPOSING_KEYS: ReadonlySet<string> = new Set(['Unidentified', 'Process']);
 const COMPOSING_KEY_CODE = 229;
 const KEYS_THAT_LEAVE_TEXT: ReadonlySet<string> = new Set(['Tab', 'Escape']);
-const PRESSABLE_CONTROL = 'button, a[href], summary, [role="button"]';
+const PRESSABLE_CONTROL =
+  'button, a[href], summary, [role="button"], [role="switch"], [role="tab"], [role="menuitem"]';
 
 type LastInput = 'pointer' | 'keyboard';
 

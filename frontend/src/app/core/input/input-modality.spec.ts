@@ -92,6 +92,21 @@ describe('Given the page that remembers whether the last press came from a point
     });
   });
 
+  for (const role of ['switch', 'tab', 'menuitem']) {
+    it(`when a finger presses the label inside a ${role} that is not a button, then that ${role} is the control pressed last`, () => {
+      const control = document.createElement('div');
+      control.setAttribute('role', role);
+      control.append(document.createElement('span'));
+      document.body.appendChild(control);
+
+      control.querySelector('span')!.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      const pressed = modality.lastPressedControl();
+      control.remove();
+
+      expect(pressed).toBe(control);
+    });
+  }
+
   describe('Given the root element that tells the styles which input came last', () => {
     const lastInput = () => document.documentElement.getAttribute('data-input');
     const press = (key: string) =>

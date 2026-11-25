@@ -1406,6 +1406,60 @@ describe('Given a dialog opened by a finger from a button inside a sheet, in a b
 
     expect(returned).toEqual([undefined]);
   });
+
+  it('when a control of the sheet itself takes the focus where the open dialog has its action row, then the sheet does not scroll for that row', () => {
+    box(opener(), 620, 660);
+
+    opener().dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+    expect(scrolled).toEqual([]);
+  });
+});
+
+describe('Given a dialog opened inside a sheet after a finger pressed a control outside the sheet, in a browser that leaves the focus on the sheet itself', () => {
+  let fixture: ComponentFixture<NestedDialogHost>;
+  let modality: InputModality;
+  let outside: HTMLButtonElement;
+
+  const dialogs = () =>
+    fixture.nativeElement.querySelectorAll('dialog') as NodeListOf<HTMLDialogElement>;
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [NestedDialogHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    });
+    modality = TestBed.inject(InputModality);
+    modality.start();
+    deviceAsksForLessMotion(true);
+    outside = document.createElement('button');
+    document.body.appendChild(outside);
+    fixture = TestBed.createComponent(NestedDialogHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    outside.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    (document.activeElement as HTMLElement | null)?.blur();
+    dialogs()[0].focus();
+    fixture.componentInstance.nested.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    modality.stop();
+    window.matchMedia = realMatchMedia;
+    outside.remove();
+    fixture.nativeElement.remove();
+  });
+
+  it('when it has gone, then the focus returns to the sheet that held it, not to the control pressed outside', () => {
+    (dialogs()[1].querySelector('.dialog-close') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(dialogs()).toHaveLength(1);
+    expect(document.activeElement).toBe(dialogs()[0]);
+  });
 });
 
 describe('Given a dialog and the history entry it keeps', () => {
