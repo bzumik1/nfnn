@@ -631,18 +631,27 @@ const STILL_MOTION = [
   { pattern: /^--motion-(rise|lift)/, still: '0px', holds: /^0(px|rem)?$/ },
   { pattern: /^--motion-scale-|^--pressed-scale/, still: '1', holds: /^1$/ },
   { pattern: /^--duration-stagger$/, still: '0s', holds: /^0m?s$/ },
+  {
+    pattern: /^--duration-entrance$/,
+    still: 'var(--duration-reduced)',
+    holds: /^var\(--duration-reduced\)$/,
+  },
+  {
+    pattern: /^--ease-spring-bouncy$/,
+    still: 'var(--ease-standard)',
+    holds: /^var\(--ease-standard\)$/,
+  },
 ];
+const MOTION_STILL = '--motion-still';
 
 export function motionProblems(theme, source) {
   const declarations = declarationsByBlock(source);
+  const inReducedRoot = ({ chain }) =>
+    chain.length === 2 && chain[0] === REDUCED_MOTION && chain[1] === ':root';
   const reduced = new Map(
-    declarations
-      .filter(
-        ({ chain }) => chain.length === 2 && chain[0] === REDUCED_MOTION && chain[1] === ':root',
-      )
-      .map(({ name, value }) => [name, value]),
+    declarations.filter(inReducedRoot).map(({ name, value }) => [name, value]),
   );
-  return declarations
+  const moving = declarations
     .filter(({ chain }) => chain.length === 1 && chain[0] === ':root')
     .flatMap(({ name, value }) => {
       const rule = STILL_MOTION.find(({ pattern }) => pattern.test(name));
@@ -656,6 +665,51 @@ export function motionProblems(theme, source) {
             `theme ${theme} keeps ${name} at ${kept} under prefers-reduced-motion, where it must be ${rule.still}`,
           ];
     });
+  const unstilled =
+    reduced.get(MOTION_STILL) === 'none'
+      ? []
+      : [
+          `theme ${theme} does not set ${MOTION_STILL} to none in its prefers-reduced-motion :root, so the transitions written through it keep moving there`,
+        ];
+  const stilledEverywhere = declarations
+    .filter((declaration) => declaration.name === MOTION_STILL && !inReducedRoot(declaration))
+    .map(
+      ({ chain }) =>
+        `theme ${theme} sets ${MOTION_STILL} in ${chain.join(' ')}, outside its prefers-reduced-motion :root, so the transitions written through it stop for every visitor`,
+    );
+  return [...moving, ...unstilled, ...stilledEverywhere];
+}
+
+function closingParenthesis(code, open) {
+  let depth = 0;
+  for (let index = open; index < code.length; index++) {
+    if (code[index] === '(') {
+      depth++;
+    } else if (code[index] === ')' && --depth === 0) {
+      return index;
+    }
+  }
+  return code.length;
+}
+
+export function motionStillProblems(file, source) {
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  const problems = declared(code).has(MOTION_STILL)
+    ? [
+        `${file} sets ${MOTION_STILL}, which only the themes set in their prefers-reduced-motion :root`,
+      ]
+    : [];
+  for (const match of code.matchAll(/var\(\s*--motion-still\b/g)) {
+    const starts = /(?:^|[;{\s])(?:transition\s*:|@return)\s*$/.test(code.slice(0, match.index));
+    const end = closingParenthesis(code, match.index + 'var'.length);
+    const ends = /^\s*(?:!important\s*)?[;}]/.test(code.slice(end + 1));
+    if (!starts || !ends) {
+      problems.push(
+        `${file} writes var(${MOTION_STILL}, …) as part of a value, so it stops only part of the transition under reduced motion; write it as the whole transition value`,
+      );
+    }
+  }
+  return problems;
 }
 
 const SPRING_DURATIONS = new Map([['--ease-spring-bouncy', '--duration-done']]);
@@ -876,7 +930,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const themes = new Map(themeNames.map((name) => [name, declared(sources.get(name))]));
 
   const needed = new Map();
-  const springProblems = [];
+  const styleProblems = [];
   for (const file of scssFiles(join(root, 'src'))) {
     const source = readFileSync(file, 'utf8');
     const local = declared(source);
@@ -885,7 +939,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         needed.set(token, relative(root, file));
       }
     }
-    springProblems.push(...springPairingProblems(relative(root, file), source));
+    styleProblems.push(...springPairingProblems(relative(root, file), source));
+    styleProblems.push(...motionStillProblems(relative(root, file), source));
   }
 
   const receiptStyle = 'src/app/features/donations/receipt-pdf/receipt-style.ts';
@@ -917,7 +972,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     return 1.05 / (luminance(hex) + 0.05);
   }
 
-  const problems = [...springProblems];
+  const problems = [...styleProblems];
   for (const theme of themes.keys()) {
     const folder = join(themesDir, theme, 'receipt');
     const tokens = values(sources.get(theme));
