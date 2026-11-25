@@ -225,6 +225,18 @@ describe('Given floating bars at the bottom of the screen', () => {
       expect(scrolls).toEqual([]);
     });
 
+    it('when an arrow key moves the focus to a radio under the bar before it leaves tabindex -1, then the page scrolls it above the bar', () => {
+      const { scrolls, focus, nextFrame } = pageWithFocus();
+      const radio = control(740, 780);
+      radio.setAttribute('role', 'radio');
+      radio.tabIndex = -1;
+
+      focus(radio);
+      nextFrame();
+
+      expect(scrolls).toEqual([{ top: 780 - BAR_TOP + BAR_GAP, behavior: 'instant' }]);
+    });
+
     it('when a control under the bar takes the focus and keeps it, then the page scrolls it above the bar', () => {
       const { scrolls, focus, nextFrame } = pageWithFocus();
 

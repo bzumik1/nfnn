@@ -2,7 +2,7 @@ import { HeldScroll, keepThePageEnd, SettlingPlacement } from '../../../core/lay
 
 const ROOM_CLASS = 'has-floating-notice';
 const ROOM_HEIGHT = '--floating-notice-height';
-const FOCUS_CATCHER = '[tabindex="-1"]';
+const FOCUS_CATCHER = '[tabindex="-1"]:not(button, a[href], input, select, textarea, [role])';
 const barsShown = new WeakMap<Document, HTMLElement[]>();
 
 function shownBars(document: Document): HTMLElement[] {

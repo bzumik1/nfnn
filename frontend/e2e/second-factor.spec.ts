@@ -495,6 +495,9 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
     );
     await pressHandsFocusToPageAsIos(copy);
     const before = await scrollTop(page);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
+    ).toBeGreaterThan(before);
 
     await copy.click();
 
