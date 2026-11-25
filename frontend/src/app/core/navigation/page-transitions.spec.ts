@@ -1395,7 +1395,16 @@ describe('Given the app on the home screen of a phone, where the news led to the
     try {
       await openOverviewFromTheNews({ title: 'Aktuality' }, { title: 'Přehled' });
       vi.useFakeTimers();
-      const draw = framesOnRequest();
+      const frames: FrameRequestCallback[] = [];
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
+        frames.push(frame);
+        return frames.length;
+      });
+      const draw = (at: number): void => {
+        frameClock.at = at;
+        drawnAt(at);
+        frames.splice(0).forEach((frame) => frame(at));
+      };
       let settled = false;
       void swipeBack()
         .settle(LET_GO_PAST_HALF)
