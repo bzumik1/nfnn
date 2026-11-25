@@ -61,3 +61,39 @@ describe('Given a control the page gives the focus back to, under a head that co
     expect(shown).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
   });
 });
+
+describe('Given Účet in the banner at the top of the page, which the room kept for the head does not cover, scrolled so that the button shows 1 px below the top', () => {
+  let banner: HTMLElement;
+  let account: HTMLButtonElement;
+  let shown: ReturnType<typeof vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>>;
+  let scrolled: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    document.documentElement.style.scrollPaddingTop = '64px';
+    banner = document.createElement('header');
+    account = document.createElement('button');
+    account.textContent = 'Účet';
+    account.style.scrollMarginTop = '5px';
+    account.style.scrollMarginBottom = '5px';
+    banner.append(account);
+    document.body.append(banner);
+    shown = vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>();
+    account.scrollIntoView = shown;
+    account.getBoundingClientRect = () => new DOMRect(300, 1, 44, 44);
+    scrolled = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    banner.remove();
+    scrolled.mockRestore();
+    document.documentElement.style.scrollPaddingTop = '';
+  });
+
+  it('when the focus returns to it, then the page moves only the 4 px its focus ring lacks, never under the room kept for the head', () => {
+    focusInView(account);
+
+    expect(document.activeElement).toBe(account);
+    expect(shown).not.toHaveBeenCalled();
+    expect(scrolled).toHaveBeenCalledWith({ top: -4, behavior: 'instant' });
+  });
+});
