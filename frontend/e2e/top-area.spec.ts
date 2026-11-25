@@ -642,8 +642,11 @@ for (const { place, path } of [
   });
 }
 
-test.describe('Given the copy of a standing sheet planted over a page, its backdrop and its dialog each veiling 60 %', () => {
-  const plantCopy = (page: Page, layers: readonly ('backdrop' | 'dialog')[]): Promise<void> =>
+test.describe('Given the copy of a standing sheet planted over a page, its backdrop, its dialog and the dim of the page beneath each veiling 60 %', () => {
+  const plantCopy = (
+    page: Page,
+    layers: readonly ('backdrop' | 'dialog' | 'dim')[],
+  ): Promise<void> =>
     page.evaluate((planted) => {
       const veil = 'color-mix(in srgb, rgb(10 15 40) 60%, transparent)';
       const overlay = document.createElement('div');
@@ -660,7 +663,14 @@ test.describe('Given the copy of a standing sheet planted over a page, its backd
       dialog.setAttribute('open', '');
       fill(dialog, planted.includes('dialog') ? veil : 'transparent');
       sheet.append(backdrop, dialog);
-      overlay.append(sheet);
+      const under = document.createElement('div');
+      under.className = 'page-transition__page page-transition__page--under';
+      const dim = document.createElement('div');
+      dim.className = 'page-transition__dim';
+      fill(dim, planted.includes('dim') ? veil : 'transparent');
+      dim.style.opacity = '1';
+      under.append(sheet, dim);
+      overlay.append(under);
       document.body.append(overlay);
     }, layers);
 
@@ -687,6 +697,14 @@ test.describe('Given the copy of a standing sheet planted over a page, its backd
     page,
   }) => {
     await plantCopy(page, ['backdrop', 'dialog']);
+
+    expect(await veilOf(page)).toBeCloseTo(0.84, 2);
+  });
+
+  test('when the dim of the page beneath shows over the backdrop, as both may while the ground changes, then the probe reads both veils together, 84 %, so a double veil never passes for one', async ({
+    page,
+  }) => {
+    await plantCopy(page, ['backdrop', 'dim']);
 
     expect(await veilOf(page)).toBeCloseTo(0.84, 2);
   });
