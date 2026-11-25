@@ -83,7 +83,8 @@ export const TOP_AREA_REGIONS: SampledRegions = {
   topArea: {
     glass: 'app-root .ui-glass',
     glassCopies: '.page-transition .ui-glass, .page-fade .ui-glass',
-    veilCopies: '.page-transition__sheet-backdrop, .page-transition__sheet > dialog',
+    veilCopies:
+      '.page-transition__sheet-backdrop, .page-transition__sheet > dialog, .page-transition__dim',
     pagesOver: '.page-transition__page--over',
     pageCopies: '.page-transition__page',
   },
