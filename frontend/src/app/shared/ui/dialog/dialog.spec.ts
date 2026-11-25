@@ -1410,6 +1410,7 @@ describe('Given a dialog opened by a finger from a button inside a sheet, in a b
   for (const [where, top] of [
     ['in view in the sheet', 300],
     ['half below the bottom edge of the sheet', 824],
+    ['half above the top of the visible part of the sheet', 20],
   ] as const) {
     it(`when a finger closed it and the button that opened it is ${where}, then the button takes the focus without scrolling the sheet`, async () => {
       const scrolledIntoView = placeInSheet(top);
@@ -1422,6 +1423,17 @@ describe('Given a dialog opened by a finger from a button inside a sheet, in a b
       expect(scrolledIntoView).toEqual([]);
     });
   }
+
+  it('when a finger closed it and the button that opened it is wholly below the visible part of the sheet, then the button takes the focus without the browser scroll and is brought the nearest way into view', async () => {
+    const scrolledIntoView = placeInSheet(900);
+    const returned = focusOptionsOf(opener());
+
+    closeNested();
+    await settle();
+
+    expect(returned).toEqual([{ preventScroll: true }]);
+    expect(scrolledIntoView).toEqual([{ block: 'nearest', behavior: 'smooth' }]);
+  });
 
   it('when the keyboard closed it and the button that opened it is in view in the sheet, then the button takes the focus without scrolling the sheet', async () => {
     const scrolledIntoView = placeInSheet(300);

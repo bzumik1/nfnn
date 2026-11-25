@@ -19,6 +19,7 @@ import {
 } from '@angular/core';
 
 import { DialogAnnouncer } from './dialog-announcer';
+import { FocusReturn } from './focus-return';
 import { DialogHistory, DialogHistoryListener } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { DIALOG_SUSPENSION } from './dialog-suspension';
@@ -101,6 +102,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private readonly suspension = inject(DIALOG_SUSPENSION);
   private readonly layout = inject(CompactLayout);
   private readonly modality = inject(InputModality);
+  private readonly focusReturn = inject(FocusReturn);
   private readonly opener = this.openerOf(this.document.activeElement);
   private readonly appearance = inject(Appearance);
   private dragPointer: number | null = null;
@@ -413,10 +415,15 @@ export class Dialog implements AfterViewInit, OnDestroy {
       opener.focus();
       return;
     }
-    opener.focus({ preventScroll: true });
+    this.focusReturn.returnTo(opener);
     if (this.document.activeElement !== opener) {
       opener.closest('dialog')?.focus({ preventScroll: true });
-    } else if (!this.modality.lastPressByPointer() && !shownWithin(panel, opener)) {
+      return;
+    }
+    const holdsStill = this.modality.lastPressByPointer()
+      ? partlyWithin(panel, opener)
+      : shownWithin(panel, opener);
+    if (!holdsStill) {
       scrollIntoViewFitting(opener);
     }
   }
@@ -609,20 +616,36 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 }
 
-function shownWithin(panel: HTMLElement, element: HTMLElement): boolean {
+interface VisibleBand {
+  readonly top: number;
+  readonly bottom: number;
+}
+
+function visibleBandOf(panel: HTMLElement): VisibleBand {
   const room = panel.getBoundingClientRect();
   const frame = panel.closest('dialog')?.getBoundingClientRect() ?? room;
   const padding = getComputedStyle(panel);
+  return {
+    top: Math.max(room.top, frame.top) + (parseFloat(padding.scrollPaddingTop) || 0),
+    bottom: Math.min(room.bottom, frame.bottom) - (parseFloat(padding.scrollPaddingBottom) || 0),
+  };
+}
+
+function shownWithin(panel: HTMLElement, element: HTMLElement): boolean {
+  const band = visibleBandOf(panel);
   const margin = getComputedStyle(element);
-  const top = Math.max(room.top, frame.top) + (parseFloat(padding.scrollPaddingTop) || 0);
-  const bottom =
-    Math.min(room.bottom, frame.bottom) - (parseFloat(padding.scrollPaddingBottom) || 0);
   const box = element.getBoundingClientRect();
   return (
     box.height > 0 &&
-    box.top - (parseFloat(margin.scrollMarginTop) || 0) >= top &&
-    box.bottom + (parseFloat(margin.scrollMarginBottom) || 0) <= bottom
+    box.top - (parseFloat(margin.scrollMarginTop) || 0) >= band.top &&
+    box.bottom + (parseFloat(margin.scrollMarginBottom) || 0) <= band.bottom
   );
+}
+
+function partlyWithin(panel: HTMLElement, element: HTMLElement): boolean {
+  const band = visibleBandOf(panel);
+  const box = element.getBoundingClientRect();
+  return box.height > 0 && box.bottom > band.top && box.top < band.bottom;
 }
 
 function endsLeaving(animation: Animation): boolean {
