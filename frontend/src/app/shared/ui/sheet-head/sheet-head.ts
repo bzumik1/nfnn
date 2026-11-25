@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { InputModality } from '../../../core/input/input-modality';
 import { isTextEntry } from '../../../core/layout/soft-keyboard';
+import { FocusReturn } from '../dialog/focus-return';
 
 const SHEET_PANEL = '.dialog-panel';
 const HEIGHT = '--sheet-head-height';
@@ -34,6 +35,7 @@ function keepFocusClearOfHead(
   view: Window,
   pressedByPointer: () => boolean,
   asksForLessMotion: () => boolean,
+  returning: (element: Element) => boolean,
 ): () => void {
   let pending = 0;
   let restoring = 0;
@@ -76,7 +78,7 @@ function keepFocusClearOfHead(
       panel.style.setProperty(PADDING_TOP, '0px');
       return;
     }
-    if (!ofItsOwnPanel(focused)) {
+    if (!ofItsOwnPanel(focused) || returning(focused)) {
       return;
     }
     if (pressedByPointer() && wasPressed(focused) && !takesText(focused)) {
@@ -141,6 +143,7 @@ export class SheetHead {
     const view = inject(DOCUMENT).defaultView;
     const modality = inject(InputModality);
     const asksForLessMotion = inject(SHEET_HEAD_ASKS_FOR_LESS_MOTION);
+    const focusReturn = inject(FocusReturn);
     afterNextRender(() => {
       const panel = head.closest<HTMLElement>(SHEET_PANEL);
       if (panel === null) {
@@ -173,6 +176,7 @@ export class SheetHead {
             view,
             () => modality.lastPressByPointer(),
             asksForLessMotion,
+            (element) => focusReturn.isReturning(element),
           ),
         );
       }
