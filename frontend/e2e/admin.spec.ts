@@ -289,6 +289,19 @@ const quietImport = {
   defaultHistoryFrom: '2026-01-01',
 };
 
+async function noteStartFromTitle(page: Page): Promise<number> {
+  return page.locator('.admin-overview').evaluate((card) => {
+    const textStart = (element: Element): number => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return range.getClientRects()[0].left;
+    };
+    const title = card.querySelector('#admin-overview-title')!;
+    const note = card.querySelector('.overview-columns')!;
+    return Math.round(textStart(note) - textStart(title));
+  });
+}
+
 test.describe('Given an administrator', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
@@ -381,10 +394,12 @@ test.describe('Given an administrator', () => {
       'Noví dárci jsou nové registrace, i bez daru, takže jich může být víc než dárců. Celkem zahrnuje i platby, které ještě nemají dárce (Celkem = Přiřazené + Bez dárce).',
       { useInnerText: true },
     );
+    expect(await noteStartFromTitle(page)).toBeCloseTo(0, 0);
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(note).toHaveText('Celkem zahrnuje i platby, které ještě nemají dárce.', {
       useInnerText: true,
     });
+    await expect.poll(() => noteStartFromTitle(page)).toBeCloseTo(0, 0);
     await page.setViewportSize({ width: 1280, height: 900 });
 
     await openAccountItem(page, 'Můj přehled');
