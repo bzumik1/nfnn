@@ -393,6 +393,7 @@ function followingFinger(
   let shown = 0;
   let lastStep = 0;
   let stepAtMost = 0;
+  let closedIn = false;
   let catchingUp = false;
   const place = (at: number): void => {
     lastStep = at - shown;
@@ -421,7 +422,10 @@ function followingFinger(
       frameMs: measuredFrameMs(stage),
       finger: () => offset,
       from: shown,
-      show: place,
+      show: (at) => {
+        closedIn = true;
+        place(at);
+      },
       goesOn: () => catchingUp && stage.running === running,
       caughtUp: () => (catchingUp = false),
     });
@@ -446,7 +450,7 @@ function followingFinger(
     const lags = shown !== wanted.from && stepAtMost > 0;
     const end = lags ? settleFrom(wanted, shown, width) : wanted;
     await (lags
-      ? afterTwoDrawnFrames().then(() =>
+      ? (closedIn ? Promise.resolve() : afterTwoDrawnFrames()).then(() =>
           trackSettle(view, {
             plan: end,
             finger: wanted,

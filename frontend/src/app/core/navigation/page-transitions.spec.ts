@@ -2559,7 +2559,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
-  it('when the finger lets go past half while the page still closes in on it, then the slide through the real swipe holds two drawn frames, and with a late frame and a tick of the page clock on its way it moves every frame towards its end, the first no more than the page was moving or an eighth of the gap and none more than that or the finger’s own slide at its steepest', async () => {
+  it('when the finger lets go past half while the page still closes in on it, then the slide through the real swipe goes on from where the page stands in the next frame, never standing still for held frames, and with a late frame and a tick of the page clock on its way it moves every frame towards its end, the first no more than the page was moving or an eighth of the gap and none more than that or the finger’s own slide at its steepest', async () => {
     const frames = framesByHand();
     try {
       const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
@@ -2585,11 +2585,12 @@ describe('Given the app on the home screen of a phone opened straight on the don
       void swipe.settle(end);
       await Promise.resolve();
       frames.run(64);
-      frames.run(80);
       await Promise.resolve();
-      expect(offsetOf(over()), 'the page moved in the two held frames').toBe(liftedAt);
+      expect(offsetOf(over()), 'the page stood still in the frame after the lift').toBeGreaterThan(
+        liftedAt,
+      );
 
-      const offsets = [liftedAt];
+      const offsets = [liftedAt, offsetOf(over())];
       for (const gap of [16, 50, 16, 'tick', 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16]) {
         if (gap === 'tick') {
           await new Promise((done) => setTimeout(done, FRAME_LATE_MS + 20));
