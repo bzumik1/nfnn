@@ -8,6 +8,8 @@ import {
   launchIconProblems,
   manifestProblems,
   motionProblems,
+  motionStillProblems,
+  partialMotionStillProblems,
   receiptTokensOutsideRoot,
   springPairingProblems,
   themeAssetProblems,
@@ -792,6 +794,8 @@ describe('Given the motion tokens of a theme', () => {
       --motion-scale-enter: 0.96;
       --pressed-scale: 0.97;
       --duration-stagger: 0.05s;
+      --duration-entrance: 0.4s;
+      --ease-spring-bouncy: linear(0, 1.038, 1);
     }
     ${reduced}
   `;
@@ -804,6 +808,9 @@ describe('Given the motion tokens of a theme', () => {
         --motion-scale-enter: 1;
         --pressed-scale: 1;
         --duration-stagger: 0s;
+        --duration-entrance: var(--duration-reduced);
+        --ease-spring-bouncy: var(--ease-standard);
+        --motion-still: none;
       }
     }
   `;
@@ -815,7 +822,7 @@ describe('Given the motion tokens of a theme', () => {
   it('when it has no reduced motion block, then every moving token is reported', () => {
     const problems = motionProblems('restless', motionTheme(''));
 
-    assert.equal(problems.length, 6);
+    assert.equal(problems.length, 9);
     assert.match(
       problems[0],
       /theme restless keeps --motion-rise at 8px under prefers-reduced-motion/,
@@ -833,6 +840,9 @@ describe('Given the motion tokens of a theme', () => {
             --motion-lift: 0px;
             --motion-scale-enter: 0.98;
             --pressed-scale: 1;
+            --duration-entrance: var(--duration-reduced);
+            --ease-spring-bouncy: var(--ease-standard);
+            --motion-still: none;
           }
         }
       `),
@@ -842,6 +852,142 @@ describe('Given the motion tokens of a theme', () => {
       'theme half keeps --motion-rise-reveal at 4px under prefers-reduced-motion, where it must be 0px',
       'theme half keeps --motion-scale-enter at 0.98 under prefers-reduced-motion, where it must be 1',
       'theme half keeps --duration-stagger at 0.05s under prefers-reduced-motion, where it must be 0s',
+    ]);
+  });
+
+  it('when its reduced motion block keeps the entrance or the bouncy spring, then each is reported', () => {
+    const problems = motionProblems(
+      'springy',
+      motionTheme(
+        everyMotionStill
+          .replace('var(--duration-reduced)', 'var(--duration-fast)')
+          .replace('var(--ease-standard)', 'var(--ease-spring)'),
+      ),
+    );
+
+    assert.deepEqual(problems, [
+      'theme springy keeps --duration-entrance at var(--duration-fast) under prefers-reduced-motion, where it must be var(--duration-reduced)',
+      'theme springy keeps --ease-spring-bouncy at var(--ease-spring) under prefers-reduced-motion, where it must be var(--ease-standard)',
+    ]);
+  });
+
+  it('when its reduced motion block does not set --motion-still to none, then the theme is reported', () => {
+    const problems = motionProblems(
+      'moving',
+      motionTheme(everyMotionStill.replace('--motion-still: none;', '--motion-still: initial;')),
+    );
+
+    assert.deepEqual(problems, [
+      'theme moving does not set --motion-still to none in its prefers-reduced-motion :root, so the transitions written through it keep moving there',
+    ]);
+  });
+
+  it('when it sets --motion-still outside its reduced motion :root, then each place is reported', () => {
+    const problems = motionProblems(
+      'frozen',
+      `${motionTheme(everyMotionStill)}
+        :root { --motion-still: none; }
+        @media (prefers-reduced-motion: reduce) and (prefers-contrast: more) {
+          :root { --motion-still: none; }
+        }
+      `,
+    );
+
+    assert.deepEqual(problems, [
+      'theme frozen sets --motion-still in :root, outside its prefers-reduced-motion :root, so the transitions written through it stop for every visitor',
+      'theme frozen sets --motion-still in @media (prefers-reduced-motion: reduce) and (prefers-contrast: more) :root, outside its prefers-reduced-motion :root, so the transitions written through it stop for every visitor',
+    ]);
+  });
+});
+
+describe('Given a style that writes a transition through --motion-still', () => {
+  it('when --motion-still is the whole transition value, then nothing is reported', () => {
+    const style = `
+      .field {
+        transition: var(--motion-still, border-color var(--duration-base));
+      }
+      .chevron {
+        transition: var(--motion-still, transform var(--duration-base)) !important;
+      }
+    `;
+
+    assert.deepEqual(motionStillProblems('field.scss', style), []);
+  });
+
+  it('when the motion module returns it whole from its function, then nothing is reported', () => {
+    const style = `
+      @function _still-when-reduced($transition) {
+        @return var(--motion-still, #{$transition});
+      }
+    `;
+
+    assert.deepEqual(motionStillProblems('src/styles/_motion.scss', style), []);
+  });
+
+  it('when another style returns it from a function of its own, then the style is reported', () => {
+    const style = `
+      @function f($x) {
+        @return var(--motion-still, $x);
+      }
+      .a {
+        transition: f(color 1s), opacity 1s;
+      }
+    `;
+
+    assert.deepEqual(motionStillProblems('src/app/a.scss', style), [
+      'src/app/a.scss writes var(--motion-still, …) as part of a value, so it stops only part of the transition under reduced motion; write it as the whole transition value',
+    ]);
+  });
+
+  it('when a theme writes it as part of a transition, then the theme is reported', () => {
+    const theme = `
+      :root {
+        --motion-rise: 8px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        :root {
+          --motion-still: none;
+        }
+      }
+      .glass {
+        transition: var(--motion-still, opacity 1s), transform 1s;
+      }
+    `;
+
+    assert.deepEqual(partialMotionStillProblems('src/themes/calm/_theme.scss', theme), [
+      'src/themes/calm/_theme.scss writes var(--motion-still, …) as part of a value, so it stops only part of the transition under reduced motion; write it as the whole transition value',
+    ]);
+  });
+
+  it('when another transition follows it or it sits inside another value, then each is reported', () => {
+    const style = `
+      .half {
+        transition: var(--motion-still, opacity var(--duration-base)), transform var(--duration-base);
+      }
+      .behind {
+        transition: color var(--duration-base), var(--motion-still, opacity var(--duration-base));
+      }
+      .delay {
+        transition-duration: var(--motion-still, 0s);
+      }
+    `;
+
+    assert.deepEqual(motionStillProblems('half.scss', style), [
+      'half.scss writes var(--motion-still, …) as part of a value, so it stops only part of the transition under reduced motion; write it as the whole transition value',
+      'half.scss writes var(--motion-still, …) as part of a value, so it stops only part of the transition under reduced motion; write it as the whole transition value',
+      'half.scss writes var(--motion-still, …) as part of a value, so it stops only part of the transition under reduced motion; write it as the whole transition value',
+    ]);
+  });
+
+  it('when it sets --motion-still itself, then the style is reported', () => {
+    const style = `
+      .still {
+        --motion-still: none;
+      }
+    `;
+
+    assert.deepEqual(motionStillProblems('still.scss', style), [
+      'still.scss sets --motion-still, which only the themes set in their prefers-reduced-motion :root',
     ]);
   });
 });
