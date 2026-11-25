@@ -154,6 +154,42 @@ describe("Given the donor's overview while the gifts load", () => {
     expect(root().querySelector('.last-gift')?.classList).not.toContain('ui-skeleton-reveal');
   });
 
+  it('when gifts with a long total arrive, then every amount is its digit groups and one tail piece holding the last group and Kč, inside one role text element that reads as one figure', async () => {
+    await open();
+    items.set(twoYearDonations().items);
+    summary.set({
+      ...twoYearSummary(),
+      totalAmountMinor: 125206350,
+      byYear: [{ year: 2026, count: 2, totalAmountMinor: 100000050 }],
+    });
+    state.set('ready');
+    await settle();
+    await wait(400);
+
+    const figures = all('.stat-value.ui-figures, .last-gift-amount');
+    const textsOfEachFigure = figures.map((figure) =>
+      [figure, ...figure.querySelectorAll('*')].filter(
+        (node) => node.getAttribute('role') === 'text',
+      ),
+    );
+    expect(textsOfEachFigure.map((texts) => texts.length)).toEqual([1, 1, 1]);
+    const wholeFigures = textsOfEachFigure.map(([text]) => text);
+    expect(
+      wholeFigures.map((figure) =>
+        [...figure.children].map((piece) =>
+          piece.classList.contains('amount-tail')
+            ? [...piece.children].map((part) => part.textContent)
+            : piece.textContent,
+        ),
+      ),
+    ).toEqual([['1', '252', ['063,50', 'Kč']], ['1', '000', ['000,50', 'Kč']], [['500', 'Kč']]]);
+    expect(wholeFigures.map((figure) => figure.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+      '1 252 063,50 Kč',
+      '1 000 000,50 Kč',
+      '500 Kč',
+    ]);
+  });
+
   it('when the device is offline, then the failure shows at once in place of the skeleton', async () => {
     await open();
     await wait(300);

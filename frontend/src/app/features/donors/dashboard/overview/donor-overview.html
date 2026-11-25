@@ -104,6 +104,18 @@
   </p>
 }
 
+<ng-template #crownGroupsOf let-amountMinor>
+  @let groups = crownGroups(amountMinor);
+  @for (group of groups.leading; track $index) {
+    <span>{{ group }}</span
+    >&ngsp;
+  }
+  <span class="amount-tail"
+    ><span>{{ groups.last }}</span
+    >&ngsp;<span>Kč</span></span
+  >
+</ng-template>
+
 <ng-template #bankStatus>
   <app-bank-check />
   <p class="ui-card__intro recent-hint" i18n="@@donor.dashboard.bank.hint">
@@ -118,7 +130,11 @@
       <div class="overview-stat">
         <dt i18n="@@donor.dashboard.stat.total">Celkem darováno</dt>
         <dd class="stat-value ui-figures">
-          {{ crowns(donations.summary()?.totalAmountMinor ?? 0) }}&nbsp;Kč
+          <span class="ui-figures--groups" role="text"
+            ><ng-container
+              [ngTemplateOutlet]="crownGroupsOf"
+              [ngTemplateOutletContext]="{ $implicit: donations.summary()?.totalAmountMinor ?? 0 }"
+          /></span>
         </dd>
       </div>
       <div class="overview-stat">
@@ -139,7 +155,13 @@
       @if (currentYear(); as year) {
         <div class="overview-stat">
           <dt i18n="@@donor.overview.stat.currentYear">Darováno v&nbsp;roce {{ year.year }}</dt>
-          <dd class="stat-value ui-figures">{{ crowns(year.totalAmountMinor) }}&nbsp;Kč</dd>
+          <dd class="stat-value ui-figures">
+            <span class="ui-figures--groups" role="text"
+              ><ng-container
+                [ngTemplateOutlet]="crownGroupsOf"
+                [ngTemplateOutletContext]="{ $implicit: year.totalAmountMinor }"
+            /></span>
+          </dd>
         </div>
       }
     </dl>
@@ -190,7 +212,10 @@
         Poslední dar
       </h2>
       <p class="last-gift-main">
-        <span class="last-gift-amount ui-figures">{{ crowns(gift.amountMinor) }}&nbsp;Kč</span
+        <span class="last-gift-amount ui-figures ui-figures--groups" role="text"
+          ><ng-container
+            [ngTemplateOutlet]="crownGroupsOf"
+            [ngTemplateOutletContext]="{ $implicit: gift.amountMinor }" /></span
         >&ngsp;<span class="last-gift-date"
           ><span class="ui-date">{{ formatDate(gift.receivedAt) }}</span></span
         >&ngsp;<span
