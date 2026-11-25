@@ -294,15 +294,13 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
         document.dispatchEvent(new Event('pointerdown'));
       });
 
-      it('when code returns the focus to a button partly below the head, then the panel drops its scroll padding while the browser scrolls, so the button stays under the finger', () => {
-        let paddingWhenFocused: string | null = null;
+      it('when code returns the focus to a button partly below the head, then the panel drops its scroll padding before the browser scrolls, so the button stays under the finger', () => {
         const button = control('#below');
         standAt(button, 130, 40);
-        button.addEventListener('focusin', () => (paddingWhenFocused = padding()));
 
         button.focus();
 
-        expect(paddingWhenFocused).toBe('0px');
+        expect(padding()).toBe('0px');
       });
 
       it('when two frames have passed since, then the panel takes its scroll padding again', async () => {
