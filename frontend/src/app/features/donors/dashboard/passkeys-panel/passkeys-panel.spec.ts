@@ -528,6 +528,79 @@ describe('Given the passkeys panel of the sign-in card', () => {
       expect(root().querySelector('.passkey')).toBeNull();
       expect(document.activeElement).toBe(element('.passkeys'));
     });
+
+    describe('and the removed row takes a while to leave', () => {
+      function leavesSlowly(passkey: typeof IPHONE): () => Promise<void> {
+        const row = document.getElementById(`passkey-row-${passkey.id}`)!;
+        const list = row.parentNode!;
+        const siblings = Array.from(list.childNodes);
+        const following = siblings.slice(siblings.indexOf(row) + 1);
+        let finish: () => void = () => undefined;
+        const finished = new Promise<void>((resolve) => (finish = resolve));
+        row.getAnimations = () =>
+          [
+            {
+              effect: { getComputedTiming: () => ({ endTime: 60_000 }) },
+              playState: 'running',
+              finished,
+            },
+          ] as never;
+        const removal = new MutationObserver(() => {
+          if (row.isConnected) {
+            return;
+          }
+          removal.disconnect();
+          list.insertBefore(row, following.find((node) => node.parentNode === list) ?? null);
+          fixture.componentInstance['rowLeaves']({
+            target: row,
+            animationComplete: () => row.remove(),
+          });
+        });
+        removal.observe(list, { childList: true });
+        return async () => {
+          finish();
+          await settle();
+          await vi.waitFor(() => expect(row.isConnected).toBe(false));
+        };
+      }
+
+      function scrollsOf(control: HTMLElement): unknown[] {
+        const scrolled: unknown[] = [];
+        control.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+          scrolled.push(options);
+        };
+        return scrolled;
+      }
+
+      it('then the key below that took the focus is scrolled into view only once the row is gone', async () => {
+        await renderOnPage();
+        const below = document.getElementById(`passkey-rename-button-${WINDOWS.id}`)!;
+        const scrolled = scrollsOf(below);
+        const leave = leavesSlowly(IPHONE);
+
+        await removeThe(IPHONE);
+
+        expect(document.activeElement).toBe(below);
+        expect(scrolled).toEqual([]);
+
+        await leave();
+
+        expect(scrolled).toEqual([{ block: 'nearest', behavior: 'smooth' }]);
+      });
+
+      it('and the donor moves the focus elsewhere before the row is gone, then nothing scrolls', async () => {
+        await renderOnPage();
+        const below = document.getElementById(`passkey-rename-button-${WINDOWS.id}`)!;
+        const scrolled = scrollsOf(below);
+        const leave = leavesSlowly(IPHONE);
+        await removeThe(IPHONE);
+
+        element('.passkeys').focus();
+        await leave();
+
+        expect(scrolled).toEqual([]);
+      });
+    });
   });
 
   describe('when the donor renames a passkey', () => {

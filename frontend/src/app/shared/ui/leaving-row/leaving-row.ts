@@ -41,6 +41,101 @@ export function afterRemoval(
   watch.observe(within, { childList: true, subtree: true });
 }
 
+export class FocusAfterRowLeaves {
+  private pending: { row: HTMLElement; focused: HTMLElement | null; gone: boolean } | null = null;
+
+  constructor(
+    private readonly document: Document,
+    private readonly watched: () => Node | null,
+  ) {}
+
+  rowLeaving(row: HTMLElement | null): void {
+    this.pending = row === null ? null : { row, focused: null, gone: false };
+  }
+
+  moveFocus(row: HTMLElement | null, control: HTMLElement): void {
+    control.focus();
+    const pending = this.pending;
+    if (pending !== null && pending.row === row) {
+      pending.focused = control;
+      this.revealOnceRowGone(pending);
+    }
+  }
+
+  rowLeft(row: HTMLElement): void {
+    const pending = this.pending;
+    if (pending === null || pending.row !== row) {
+      return;
+    }
+    afterRemoval(
+      row,
+      () => {
+        pending.gone = true;
+        this.revealOnceRowGone(pending);
+      },
+      this.watched(),
+    );
+  }
+
+  forget(): void {
+    this.pending = null;
+  }
+
+  private revealOnceRowGone(pending: { focused: HTMLElement | null; gone: boolean }): void {
+    if (this.pending !== pending || !pending.gone || pending.focused === null) {
+      return;
+    }
+    this.pending = null;
+    this.scrollIntoViewIfFocused(pending.focused);
+  }
+
+  private scrollIntoViewIfFocused(focused: HTMLElement): void {
+    if (this.document.activeElement !== focused) {
+      return;
+    }
+    const reduced =
+      this.document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    focused.scrollIntoView?.({
+      block: this.fitsItsScroller(focused) ? 'nearest' : 'start',
+      behavior: reduced ? 'instant' : 'smooth',
+    });
+  }
+
+  private fitsItsScroller(control: HTMLElement): boolean {
+    const view = this.document.defaultView;
+    if (view === null) {
+      return true;
+    }
+    const scroller = this.scrollerOf(control, view);
+    const page = scroller === this.document.documentElement;
+    const padding = view.getComputedStyle(scroller);
+    const margin = view.getComputedStyle(control);
+    const room =
+      (page ? view.innerHeight : scroller.clientHeight) -
+      (parseFloat(padding.scrollPaddingTop) || 0) -
+      (parseFloat(padding.scrollPaddingBottom) || 0);
+    const needed =
+      control.getBoundingClientRect().height +
+      (parseFloat(margin.scrollMarginTop) || 0) +
+      (parseFloat(margin.scrollMarginBottom) || 0);
+    return needed <= room;
+  }
+
+  private scrollerOf(control: HTMLElement, view: Window): HTMLElement {
+    for (
+      let node = control.parentElement;
+      node !== null && node !== this.document.body;
+      node = node.parentElement
+    ) {
+      const overflow = view.getComputedStyle(node).overflowY;
+      if (overflow === 'auto' || overflow === 'scroll') {
+        return node;
+      }
+    }
+    return this.document.documentElement;
+  }
+}
+
 function followsRow(row: Element, control: HTMLElement): boolean {
   return (
     !row.contains(control) &&

@@ -30,6 +30,7 @@ import {
 import { deviceName } from '../../../../core/auth/device-name';
 import { deviceAccountOf, SESSION_DEVICE } from '../../../../core/auth/session-device';
 import {
+  FocusAfterRowLeaves,
   leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
@@ -124,7 +125,13 @@ export class PasskeysPanel {
   protected readonly status = signal('');
   protected readonly added = signal<string | null>(null);
   protected readonly rowLeft = signal(false);
-  protected readonly rowLeaves = leaveWithClass('passkey-slot--leaving');
+  protected readonly rowLeaves = leaveWithClass('passkey-slot--leaving', {
+    left: (row) => this.focusAfterRowLeaves.rowLeft(row),
+  });
+  private readonly focusAfterRowLeaves = new FocusAfterRowLeaves(
+    this.document,
+    () => this.region().nativeElement,
+  );
   protected readonly nameMaxLength = PASSKEY_NAME_MAX_LENGTH;
 
   protected readonly nameHint = $localize`:@@donor.passkeys.name.hint:Podle názvu klíč později poznáte, třeba „iPhone“ nebo „Pracovní notebook“.`;
@@ -353,6 +360,7 @@ export class PasskeysPanel {
     if (this.removing() !== null) {
       return;
     }
+    this.focusAfterRowLeaves.forget();
     this.changes.changing();
     this.removing.set(passkey.id);
     this.authApi.removePasskey(passkey.id).subscribe({
@@ -363,6 +371,7 @@ export class PasskeysPanel {
           this.passkeyList()?.nativeElement.querySelectorAll<HTMLElement>(RENAME_BUTTONS) ?? [],
         );
         markRowsLeaving([row]);
+        this.focusAfterRowLeaves.rowLeaving(row);
         this.removing.set(null);
         this.confirming.set(null);
         this.rowLeft.set(true);
@@ -370,9 +379,10 @@ export class PasskeysPanel {
         this.status.set(
           $localize`:@@donor.passkeys.removed:Přístupový klíč ${passkey.name}:name: je odebraný. Tímto klíčem se už nepřihlásíte; v\u00a0zařízení ho můžete smazat.`,
         );
-        afterNextRender(() => (neighbour() ?? this.region().nativeElement).focus(), {
-          injector: this.injector,
-        });
+        afterNextRender(
+          () => this.focusAfterRowLeaves.moveFocus(row, neighbour() ?? this.region().nativeElement),
+          { injector: this.injector },
+        );
         this.changes.changed();
       },
       error: (failure: unknown) => {
