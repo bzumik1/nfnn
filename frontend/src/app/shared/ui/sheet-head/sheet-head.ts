@@ -43,9 +43,12 @@ function keepFocusClearOfHead(
     if (focused.ownerDocument.activeElement !== focused) {
       return;
     }
+    const box = focused.getBoundingClientRect();
+    if (box.bottom <= panel.getBoundingClientRect().top) {
+      return;
+    }
     const margin = parseFloat(view.getComputedStyle(focused).scrollMarginTop) || 0;
-    const covered =
-      head.getBoundingClientRect().bottom - (focused.getBoundingClientRect().top - margin);
+    const covered = head.getBoundingClientRect().bottom - (box.top - margin);
     if (covered > 0) {
       panel.scrollBy({ top: -covered, behavior: asksForLessMotion() ? 'instant' : 'smooth' });
     }

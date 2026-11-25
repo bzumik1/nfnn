@@ -4779,6 +4779,24 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
   }
 }
 
+async function untilTheLastFrameStandsInView(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate((subpixel) => {
+        const last = (
+          window as unknown as { neighbourRecord: NeighbourRecord }
+        ).neighbourRecord.frames.at(-1);
+        return (
+          last !== undefined &&
+          !last.rowThere &&
+          last.top >= last.upperEdge - subpixel &&
+          last.bottom <= last.lowerEdge + subpixel
+        );
+      }, SUBPIXEL_PX),
+    )
+    .toBe(true);
+}
+
 function framesThatMovedItWhileTheRowStood(
   frames: readonly NeighbourFrame[],
   topAtThePress: number,
@@ -4828,7 +4846,7 @@ for (const inSheet of [false, true]) {
       await expect(above).toBeFocused();
       await expect(page.locator(row)).toHaveCount(0);
       await settledWithin(scope);
-      await expect(above).toBeInViewport({ ratio: 1 });
+      await untilTheLastFrameStandsInView(page);
       const recorded = await frames();
       expect(framesThatMovedItWhileTheRowStood(recorded, topAtThePress)).toEqual([]);
       expectTheLastFrameInView(recorded);

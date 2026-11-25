@@ -96,6 +96,10 @@ export class FocusAfterRowLeaves {
         stopHolding: () => undefined,
       };
       this.pending = pending;
+      const nearest = neighbour();
+      if (nearest !== null) {
+        this.noteWhetherItFollows(pending, nearest);
+      }
       pending.stopHolding = this.holdBelowTheTop(pending);
       this.stopHolding = pending.stopHolding;
     }
