@@ -414,7 +414,7 @@ describe('Given a phone that animates, whose app has drawn frames at a steady pa
     expect(motions.size).toBeGreaterThan(1);
     expect(transitions.steadyFrameMs()).toBe(16);
     expect(new Set([...motions.values()].map((motion) => motion.startTime))).toEqual(
-      new Set([5016]),
+      new Set([5032]),
     );
   });
 
@@ -455,7 +455,7 @@ describe('Given a phone that animates, whose app has drawn frames at a steady pa
     expect(motions.size).toBeGreaterThan(1);
     expect(transitions.steadyFrameMs()).toBe(16);
     expect(new Set([...motions.values()].map((motion) => motion.startTime))).toEqual(
-      new Set([5016]),
+      new Set([5032]),
     );
   });
 });
@@ -563,17 +563,30 @@ describe('Given a phone that animates, an article opened from the news, and the 
     return new Set([...motions.values()].map((motion) => motion.startTime));
   }
 
-  it('when the first frame of the step is drawn, then its motions are let go in it, but the browser starts none of them before the next frame however long that frame takes within the motion’s length, so two frames show both pages at rest', async () => {
+  it('when the first frame of the step is drawn, then its motions stay held in it, since a phone may show that frame only once it has painted both copies, and they are let go in the next frame', async () => {
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
     await holdBegun();
 
     draw(5000);
-    await vi.advanceTimersByTimeAsync(300 + 2 * FRAME_LATE_MS - 20);
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(5016);
 
     expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
     expect(motions.size).toBeGreaterThan(0);
+    expect(startTimes(motions)).toEqual(new Set([null]));
+  });
+
+  it('when the motions are let go, then the browser starts none of them before the frame after however long that frame takes within the motion’s length, so the screen moves only from a frame that already showed both pages at rest', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    draw(5000);
+    draw(5016);
+
+    await vi.advanceTimersByTimeAsync(300 + 2 * FRAME_LATE_MS - 20);
     expect(startTimes(motions)).toEqual(new Set([null]));
     draw(5480);
     expect(startTimes(motions)).toEqual(new Set([5480]));
@@ -634,6 +647,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     await holdBegun();
     draw(5000);
     draw(5016);
+    draw(5032);
 
     await vi.advanceTimersByTimeAsync(300 + 2 * FRAME_LATE_MS + 1);
 
@@ -650,13 +664,14 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
   });
 
-  it('when the frame after the first one of the step is drawn, then the browser starts every motion at its time, so that frame still shows both pages at rest and the third frame moves', async () => {
+  it('when the frame after the one that lets the motions go is drawn, then the browser starts every motion at its time, so that frame still shows both pages at rest and the next one moves', async () => {
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
     await holdBegun();
 
     draw(5000);
+    draw(5016);
     draw(5140);
     await vi.advanceTimersByTimeAsync(0);
 
@@ -671,6 +686,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     await holdBegun();
 
     draw(5000);
+    draw(5016);
     draw(5140);
     await vi.advanceTimersByTimeAsync(0);
 
@@ -686,6 +702,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
   async function releasedAt(draw: (at: number) => void, first: number, second: number) {
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
     await holdBegun();
+    draw(2 * first - second);
     draw(first);
     draw(second);
     await vi.advanceTimersByTimeAsync(0);

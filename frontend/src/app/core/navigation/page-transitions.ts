@@ -459,27 +459,17 @@ export class PageTransitions {
   private startMoving(running: Running, view: Window, page: HTMLElement): void {
     running.overlay.classList.add(HELD_CLASS, MOVING_CLASS);
     const still = this.finishWhenStill(running, page, view);
-    let released = false;
-    const goesOn = (): boolean => this.running === running;
     const release = (): void => {
-      released = true;
+      if (this.running !== running) {
+        return;
+      }
       startHeldMotions(running.overlay);
       publishSteadyFrame(view, this.steadyFrameMs());
       view.requestAnimationFrame(() =>
         view.setTimeout(still, this.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
       );
     };
-    const byClock = view.setTimeout(() => {
-      if (goesOn() && !released) {
-        release();
-      }
-    }, FRAME_LATE_MS);
-    view.requestAnimationFrame(() => {
-      if (goesOn() && !released) {
-        view.clearTimeout(byClock);
-        release();
-      }
-    });
+    nextFrame(view, (_, drawn) => (drawn ? nextFrame(view, release) : release()));
   }
 
   steadyFrameMs(): number {
