@@ -1382,6 +1382,42 @@ describe('Given the app on the home screen of a phone, where the news led to the
     }
   });
 
+  it('when the browser draws no frame for 270 ms after the slide is let go, then the swipe is not settled before the slide has run its whole length from the frame drawn then, and it settles within that length and 200 ms', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => ({
+        finished: new Promise(() => undefined),
+        ready: new Promise(() => undefined),
+        pause: () => undefined,
+        play: () => undefined,
+      }),
+    });
+    try {
+      await openOverviewFromTheNews({ title: 'Aktuality' }, { title: 'Přehled' });
+      vi.useFakeTimers();
+      const draw = framesOnRequest();
+      let settled = false;
+      void swipeBack()
+        .settle(LET_GO_PAST_HALF)
+        .then(() => (settled = true));
+      await vi.advanceTimersByTimeAsync(0);
+      draw(5000);
+      await vi.advanceTimersByTimeAsync(0);
+      draw(5016);
+      await vi.advanceTimersByTimeAsync(270);
+      draw(5286);
+
+      await vi.advanceTimersByTimeAsync(LET_GO_PAST_HALF.durationMs - 10);
+      expect(settled, 'the slide was cut before its end').toBe(false);
+      await vi.advanceTimersByTimeAsync(2 * FRAME_LATE_MS + 20);
+
+      expect(settled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
   it('when the finger lets go, then the page holds where it was let go until the frame drawn next and only then slides on', async () => {
     const steps: string[] = [];
     Object.defineProperty(HTMLElement.prototype, 'animate', {
