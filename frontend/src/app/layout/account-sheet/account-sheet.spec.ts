@@ -291,6 +291,36 @@ describe('Given the account sheet of a signed-in donor', () => {
       expect(focused).toEqual([{ preventScroll: true }]);
     });
 
+    it('and the visitor goes back to a row that shows partly, under the head, then the row takes the focus and the list stays where it was, since the arriving copy was already drawn at that scroll', async () => {
+      const shown = vi.fn();
+      const box = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+        this: Element,
+      ) {
+        return this.getAttribute('href') === '/darce/potvrzeni'
+          ? new DOMRect(0, -10, 300, 44)
+          : new DOMRect(0, 0, 390, 844);
+      });
+      Object.defineProperty(Element.prototype, 'scrollIntoView', {
+        configurable: true,
+        value(this: Element) {
+          if (this.getAttribute('href') === '/darce/potvrzeni') {
+            shown();
+          }
+        },
+      });
+
+      history.listener?.stepBack();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      box.mockRestore();
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+
+      expect((document.activeElement as HTMLAnchorElement | null)?.getAttribute('href')).toBe(
+        '/darce/potvrzeni',
+      );
+      expect(shown).not.toHaveBeenCalled();
+    });
+
     it('and Zavřít is pressed, then the whole sheet closes over the page, as at its first step', async () => {
       sheet.querySelector<HTMLButtonElement>('button[aria-label="Zavřít"]')!.click();
       fixture.detectChanges();
