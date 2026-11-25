@@ -330,6 +330,7 @@
   --page-title-fade-at: 0.5;
   --color-page-dim: color-mix(in srgb, #000000 10%, transparent);
   --shadow-page-edge: -8px 0 24px color-mix(in srgb, #000000 12%, transparent);
+  --radius-page-card: min(39px, calc(var(--safe-area-bottom) * 100));
   --pressed-tint-amount: 8%;
   --pressed-brightness: 0.92;
   --pressed-scale: 0.97;
@@ -501,6 +502,7 @@
   --hero-top-shade-height: 160px;
   --hero-shade-fade: var(--space-12);
   --safe-area-top: env(safe-area-inset-top);
+  --safe-area-bottom: env(safe-area-inset-bottom);
   --full-screen-height: 100svh;
   --scroll-edge-fade: 24px;
   --scroll-shade-amount: 14%;

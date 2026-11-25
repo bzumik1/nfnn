@@ -60,6 +60,7 @@ const BACKDROP_LOOKS = [
   '-webkit-backdrop-filter',
 ];
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
+const HOME_SCREEN_CLASS = `${PAGE_TRANSITION_CLASS}--home-screen`;
 const HELD_CLASS = `${PAGE_TRANSITION_CLASS}--held`;
 const ON_GROUND_CLASS = `${PAGE_TRANSITION_CLASS}--on-ground`;
 const IN_SHEET_CLASS = `${PAGE_TRANSITION_CLASS}--in-sheet`;
@@ -614,10 +615,21 @@ export class PageTransitions {
   overlay(kind: PageTransitionKind): HTMLElement {
     const overlay = this.document.createElement('div');
     overlay.className = `${PAGE_TRANSITION_CLASS} ${PAGE_TRANSITION_CLASS}--${kind}`;
+    overlay.classList.toggle(HOME_SCREEN_CLASS, this.fromTheHomeScreen());
     overlay.setAttribute('aria-hidden', 'true');
     overlay.inert = true;
     this.document.body.append(overlay);
     return overlay;
+  }
+
+  private fromTheHomeScreen(): boolean {
+    const view = this.document.defaultView;
+    return (
+      view !== null &&
+      ((view.navigator as Navigator & { readonly standalone?: boolean }).standalone === true ||
+        (typeof view.matchMedia === 'function' &&
+          view.matchMedia('(display-mode: standalone)').matches))
+    );
   }
 
   sheetOverlay(kind: PageTransitionKind): HTMLElement {
@@ -676,7 +688,6 @@ export class PageTransitions {
     const page = this.document.createElement('div');
     page.className = `${PAGE_TRANSITION_CLASS}__page ${PAGE_TRANSITION_CLASS}__page--${position}`;
     page.style.backgroundColor = kept.ground;
-    page.style.setProperty('--page-transition-ground', kept.ground);
     const scroller = this.document.createElement('div');
     scroller.className = `${PAGE_TRANSITION_CLASS}__scroller`;
     const copy = kept.copy;

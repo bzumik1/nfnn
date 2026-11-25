@@ -2,11 +2,11 @@ $top: calc(var(--safe-area-top) + var(--sheet-top-gap));
 
 $inline-start: max(var(--sheet-inset-inline), env(safe-area-inset-left));
 $inline-end: max(var(--sheet-inset-inline), env(safe-area-inset-right));
-$ground: color-mix(
-  in srgb,
-  var(--color-backdrop-tint) var(--backdrop-strength),
-  var(--color-surface)
-);
+@function under-backdrop($ground) {
+  @return color-mix(in srgb, var(--color-backdrop-tint) var(--backdrop-strength), $ground);
+}
+
+$ground: under-backdrop(var(--color-surface));
 
 @mixin ground {
   background: $ground;
