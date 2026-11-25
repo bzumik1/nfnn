@@ -46,6 +46,10 @@ $passkey-list-gap: var(--space-4);
   list-style: none;
   margin: 0 0 $passkey-list-gap;
   padding: 0;
+
+  @media (prefers-reduced-motion: reduce) {
+    min-block-size: var(--passkeys-room-for-empty-text, 0);
+  }
 }
 
 .passkey-slot--entering {
@@ -69,6 +73,7 @@ $passkey-list-gap: var(--space-4);
 .passkeys-empty--behind-leaving-row {
   @media (prefers-reduced-motion: reduce) {
     position: absolute;
+    inline-size: var(--passkeys-held-empty-text-inline-size, auto);
     opacity: 0;
     pointer-events: none;
     animation-name: none !important;

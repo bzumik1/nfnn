@@ -18,7 +18,7 @@ import {
   samplePasskey,
 } from '../../../../core/auth/testing/donor-fixtures';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
-import { PasskeysPanel } from './passkeys-panel';
+import { keepRoomForEmptyText, PasskeysPanel } from './passkeys-panel';
 import { leavesAsInTheBrowser } from '../../../../shared/ui/leaving-row/testing/leaves-as-in-the-browser';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
@@ -650,6 +650,33 @@ describe('Given the passkeys panel of the sign-in card', () => {
         );
       });
 
+      it('and it was the only key, so the list leaves with it, then the list keeps room for the empty text and the empty text is held at the width of the list while the list stands', async () => {
+        await renderOnPage([IPHONE]);
+        const row = document.getElementById(`passkey-row-${IPHONE.id}`)!;
+        const list = row.parentElement!;
+        const finish = leavesAsInTheBrowser(
+          row,
+          (event) => fixture.componentInstance['rowLeaves'](event),
+          () => list.remove(),
+          list,
+        );
+        await removeThe(IPHONE);
+
+        expect(list.isConnected).toBe(true);
+        expect(list.style.getPropertyValue('--passkeys-room-for-empty-text')).toMatch(
+          /^\d+(\.\d+)?px$/,
+        );
+        expect(
+          element('.passkeys-empty').style.getPropertyValue(
+            '--passkeys-held-empty-text-inline-size',
+          ),
+        ).toMatch(/^\d+(\.\d+)?px$/);
+
+        finish();
+        await settle();
+        await vi.waitFor(() => expect(list.isConnected).toBe(false));
+      });
+
       it('and the donor then removes the last key left, so the list leaves with it, then the empty text far above the window is brought into view once the list is gone', async () => {
         await renderOnPage();
         const leaveIphone = leavesSlowly(IPHONE);
@@ -1010,5 +1037,50 @@ describe('Given the passkeys panel on a device that keeps a copy of the donor da
     expect(added).toEqual([
       { account: deviceAccountOf(sampleDonor()), output: new Uint8Array(32).fill(9) },
     ]);
+  });
+});
+
+describe('Given the list of the last passkey leaving and the empty text held out of the flow behind it', () => {
+  let list: HTMLElement;
+  let emptyText: HTMLElement;
+
+  beforeEach(() => {
+    list = document.createElement('ul');
+    emptyText = document.createElement('p');
+    Object.defineProperty(list, 'clientWidth', { value: 300 });
+    list.style.marginBottom = '16px';
+    emptyText.style.marginBottom = '14px';
+    document.body.append(list, emptyText);
+  });
+
+  afterEach(() => {
+    list.remove();
+    emptyText.remove();
+  });
+
+  function heldEmptyTextWidth(): string {
+    return emptyText.style.getPropertyValue('--passkeys-held-empty-text-inline-size');
+  }
+
+  function roomKept(): string {
+    return list.style.getPropertyValue('--passkeys-room-for-empty-text');
+  }
+
+  it('when the room is kept, then the empty text is first held at the width of the list and the list keeps room for all of it, its margin included, so nothing below moves down once the list is removed', () => {
+    emptyText.getBoundingClientRect = () =>
+      new DOMRect(0, 0, 300, heldEmptyTextWidth() === '300px' ? 387 : 290);
+
+    keepRoomForEmptyText(list, emptyText);
+
+    expect(heldEmptyTextWidth()).toBe('300px');
+    expect(roomKept()).toBe('385px');
+  });
+
+  it('when the empty text takes less room than the margin of the list, then the list keeps no room beyond its own', () => {
+    emptyText.getBoundingClientRect = () => new DOMRect(0, 0, 300, 0);
+
+    keepRoomForEmptyText(list, emptyText);
+
+    expect(roomKept()).toBe('0px');
   });
 });

@@ -54,6 +54,19 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 const PASSKEY_NAME_MAX_LENGTH = 64;
 const RENAME_BUTTONS = '[id^="passkey-rename-button-"]';
 const EMPTY_TEXT_BEHIND_LEAVING_ROW = 'passkeys-empty--behind-leaving-row';
+const HELD_EMPTY_TEXT_INLINE_SIZE = '--passkeys-held-empty-text-inline-size';
+const ROOM_FOR_EMPTY_TEXT = '--passkeys-room-for-empty-text';
+
+export function keepRoomForEmptyText(list: HTMLElement, emptyText: HTMLElement): void {
+  emptyText.style.setProperty(HELD_EMPTY_TEXT_INLINE_SIZE, `${list.clientWidth}px`);
+  const room =
+    emptyText.getBoundingClientRect().height + marginBottomOf(emptyText) - marginBottomOf(list);
+  list.style.setProperty(ROOM_FOR_EMPTY_TEXT, `${Math.max(0, room)}px`);
+}
+
+function marginBottomOf(element: HTMLElement): number {
+  return Number.parseFloat(getComputedStyle(element).marginBottom) || 0;
+}
 
 @Component({
   selector: 'app-passkeys-panel',
@@ -412,6 +425,16 @@ export class PasskeysPanel {
     }
     this.rowsStillLeaving.update((count) => count + 1);
     afterRemoval(row, () => this.letEmptyTextEnter(), this.region()?.nativeElement ?? null);
+    const list = row.parentElement;
+    afterNextRender(
+      () => {
+        const emptyText = this.emptyText()?.nativeElement;
+        if (list !== null && list.isConnected && emptyText !== undefined) {
+          keepRoomForEmptyText(list, emptyText);
+        }
+      },
+      { injector: this.injector },
+    );
   }
 
   private letEmptyTextEnter(): void {
