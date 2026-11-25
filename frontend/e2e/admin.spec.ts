@@ -376,6 +376,16 @@ test.describe('Given an administrator', () => {
     await expect(page.locator('.overview-table tbody tr')).toHaveText([
       'prosinec 2025 1 1 0 500 Kč 500 Kč 0 Kč',
     ]);
+    const note = page.locator('.overview-columns');
+    await expect(note).toHaveText(
+      'Noví dárci jsou nové registrace, i bez daru, takže jich může být víc než dárců. Celkem zahrnuje i platby, které ještě nemají dárce (Celkem = Přiřazené + Bez dárce).',
+      { useInnerText: true },
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(note).toHaveText('Celkem zahrnuje i platby, které ještě nemají dárce.', {
+      useInnerText: true,
+    });
+    await page.setViewportSize({ width: 1280, height: 900 });
 
     await openAccountItem(page, 'Můj přehled');
 

@@ -202,6 +202,10 @@
       text-align: left;
     }
   }
+
+  .overview-columns :is(.col-new, .col-paired) {
+    display: none;
+  }
 }
 
 @include bp.container-down(ui-table, ledger) {
