@@ -1118,8 +1118,10 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
   }) => {
     await openSettingsWithConnections(page, [claudeConnection, otherConnection, thirdConnection]);
     const disconnect = page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' });
-    await disconnect.scrollIntoViewIfNeeded();
+    await page.locator(thirdConnectionRow).scrollIntoViewIfNeeded();
     await settled(page, '.connections');
+    await expect(disconnect).toBeInViewport({ ratio: 1 });
+    await expect(page.locator(thirdConnectionRow)).toBeInViewport({ ratio: 1 });
 
     const frames = await framesWhile(
       page,
