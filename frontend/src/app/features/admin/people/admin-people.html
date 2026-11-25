@@ -96,7 +96,7 @@
                       [attr.aria-label]="moveUpLabel(member)"
                       (click)="move(member, 'up')"
                     >
-                      <span aria-hidden="true">↑</span>
+                      <span class="move-arrow" aria-hidden="true">↑</span>
                       <span i18n="@@admin.people.move.up">Výš</span>
                     </button>
                     <button
@@ -108,7 +108,7 @@
                       [attr.aria-label]="moveDownLabel(member)"
                       (click)="move(member, 'down')"
                     >
-                      <span aria-hidden="true">↓</span>
+                      <span class="move-arrow" aria-hidden="true">↓</span>
                       <span i18n="@@admin.people.move.down">Níž</span>
                     </button>
                     <button
