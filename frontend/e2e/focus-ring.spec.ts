@@ -7,6 +7,7 @@ import {
 } from './baseline/screen-mocks';
 import {
   mockDonorApi,
+  openSignInDialog,
   rememberedDonorSession,
   showAccountList,
   whenAdministrationCopied,
@@ -103,6 +104,46 @@ async function sampleEveryFrame(
     },
     [ringShows, element] as const,
   );
+}
+
+interface FieldRingFrame {
+  readonly focused: boolean;
+  readonly ring: string | null;
+}
+
+interface FieldRingSampler {
+  readonly frames: FieldRingFrame[];
+  stop(): FieldRingFrame[];
+}
+
+async function sampleFieldRing(page: Page, control: Locator): Promise<JSHandle<FieldRingSampler>> {
+  const element = await control.elementHandle();
+  return page.evaluateHandle((input) => {
+    const frames: FieldRingFrame[] = [];
+    let sampling = true;
+    const field = input?.closest('app-form-field') ?? null;
+    const sample = () => {
+      const style = field === null ? null : getComputedStyle(field);
+      frames.push({
+        focused: document.activeElement === input,
+        ring:
+          style === null || style.outlineStyle === 'none'
+            ? null
+            : `${style.outlineWidth} ${style.outlineStyle} ${style.outlineColor} at ${style.outlineOffset}`,
+      });
+      if (sampling) {
+        requestAnimationFrame(sample);
+      }
+    };
+    requestAnimationFrame(sample);
+    return {
+      frames,
+      stop: () => {
+        sampling = false;
+        return frames;
+      },
+    };
+  }, element);
 }
 
 function press(page: Page, control: Locator, browserName: string): Promise<void> {
@@ -248,6 +289,36 @@ test.describe('Given a visitor on the Přispět page who works with the keyboard
     await expect(viewer).toHaveCount(0);
     await expect(qrButton(page)).toBeFocused();
     expect(await focusedShowsRing(page, ringShows)).toBe(true);
+  });
+});
+
+test.describe('Given a keyboard user in the sign-in dialog who asks for less motion', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('when Tab moves from E-mail to Heslo, then the ring of Heslo shows in its own colour and place from its first frame', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await openSignInDialog(page);
+    const email = page.locator('#login-email');
+    const password = page.locator('#login-password');
+    await email.focus();
+    const sampler = await sampleFieldRing(page, password);
+
+    await page.keyboard.press('Tab');
+
+    await expect(password).toBeFocused();
+    await expect
+      .poll(() =>
+        sampler.evaluate(
+          (sampled) => sampled.frames.filter((frame) => frame.focused && frame.ring).length,
+        ),
+      )
+      .toBeGreaterThan(2);
+    const frames = await sampler.evaluate((sampled) => sampled.stop());
+    const rings = frames.filter((frame) => frame.focused).map((frame) => frame.ring);
+    expect(rings.at(-1)).not.toBeNull();
+    expect([...new Set(rings)]).toEqual([rings.at(-1)]);
   });
 });
 

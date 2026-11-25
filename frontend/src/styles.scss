@@ -203,6 +203,12 @@ html.appearance-switching ::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  :where(*),
+  :where(*)::before,
+  :where(*)::after {
+    transition-property: none;
+  }
+
   *,
   *::before,
   *::after {

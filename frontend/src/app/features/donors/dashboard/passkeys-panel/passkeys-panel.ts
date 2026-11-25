@@ -30,6 +30,7 @@ import {
 import { deviceName } from '../../../../core/auth/device-name';
 import { deviceAccountOf, SESSION_DEVICE } from '../../../../core/auth/session-device';
 import {
+  FocusAfterRowLeaves,
   leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
@@ -89,11 +90,12 @@ export class PasskeysPanel {
   readonly countChanged = output<number>();
   readonly countUnknown = output<void>();
 
-  private readonly region = viewChild.required<ElementRef<HTMLElement>>('region');
+  private readonly region = viewChild<ElementRef<HTMLElement>>('region');
   private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
   private readonly renameField = viewChild<ElementRef<HTMLInputElement>>('renameField');
   private readonly passkeyList = viewChild<ElementRef<HTMLElement>>('passkeyList');
+  private readonly emptyText = viewChild<ElementRef<HTMLElement>>('emptyText');
 
   protected readonly supported = this.authenticator.supported();
   protected readonly passkeys = signal<Passkey[] | null>(null);
@@ -124,7 +126,13 @@ export class PasskeysPanel {
   protected readonly status = signal('');
   protected readonly added = signal<string | null>(null);
   protected readonly rowLeft = signal(false);
-  protected readonly rowLeaves = leaveWithClass('passkey-slot--leaving');
+  protected readonly rowLeaves = leaveWithClass('passkey-slot--leaving', {
+    left: (row) => this.focusAfterRowLeaves.rowLeaveEnded(row),
+  });
+  private readonly focusAfterRowLeaves = new FocusAfterRowLeaves(
+    this.document,
+    () => this.region()?.nativeElement ?? null,
+  );
   protected readonly nameMaxLength = PASSKEY_NAME_MAX_LENGTH;
 
   protected readonly nameHint = $localize`:@@donor.passkeys.name.hint:Podle názvu klíč později poznáte, třeba „iPhone“ nebo „Pracovní notebook“.`;
@@ -187,8 +195,8 @@ export class PasskeysPanel {
     });
   }
 
-  focusTarget(): HTMLElement {
-    return this.region().nativeElement;
+  focusTarget(): HTMLElement | null {
+    return this.region()?.nativeElement ?? null;
   }
 
   collapse(): void {
@@ -353,6 +361,7 @@ export class PasskeysPanel {
     if (this.removing() !== null) {
       return;
     }
+    this.focusAfterRowLeaves.forget();
     this.changes.changing();
     this.removing.set(passkey.id);
     this.authApi.removePasskey(passkey.id).subscribe({
@@ -363,6 +372,7 @@ export class PasskeysPanel {
           this.passkeyList()?.nativeElement.querySelectorAll<HTMLElement>(RENAME_BUTTONS) ?? [],
         );
         markRowsLeaving([row]);
+        this.focusAfterRowLeaves.rowLeaving(row);
         this.removing.set(null);
         this.confirming.set(null);
         this.rowLeft.set(true);
@@ -370,7 +380,7 @@ export class PasskeysPanel {
         this.status.set(
           $localize`:@@donor.passkeys.removed:Přístupový klíč ${passkey.name}:name: je odebraný. Tímto klíčem se už nepřihlásíte; v\u00a0zařízení ho můžete smazat.`,
         );
-        afterNextRender(() => (neighbour() ?? this.region().nativeElement).focus(), {
+        afterNextRender(() => this.focusAfterRemoval(row, neighbour()), {
           injector: this.injector,
         });
         this.changes.changed();
@@ -389,6 +399,24 @@ export class PasskeysPanel {
         );
       },
     });
+  }
+
+  private focusAfterRemoval(row: HTMLElement | null, neighbour: HTMLElement | null): void {
+    if (neighbour !== null) {
+      this.focusAfterRowLeaves.moveFocus(row, neighbour);
+      return;
+    }
+    const region = this.region()?.nativeElement;
+    if (region === undefined) {
+      return;
+    }
+    const emptyText = this.emptyText()?.nativeElement;
+    this.focusAfterRowLeaves.focusInPlace(
+      region,
+      emptyText === undefined
+        ? null
+        : { row, from: emptyText, to: this.addButton()?.nativeElement ?? null },
+    );
   }
 
   protected formatDate(isoInstant: string): string {

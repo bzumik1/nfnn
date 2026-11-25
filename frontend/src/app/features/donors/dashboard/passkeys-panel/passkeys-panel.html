@@ -178,6 +178,7 @@
       }
     } @else if (hasPassword()) {
       <p
+        #emptyText
         class="passkeys-empty"
         [class.passkeys-empty--after-rows]="rowLeft()"
         i18n="@@donor.passkeys.empty"
@@ -186,6 +187,7 @@
       </p>
     } @else {
       <p
+        #emptyText
         class="passkeys-warning"
         [class.passkeys-empty--after-rows]="rowLeft()"
         i18n="@@donor.passkeys.emptyPasswordless"

@@ -10,6 +10,7 @@ import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessi
 import { deviceNameInSentence } from './device-labels';
 import { DevicesCard } from './devices-card';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
+import { leavesAsInTheBrowser } from '../../../../shared/ui/leaving-row/testing/leaves-as-in-the-browser';
 
 function expectLockedInPlace(button: HTMLButtonElement): void {
   expect(button.disabled).toBe(false);
@@ -598,42 +599,20 @@ describe("Given a donor's signed-in devices card", () => {
       return document.getElementById(`device-row-${device.id}`)!;
     }
 
-    function leavesAsInTheBrowser(
+    function leavesAsTheDeviceInTheBrowser(
       device: SignedInDevice,
       completes: (row: HTMLElement) => void,
     ): () => void {
-      const row = rowOf(device);
-      const list = row.parentNode!;
-      const siblings = Array.from(list.childNodes);
-      const following = siblings.slice(siblings.indexOf(row) + 1);
-      let finish: () => void = () => undefined;
-      const finished = new Promise<void>((resolve) => (finish = resolve));
-      row.getAnimations = () =>
-        [
-          {
-            effect: { getComputedTiming: () => ({ endTime: 60_000 }) },
-            playState: 'running',
-            finished,
-          },
-        ] as never;
-      const removal = new MutationObserver(() => {
-        if (row.isConnected) {
-          return;
-        }
-        removal.disconnect();
-        list.insertBefore(row, following.find((node) => node.parentNode === list) ?? null);
-        fixture.componentInstance['rowLeaves']({
-          target: row,
-          animationComplete: () => completes(row),
-        });
-      });
-      removal.observe(list, { childList: true });
-      return finish;
+      return leavesAsInTheBrowser(
+        rowOf(device),
+        (event) => fixture.componentInstance['rowLeaves'](event),
+        completes,
+      );
     }
 
     function slowToLeave(device: SignedInDevice): () => Promise<void> {
       const row = rowOf(device);
-      const finish = leavesAsInTheBrowser(device, () => row.remove());
+      const finish = leavesAsTheDeviceInTheBrowser(device, () => row.remove());
       return async () => {
         finish();
         await settle();
@@ -697,7 +676,7 @@ describe("Given a donor's signed-in devices card", () => {
       deviceAsksForLessMotion(true);
       const row = rowOf(UNKNOWN);
       let completed = false;
-      const finish = leavesAsInTheBrowser(UNKNOWN, () => (completed = true));
+      const finish = leavesAsTheDeviceInTheBrowser(UNKNOWN, () => (completed = true));
       await signOutUnknown();
       const focused = document.activeElement;
 
