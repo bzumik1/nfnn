@@ -9,6 +9,7 @@ import {
   effect,
   ElementRef,
   inject,
+  Injectable,
   Injector,
   input,
   output,
@@ -57,18 +58,31 @@ const EMPTY_TEXT_BEHIND_LEAVING_ROW = 'passkeys-empty--behind-leaving-row';
 const HELD_EMPTY_TEXT_INLINE_SIZE = '--passkeys-held-empty-text-inline-size';
 const ROOM_FOR_EMPTY_TEXT = '--passkeys-room-for-empty-text';
 
-export function keepRoomForEmptyText(list: HTMLElement, emptyText: HTMLElement): void {
-  emptyText.style.setProperty(
-    HELD_EMPTY_TEXT_INLINE_SIZE,
-    `${list.getBoundingClientRect().width}px`,
-  );
-  const room =
-    emptyText.getBoundingClientRect().height + marginBottomOf(emptyText) - marginBottomOf(list);
-  list.style.setProperty(ROOM_FOR_EMPTY_TEXT, `${Math.max(0, room)}px`);
+export interface LaidOutBox {
+  readonly width: number;
+  readonly height: number;
+  readonly marginBottom: number;
 }
 
-function marginBottomOf(element: HTMLElement): number {
-  return Number.parseFloat(getComputedStyle(element).marginBottom) || 0;
+@Injectable({ providedIn: 'root' })
+export class LaidOutBoxes {
+  of(element: HTMLElement): LaidOutBox {
+    const { width, height } = element.getBoundingClientRect();
+    const marginBottom = Number.parseFloat(getComputedStyle(element).marginBottom) || 0;
+    return { width, height, marginBottom };
+  }
+}
+
+export function keepRoomForEmptyText(
+  list: HTMLElement,
+  emptyText: HTMLElement,
+  boxes: LaidOutBoxes,
+): void {
+  const listBox = boxes.of(list);
+  emptyText.style.setProperty(HELD_EMPTY_TEXT_INLINE_SIZE, `${listBox.width}px`);
+  const emptyTextBox = boxes.of(emptyText);
+  const room = emptyTextBox.height + emptyTextBox.marginBottom - listBox.marginBottom;
+  list.style.setProperty(ROOM_FOR_EMPTY_TEXT, `${Math.max(0, room)}px`);
 }
 
 @Component({
@@ -102,6 +116,7 @@ export class PasskeysPanel {
   private readonly document = inject(DOCUMENT);
   private prfInput: Uint8Array<ArrayBuffer> | null = null;
   private readonly injector = inject(Injector);
+  private readonly boxes = inject(LaidOutBoxes);
 
   readonly labelledBy = input<string | null>(null);
   readonly sessionEnded = output<void>();
@@ -432,8 +447,8 @@ export class PasskeysPanel {
     afterNextRender(
       () => {
         const emptyText = this.emptyText()?.nativeElement;
-        if (list !== null && list.isConnected && emptyText !== undefined) {
-          keepRoomForEmptyText(list, emptyText);
+        if (list !== null && emptyText !== undefined) {
+          keepRoomForEmptyText(list, emptyText, this.boxes);
         }
       },
       { injector: this.injector },

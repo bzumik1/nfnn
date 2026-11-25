@@ -1,6 +1,5 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { afterNextRender } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -19,7 +18,7 @@ import {
   samplePasskey,
 } from '../../../../core/auth/testing/donor-fixtures';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
-import { keepRoomForEmptyText, PasskeysPanel } from './passkeys-panel';
+import { keepRoomForEmptyText, LaidOutBoxes, PasskeysPanel } from './passkeys-panel';
 import { leavesAsInTheBrowser } from '../../../../shared/ui/leaving-row/testing/leaves-as-in-the-browser';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
@@ -655,38 +654,26 @@ describe('Given the passkeys panel of the sign-in card', () => {
         await renderOnPage([IPHONE]);
         const row = document.getElementById(`passkey-row-${IPHONE.id}`)!;
         const list = row.parentElement!;
-        list.getBoundingClientRect = () => new DOMRect(0, 0, 300, 351);
-        list.style.marginBottom = '16px';
+        vi.spyOn(TestBed.inject(LaidOutBoxes), 'of').mockImplementation((measured) =>
+          measured === list
+            ? { width: 300, height: 351, marginBottom: 16 }
+            : {
+                width: 300,
+                height:
+                  measured.style.getPropertyValue('--passkeys-held-empty-text-inline-size') ===
+                  '300px'
+                    ? 387
+                    : 290,
+                marginBottom: 14,
+              },
+        );
         const finish = leavesAsInTheBrowser(
           row,
           (event) => fixture.componentInstance['rowLeaves'](event),
           () => list.remove(),
           list,
         );
-        Array.from(row.querySelectorAll('button'))
-          .find((button) => withOrdinarySpaces(button.textContent)?.includes('Odebrat'))
-          ?.click();
-        await settle();
-        await clickButton('Ano, odebrat');
-        afterNextRender(
-          () => {
-            const emptyText = element('.passkeys-empty');
-            emptyText.style.marginBottom = '14px';
-            emptyText.getBoundingClientRect = () =>
-              new DOMRect(
-                0,
-                0,
-                300,
-                emptyText.style.getPropertyValue('--passkeys-held-empty-text-inline-size') ===
-                  '300px'
-                  ? 387
-                  : 290,
-              );
-          },
-          { injector: fixture.componentRef.injector },
-        );
-        http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`).flush(null);
-        await settle();
+        await removeThe(IPHONE);
 
         expect(list.isConnected).toBe(true);
         expect(
@@ -1094,7 +1081,7 @@ describe('Given the list of the last passkey leaving and the empty text held out
     emptyText.getBoundingClientRect = () =>
       new DOMRect(0, 0, 300, heldEmptyTextWidth() === '300px' ? 387 : 290);
 
-    keepRoomForEmptyText(list, emptyText);
+    keepRoomForEmptyText(list, emptyText, new LaidOutBoxes());
 
     expect(heldEmptyTextWidth()).toBe('300px');
     expect(roomKept()).toBe('385px');
@@ -1103,7 +1090,7 @@ describe('Given the list of the last passkey leaving and the empty text held out
   it('when the empty text takes less room than the margin of the list, then the list keeps no room beyond its own', () => {
     emptyText.getBoundingClientRect = () => new DOMRect(0, 0, 300, 0);
 
-    keepRoomForEmptyText(list, emptyText);
+    keepRoomForEmptyText(list, emptyText, new LaidOutBoxes());
 
     expect(roomKept()).toBe('0px');
   });
