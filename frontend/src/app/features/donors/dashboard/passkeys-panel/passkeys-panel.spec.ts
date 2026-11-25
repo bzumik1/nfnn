@@ -618,6 +618,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
         await removeThe(WINDOWS);
         const emptyText = element('.passkeys-empty');
         emptyText.getBoundingClientRect = () => new DOMRect(0, -2000, 300, 40);
+        element('.passkeys-action').getBoundingClientRect = () => new DOMRect(0, -1944, 300, 44);
         const emptyTextScrolled = scrollsOf(emptyText);
 
         expect(document.activeElement).toBe(region);
