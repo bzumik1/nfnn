@@ -35,7 +35,7 @@ import { DirtyForms } from '../updates/dirty-forms';
 import { NavigationPreview } from './navigation-preview';
 import { PagePlacement } from './page-placement';
 import { stillCopyOf } from './still-copy';
-import { PLACING_MARK, STEADY_FRAME_MARK, STEADY_FRAMES_KEPT, steadyFrameMs } from './frame-pace';
+import { steadyFrameMs } from './frame-pace';
 
 export const PAGE_LAYER_CLASS = 'page-layer';
 export const PAGE_TRANSITION_CLASS = 'page-transition';
@@ -57,7 +57,6 @@ export const STANDING_DIALOG = 'dialog[open]:not(.dialog--leaving)';
 export const STACKED_DIALOG_CLASS = 'dialog--stacked';
 const DRAWN_DIALOG = `${STANDING_DIALOG}:not(.${STACKED_DIALOG_CLASS})`;
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
-const HELD_CLASS = `${PAGE_TRANSITION_CLASS}--held`;
 export const ON_GROUND_CLASS = `${PAGE_TRANSITION_CLASS}--on-ground`;
 export const IN_SHEET_CLASS = `${PAGE_TRANSITION_CLASS}--in-sheet`;
 export const SHEET_PANEL = '.dialog-panel';
@@ -129,6 +128,9 @@ export interface StepChrome {
     arriving: PlacedPage | null,
   ): BarItem[];
   readsWaitLeftMs(stage: PageTransitions): number;
+  samplePace(stage: PageTransitions): void;
+  hold(view: Window, overlay: HTMLElement, kind: PlacingKind): void;
+  release(view: Window, overlay: HTMLElement, steadyBeforeMs: number): void;
   afterDrawnFrames(
     view: Window,
     document: Document,
@@ -171,7 +173,7 @@ export class PageTransitions {
   private readonly injector = inject(Injector);
   drawing: SwipeDrawing | null = null;
   sheets: SheetLooks | null = null;
-  dressing: StepChrome | null = null;
+  private stepChrome: StepChrome | null = null;
   private readonly lent: (() => void)[] = [];
   private readonly kept = new Map<number, KeptPage>();
   readonly keptSheets = new Map<number, KeptSheet>();
@@ -187,11 +189,20 @@ export class PageTransitions {
   finishing: number | null = null;
   titleFrame: number | null = null;
   readonly frameGaps: number[] = [];
-  private samplingRound = 0;
+  samplingRound = 0;
   private pressedAt = Number.NEGATIVE_INFINITY;
   tappedAt = 0;
   readonly loadedRoutes = new Set<Route>();
   private drawnSincePress = true;
+
+  get dressing(): StepChrome | null {
+    return this.stepChrome;
+  }
+
+  set dressing(chrome: StepChrome | null) {
+    this.stepChrome = chrome;
+    this.sampleFramePace();
+  }
 
   get running(): Running | null {
     return untracked(this.step);
@@ -223,7 +234,6 @@ export class PageTransitions {
     PACE_SAMPLED_ON.forEach((type) =>
       this.document.addEventListener(type, sample, { capture: true, passive: true }),
     );
-    this.sampleFramePace();
     inject(DestroyRef).onDestroy(() => {
       events.unsubscribe();
       this.document.removeEventListener('visibilitychange', hidden);
@@ -494,8 +504,9 @@ export class PageTransitions {
   }
 
   private startMoving(running: Running, view: Window, page: HTMLElement, kind: PlacingKind): void {
-    running.overlay.classList.add(HELD_CLASS, MOVING_CLASS);
-    publishMark(view, PLACING_MARK, { kind });
+    const chrome = this.dressing;
+    chrome?.hold(view, running.overlay, kind);
+    running.overlay.classList.add(MOVING_CLASS);
     const framesStopped = !this.drawnSincePress;
     const still = this.finishWhenStill(running, page, view);
     let released = false;
@@ -505,13 +516,12 @@ export class PageTransitions {
       }
       released = true;
       this.finishAfter(view, PAGE_TRANSITION_LONGEST_MS);
-      startHeldMotions(running.overlay);
-      publishSteadyFrame(view, this.steadyFrameMs());
+      chrome?.release(view, running.overlay, this.steadyFrameMs());
       view.requestAnimationFrame(() =>
         view.setTimeout(still, this.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
       );
     };
-    (this.dressing?.afterDrawnFrames ?? ((...wait) => wait[3]()))(
+    (chrome?.afterDrawnFrames ?? ((...wait) => wait[3]()))(
       view,
       this.document,
       kind === 'task' ? 2 : 1,
@@ -530,36 +540,7 @@ export class PageTransitions {
   }
 
   private sampleFramePace(): void {
-    const view = this.document.defaultView;
-    if (
-      this.running !== null ||
-      view === null ||
-      typeof view.requestAnimationFrame !== 'function' ||
-      !this.compact() ||
-      !motionAllowed(view)
-    ) {
-      return;
-    }
-    const round = ++this.samplingRound;
-    let previousAt = Number.NaN;
-    let frames = 0;
-    const frame = (at: number): void => {
-      if (round !== this.samplingRound || this.running !== null || frames > STEADY_FRAMES_KEPT) {
-        return;
-      }
-      this.keepFrameGap(at - previousAt);
-      previousAt = at;
-      frames++;
-      view.requestAnimationFrame(frame);
-    };
-    view.requestAnimationFrame(frame);
-  }
-
-  private keepFrameGap(gapMs: number): void {
-    if (Number.isFinite(gapMs) && gapMs > 0) {
-      this.frameGaps.push(gapMs);
-      this.frameGaps.splice(0, Math.max(0, this.frameGaps.length - STEADY_FRAMES_KEPT));
-    }
+    this.dressing?.samplePace(this);
   }
 
   finishAfter(view: Window, ms: number): void {
@@ -763,14 +744,6 @@ export class PageTransitions {
   }
 }
 
-function startHeldMotions(overlay: HTMLElement): void {
-  overlay.classList.remove(HELD_CLASS);
-  overlay
-    .getAnimations?.({ subtree: true })
-    .filter((motion) => motion.pending)
-    .forEach((motion) => motion.play());
-}
-
 export function liveDialogs(document: Document, selector: string): HTMLDialogElement[] {
   return Array.from(document.querySelectorAll<HTMLDialogElement>(selector)).filter(
     (dialog) => dialog.closest(`.${PAGE_TRANSITION_CLASS}`) === null,
@@ -814,19 +787,6 @@ export function nextFrame(view: Window, then: (now: number, drawn: boolean) => v
   };
   const late = view.setTimeout(() => once(view.performance.now(), false), FRAME_LATE_MS);
   view.requestAnimationFrame((now) => once(now, true));
-}
-
-export function publishSteadyFrame(view: Window, steadyBeforeMs: number): void {
-  publishMark(view, STEADY_FRAME_MARK, { steadyBeforeMs });
-}
-
-function publishMark(view: Window, name: string, detail: object): void {
-  const timing = view.performance;
-  if (typeof timing?.mark !== 'function' || typeof timing.clearMarks !== 'function') {
-    return;
-  }
-  timing.clearMarks(name);
-  timing.mark(name, { detail });
 }
 
 function afterFrames(view: Window, frames: number, then: () => void): void {

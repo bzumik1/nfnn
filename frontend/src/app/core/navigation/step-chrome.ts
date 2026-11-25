@@ -7,6 +7,7 @@ import {
   FRAME_LATE_MS,
   HELD_WITHOUT_A_FRAME_MS,
   IN_SHEET_CLASS,
+  motionAllowed,
   MOVING_CLASS,
   ON_GROUND_CLASS,
   PAGE_TRANSITION_CLASS,
@@ -14,6 +15,7 @@ import {
   PlacedPage,
   StepChrome,
 } from './page-transitions';
+import { PLACING_MARK, STEADY_FRAME_MARK, STEADY_FRAMES_KEPT } from './frame-pace';
 
 const PLACED_WITHIN_FRAMES = 9;
 const FIRST_OPENING_PLACED_WITHIN_FRAMES = 18;
@@ -22,6 +24,7 @@ const LONG_TASK_MS = 50;
 const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
 const BAR_ITEMS = ['.back-button', '.account-button'];
 const GROUND_CHANGES_CLASS = `${PAGE_TRANSITION_CLASS}--ground-changes`;
+const HELD_CLASS = `${PAGE_TRANSITION_CLASS}--held`;
 const HOME_SCREEN_CLASS = `${PAGE_TRANSITION_CLASS}--home-screen`;
 const SHEET_LOOKS = '.dialog--sheet, app-sheet-head';
 const TITLES_FOLLOW_CLASS = `${PAGE_TRANSITION_CLASS}--titles-follow`;
@@ -38,7 +41,68 @@ interface StepMeasure {
   readonly fadeAt: number;
 }
 
-export const STEP_CHROME: StepChrome = { dress: dressChrome, readsWaitLeftMs, afterDrawnFrames };
+export const STEP_CHROME: StepChrome = {
+  dress: dressChrome,
+  readsWaitLeftMs,
+  samplePace,
+  hold: (view, overlay, kind) => {
+    overlay.classList.add(HELD_CLASS);
+    publishMark(view, PLACING_MARK, { kind });
+  },
+  release: (view, overlay, steadyBeforeMs) => {
+    overlay.classList.remove(HELD_CLASS);
+    overlay
+      .getAnimations?.({ subtree: true })
+      .filter((motion) => motion.pending)
+      .forEach((motion) => motion.play());
+    publishSteadyFrame(view, steadyBeforeMs);
+  },
+  afterDrawnFrames,
+};
+
+export function publishSteadyFrame(view: Window, steadyBeforeMs: number): void {
+  publishMark(view, STEADY_FRAME_MARK, { steadyBeforeMs });
+}
+
+function publishMark(view: Window, name: string, detail: object): void {
+  const timing = view.performance;
+  if (typeof timing?.mark !== 'function' || typeof timing.clearMarks !== 'function') {
+    return;
+  }
+  timing.clearMarks(name);
+  timing.mark(name, { detail });
+}
+
+function samplePace(stage: PageTransitions): void {
+  const view = stage.document.defaultView;
+  if (
+    stage.running !== null ||
+    view === null ||
+    typeof view.requestAnimationFrame !== 'function' ||
+    !stage.compact() ||
+    !motionAllowed(view)
+  ) {
+    return;
+  }
+  const round = ++stage.samplingRound;
+  const gaps = stage.frameGaps;
+  let previousAt = Number.NaN;
+  let frames = 0;
+  const frame = (at: number): void => {
+    if (round !== stage.samplingRound || stage.running !== null || frames > STEADY_FRAMES_KEPT) {
+      return;
+    }
+    const gapMs = at - previousAt;
+    if (Number.isFinite(gapMs) && gapMs > 0) {
+      gaps.push(gapMs);
+      gaps.splice(0, Math.max(0, gaps.length - STEADY_FRAMES_KEPT));
+    }
+    previousAt = at;
+    frames++;
+    view.requestAnimationFrame(frame);
+  };
+  view.requestAnimationFrame(frame);
+}
 
 function readsWaitLeftMs(stage: PageTransitions): number {
   const frames = loadedItsCode(stage) ? FIRST_OPENING_PLACED_WITHIN_FRAMES : PLACED_WITHIN_FRAMES;

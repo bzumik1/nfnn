@@ -24,13 +24,12 @@ import {
   PAGE_TRANSITION_LONGEST_MS,
   PageTransitions,
   PlacedPage,
-  publishSteadyFrame,
   Running,
   SHOWN_DIALOG,
   SwipePreview,
 } from './page-transitions';
 import { sheetOnly, sheetOverlay, standingSheetCopy } from './sheet-stepping';
-import { afterDrawnFrames } from './step-chrome';
+import { afterDrawnFrames, publishSteadyFrame } from './step-chrome';
 
 const SECTION_LINKS = 'nav a[href]';
 const NOT_COPIED = 'iframe, video, audio, object, embed, dialog';

@@ -25,12 +25,11 @@ import {
   PAGE_TRANSITION_CLASS,
   PAGE_TRANSITION_LONGEST_MS,
   PageTransitions,
-  publishSteadyFrame,
 } from './page-transitions';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 import { closeOnceCovered, SHEET_STEPPING, sheetOnly, swipeBackInSheet } from './sheet-stepping';
 import { steepestStepOver } from './back-swipe';
-import { afterDrawnFrames, STEP_CHROME } from './step-chrome';
+import { afterDrawnFrames, publishSteadyFrame, STEP_CHROME } from './step-chrome';
 
 @Component({ template: '' })
 class Blank {}
