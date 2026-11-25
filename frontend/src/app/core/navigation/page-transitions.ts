@@ -47,6 +47,7 @@ const SWIPE_HANDED_OVER_AFTER_FRAMES = 2;
 const PLACED_WITHIN_FRAMES = 9;
 const FIRST_OPENING_PLACED_WITHIN_FRAMES = 18;
 const FRAMES_TO_PLACE = 2;
+const DISPLAY_FRAME_MS = 1000 / 60;
 const PRESS_LEADS_WITHIN_MS = 1000;
 export const ACCOUNT_RETURNS_KEY = 'nfnnAppAccount';
 
@@ -427,7 +428,8 @@ export class PageTransitions {
 
   private moveOnceAnswered(running: Running, view: Window): void {
     const frames = this.loadsCode ? FIRST_OPENING_PLACED_WITHIN_FRAMES : PLACED_WITHIN_FRAMES;
-    const left = this.tappedAt + (frames - FRAMES_TO_PLACE) * this.steadyFrameMs() - this.now();
+    const frameMs = Math.min(this.steadyFrameMs(), DISPLAY_FRAME_MS);
+    const left = this.tappedAt + (frames - FRAMES_TO_PLACE) * frameMs - this.now();
     if (this.placement.isAnswered() || left <= 0) {
       this.move(running, view);
       return;

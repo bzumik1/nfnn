@@ -373,8 +373,15 @@ describe('Given a phone that animates, whose router puts the scroll back, and ar
     expect(arrived).toBe('Zahrada pro děti');
   });
 
+  it('when the app has sampled no steady pace yet, so its steady frame falls back to 34 ms, then the tap budget still counts the display’s frames of 16.7 ms, and a page placed 150 ms after the tap slides in at once with its waiting line', async () => {
+    await opensPlacedAfter('/aktuality/zahrada-pro-deti', 150);
+    await vi.advanceTimersByTimeAsync(5);
+
+    expect(arrived).toBe('Načítáme stránku…');
+  });
+
   it('when the text never comes, then the article still slides in within the time a frame may be late, with its waiting line', async () => {
-    await opensPlacedAfter('/aktuality/zahrada-pro-deti', 40);
+    await opensPlacedAfter('/aktuality/zahrada-pro-deti', 0);
     await vi.advanceTimersByTimeAsync(FRAME_LATE_MS - 10);
     expect(arrived, 'the article was copied before the time a frame may be late').toBeNull();
     await vi.advanceTimersByTimeAsync(10 + FRAME_LATE_MS);
@@ -383,7 +390,7 @@ describe('Given a phone that animates, whose router puts the scroll back, and ar
   });
 
   it('when the page’s code loads first, as on its first opening, then the step may wait for its text within 18 frames of the tap, and the article slides in filled', async () => {
-    await opensPlacedAfter('/pomahame/zahrada-pro-deti', 250);
+    await opensPlacedAfter('/pomahame/zahrada-pro-deti', 200);
     await vi.advanceTimersByTimeAsync(5);
     expect(arrived).toBeNull();
 
@@ -2097,6 +2104,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
     try {
       const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
       await vi.dynamicImportSettled();
+      const moves = transformsOf(over());
       swipe.follow(300);
       const left = swipe.settle({
         completes: true,
@@ -2109,6 +2117,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
 
       expect(await left).toBe(false);
       expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+      expect(moves(), 'the page moved over a ground with no page drawn on it').toEqual([]);
     } finally {
       delete (HTMLElement.prototype as { animate?: unknown }).animate;
     }
@@ -2352,6 +2361,9 @@ describe('Given the app on the home screen of a phone opened straight on the don
 
   it('when the finger lets go past half before the router has come to rest, then the still copy keeps covering the page until it has, and the swipe ends without a step', async () => {
     const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+    const moves = transformsOf(
+      document.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`)!,
+    );
     swipe.follow(300);
     const left = swipe.settle({
       completes: true,
@@ -2371,6 +2383,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
 
     expect(await left).toBe(false);
     expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    expect(moves(), 'the page moved over a ground with no page drawn on it').toEqual([]);
   });
 });
 
@@ -2779,4 +2792,22 @@ function dressedTransitions(): PageTransitions {
   const transitions = TestBed.inject(PageTransitions);
   transitions.dressing = dressChrome;
   return transitions;
+}
+
+function transformsOf(page: HTMLElement): () => string[] {
+  const seen: string[] = [];
+  const watch = new MutationObserver(() => {
+    if (page.style.transform !== '') {
+      seen.push(page.style.transform);
+    }
+  });
+  watch.observe(page, { attributes: true, attributeFilter: ['style'] });
+  onTestFinished(() => watch.disconnect());
+  return () => {
+    watch.takeRecords();
+    if (page.style.transform !== '' && !seen.includes(page.style.transform)) {
+      seen.push(page.style.transform);
+    }
+    return seen;
+  };
 }
