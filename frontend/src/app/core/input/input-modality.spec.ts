@@ -47,6 +47,51 @@ describe('Given the page that remembers whether the last press came from a point
     expect(modality.lastPressByPointer()).toBe(false);
   });
 
+  describe('Given a button with a label inside it', () => {
+    let button: HTMLButtonElement;
+    const pressLabel = () =>
+      button.querySelector('span')!.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+    beforeEach(() => {
+      button = document.createElement('button');
+      button.append(document.createElement('span'));
+      document.body.appendChild(button);
+    });
+
+    afterEach(() => button.remove());
+
+    it('when nothing has been pressed yet, then no control was pressed last', () => {
+      expect(modality.lastPressedControl()).toBeNull();
+    });
+
+    it('when a finger presses its label, then the button is the control pressed last', () => {
+      pressLabel();
+
+      expect(modality.lastPressedControl()).toBe(button);
+    });
+
+    it('when a key is pressed after the finger, then no control was pressed last', () => {
+      pressLabel();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Tab' }));
+
+      expect(modality.lastPressedControl()).toBeNull();
+    });
+
+    it('when the pressed button has left the page, then no control was pressed last', () => {
+      pressLabel();
+      button.remove();
+
+      expect(modality.lastPressedControl()).toBeNull();
+    });
+
+    it('when a finger presses outside any control, then no control was pressed last', () => {
+      pressLabel();
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+      expect(modality.lastPressedControl()).toBeNull();
+    });
+  });
+
   describe('Given the root element that tells the styles which input came last', () => {
     const lastInput = () => document.documentElement.getAttribute('data-input');
     const press = (key: string) =>

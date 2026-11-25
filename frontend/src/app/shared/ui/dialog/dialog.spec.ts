@@ -1268,6 +1268,146 @@ describe('Given a long sheet whose buttons stay at its bottom edge', () => {
   });
 });
 
+@Component({
+  imports: [Dialog],
+  template: `
+    <app-dialog labelledBy="outer-title" presentation="sheet">
+      <h2 id="outer-title">Údaje a zabezpečení</h2>
+      <button type="button" id="nested-opener" (click)="nested.set(true)">
+        <span>Smazat data</span>
+      </button>
+      @if (nested()) {
+        <app-dialog labelledBy="nested-title" presentation="sheet" (dismissed)="nested.set(false)">
+          <h2 id="nested-title">Smazat data?</h2>
+          <div class="ui-dialog__actions" style="position: sticky">
+            <button type="button">Zrušit</button>
+          </div>
+        </app-dialog>
+      }
+    </app-dialog>
+  `,
+})
+class NestedDialogHost {
+  readonly nested = signal(false);
+}
+
+describe('Given a dialog opened by a finger from a button inside a sheet, in a browser that leaves the focus on the sheet itself', () => {
+  let fixture: ComponentFixture<NestedDialogHost>;
+  let modality: InputModality;
+  let scrolled: number[];
+
+  const dialogs = () =>
+    fixture.nativeElement.querySelectorAll('dialog') as NodeListOf<HTMLDialogElement>;
+  const sheet = () => dialogs()[0];
+  const sheetPanel = () => sheet().querySelector(':scope > .dialog-panel') as HTMLElement;
+  const nested = () => dialogs()[1];
+  const opener = () => fixture.nativeElement.querySelector('#nested-opener') as HTMLButtonElement;
+  const box = (element: Element, top: number, bottom: number): void => {
+    element.getBoundingClientRect = () => ({ top, bottom, height: bottom - top }) as DOMRect;
+  };
+  const focusOptionsOf = (element: HTMLElement): (FocusOptions | undefined)[] => {
+    const calls: (FocusOptions | undefined)[] = [];
+    const focus = element.focus.bind(element);
+    element.focus = (options?: FocusOptions) => {
+      calls.push(options);
+      focus(options);
+    };
+    return calls;
+  };
+  const settle = async (): Promise<void> => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+  const closeNested = (): void => {
+    (nested().querySelector('.dialog-close') as HTMLButtonElement).click();
+    fixture.detectChanges();
+  };
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [NestedDialogHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    });
+    modality = TestBed.inject(InputModality);
+    modality.start();
+    deviceAsksForLessMotion(false);
+    fixture = TestBed.createComponent(NestedDialogHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    scrolled = [];
+    sheetPanel().scrollBy = ((options: ScrollToOptions) =>
+      scrolled.push(options.top ?? 0)) as never;
+    opener()
+      .querySelector('span')!
+      .dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    sheet().focus();
+    opener().click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    box(nested(), 0, 844);
+    box(nested().querySelector('.ui-dialog__actions')!, 600, 700);
+  });
+
+  afterEach(() => {
+    modality.stop();
+    window.matchMedia = realMatchMedia;
+    fixture.nativeElement.remove();
+  });
+
+  it('when its close button starts it leaving, then it parks the focus on itself without scrolling and the sheet behind it stays where it was', () => {
+    const parked = focusOptionsOf(nested());
+
+    closeNested();
+
+    expect(nested().classList).toContain('dialog--leaving');
+    expect(document.activeElement).toBe(nested());
+    expect(parked).toEqual([{ preventScroll: true }]);
+    expect(scrolled).toEqual([]);
+  });
+
+  for (const less of [false, true]) {
+    const motion = less ? 'the visitor asks for less motion' : 'it leaves with motion';
+
+    it(`when ${motion} and it has gone, then the focus returns to the button that opened it, not to the sheet`, async () => {
+      deviceAsksForLessMotion(less);
+
+      closeNested();
+      await settle();
+
+      expect(dialogs()).toHaveLength(1);
+      expect(document.activeElement).toBe(opener());
+    });
+  }
+
+  it('when it has gone and the button that opened it is in view in the sheet, then the button takes the focus without scrolling the sheet', async () => {
+    box(sheet(), 0, 844);
+    box(sheetPanel(), 40, 844);
+    box(opener(), 300, 340);
+    const returned = focusOptionsOf(opener());
+
+    closeNested();
+    await settle();
+
+    expect(returned).toEqual([{ preventScroll: true }]);
+  });
+
+  it('when it has gone and the button that opened it is below the visible part of the sheet, then the button takes the focus the way that brings it into view', async () => {
+    box(sheet(), 0, 844);
+    box(sheetPanel(), 40, 844);
+    box(opener(), 900, 940);
+    const returned = focusOptionsOf(opener());
+
+    closeNested();
+    await settle();
+
+    expect(returned).toEqual([undefined]);
+  });
+});
+
 describe('Given a dialog and the history entry it keeps', () => {
   let fixture: ComponentFixture<PresentedHost>;
   let history: FakeDialogHistory;

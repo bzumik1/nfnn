@@ -33,6 +33,7 @@ const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 const CLOSING_GRACE_MS = 300;
 const SHEET_DURATION = '--duration-sheet';
 const REPAINTING = 'dialog--repainting';
+const PANEL = '.dialog-panel';
 
 type Exit = 'open' | 'leaving' | 'gone';
 
@@ -89,7 +90,6 @@ export class Dialog implements AfterViewInit, OnDestroy {
     const offset = this.dragOffset();
     return offset > 0 ? `0 ${offset}px` : null;
   });
-  private readonly opener = this.document.activeElement;
   private readonly history = inject(DialogHistory);
   private readonly injector = inject(Injector);
   private readonly historyEntry: DialogHistoryListener = {
@@ -99,6 +99,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private readonly suspension = inject(DIALOG_SUSPENSION);
   private readonly layout = inject(CompactLayout);
   private readonly modality = inject(InputModality);
+  private readonly opener = this.openerOf(this.document.activeElement);
   private readonly appearance = inject(Appearance);
   private dragPointer: number | null = null;
   private touchOrigin: TouchOrigin | null = null;
@@ -173,7 +174,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
       dialog.close();
     }
     if (this.opener instanceof HTMLElement && this.opener.isConnected) {
-      this.opener.focus();
+      this.returnFocusTo(this.opener);
     } else {
       this.document.querySelector<HTMLElement>('main#obsah')?.focus({ preventScroll: true });
     }
@@ -372,9 +373,15 @@ export class Dialog implements AfterViewInit, OnDestroy {
 
   protected keepFocusAboveActions(event: FocusEvent): void {
     const target = event.target;
+    if (
+      !(target instanceof HTMLElement) ||
+      target.closest('dialog') !== this.element().nativeElement
+    ) {
+      return;
+    }
     const panel = this.panel().nativeElement;
     const actions = panel.querySelector<HTMLElement>('.ui-dialog__actions');
-    if (!(target instanceof HTMLElement) || actions === null || actions.contains(target)) {
+    if (actions === null || actions.contains(target)) {
       return;
     }
     if (getComputedStyle(actions).position !== 'sticky') {
@@ -383,6 +390,22 @@ export class Dialog implements AfterViewInit, OnDestroy {
     const covered = target.getBoundingClientRect().bottom - actions.getBoundingClientRect().top;
     if (covered > 0) {
       panel.scrollBy({ top: covered + ROOM_ABOVE_STICKY_ACTIONS_PX });
+    }
+  }
+
+  private openerOf(focused: Element | null): Element | null {
+    const pressed = this.modality.lastPressedControl();
+    return focused instanceof HTMLDialogElement && pressed !== null && focused.contains(pressed)
+      ? pressed
+      : focused;
+  }
+
+  private returnFocusTo(opener: HTMLElement): void {
+    const panel = opener.closest<HTMLElement>(PANEL);
+    if (panel !== null && shownWithin(panel, opener)) {
+      opener.focus({ preventScroll: true });
+    } else {
+      opener.focus();
     }
   }
 
@@ -572,6 +595,17 @@ export class Dialog implements AfterViewInit, OnDestroy {
       { injector: this.injector },
     );
   }
+}
+
+function shownWithin(panel: HTMLElement, element: HTMLElement): boolean {
+  const room = panel.getBoundingClientRect();
+  const frame = panel.closest('dialog')?.getBoundingClientRect() ?? room;
+  const padding = getComputedStyle(panel);
+  const top = Math.max(room.top, frame.top) + (parseFloat(padding.scrollPaddingTop) || 0);
+  const bottom =
+    Math.min(room.bottom, frame.bottom) - (parseFloat(padding.scrollPaddingBottom) || 0);
+  const box = element.getBoundingClientRect();
+  return box.height > 0 && box.top >= top && box.bottom <= bottom;
 }
 
 function endsLeaving(animation: Animation): boolean {
