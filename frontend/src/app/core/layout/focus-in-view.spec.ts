@@ -66,7 +66,8 @@ describe('Given Účet in the banner at the top of the page, which the room kept
   let banner: HTMLElement;
   let account: HTMLButtonElement;
   let shown: ReturnType<typeof vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>>;
-  let scrolled: ReturnType<typeof vi.spyOn>;
+  let scrolled: ReturnType<typeof vi.fn<(options?: ScrollToOptions) => void>>;
+  let page: Element;
 
   beforeEach(() => {
     document.documentElement.style.scrollPaddingTop = '64px';
@@ -80,12 +81,14 @@ describe('Given Účet in the banner at the top of the page, which the room kept
     shown = vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>();
     account.scrollIntoView = shown;
     account.getBoundingClientRect = () => new DOMRect(300, 1, 44, 44);
-    scrolled = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+    page = document.scrollingElement ?? document.documentElement;
+    scrolled = vi.fn<(options?: ScrollToOptions) => void>();
+    Object.defineProperty(page, 'scrollBy', { configurable: true, value: scrolled });
   });
 
   afterEach(() => {
     banner.remove();
-    scrolled.mockRestore();
+    delete (page as { scrollBy?: unknown }).scrollBy;
     document.documentElement.style.scrollPaddingTop = '';
   });
 
