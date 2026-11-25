@@ -40,6 +40,9 @@ const STANDING_PARTS = 'app-header, .side-nav-panel, app-tab-bar';
 const CATCH_UP_SPANS = 3;
 const CLOSE_IN_FRAMES_AT_LEAST = 8;
 const ARRIVED_WITHIN_PX = 0.5;
+const SETTLE_ARRIVES_WITHIN_SLIDES = 1.5;
+const SETTLE_ARRIVES_WITHIN_MS = 400;
+const SETTLE_SPARE_FRAMES = 3;
 const CLOSE_IN_MARK = 'nfnn.close-in';
 const SETTLE_FIRST_MARK = 'nfnn.settle-first';
 
@@ -132,6 +135,10 @@ export function trackSettle(view: Window, track: SettleTrack): Promise<void> {
     let elapsed = 0;
     let last: number | null = null;
     let lastDrawnAt = track.drawnAt ?? view.performance.now();
+    const arriveBy =
+      view.performance.now() +
+      Math.max(track.finger.durationMs * SETTLE_ARRIVES_WITHIN_SLIDES, SETTLE_ARRIVES_WITHIN_MS) +
+      SETTLE_SPARE_FRAMES * track.frameMs;
     let first = true;
     const step = (now: number, drawn: boolean): void => {
       if (!track.goesOn()) {
@@ -153,11 +160,16 @@ export function trackSettle(view: Window, track: SettleTrack): Promise<void> {
         if (drawn) {
           lastDrawnAt = now;
         }
+        const due = now >= arriveBy;
         const target =
-          plan.durationMs <= 0
+          due || plan.durationMs <= 0
             ? plan.to
             : plan.from + way * easedAt(curve, elapsed / plan.durationMs);
-        const atMost = first ? floor : stepAtMostOver(drawn ? advanceMs : track.frameMs);
+        const atMost = due
+          ? Infinity
+          : first
+            ? floor
+            : stepAtMostOver(drawn ? advanceMs : track.frameMs);
         const from = at;
         const towards = target - at;
         at = Math.abs(towards) <= atMost ? target : at + Math.sign(towards) * atMost;

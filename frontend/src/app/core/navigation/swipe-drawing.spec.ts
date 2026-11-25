@@ -368,3 +368,31 @@ describe('Given a phone whose close-in and settle are judged from the app’s ow
     expect(settleFirst[0]['step'] as number).toBeLessThanOrEqual(STEP_AT_MOST + 1e-9);
   });
 });
+
+describe('Given a browser that draws a frame only every 600 ms while the page settles after a lift', () => {
+  it('when the finger lets go 120 px behind where it slid the page, then the page still arrives within 1.5 times the finger’s own slide or 400 ms and three frames, plus the one frame that shows it, never crawling on by an eighth of the gap each slow frame', () => {
+    const display = simulatedDisplay();
+    const end = releasedAt(300, 'still');
+    const plan = settleFrom(end, 180, WIDTH);
+    let shown = 180;
+    let arrivedMs: number | null = null;
+    void trackSettle(display.view, {
+      plan,
+      finger: end,
+      frameMs: SIXTIETH_MS,
+      firstStepAtMost: 300 / 8,
+      show: (at) => (shown = at),
+      goesOn: () => arrivedMs === null,
+    });
+    for (let frame = 1; frame <= 20 && arrivedMs === null; frame++) {
+      display.frame(frame * 600);
+      if (shown === plan.to) {
+        arrivedMs = frame * 600;
+      }
+    }
+    const arriveBy = Math.max(1.5 * end.durationMs, 400) + 3 * SIXTIETH_MS + 600;
+
+    expect(arrivedMs, `the page stood at ${shown.toFixed(1)}`).not.toBeNull();
+    expect(arrivedMs!).toBeLessThanOrEqual(arriveBy);
+  });
+});
