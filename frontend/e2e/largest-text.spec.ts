@@ -47,6 +47,7 @@ import {
   oneLetterGroupsPastTheirLine,
   boldReservesApartFromTheirLabel,
 } from './kept-together';
+import { offerPasskeysAsAnIPhoneDoes } from './passkeys-offered';
 import { serveReceiptKeys, serveReceiptStatus, YEARLY_RECEIPT } from './receipt-verification';
 
 const LARGEST_SYSTEM_TEXT_PX = 53;
@@ -1117,24 +1118,6 @@ async function mockRemovablePasskeys(
       await route.fulfill({ status: 204 });
     },
   );
-}
-
-async function offerPasskeysAsAnIPhoneDoes(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    const refused = () => Promise.reject(new DOMException('Not in this test', 'NotAllowedError'));
-    if (typeof window.PublicKeyCredential !== 'function') {
-      Object.defineProperty(window, 'PublicKeyCredential', {
-        configurable: true,
-        value: class {},
-      });
-    }
-    if (typeof navigator.credentials?.create !== 'function') {
-      Object.defineProperty(navigator, 'credentials', {
-        configurable: true,
-        value: { create: refused, get: refused },
-      });
-    }
-  });
 }
 
 async function openThePasskeys(scope: Locator): Promise<Locator> {

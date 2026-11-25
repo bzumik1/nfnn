@@ -10,6 +10,7 @@ import {
   signIn,
 } from './donor-session';
 import { expect, test } from './fixtures';
+import { offerPasskeysAsAnIPhoneDoes } from './passkeys-offered';
 
 interface Box {
   readonly top: number;
@@ -1411,9 +1412,10 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
     expect(notOneDividerAboveTheLastRow(frames)).toEqual([]);
   });
 
-  test('when they remove their last passkey, then the empty text never stands above the place it ends at, the frame in which the list is removed included', async ({
+  test('when they remove their last passkey, then the empty text never stands above the place it ends at, the frame in which the list is removed included, and Přidat přístupový klíč below it never moves down while the row fades', async ({
     page,
   }) => {
+    await offerPasskeysAsAnIPhoneDoes(page);
     await openSettingsWithPasskeys(page, [iphonePasskey]);
     const row = page.locator(iphonePasskeyRow);
     await row.getByRole('button', { name: 'Odebrat' }).click();
@@ -1423,15 +1425,22 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
 
     const frames = await framesWhile(
       page,
-      { row: iphonePasskeyRow, card: 'app-account-card .ui-card', empty: '.passkeys-empty' },
+      {
+        row: iphonePasskeyRow,
+        card: 'app-account-card .ui-card',
+        empty: '.passkeys-empty',
+        add: '.passkeys > button.passkeys-action',
+      },
       () => confirm.click(),
       { removed: '.passkey-list' },
     );
 
     await expect(page.locator('.passkey-name')).toHaveCount(0);
     expect(present(frames, 'empty').length).toBeGreaterThan(0);
+    expect(present(frames, 'add').length).toBe(frames.length);
     expect(frames.at(-1)?.boxes['row']).toBeNull();
     expect(risesAboveItsEndWithin(frames, 'empty', 'card')).toEqual([]);
+    expect(movesDownWithin(frames, 'add', 'card')).toEqual([]);
   });
 
   test('when the second press of a double tap on Odpojit for claude.ai comes as its row is removed, then it reaches nothing where the first one was, and Odpojit of chatgpt.com answers again a moment later', async ({
