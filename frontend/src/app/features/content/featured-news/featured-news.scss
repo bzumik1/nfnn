@@ -315,12 +315,14 @@ $clamped-title-lines: 3;
   }
 }
 
-@include bp.container-down(featured, pair) {
-  .featured-photo {
-    block-size: calc(100cqi * 2 / 3);
-  }
+@include bp.down(tablet) {
+  @include bp.container-down(featured, pair) {
+    .featured-photo {
+      block-size: calc(100cqi * 2 / 3);
+    }
 
-  .featured--photo .featured-text {
-    padding-block-start: calc(100cqi * 2 / 3 + var(--space-6));
+    .featured--photo .featured-text {
+      padding-block-start: calc(100cqi * 2 / 3 + var(--space-6));
+    }
   }
 }

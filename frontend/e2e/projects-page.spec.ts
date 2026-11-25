@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { mockDonorApi, samplePngBase64 } from './donor-session';
+import { showLargestSystemText } from './system-text';
 
 const PNG = Buffer.from(samplePngBase64, 'base64');
 const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
@@ -225,13 +226,7 @@ test.describe('Given a visitor on Pomáháme with every year on an iPad upright'
   test('when the installed app shows the largest accessibility text, then every tile of a strip keeps the words of its title whole', async ({
     page,
   }) => {
-    await page.addInitScript(() => {
-      document.addEventListener('DOMContentLoaded', () => {
-        const style = document.createElement('style');
-        style.textContent = 'html { font-size: 53px; }';
-        document.head.append(style);
-      });
-    });
+    await showLargestSystemText(page);
     await page.goto('/projekty?rok=vse');
     await expect(page.locator('ul.strip .tile-link').first()).toBeVisible();
 

@@ -49,23 +49,12 @@ import {
   boldReservesApartFromTheirLabel,
 } from './kept-together';
 import { offerPasskeysAsAnIPhoneDoes } from './passkeys-offered';
+import { LARGEST_SYSTEM_TEXT_PX, showLargestSystemText } from './system-text';
 import { serveReceiptKeys, serveReceiptStatus, YEARLY_RECEIPT } from './receipt-verification';
-
-const LARGEST_SYSTEM_TEXT_PX = 53;
 
 const PAGES_WITH_A_FULL_WIDTH_TITLE = ['/prispet', '/aktuality', '/projekty'];
 
 const PAGES_WITH_A_TITLE = [...PAGES_WITH_A_FULL_WIDTH_TITLE, '/o-nas'];
-
-async function showLargestSystemText(page: Page): Promise<void> {
-  await page.addInitScript((px) => {
-    document.addEventListener('DOMContentLoaded', () => {
-      const style = document.createElement('style');
-      style.textContent = `html { font-size: ${px}px; }`;
-      document.head.append(style);
-    });
-  }, LARGEST_SYSTEM_TEXT_PX);
-}
 
 async function anchorNoScrollAsSafariDoes(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -2168,6 +2157,34 @@ async function featuredNewsWithAPhoto(page: Page): Promise<void> {
     (route) =>
       route.fulfill({ contentType: 'image/png', body: Buffer.from(samplePngBase64, 'base64') }),
   );
+}
+
+for (const { screen, viewport } of [
+  { screen: 'an iPhone on its side', viewport: { width: 844, height: 390 } },
+  { screen: 'an iPad upright', viewport: { width: 820, height: 1180 } },
+]) {
+  test.describe(`Given a visitor on Aktuality on ${screen} whose installed app shows the largest accessibility text`, () => {
+    test.use({ viewport });
+
+    test('when the featured article has a photo, then the card keeps its text and its photo side by side, with the title at the top of its column', async ({
+      page,
+    }) => {
+      await showLargestSystemText(page);
+      await mockDonorApi(page);
+      await featuredNewsWithAPhoto(page);
+      await page.goto('/aktuality');
+      const card = page.locator('app-featured-news article');
+      const photo = card.locator('img');
+      await expect(photo).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      const photoBox = (await photo.boundingBox())!;
+      const textBox = (await card.locator('.featured-text').boundingBox())!;
+      const titleBox = (await card.getByRole('heading').boundingBox())!;
+      expect(photoBox.x).toBeGreaterThanOrEqual(textBox.x + textBox.width - 1);
+      expect(titleBox.y - textBox.y).toBeLessThan(viewport.height / 4);
+    });
+  });
 }
 
 for (const width of [375, 420]) {
