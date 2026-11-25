@@ -24,7 +24,7 @@ import {
   publishSteadyFrame,
 } from './page-transitions';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
-import { SHEET_STEPPING, sheetOnly } from './sheet-stepping';
+import { closeOnceCovered, SHEET_STEPPING, sheetOnly, swipeBackInSheet } from './sheet-stepping';
 import { afterDrawn } from './swipe-drawing';
 
 @Component({ template: '' })
@@ -132,7 +132,7 @@ describe('Given a phone that animates and a page of the news with an article to 
     });
 
     function leaveTheSheet(): void {
-      transitions.closeOnceCovered(() =>
+      closeOnceCovered(transitions, () =>
         closedUnderCover.push(document.querySelector(`.${PAGE_TRANSITION_CLASS}`) !== null),
       );
     }
@@ -2515,28 +2515,28 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     });
 
     it('and a finger takes the section back, then the list it left follows the finger under it', () => {
-      expect(transitions.startSheetSwipe(1)).not.toBeNull();
+      expect(swipeBackInSheet(transitions, 1)).not.toBeNull();
       expect(overlayPage('under')?.textContent).toContain('Účet');
     });
 
     it('and the system then asks for less motion, then nothing follows a finger and the step back comes at once', () => {
       withLessMotion(true);
 
-      expect(transitions.startSheetSwipe(1)).toBeNull();
+      expect(swipeBackInSheet(transitions, 1)).toBeNull();
       expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
     });
 
     it('and the sheet that kept the list is gone, then no copy of that list is left for a finger to follow', () => {
       transitions.forgetSheetsOf(sheet);
 
-      expect(transitions.startSheetSwipe(1)).toBeNull();
+      expect(swipeBackInSheet(transitions, 1)).toBeNull();
       expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
     });
 
     it('and another sheet is gone, then the copy of the list stays', () => {
       transitions.forgetSheetsOf(document.createElement('dialog'));
 
-      expect(transitions.startSheetSwipe(1)).not.toBeNull();
+      expect(swipeBackInSheet(transitions, 1)).not.toBeNull();
     });
   });
 });

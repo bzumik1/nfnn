@@ -41,6 +41,7 @@ import { AccountBadges } from '../../core/layout/account-badges';
 import { bringIntoView, focusInView, focusWithoutScroll } from '../../core/layout/focus-in-view';
 import { AppInstall } from '../../core/install/app-install';
 import { SheetHead } from '../../shared/ui/sheet-head/sheet-head';
+import { closeOnceCovered, swipeBackInSheet } from '../../core/navigation/sheet-stepping';
 
 export type AccountIcon = 'overview' | 'gifts' | 'receipts' | 'accounts' | 'details' | 'admin';
 
@@ -99,7 +100,7 @@ export class AccountSheet {
   private readonly accountReturn = inject(AccountReturn);
   private readonly sectionSteps: StepsInside = {
     startSwipe: () =>
-      this.sectionHasUnsavedInput() ? null : this.transitions.startSheetSwipe(this.depth()),
+      this.sectionHasUnsavedInput() ? null : swipeBackInSheet(this.transitions, this.depth()),
     back: () => this.back(),
   };
 
@@ -398,7 +399,7 @@ export class AccountSheet {
         : null;
     this.leftWithReturn = account !== null;
     const handedOver = this.history.handOver(url);
-    this.transitions.closeOnceCovered(() => this.closed.emit());
+    closeOnceCovered(this.transitions, () => this.closed.emit());
     if (handedOver) {
       void this.router.navigateByUrl(url, {
         replaceUrl: true,

@@ -173,8 +173,8 @@ export class PageTransitions {
   private trigger: NavigationFacts['trigger'] = 'imperative';
   private restoredDepth: number | null = null;
   private standingSheet: HTMLElement | null = null;
-  private closesWhenCovered: (() => void) | null = null;
-  private closingSheet: HTMLDialogElement | null = null;
+  closesWhenCovered: (() => void) | null = null;
+  closingSheet: HTMLDialogElement | null = null;
   private readonly step = signal<Running | null>(null);
   readonly stepping = computed(() => this.step() !== null);
   finishing: number | null = null;
@@ -259,20 +259,7 @@ export class PageTransitions {
     }
   }
 
-  closeOnceCovered(close: () => void): void {
-    const view = this.document.defaultView;
-    const sheet = liveDialogs(this.document, STANDING_DIALOG).at(-1) ?? null;
-    const covers = view !== null && this.compact() && motionAllowed(view) && this.running === null;
-    this.closeCoveredSheet();
-    if (covers && sheet !== null) {
-      this.closesWhenCovered = close;
-      this.closingSheet = sheet;
-    } else {
-      close();
-    }
-  }
-
-  private closeCoveredSheet(): void {
+  closeCoveredSheet(): void {
     const close = this.closesWhenCovered;
     this.closesWhenCovered = null;
     this.closingSheet = null;
@@ -293,15 +280,6 @@ export class PageTransitions {
 
   startSwipe(destination: BackDestination): SwipePreview | null {
     return this.drawing?.startSwipe(this, destination) ?? null;
-  }
-
-  startSheetSwipe(depth: number): SwipePreview | null {
-    const view = this.document.defaultView;
-    const under = this.keptSheets.get(depth - 1);
-    if (view === null || under === undefined || under.width !== view.innerWidth) {
-      return null;
-    }
-    return this.drawing?.startSheetSwipe(this, under.sheet) ?? null;
   }
 
   stepInSheet(step: SheetStep): void {

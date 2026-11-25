@@ -16,6 +16,7 @@ import {
   SHEET_PANEL,
   SheetLooks,
   SheetStep,
+  SwipePreview,
   STANDING_DIALOG,
 } from './page-transitions';
 import { stillCopyOf } from './still-copy';
@@ -176,4 +177,26 @@ function standingCopy(bar: HTMLElement, head: HTMLElement, box: HTMLElement): HT
   copy.style.height = `${place.height}px`;
   bar.append(copy);
   return copy;
+}
+
+export function closeOnceCovered(stage: PageTransitions, close: () => void): void {
+  const view = stage.document.defaultView;
+  const sheet = liveDialogs(stage.document, STANDING_DIALOG).at(-1) ?? null;
+  const covers = view !== null && stage.compact() && motionAllowed(view) && stage.running === null;
+  stage.closeCoveredSheet();
+  if (covers && sheet !== null) {
+    stage.closesWhenCovered = close;
+    stage.closingSheet = sheet;
+  } else {
+    close();
+  }
+}
+
+export function swipeBackInSheet(stage: PageTransitions, depth: number): SwipePreview | null {
+  const view = stage.document.defaultView;
+  const under = stage.keptSheets.get(depth - 1);
+  if (view === null || under === undefined || under.width !== view.innerWidth) {
+    return null;
+  }
+  return stage.drawing?.startSheetSwipe(stage, under.sheet) ?? null;
 }
