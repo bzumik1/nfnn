@@ -678,11 +678,32 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(startTimes(motions)).toEqual(new Set([5182]));
   });
 
-  it('when no frame comes at all after the hold begins, then only the page clock lets the held motions go, after HELD_WITHOUT_A_FRAME_MS, and each starts with the first frame drawn after', async () => {
+  it('when the page is visible and its main thread is busy past HELD_WITHOUT_A_FRAME_MS, so its first frame is still to come, then the clock never lets the held motions go, and the first frame and the one after it do', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS + 100);
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(5600);
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(5616);
+
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
+  function hiddenWithoutTellingThePage(): void {
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    onTestFinished(() => visibility.mockRestore());
+  }
+
+  it('when the page is hidden and no frame comes at all after the hold begins, as in a home-screen app put away, then only the page clock lets the held motions go, after HELD_WITHOUT_A_FRAME_MS, and each starts with the first frame drawn after', async () => {
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
     await holdBegun();
+    hiddenWithoutTellingThePage();
 
     await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS - 10);
     expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
@@ -700,6 +721,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     drawnSteadilyBeforeTheTap(draw, 16);
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
     await holdBegun();
+    hiddenWithoutTellingThePage();
     await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS);
     draw(5048);
 

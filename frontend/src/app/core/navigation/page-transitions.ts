@@ -492,7 +492,11 @@ export class PageTransitions {
         view.setTimeout(still, this.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
       );
     };
-    const byClock = view.setTimeout(release, HELD_WITHOUT_A_FRAME_MS);
+    const byClock = view.setTimeout(() => {
+      if (this.document.visibilityState === 'hidden') {
+        release();
+      }
+    }, HELD_WITHOUT_A_FRAME_MS);
     view.requestAnimationFrame(() => {
       view.clearTimeout(byClock);
       view.requestAnimationFrame(release);
