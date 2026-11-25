@@ -37,6 +37,7 @@ import { DonorNotifiedDevices } from '../../../operations/donor-notified-devices
 import { groupDevices } from './device-groups';
 import { deviceName, deviceNameInSentence, sessionKindName } from './device-labels';
 import { Disclosure } from '../../../../shared/ui/disclosure/disclosure';
+import { InputModality } from '../../../../core/input/input-modality';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const DEVICE_NOT_FOUND = 'donors/device-not-found';
@@ -82,9 +83,12 @@ export class DevicesCard {
   private readonly changes = new ListChanges(() => this.loadDevices(false, true));
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
+  private readonly inputModality = inject(InputModality);
   private readonly title = viewChild.required<ElementRef<HTMLElement>>('title');
   private readonly deviceList = viewChild<ElementRef<HTMLElement>>('deviceList');
   private readonly othersButton = viewChild<ElementRef<HTMLButtonElement>>('othersButton');
+  private readonly olderToggle = viewChild<ElementRef<HTMLButtonElement>>('olderToggle');
+  private readonly olderFold = viewChild<ElementRef<HTMLElement>>('olderFold');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
 
   readonly sessionEnded = output<void>();
@@ -203,6 +207,10 @@ export class DevicesCard {
 
   toggleOlder(): void {
     this.returning.set(null);
+    const toggle = this.olderToggle()?.nativeElement;
+    if (toggle !== undefined && this.closingFoldHoldsThePress(toggle)) {
+      toggle.focus({ preventScroll: true });
+    }
     this.olderShown.update((shown) => !shown);
   }
 
@@ -252,10 +260,7 @@ export class DevicesCard {
 
   private removed(device: SignedInDevice): void {
     const row = this.row(device);
-    const neighbour = neighbourAfterRowLeaves(
-      row,
-      this.deviceList()?.nativeElement.querySelectorAll<HTMLElement>(ROW_CONTROLS) ?? [],
-    );
+    const neighbour = this.neighbourAfterSignOut(device, row);
     markRowsLeaving([row]);
     this.focusAfterRowLeaves.rowLeaving(row, neighbour);
     if (row !== null && !this.leavesInView(row)) {
@@ -268,11 +273,50 @@ export class DevicesCard {
     this.signedOut.set(
       $localize`:@@donor.account.devices.signedOut:Zařízení jsme odhlásili: ${this.nameInSentence(device)}:device:. Pokud jste se na něm nepřihlásili vy, změňte si heslo.`,
     );
-    afterNextRender(
-      () => this.focusAfterRowLeaves.moveFocus(row, neighbour() ?? this.title().nativeElement),
-      { injector: this.injector },
-    );
+    afterNextRender(() => this.focusAfterSignOut(row, neighbour() ?? this.title().nativeElement), {
+      injector: this.injector,
+    });
     this.changes.changed();
+  }
+
+  private neighbourAfterSignOut(
+    device: SignedInDevice,
+    row: HTMLElement | null,
+  ): () => HTMLElement | null {
+    const controls =
+      this.deviceList()?.nativeElement.querySelectorAll<HTMLElement>(ROW_CONTROLS) ?? [];
+    const toggle = this.olderToggle()?.nativeElement ?? null;
+    if (row !== null || toggle === null || !this.isOlder(device)) {
+      return neighbourAfterRowLeaves(row, controls);
+    }
+    const aboveToggle = neighbourAfterRowLeaves(toggle, controls);
+    return () => (toggle.isConnected ? toggle : aboveToggle());
+  }
+
+  private focusAfterSignOut(row: HTMLElement | null, control: HTMLElement): void {
+    if (row !== null) {
+      this.focusAfterRowLeaves.moveFocus(row, control);
+      return;
+    }
+    control.focus({ preventScroll: true });
+    this.focusAfterRowLeaves.keepInViewOnceSettled(control, [], false);
+  }
+
+  private closingFoldHoldsThePress(toggle: HTMLElement): boolean {
+    const fold = this.olderFold()?.nativeElement;
+    if (fold === undefined) {
+      return false;
+    }
+    const pressed = this.inputModality.lastPressedControl();
+    return (
+      fold.contains(this.document.activeElement) ||
+      pressed === toggle ||
+      (pressed !== null && fold.contains(pressed))
+    );
+  }
+
+  private isOlder(device: SignedInDevice): boolean {
+    return this.groups().older.some((older) => older.id === device.id);
   }
 
   private leavesInView(row: HTMLElement): boolean {
