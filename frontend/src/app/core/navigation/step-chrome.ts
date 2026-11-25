@@ -13,6 +13,7 @@ import {
 const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
 const BAR_ITEMS = ['.back-button', '.account-button'];
 const GROUND_CHANGES_CLASS = `${PAGE_TRANSITION_CLASS}--ground-changes`;
+const HOME_SCREEN_CLASS = `${PAGE_TRANSITION_CLASS}--home-screen`;
 const SHEET_LOOKS = '.dialog--sheet, app-sheet-head';
 const TITLES_FOLLOW_CLASS = `${PAGE_TRANSITION_CLASS}--titles-follow`;
 const TITLE_CLASS = `${PAGE_TRANSITION_CLASS}__title`;
@@ -52,6 +53,7 @@ export function dressChrome(
         sheetStandsOn(leaving) !== sheetStandsOn(arriving),
     );
   }
+  overlay.classList.toggle(HOME_SCREEN_CLASS, fromTheHomeScreen(stage.document.defaultView));
   decideCorners(overlay, leaving, arriving);
   overlay.querySelector(`.${PAGE_TRANSITION_CLASS}__bar`)?.remove();
   const bar = stage.document.createElement('div');
@@ -157,6 +159,15 @@ function decideCorners(
         !overlay.classList.contains(ON_GROUND_CLASS),
     );
   }
+}
+
+function fromTheHomeScreen(view: Window | null): boolean {
+  return (
+    view !== null &&
+    ((view.navigator as Navigator & { readonly standalone?: boolean }).standalone === true ||
+      (typeof view.matchMedia === 'function' &&
+        view.matchMedia('(display-mode: standalone)').matches))
+  );
 }
 
 function barPart(

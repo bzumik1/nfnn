@@ -2910,28 +2910,34 @@ describe('Given a step of the app, whose top page has the display’s corners on
     });
   }
 
-  it('when it runs from the home screen of an iPhone, then its layer says so, so only there the top page gets the corners', () => {
+  it('when it runs from the home screen of an iPhone, then the layer of a dressed step says so, so only there the top page gets the corners', () => {
     homeScreen(true, false);
+    const transitions = dressedTransitions();
 
-    const overlay = dressedTransitions().overlay('push');
+    const overlay = transitions.overlay('push');
+    transitions.dressChrome(overlay, null, null);
 
     expect(overlay.classList).toContain(`${PAGE_TRANSITION_CLASS}--home-screen`);
     overlay.remove();
   });
 
-  it('when it runs as an installed app on another system, then its layer says so too', () => {
+  it('when it runs as an installed app on another system, then the layer of a dressed step says so too', () => {
     homeScreen(false, true);
+    const transitions = dressedTransitions();
 
-    const overlay = dressedTransitions().overlay('pop');
+    const overlay = transitions.overlay('pop');
+    transitions.dressChrome(overlay, null, null);
 
     expect(overlay.classList).toContain(`${PAGE_TRANSITION_CLASS}--home-screen`);
     overlay.remove();
   });
 
-  it('when it runs in a browser tab, then its layer does not, so no page of the step is rounded', () => {
+  it('when it runs in a browser tab, then the layer of a dressed step does not, so no page of the step is rounded', () => {
     homeScreen(false, false);
+    const transitions = dressedTransitions();
 
-    const overlay = dressedTransitions().overlay('push');
+    const overlay = transitions.overlay('push');
+    transitions.dressChrome(overlay, null, null);
 
     expect(overlay.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--home-screen`);
     overlay.remove();
