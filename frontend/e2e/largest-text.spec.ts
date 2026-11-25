@@ -4779,11 +4779,13 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
   }
 }
 
-function framesThatMovedItWhileTheRowStood(frames: readonly NeighbourFrame[]): string[] {
-  const first = frames[0];
+function framesThatMovedItWhileTheRowStood(
+  frames: readonly NeighbourFrame[],
+  topAtThePress: number,
+): string[] {
   return frames.flatMap((frame, index) =>
-    frame.rowThere && Math.abs(frame.top - first.top) > SUBPIXEL_PX
-      ? [`frame ${index}: top ${frame.top.toFixed(1)}, ${first.top.toFixed(1)} at the press`]
+    frame.rowThere && Math.abs(frame.top - topAtThePress) > SUBPIXEL_PX
+      ? [`frame ${index}: top ${frame.top.toFixed(1)}, ${topAtThePress.toFixed(1)} at the press`]
       : [],
   );
 }
@@ -4812,6 +4814,7 @@ for (const inSheet of [false, true]) {
       await expect(confirm).toBeInViewport({ ratio: 1 });
       const above = renameButtonOf(passkeys, iphonePasskey);
       await expect(above).not.toBeInViewport();
+      const topAtThePress = await above.evaluate((button) => button.getBoundingClientRect().top);
       const row = `#passkey-row-${notebookPasskey.id}`;
       const frames = await recordTheNeighbourFromTheNextClick(
         page,
@@ -4827,7 +4830,7 @@ for (const inSheet of [false, true]) {
       await settledWithin(scope);
       await expect(above).toBeInViewport({ ratio: 1 });
       const recorded = await frames();
-      expect(framesThatMovedItWhileTheRowStood(recorded)).toEqual([]);
+      expect(framesThatMovedItWhileTheRowStood(recorded, topAtThePress)).toEqual([]);
       expectTheLastFrameInView(recorded);
     });
   });
