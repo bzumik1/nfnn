@@ -2363,41 +2363,34 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
-  it('when a flick lets the page go before the page Zpět leads to is drawn, then its slide starts only after two drawn frames, never by the page clock in a visible page within 250 ms, so the copy just placed is painted before the slide’s clock runs (the clock’s 500 ms bound is the afterTwoFrames rows’)', async () => {
-    let played = 0;
-    Object.defineProperty(HTMLElement.prototype, 'animate', {
-      configurable: true,
-      value: () => ({
-        finished: new Promise(() => undefined),
-        pause: () => undefined,
-        play: () => played++,
-      }),
-    });
+  it('when a flick lets the page go past half before the page Zpět leads to is drawn, then the slide that takes the page from where it stands starts only after two drawn frames, never by the page clock in a visible page within 250 ms, so the copy just placed is painted before the page moves (the clock’s 500 ms bound is the afterTwoFrames rows’)', async () => {
     const frames = framesByHand();
     try {
       const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
       await vi.dynamicImportSettled();
       swipe.follow(120);
       void swipe.settle({
-        completes: false,
+        completes: true,
         from: 120,
-        to: 0,
+        to: 390,
         durationMs: 150,
         easing: 'ease-out',
+        speed: 1,
       });
       finishVisit();
       await drawnUnder();
 
       await new Promise((done) => setTimeout(done, 2 * FRAME_LATE_MS + 50));
-      expect(played, 'the slide was let go by the clock').toBe(0);
+      expect(offsetOf(over()), 'the page moved by the clock').toBe(0);
       frames.run(16);
-      expect(played).toBe(0);
       frames.run(32);
+      expect(offsetOf(over()), 'the page moved before two frames were drawn').toBe(0);
+      await Promise.resolve();
+      frames.run(48);
 
-      await vi.waitFor(() => expect(played).toBeGreaterThan(0));
+      await vi.waitFor(() => expect(offsetOf(over())).toBeGreaterThan(0));
     } finally {
       frames.restore();
-      delete (HTMLElement.prototype as { animate?: unknown }).animate;
     }
   });
 
@@ -2449,40 +2442,50 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
-  it('when a flick lets the page go before the page Zpět leads to is drawn, then the slide that settles it owns the page, and the close-in that the drawing starts never writes over it', async () => {
-    let animated = false;
-    Object.defineProperty(HTMLElement.prototype, 'animate', {
-      configurable: true,
-      value: () => {
-        animated = true;
-        return motionEnding(new Promise(() => undefined));
-      },
-    });
+  it('when the finger lets the page go back while the page still closes in on it, then the slide that settles it owns the page, and the close-in never moves it towards the finger again', async () => {
     const frames = framesByHand();
     try {
       const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
       await vi.dynamicImportSettled();
-      swipe.follow(120);
+      swipe.follow(200);
+      finishVisit();
+      await drawnUnder();
+      for (const at of [16, 32, 48]) {
+        frames.run(at);
+      }
+      const letGoAt = offsetOf(over());
+      expect(letGoAt).toBeGreaterThan(0);
       void swipe.settle({
         completes: false,
-        from: 120,
+        from: 200,
         to: 0,
         durationMs: 150,
         easing: 'ease-out',
+        speed: 0,
       });
-      finishVisit();
-      await drawnUnder();
-      await vi.waitFor(() => expect(animated).toBe(true));
-      const settledFrom = over().style.transform;
 
-      for (const at of [16, 32, 48, 64, 80]) {
-        frames.run(at);
+      const offsets = [letGoAt];
+      for (let frame = 4; frame <= 60; frame++) {
+        frames.run(frame * 16);
+        await Promise.resolve();
+        const page = document.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`);
+        if (page === null) {
+          break;
+        }
+        offsets.push(offsetOf(page));
       }
 
-      expect(over().style.transform).toBe(settledFrom);
+      offsets
+        .slice(1)
+        .forEach((offset, frame) =>
+          expect(offset, `frame ${frame + 4}`).toBeLessThanOrEqual(offsets[frame]),
+        );
+      expect(offsets.at(-1), 'where the page stood last').toBeLessThan(letGoAt);
+      await vi.waitFor(() =>
+        expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull(),
+      );
     } finally {
       frames.restore();
-      delete (HTMLElement.prototype as { animate?: unknown }).animate;
     }
   });
 

@@ -1,5 +1,5 @@
-import { BackSwipe, settleFrom, SwipeSettle } from './back-swipe';
-import { closeInOnFinger } from './swipe-drawing';
+import { BackSwipe, settleFrom, steepestStepOver, SwipeSettle } from './back-swipe';
+import { closeInOnFinger, trackSettle } from './swipe-drawing';
 
 const START_GAP = 220;
 const FAST_MS = 150;
@@ -158,7 +158,7 @@ describe('Given the page closing in on a finger 220 px ahead once the page Zpět
   });
 
   it('when the phone draws 30 frames a second in Low Power Mode, then the page is with the finger within 12 frames, its steps from the second to the eighth held to an eighth of the gap', () => {
-    const { framesToTheFinger } = closeInOver(
+    const { steps, framesToTheFinger } = closeInOver(
       1000 / 30,
       1000 / 30,
       Array<number>(60).fill(1000 / 30),
@@ -166,17 +166,29 @@ describe('Given the page closing in on a finger 220 px ahead once the page Zpět
 
     expect(framesToTheFinger).not.toBeNull();
     expect(framesToTheFinger!).toBeLessThanOrEqual(12);
+    expect(
+      steps.slice(1, 8).map((step) => Number(step.toFixed(3))),
+      'the steps from the second to the eighth',
+    ).toEqual(Array<number>(7).fill(STEP_AT_MOST));
   });
 });
 
 const WIDTH = 390;
-const FINGER_AT = 300;
+const PAGE_STEP_MS = 350;
 
-function easedAt(easing: string, x: number): number {
+function curveOf(easing: string): [number, number, number, number] {
+  if (easing === 'ease-out') {
+    return [0, 0, 0.58, 1];
+  }
   const [x1, y1, x2, y2] = /cubic-bezier\(([^)]*)\)/
     .exec(easing)![1]
     .split(',')
     .map((value) => Number(value));
+  return [x1, y1, x2, y2];
+}
+
+function easedAt(easing: string, x: number): number {
+  const [x1, y1, x2, y2] = curveOf(easing);
   const curve = (t: number, one: number, two: number): number =>
     3 * (1 - t) ** 2 * t * one + 3 * (1 - t) * t ** 2 * two + t ** 3;
   let low = 0;
@@ -192,7 +204,7 @@ function easedAt(easing: string, x: number): number {
   return curve((low + high) / 2, y1, y2);
 }
 
-function settleSteps(settle: SwipeSettle, frameMs: number): number[] {
+function curveSteps(settle: SwipeSettle, frameMs: number): number[] {
   const way = settle.to - settle.from;
   const at = (frame: number): number =>
     settle.durationMs === 0
@@ -200,29 +212,51 @@ function settleSteps(settle: SwipeSettle, frameMs: number): number[] {
       : settle.from +
         way * easedAt(settle.easing, Math.min(1, (frame * frameMs) / settle.durationMs));
   const steps: number[] = [];
-  for (let frame = 1; frame * frameMs <= settle.durationMs + frameMs; frame++) {
-    steps.push(Math.abs(at(frame) - at(frame - 1)));
+  for (let frame = 1; (frame - 1) * frameMs < settle.durationMs; frame++) {
+    steps.push(at(frame) - at(frame - 1));
   }
   return steps;
 }
 
-function flickedTo(fingerAt: number, speed: number): SwipeSettle {
+type Finger = 'still' | 'cancel' | number;
+
+function releasedAt(fingerAt: number, finger: Finger): SwipeSettle {
+  if (finger === 'cancel') {
+    return {
+      completes: false,
+      from: fingerAt,
+      to: 0,
+      durationMs: PAGE_STEP_MS,
+      easing: 'ease-out',
+    };
+  }
   const swipe = new BackSwipe({ x: 20, y: 400, at: 0 }, WIDTH);
+  const speed = finger === 'still' ? 0 : finger;
   swipe.move({ x: 20 + fingerAt / 2, y: 400, at: 100 });
   swipe.move({ x: 20 + fingerAt - speed * 16, y: 400, at: 200 });
   swipe.move({ x: 20 + fingerAt, y: 400, at: 216 });
-  return swipe.release({ x: 20 + fingerAt, y: 400, at: 216 })!;
+  return swipe.release({ x: 20 + fingerAt, y: 400, at: finger === 'still' ? 416 : 216 })!;
 }
 
-function pageAfterCloseInFrames(frames: number, frameMs: number): { at: number; stepPx: number } {
+interface Lifted {
+  readonly at: number;
+  readonly stepPx: number;
+}
+
+function pageAfterCloseInFrames(
+  frames: number,
+  fingerAt: number,
+  measuredMs: number,
+  frameMs: number,
+): Lifted {
   if (frames === 0) {
     return { at: 0, stepPx: 0 };
   }
   const display = simulatedDisplay();
   let offset = 0;
   closeInOnFinger(display.view, FAST_MS, {
-    frameMs,
-    finger: () => FINGER_AT,
+    frameMs: measuredMs,
+    finger: () => fingerAt,
     from: 0,
     show: (at) => (offset = at),
     goesOn: () => true,
@@ -236,44 +270,84 @@ function pageAfterCloseInFrames(frames: number, frameMs: number): { at: number; 
   return { at: offset, stepPx: offset - before };
 }
 
-describe('Given a finger that lifts while the page still closes in on it', () => {
-  for (const display of [60, 30]) {
-    const frameMs = 1000 / display;
-    for (const lift of [0, 1, 2, 3]) {
-      it(`when a ${display} Hz display lets it go ${lift === 0 ? 'before the close-in begins' : `in frame ${lift} of the close-in`}, flicked at 0.5 to 3 px/ms from 300 px, then the slide's first frame moves the page no more than it was moving or an eighth of the gap, and no frame of the slide moves it more than that or the finger's own slide does at its steepest`, () => {
-        const page = pageAfterCloseInFrames(lift, frameMs);
-        const stepAtMostPx = FINGER_AT / 8;
-        const tooFar: string[] = [];
-        for (const speed of [0.5, 1, 2, 3]) {
-          const end = flickedTo(FINGER_AT, speed);
-          const settle = settleFrom(end, {
-            at: page.at,
-            stepPx: page.stepPx,
-            frameMs,
-            stepAtMostPx,
-            width: WIDTH,
-          });
-          const steps = settleSteps(settle, frameMs);
-          const bound = Math.max(page.stepPx, stepAtMostPx);
-          const steepest = Math.max(bound, ...settleSteps(end, frameMs));
-          if (steps[0] > bound + 1e-6) {
-            tooFar.push(
-              `${speed} px/ms: first frame ${steps[0].toFixed(1)} px over ${bound.toFixed(1)}`,
-            );
-          }
-          steps.forEach((step, frame) => {
-            if (step > steepest + 1e-6) {
-              tooFar.push(
-                `${speed} px/ms: frame ${frame + 1} ${step.toFixed(1)} px over ${steepest.toFixed(1)}`,
-              );
+interface Settled {
+  readonly steps: number[];
+  readonly arrivedMs: number | null;
+}
+
+function settledFrom(
+  end: SwipeSettle,
+  page: Lifted,
+  fingerAt: number,
+  measuredMs: number,
+  frameMs: number,
+): Settled {
+  const display = simulatedDisplay();
+  const plan = settleFrom(end, page.at, WIDTH);
+  const shown = [page.at];
+  let arrivedMs: number | null = null;
+  void trackSettle(display.view, {
+    plan,
+    finger: end,
+    frameMs: measuredMs,
+    firstStepAtMost: Math.max(Math.sign(plan.to - page.at) * page.stepPx, fingerAt / 8),
+    show: (at) => shown.push(at),
+    goesOn: () => arrivedMs === null,
+  });
+  for (let frame = 1; frame <= 200 && arrivedMs === null; frame++) {
+    display.frame(frame * frameMs);
+    if (shown.at(-1) === plan.to) {
+      arrivedMs = frame * frameMs;
+    }
+  }
+  return { steps: shown.slice(1).map((at, frame) => at - shown[frame]), arrivedMs };
+}
+
+describe('Given a finger that lifts or is called off while the page still closes in on it', () => {
+  for (const { display, frameMs } of [
+    { display: '60 Hz', frameMs: SIXTIETH_MS },
+    { display: '120 Hz', frameMs: 1000 / 120 },
+    { display: '30 Hz', frameMs: 1000 / 30 },
+  ]) {
+    for (const measuredMs of [frameMs, 34]) {
+      it(`when a ${display} display, ${measuredMs.toFixed(1)} ms measured, lets it go before the close-in or in any of its first 8 frames, 30, 120 or 300 px behind, still, slowly, flicked up to 3 px/ms or called off, then the slide's first frame moves the page no more than it was moving or an eighth of the gap, no frame more than that or the finger's own slide at its steepest, every frame towards its end, and it arrives within 1.5 times the finger's own slide or 400 ms`, () => {
+        const wrong: string[] = [];
+        for (const fingerAt of [30, 120, 300]) {
+          for (let lift = 0; lift <= 8; lift++) {
+            const page = pageAfterCloseInFrames(lift, fingerAt, measuredMs, frameMs);
+            for (const finger of ['still', 0.2, 0.5, 1, 2, 3, 'cancel'] as Finger[]) {
+              const end = releasedAt(fingerAt, finger);
+              const way = Math.sign(end.to - page.at);
+              const firstAtMost = Math.max(way * page.stepPx, fingerAt / 8);
+              const anyAtMost = Math.max(firstAtMost, steepestStepOver(end, frameMs));
+              const arriveWithin = Math.max(end.durationMs * 1.5, 400);
+              const { steps, arrivedMs } = settledFrom(end, page, fingerAt, measuredMs, frameMs);
+              const kase = `${fingerAt} px, lift ${lift}, ${finger}`;
+              if (Math.abs(steps[0] ?? 0) > firstAtMost + 1e-6) {
+                wrong.push(
+                  `${kase}: first frame ${Math.abs(steps[0]).toFixed(1)} over ${firstAtMost.toFixed(1)}`,
+                );
+              }
+              steps.forEach((step, frame) => {
+                if (Math.abs(step) > anyAtMost + 1e-6) {
+                  wrong.push(
+                    `${kase}: frame ${frame + 1} ${Math.abs(step).toFixed(1)} over ${anyAtMost.toFixed(1)}`,
+                  );
+                }
+                if (way * step < -1e-6) {
+                  wrong.push(`${kase}: frame ${frame + 1} went back ${step.toFixed(1)}`);
+                }
+              });
+              if (arrivedMs === null || arrivedMs > arriveWithin + frameMs) {
+                wrong.push(
+                  `${kase}: arrived after ${arrivedMs?.toFixed(0)} ms, over ${arriveWithin.toFixed(0)}`,
+                );
+              }
             }
-          });
-          if (settle.from !== page.at || settle.to !== end.to) {
-            tooFar.push(`${speed} px/ms: the slide runs from ${settle.from} to ${settle.to}`);
           }
         }
 
-        expect(tooFar.slice(0, 8), `${tooFar.length} frames too far`).toEqual([]);
+        expect(wrong.slice(0, 8), `${wrong.length} wrong`).toEqual([]);
       });
     }
   }

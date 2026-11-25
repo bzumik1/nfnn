@@ -8,7 +8,7 @@ import {
 import { pathOf } from './app-tabs';
 import { pushWithinSection } from './page-transition-kind';
 import { BackDestination } from './back-target';
-import { settleFrom, SwipeSettle } from './back-swipe';
+import { curveOf, easedAt, settleFrom, steepestStepOver, SwipeSettle } from './back-swipe';
 import {
   BarCurve,
   afterTwoFrames,
@@ -40,6 +40,7 @@ const TAB_BAR = 'app-tab-bar .tab-bar';
 const STANDING_PARTS = 'app-header, .side-nav-panel, app-tab-bar';
 const CATCH_UP_SPANS = 3;
 const CLOSE_IN_FRAMES_AT_LEAST = 8;
+const ARRIVED_WITHIN_PX = 0.5;
 
 export interface CatchUp {
   readonly frameMs: number;
@@ -89,6 +90,72 @@ export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp):
     }
   };
   nextFrame(view, closeIn);
+}
+
+export interface SettleTrack {
+  readonly plan: SwipeSettle;
+  readonly finger: SwipeSettle;
+  readonly frameMs: number;
+  readonly firstStepAtMost: number;
+  readonly show: (at: number) => void;
+  readonly goesOn: () => boolean;
+}
+
+export function trackSettle(view: Window, track: SettleTrack): Promise<void> {
+  const { plan } = track;
+  const curve = curveOf(plan.easing);
+  const way = plan.to - plan.from;
+  const steepest = new Map<number, number>();
+  const stepAtMostOver = (advanceMs: number): number => {
+    const key = Math.floor(advanceMs * 10) / 10;
+    const known = steepest.get(key) ?? steepestStepOver(track.finger, key);
+    steepest.set(key, known);
+    return Math.max(track.firstStepAtMost, known);
+  };
+  return new Promise((settled) => {
+    let at = plan.from;
+    let elapsed = 0;
+    let last: number | null = null;
+    let lastDrawnAt = view.performance.now();
+    let first = true;
+    const step = (now: number, drawn: boolean): void => {
+      if (!track.goesOn()) {
+        settled();
+        return;
+      }
+      const stopped = !drawn && now - lastDrawnAt >= HELD_WITHOUT_A_FRAME_MS;
+      if (drawn || stopped) {
+        const advanceMs = drawn
+          ? Math.min(track.frameMs, last === null ? DISPLAY_FRAME_MS : Math.max(0, now - last))
+          : Math.max(0, now - (last ?? lastDrawnAt));
+        elapsed += advanceMs;
+        last = now;
+        if (drawn) {
+          lastDrawnAt = now;
+        }
+        const target =
+          plan.durationMs <= 0
+            ? plan.to
+            : plan.from + way * easedAt(curve, elapsed / plan.durationMs);
+        const atMost = first
+          ? track.firstStepAtMost
+          : stepAtMostOver(drawn ? advanceMs : track.frameMs);
+        first = false;
+        const towards = target - at;
+        at = Math.abs(towards) <= atMost ? target : at + Math.sign(towards) * atMost;
+        track.show(at);
+      }
+      if (Math.abs(plan.to - at) < ARRIVED_WITHIN_PX) {
+        if (at !== plan.to) {
+          track.show(plan.to);
+        }
+        settled();
+      } else {
+        nextFrame(view, step);
+      }
+    };
+    nextFrame(view, step);
+  });
 }
 
 export async function withoutFocus<T>(
@@ -372,35 +439,20 @@ function followingFinger(
       }
       return false;
     }
-    const end = settleFrom(wanted, {
-      at: shown,
-      stepPx: lastStep,
-      frameMs: stage.measuredFrameMs() ?? DISPLAY_FRAME_MS,
-      stepAtMostPx: stepAtMost,
-      width,
-    });
-    const timing: KeyframeAnimationOptions = {
-      duration: end.durationMs,
-      easing: end.easing,
-      fill: 'forwards',
-    };
-    const motions = [
-      over.animate([{ transform: `translateX(${end.to}px)` }], timing),
-      under.animate([{ transform: end.completes ? 'none' : parallaxAt(0) }], timing),
-      ...(dim === null ? [] : [dim.animate([{ opacity: end.completes ? 0 : 1 }], timing)]),
-      ...barMotions(bar.items, end.completes ? 1 : 0, timing),
-    ];
-    motions.forEach((motion) => motion.pause());
-    await new Promise<void>((drawn) => afterTwoFrames(view, stage.document, drawn));
-    motions.forEach((motion) => motion.play());
-    publishSteadyFrame(view, stage.steadyFrameMs());
-    await Promise.race([
-      Promise.allSettled(motions.map((motion) => motion.finished)),
-      new Promise((done) =>
-        view.requestAnimationFrame(() => view.setTimeout(done, end.durationMs + 2 * FRAME_LATE_MS)),
-      ),
-      new Promise((done) => view.setTimeout(done, PAGE_TRANSITION_LONGEST_MS)),
-    ]);
+    const lags = shown !== wanted.from && stepAtMost > 0;
+    const end = lags ? settleFrom(wanted, shown, width) : wanted;
+    await (lags
+      ? afterTwoDrawnFrames().then(() =>
+          trackSettle(view, {
+            plan: end,
+            finger: wanted,
+            frameMs: stage.measuredFrameMs() ?? DISPLAY_FRAME_MS,
+            firstStepAtMost: Math.max(Math.sign(end.to - shown) * lastStep, stepAtMost),
+            show: place,
+            goesOn: () => stage.running === running,
+          }),
+        )
+      : slide(end));
     await drawn;
     if (!end.completes) {
       discard();
@@ -416,6 +468,32 @@ function followingFinger(
       stage.finish();
     }
     return end.completes;
+  };
+  const afterTwoDrawnFrames = (): Promise<void> =>
+    new Promise<void>((drawn) => afterTwoFrames(view, stage.document, drawn));
+  const slide = async (end: SwipeSettle): Promise<void> => {
+    const timing: KeyframeAnimationOptions = {
+      duration: end.durationMs,
+      easing: end.easing,
+      fill: 'forwards',
+    };
+    const motions = [
+      over.animate([{ transform: `translateX(${end.to}px)` }], timing),
+      under.animate([{ transform: end.completes ? 'none' : parallaxAt(0) }], timing),
+      ...(dim === null ? [] : [dim.animate([{ opacity: end.completes ? 0 : 1 }], timing)]),
+      ...barMotions(bar.items, end.completes ? 1 : 0, timing),
+    ];
+    motions.forEach((motion) => motion.pause());
+    await afterTwoDrawnFrames();
+    motions.forEach((motion) => motion.play());
+    publishSteadyFrame(view, stage.steadyFrameMs());
+    await Promise.race([
+      Promise.allSettled(motions.map((motion) => motion.finished)),
+      new Promise((done) =>
+        view.requestAnimationFrame(() => view.setTimeout(done, end.durationMs + 2 * FRAME_LATE_MS)),
+      ),
+      new Promise((done) => view.setTimeout(done, PAGE_TRANSITION_LONGEST_MS)),
+    ]);
   };
   return {
     follow: (to) => {
