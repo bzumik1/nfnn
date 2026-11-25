@@ -352,13 +352,19 @@ test.describe('Given a donor who protects the account with an authenticator app'
 });
 
 test.describe('Given a donor turning on the code from an authenticator app', () => {
-  async function showKey(page: Page, width: number): Promise<void> {
+  async function showKey(page: Page, width: number, rootPx?: number): Promise<void> {
     await mockDonorApi(page);
     await page.route('**/api/donors/me/second-factor/setup', (route) =>
       route.fulfill({ json: secondFactorEnrolment }),
     );
     await page.setViewportSize({ width: 1280, height: 900 });
     await signIn(page);
+    if (rootPx !== undefined) {
+      await page.addStyleTag({ content: `html { font-size: ${rootPx}px; }` });
+      await expect
+        .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).fontSize))
+        .toBe(`${rootPx}px`);
+    }
     await page.setViewportSize({ width, height: 900 });
     await openDonorSection(page, 'Údaje a zabezpečení');
     await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
@@ -509,14 +515,7 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
   test('when the key shows in a 375 px window with the largest system text, then no part of it reaches past its card', async ({
     page,
   }) => {
-    await page.addInitScript((px) => {
-      document.addEventListener('DOMContentLoaded', () => {
-        const style = document.createElement('style');
-        style.textContent = `html { font-size: ${px}px; }`;
-        document.head.append(style);
-      });
-    }, LARGEST_SYSTEM_TEXT_PX);
-    await showKey(page, 375);
+    await showKey(page, 375, LARGEST_SYSTEM_TEXT_PX);
     const key = page.locator('.account-secret-value');
     await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
     await page.evaluate(() => document.fonts.ready);
