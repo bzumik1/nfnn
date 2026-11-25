@@ -1,4 +1,4 @@
-import { focusInView } from './focus-in-view';
+import { focusInView, viewBand } from './focus-in-view';
 
 describe('Given a control the page gives the focus back to, under a head that covers the top of the page', () => {
   const head = 64;
@@ -95,5 +95,19 @@ describe('Given Účet in the banner at the top of the page, which the room kept
     expect(document.activeElement).toBe(account);
     expect(shown).not.toHaveBeenCalled();
     expect(scrolled).toHaveBeenCalledWith({ top: -4, behavior: 'instant' });
+  });
+});
+
+describe('Given the view band sent to a page on its own, as Playwright sends a function by its source text', () => {
+  it('when it is rebuilt from its own source and measures a control in the banner, then it measures the same band, needing nothing else of its module', () => {
+    const banner = document.createElement('header');
+    const account = document.createElement('button');
+    banner.append(account);
+    document.body.append(banner);
+    const alone = new Function(`return (${viewBand.toString()})`)() as typeof viewBand;
+
+    expect(alone(account)).toEqual(viewBand(account));
+
+    banner.remove();
   });
 });
