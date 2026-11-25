@@ -115,6 +115,19 @@ describe('Given the panel of the locked administration', () => {
       ]);
     });
 
+    it('then the note Face ID, otisk prstu nebo zámek obrazovky stands right under the passkey button, before Použít heslo, and describes that button', () => {
+      const passkey = element('button.lock-passkey')!;
+      const note = passkey.nextElementSibling as HTMLElement;
+
+      expect(withOrdinarySpaces(note.textContent)?.trim()).toBe(
+        'Face ID, otisk prstu nebo zámek obrazovky.',
+      );
+      expect(passkey.getAttribute('aria-describedby')).toBe(note.id);
+      expect(note.compareDocumentPosition(element('button.lock-use-password')!)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+
     it('then its heading is the title of the card', () => {
       expect(element('h1')?.className).toBe('ui-card__title');
     });
@@ -205,6 +218,19 @@ describe('Given the panel of the locked administration', () => {
       ]);
       expect(element('button.lock-passkey')?.classList).toContain('ui-button--primary');
       expect(element('button.lock-use-password')?.classList).not.toContain('ui-button--primary');
+    });
+
+    it('then the note Face ID, otisk prstu nebo zámek obrazovky stands right under the passkey button, before Použít heslo, and describes that button', () => {
+      const passkey = element('button.lock-passkey')!;
+      const note = passkey.nextElementSibling as HTMLElement;
+
+      expect(withOrdinarySpaces(note.textContent)?.trim()).toBe(
+        'Face ID, otisk prstu nebo zámek obrazovky.',
+      );
+      expect(passkey.getAttribute('aria-describedby')).toBe(note.id);
+      expect(note.compareDocumentPosition(element('button.lock-use-password')!)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
     });
 
     it('and the passkey is pressed, then the server checks the passkey of the account and nothing is asked of the device copy', async () => {
