@@ -254,8 +254,10 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
           await expect(opener).toBeFocused();
           const scrolledTo = await cutInHalfBy('head', panel, opener);
 
-          await tapAsSafariDoes(sheet, opener);
+          await opener.dispatchEvent('pointerdown', { pointerType: 'touch', isPrimary: true });
+          await sheet.evaluate((dialog: HTMLElement) => dialog.focus({ preventScroll: true }));
           await expect(opener).toBeFocused();
+          await opener.dispatchEvent('click');
           const dialog = nested.dialog(page);
           await expect(dialog).toBeVisible();
           await watchScrolls(panel);

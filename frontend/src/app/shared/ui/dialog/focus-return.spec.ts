@@ -43,6 +43,21 @@ describe('Given a button that a closing dialog hands the focus back to', () => {
     expect(focusReturn.isReturning(button)).toBe(false);
   });
 
+  it('when a hand-back runs inside another, then the outer one is still known as returning after the inner one ends', () => {
+    const inner = document.createElement('button');
+    document.body.appendChild(inner);
+    let outerAfterInner = false;
+
+    focusReturn.whileReturning(button, () => {
+      focusReturn.whileReturning(inner, () => inner.focus({ preventScroll: true }));
+      outerAfterInner = focusReturn.isReturning(button);
+    });
+    inner.remove();
+
+    expect(outerAfterInner).toBe(true);
+    expect(focusReturn.isReturning(button)).toBe(false);
+  });
+
   it('when the button takes the focus by itself, then it is not known as returning', () => {
     let returningWhileFocused = true;
     button.addEventListener('focusin', () => {

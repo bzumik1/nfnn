@@ -1371,7 +1371,7 @@ describe('Given a dialog opened by a finger from a button inside a sheet, in a b
   });
 
   for (const less of [false, true]) {
-    it(`when the browser hands the focus back to the button that opened it as it closes the dialog${less ? ' with less motion' : ''}, then that focus counts as returned, so the sheet head leaves the button where it is`, async () => {
+    it(`when the browser hands the focus back to the button that opened it as it closes the dialog${less ? ' with less motion' : ''}, then that hand-back counts as a returned focus`, async () => {
       deviceAsksForLessMotion(less);
       const focusReturn = TestBed.inject(FocusReturn);
       const native = nested();

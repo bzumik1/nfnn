@@ -9,11 +9,12 @@ export class FocusReturn {
   }
 
   whileReturning(element: Element | null, action: () => void): void {
+    const outer = this.returning;
     this.returning = element;
     try {
       action();
     } finally {
-      this.returning = null;
+      this.returning = outer;
     }
   }
 
