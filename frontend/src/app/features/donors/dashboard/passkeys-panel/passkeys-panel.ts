@@ -30,6 +30,7 @@ import {
 import { deviceName } from '../../../../core/auth/device-name';
 import { deviceAccountOf, SESSION_DEVICE } from '../../../../core/auth/session-device';
 import {
+  afterRemoval,
   FocusAfterRowLeaves,
   leaveWithClass,
   markRowsLeaving,
@@ -52,6 +53,7 @@ import { Disclosure } from '../../../../shared/ui/disclosure/disclosure';
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const PASSKEY_NAME_MAX_LENGTH = 64;
 const RENAME_BUTTONS = '[id^="passkey-rename-button-"]';
+const EMPTY_TEXT_BEHIND_LEAVING_ROW = 'passkeys-empty--behind-leaving-row';
 
 @Component({
   selector: 'app-passkeys-panel',
@@ -126,6 +128,8 @@ export class PasskeysPanel {
   protected readonly status = signal('');
   protected readonly added = signal<string | null>(null);
   protected readonly rowLeft = signal(false);
+  private readonly rowsStillLeaving = signal(0);
+  protected readonly emptyTextBehindLeavingRow = computed(() => this.rowsStillLeaving() > 0);
   protected readonly rowLeaves = leaveWithClass('passkey-slot--leaving', {
     left: (row) => this.focusAfterRowLeaves.rowLeaveEnded(row),
   });
@@ -372,6 +376,7 @@ export class PasskeysPanel {
           this.passkeyList()?.nativeElement.querySelectorAll<HTMLElement>(RENAME_BUTTONS) ?? [],
         );
         markRowsLeaving([row]);
+        this.holdEmptyTextBehind(row);
         this.focusAfterRowLeaves.rowLeaving(row);
         this.removing.set(null);
         this.confirming.set(null);
@@ -399,6 +404,21 @@ export class PasskeysPanel {
         );
       },
     });
+  }
+
+  private holdEmptyTextBehind(row: HTMLElement | null): void {
+    if (row === null) {
+      return;
+    }
+    this.rowsStillLeaving.update((count) => count + 1);
+    afterRemoval(row, () => this.letEmptyTextEnter(), this.region()?.nativeElement ?? null);
+  }
+
+  private letEmptyTextEnter(): void {
+    this.rowsStillLeaving.update((count) => count - 1);
+    if (this.rowsStillLeaving() === 0) {
+      this.emptyText()?.nativeElement.classList.remove(EMPTY_TEXT_BEHIND_LEAVING_ROW);
+    }
   }
 
   private focusAfterRemoval(row: HTMLElement | null, neighbour: HTMLElement | null): void {

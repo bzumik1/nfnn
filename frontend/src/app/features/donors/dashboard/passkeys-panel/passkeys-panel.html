@@ -181,6 +181,7 @@
         #emptyText
         class="passkeys-empty"
         [class.passkeys-empty--after-rows]="rowLeft()"
+        [class.passkeys-empty--behind-leaving-row]="emptyTextBehindLeavingRow()"
         i18n="@@donor.passkeys.empty"
       >
         Zatím nemáte žádný přístupový klíč. Přihlašujete se e&#8209;mailem a&nbsp;heslem.
@@ -190,6 +191,7 @@
         #emptyText
         class="passkeys-warning"
         [class.passkeys-empty--after-rows]="rowLeft()"
+        [class.passkeys-empty--behind-leaving-row]="emptyTextBehindLeavingRow()"
         i18n="@@donor.passkeys.emptyPasswordless"
       >
         Účet nemá heslo ani přístupový klíč. Vytvořte si klíč hned; jinak se příště přihlásíte jen
