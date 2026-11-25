@@ -54,16 +54,23 @@ export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp):
   const startGap = catchUp.finger() - catchUp.from;
   let last: number | null = null;
   let lastDrawnAt = view.performance.now();
+  let drawnBefore: number | null = null;
+  let shortestDrawnGap = Number.POSITIVE_INFINITY;
   let elapsed = 0;
   const closeIn = (now: number, drawn: boolean): void => {
     if (!catchUp.goesOn()) {
       return;
     }
     if (drawn) {
+      if (drawnBefore !== null && now > drawnBefore) {
+        shortestDrawnGap = Math.min(shortestDrawnGap, now - drawnBefore);
+      }
       elapsed += Math.min(
         catchUp.frameMs,
+        shortestDrawnGap,
         last === null ? DISPLAY_FRAME_MS : Math.max(0, now - last),
       );
+      drawnBefore = now;
       last = now;
       lastDrawnAt = now;
     } else if (now - lastDrawnAt >= HELD_WITHOUT_A_FRAME_MS) {

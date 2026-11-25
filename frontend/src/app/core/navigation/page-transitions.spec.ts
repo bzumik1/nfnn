@@ -2203,6 +2203,36 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
+  it('when the app was opened straight on the article and swiped at once, and one vsync is missed while the page beneath renders, then that frame of 33 ms still moves the close-in by one frame of the display it has seen, no more than an eighth of the gap', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    onTestFinished(() => {
+      document.documentElement.style.removeProperty('--duration-fast');
+    });
+    const frames = framesByHand();
+    try {
+      const transitions = dressedTransitions();
+      document.dispatchEvent(new Event('pointerdown'));
+      for (let frame = 0; frame <= 11; frame++) {
+        frames.run(1000 + frame * 34);
+      }
+      const swipe = transitions.startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnder();
+      const offsets = [offsetOf(over())];
+      for (const at of [3000, 3016.7, 3050, 3066.7, 3083.3, 3100]) {
+        frames.run(at);
+        offsets.push(offsetOf(over()));
+      }
+      const steps = offsets.slice(1).map((offset, frame) => offset - offsets[frame]);
+
+      expect(Math.max(...steps), 'the longest step on the screen').toBeLessThanOrEqual(220 / 8);
+    } finally {
+      frames.restore();
+    }
+  });
+
   it('when two long tasks in a row hold back the first frame of the close-in, so the page clock ticks twice before it, then the ticks move nothing and that frame moves the page by one frame, no more than an eighth of the gap', async () => {
     document.documentElement.style.setProperty('--duration-fast', '150ms');
     onTestFinished(() => {
