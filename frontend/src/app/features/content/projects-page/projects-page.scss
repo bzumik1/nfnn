@@ -319,7 +319,7 @@
 @include bp.container-up(stories, cards) {
   @include bp.container-down(stories, nav) {
     .strip {
-      grid-auto-columns: calc((100% - 3 * var(--space-4)) / 4);
+      grid-auto-columns: max(10rem, calc((100% - 3 * var(--space-4)) / 4));
     }
   }
 }
