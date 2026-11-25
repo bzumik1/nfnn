@@ -38,7 +38,7 @@ import { AccountSection } from './account-section';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { AccountBadges } from '../../core/layout/account-badges';
-import { focusInView } from '../../core/layout/focus-in-view';
+import { bringIntoView, focusInView, focusWithoutScroll } from '../../core/layout/focus-in-view';
 import { AppInstall } from '../../core/install/app-install';
 import { SheetHead } from '../../shared/ui/sheet-head/sheet-head';
 
@@ -251,8 +251,8 @@ export class AccountSheet {
     afterNextRender(
       () => {
         const link = left === null ? null : this.linkTo(left.path);
-        if (link !== null) {
-          focusInView(link);
+        if (link !== null && focusWithoutScroll(link)) {
+          bringIntoView(link);
         }
       },
       { injector: this.injector },
