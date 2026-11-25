@@ -5,6 +5,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
+  DOCUMENT,
   ElementRef,
   inject,
   Injector,
@@ -26,6 +28,8 @@ import {
   PasskeyCeremonyError,
 } from '../../../../core/auth/passkey-authenticator';
 import { formatBankTime } from '../../../donations/donation-date';
+import { InputModality } from '../../../../core/input/input-modality';
+import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
 import { BusyButton } from '../../../../shared/ui/busy-button/busy-button';
 import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
@@ -53,6 +57,7 @@ type Panel =
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const AUTHENTICATOR_QR_LEVEL = 'M';
 const SECRET_GROUP = 4;
+const PASSIVE_CAPTURE: AddEventListenerOptions = { passive: true, capture: true };
 
 @Component({
   selector: 'app-account-card',
@@ -81,6 +86,10 @@ export class AccountCard {
   private readonly auth = inject(AuthStore);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly modality = inject(InputModality);
+  private readonly focusAfterClosing = new FocusAfterRowLeaves(this.document, () => null);
+  private lastPressed: Node | null = null;
 
   readonly sessionEnded = output<void>();
 
@@ -168,13 +177,23 @@ export class AccountCard {
   protected newPasswordConfirmation = '';
   protected code = '';
 
+  constructor() {
+    const pressed = (event: Event) => {
+      this.lastPressed = event.target instanceof Node ? event.target : null;
+    };
+    this.document.addEventListener('pointerdown', pressed, PASSIVE_CAPTURE);
+    inject(DestroyRef).onDestroy(() =>
+      this.document.removeEventListener('pointerdown', pressed, PASSIVE_CAPTURE),
+    );
+  }
+
   protected formatTime(isoInstant: string): string {
     return formatBankTime(isoInstant);
   }
 
   toggle(panel: Exclude<Panel, 'closed'>): void {
     if (this.panel() === panel) {
-      this.close(panel);
+      this.close(panel, this.modality.lastPressByPointer());
       return;
     }
     this.open(panel);
@@ -450,12 +469,40 @@ export class AccountCard {
     this.clearFields();
   }
 
-  private close(panel: Panel): void {
+  private close(panel: Panel, pressedByPointer = false): void {
     this.panel.set('closed');
     this.passkeysPanel().collapse();
     this.clearFields();
-    afterNextRender(() => this.buttonFor(panel)?.nativeElement.focus(), {
-      injector: this.injector,
+    afterNextRender(
+      () => {
+        const button = this.buttonFor(panel)?.nativeElement;
+        if (button === undefined) {
+          return;
+        }
+        button.focus({ preventScroll: true });
+        this.focusAfterClosing.keepInViewOnceSettled(
+          button,
+          this.closingAbove(button),
+          pressedByPointer && this.pressedLast(button),
+        );
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private pressedLast(button: HTMLElement): boolean {
+    return this.lastPressed !== null && button.contains(this.lastPressed);
+  }
+
+  private closingAbove(button: HTMLElement): Animation[] {
+    const panel = this.document.getElementById(button.getAttribute('aria-controls') ?? '');
+    return (this.host.nativeElement.getAnimations?.({ subtree: true }) ?? []).filter((motion) => {
+      const target = (motion.effect as KeyframeEffect | null)?.target ?? null;
+      return (
+        target !== null &&
+        Number.isFinite(Number(motion.effect?.getComputedTiming().endTime)) &&
+        (target === panel || standsAbove(target, button))
+      );
     });
   }
 
@@ -483,4 +530,11 @@ export class AccountCard {
         return this.secondFactorButton();
     }
   }
+}
+
+function standsAbove(element: Element, control: HTMLElement): boolean {
+  return (
+    !element.contains(control) &&
+    (element.compareDocumentPosition(control) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+  );
 }
