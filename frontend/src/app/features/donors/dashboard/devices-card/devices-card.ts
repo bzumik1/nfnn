@@ -84,6 +84,8 @@ export class DevicesCard {
   private readonly title = viewChild.required<ElementRef<HTMLElement>>('title');
   private readonly deviceList = viewChild<ElementRef<HTMLElement>>('deviceList');
   private readonly othersButton = viewChild<ElementRef<HTMLButtonElement>>('othersButton');
+  private readonly olderToggle = viewChild<ElementRef<HTMLButtonElement>>('olderToggle');
+  private readonly olderFold = viewChild<ElementRef<HTMLElement>>('olderFold');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
 
   readonly sessionEnded = output<void>();
@@ -201,6 +203,9 @@ export class DevicesCard {
 
   toggleOlder(): void {
     this.returning.set(null);
+    if (this.olderFold()?.nativeElement.contains(this.document.activeElement)) {
+      this.olderToggle()?.nativeElement.focus({ preventScroll: true });
+    }
     this.olderShown.update((shown) => !shown);
   }
 
@@ -250,10 +255,7 @@ export class DevicesCard {
 
   private removed(device: SignedInDevice): void {
     const row = this.row(device);
-    const neighbour = neighbourAfterRowLeaves(
-      row,
-      this.deviceList()?.nativeElement.querySelectorAll<HTMLElement>(ROW_CONTROLS) ?? [],
-    );
+    const neighbour = this.neighbourAfterSignOut(device, row);
     markRowsLeaving([row]);
     this.focusAfterRowLeaves.rowLeaving(row);
     if (row !== null && !this.leavesInView(row)) {
@@ -266,11 +268,37 @@ export class DevicesCard {
     this.signedOut.set(
       $localize`:@@donor.account.devices.signedOut:Zařízení jsme odhlásili: ${this.nameInSentence(device)}:device:. Pokud jste se na něm nepřihlásili vy, změňte si heslo.`,
     );
-    afterNextRender(
-      () => this.focusAfterRowLeaves.moveFocus(row, neighbour() ?? this.title().nativeElement),
-      { injector: this.injector },
-    );
+    afterNextRender(() => this.focusAfterSignOut(row, neighbour() ?? this.title().nativeElement), {
+      injector: this.injector,
+    });
     this.changes.changed();
+  }
+
+  private neighbourAfterSignOut(
+    device: SignedInDevice,
+    row: HTMLElement | null,
+  ): () => HTMLElement | null {
+    const controls =
+      this.deviceList()?.nativeElement.querySelectorAll<HTMLElement>(ROW_CONTROLS) ?? [];
+    const toggle = this.olderToggle()?.nativeElement ?? null;
+    if (row !== null || toggle === null || !this.isOlder(device)) {
+      return neighbourAfterRowLeaves(row, controls);
+    }
+    const aboveToggle = neighbourAfterRowLeaves(toggle, controls);
+    return () => (toggle.isConnected ? toggle : aboveToggle());
+  }
+
+  private focusAfterSignOut(row: HTMLElement | null, control: HTMLElement): void {
+    if (row !== null) {
+      this.focusAfterRowLeaves.moveFocus(row, control);
+      return;
+    }
+    control.focus({ preventScroll: true });
+    this.focusAfterRowLeaves.keepInViewOnceSettled(control, [], false);
+  }
+
+  private isOlder(device: SignedInDevice): boolean {
+    return this.groups().older.some((older) => older.id === device.id);
   }
 
   private leavesInView(row: HTMLElement): boolean {

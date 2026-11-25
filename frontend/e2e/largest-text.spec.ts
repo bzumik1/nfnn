@@ -1030,7 +1030,112 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
       await expect(page.locator(`#device-row-${iphone?.id}`)).toHaveCount(0);
       await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
     });
+
+    test('when they sign out Windows · Edge and close Starší by a press that leaves the focus where it was before the slow answer comes, with Starší under the header, then Starší keeps the focus and stands between the header and whatever covers the bottom of the window', async ({
+      page,
+    }) => {
+      const signOut = await holdTheOlderDeviceSignOut(page);
+      const devices = await openStarsiOnTheAccountPageWithLargestText(page);
+      const starsi = devices.locator('.devices-older-toggle');
+      const confirm = await askToSignOutWindows(devices);
+
+      await confirm.click();
+      await signOut.asked;
+      await starsi.dispatchEvent('click');
+      await expect(devices.locator('#devices-older')).toHaveCount(0);
+      await expect(starsi).toBeFocused();
+      await placeTheTopOf(starsi, 40);
+      signOut.answer();
+
+      await expect(starsi).toHaveText(/Starší \(1\)/);
+      await expect(starsi).toBeFocused();
+      await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
+    });
+
+    test('when they sign out Windows · Edge and close Starší by a press that leaves the focus where it was after the answer came, then Starší takes the focus and stands between the header and whatever covers the bottom of the window', async ({
+      page,
+    }) => {
+      const signOut = await holdTheOlderDeviceSignOut(page);
+      const devices = await openStarsiOnTheAccountPageWithLargestText(page);
+      const starsi = devices.locator('.devices-older-toggle');
+      const confirm = await askToSignOutWindows(devices);
+      await confirm.click();
+      await signOut.asked;
+      signOut.answer();
+      await expect(page.locator(`#device-row-${windowsEdge?.id}`)).toHaveCount(0);
+      await expect(devices.locator('#devices-older .device-sign-out')).toBeFocused();
+      await placeTheTopOf(starsi, 200);
+
+      await starsi.dispatchEvent('click');
+
+      await expect(starsi).toHaveAttribute('aria-expanded', 'false');
+      await expect(devices.locator('#devices-older')).toHaveCount(0);
+      await expect(starsi).toBeFocused();
+      await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
+    });
   });
+}
+
+const windowsEdge = longUnusedDevices.find((device) => device.platform === 'WINDOWS');
+
+interface HeldSignOut {
+  readonly asked: Promise<void>;
+  readonly answer: () => void;
+}
+
+async function holdTheOlderDeviceSignOut(page: Page): Promise<HeldSignOut> {
+  let listed = [...signedInDevices, ...longUnusedDevices];
+  let answer = (): void => undefined;
+  const answered = new Promise<void>((resolve) => (answer = resolve));
+  let asked = (): void => undefined;
+  const askedOnce = new Promise<void>((resolve) => (asked = resolve));
+  await mockDonorApi(page);
+  await page.route(
+    (url) => url.pathname === '/api/donors/me/devices',
+    (route) => route.fulfill({ json: { items: listed } }),
+  );
+  await page.route(
+    (url) => url.pathname === `/api/donors/me/devices/${windowsEdge?.id}`,
+    async (route) => {
+      if (route.request().method() !== 'DELETE') {
+        await route.fallback();
+        return;
+      }
+      asked();
+      await answered;
+      listed = listed.filter((device) => device.id !== windowsEdge?.id);
+      await route.fulfill({ status: 204 });
+    },
+  );
+  return { asked: askedOnce, answer };
+}
+
+async function openStarsiOnTheAccountPageWithLargestText(page: Page): Promise<Locator> {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page);
+  await openDonorSection(page, 'Údaje a zabezpečení');
+  await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+  await page.setViewportSize({ width: 375, height: 667 });
+  const devices = page.locator('.devices');
+  const starsi = devices.locator('.devices-older-toggle');
+  await starsi.click();
+  await expect(starsi).toHaveAttribute('aria-expanded', 'true');
+  return devices;
+}
+
+async function placeTheTopOf(control: Locator, top: number): Promise<void> {
+  await control.evaluate(
+    (element, wanted) =>
+      window.scrollBy({ top: element.getBoundingClientRect().top - wanted, behavior: 'instant' }),
+    top,
+  );
+}
+
+async function askToSignOutWindows(devices: Locator): Promise<Locator> {
+  await devices.getByRole('button', { name: 'Odhlásit Windows · Edge' }).click();
+  const question = devices.getByRole('group', { name: 'Odhlásit Windows · Edge?' });
+  await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+  return question.getByRole('button', { name: 'Odhlásit', exact: true });
 }
 
 for (const reducedMotion of ['no-preference', 'reduce'] as const) {

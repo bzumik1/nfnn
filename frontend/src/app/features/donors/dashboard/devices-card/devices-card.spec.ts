@@ -889,6 +889,98 @@ describe("Given a donor's signed-in devices card", () => {
     });
   });
 
+  describe('when two devices were last used more than 30 days ago and the donor closes Starší by a press that leaves the focus where it was', () => {
+    let scrolled: { element: HTMLElement; options: unknown }[];
+
+    const toggle = () => element<HTMLButtonElement>('.devices-older-toggle');
+
+    function watchScrolls(control: HTMLElement): void {
+      control.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+        scrolled.push({ element: control, options });
+      };
+    }
+
+    async function openStarsi(): Promise<void> {
+      toggle().click();
+      await settle();
+    }
+
+    async function closeStarsi(): Promise<void> {
+      toggle().click();
+      await settle();
+      await vi.waitFor(() => expect(element('.devices-older')).toBeNull());
+    }
+
+    function answerSignOut(device: SignedInDevice): void {
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${device.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+    }
+
+    beforeEach(async () => {
+      scrolled = [];
+      await signIn();
+    });
+
+    it('and the answer comes once the fold is gone, then Starší keeps the focus and is brought into view the fitting way', async () => {
+      await listed([THIS_MAC, IPHONE, OLD_IPAD, OLD_WINDOWS]);
+      await openStarsi();
+      await ask(signOutButton(rows()[2]));
+      element<HTMLButtonElement>('.devices-confirm-yes').focus();
+      await confirmSignOut();
+      watchScrolls(toggle());
+
+      await closeStarsi();
+
+      expect(document.activeElement).toBe(toggle());
+
+      answerSignOut(OLD_IPAD);
+      await settle();
+
+      expect(text(toggle().querySelector('.ui-list__title'))).toBe('Starší (1)');
+      expect(document.activeElement).toBe(toggle());
+      expect(scrolled).toEqual([
+        { element: toggle(), options: expect.objectContaining({ block: 'nearest' }) },
+      ]);
+    });
+
+    it('and the answer comes once the fold of the last older device is gone, then the control above Starší takes the focus and is brought into view the fitting way', async () => {
+      await listed([THIS_MAC, IPHONE, OLD_IPAD]);
+      await openStarsi();
+      await ask(signOutButton(rows()[2]));
+      element<HTMLButtonElement>('.devices-confirm-yes').focus();
+      await confirmSignOut();
+      const above = signOutButton(rows()[1])!;
+      watchScrolls(above);
+
+      await closeStarsi();
+      answerSignOut(OLD_IPAD);
+      await settle();
+
+      expect(toggle()).toBeNull();
+      expect(document.activeElement).toBe(above);
+      expect(scrolled).toEqual([
+        { element: above, options: expect.objectContaining({ block: 'nearest' }) },
+      ]);
+    });
+
+    it('and the answer came before the fold closed, then Starší takes the focus from the older device that had it', async () => {
+      await listed([THIS_MAC, IPHONE, OLD_IPAD, OLD_WINDOWS]);
+      await openStarsi();
+      await ask(signOutButton(rows()[2]));
+      await confirmSignOut();
+      answerSignOut(OLD_IPAD);
+      await settle();
+      expect(document.activeElement).toBe(signOutButton(rows()[2]));
+      expect(text(rows()[2].querySelector('.device-name'))).toBe('Windows · Edge');
+
+      await closeStarsi();
+
+      expect(document.activeElement).toBe(toggle());
+      expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    });
+  });
+
   it('when the donor signs out the only other device, then the heading takes focus and the card says no other device is', async () => {
     await signIn();
     await listed([THIS_MAC, IPHONE]);
