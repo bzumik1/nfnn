@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { NavigationStart, Router } from '@angular/router';
 import { InputModality } from '../input/input-modality';
+import { CompactLayout } from '../layout/compact-layout';
 import {
   bringIntoView,
   focusWithoutScroll,
@@ -49,6 +50,7 @@ interface ScrollGuard {
 export class PageFocus {
   private readonly router = inject(Router);
   private readonly back = inject(BackTarget);
+  private readonly layout = inject(CompactLayout);
   private readonly preview = inject(NavigationPreview);
   private readonly modality = inject(InputModality);
   private readonly placement = inject(PagePlacement);
@@ -271,6 +273,10 @@ export class PageFocus {
       !focusWithoutScroll(target, this.modality.lastPressByPointer() ? { focusVisible: false } : {})
     ) {
       return false;
+    }
+    if (!this.layout.isCompact()) {
+      target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+      return true;
     }
     this.guardScrollUntilFocusDrawn(target);
     this.bringIntoViewOnceStill(target);
