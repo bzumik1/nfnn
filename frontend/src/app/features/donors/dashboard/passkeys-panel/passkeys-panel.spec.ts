@@ -550,6 +550,15 @@ describe('Given the passkeys panel of the sign-in card', () => {
         };
       }
 
+      function standWithTheAddButtonRightUnder(emptyText: HTMLElement, top: number): void {
+        const addButton = Array.from(root().querySelectorAll<HTMLElement>('button')).find(
+          (button) => accessibleText(button).includes('Přidat přístupový klíč'),
+        );
+        expect(addButton, 'button "Přidat přístupový klíč"').toBeDefined();
+        emptyText.getBoundingClientRect = () => new DOMRect(0, top, 300, 40);
+        addButton!.getBoundingClientRect = () => new DOMRect(0, top + 56, 300, 44);
+      }
+
       function scrollsOf(control: HTMLElement): unknown[] {
         const scrolled: unknown[] = [];
         control.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
@@ -594,7 +603,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
         const leave = leavesSlowly(IPHONE, (row) => row.parentElement!);
         await removeThe(IPHONE);
         const emptyText = element('.passkeys-empty');
-        emptyText.getBoundingClientRect = () => new DOMRect(0, -300, 300, 40);
+        standWithTheAddButtonRightUnder(emptyText, -300);
         const emptyTextScrolled = scrollsOf(emptyText);
 
         expect(document.activeElement).toBe(region);
@@ -617,8 +626,7 @@ describe('Given the passkeys panel of the sign-in card', () => {
         const leaveWindows = leavesSlowly(WINDOWS, (row) => row.parentElement!);
         await removeThe(WINDOWS);
         const emptyText = element('.passkeys-empty');
-        emptyText.getBoundingClientRect = () => new DOMRect(0, -2000, 300, 40);
-        element('.passkeys-action').getBoundingClientRect = () => new DOMRect(0, -1944, 300, 44);
+        standWithTheAddButtonRightUnder(emptyText, -2000);
         const emptyTextScrolled = scrollsOf(emptyText);
 
         expect(document.activeElement).toBe(region);
