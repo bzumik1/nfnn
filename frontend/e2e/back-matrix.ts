@@ -1208,16 +1208,16 @@ function travelled(probe: StepProbe): Frame[] {
       .length,
     'frames in which the top page had corners without a drawn, dimmed page beneath',
   ).toBe(0);
-  const first = topped[0];
+  const firstTopped = topped[0];
   if (
     probe.paced &&
-    first !== undefined &&
-    !first.onGround &&
-    first.underDrawn &&
-    first.underDimmed
+    firstTopped !== undefined &&
+    !firstTopped.onGround &&
+    firstTopped.underDrawn &&
+    firstTopped.underDimmed
   ) {
     expect(
-      first.overRounded,
+      firstTopped.overRounded,
       'the top page of a page step over a drawn, dimmed page in the app on the home screen of a phone had no corners like the display',
     ).toBeGreaterThan(0);
   }
