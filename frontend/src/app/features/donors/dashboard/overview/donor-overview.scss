@@ -22,6 +22,19 @@
   color: var(--color-text);
 }
 
+.last-gift-amount,
+.stat-value:has(> .ui-figures--groups) {
+  text-wrap: balance;
+}
+
+.ui-figures--groups > .amount-tail {
+  white-space: normal;
+
+  > * {
+    white-space: nowrap;
+  }
+}
+
 .last-gift-date {
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);

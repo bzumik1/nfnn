@@ -24,6 +24,11 @@ import { DiagnosticsDownload } from '../../../../shared/ui/diagnostics-download/
 
 const RECENT_DONATIONS_SHOWN = 5;
 
+interface CrownGroups {
+  readonly leading: readonly string[];
+  readonly last: string;
+}
+
 @Component({
   selector: 'app-donor-overview',
   imports: [
@@ -96,8 +101,9 @@ export class DonorOverview {
     inject(DestroyRef).onDestroy(() => this.refusal.clear());
   }
 
-  protected crowns(amountMinor: number): string {
-    return formatMinorUnits(amountMinor);
+  protected crownGroups(amountMinor: number): CrownGroups {
+    const groups = formatMinorUnits(amountMinor).split(/\s/u);
+    return { leading: groups.slice(0, -1), last: groups.at(-1) ?? '' };
   }
 
   protected statusLabel(status: DonationStatus): string {

@@ -4,11 +4,15 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   inject,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
+
+import { PageFocus } from '../../../core/navigation/page-focus';
 
 const CONFIRMATION_MS = 2000;
 
@@ -40,6 +44,8 @@ export class CopyButton {
   readonly copied = output<void>();
 
   protected readonly state = signal<CopyState>('idle');
+  private readonly pageFocus = inject(PageFocus);
+  private readonly button = viewChild.required<ElementRef<HTMLButtonElement>>('button');
   private reset: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
@@ -61,6 +67,7 @@ export class CopyButton {
   }
 
   protected async copy(): Promise<void> {
+    this.pageFocus.keepOnPressed(this.button().nativeElement);
     clearTimeout(this.reset);
     try {
       await navigator.clipboard.writeText(this.value());

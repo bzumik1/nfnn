@@ -476,15 +476,26 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
         }
         new MutationObserver((records) => {
           const removed = records.flatMap((record) => Array.from(record.removedNodes));
-          if (
-            records.some(
-              (record) =>
-                record.type === 'attributes' &&
-                record.target instanceof HTMLLIElement &&
-                record.target.hasAttribute('inert'),
-            )
-          ) {
+          const leavingRows = records.filter(
+            (record) =>
+              record.type === 'attributes' &&
+              record.target instanceof HTMLLIElement &&
+              record.target.hasAttribute('inert'),
+          );
+          if (leavingRows.some((record) => record.attributeName === 'inert')) {
             seen.push('row out of reach');
+          }
+          for (const record of leavingRows) {
+            const leaveClassAdded =
+              record.attributeName === 'class' &&
+              !(record.oldValue ?? '').split(' ').includes('payment-row--leaving');
+            if (leaveClassAdded && record.target instanceof Element) {
+              for (const motion of record.target.getAnimations()) {
+                if (motion instanceof CSSAnimation) {
+                  seen.push(motion.animationName);
+                }
+              }
+            }
           }
           const rowGone = removed.some(
             (node) => node instanceof HTMLLIElement && node.hasAttribute('inert'),
@@ -499,19 +510,11 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
           }
         }).observe(document.body, {
           attributes: true,
-          attributeFilter: ['inert'],
+          attributeFilter: ['inert', 'class'],
+          attributeOldValue: true,
           childList: true,
           subtree: true,
         });
-        document.addEventListener(
-          'animationstart',
-          (event) => {
-            if (event.target instanceof HTMLLIElement) {
-              seen.push(event.animationName);
-            }
-          },
-          true,
-        );
       });
 
       await rows.first().click();

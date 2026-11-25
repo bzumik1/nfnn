@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { CopyButton } from './copy-button';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
@@ -210,5 +211,41 @@ describe('Given a copy button in a row whose other actions are small tinted butt
     expect(button().classList).toContain('copy-button--copied');
     expect(button().classList).not.toContain('ui-pill-button--done');
     expect(button().classList).toContain('ui-button--small');
+  });
+});
+
+describe('Given a copy button on a page that holds the focus, as after a tap on iOS', () => {
+  let page: HTMLElement;
+  let fixture: ComponentFixture<CopyButton>;
+
+  beforeEach(async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      configurable: true,
+    });
+    await TestBed.configureTestingModule({
+      imports: [CopyButton],
+      providers: [provideRouter([])],
+    }).compileComponents();
+    fixture = TestBed.createComponent(CopyButton);
+    fixture.componentRef.setInput('value', 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ');
+    fixture.componentRef.setInput('what', 'klíč');
+    fixture.detectChanges();
+    page = document.createElement('main');
+    page.tabIndex = -1;
+    page.append(fixture.nativeElement);
+    document.body.append(page);
+    page.focus();
+  });
+
+  afterEach(() => page.remove());
+
+  it('when it is pressed, then the button has the focus', async () => {
+    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+
+    button.click();
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(button);
   });
 });
