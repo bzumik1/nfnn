@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 @use 'pressed';
 @use 'focus-ring';
 
@@ -20,7 +21,7 @@ $clamped-title-lines: 3;
   box-shadow: var(--shadow-card);
   color: var(--color-on-image);
   isolation: isolate;
-  transition: transform var(--duration-base);
+  @include motion.move(transform);
 }
 
 .featured:not(.featured--photo) {
