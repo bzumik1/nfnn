@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { afterNextRender } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -650,27 +651,50 @@ describe('Given the passkeys panel of the sign-in card', () => {
         );
       });
 
-      it('and it was the only key, so the list leaves with it, then the list keeps room for the empty text and the empty text is held at the width of the list while the list stands', async () => {
+      it('and it was the only key, so the list leaves with it, then the empty text is held at the width of the list and the list keeps room for all of it, its margin included, while the list stands', async () => {
         await renderOnPage([IPHONE]);
         const row = document.getElementById(`passkey-row-${IPHONE.id}`)!;
         const list = row.parentElement!;
+        list.getBoundingClientRect = () => new DOMRect(0, 0, 300, 351);
+        list.style.marginBottom = '16px';
         const finish = leavesAsInTheBrowser(
           row,
           (event) => fixture.componentInstance['rowLeaves'](event),
           () => list.remove(),
           list,
         );
-        await removeThe(IPHONE);
+        Array.from(row.querySelectorAll('button'))
+          .find((button) => withOrdinarySpaces(button.textContent)?.includes('Odebrat'))
+          ?.click();
+        await settle();
+        await clickButton('Ano, odebrat');
+        afterNextRender(
+          () => {
+            const emptyText = element('.passkeys-empty');
+            emptyText.style.marginBottom = '14px';
+            emptyText.getBoundingClientRect = () =>
+              new DOMRect(
+                0,
+                0,
+                300,
+                emptyText.style.getPropertyValue('--passkeys-held-empty-text-inline-size') ===
+                  '300px'
+                  ? 387
+                  : 290,
+              );
+          },
+          { injector: fixture.componentRef.injector },
+        );
+        http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`).flush(null);
+        await settle();
 
         expect(list.isConnected).toBe(true);
-        expect(list.style.getPropertyValue('--passkeys-room-for-empty-text')).toMatch(
-          /^\d+(\.\d+)?px$/,
-        );
         expect(
           element('.passkeys-empty').style.getPropertyValue(
             '--passkeys-held-empty-text-inline-size',
           ),
-        ).toMatch(/^\d+(\.\d+)?px$/);
+        ).toBe('300px');
+        expect(list.style.getPropertyValue('--passkeys-room-for-empty-text')).toBe('385px');
 
         finish();
         await settle();
@@ -1047,7 +1071,7 @@ describe('Given the list of the last passkey leaving and the empty text held out
   beforeEach(() => {
     list = document.createElement('ul');
     emptyText = document.createElement('p');
-    Object.defineProperty(list, 'clientWidth', { value: 300 });
+    list.getBoundingClientRect = () => new DOMRect(0, 0, 300, 351);
     list.style.marginBottom = '16px';
     emptyText.style.marginBottom = '14px';
     document.body.append(list, emptyText);

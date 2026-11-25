@@ -58,7 +58,10 @@ const HELD_EMPTY_TEXT_INLINE_SIZE = '--passkeys-held-empty-text-inline-size';
 const ROOM_FOR_EMPTY_TEXT = '--passkeys-room-for-empty-text';
 
 export function keepRoomForEmptyText(list: HTMLElement, emptyText: HTMLElement): void {
-  emptyText.style.setProperty(HELD_EMPTY_TEXT_INLINE_SIZE, `${list.clientWidth}px`);
+  emptyText.style.setProperty(
+    HELD_EMPTY_TEXT_INLINE_SIZE,
+    `${list.getBoundingClientRect().width}px`,
+  );
   const room =
     emptyText.getBoundingClientRect().height + marginBottomOf(emptyText) - marginBottomOf(list);
   list.style.setProperty(ROOM_FOR_EMPTY_TEXT, `${Math.max(0, room)}px`);
