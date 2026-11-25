@@ -1484,16 +1484,6 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
     );
 
     await expect(page.locator('.passkey-name')).toHaveCount(0);
-    test.info().annotations.push({
-      type: 'diagnostic-2044',
-      description: JSON.stringify({
-        rowWithItsQuestion,
-        question,
-        rowOnceItsQuestionCloses,
-        rows: present(frames, 'row').map(({ at, box }) => [Math.round(at), box.height]),
-        empty: frames.at(-1)?.boxes['empty']?.height,
-      }),
-    });
     expect(frames.at(-1)?.boxes['empty']?.height ?? 0).toBeGreaterThan(rowOnceItsQuestionCloses);
     expect(present(frames, 'add').length).toBe(frames.length);
     expect(frames.at(-1)?.boxes['row']).toBeNull();
