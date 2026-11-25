@@ -164,7 +164,7 @@ jobs:
       - name: Build the frontend for production
         run: npm run build
 
-      - name: Every row of the back matrix three times at a four times slower CPU with unscaled budgets, red until the known defect #1982 lands
+      - name: The back matrix's rows tagged @timed-motion three times at a four times slower CPU with unscaled budgets, red until the known defect #1982 lands
         run: npx playwright test e2e/back-matrix.spec.ts --project=motion-timed --repeat-each=3 --retries=0 --reporter=list,json
         env:
           NFNN_CPU_SLOWDOWN: "4"
