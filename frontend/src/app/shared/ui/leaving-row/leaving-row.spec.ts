@@ -1,4 +1,9 @@
-import { leaveWithClass, markRowsLeaving, neighbourAfterRowLeaves } from './leaving-row';
+import {
+  afterRemoval,
+  leaveWithClass,
+  markRowsLeaving,
+  neighbourAfterRowLeaves,
+} from './leaving-row';
 
 describe('Given a list whose row is about to leave', () => {
   let list: HTMLUListElement;
@@ -373,5 +378,135 @@ describe('Given a list whose row leaves while the rows below it settle into its 
     leaveWithClass('row--leaving')({ target: byId('second'), animationComplete: () => undefined });
 
     expect(list.querySelectorAll('[class]')).toHaveLength(1);
+  });
+});
+
+describe('Given a row watched until it is removed', () => {
+  let section: HTMLElement;
+  let list: HTMLUListElement;
+  let row: HTMLLIElement;
+  let other: HTMLLIElement;
+  let releases: boolean[];
+
+  beforeEach(() => {
+    section = document.createElement('section');
+    list = document.createElement('ul');
+    row = document.createElement('li');
+    other = document.createElement('li');
+    list.append(row, other);
+    section.append(list);
+    document.body.append(section);
+    releases = [];
+    afterRemoval(row, () => releases.push(row.isConnected));
+  });
+
+  afterEach(() => section.remove());
+
+  async function settle(): Promise<void> {
+    for (let turn = 0; turn < 5; turn += 1) {
+      await Promise.resolve();
+    }
+  }
+
+  it('when it is removed from its list, then it is released once, only after the removal', async () => {
+    row.remove();
+    expect(releases).toEqual([]);
+
+    await settle();
+
+    expect(releases).toEqual([false]);
+  });
+
+  it('when another row of its list is removed, then it is not released', async () => {
+    other.remove();
+    await settle();
+
+    expect(releases).toEqual([]);
+  });
+
+  it('when its list leaves with the section around it, then it is not released, because only its own list is watched', async () => {
+    expect(() => section.remove()).not.toThrow();
+    await settle();
+
+    expect(releases).toEqual([]);
+  });
+
+  it('when it is put back and removed again after its release, then it is not released a second time', async () => {
+    row.remove();
+    await settle();
+
+    list.append(row);
+    await settle();
+    row.remove();
+    await settle();
+
+    expect(releases).toEqual([false]);
+  });
+});
+
+describe('Given a row in a fold, watched from the list around the fold until it is removed', () => {
+  let card: HTMLUListElement;
+  let fold: HTMLLIElement;
+  let row: HTMLLIElement;
+  let releases: boolean[];
+
+  beforeEach(() => {
+    card = document.createElement('ul');
+    fold = document.createElement('li');
+    const folded = document.createElement('ul');
+    row = document.createElement('li');
+    folded.append(row);
+    fold.append(folded);
+    card.append(fold);
+    document.body.append(card);
+    releases = [];
+    afterRemoval(row, () => releases.push(row.isConnected), card);
+  });
+
+  afterEach(() => card.remove());
+
+  async function settle(): Promise<void> {
+    for (let turn = 0; turn < 5; turn += 1) {
+      await Promise.resolve();
+    }
+  }
+
+  it('when the whole fold leaves with the row still in it, then it is released once, after the removal', async () => {
+    fold.remove();
+    expect(releases).toEqual([]);
+
+    await settle();
+
+    expect(releases).toEqual([false]);
+  });
+
+  it('when only the row leaves its fold, then it is released once', async () => {
+    row.remove();
+    await settle();
+
+    expect(releases).toEqual([false]);
+  });
+
+  it('when another row of the list around the fold is removed, then it is not released', async () => {
+    const other = document.createElement('li');
+    card.append(other);
+    await settle();
+    other.remove();
+    await settle();
+
+    expect(releases).toEqual([]);
+  });
+});
+
+describe('Given a row that has already left the document', () => {
+  it('when it is watched until it is removed, then it is released at once', () => {
+    const list = document.createElement('ul');
+    const row = document.createElement('li');
+    list.append(row);
+    const releases: boolean[] = [];
+
+    afterRemoval(row, () => releases.push(row.isConnected));
+
+    expect(releases).toEqual([false]);
   });
 });

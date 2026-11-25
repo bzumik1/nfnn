@@ -106,11 +106,12 @@ export class KeyboardAvoidance {
 
   private visibleRegionOf(scroller: HTMLElement): Region {
     const box = scroller.getBoundingClientRect();
+    const top = box.top + (parseFloat(getComputedStyle(scroller).scrollPaddingTop) || 0);
     const area = this.keyboard.visibleArea();
     return area === null
-      ? box
+      ? { top, bottom: box.bottom }
       : {
-          top: Math.max(box.top, area.top),
+          top: Math.max(top, area.top),
           bottom: Math.min(box.bottom, area.top + area.height),
         };
   }

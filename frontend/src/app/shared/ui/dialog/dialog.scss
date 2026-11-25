@@ -68,6 +68,8 @@
 }
 
 .dialog-panel {
+  --sheet-head-height: 0rem;
+
   container: dialog-panel / inline-size;
   position: relative;
   background: var(--color-surface-elevated);
@@ -77,6 +79,7 @@
   max-width: var(--dialog-max-width);
   box-shadow: var(--shadow-dialog);
   outline: 1px solid transparent;
+  scroll-padding-top: var(--sheet-head-height);
 
   &--wide {
     max-width: var(--dialog-max-width-wide);

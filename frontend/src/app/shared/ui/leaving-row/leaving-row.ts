@@ -23,6 +23,24 @@ export function neighbourAfterRowLeaves(
   return () => nearestFirst.find(canTakeFocus) ?? null;
 }
 
+export function afterRemoval(
+  row: Element,
+  released: () => void,
+  within: Node | null = row.parentNode,
+): void {
+  if (within === null || !row.isConnected) {
+    released();
+    return;
+  }
+  const watch = new MutationObserver(() => {
+    if (!row.isConnected) {
+      watch.disconnect();
+      released();
+    }
+  });
+  watch.observe(within, { childList: true, subtree: true });
+}
+
 function followsRow(row: Element, control: HTMLElement): boolean {
   return (
     !row.contains(control) &&
