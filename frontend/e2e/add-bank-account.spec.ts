@@ -1,5 +1,11 @@
 import { expect, test } from './fixtures';
-import { bankAccountItem, mockDonorApi, openDonorSection, signIn } from './donor-session';
+import {
+  bankAccountItem,
+  mockDonorApi,
+  openAccountItem,
+  openDonorSection,
+  signIn,
+} from './donor-session';
 import { expectActionInSightOrCuedBelow } from './dialog-edge';
 
 const newAccount = bankAccountItem({
@@ -67,5 +73,37 @@ test.describe('Given a signed-in donor adding a bank account', () => {
     await expect(dialog.getByText('5544332217/2010')).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Hotovo' }).click();
     await expect(page.locator('.accounts-list .account-number')).toHaveText('1234567890/0800');
+  });
+});
+
+test.describe('Given a signed-in donor in Bankovní účty inside the account sheet of a window 600 by 900', () => {
+  test('when Přidat bankovní účet opens centred over the sheet, then only the sheet keeps room for its head when it scrolls a control into view', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await signIn(page);
+    await page.setViewportSize({ width: 600, height: 900 });
+    await openAccountItem(page, 'Bankovní účty');
+    const sheet = page.getByRole('dialog', { name: 'Bankovní účty' });
+    await expect(sheet.locator('app-sheet-head')).toBeVisible();
+
+    await sheet.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+
+    const added = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
+    await expect(added).toBeVisible();
+    await expect
+      .poll(() =>
+        added.evaluate((dialog) => {
+          const head = document.querySelector<HTMLElement>('app-account-sheet app-sheet-head')!;
+          const sheetPadding = getComputedStyle(head.closest('.dialog-panel')!).scrollPaddingTop;
+          return {
+            added: getComputedStyle(dialog.querySelector(':scope > .dialog-panel')!)
+              .scrollPaddingTop,
+            sheetBeyondHead: parseFloat(sheetPadding) - head.offsetHeight,
+            headShown: head.offsetHeight > 0,
+          };
+        }),
+      )
+      .toEqual({ added: '0px', sheetBeyondHead: 0, headShown: true });
   });
 });

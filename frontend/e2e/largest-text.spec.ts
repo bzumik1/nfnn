@@ -26,6 +26,7 @@ import {
   claudeConnection,
   connectionRequest,
   donationItem,
+  longUnusedDevices,
   mockConnectApi,
   mockDonorApi,
   noDonations,
@@ -34,6 +35,7 @@ import {
   rememberedDonorSession,
   secondFactorRequired,
   showAccountList,
+  signedInDevices,
   signIn,
   whenAdministrationCopied,
 } from './donor-session';
@@ -61,6 +63,16 @@ async function showLargestSystemText(page: Page): Promise<void> {
       document.head.append(style);
     });
   }, LARGEST_SYSTEM_TEXT_PX);
+}
+
+async function anchorNoScrollAsSafariDoes(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = 'html, body, .dialog-panel { overflow-anchor: none; }';
+      document.head.append(style);
+    });
+  });
 }
 
 async function linesOf(control: Locator): Promise<number> {
@@ -900,6 +912,148 @@ for (const { width, height } of [
       expect(measured.offCentre).toBeLessThanOrEqual(1);
       expect(measured.typingEnd).toBeLessThanOrEqual(measured.eyeStart);
       expect(measured.reach).toBeGreaterThanOrEqual(measured.touchTarget);
+    });
+  });
+}
+
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  test.describe(`Given a donor on an iPhone 375 pt wide whose installed app shows the largest accessibility text, asks for ${reducedMotion} motion and has older devices`, () => {
+    test.use({ viewport: { width: 375, height: 667 }, reducedMotion });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await anchorNoScrollAsSafariDoes(page);
+    });
+
+    test('when they sign out the iPhone, then Starší takes the focus and stands between the header and whatever covers the bottom of the window', async ({
+      page,
+    }) => {
+      const iphone = signedInDevices.find((device) => !device.current);
+      let listed = [...signedInDevices, ...longUnusedDevices];
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/devices',
+        (route) => route.fulfill({ json: { items: listed } }),
+      );
+      await page.route(
+        (url) => url.pathname.startsWith('/api/donors/me/devices/'),
+        async (route) => {
+          listed = listed.filter((device) => device.id !== iphone?.id);
+          await route.fulfill({ status: 204 });
+        },
+      );
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+      await page.setViewportSize({ width: 375, height: 667 });
+      const devices = page.locator('.devices');
+      await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+      const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+      await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+
+      await question.getByRole('button', { name: 'Odhlásit', exact: true }).click();
+
+      await expect(devices.getByRole('button', { name: /Starší \(2\)/ })).toBeFocused();
+      await expect(page.locator(`#device-row-${iphone?.id}`)).toHaveCount(0);
+      await expect(async () => {
+        const place = await page.evaluate(() => {
+          const box = document.activeElement!.getBoundingClientRect();
+          const header = [
+            ...document.querySelectorAll<HTMLElement>('app-header a, app-header button'),
+          ]
+            .filter((element) => getComputedStyle(element).visibility !== 'hidden')
+            .map((element) => element.getBoundingClientRect())
+            .filter((control) => control.width > 0 && control.height > 0 && control.bottom > 0)
+            .map((control) => control.bottom);
+          const coveringTops = [
+            ...document.querySelectorAll<HTMLElement>(
+              'app-tab-bar nav, .ui-notice--floating, app-offline-status .offline-pill',
+            ),
+          ]
+            .map((element) => element.getBoundingClientRect())
+            .filter((cover) => cover.height > 0 && cover.top > window.innerHeight / 2)
+            .map((cover) => cover.top);
+          return {
+            top: box.top,
+            bottom: box.bottom,
+            headerBottom: Math.max(0, ...header),
+            lowerEdge: Math.min(window.innerHeight, ...coveringTops),
+          };
+        });
+        expect(place.top).toBeGreaterThanOrEqual(place.headerBottom);
+        expect(place.bottom).toBeLessThanOrEqual(place.lowerEdge);
+      }).toPass();
+    });
+  });
+}
+
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  test.describe(`Given a donor on an iPhone 390 pt wide whose phone shows the largest accessibility text, asks for ${reducedMotion} motion and has older devices in Údaje a zabezpečení inside the account sheet`, () => {
+    test.use({ viewport: { width: 390, height: 844 }, reducedMotion });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await anchorNoScrollAsSafariDoes(page);
+    });
+
+    test('when they sign out the iPhone, then Starší takes the focus and stands below the sheet head, inside the sheet', async ({
+      page,
+    }) => {
+      const iphone = signedInDevices.find((device) => !device.current);
+      let listed = [...signedInDevices, ...longUnusedDevices];
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/devices',
+        (route) => route.fulfill({ json: { items: listed } }),
+      );
+      await page.route(
+        (url) => url.pathname.startsWith('/api/donors/me/devices/'),
+        async (route) => {
+          listed = listed.filter((device) => device.id !== iphone?.id);
+          await route.fulfill({ status: 204 });
+        },
+      );
+      await rememberedDonorSession(page);
+      await page.goto('/darce/prehled');
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      const sheet = page.locator('app-account-sheet');
+      await expect(sheet.locator('app-sheet-head')).toBeVisible();
+      await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+      const devices = sheet.locator('.devices');
+      await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+      const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+      await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+
+      await question.getByRole('button', { name: 'Odhlásit', exact: true }).click();
+
+      await expect(devices.getByRole('button', { name: /Starší \(2\)/ })).toBeFocused();
+      await expect(sheet.locator(`#device-row-${iphone?.id}`)).toHaveCount(0);
+      await expect(async () => {
+        const place = await page.evaluate(() => {
+          const control = document.activeElement!;
+          const box = control.getBoundingClientRect();
+          const ring = getComputedStyle(control);
+          const ringReach = Math.max(
+            0,
+            parseFloat(ring.outlineWidth) + parseFloat(ring.outlineOffset),
+          );
+          const head = document
+            .querySelector('app-account-sheet app-sheet-head')!
+            .getBoundingClientRect();
+          const panel = document
+            .querySelector('app-account-sheet .dialog-panel')!
+            .getBoundingClientRect();
+          return {
+            ringTop: box.top - ringReach,
+            ringBottom: box.bottom + ringReach,
+            headBottom: head.bottom,
+            panelBottom: panel.bottom,
+          };
+        });
+        expect(place.ringTop).toBeGreaterThanOrEqual(place.headBottom);
+        expect(place.ringBottom).toBeLessThanOrEqual(place.panelBottom);
+      }).toPass();
     });
   });
 }

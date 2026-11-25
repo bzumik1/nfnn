@@ -16,6 +16,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  afterRemoval,
   leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
@@ -105,7 +106,10 @@ export class DevicesCard {
   protected readonly rowLeft = signal(false);
   protected readonly rowLeaves = leaveWithClass('device-slot--leaving', {
     leaves: (row) => this.olderShown() || row.closest('.device-list--older') === null,
+    left: (row) => this.revealFocusAfterRowLeft(row),
   });
+  private rowSignedOut: { row: HTMLElement; focused: HTMLElement | null; gone: boolean } | null =
+    null;
 
   constructor() {
     this.loadDevices(true);
@@ -249,6 +253,7 @@ export class DevicesCard {
       this.deviceList()?.nativeElement.querySelectorAll<HTMLElement>(ROW_CONTROLS) ?? [],
     );
     markRowsLeaving([row]);
+    this.rowSignedOut = row === null ? null : { row, focused: null, gone: false };
     this.signingOut.set(null);
     this.confirming.set(null);
     this.rowLeft.set(true);
@@ -256,8 +261,88 @@ export class DevicesCard {
     this.signedOut.set(
       $localize`:@@donor.account.devices.signedOut:Zařízení jsme odhlásili: ${this.nameInSentence(device)}:device:. Pokud jste se na něm nepřihlásili vy, změňte si heslo.`,
     );
-    this.focusAfterRender(() => neighbour() ?? this.title().nativeElement);
+    afterNextRender(
+      () => {
+        const focused = neighbour() ?? this.title().nativeElement;
+        focused.focus();
+        const signedOut = this.rowSignedOut;
+        if (signedOut !== null && signedOut.row === row) {
+          signedOut.focused = focused;
+          this.revealFocusOnceRowGone(signedOut);
+        }
+      },
+      { injector: this.injector },
+    );
     this.changes.changed();
+  }
+
+  private revealFocusAfterRowLeft(row: HTMLElement): void {
+    const signedOut = this.rowSignedOut;
+    if (signedOut === null || signedOut.row !== row) {
+      return;
+    }
+    afterRemoval(
+      row,
+      () => {
+        signedOut.gone = true;
+        this.revealFocusOnceRowGone(signedOut);
+      },
+      this.deviceList()?.nativeElement ?? null,
+    );
+  }
+
+  private revealFocusOnceRowGone(signedOut: { focused: HTMLElement | null; gone: boolean }): void {
+    if (this.rowSignedOut !== signedOut || !signedOut.gone || signedOut.focused === null) {
+      return;
+    }
+    this.rowSignedOut = null;
+    this.scrollIntoViewIfFocused(signedOut.focused);
+  }
+
+  private scrollIntoViewIfFocused(focused: HTMLElement | null): void {
+    if (focused === null || this.document.activeElement !== focused) {
+      return;
+    }
+    const reduced =
+      this.document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    focused.scrollIntoView?.({
+      block: this.fitsItsScroller(focused) ? 'nearest' : 'start',
+      behavior: reduced ? 'instant' : 'smooth',
+    });
+  }
+
+  private fitsItsScroller(control: HTMLElement): boolean {
+    const view = this.document.defaultView;
+    if (view === null) {
+      return true;
+    }
+    const scroller = this.scrollerOf(control, view);
+    const page = scroller === this.document.documentElement;
+    const padding = view.getComputedStyle(scroller);
+    const margin = view.getComputedStyle(control);
+    const room =
+      (page ? view.innerHeight : scroller.clientHeight) -
+      (parseFloat(padding.scrollPaddingTop) || 0) -
+      (parseFloat(padding.scrollPaddingBottom) || 0);
+    const needed =
+      control.getBoundingClientRect().height +
+      (parseFloat(margin.scrollMarginTop) || 0) +
+      (parseFloat(margin.scrollMarginBottom) || 0);
+    return needed <= room;
+  }
+
+  private scrollerOf(control: HTMLElement, view: Window): HTMLElement {
+    for (
+      let node = control.parentElement;
+      node !== null && node !== this.document.body;
+      node = node.parentElement
+    ) {
+      const overflow = view.getComputedStyle(node).overflowY;
+      if (overflow === 'auto' || overflow === 'scroll') {
+        return node;
+      }
+    }
+    return this.document.documentElement;
   }
 
   private otherDevices(): SignedInDevice[] {
@@ -300,6 +385,7 @@ export class DevicesCard {
   }
 
   private begin(target: string): void {
+    this.rowSignedOut = null;
     this.changes.changing();
     this.signingOut.set(target);
     this.actionError.set('');

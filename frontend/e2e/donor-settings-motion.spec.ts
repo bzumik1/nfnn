@@ -874,10 +874,15 @@ async function expectTheDoubleTapToReachNothingOnRemoval(page: Page): Promise<st
 }
 
 async function disconnectClaudeWatchingDividers(page: Page): Promise<Frame[]> {
+  const { width } = page.viewportSize()!;
+  await page.setViewportSize({ width, height: ROOM_FOR_THREE_CONNECTIONS });
   await openSettingsWithTwoConnections(page);
   const disconnect = page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' });
-  await disconnect.scrollIntoViewIfNeeded();
+  const nextClient = page.locator(`${otherConnectionRow} .connection-client`);
+  await nextClient.scrollIntoViewIfNeeded();
   await settled(page, '.connections');
+  await expect(disconnect).toBeInViewport({ ratio: 1 });
+  await expect(nextClient).toBeInViewport({ ratio: 1 });
 
   const frames = await framesWhile(
     page,
