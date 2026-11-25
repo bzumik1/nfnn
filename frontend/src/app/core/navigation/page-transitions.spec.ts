@@ -17,6 +17,7 @@ import { ACCOUNT_RETURNS_KEY } from './page-transitions';
 import { NavigationPreview } from './navigation-preview';
 import {
   FRAME_LATE_MS,
+  HELD_WITHOUT_A_FRAME_MS,
   PAGE_LAYER_CLASS,
   PAGE_TRANSITION_CLASS,
   PAGE_TRANSITION_LONGEST_MS,
@@ -635,14 +636,16 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(moving(), 'the motion was cut before its end').not.toBeNull();
   });
 
-  it('when the browser commits the let-go motions 270 ms late, then the step is not cut before the motion has run its whole length from that frame, and it ends within that length and 200 ms', async () => {
+  it('when the second frame of the hold comes 270 ms late, then the motions are let go only in it, the step is not cut before the motion has run its whole length from the frame after, and it ends within that length and 200 ms', async () => {
     watchHeldMotions();
     const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
     await holdBegun();
     draw(5000);
     await vi.advanceTimersByTimeAsync(270);
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
     draw(5270);
+    draw(5286);
 
     await vi.advanceTimersByTimeAsync(300 - 10);
     expect(moving(), 'the motion was cut before its end').not.toBeNull();
@@ -651,13 +654,32 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
   });
 
-  it('when no frame comes after the hold begins, then the page clock lets the held motions go within the time a frame may be late, well within a quick change, and each starts with the first frame drawn after', async () => {
+  it('when the first frame comes later than a frame may be late, as when a phone takes long to render the page beneath, then the motions stay held through that frame and are let go only in the one after it, never by the clock before the copies are painted', async () => {
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
     await holdBegun();
 
-    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS + 50);
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(5150);
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(5166);
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(5182);
+
+    expect(startTimes(motions)).toEqual(new Set([5182]));
+  });
+
+  it('when no frame comes at all after the hold begins, then only the page clock lets the held motions go, after HELD_WITHOUT_A_FRAME_MS, and each starts with the first frame drawn after', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS - 10);
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    await vi.advanceTimersByTimeAsync(10);
     expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
     draw(5200);
 
@@ -671,7 +693,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     drawnSteadilyBeforeTheTap(draw, 16);
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
     await holdBegun();
-    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS);
     draw(5048);
 
     for (const at of [5064, 5131, 5164]) {

@@ -42,6 +42,7 @@ export const PAGE_TRANSITION_LONGEST_MS = 2000;
 export const PAGE_COVER_LONGEST_MS = 5000;
 export const KEPT_PAGES = 3;
 export const FRAME_LATE_MS = 100;
+export const HELD_WITHOUT_A_FRAME_MS = PAGE_TRANSITION_LONGEST_MS / 4;
 const SWIPE_HANDED_OVER_AFTER_FRAMES = 2;
 const PLACED_WITHIN_FRAMES = 9;
 const FIRST_OPENING_PLACED_WITHIN_FRAMES = 18;
@@ -201,8 +202,8 @@ export class PageTransitions {
     });
     const events = this.router.events.subscribe((event) => this.follow(event));
     const hidden = (): void => this.endWhenHidden();
-    const sample = (): void => {
-      this.pressedAt = this.now();
+    const sample = (event: Event): void => {
+      this.pressedAt = event.timeStamp;
       this.sampleFramePace();
     };
     this.document.addEventListener('visibilitychange', hidden);
@@ -477,17 +478,23 @@ export class PageTransitions {
   private startMoving(running: Running, view: Window, page: HTMLElement): void {
     running.overlay.classList.add(HELD_CLASS, MOVING_CLASS);
     const still = this.finishWhenStill(running, page, view);
+    let released = false;
     const release = (): void => {
-      if (this.running !== running) {
+      if (released || this.running !== running) {
         return;
       }
+      released = true;
       startHeldMotions(running.overlay);
       publishSteadyFrame(view, this.steadyFrameMs());
       view.requestAnimationFrame(() =>
         view.setTimeout(still, this.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
       );
     };
-    nextFrame(view, (_, drawn) => (drawn ? nextFrame(view, release) : release()));
+    const byClock = view.setTimeout(release, HELD_WITHOUT_A_FRAME_MS);
+    view.requestAnimationFrame(() => {
+      view.clearTimeout(byClock);
+      view.requestAnimationFrame(release);
+    });
   }
 
   private now(): number {
