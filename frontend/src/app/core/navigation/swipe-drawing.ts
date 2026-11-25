@@ -363,11 +363,9 @@ function followingFinger(
     await Promise.race([
       Promise.allSettled(motions.map((motion) => motion.finished)),
       new Promise((done) =>
-        view.setTimeout(
-          done,
-          Math.min(PAGE_TRANSITION_LONGEST_MS, end.durationMs + 2 * FRAME_LATE_MS),
-        ),
+        view.requestAnimationFrame(() => view.setTimeout(done, end.durationMs + 2 * FRAME_LATE_MS)),
       ),
+      new Promise((done) => view.setTimeout(done, PAGE_TRANSITION_LONGEST_MS)),
     ]);
     await drawn;
     if (!end.completes) {
