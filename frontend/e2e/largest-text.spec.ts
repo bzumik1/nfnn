@@ -206,6 +206,179 @@ async function contentPastTheSides(dialog: Locator): Promise<string[]> {
   });
 }
 
+async function figuresPastTheirContent(card: Locator): Promise<string[]> {
+  await card.evaluate(() => document.fonts.ready);
+  return card.evaluate((element) =>
+    Array.from(element.querySelectorAll<HTMLElement>('.stat-value.ui-figures, .last-gift-amount'))
+      .filter((figure) => {
+        const holder = figure.closest<HTMLElement>('.overview-stat') ?? element;
+        const style = getComputedStyle(holder);
+        const frame = holder.getBoundingClientRect();
+        const left = frame.left + holder.clientLeft + parseFloat(style.paddingLeft);
+        const right =
+          frame.left + holder.clientLeft + holder.clientWidth - parseFloat(style.paddingRight);
+        const range = document.createRange();
+        range.selectNodeContents(figure);
+        return Array.from(range.getClientRects()).some(
+          (box) => box.width > 0 && (box.left < left - 1 || box.right > right + 1),
+        );
+      })
+      .map((figure) => (figure.textContent ?? '').replace(/\s+/g, ' ').trim()),
+  );
+}
+
+async function currencyAloneThoughItFitsBesideTheLastGroup(card: Locator): Promise<string[]> {
+  await card.evaluate(() => document.fonts.ready);
+  return card.evaluate((element) =>
+    Array.from(
+      element.querySelectorAll<HTMLElement>('.stat-value.ui-figures, .last-gift-amount'),
+    ).flatMap((figure) => {
+      const text = (figure.textContent ?? '').replace(/\s+/g, ' ').trim();
+      const [lastGroup, currency] = Array.from(figure.querySelectorAll('span'))
+        .filter((piece) => piece.children.length === 0)
+        .slice(-2);
+      if (!lastGroup || currency?.textContent !== 'Kč') {
+        return [`${text}: no piece Kč after a digit group`];
+      }
+      const groupBox = lastGroup.getBoundingClientRect();
+      const currencyBox = currency.getBoundingClientRect();
+      if (Math.round(currencyBox.top) === Math.round(groupBox.top)) {
+        return [];
+      }
+      const space = document.createElement('span');
+      space.style.position = 'absolute';
+      space.style.visibility = 'hidden';
+      space.style.whiteSpace = 'pre';
+      space.textContent = ' ';
+      figure.append(space);
+      const spaceWidth = space.getBoundingClientRect().width;
+      space.remove();
+      const holder = figure.parentElement!;
+      const holderStyle = getComputedStyle(holder);
+      const figureStyle = getComputedStyle(figure);
+      const line =
+        holder.clientWidth -
+        parseFloat(holderStyle.paddingLeft) -
+        parseFloat(holderStyle.paddingRight) -
+        parseFloat(figureStyle.paddingLeft) -
+        parseFloat(figureStyle.paddingRight) -
+        parseFloat(figureStyle.borderLeftWidth) -
+        parseFloat(figureStyle.borderRightWidth);
+      const needed = groupBox.width + spaceWidth + currencyBox.width;
+      return needed > line
+        ? []
+        : [
+            `${text}: Kč alone although its last group and Kč need ${needed.toFixed(1)} of ${line.toFixed(1)} px`,
+          ];
+    }),
+  );
+}
+
+async function digitGroupsSplitAcrossLines(card: Locator): Promise<string[]> {
+  await card.evaluate(() => document.fonts.ready);
+  return card.evaluate((element) => {
+    const split: string[] = [];
+    for (const figure of element.querySelectorAll('.stat-value.ui-figures, .last-gift-amount')) {
+      const walker = document.createTreeWalker(figure, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        for (const group of (node.textContent ?? '').matchAll(/\S+/g)) {
+          const range = document.createRange();
+          range.setStart(node, group.index);
+          range.setEnd(node, group.index + group[0].length);
+          const tops = new Set(
+            Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+          );
+          if (tops.size > 1) {
+            split.push(group[0]);
+          }
+        }
+      }
+    }
+    return split;
+  });
+}
+
+async function linesOfEachFigure(page: Page): Promise<number[]> {
+  await page.evaluate(() => document.fonts.ready);
+  return page
+    .locator('.overview-stats .stat-value.ui-figures, .last-gift .last-gift-amount')
+    .evaluateAll((figures) =>
+      figures.map((figure) => {
+        const range = document.createRange();
+        range.selectNodeContents(figure);
+        return new Set(
+          Array.from(range.getClientRects())
+            .filter((rect) => rect.width > 0)
+            .map((rect) => Math.round(rect.bottom)),
+        ).size;
+      }),
+    );
+}
+
+const LONG_TOTAL_MINOR = 125206350;
+
+const donorWithALongTotal = {
+  summary: {
+    ...noDonations.summary,
+    totalAmountMinor: LONG_TOTAL_MINOR,
+    count: 1,
+    lastReceivedAt: '2026-03-15',
+    byYear: [{ year: 2026, count: 1, totalAmountMinor: LONG_TOTAL_MINOR }],
+  },
+  list: {
+    items: [donationItem({ id: 'd-1', amountMinor: LONG_TOTAL_MINOR })],
+    totalAmountMinor: LONG_TOTAL_MINOR,
+    currency: 'CZK',
+    count: 1,
+  },
+};
+
+const SHORT_TOTAL_MINOR = 2515030;
+
+const donorWithAShortTotal = {
+  summary: {
+    ...noDonations.summary,
+    totalAmountMinor: SHORT_TOTAL_MINOR,
+    count: 1,
+    lastReceivedAt: '2026-03-15',
+    byYear: [{ year: 2026, count: 1, totalAmountMinor: SHORT_TOTAL_MINOR }],
+  },
+  list: {
+    items: [donationItem({ id: 'd-1', amountMinor: SHORT_TOTAL_MINOR })],
+    totalAmountMinor: SHORT_TOTAL_MINOR,
+    currency: 'CZK',
+    count: 1,
+  },
+};
+
+const GIVEN_IN_2026_MINOR = 125150300;
+
+const donorWhoGaveAMillionIn2026 = {
+  summary: {
+    ...noDonations.summary,
+    totalAmountMinor: LONG_TOTAL_MINOR,
+    count: 2,
+    lastReceivedAt: '2026-03-15',
+    byYear: [
+      { year: 2026, count: 1, totalAmountMinor: GIVEN_IN_2026_MINOR },
+      { year: 2025, count: 1, totalAmountMinor: LONG_TOTAL_MINOR - GIVEN_IN_2026_MINOR },
+    ],
+  },
+  list: {
+    items: [
+      donationItem({ id: 'd-1', amountMinor: GIVEN_IN_2026_MINOR }),
+      donationItem({
+        id: 'd-2',
+        receivedAt: '2025-11-20',
+        amountMinor: LONG_TOTAL_MINOR - GIVEN_IN_2026_MINOR,
+      }),
+    ],
+    totalAmountMinor: LONG_TOTAL_MINOR,
+    currency: 'CZK',
+    count: 2,
+  },
+};
+
 for (const { width, height } of [
   { width: 320, height: 568 },
   { width: 375, height: 667 },
@@ -530,6 +703,44 @@ for (const { width, height } of [
         await expect.poll(() => contentPastTheSides(bar), textSize).toEqual([]);
       }
     });
+
+    for (const { who, donor, amounts } of [
+      {
+        who: 'whose total is 1 252 063,50 Kč',
+        donor: donorWithALongTotal,
+        amounts: ['1 252 063,50 Kč', '1 252 063,50 Kč', '1 252 063,50 Kč'],
+      },
+      {
+        who: 'who gave 1 251 503 Kč in 2026',
+        donor: donorWhoGaveAMillionIn2026,
+        amounts: ['1 252 063,50 Kč', '1 251 503 Kč', '1 251 503 Kč'],
+      },
+      {
+        who: 'whose total is 25 150,30 Kč',
+        donor: donorWithAShortTotal,
+        amounts: ['25 150,30 Kč', '25 150,30 Kč', '25 150,30 Kč'],
+      },
+    ]) {
+      test(`when a signed-in donor ${who} opens Můj přehled, then every amount of the figures and of Poslední dar stays within its card, breaks only between digit groups and leaves Kč alone on a line only where its last group and Kč do not fit one line`, async ({
+        page,
+      }) => {
+        await mockDonorApi(page, donor);
+        await page.setViewportSize({ width: 1280, height: 900 });
+        await signIn(page);
+        await page.setViewportSize({ width, height });
+        const stats = page.locator('.overview-stats');
+        const lastGift = page.locator('section[aria-labelledby="last-gift-title"]');
+        await expect(
+          page.locator('.overview-stats .stat-value.ui-figures, .last-gift .last-gift-amount'),
+        ).toHaveText(amounts);
+
+        for (const card of [stats, lastGift]) {
+          await expect.poll(() => figuresPastTheirContent(card)).toEqual([]);
+          await expect.poll(() => digitGroupsSplitAcrossLines(card)).toEqual([]);
+          await expect.poll(() => currencyAloneThoughItFitsBesideTheLastGroup(card)).toEqual([]);
+        }
+      });
+    }
 
     test('when a signed-in donor opens Můj přehled and the standing order guide, then every bank detail of Poslat dar stays whole within its row and the bank code of the account number stays on one line', async ({
       page,
@@ -4026,6 +4237,24 @@ for (const width of [320, 390]) {
       await expect.poll(() => contentPastTheSides(card)).toEqual([]);
       expect(await card.evaluate((element) => element.scrollWidth - element.clientWidth)).toBe(0);
       await expect.poll(() => pageWiderThanTheWindow(page)).toBe(0);
+    });
+  });
+}
+
+for (const width of [390, 1280]) {
+  test.describe(`Given a donor whose total is 1 252 063,50 Kč on a screen ${width} px wide at the default text size`, () => {
+    test('when they open Můj přehled, then every amount of the figures and of Poslední dar stays on one line', async ({
+      page,
+    }) => {
+      await mockDonorApi(page, donorWithALongTotal);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height: 900 });
+      await expect(page.locator('.overview-stats .stat-value').first()).toHaveText(
+        '1 252 063,50 Kč',
+      );
+
+      await expect.poll(() => linesOfEachFigure(page)).toEqual([1, 1, 1]);
     });
   });
 }

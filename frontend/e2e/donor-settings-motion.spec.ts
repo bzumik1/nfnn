@@ -24,6 +24,7 @@ interface Frame {
 interface FrameWatch {
   settingsFrames: Frame[];
   settingsWatched: boolean;
+  settingsActed: boolean;
 }
 
 const COMPUTER = { width: 1280, height: 800 };
@@ -65,13 +66,20 @@ async function framesWhile(
   page: Page,
   watched: Record<string, string>,
   act: () => Promise<void>,
+  removed?: string,
 ): Promise<Frame[]> {
   await page.evaluate(
-    ({ watched, watchedMs }) => {
+    ({ watched, watchedMs, removed }) => {
       const watch = window as unknown as FrameWatch;
       watch.settingsFrames = [];
       watch.settingsWatched = false;
+      watch.settingsActed = false;
       const began = performance.now();
+      let sampledAfterAct = false;
+      const cardSettled = (): boolean =>
+        (document.querySelector(watched['card'])?.getAnimations({ subtree: true }) ?? []).every(
+          (animation) => animation.playState === 'finished',
+        );
       const sample = (frameTime: DOMHighResTimeStamp): void => {
         const boxes: Record<string, Box | null> = {};
         for (const [name, selector] of Object.entries(watched)) {
@@ -85,7 +93,14 @@ async function framesWhile(
                 };
         }
         watch.settingsFrames.push({ at: frameTime - began, boxes });
-        if (performance.now() - began < watchedMs) {
+        sampledAfterAct ||= watch.settingsActed;
+        const stillThere = removed !== null && document.querySelector(removed) !== null;
+        if (
+          performance.now() - began < watchedMs ||
+          !sampledAfterAct ||
+          stillThere ||
+          !cardSettled()
+        ) {
           requestAnimationFrame(sample);
         } else {
           watch.settingsWatched = true;
@@ -93,9 +108,12 @@ async function framesWhile(
       };
       requestAnimationFrame(sample);
     },
-    { watched, watchedMs: WATCHED_MS },
+    { watched, watchedMs: WATCHED_MS, removed: removed ?? null },
   );
   await act();
+  await page.evaluate(() => {
+    (window as unknown as FrameWatch).settingsActed = true;
+  });
   await expect
     .poll(() => page.evaluate(() => (window as unknown as FrameWatch).settingsWatched))
     .toBe(true);
@@ -314,8 +332,11 @@ async function confirmSigningOutTheIPhone(page: Page): Promise<Frame[]> {
   await settled(page, '.devices');
   await recordRowsShownAgain(page, '.device-slot', 'device-slot--leaving');
 
-  const frames = await framesWhile(page, { row: otherRow, card: '.devices' }, () =>
-    question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
+  const frames = await framesWhile(
+    page,
+    { row: otherRow, card: '.devices' },
+    () => question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
+    otherRow,
   );
 
   await expect(devices.locator('.device-name')).toHaveText(['Mac · Safari']);
@@ -359,6 +380,7 @@ async function confirmRemovingTheIPhonePasskey(page: Page): Promise<Frame[]> {
     page,
     { row: iphonePasskeyRow, card: 'app-account-card .ui-card' },
     () => confirm.click(),
+    iphonePasskeyRow,
   );
 
   await expect(page.locator('.passkey-name')).toHaveText(['Pracovní notebook']);
@@ -487,8 +509,11 @@ async function disconnectClaude(page: Page): Promise<Frame[]> {
   await settled(page, '.connections');
   await recordRowsShownAgain(page, '.connection-slot', 'connection-slot--leaving');
 
-  const frames = await framesWhile(page, { row: claudeConnectionRow, card: '.connections' }, () =>
-    page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click(),
+  const frames = await framesWhile(
+    page,
+    { row: claudeConnectionRow, card: '.connections' },
+    () => page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click(),
+    claudeConnectionRow,
   );
 
   await expect(connections.locator('.connection-client')).toHaveText(['chatgpt.com']);
@@ -557,7 +582,12 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
 
     await unfold();
     await recordLeavingRows(page, '.device-slot', 'device-slot--leaving');
-    const frames = await framesWhile(page, { card: '.devices' }, () => older.click());
+    const frames = await framesWhile(
+      page,
+      { card: '.devices' },
+      () => older.click(),
+      '#devices-older',
+    );
     await expect(page.locator('#devices-older')).toHaveCount(0);
     await settled(page, '.devices');
     const folded = await heightOf(page, '.devices');

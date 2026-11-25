@@ -17,6 +17,7 @@ import {
   rememberedDonorSession,
 } from './donor-session';
 import { expect, test } from './fixtures';
+import { focusAtPress, pressHandsFocusToPageAsIos } from './ios-press';
 import {
   chunkLoadNotice,
   openAboutThenLoseNewChunks,
@@ -146,31 +147,10 @@ async function linesStartAt(text: Locator, edgeSelector: string): Promise<number
   return starts.map((start) => (Math.abs(start) <= 2 ? 0 : Math.round(start)));
 }
 
-async function pressLeavesFocusOnPageAsIos(retry: Locator): Promise<void> {
-  await retry.evaluate((button) => {
-    button.addEventListener('mousedown', (event) => {
-      event.preventDefault();
-      document.getElementById('obsah')?.focus({ preventScroll: true });
-    });
-    document.addEventListener(
-      'click',
-      () => {
-        (window as unknown as { focusAtPress: string | null }).focusAtPress =
-          document.activeElement?.id ?? null;
-      },
-      { capture: true },
-    );
-  });
-}
-
 async function pressUnavailable(page: Page, control: Locator): Promise<void> {
   const box = await control.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
-}
-
-async function focusAtPress(page: Page): Promise<string | null> {
-  return page.evaluate(() => (window as unknown as { focusAtPress: string | null }).focusAtPress);
 }
 
 async function scrollTop(page: Page): Promise<number> {
@@ -809,7 +789,7 @@ test.describe('Given an administrator at phone width with the largest text whose
     const retry = page.locator('app-load-failure button');
     await retry.scrollIntoViewIfNeeded();
     const before = await scrollTop(page);
-    await pressLeavesFocusOnPageAsIos(retry);
+    await pressHandsFocusToPageAsIos(retry);
 
     await retry.click();
 
@@ -883,7 +863,7 @@ test.describe('Given a visitor on a phone whose article fails to load', () => {
     const retry = page.locator('app-load-failure button');
     await retry.scrollIntoViewIfNeeded();
     const before = await scrollTop(page);
-    await pressLeavesFocusOnPageAsIos(retry);
+    await pressHandsFocusToPageAsIos(retry);
 
     loads = true;
     await retry.click();
@@ -921,7 +901,7 @@ test.describe('Given a visitor on a phone whose article fails to load', () => {
     const retry = page.locator('app-load-failure button');
     await retry.scrollIntoViewIfNeeded();
     const before = await scrollTop(page);
-    await pressLeavesFocusOnPageAsIos(retry);
+    await pressHandsFocusToPageAsIos(retry);
     loads = true;
     await retry.click();
     await expect(retry).toHaveAttribute('aria-busy', 'true');
@@ -952,7 +932,7 @@ test.describe('Given a visitor on a phone whose article fails to load', () => {
     const retry = page.locator('app-load-failure button');
     await retry.scrollIntoViewIfNeeded();
     const before = await scrollTop(page);
-    await pressLeavesFocusOnPageAsIos(retry);
+    await pressHandsFocusToPageAsIos(retry);
     await dropTheConnection(page, context);
     await expect(retry).toHaveAttribute('aria-disabled', 'true');
 
