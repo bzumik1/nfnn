@@ -2673,6 +2673,134 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
+  for (const { display, frameMs } of [
+    { display: '30 Hz', frameMs: 1000 / 30 },
+    { display: '60 Hz', frameMs: 1000 / 60 },
+  ]) {
+    for (const travel of [20, 40]) {
+      it(`when a ${display} display has drawn the page at the finger, the finger moves ${travel} px more before the next frame and lets go, then the first frame of the slide moves the page from where the last drawn frame showed it no more than it was moving or an eighth of the gap, since the finger's last travel was never drawn`, async () => {
+        const now = oneFakePageClock();
+        const frames = framesByHand();
+        try {
+          const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+          await vi.dynamicImportSettled();
+          swipe.follow(220);
+          finishVisit();
+          await drawnUnderOnTheFakeClock();
+          const drawn = [offsetOf(over())];
+          for (let frame = 0; frame < 60 && drawn.at(-1)! < 220; frame++) {
+            await vi.advanceTimersByTimeAsync(frameMs);
+            frames.run(now());
+            drawn.push(offsetOf(over()));
+          }
+          expect(drawn.at(-1), 'the page closed in on the finger').toBe(220);
+          swipe.follow(220 + travel / 2);
+          swipe.follow(220 + travel);
+          void swipe.settle({
+            completes: true,
+            from: 220 + travel,
+            to: 390,
+            durationMs: 150,
+            easing: 'cubic-bezier(0.25, 0.5, 0.25, 1)',
+            speed: 1,
+          });
+          await vi.advanceTimersByTimeAsync(frameMs);
+          frames.run(now());
+          await vi.advanceTimersByTimeAsync(0);
+          const moved = offsetOf(over()) - 220;
+
+          expect(moved, 'the page stood still in the first frame after the lift').toBeGreaterThan(
+            0,
+          );
+          expect(moved, 'the first frame of the slide').toBeLessThanOrEqual(
+            Math.max(220 - drawn.at(-2)!, 220 / 8) + 1e-6,
+          );
+        } finally {
+          frames.restore();
+        }
+      });
+    }
+  }
+
+  it('when no frame is drawn for 600, 800 or 1100 ms while the finger runs far ahead of a page that closed in on a short gap, and it lets go in that time, slowly or with a flick, on a 30 or 60 Hz display that measured its own frames, then the page arrives within 1.5 times the finger’s own slide or 400 ms after the frames come again, each frame moving it no more than it was moving, an eighth of the gap it now shows to the finger, or the finger’s own slide at its steepest', async () => {
+    const now = oneFakePageClock();
+    const frames = framesByHand();
+    const late: string[] = [];
+    try {
+      for (const [freezeMs, frameMs, speed, durationMs] of [600, 800, 1100].flatMap((freeze) =>
+        [1000 / 30, 1000 / 60].flatMap((frame) => [
+          [freeze, frame, 0.2, 350],
+          [freeze, frame, 1, 180],
+        ]),
+      )) {
+        const transitions = dressedTransitions();
+        transitions.frameGaps.splice(0, Infinity, ...Array<number>(10).fill(frameMs));
+        const swipe = transitions.startSwipe({ kind: 'parent', path: '/' })!;
+        await vi.dynamicImportSettled();
+        swipe.follow(56);
+        finishVisit();
+        await drawnUnderOnTheFakeClock();
+        const drawn = [offsetOf(over())];
+        for (let frame = 0; frame < 2; frame++) {
+          await vi.advanceTimersByTimeAsync(frameMs);
+          frames.run(now());
+          drawn.push(offsetOf(over()));
+        }
+        await vi.advanceTimersByTimeAsync(freezeMs / 2);
+        swipe.follow(300);
+        await vi.advanceTimersByTimeAsync(freezeMs / 2);
+        const end = {
+          completes: true,
+          from: 300,
+          to: 390,
+          durationMs,
+          easing: 'cubic-bezier(0.25, 0.5, 0.25, 1)',
+          speed,
+        };
+        const settled = swipe.settle(end);
+        const lastDrawn = drawn.at(-1)!;
+        const atMost = Math.max(
+          lastDrawn - drawn.at(-2)!,
+          56 / 8,
+          (300 - lastDrawn) / 8,
+          steepestStepOver(end, frameMs),
+        );
+        const resumedAt = now();
+        const offsets = [lastDrawn];
+        let arrivedMs: number | null = null;
+        for (let frame = 0; frame < 120 && arrivedMs === null; frame++) {
+          await vi.advanceTimersByTimeAsync(frameMs);
+          frames.run(now());
+          await vi.advanceTimersByTimeAsync(0);
+          const page = document.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`);
+          const at = page === null ? 390 : offsetOf(page);
+          if (at - offsets.at(-1)! > atMost + 1e-6) {
+            late.push(
+              `${freezeMs} ms, ${frameMs.toFixed(1)} ms frames, ${speed} px/ms: frame ${frame + 1} moved ${(at - offsets.at(-1)!).toFixed(1)} over ${atMost.toFixed(1)}`,
+            );
+          }
+          offsets.push(at);
+          if (at === 390) {
+            arrivedMs = now() - resumedAt;
+          }
+        }
+        if (arrivedMs === null || arrivedMs > Math.max(1.5 * end.durationMs, 400) + frameMs) {
+          late.push(
+            `${freezeMs} ms, ${frameMs.toFixed(1)} ms frames, ${speed} px/ms: arrived after ${arrivedMs} ms (${offsets.map((at) => at.toFixed(0)).join(' ')})`,
+          );
+        }
+        await vi.advanceTimersByTimeAsync(2000);
+        await settled;
+        dressedTransitions().finish();
+        document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+      }
+
+      expect(late).toEqual([]);
+    } finally {
+      frames.restore();
+    }
+  });
+
   it('when the page clock closes the last of the gap while no frame is drawn for 520 ms, frames come again showing the page at the still finger, and the finger lets go, then the slide never shows the page behind where the last drawn frame showed it, and no frame steps back', async () => {
     const now = oneFakePageClock();
     const frames = framesByHand();

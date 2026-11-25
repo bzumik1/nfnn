@@ -102,6 +102,8 @@ export interface SettleTrack {
   readonly firstStepAtMost: number;
   readonly show: (at: number) => void;
   readonly goesOn: () => boolean;
+  readonly drawnAt?: number;
+  readonly afterFreezeStepAtMost?: number;
 }
 
 export function trackSettle(view: Window, track: SettleTrack): Promise<void> {
@@ -109,17 +111,19 @@ export function trackSettle(view: Window, track: SettleTrack): Promise<void> {
   const curve = curveOf(plan.easing);
   const way = plan.to - plan.from;
   const steepest = new Map<number, number>();
+  let floor = track.firstStepAtMost;
   const stepAtMostOver = (advanceMs: number): number => {
     const key = Math.floor(advanceMs * 10) / 10;
     const known = steepest.get(key) ?? steepestStepOver(track.finger, key);
     steepest.set(key, known);
-    return Math.max(track.firstStepAtMost, known);
+    return Math.max(floor, known);
   };
   return new Promise((settled) => {
     let at = plan.from;
+    let presentedAt = plan.from;
     let elapsed = 0;
     let last: number | null = null;
-    let lastDrawnAt = view.performance.now();
+    let lastDrawnAt = track.drawnAt ?? view.performance.now();
     let first = true;
     const step = (now: number, drawn: boolean): void => {
       if (!track.goesOn()) {
@@ -127,6 +131,11 @@ export function trackSettle(view: Window, track: SettleTrack): Promise<void> {
         return;
       }
       const stopped = !drawn && now - lastDrawnAt >= HELD_WITHOUT_A_FRAME_MS;
+      if (drawn && now - lastDrawnAt >= HELD_WITHOUT_A_FRAME_MS) {
+        at = presentedAt;
+        floor = Math.max(floor, track.afterFreezeStepAtMost ?? 0);
+        first = true;
+      }
       if (drawn || stopped) {
         const advanceMs = drawn
           ? Math.min(track.frameMs, last === null ? DISPLAY_FRAME_MS : Math.max(0, now - last))
@@ -140,12 +149,13 @@ export function trackSettle(view: Window, track: SettleTrack): Promise<void> {
           plan.durationMs <= 0
             ? plan.to
             : plan.from + way * easedAt(curve, elapsed / plan.durationMs);
-        const atMost = first
-          ? track.firstStepAtMost
-          : stepAtMostOver(drawn ? advanceMs : track.frameMs);
+        const atMost = first ? floor : stepAtMostOver(drawn ? advanceMs : track.frameMs);
         first = false;
         const towards = target - at;
         at = Math.abs(towards) <= atMost ? target : at + Math.sign(towards) * atMost;
+        if (drawn) {
+          presentedAt = at;
+        }
         track.show(at);
       }
       if (Math.abs(plan.to - at) < ARRIVED_WITHIN_PX) {
@@ -395,10 +405,12 @@ function followingFinger(
   let stepAtMost = 0;
   let closedIn = false;
   let catchingUp = false;
+  let presentedTime = view.performance.now();
   let presenting = false;
   const present = (): void => {
     presentedStep = shown - presented;
     presented = shown;
+    presentedTime = view.performance.now();
   };
   const place = (at: number, drawn = true): void => {
     shown = at;
@@ -460,7 +472,7 @@ function followingFinger(
       }
       return false;
     }
-    if (shown !== presented) {
+    if (stepAtMost > 0 && shown !== presented) {
       shown = presented;
       follow();
     }
@@ -473,6 +485,8 @@ function followingFinger(
             finger: wanted,
             frameMs: measuredFrameMs(stage),
             firstStepAtMost: Math.max(Math.sign(end.to - shown) * presentedStep, stepAtMost),
+            drawnAt: presentedTime,
+            afterFreezeStepAtMost: Math.abs(wanted.from - presented) / CLOSE_IN_FRAMES_AT_LEAST,
             show: place,
             goesOn: () => stage.running === running,
           }),
@@ -524,7 +538,7 @@ function followingFinger(
     follow: (to) => {
       offset = Math.min(width, Math.max(0, to));
       if (ready && !catchingUp) {
-        place(offset);
+        place(offset, false);
       }
     },
     settle,
