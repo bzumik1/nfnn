@@ -6,6 +6,8 @@ import { Appearance } from '../../../core/appearance/appearance';
 import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { EDGE_SWIPE_DRAGGING_CLASS } from '../../../core/navigation/edge-swipe-back';
+import { PageTransitions } from '../../../core/navigation/page-transitions';
+import { SHEET_STEPPING } from '../../../core/navigation/sheet-stepping';
 import { Dialog } from './dialog';
 import { SuspendsDialogs } from './dialog-suspension';
 import { DialogAnnouncer } from './dialog-announcer';
@@ -67,6 +69,10 @@ describe('Given a dialog opened from a button', () => {
   });
 
   afterEach(() => fixture.nativeElement.remove());
+
+  it('when it is made, then it hands the steps of a sheet to the page transitions, so a sheet stands in a step from its first one', () => {
+    expect(TestBed.inject(PageTransitions).sheets).toBe(SHEET_STEPPING);
+  });
 
   it('when it renders, then it is open as a modal dialog named by its title', () => {
     expect(native().open).toBe(true);

@@ -33,7 +33,7 @@ import {
   PageTransitions,
   STACKED_DIALOG_CLASS,
 } from '../../../core/navigation/page-transitions';
-import { SHEET_LOOKS } from '../../../core/navigation/sheet-stepping';
+import { SHEET_STEPPING } from '../../../core/navigation/sheet-stepping';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
@@ -120,7 +120,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private leaveTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
-    inject(PageTransitions).sheets ??= SHEET_LOOKS;
+    inject(PageTransitions).sheets ??= SHEET_STEPPING;
     effect(() => {
       const suspended = this.suspension();
       untracked(() => this.follow(suspended));

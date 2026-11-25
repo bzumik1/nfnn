@@ -2,7 +2,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { PageTransitions } from '../../../core/navigation/page-transitions';
-import { SHEET_LOOKS } from '../../../core/navigation/sheet-stepping';
+import { SHEET_STEPPING } from '../../../core/navigation/sheet-stepping';
 import { SHEET_HEAD_RESIZE_OBSERVER, SheetHead } from './sheet-head';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 import { InputModality } from '../../../core/input/input-modality';
@@ -82,7 +82,7 @@ describe('Given the head of a page inside a sheet', () => {
   it('when it is made outside any dialog, as the head of a page of Správa on a phone, then the steps can hold it, since the code that holds the heads comes with it', () => {
     fixture.detectChanges();
 
-    expect(TestBed.inject(PageTransitions).sheets).toBe(SHEET_LOOKS);
+    expect(TestBed.inject(PageTransitions).sheets).toBe(SHEET_STEPPING);
   });
 
   it('when Zpět is pressed, then the sheet is asked to step back', () => {

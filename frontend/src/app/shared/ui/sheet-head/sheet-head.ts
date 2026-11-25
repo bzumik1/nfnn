@@ -19,7 +19,7 @@ import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { isTextEntry } from '../../../core/layout/soft-keyboard';
 import { motionAllowed, PageTransitions } from '../../../core/navigation/page-transitions';
-import { SHEET_LOOKS } from '../../../core/navigation/sheet-stepping';
+import { SHEET_STEPPING } from '../../../core/navigation/sheet-stepping';
 
 const SHEET_PANEL = '.dialog-panel';
 const HEIGHT = '--sheet-head-height';
@@ -146,7 +146,7 @@ export class SheetHead {
   private lettingGo: number | null = null;
 
   constructor() {
-    this.transitions.sheets ??= SHEET_LOOKS;
+    this.transitions.sheets ??= SHEET_STEPPING;
     effect(() => {
       this.title();
       untracked(() => this.letFadeGo());

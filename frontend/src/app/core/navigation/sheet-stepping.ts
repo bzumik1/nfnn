@@ -30,7 +30,7 @@ const BACKDROP_LOOKS = [
   '-webkit-backdrop-filter',
 ];
 
-export const SHEET_LOOKS: SheetLooks = { stepInSheet, standingSheetCopy, holdHeads };
+export const SHEET_STEPPING: SheetLooks = { stepInSheet, standingSheetCopy, holdHeads };
 
 function stepInSheet(stage: PageTransitions, step: SheetStep): void {
   const view = stage.document.defaultView;
