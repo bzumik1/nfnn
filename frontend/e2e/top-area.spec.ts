@@ -601,7 +601,6 @@ function expectTheBackdropInStep(frames: TopAreaFrame[]): void {
 const STATUS_BAR_PX = 59;
 const HOLD_MS = 100;
 const BUSY_MS = 120;
-const FRAME_START_BEFORE_CHECK_MS = 1;
 const CPU_SLOWER_AS_ON_A_LOADED_RUNNER = 3;
 const PULL_DOWNS = [0, 20, 80, 400];
 const CLASSIC_SCROLLBARS_ONLY =
@@ -800,7 +799,7 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
         until: 0,
         read(reader) {
           const tick = (now: number): void => {
-            if (performance.now() < held.nfnnLateFrames.until) {
+            if (now < held.nfnnLateFrames.until) {
               held.nfnnHeldBack = true;
               held.nfnnHeldFrames.push(now);
               requestAnimationFrame(tick);
@@ -861,9 +860,7 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
           at > beforeHold && at < sampled[afterHold] && !heldFrames.includes(at) && at >= firstHeld,
       ),
     ).toEqual([]);
-    expect(frames[afterHold].at - frames[afterHold - 1].at).toBeGreaterThanOrEqual(
-      HOLD_MS - FRAME_START_BEFORE_CHECK_MS,
-    );
+    expect(frames[afterHold].at - frames[afterHold - 1].at).toBeGreaterThanOrEqual(HOLD_MS);
     expect(veilJumps(frames)).toEqual([]);
   });
 
