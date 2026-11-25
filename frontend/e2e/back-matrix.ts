@@ -143,7 +143,9 @@ export interface Frame {
   readonly overlay: boolean;
   readonly offset: number | null;
   readonly tinted: boolean;
-  readonly rounded: number;
+  readonly overRounded: number;
+  readonly underRounded: number;
+  readonly onGround: boolean;
   readonly titles: string[];
   readonly heads: string[];
   readonly live: string[];
@@ -465,17 +467,24 @@ export function detailScreens(): string[] {
   return [...content, ...administration].filter((path) => path.includes(':'));
 }
 
+const HOME_INDICATOR_INSET_PX = 34;
+
 export async function onThePhone(page: Page, look: Look): Promise<void> {
   await page.emulateMedia({ colorScheme: look, reducedMotion: 'no-preference' });
   await seeHeadTitles(page);
-  await page.addInitScript((gap) => {
-    Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
-    Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
-    localStorage.setItem('nfnn.donor-session-app', '1');
-    const gapSheet = new CSSStyleSheet();
-    gapSheet.replaceSync(`:root { --sheet-top-gap: ${gap}px !important; }`);
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets, gapSheet];
-  }, SHEET_TOP_GAP_PX);
+  await page.addInitScript(
+    ({ gap, inset }) => {
+      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+      Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
+      localStorage.setItem('nfnn.donor-session-app', '1');
+      const gapSheet = new CSSStyleSheet();
+      gapSheet.replaceSync(
+        `:root { --sheet-top-gap: ${gap}px !important; --safe-area-bottom: ${inset}px !important; }`,
+      );
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, gapSheet];
+    },
+    { gap: SHEET_TOP_GAP_PX, inset: HOME_INDICATOR_INSET_PX },
+  );
   await page.route('**/api/donors/auth/refresh', (route) =>
     route.fulfill(session(200, administrator)),
   );
@@ -1016,20 +1025,20 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
         const layerStyle = overlay === null ? null : getComputedStyle(overlay);
         const filter =
           layerStyle?.backdropFilter || layerStyle?.getPropertyValue('-webkit-backdrop-filter');
-        const corners = Array.from(
-          overlay?.querySelectorAll<HTMLElement>('.page-transition__page') ?? [],
-          (page) => {
-            const style = getComputedStyle(page);
-            return Math.max(
-              ...[
-                style.borderTopLeftRadius,
-                style.borderTopRightRadius,
-                style.borderBottomLeftRadius,
-                style.borderBottomRightRadius,
-              ].map((radius) => Number.parseFloat(radius) || 0),
-            );
-          },
-        );
+        const cornerOf = (page: Element | null): number => {
+          if (page === null) {
+            return 0;
+          }
+          const style = getComputedStyle(page);
+          return Math.max(
+            ...[
+              style.borderTopLeftRadius,
+              style.borderTopRightRadius,
+              style.borderBottomLeftRadius,
+              style.borderBottomRightRadius,
+            ].map((radius) => Number.parseFloat(radius) || 0),
+          );
+        };
         const titles = (window.nfnnHeadTitles?.() ?? []).filter(
           (title) => title.opacity > hiddenAtMost,
         );
@@ -1044,7 +1053,9 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
           covered: paced ? coverOfTheLine() : null,
           tinted:
             layerStyle !== null && (filter === undefined || filter === '' || filter === 'none'),
-          rounded: Math.max(0, ...corners),
+          overRounded: cornerOf(over),
+          underRounded: cornerOf(under),
+          onGround: overlay?.classList.contains('page-transition--on-ground') ?? false,
           titles: titles.map(
             (title) =>
               `${title.text} ${title.opacity.toFixed(2)} ${Math.round(title.left)}..${Math.round(title.right)}`,
@@ -1168,9 +1179,19 @@ function travelled(probe: StepProbe): Frame[] {
     'frames in which Safari would tint the band under the clock from the moving layer',
   ).toBe(0);
   expect(
-    Math.max(...shown.map((frame) => frame.rounded)),
-    'the moving page had rounded corners',
+    Math.max(...shown.map((frame) => frame.underRounded)),
+    'the page beneath the moving one had rounded corners',
   ).toBe(0);
+  expect(
+    Math.max(...shown.filter((frame) => frame.onGround).map((frame) => frame.overRounded), 0),
+    'a step on the ground of a sheet, with no shadow and no dim beneath, rounded its top page',
+  ).toBe(0);
+  if (probe.paced) {
+    expect(
+      Math.min(...shown.filter((frame) => !frame.onGround).map((frame) => frame.overRounded), 1),
+      'the top page of a step in the app on the home screen of a phone had no corners like the display',
+    ).toBeGreaterThan(0);
+  }
   return shown.filter((frame) => frame.offset !== null);
 }
 
