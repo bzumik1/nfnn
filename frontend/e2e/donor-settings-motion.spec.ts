@@ -43,6 +43,7 @@ const GONE_OPACITY = 0.01;
 const SHOWING_OPACITY = 0.05;
 const STANDING_OPACITY = 0.5;
 const ONE_LINE_PX = 2;
+const DIVIDER_PX = 1;
 
 const otherDevice = signedInDevices.find((device) => !device.current);
 const otherRow = `#device-row-${otherDevice?.id}`;
@@ -68,8 +69,14 @@ const otherConnection = {
   id: '0192f0f1-0000-7000-8000-000000000012',
   client: 'chatgpt.com',
 };
+const thirdConnection = {
+  ...claudeConnection,
+  id: '0192f0f1-0000-7000-8000-000000000013',
+  client: 'cursor.com',
+};
 const claudeConnectionRow = `#connection-row-${claudeConnection.id}`;
 const otherConnectionRow = `#connection-row-${otherConnection.id}`;
+const thirdConnectionRow = `#connection-row-${thirdConnection.id}`;
 
 interface DoubleTapWatch {
   leaveHeld: boolean;
@@ -484,6 +491,47 @@ function dividersLeftAfterRemoval(frames: readonly Frame[]): string[] {
   );
 }
 
+function dividersThickerThanOnePx(frames: readonly Frame[]): string[] {
+  return frames.flatMap(({ at, lines, afters }) =>
+    lines
+      .filter((line) => line.bottom - line.top > DIVIDER_PX + SUBPIXEL_PX)
+      .map(
+        (line) =>
+          `divider ${line.bottom - line.top} px thick at ${line.top} at +${Math.round(at)} ms (${afters.join('; ') || 'no ::after style'})`,
+      ),
+  );
+}
+
+function notOneDividerAboveTheLastRow(frames: readonly Frame[]): string[] {
+  return frames.flatMap(({ at, boxes, lines, afters }) => {
+    const lastRow = boxes['lastRow'];
+    if (lastRow === null) {
+      return [`no last row at +${Math.round(at)} ms`];
+    }
+    const touching = lines.filter(
+      (line) =>
+        line.alpha > GONE_OPACITY &&
+        line.top <= lastRow.top + SUBPIXEL_PX &&
+        line.bottom >= lastRow.top - SUBPIXEL_PX,
+    );
+    return touching.length === 1
+      ? []
+      : [
+          `${touching.length} dividers on the last row's top ${lastRow.top} at +${Math.round(at)} ms (${afters.join('; ') || 'no ::after style'})`,
+        ];
+  });
+}
+
+function risesAboveItsEndWithin(frames: readonly Frame[], name: string, within: string): string[] {
+  const shown = topsWithin(frames, name, within);
+  const end = shown[shown.length - 1]?.top;
+  return shown.flatMap(({ at, top }) =>
+    top < end - SUBPIXEL_PX
+      ? [`${name} top in ${within} ${top} above its end ${end} at +${Math.round(at)} ms`]
+      : [],
+  );
+}
+
 function movesAfterTheEmptyTextShows(frames: readonly Frame[], name: string): string[] {
   const shown = frames.flatMap(({ at, boxes }) => {
     const card = boxes[name];
@@ -613,8 +661,11 @@ async function confirmRemovingTheIPhonePasskey(page: Page): Promise<Frame[]> {
   return frames;
 }
 
-async function openSettingsWithTwoConnections(page: Page): Promise<() => void> {
-  let listed = [claudeConnection, otherConnection];
+async function openSettingsWithConnections(
+  page: Page,
+  connections: readonly (typeof claudeConnection)[],
+): Promise<() => void> {
+  let listed = [...connections];
   const disconnectClaudeElsewhere = (): void => {
     listed = listed.filter((connection) => connection.id !== claudeConnection.id);
   };
@@ -631,8 +682,14 @@ async function openSettingsWithTwoConnections(page: Page): Promise<() => void> {
       },
     );
   });
-  await expect(page.locator('.connection-client')).toHaveText(['claude.ai', 'chatgpt.com']);
+  await expect(page.locator('.connection-client')).toHaveText(
+    connections.map((connection) => connection.client),
+  );
   return disconnectClaudeElsewhere;
+}
+
+function openSettingsWithTwoConnections(page: Page): Promise<() => void> {
+  return openSettingsWithConnections(page, [claudeConnection, otherConnection]);
 }
 
 async function openSettingsCountingDisconnects(page: Page): Promise<string[]> {
@@ -1054,6 +1111,56 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
     expect(notOneDividerOnTheRowsBottom(frames)).toEqual([]);
     expect(movesWithinFromTheFirstFrame(frames, 'client', 'card')).toEqual([]);
     expect(movesDownWithin(frames, 'nextClient', 'card')).toEqual([]);
+  });
+
+  test('when they disconnect claude.ai above chatgpt.com and cursor.com, then every divider stays 1 px thick and exactly one stands between chatgpt.com and cursor.com in every frame, the one after the removal included', async ({
+    page,
+  }) => {
+    await openSettingsWithConnections(page, [claudeConnection, otherConnection, thirdConnection]);
+    const disconnect = page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' });
+    await disconnect.scrollIntoViewIfNeeded();
+    await settled(page, '.connections');
+
+    const frames = await framesWhile(
+      page,
+      {
+        row: claudeConnectionRow,
+        card: '.connections',
+        nextRow: otherConnectionRow,
+        lastRow: thirdConnectionRow,
+      },
+      () => disconnect.click(),
+      { removed: claudeConnectionRow, dividers: '.connection, .connection-slot' },
+    );
+
+    await expect(page.locator('.connection-client')).toHaveText(['chatgpt.com', 'cursor.com']);
+    expect(present(frames, 'row').length).toBeGreaterThan(0);
+    expect(frames.at(-1)?.boxes['row']).toBeNull();
+    expect(dividersThickerThanOnePx(frames)).toEqual([]);
+    expect(notOneDividerAboveTheLastRow(frames)).toEqual([]);
+  });
+
+  test('when they remove their last passkey, then the empty text never stands above the place it ends at, the frame in which the list is removed included', async ({
+    page,
+  }) => {
+    await openSettingsWithPasskeys(page, [iphonePasskey]);
+    const row = page.locator(iphonePasskeyRow);
+    await row.getByRole('button', { name: 'Odebrat' }).click();
+    const confirm = row.getByRole('button', { name: 'Ano, odebrat' });
+    await expect(confirm).toBeVisible();
+    await settled(page, 'app-account-card .ui-card');
+
+    const frames = await framesWhile(
+      page,
+      { row: iphonePasskeyRow, card: 'app-account-card .ui-card', empty: '.passkeys-empty' },
+      () => confirm.click(),
+      { removed: '.passkey-list' },
+    );
+
+    await expect(page.locator('.passkey-name')).toHaveCount(0);
+    expect(present(frames, 'empty').length).toBeGreaterThan(0);
+    expect(frames.at(-1)?.boxes['row']).toBeNull();
+    expect(risesAboveItsEndWithin(frames, 'empty', 'card')).toEqual([]);
   });
 
   test('when the second press of a double tap on Odpojit for claude.ai comes as its row is removed, then it reaches nothing where the first one was, and Odpojit of chatgpt.com answers again a moment later', async ({

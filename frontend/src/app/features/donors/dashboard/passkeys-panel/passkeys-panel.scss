@@ -57,6 +57,7 @@ $passkey-list-gap: var(--space-4);
 }
 
 .passkeys-empty--after-rows {
+  transition-property: none;
   @include motion.after-rows-left;
 }
 
