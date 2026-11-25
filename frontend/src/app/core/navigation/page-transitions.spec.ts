@@ -1978,6 +1978,32 @@ describe('Given the app on the home screen of a phone opened straight on the don
     expect(over().style.transform).toBe('');
   });
 
+  it('when the page Zpět leads to is drawn 220 px behind a finger that holds still, as the iPhone SE drew it in round 29, then the page sets off from rest and gathers speed, so no frame shows it more than an eighth of the way further, never the 42 to 129 px jump of one frame', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnder();
+
+      const offsets = [offsetOf(over())];
+      for (let frame = 1; frame <= 40; frame++) {
+        frames.run(frame * 16);
+        offsets.push(offsetOf(over()));
+      }
+      const steps = offsets.slice(1).map((offset, frame) => offset - offsets[frame]);
+
+      expect(steps[0], 'the first frame of the close-in').toBeLessThanOrEqual(220 * 0.05);
+      expect(Math.max(...steps), 'the longest step of one frame').toBeLessThanOrEqual(220 / 8);
+      expect(offsets.at(-1)).toBe(220);
+    } finally {
+      frames.restore();
+      document.documentElement.style.removeProperty('--duration-fast');
+    }
+  });
+
   it('when the page Zpět leads to is drawn while the finger keeps moving, then the page closes in on the finger frame by frame until it is with it and then follows it 1:1, never jumping at an end set in advance', async () => {
     document.documentElement.style.setProperty('--duration-fast', '150ms');
     const frames = framesByHand();

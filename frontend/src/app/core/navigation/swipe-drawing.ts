@@ -49,18 +49,18 @@ export interface CatchUp {
 
 export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp): void {
   const closing = Math.max(1, fastMs / CATCH_UP_SPANS);
+  const startGap = catchUp.finger() - catchUp.from;
   let last: number | null = null;
-  let gap = catchUp.finger() - catchUp.from;
+  let elapsed = 0;
   const closeIn = (now: number): void => {
     if (!catchUp.goesOn()) {
       return;
     }
-    const elapsed = last === null ? FRAME_MS : Math.max(0, now - last);
+    elapsed += last === null ? FRAME_MS : Math.max(0, now - last);
     last = now;
-    gap *= Math.exp(-elapsed / closing);
-    if (Math.abs(gap) < 1) {
-      gap = 0;
-    }
+    const spans = elapsed / closing;
+    const left = startGap * (1 + spans) * Math.exp(-spans);
+    const gap = Math.abs(left) < 1 ? 0 : left;
     catchUp.show(catchUp.finger() - gap);
     if (gap === 0) {
       catchUp.caughtUp();
