@@ -11,6 +11,8 @@ import { InputModality } from '../../../core/input/input-modality';
       <app-sheet-head title="Údaje a zabezpečení" />
     }
     <input id="below" aria-label="E-mail" />
+    <button id="toggle" type="button">Změnit heslo</button>
+    <button id="cancel" type="button">Zrušit</button>
     <dialog id="opened-inside" tabindex="-1" open>
       <div class="dialog-panel"><input id="nested" aria-label="Číslo účtu" /></div>
     </dialog>
@@ -272,53 +274,80 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
       expect(scrolled).toEqual([-27]);
     });
 
-    it('when a finger presses a button half under the head and the press focuses it, then the panel stays where it is, so nothing moves under the finger', async () => {
-      const modality = TestBed.inject(InputModality);
-      modality.start();
-      onTestFinished(() => modality.stop());
-      const pressed = control('#below');
-      standAt(pressed, 130, 40);
-
-      pressed.dispatchEvent(new Event('pointerdown', { bubbles: true }));
-      pressed.focus();
-      await nextFrame();
-
-      expect(scrolled).toEqual([]);
-    });
-
     describe('when a finger pressed last', () => {
+      const pressByFinger = (element: HTMLElement) =>
+        element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
       beforeEach(() => {
         const modality = TestBed.inject(InputModality);
         modality.start();
         onTestFinished(() => modality.stop());
-        document.dispatchEvent(new Event('pointerdown'));
       });
 
-      it('when code returns the focus to a button partly below the head, then the panel drops its scroll padding before the browser scrolls, so the button stays under the finger', () => {
-        const button = control('#below');
-        standAt(button, 130, 40);
+      it('when the press focuses a button half under the head, then the panel stays where it is, so nothing moves under the finger', async () => {
+        const toggle = control('#toggle');
+        standAt(toggle, 130, 40);
 
-        button.focus();
+        pressByFinger(toggle);
+        toggle.focus();
+        await nextFrame();
+
+        expect(scrolled).toEqual([]);
+      });
+
+      it('when code returns the focus to the pressed button partly below the head, then the panel drops its scroll padding before the browser scrolls, so the button stays under the finger', () => {
+        const toggle = control('#toggle');
+        standAt(toggle, 130, 40);
+        pressByFinger(toggle);
+
+        toggle.focus();
 
         expect(padding()).toBe('0px');
       });
 
       it('when two frames have passed since, then the panel takes its scroll padding again', async () => {
-        standAt(control('#below'), 130, 40);
+        const toggle = control('#toggle');
+        standAt(toggle, 130, 40);
+        pressByFinger(toggle);
 
-        control('#below').focus();
+        toggle.focus();
         await nextFrame();
         await nextFrame();
 
         expect(padding()).toBe('');
       });
 
-      it('when code moves the focus to a control hidden entirely under the head, then the panel keeps its scroll padding, so the browser brings it below the head', () => {
-        standAt(control('#below'), 100, 40);
+      it('when code moves the focus from the pressed button to another one half under the head, then the panel brings that one below the head in the next frame', async () => {
+        pressByFinger(control('#cancel'));
+        standAt(control('#toggle'), 130, 40);
 
-        control('#below').focus();
+        control('#toggle').focus();
+        await nextFrame();
 
         expect(padding()).toBe('');
+        expect(scrolled).toEqual([-27]);
+      });
+
+      it('when the pressed control is hidden entirely under the head, then the panel keeps its scroll padding, so the browser brings it below the head', () => {
+        const toggle = control('#toggle');
+        standAt(toggle, 100, 40);
+        pressByFinger(toggle);
+
+        toggle.focus();
+
+        expect(padding()).toBe('');
+      });
+
+      it('when the press focuses a field half under the head, then the panel keeps its scroll padding and leaves the field to keyboard avoidance', async () => {
+        const field = control('#below');
+        standAt(field, 130, 40);
+
+        pressByFinger(field);
+        field.focus();
+        await nextFrame();
+
+        expect(padding()).toBe('');
+        expect(scrolled).toEqual([]);
       });
     });
 

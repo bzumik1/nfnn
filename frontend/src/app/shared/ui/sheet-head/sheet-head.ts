@@ -11,6 +11,7 @@ import {
   output,
 } from '@angular/core';
 import { InputModality } from '../../../core/input/input-modality';
+import { isTextEntry } from '../../../core/layout/soft-keyboard';
 
 const SHEET_PANEL = '.dialog-panel';
 const HEIGHT = '--sheet-head-height';
@@ -21,6 +22,10 @@ function offsetWithin(panel: HTMLElement, head: HTMLElement): number {
   const scale =
     panelBox.height > 0 && panel.offsetHeight > 0 ? panelBox.height / panel.offsetHeight : 1;
   return (head.getBoundingClientRect().top - panelBox.top) / scale - panel.clientTop;
+}
+
+function takesText(element: Element): boolean {
+  return isTextEntry(element);
 }
 
 function keepFocusClearOfHead(
@@ -53,6 +58,12 @@ function keepFocusClearOfHead(
       });
     });
   };
+  let lastPressed: Node | null = null;
+  const pressed = (event: Event) => {
+    lastPressed = event.target instanceof Node ? event.target : null;
+  };
+  const wasPressed = (focused: HTMLElement) =>
+    lastPressed !== null && (focused === lastPressed || focused.contains(lastPressed));
   const ofItsOwnPanel = (focused: HTMLElement) =>
     focused.closest(SHEET_PANEL) === panel && focused.closest('dialog') === panel.closest('dialog');
   const focusEntered = (event: FocusEvent) => {
@@ -67,8 +78,11 @@ function keepFocusClearOfHead(
     if (!ofItsOwnPanel(focused)) {
       return;
     }
-    if (pressedByPointer()) {
-      if (focused.getBoundingClientRect().bottom > head.getBoundingClientRect().bottom) {
+    if (pressedByPointer() && wasPressed(focused)) {
+      if (
+        !takesText(focused) &&
+        focused.getBoundingClientRect().bottom > head.getBoundingClientRect().bottom
+      ) {
         holdStillForTwoFrames(focused);
       }
       return;
@@ -81,11 +95,13 @@ function keepFocusClearOfHead(
       panel.style.removeProperty(PADDING_TOP);
     }
   };
+  panel.addEventListener('pointerdown', pressed, { capture: true, passive: true });
   panel.addEventListener('focusin', focusEntered);
   panel.addEventListener('focusout', focusLeft);
   return () => {
     view.cancelAnimationFrame(pending);
     view.cancelAnimationFrame(restoring);
+    panel.removeEventListener('pointerdown', pressed, { capture: true });
     panel.removeEventListener('focusin', focusEntered);
     panel.removeEventListener('focusout', focusLeft);
     panel.style.removeProperty(PADDING_TOP);
