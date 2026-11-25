@@ -1504,6 +1504,9 @@ describe('Given the app on the home screen of a phone, where the news led to the
 
       expect(settled).toBe(true);
     } finally {
+      if (vi.isMockFunction(window.requestAnimationFrame)) {
+        vi.mocked(window.requestAnimationFrame).mockRestore();
+      }
       vi.useRealTimers();
       delete (HTMLElement.prototype as { animate?: unknown }).animate;
     }
