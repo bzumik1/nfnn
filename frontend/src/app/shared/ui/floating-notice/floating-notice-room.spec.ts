@@ -138,4 +138,100 @@ describe('Given floating bars at the bottom of the screen', () => {
 
     expect(scrolls).toEqual([]);
   });
+
+  describe('Given a bar whose top stands at 720 px of an 800 px window', () => {
+    const BAR_TOP = 720;
+    const BAR_GAP = 16;
+
+    const placedAt = <T extends HTMLElement>(element: T, top: number, bottom: number): T => {
+      Object.defineProperty(element, 'getBoundingClientRect', {
+        value: () => ({ top, bottom }),
+      });
+      return element;
+    };
+
+    const pageWithFocus = () => {
+      const scrolls: ScrollToOptions[] = [];
+      const frames: FrameRequestCallback[] = [];
+      let focusin: ((event: FocusEvent) => void) | null = null;
+      let focused: Element | null = document.body;
+      const view = {
+        scrollY: 0,
+        innerHeight: 800,
+        visualViewport: null,
+        document: { documentElement: { scrollHeight: 4000 } },
+        scrollTo: () => undefined,
+        scrollBy: (options: ScrollToOptions) => scrolls.push(options),
+        requestAnimationFrame: (frame: FrameRequestCallback) => frames.push(frame),
+        getComputedStyle: () => ({ bottom: `${BAR_GAP}px` }),
+      };
+      const page = {
+        documentElement: root,
+        body: document.body,
+        defaultView: view,
+        get activeElement() {
+          return focused;
+        },
+        addEventListener: (type: string, listener: (event: FocusEvent) => void) => {
+          if (type === 'focusin') {
+            focusin = listener;
+          }
+        },
+        removeEventListener: () => undefined,
+      } as unknown as Document;
+      const focus = (element: Element) => {
+        focused = element;
+        focusin?.({ target: element } as unknown as FocusEvent);
+      };
+      const moveFocusQuietly = (element: Element) => {
+        focused = element;
+      };
+      const nextFrame = () => frames.splice(0).forEach((frame) => frame(0));
+      keepRoomForFloatingNotice(
+        page,
+        placedAt(bar(80), BAR_TOP, 800),
+        NOTHING_HELD,
+        NOTHING_SETTLING,
+      );
+      return { scrolls, focus, moveFocusQuietly, nextFrame };
+    };
+
+    const control = (top: number, bottom: number): HTMLButtonElement => {
+      const button = document.createElement('button');
+      document.body.append(button);
+      return placedAt(button, top, bottom);
+    };
+
+    it('when a page container that only catches the focus takes it, then the page does not move', () => {
+      const { scrolls, focus, nextFrame } = pageWithFocus();
+      const main = document.createElement('main');
+      main.tabIndex = -1;
+      document.body.append(main);
+
+      focus(placedAt(main, -900, 3000));
+      nextFrame();
+
+      expect(scrolls).toEqual([]);
+    });
+
+    it('when a control under the bar takes the focus and the focus returns to a visible button before the next frame, then the page does not move', () => {
+      const { scrolls, focus, moveFocusQuietly, nextFrame } = pageWithFocus();
+      const visible = control(360, 400);
+
+      focus(control(740, 780));
+      moveFocusQuietly(visible);
+      nextFrame();
+
+      expect(scrolls).toEqual([]);
+    });
+
+    it('when a control under the bar takes the focus and keeps it, then the page scrolls it above the bar', () => {
+      const { scrolls, focus, nextFrame } = pageWithFocus();
+
+      focus(control(740, 780));
+      nextFrame();
+
+      expect(scrolls).toEqual([{ top: 780 - BAR_TOP + BAR_GAP, behavior: 'instant' }]);
+    });
+  });
 });

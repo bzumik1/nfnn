@@ -14,6 +14,7 @@ import {
   signIn,
 } from './donor-session';
 import { Locator, Page } from '@playwright/test';
+import { focusAtPress, pressHandsFocusToPageAsIos } from './ios-press';
 import jsQR from 'jsqr';
 
 const QUIET_ZONE = 4;
@@ -49,31 +50,6 @@ async function plainQrText(qr: Locator): Promise<string | undefined> {
   return side > 2 * QUIET_ZONE
     ? jsQR(pixels, width, width, { inversionAttempts: 'dontInvert' })?.data
     : undefined;
-}
-
-async function pressHandsFocusToPageAsIos(button: Locator): Promise<void> {
-  await button.evaluate((pressed) => {
-    pressed.setAttribute('data-pressed', 'copy');
-    pressed.addEventListener('mousedown', (event) => {
-      event.preventDefault();
-      pressed.parentElement
-        ?.closest<HTMLElement>('[tabindex="-1"]')
-        ?.focus({ preventScroll: true });
-    });
-    document.addEventListener(
-      'click',
-      () => {
-        const focused = document.activeElement;
-        (window as unknown as { focusAtPress: string | null }).focusAtPress =
-          focused === null ? null : focused.id || focused.localName;
-      },
-      { capture: true },
-    );
-  });
-}
-
-async function focusAtPress(page: Page): Promise<string | null> {
-  return page.evaluate(() => (window as unknown as { focusAtPress: string | null }).focusAtPress);
 }
 
 async function scrollTop(page: Page): Promise<number> {
@@ -352,8 +328,14 @@ test.describe('Given a donor who protects the account with an authenticator app'
 });
 
 test.describe('Given a donor turning on the code from an authenticator app', () => {
-  async function showKey(page: Page, width: number, rootPx?: number): Promise<void> {
+  async function showKey(
+    page: Page,
+    width: number,
+    rootPx?: number,
+    afterMocks?: (page: Page) => Promise<unknown>,
+  ): Promise<void> {
     await mockDonorApi(page);
+    await afterMocks?.(page);
     await page.route('**/api/donors/me/second-factor/setup', (route) =>
       route.fulfill({ json: secondFactorEnrolment }),
     );
@@ -479,10 +461,51 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
 
     await expect(page.getByRole('status').filter({ hasText: 'Zkopírováno.' })).toHaveCount(1);
     expect(await focusAtPress(page)).toBe('obsah');
-    expect(await page.evaluate(() => document.activeElement?.getAttribute('data-pressed'))).toBe(
-      'copy',
-    );
+    await expect(copy).toBeFocused();
     expect(await scrollTop(page)).toBe(before);
+  });
+
+  test('when they press Kopírovat klíč while the notice that the overview could not be stored on the device floats at the bottom and the press hands the focus to the page around it as iOS does, then the page keeps its place and the button stays in view', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: () => Promise.resolve() },
+        configurable: true,
+      });
+    });
+    let failFirstSync: () => void = () => undefined;
+    const firstSyncFails = new Promise<void>((resolve) => (failFirstSync = resolve));
+    await showKey(page, 1280, undefined, (mocked) =>
+      mocked.route(
+        (url) => url.pathname === '/api/donations/me/sync',
+        async (route) => {
+          await firstSyncFails;
+          await route.fulfill(problem(500, 'server-error', 'Chyba serveru', 'Zkuste to znovu.'));
+        },
+      ),
+    );
+    await expect(page.locator('.first-sync--saving')).toBeVisible();
+    failFirstSync();
+    const notice = page.locator('.first-sync');
+    await expect(notice.getByText(/nepodařilo uložit/)).toBeVisible();
+    const copy = page.getByRole('button', { name: 'Kopírovat klíč' });
+    await copy.evaluate((button) =>
+      button.scrollIntoView({ block: 'center', behavior: 'instant' }),
+    );
+    await pressHandsFocusToPageAsIos(copy);
+    const before = await scrollTop(page);
+
+    await copy.click();
+
+    await expect(page.getByRole('status').filter({ hasText: 'Zkopírováno.' })).toHaveCount(1);
+    expect(await focusAtPress(page)).toBe('obsah');
+    await expect(copy).toBeFocused();
+    expect(await scrollTop(page)).toBe(before);
+    await expect(copy).toBeInViewport({ ratio: 1 });
+    const copyBox = (await copy.boundingBox())!;
+    const noticeBox = (await notice.boundingBox())!;
+    expect(copyBox.y + copyBox.height).toBeLessThanOrEqual(noticeBox.y);
   });
 
   test('when they press Kopírovat klíč in the account sheet of a 390 px window after typing in Kód z aplikace and the press hands the focus to the sheet as iOS does, then the focus moves to that button, the sheet keeps its place and Zkopírováno is said once', async ({
