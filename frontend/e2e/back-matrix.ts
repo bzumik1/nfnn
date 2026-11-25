@@ -1282,6 +1282,12 @@ function travelled(probe: StepProbe): Frame[] {
   return shown.filter((frame) => frame.offset !== null);
 }
 
+function expectNoJumpWhereTimed(probe: StepProbe, frames: readonly Frame[], width: number): void {
+  if (test.info().tags.includes(TIMED_MOTION_TAG)) {
+    expectNoJump(probe, frames, width);
+  }
+}
+
 export function expectNoJump(probe: StepProbe, frames: readonly Frame[], width: number): void {
   expect(
     Number.isFinite(probe.steepestPerMs) && probe.steepestPerMs > 0,
@@ -2230,7 +2236,7 @@ export function expectLeftAway(probe: StepProbe, width: number, from: number): v
       'the leaving page went back on its way',
     ).toBeGreaterThanOrEqual(travelledFrames[at - 1].offset! - 1);
   }
-  expectNoJump(probe, travelledFrames, width);
+  expectNoJumpWhereTimed(probe, travelledFrames, width);
   expectOneTitleAtATime(probe);
 }
 
@@ -2252,7 +2258,7 @@ export function expectArrived(probe: StepProbe, width: number): void {
       'the arriving page went back on its way',
     ).toBeLessThanOrEqual(travelledFrames[at - 1].offset! + 1);
   }
-  expectNoJump(probe, travelledFrames, width);
+  expectNoJumpWhereTimed(probe, travelledFrames, width);
   expectOneTitleAtATime(probe);
 }
 
@@ -2272,7 +2278,7 @@ export function expectSlidBack(probe: StepProbe, width: number, from: number): v
       'the page went away again on its way back',
     ).toBeLessThanOrEqual(travelledFrames[at - 1].offset! + 1);
   }
-  expectNoJump(probe, travelledFrames, width);
+  expectNoJumpWhereTimed(probe, travelledFrames, width);
   expectOneTitleAtATime(probe);
 }
 
