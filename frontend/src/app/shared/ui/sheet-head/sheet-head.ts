@@ -13,12 +13,55 @@ import {
 
 const SHEET_PANEL = '.dialog-panel';
 const HEIGHT = '--sheet-head-height';
+const PADDING_TOP = 'scroll-padding-top';
 
 function offsetWithin(panel: HTMLElement, head: HTMLElement): number {
   const panelBox = panel.getBoundingClientRect();
   const scale =
     panelBox.height > 0 && panel.offsetHeight > 0 ? panelBox.height / panel.offsetHeight : 1;
   return (head.getBoundingClientRect().top - panelBox.top) / scale - panel.clientTop;
+}
+
+function keepFocusClearOfHead(panel: HTMLElement, head: HTMLElement, view: Window): () => void {
+  let pending = 0;
+  const uncover = (focused: HTMLElement) => {
+    if (focused.ownerDocument.activeElement !== focused) {
+      return;
+    }
+    const margin = parseFloat(view.getComputedStyle(focused).scrollMarginTop) || 0;
+    const covered =
+      head.getBoundingClientRect().bottom - (focused.getBoundingClientRect().top - margin);
+    if (covered > 0) {
+      panel.scrollBy({ top: -covered, behavior: 'instant' });
+    }
+  };
+  const focusEntered = (event: FocusEvent) => {
+    const focused = event.target;
+    if (!(focused instanceof HTMLElement) || focused === panel) {
+      return;
+    }
+    if (head.contains(focused)) {
+      panel.style.setProperty(PADDING_TOP, '0px');
+      return;
+    }
+    if (focused.closest(SHEET_PANEL) === panel) {
+      view.cancelAnimationFrame(pending);
+      pending = view.requestAnimationFrame(() => uncover(focused));
+    }
+  };
+  const focusLeft = (event: FocusEvent) => {
+    if (!(event.relatedTarget instanceof Node && head.contains(event.relatedTarget))) {
+      panel.style.removeProperty(PADDING_TOP);
+    }
+  };
+  panel.addEventListener('focusin', focusEntered);
+  panel.addEventListener('focusout', focusLeft);
+  return () => {
+    view.cancelAnimationFrame(pending);
+    panel.removeEventListener('focusin', focusEntered);
+    panel.removeEventListener('focusout', focusLeft);
+    panel.style.removeProperty(PADDING_TOP);
+  };
 }
 
 export const SHEET_HEAD_RESIZE_OBSERVER = new InjectionToken<typeof ResizeObserver | null>(
@@ -42,6 +85,7 @@ export class SheetHead {
     const head = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
     const destroyRef = inject(DestroyRef);
     const Observer = inject(SHEET_HEAD_RESIZE_OBSERVER);
+    const view = inject(DOCUMENT).defaultView;
     afterNextRender(() => {
       const panel = head.closest<HTMLElement>(SHEET_PANEL);
       if (panel === null) {
@@ -66,6 +110,9 @@ export class SheetHead {
         destroyRef.onDestroy(() => observer.disconnect());
       }
       destroyRef.onDestroy(() => panel.style.removeProperty(HEIGHT));
+      if (view !== null) {
+        destroyRef.onDestroy(keepFocusClearOfHead(panel, head, view));
+      }
     });
   }
 }

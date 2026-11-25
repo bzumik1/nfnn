@@ -9,6 +9,8 @@ import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
     @if (shown()) {
       <app-sheet-head title="Údaje a zabezpečení" />
     }
+    <input id="below" aria-label="E-mail" />
+    <div class="dialog-panel"><input id="nested" aria-label="Číslo účtu" /></div>
   </div>`,
 })
 class SheetPanel {
@@ -217,6 +219,83 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
     deliver({ target: head()! });
 
     expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('57px');
+  });
+
+  describe('when the focus comes into the sheet', () => {
+    const control = (selector: string) =>
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(selector)!;
+    const padding = () => panel().style.getPropertyValue('scroll-padding-top');
+    const nextFrame = () => new Promise<void>((done) => requestAnimationFrame(() => done()));
+    let scrolled: number[];
+
+    beforeEach(() => {
+      scrolled = [];
+      panel().scrollBy = ((options: ScrollToOptions) => scrolled.push(options.top ?? 0)) as never;
+      standAt(panel(), 100, 600);
+      standAt(head()!, 100, 57);
+    });
+
+    it('when Zpět takes it, then the panel drops its scroll padding, so the browser never scrolls to bring a control of the sticky head below the head', () => {
+      control('button[aria-label="Zpět"]').focus();
+
+      expect(padding()).toBe('0px');
+    });
+
+    it('when it moves from Zpět to Zavřít, then the panel still keeps no scroll padding', () => {
+      control('button[aria-label="Zpět"]').focus();
+
+      control('button[aria-label="Zavřít"]').focus();
+
+      expect(padding()).toBe('0px');
+    });
+
+    it("when it leaves Zavřít for a field below, then the panel takes the head's height as its scroll padding again before the field is focused", () => {
+      let paddingWhenFieldFocused: string | null = null;
+      control('#below').addEventListener('focusin', () => (paddingWhenFieldFocused = padding()));
+      control('button[aria-label="Zavřít"]').focus();
+
+      control('#below').focus();
+
+      expect(paddingWhenFieldFocused).toBe('');
+      expect(padding()).toBe('');
+    });
+
+    it('when the browser leaves a field it focused 27 px under the head, then the panel scrolls the field down below the head in the next frame', async () => {
+      standAt(control('#below'), 130, 40);
+
+      control('#below').focus();
+      await nextFrame();
+
+      expect(scrolled).toEqual([-27]);
+    });
+
+    it('when a focused field already stands below the head, then the panel stays where it is', async () => {
+      standAt(control('#below'), 170, 40);
+
+      control('#below').focus();
+      await nextFrame();
+
+      expect(scrolled).toEqual([]);
+    });
+
+    it('when a field of a dialog opened inside the sheet takes it, then the panel of the sheet leaves it alone', async () => {
+      standAt(control('#nested'), 0, 40);
+
+      control('#nested').focus();
+      await nextFrame();
+
+      expect(scrolled).toEqual([]);
+      expect(padding()).toBe('');
+    });
+
+    it('when the head leaves while Zpět has it, then the panel keeps no scroll padding of its own', async () => {
+      control('button[aria-label="Zpět"]').focus();
+
+      fixture.componentInstance.shown.set(false);
+      await fixture.whenStable();
+
+      expect(padding()).toBe('');
+    });
   });
 
   it('when it leaves, then the panel forgets its height', async () => {

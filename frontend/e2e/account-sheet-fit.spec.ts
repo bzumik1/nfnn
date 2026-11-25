@@ -109,47 +109,98 @@ function scrollTopAfterTwoFrames(panel: Locator): Promise<number> {
   );
 }
 
-test.describe('Given a signed-in donor who has scrolled Údaje a zabezpečení in the account sheet 390 px wide', () => {
+const LARGEST_SYSTEM_TEXT_PX = 53;
+const SCROLLED_TO = 1500;
+const UNDER_THE_HEAD = 20;
+
+async function showLargestSystemText(page: Page): Promise<void> {
+  await page.addInitScript((px) => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = `html { font-size: ${px}px; }`;
+      document.head.append(style);
+    });
+  }, LARGEST_SYSTEM_TEXT_PX);
+}
+
+test.describe('Given a signed-in donor whose phone shows the largest accessibility text and who has scrolled Údaje a zabezpečení in the account sheet 390 px wide', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('when the focus moves from a control below up to Zpět and then to Zavřít in the sheet head, then the sheet stays where it was scrolled', async ({
-    page,
-  }) => {
+  test.beforeEach(async ({ page }) => {
+    await showLargestSystemText(page);
     await mockDonorApi(page);
     await signIn(page);
     await openAccountItem(page, 'Údaje a zabezpečení');
-    const sheet = page.getByRole('dialog', { name: 'Údaje a zabezpečení' });
-    const head = sheet.locator('app-sheet-head');
-    const panel = sheet.locator(':scope > .dialog-panel');
-    await expect(head).toBeVisible();
     await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
-    await panel.evaluate((element) => element.scrollTo(0, 400));
-    await expect.poll(() => scrollTopAfterTwoFrames(panel)).toBeGreaterThan(0);
-    const focusedBelow = await panel.evaluate((element) => {
+  });
+
+  const sheetOf = (page: Page) => page.getByRole('dialog', { name: 'Údaje a zabezpečení' });
+  const panelOf = (page: Page) => sheetOf(page).locator(':scope > .dialog-panel');
+
+  async function scrollTo(panel: Locator, top: number): Promise<void> {
+    await panel.evaluate((element, to) => element.scrollTo(0, to), top);
+    await expect.poll(() => scrollTopAfterTwoFrames(panel)).toBe(top);
+  }
+
+  test('when each control of the sheet head takes the focus through focus(), then the sheet stays where it was scrolled', async ({
+    page,
+  }) => {
+    const head = sheetOf(page).locator('app-sheet-head');
+    const panel = panelOf(page);
+    await expect(head).toBeVisible();
+    await scrollTo(panel, SCROLLED_TO);
+
+    for (const control of [
+      head.getByRole('button', { name: 'Zpět', exact: true }),
+      head.getByRole('heading', { level: 2 }),
+      head.getByRole('button', { name: 'Zavřít', exact: true }),
+    ]) {
+      await control.evaluate((element: HTMLElement) => element.focus());
+      await expect(control).toBeFocused();
+      expect(await scrollTopAfterTwoFrames(panel)).toBe(SCROLLED_TO);
+    }
+  });
+
+  test('when a control 20 px under the head takes the focus through focus(), as a hardware keyboard moves it, then it ends below the head', async ({
+    page,
+  }) => {
+    const panel = panelOf(page);
+    await expect(sheetOf(page).locator('app-sheet-head')).toBeVisible();
+    await scrollTo(panel, SCROLLED_TO);
+    const marked = await panel.evaluate((element, under) => {
       const headBottom = element.querySelector('app-sheet-head')!.getBoundingClientRect().bottom;
       const panelBottom = element.getBoundingClientRect().bottom;
-      const below = Array.from(element.querySelectorAll<HTMLElement>('button, a[href]')).find(
-        (control) => {
-          const box = control.getBoundingClientRect();
+      const control = Array.from(element.querySelectorAll<HTMLElement>('button, a[href]')).find(
+        (candidate) => {
+          const box = candidate.getBoundingClientRect();
           return (
-            control.closest('app-sheet-head') === null &&
+            candidate.closest('app-sheet-head') === null &&
             box.height > 0 &&
-            box.top > headBottom + 24 &&
-            box.bottom < panelBottom - 24
+            box.top > headBottom &&
+            box.bottom < panelBottom
           );
         },
       );
-      below?.focus();
-      return below !== undefined && document.activeElement === below;
-    });
-    expect(focusedBelow).toBe(true);
-    const scrolled = await scrollTopAfterTwoFrames(panel);
+      if (control === undefined) {
+        return false;
+      }
+      element.scrollBy(0, control.getBoundingClientRect().top - (headBottom - under));
+      control.setAttribute('data-under-head', '');
+      return true;
+    }, UNDER_THE_HEAD);
+    expect(marked).toBe(true);
+    const control = panel.locator('[data-under-head]');
+    await scrollTopAfterTwoFrames(panel);
 
-    for (const name of ['Zpět', 'Zavřít']) {
-      const control = head.getByRole('button', { name, exact: true });
-      await control.focus();
-      await expect(control).toBeFocused();
-      await expect.poll(() => scrollTopAfterTwoFrames(panel)).toBeCloseTo(scrolled, 0);
-    }
+    await control.evaluate((element: HTMLElement) => element.focus());
+
+    await expect(control).toBeFocused();
+    await expect(async () => {
+      const place = await panel.evaluate((element) => ({
+        top: element.querySelector('[data-under-head]')!.getBoundingClientRect().top,
+        headBottom: element.querySelector('app-sheet-head')!.getBoundingClientRect().bottom,
+      }));
+      expect(place.top).toBeGreaterThanOrEqual(place.headBottom);
+    }).toPass();
   });
 });
