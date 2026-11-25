@@ -100,7 +100,7 @@ export interface SettleTrack {
   readonly finger: SwipeSettle;
   readonly frameMs: number;
   readonly firstStepAtMost: number;
-  readonly show: (at: number) => void;
+  readonly show: (at: number, drawn: boolean) => void;
   readonly goesOn: () => boolean;
   readonly drawnAt?: number;
   readonly afterFreezeStepAtMost?: number;
@@ -156,11 +156,11 @@ export function trackSettle(view: Window, track: SettleTrack): Promise<void> {
         if (drawn) {
           presentedAt = at;
         }
-        track.show(at);
+        track.show(at, drawn);
       }
       if (Math.abs(plan.to - at) < ARRIVED_WITHIN_PX) {
         if (at !== plan.to) {
-          track.show(plan.to);
+          track.show(plan.to, drawn);
         }
         settled();
       } else {
@@ -405,12 +405,12 @@ function followingFinger(
   let stepAtMost = 0;
   let closedIn = false;
   let catchingUp = false;
-  let presentedTime = view.performance.now();
+  let drawnAt = view.performance.now();
+  let settling = false;
   let presenting = false;
   const present = (): void => {
     presentedStep = shown - presented;
     presented = shown;
-    presentedTime = view.performance.now();
   };
   const place = (at: number, drawn = true): void => {
     shown = at;
@@ -441,6 +441,13 @@ function followingFinger(
       return;
     }
     ready = true;
+    const watchFrames = (now: number): void => {
+      drawnAt = now;
+      if (!settling && stage.running === running) {
+        view.requestAnimationFrame(watchFrames);
+      }
+    };
+    view.requestAnimationFrame(watchFrames);
     catchingUp = true;
     stepAtMost = Math.max(0, offset - shown) / CLOSE_IN_FRAMES_AT_LEAST;
     closeInOnFinger(view, stage.durationOf('--duration-fast'), {
@@ -458,6 +465,7 @@ function followingFinger(
   const drawn = draw(bar, takeOver);
   const settle = async (wanted: SwipeSettle): Promise<boolean> => {
     catchingUp = false;
+    settling = true;
     if (stage.running !== running) {
       return false;
     }
@@ -485,7 +493,7 @@ function followingFinger(
             finger: wanted,
             frameMs: measuredFrameMs(stage),
             firstStepAtMost: Math.max(Math.sign(end.to - shown) * presentedStep, stepAtMost),
-            drawnAt: presentedTime,
+            drawnAt,
             afterFreezeStepAtMost: Math.abs(wanted.from - presented) / CLOSE_IN_FRAMES_AT_LEAST,
             show: place,
             goesOn: () => stage.running === running,

@@ -2801,6 +2801,59 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
+  it('when the page has closed in on a finger that then rests still for 600 ms while frames keep coming, and the first frame after the lift comes 120 ms late, then the slide runs its planned curve from the lift, never taking the still page for a freeze and jumping to its end', async () => {
+    const now = oneFakePageClock();
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnderOnTheFakeClock();
+      for (let frame = 0; frame < 60 && offsetOf(over()) < 220; frame++) {
+        await vi.advanceTimersByTimeAsync(16);
+        frames.run(now());
+      }
+      expect(offsetOf(over()), 'the page closed in on the finger').toBe(220);
+      for (let rested = 0; rested < 600; rested += 16) {
+        await vi.advanceTimersByTimeAsync(16);
+        frames.run(now());
+      }
+
+      const end = {
+        completes: true,
+        from: 220,
+        to: 390,
+        durationMs: 300,
+        easing: 'ease-out',
+      };
+      void swipe.settle(end);
+      const liftedAt = now();
+      await vi.advanceTimersByTimeAsync(120);
+      frames.run(now());
+      const offsets = [220, offsetOf(over())];
+      let arrivedMs: number | null = null;
+      for (let frame = 0; frame < 60 && arrivedMs === null; frame++) {
+        await vi.advanceTimersByTimeAsync(16);
+        frames.run(now());
+        await vi.advanceTimersByTimeAsync(0);
+        const page = document.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`);
+        const at = page === null ? 390 : offsetOf(page);
+        offsets.push(at);
+        if (at === 390) {
+          arrivedMs = now() - liftedAt;
+        }
+      }
+
+      expect(
+        arrivedMs,
+        `arrived before its planned ${end.durationMs} ms: ${offsets.map((at) => at.toFixed(1)).join(', ')}`,
+      ).toBeGreaterThanOrEqual(end.durationMs - 16);
+    } finally {
+      frames.restore();
+    }
+  });
+
   it('when the page clock closes the last of the gap while no frame is drawn for 520 ms, frames come again showing the page at the still finger, and the finger lets go, then the slide never shows the page behind where the last drawn frame showed it, and no frame steps back', async () => {
     const now = oneFakePageClock();
     const frames = framesByHand();
