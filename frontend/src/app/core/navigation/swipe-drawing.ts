@@ -40,6 +40,8 @@ const STANDING_PARTS = 'app-header, .side-nav-panel, app-tab-bar';
 const CATCH_UP_SPANS = 3;
 const CLOSE_IN_FRAMES_AT_LEAST = 8;
 const ARRIVED_WITHIN_PX = 0.5;
+const CLOSE_IN_MARK = 'nfnn.close-in';
+const SETTLE_FIRST_MARK = 'nfnn.settle-first';
 
 function measuredFrameMs(stage: PageTransitions): number {
   return stage.frameGaps.length === 0 ? DISPLAY_FRAME_MS : stage.steadyFrameMs();
@@ -82,7 +84,9 @@ export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp):
       const spans = elapsed / closing;
       const left = startGap * (1 + spans) * Math.exp(-spans);
       const target = left < 1 ? 0 : left;
+      const before = behind;
       behind = Math.max(target, behind - stepAtMost);
+      markFrame(view, CLOSE_IN_MARK, { behind, step: before - behind, gap0: startGap, drawn });
       const finger = Math.max(0, catchUp.finger());
       catchUp.show(Math.min(finger, Math.max(0, finger - behind)), drawn);
     }
@@ -104,6 +108,10 @@ export interface SettleTrack {
   readonly goesOn: () => boolean;
   readonly drawnAt?: number;
   readonly afterFreezeStepAtMost?: number;
+}
+
+function markFrame(view: Window, name: string, detail: object): void {
+  view.performance.mark?.(name, { detail });
 }
 
 export function trackSettle(view: Window, track: SettleTrack): Promise<void> {
@@ -150,9 +158,13 @@ export function trackSettle(view: Window, track: SettleTrack): Promise<void> {
             ? plan.to
             : plan.from + way * easedAt(curve, elapsed / plan.durationMs);
         const atMost = first ? floor : stepAtMostOver(drawn ? advanceMs : track.frameMs);
-        first = false;
+        const from = at;
         const towards = target - at;
         at = Math.abs(towards) <= atMost ? target : at + Math.sign(towards) * atMost;
+        if (first) {
+          markFrame(view, SETTLE_FIRST_MARK, { from, step: at - from, atMost, drawn });
+        }
+        first = false;
         if (drawn) {
           presentedAt = at;
         }

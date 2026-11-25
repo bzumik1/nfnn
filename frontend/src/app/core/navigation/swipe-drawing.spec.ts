@@ -310,3 +310,61 @@ describe('Given a finger that lifts or is called off while the page still closes
     }
   }
 });
+
+describe('Given a phone whose close-in and settle are judged from the app’s own values', () => {
+  it('when the page closes in on a finger 220 px ahead and the finger then lets go, then each drawn frame of the close-in marks how far the page is behind, how much of that it closed and the gap it started from, and the first frame of the settle marks its step and its bound', () => {
+    const display = simulatedDisplay();
+    const marks: { name: string; detail: Record<string, unknown> }[] = [];
+    (display.view.performance as { mark?: unknown }).mark = (
+      name: string,
+      options: { detail: Record<string, unknown> },
+    ) => marks.push({ name, detail: options.detail });
+    let caught = false;
+    closeInOnFinger(display.view, FAST_MS, {
+      frameMs: SIXTIETH_MS,
+      finger: () => START_GAP,
+      from: 0,
+      show: () => undefined,
+      goesOn: () => !caught,
+      caughtUp: () => (caught = true),
+    });
+    for (let frame = 1; frame <= 3; frame++) {
+      display.frame(frame * SIXTIETH_MS);
+    }
+    caught = true;
+    const end = releasedAt(120, 1);
+    void trackSettle(display.view, {
+      plan: settleFrom(end, 82.5, WIDTH),
+      finger: end,
+      frameMs: SIXTIETH_MS,
+      firstStepAtMost: STEP_AT_MOST,
+      show: () => undefined,
+      goesOn: () => true,
+    });
+    display.frame(4 * SIXTIETH_MS);
+    const closeIn = marks
+      .filter((mark) => mark.name === 'nfnn.close-in')
+      .map((mark) => mark.detail);
+    const settleFirst = marks
+      .filter((mark) => mark.name === 'nfnn.settle-first')
+      .map((mark) => mark.detail);
+
+    expect(closeIn).toHaveLength(3);
+    closeIn.forEach((detail, frame) => {
+      const behindBefore = frame === 0 ? START_GAP : (closeIn[frame - 1]['behind'] as number);
+      expect(detail).toEqual({
+        behind: behindBefore - (detail['step'] as number),
+        step: expect.any(Number),
+        gap0: START_GAP,
+        drawn: true,
+      });
+      expect(detail['step'] as number).toBeGreaterThan(0);
+      expect(detail['step'] as number).toBeLessThanOrEqual(STEP_AT_MOST + 1e-9);
+    });
+    expect(settleFirst).toEqual([
+      { from: 82.5, step: expect.any(Number), atMost: STEP_AT_MOST, drawn: true },
+    ]);
+    expect(settleFirst[0]['step'] as number).toBeGreaterThan(0);
+    expect(settleFirst[0]['step'] as number).toBeLessThanOrEqual(STEP_AT_MOST + 1e-9);
+  });
+});
