@@ -1112,6 +1112,10 @@ async function mockRemovablePasskeys(
   await page.route(
     (url) => passkeys.some((passkey) => url.pathname === `/api/donors/me/passkeys/${passkey.id}`),
     async (route) => {
+      if (route.request().method() !== 'DELETE') {
+        await route.fallback();
+        return;
+      }
       const removed = new URL(route.request().url()).pathname.split('/').pop();
       listed = listed.filter((passkey) => passkey.id !== removed);
       await route.fulfill({ status: 204 });
@@ -1156,6 +1160,27 @@ async function removeThePasskey(passkeys: Locator, passkey: ListedPasskey): Prom
   await confirm.click();
 
   await expect(passkeys.locator(`#passkey-row-${passkey.id}`)).toHaveCount(0);
+}
+
+async function collapseThePasskeysByKeyWhileTheRowLeaves(
+  page: Page,
+  passkey: ListedPasskey,
+): Promise<void> {
+  await page.evaluate((rowId) => {
+    const manage = document.querySelector<HTMLButtonElement>(
+      'app-account-card button[aria-controls="account-passkeys-panel"]',
+    )!;
+    const watch = new MutationObserver(() => {
+      if (document.querySelector(`#${rowId}.passkey-slot--leaving`) === null) {
+        return;
+      }
+      watch.disconnect();
+      manage.focus({ preventScroll: true });
+      manage.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      manage.click();
+    });
+    watch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+  }, `passkey-row-${passkey.id}`);
 }
 
 function renameButtonOf(passkeys: Locator, passkey: ListedPasskey): Locator {
@@ -1257,6 +1282,26 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
       await removeThePasskey(passkeys, notebookPasskey);
 
       await expectTheResultInViewWithTheAddButton(passkeys);
+    });
+
+    test('when they remove a passkey and collapse the panel from the keyboard while its row still leaves, then Spravovat přístupové klíče keeps the focus and stands between the header and whatever covers the bottom of the window once the panel has closed', async ({
+      page,
+    }) => {
+      await mockRemovablePasskeys(page, [iphonePasskey, notebookPasskey]);
+      const passkeys = await signInOnTheAccountPageWithLargestText(page);
+      const manage = page
+        .locator('app-account-card')
+        .getByRole('button', { name: 'Spravovat přístupové klíče' });
+      const confirm = await askToRemove(passkeys, iphonePasskey);
+      await collapseThePasskeysByKeyWhileTheRowLeaves(page, iphonePasskey);
+
+      await confirm.click();
+
+      await expect(manage).toHaveAttribute('aria-expanded', 'false');
+      await expect(page.locator(`#passkey-row-${iphonePasskey.id}`)).toHaveCount(0);
+      await expect(page.locator('#account-passkeys-panel')).toBeHidden();
+      await expect(manage).toBeFocused();
+      await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
     });
   });
 }

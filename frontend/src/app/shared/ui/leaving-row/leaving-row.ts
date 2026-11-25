@@ -27,10 +27,10 @@ export function afterRemoval(
   row: Element,
   released: () => void,
   within: Node | null = row.parentNode,
-): void {
+): () => void {
   if (within === null || !row.isConnected) {
     released();
-    return;
+    return () => undefined;
   }
   const watch = new MutationObserver(() => {
     if (!row.isConnected) {
@@ -39,6 +39,7 @@ export function afterRemoval(
     }
   });
   watch.observe(within, { childList: true, subtree: true });
+  return () => watch.disconnect();
 }
 
 export interface RevealInPlace {
@@ -52,6 +53,7 @@ interface PendingReveal {
   focused: HTMLElement | null;
   reveal: (() => void) | null;
   gone: boolean;
+  stopWatching: () => void;
 }
 
 interface VisibleBand {
@@ -68,7 +70,16 @@ export class FocusAfterRowLeaves {
   ) {}
 
   rowLeaving(row: HTMLElement | null): void {
-    this.pending = row === null ? null : { row, focused: null, reveal: null, gone: false };
+    this.forget();
+    if (row !== null) {
+      this.pending = {
+        row,
+        focused: null,
+        reveal: null,
+        gone: false,
+        stopWatching: () => undefined,
+      };
+    }
   }
 
   moveFocus(row: HTMLElement | null, control: HTMLElement): void {
@@ -87,7 +98,7 @@ export class FocusAfterRowLeaves {
     control.focus({ preventScroll: true });
     const pending = this.pending;
     if (reveal === null || pending === null || pending.row !== reveal.row) {
-      this.pending = null;
+      this.forget();
       return;
     }
     pending.focused = control;
@@ -100,7 +111,8 @@ export class FocusAfterRowLeaves {
     if (pending === null || pending.row !== row) {
       return;
     }
-    afterRemoval(
+    pending.stopWatching();
+    pending.stopWatching = afterRemoval(
       row,
       () => {
         pending.gone = true;
@@ -110,7 +122,25 @@ export class FocusAfterRowLeaves {
     );
   }
 
+  keepInViewOnceSettled(
+    control: HTMLElement,
+    motions: readonly Animation[],
+    pressedByPointer: boolean,
+  ): void {
+    this.afterMotions(motions, () => {
+      if (
+        this.document.activeElement !== control ||
+        !control.isConnected ||
+        (pressedByPointer && this.partlyInView(control))
+      ) {
+        return;
+      }
+      this.scrollIntoViewFitting(control);
+    });
+  }
+
   forget(): void {
+    this.pending?.stopWatching();
     this.pending = null;
   }
 
@@ -137,23 +167,33 @@ export class FocusAfterRowLeaves {
       this.revealSpan(from, to);
       return;
     }
+    this.afterMotions(motions, () => {
+      if (this.document.activeElement === focused && from.isConnected) {
+        this.revealSpan(from, to);
+      }
+    });
+  }
+
+  private afterMotions(motions: readonly Animation[], settled: () => void): void {
+    if (motions.length === 0) {
+      settled();
+      return;
+    }
     const longest = Math.max(
       0,
       ...motions.map((motion) => Number(motion.effect?.getComputedTiming().endTime ?? 0)),
     );
     let done = false;
-    const reveal = (): void => {
+    const finish = (): void => {
       if (done) {
         return;
       }
       done = true;
       clearTimeout(fallback);
-      if (this.document.activeElement === focused && from.isConnected) {
-        this.revealSpan(from, to);
-      }
+      settled();
     };
-    void Promise.allSettled(motions.map((motion) => motion.finished)).then(reveal);
-    const fallback = setTimeout(reveal, (Number.isFinite(longest) ? longest : 0) + LEAVE_GRACE_MS);
+    void Promise.allSettled(motions.map((motion) => motion.finished)).then(finish);
+    const fallback = setTimeout(finish, (Number.isFinite(longest) ? longest : 0) + LEAVE_GRACE_MS);
   }
 
   private revealSpan(from: HTMLElement, to: HTMLElement | null): void {
@@ -183,6 +223,16 @@ export class FocusAfterRowLeaves {
     const reduced =
       this.document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     return reduced ? 'instant' : 'smooth';
+  }
+
+  private partlyInView(control: HTMLElement): boolean {
+    const view = this.document.defaultView;
+    if (view === null) {
+      return true;
+    }
+    const band = this.visibleBand(this.scrollerOf(control, view), view);
+    const box = control.getBoundingClientRect();
+    return box.bottom > band.top && box.top < band.bottom;
   }
 
   private fitsItsScroller(control: HTMLElement): boolean {
