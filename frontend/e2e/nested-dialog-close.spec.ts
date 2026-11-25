@@ -13,6 +13,7 @@ interface NestedDialog {
   readonly section: string;
   readonly opener: string;
   readonly dialog: (page: Page) => Locator;
+  readonly settled: (page: Page) => Promise<void>;
 }
 
 const NESTED_DIALOGS: readonly NestedDialog[] = [
@@ -20,11 +21,16 @@ const NESTED_DIALOGS: readonly NestedDialog[] = [
     section: 'Údaje a zabezpečení',
     opener: 'Smazat data z tohoto zařízení',
     dialog: (page) => page.getByRole('alertdialog', { name: 'Smazat data z tohoto zařízení?' }),
+    settled: (page) =>
+      expect(page.getByText(/Uloženo v\u00a0zařízení\u00a0· aktualizováno /)).toBeVisible({
+        timeout: 10_000,
+      }),
   },
   {
     section: 'Bankovní účty',
     opener: 'Přidat bankovní účet',
     dialog: (page) => page.getByRole('dialog', { name: 'Přidat bankovní účet' }),
+    settled: async () => undefined,
   },
 ];
 
@@ -35,6 +41,24 @@ const CLOSES = [
   },
   { way: 'Esc', close: (dialog: Locator) => dialog.page().keyboard.press('Escape') },
 ] as const;
+
+interface PanelLayout {
+  readonly top: number;
+  readonly height: number;
+}
+
+function layoutAfterTwoFrames(panel: Locator): Promise<PanelLayout> {
+  return panel.evaluate(
+    (element) =>
+      new Promise<PanelLayout>((resolve) =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() =>
+            resolve({ top: element.scrollTop, height: element.scrollHeight }),
+          ),
+        ),
+      ),
+  );
+}
 
 function scrollTopAfterTwoFrames(panel: Locator): Promise<number> {
   return panel.evaluate(
@@ -49,9 +73,10 @@ async function bringIntoMiddle(panel: Locator, opener: Locator): Promise<number>
   let settled = 0;
   await expect(async () => {
     await opener.evaluate((element) => element.scrollIntoView({ block: 'center' }));
-    const first = await scrollTopAfterTwoFrames(panel);
-    settled = await scrollTopAfterTwoFrames(panel);
-    expect(settled).toBe(first);
+    const first = await layoutAfterTwoFrames(panel);
+    const second = await layoutAfterTwoFrames(panel);
+    expect(second).toEqual(first);
+    settled = second.top;
   }).toPass();
   return settled;
 }
@@ -63,6 +88,12 @@ async function cutInHalfBy(edge: Edge, panel: Locator, opener: Locator): Promise
   await expect(async () => {
     const cut = await opener.evaluate((button, by) => {
       const scroller = button.closest<HTMLElement>('.dialog-panel')!;
+      if (by === 'head' && scroller.querySelector('[data-room-below]') === null) {
+        const room = document.createElement('div');
+        room.setAttribute('data-room-below', '');
+        room.style.blockSize = `${scroller.clientHeight}px`;
+        scroller.append(room);
+      }
       const line = () =>
         by === 'head'
           ? scroller.querySelector('app-sheet-head')!.getBoundingClientRect().bottom
@@ -76,9 +107,10 @@ async function cutInHalfBy(edge: Edge, panel: Locator, opener: Locator): Promise
       return placed.top < line() && placed.bottom > line();
     }, edge);
     expect(cut).toBe(true);
-    const first = await scrollTopAfterTwoFrames(panel);
-    settled = await scrollTopAfterTwoFrames(panel);
-    expect(settled).toBe(first);
+    const first = await layoutAfterTwoFrames(panel);
+    const second = await layoutAfterTwoFrames(panel);
+    expect(second).toEqual(first);
+    settled = second.top;
   }).toPass();
   return settled;
 }
@@ -131,6 +163,7 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
           const opener = panel.getByRole('button', { name: nested.opener, exact: true });
           await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
           await expect(opener).toBeEnabled({ timeout: 10_000 });
+          await nested.settled(page);
           const scrolledTo = await bringIntoMiddle(panel, opener);
           expect(scrolledTo).toBeGreaterThan(0);
 
@@ -160,6 +193,7 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
           const opener = panel.getByRole('button', { name: nested.opener, exact: true });
           await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
           await expect(opener).toBeEnabled({ timeout: 10_000 });
+          await nested.settled(page);
           const scrolledTo = await cutInHalfBy(edge, panel, opener);
 
           await tapAsSafariDoes(sheet, opener);
@@ -184,6 +218,7 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
         const opener = panel.getByRole('button', { name: nested.opener, exact: true });
         await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
         await expect(opener).toBeEnabled({ timeout: 10_000 });
+        await nested.settled(page);
         await cutInHalfBy('head', panel, opener);
 
         await tapAsSafariDoes(sheet, opener);
