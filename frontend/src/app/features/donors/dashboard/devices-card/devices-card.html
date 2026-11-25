@@ -33,6 +33,7 @@
       @if (groups().older.length > 0) {
         <li>
           <button
+            #olderToggle
             type="button"
             class="ui-list__row devices-older-toggle"
             [attr.aria-expanded]="olderShown()"
@@ -78,7 +79,7 @@
           </button>
         </li>
         @if (olderShown()) {
-          <li class="devices-older" appDisclosure animate.leave="devices-older--closing">
+          <li #olderFold class="devices-older" appDisclosure animate.leave="devices-older--closing">
             <div>
               <ul id="devices-older" class="ui-list device-list device-list--older">
                 @for (device of groups().older; track device.id) {
