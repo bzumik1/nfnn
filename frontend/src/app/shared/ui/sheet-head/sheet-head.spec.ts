@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SHEET_HEAD_RESIZE_OBSERVER, SheetHead } from './sheet-head';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
+import { InputModality } from '../../../core/input/input-modality';
 
 @Component({
   imports: [SheetHead],
@@ -269,6 +270,20 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
       await nextFrame();
 
       expect(scrolled).toEqual([-27]);
+    });
+
+    it('when a finger presses a button half under the head and the press focuses it, then the panel stays where it is, so nothing moves under the finger', async () => {
+      const modality = TestBed.inject(InputModality);
+      modality.start();
+      onTestFinished(() => modality.stop());
+      const pressed = control('#below');
+      standAt(pressed, 130, 40);
+
+      pressed.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      pressed.focus();
+      await nextFrame();
+
+      expect(scrolled).toEqual([]);
     });
 
     it('when a focused field already stands below the head, then the panel stays where it is', async () => {

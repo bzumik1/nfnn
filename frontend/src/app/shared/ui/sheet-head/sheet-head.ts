@@ -10,6 +10,7 @@ import {
   input,
   output,
 } from '@angular/core';
+import { InputModality } from '../../../core/input/input-modality';
 
 const SHEET_PANEL = '.dialog-panel';
 const HEIGHT = '--sheet-head-height';
@@ -22,7 +23,12 @@ function offsetWithin(panel: HTMLElement, head: HTMLElement): number {
   return (head.getBoundingClientRect().top - panelBox.top) / scale - panel.clientTop;
 }
 
-function keepFocusClearOfHead(panel: HTMLElement, head: HTMLElement, view: Window): () => void {
+function keepFocusClearOfHead(
+  panel: HTMLElement,
+  head: HTMLElement,
+  view: Window,
+  pressedByPointer: () => boolean,
+): () => void {
   let pending = 0;
   const uncover = (focused: HTMLElement) => {
     if (focused.ownerDocument.activeElement !== focused) {
@@ -45,6 +51,7 @@ function keepFocusClearOfHead(panel: HTMLElement, head: HTMLElement, view: Windo
       return;
     }
     if (
+      !pressedByPointer() &&
       focused.closest(SHEET_PANEL) === panel &&
       focused.closest('dialog') === panel.closest('dialog')
     ) {
@@ -89,6 +96,7 @@ export class SheetHead {
     const destroyRef = inject(DestroyRef);
     const Observer = inject(SHEET_HEAD_RESIZE_OBSERVER);
     const view = inject(DOCUMENT).defaultView;
+    const modality = inject(InputModality);
     afterNextRender(() => {
       const panel = head.closest<HTMLElement>(SHEET_PANEL);
       if (panel === null) {
@@ -114,7 +122,9 @@ export class SheetHead {
       }
       destroyRef.onDestroy(() => panel.style.removeProperty(HEIGHT));
       if (view !== null) {
-        destroyRef.onDestroy(keepFocusClearOfHead(panel, head, view));
+        destroyRef.onDestroy(
+          keepFocusClearOfHead(panel, head, view, () => modality.lastPressByPointer()),
+        );
       }
     });
   }
