@@ -2033,6 +2033,91 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
+  it('when a frame of the close-in comes 100 ms late, as when the article is drawn again behind the cover on an iPhone SE, then the close-in advances by one frame of the display, so that frame moves the page no more than an eighth of the gap either', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnder();
+
+      const offsets = [offsetOf(over())];
+      for (const at of [16, 32, 132, 148, 164, 180, 196, 212, 228, 244, 260, 276, 292]) {
+        frames.run(at);
+        offsets.push(offsetOf(over()));
+      }
+      const steps = offsets.slice(1).map((offset, frame) => offset - offsets[frame]);
+
+      expect(Math.max(...steps), 'the longest step of one frame').toBeLessThanOrEqual(220 / 8);
+    } finally {
+      frames.restore();
+      document.documentElement.style.removeProperty('--duration-fast');
+    }
+  });
+
+  it('when the finger goes back towards the edge while the page closes in on it, then the page never goes past the edge nor ahead of the finger', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnder();
+      for (const at of [16, 32, 48]) {
+        frames.run(at);
+      }
+
+      swipe.follow(5);
+      frames.run(64);
+
+      expect(offsetOf(over())).toBeGreaterThanOrEqual(0);
+      expect(offsetOf(over())).toBeLessThanOrEqual(5);
+    } finally {
+      frames.restore();
+      document.documentElement.style.removeProperty('--duration-fast');
+    }
+  });
+
+  it('when a flick lets the page go before the page Zpět leads to is drawn, then the slide that settles it owns the page, and the close-in that the drawing starts never writes over it', async () => {
+    let animated = false;
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => {
+        animated = true;
+        return motionEnding(new Promise(() => undefined));
+      },
+    });
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(120);
+      void swipe.settle({
+        completes: false,
+        from: 120,
+        to: 0,
+        durationMs: 150,
+        easing: 'ease-out',
+      });
+      finishVisit();
+      await drawnUnder();
+      await vi.waitFor(() => expect(animated).toBe(true));
+      const settledFrom = over().style.transform;
+
+      for (const at of [16, 32, 48, 64, 80]) {
+        frames.run(at);
+      }
+
+      expect(over().style.transform).toBe(settledFrom);
+    } finally {
+      frames.restore();
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
   it('when the page Zpět leads to is drawn while the finger keeps moving, then the page closes in on the finger frame by frame until it is with it and then follows it 1:1, never jumping at an end set in advance', async () => {
     document.documentElement.style.setProperty('--duration-fast', '150ms');
     const frames = framesByHand();

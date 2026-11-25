@@ -13,6 +13,7 @@ import {
   BarCurve,
   DrawnAt,
   BarItem,
+  DISPLAY_FRAME_MS,
   FRAME_LATE_MS,
   liveDialogs,
   motionAllowed,
@@ -37,9 +38,9 @@ const SIDE_NAVIGATION = '.side-nav-panel';
 const TAB_BAR = 'app-tab-bar .tab-bar';
 const STANDING_PARTS = 'app-header, .side-nav-panel, app-tab-bar';
 const CATCH_UP_SPANS = 3;
-const FRAME_MS = 16;
 
 export interface CatchUp {
+  readonly frameMs: number;
   readonly finger: () => number;
   readonly from: number;
   readonly show: (offset: number) => void;
@@ -52,16 +53,18 @@ export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp):
   const startGap = catchUp.finger() - catchUp.from;
   let last: number | null = null;
   let elapsed = 0;
-  const closeIn = (now: number): void => {
+  const closeIn = (now: number, drawn: boolean): void => {
     if (!catchUp.goesOn()) {
       return;
     }
-    elapsed += last === null ? FRAME_MS : Math.max(0, now - last);
+    const sinceLast = last === null ? catchUp.frameMs : Math.max(0, now - last);
+    elapsed += drawn ? Math.min(catchUp.frameMs, sinceLast) : sinceLast;
     last = now;
     const spans = elapsed / closing;
     const left = startGap * (1 + spans) * Math.exp(-spans);
     const gap = Math.abs(left) < 1 ? 0 : left;
-    catchUp.show(catchUp.finger() - gap);
+    const finger = Math.max(0, catchUp.finger());
+    catchUp.show(Math.min(finger, Math.max(0, finger - gap)));
     if (gap === 0) {
       catchUp.caughtUp();
     } else {
@@ -319,6 +322,7 @@ function followingFinger(
     ready = true;
     catchingUp = true;
     closeInOnFinger(view, stage.durationOf('--duration-fast'), {
+      frameMs: Math.min(stage.steadyFrameMs(), DISPLAY_FRAME_MS),
       finger: () => offset,
       from: shown,
       show: (at) => {
@@ -337,6 +341,7 @@ function followingFinger(
     }
     if (!ready) {
       await drawn;
+      catchingUp = false;
     }
     if (!ready) {
       discard();
