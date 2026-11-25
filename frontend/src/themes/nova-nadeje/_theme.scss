@@ -330,7 +330,7 @@
   --page-title-fade-at: 0.5;
   --color-page-dim: color-mix(in srgb, #000000 10%, transparent);
   --shadow-page-edge: -8px 0 24px color-mix(in srgb, #000000 12%, transparent);
-  --radius-page-card: min(39px, calc(var(--safe-area-bottom) * 100));
+  --radius-page-card: min(18px, calc(var(--safe-area-bottom) * 100));
   --pressed-tint-amount: 8%;
   --pressed-brightness: 0.92;
   --pressed-scale: 0.97;
@@ -546,6 +546,12 @@
   --receipt-font-body: 'body.dff39d7ece2769ee.ttf';
   --receipt-font-bold: 'body-bold.9c1666e97d06aa76.ttf';
   --receipt-font-heading: 'heading.45cd81d9ffd96e49.ttf';
+}
+
+@media (min-resolution: 3dppx) {
+  :root {
+    --radius-page-card: min(39px, calc(var(--safe-area-bottom) * 100));
+  }
 }
 
 @media (prefers-contrast: more) {
