@@ -577,6 +577,38 @@ describe('Given the head of a page inside a sheet whose title arrives only after
     expect(shown()).toBe('Platby z banky');
   });
 
+  it('when the next donor’s card opens under the same title of the head and its name has not arrived yet, then the head shows that title again, never the last donor’s name', async () => {
+    await arrives('Petr Svoboda');
+    await fades[0].end();
+    expect(shown()).toBe('Petr Svoboda');
+
+    fixture.componentRef.setInput('lateTitle', null);
+    await fixture.whenStable();
+
+    expect(shown()).toBe('Dárce');
+  });
+
+  it('when the late title is let go during its fade under the same title of the head, then the head shows that title and the fade is let go', async () => {
+    await arrives('Petr Svoboda');
+
+    fixture.componentRef.setInput('lateTitle', null);
+    await fixture.whenStable();
+    await fades[0].end();
+
+    expect(fades[0].cancelled).toBe(true);
+    expect(shown()).toBe('Dárce');
+  });
+
+  it('when the title arrives on a window as wide as a computer’s, past the bar of tabs, then it shows at once, never faded', async () => {
+    compact.set(false);
+    await fixture.whenStable();
+
+    await arrives('Petr Svoboda');
+
+    expect(fades).toEqual([]);
+    expect(shown()).toBe('Petr Svoboda');
+  });
+
   it('when the title of the page is given with the page, then it shows at once, never faded', async () => {
     fixture.componentRef.setInput('title', 'Platby z banky');
     await fixture.whenStable();
