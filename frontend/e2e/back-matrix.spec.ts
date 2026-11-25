@@ -46,6 +46,7 @@ import {
   pageScroll,
   type Placing,
   longFrameProblems,
+  placingKindProblems,
   placingProblems,
   frozenOnTheScreen,
   judgedOnTheScreen,
@@ -1408,6 +1409,34 @@ test.describe('Given the probe that watches a step of the back matrix', () => {
       expect(longFrameProblems(placedAfter([16.7, 80], [0.4, 0]))).not.toEqual([]);
     },
   );
+
+  test('when the app marks a placing as made inside a frame, by its frame callback or a resize observer, and the probe’s own wrappers saw it outside any, then the judge reports the mark, since the app would let the motion go in the frame that first paints the copies', () => {
+    for (const kind of ['raf', 'resize-observer']) {
+      expect(placingKindProblems({ placingKind: kind, placedInFrame: false } as StepProbe)).toEqual(
+        [
+          `the app marked its placing as ${kind}, inside a frame, but the probe saw it made outside any frame callback or resize observer`,
+        ],
+      );
+    }
+  });
+
+  test('when the app’s mark of the placing agrees with where the probe saw it made, or the app marks a placing made inside a frame as made in a task and so holds it one frame longer, then the judge reports nothing, and the first move counts from the frame the probe saw', () => {
+    expect(placingKindProblems({ placingKind: 'raf', placedInFrame: true } as StepProbe)).toEqual(
+      [],
+    );
+    expect(
+      placingKindProblems({ placingKind: 'resize-observer', placedInFrame: true } as StepProbe),
+    ).toEqual([]);
+    expect(placingKindProblems({ placingKind: 'task', placedInFrame: false } as StepProbe)).toEqual(
+      [],
+    );
+    expect(placingKindProblems({ placingKind: 'task', placedInFrame: true } as StepProbe)).toEqual(
+      [],
+    );
+    expect(placingKindProblems({ placingKind: null, placedInFrame: null } as StepProbe)).toEqual(
+      [],
+    );
+  });
 
   test('when a frame between the tap and the placing lasts 80 ms, 35 ms of them the probe’s own reads, then the app’s 45 ms lie within three steady frames', () => {
     expect(longFrameProblems(placedAfter([16.7, 80], [0.4, 35]))).toEqual([]);

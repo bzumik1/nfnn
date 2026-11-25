@@ -6,6 +6,7 @@ import {
   KeptPage,
   liveDialogs,
   motionAllowed,
+  nextFrame,
   ON_GROUND_CLASS,
   PAGE_COVER_LONGEST_MS,
   PAGE_TRANSITION_CLASS,
@@ -82,15 +83,17 @@ function stepInSheet(stage: PageTransitions, step: SheetStep): void {
   step.change();
   stage.afterRender(() => {
     step.placed();
-    if (stage.running !== running) {
-      return;
-    }
-    const arriving = standingSheetCopy(stage);
-    if (arriving === null) {
-      stage.finish();
-      return;
-    }
-    stage.moveTo(running, view, sheetOnly(stage, arriving));
+    nextFrame(view, (_, inFrame) => {
+      if (stage.running !== running) {
+        return;
+      }
+      const arriving = standingSheetCopy(stage);
+      if (arriving === null) {
+        stage.finish();
+        return;
+      }
+      stage.moveTo(running, view, sheetOnly(stage, arriving), inFrame ? 'raf' : 'task');
+    });
   });
 }
 

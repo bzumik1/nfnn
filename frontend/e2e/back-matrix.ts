@@ -204,6 +204,7 @@ interface TimeSpent {
 interface LateFrames {
   until: number;
   readonly frameAt: () => number;
+  placingInFrame: boolean | null;
   read: (reader: FrameRequestCallback) => void;
   callbacks: TimeSpent[];
 }
@@ -225,6 +226,7 @@ export interface StepProbe {
   placedAt: number | null;
   anchoredAt: number | null;
   placingKind: string | null;
+  placedInFrame: boolean | null;
   loadedCode: boolean;
   busyFrameAt: number | null;
   longFrames: LongFrame[] | null;
@@ -715,6 +717,7 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
         placedAt: null,
         anchoredAt: null,
         placingKind: null,
+        placedInFrame: null,
         loadedCode: false,
         busyFrameAt: null,
         longFrames: null,
@@ -863,7 +866,16 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
         const callbacks: TimeSpent[] = [];
         let reading: { id: number; requestedIn: number } | null = null;
         let frameAt = -1;
+        let inFrame = false;
         let next = 1_000_000_000;
+        const inside = (run: () => void): void => {
+          inFrame = true;
+          try {
+            run();
+          } finally {
+            queueMicrotask(() => (inFrame = false));
+          }
+        };
         const readLast = (): void => {
           if (reading !== null) {
             cancel(reading.id);
@@ -878,6 +890,7 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
         const state: LateFrames = {
           until: 0,
           frameAt: () => frameAt,
+          placingInFrame: null,
           callbacks,
           read: (reader: FrameRequestCallback): void => {
             readers.push(reader);
@@ -907,7 +920,7 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
             requested.delete(id);
             const from = performance.now();
             try {
-              callback(now);
+              inside(() => callback(now));
             } finally {
               callbacks.push({ at: now, from, ms: performance.now() - from });
               callbacks.splice(0, Math.max(0, callbacks.length - kept));
@@ -921,8 +934,23 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
           cancel(requested.get(id) ?? id);
           requested.delete(id);
         };
+        const Observer = window.ResizeObserver;
+        window.ResizeObserver = class extends Observer {
+          constructor(callback: ResizeObserverCallback) {
+            super((entries, observer) => inside(() => callback(entries, observer)));
+          }
+        };
+        const mark = performance.mark.bind(performance);
+        performance.mark = (name, options) => {
+          if (name === placingMark) {
+            state.placingInFrame = inFrame;
+          }
+          return mark(name, options);
+        };
         return state;
       })());
+      performance.clearMarks(placingMark);
+      late.placingInFrame = null;
       const keepBusy = (ms: number): void => {
         const from = performance.now();
         let at = from;
@@ -1004,7 +1032,8 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
           PerformanceMark | undefined;
         const kind = (placing?.detail as { kind?: unknown } | undefined)?.kind;
         probe.placingKind = typeof kind === 'string' ? kind : null;
-        if (probe.placingKind === 'raf' || probe.placingKind === 'resize-observer') {
+        probe.placedInFrame = late.placingInFrame;
+        if (probe.placedInFrame === true) {
           probe.anchoredAt = late.frameAt();
         } else {
           requestAnimationFrame((now) => (probe.anchoredAt ??= now));
@@ -1990,6 +2019,15 @@ export function longFrameProblems(placing: Placing): string[] {
       ];
 }
 
+export function placingKindProblems(probe: StepProbe): string[] {
+  const markedInFrame = probe.placingKind === 'raf' || probe.placingKind === 'resize-observer';
+  return markedInFrame && probe.placedInFrame === false
+    ? [
+        `the app marked its placing as ${probe.placingKind}, inside a frame, but the probe saw it made outside any frame callback or resize observer`,
+      ]
+    : [];
+}
+
 export function expectWithinTheBudget(probe: StepProbe, restingAt?: number): void {
   const moving = travelled(probe);
   const tappedAt = probe.tappedAt;
@@ -2022,6 +2060,7 @@ export function expectWithinTheBudget(probe: StepProbe, restingAt?: number): voi
   expect(moved, 'the page never moved').not.toBeNull();
   const busyFrameAt = probe.busyFrameAt;
   expect(busyFrameAt, 'no frame was drawn after both copies were placed').not.toBeNull();
+  expect(placingKindProblems(probe), 'where the app placed both copies').toEqual([]);
   const anchoredAt = probe.anchoredAt ?? probe.placedAt!;
   const framesBefore = probe.frames.filter(
     (frame) => frame.at > anchoredAt && frame.at < moved!.at,
@@ -2030,6 +2069,7 @@ export function expectWithinTheBudget(probe: StepProbe, restingAt?: number): voi
     type: FIRST_MOVE_ANNOTATION,
     description: JSON.stringify({
       kind: probe.placingKind,
+      inFrame: probe.placedInFrame,
       placingToAnchorMs: Math.round((anchoredAt - probe.placedAt!) * 10) / 10,
       anchorToFirstMoveMs: Math.round((moved!.at - anchoredAt) * 10) / 10,
       frames: framesBefore,

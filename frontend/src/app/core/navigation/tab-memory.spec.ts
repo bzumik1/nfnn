@@ -609,6 +609,18 @@ describe('Given a visitor who steps back to a page drawn afresh, shorter at firs
     expect(placed()).toBe(true);
   });
 
+  it('when the page grows tall enough, then it is put where they left it inside the rendering that grew it, so the step back counts its frames from that frame', async () => {
+    await stepBack();
+    const placement = TestBed.inject(PagePlacement);
+    let inRendering: boolean | null = null;
+    void placement.placed(window, 60_000).then(() => (inRendering = placement.placesInRendering));
+
+    grows(3000);
+    await settledPromises();
+
+    expect(inRendering).toBe(true);
+  });
+
   it('when the page is already tall enough, then the cover of the step back lifts at once, and so does the cover of the next step back', async () => {
     pageHeight(3000);
     await stepBack();

@@ -13,7 +13,7 @@ import {
   withInMemoryScrolling,
 } from '@angular/router';
 import { CompactLayout } from '../layout/compact-layout';
-import { STEADY_FRAME_MARK } from './frame-pace';
+import { PLACING_MARK, STEADY_FRAME_MARK } from './frame-pace';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from './back-target';
 import { PagePlacement } from './page-placement';
 import { ACCOUNT_RETURNS_KEY } from './page-transitions';
@@ -2573,16 +2573,18 @@ describe('Given the app on the home screen of a phone opened straight on the don
   });
 
   it('when the finger lets go past half while the page still closes in on it, then the slide through the real swipe goes on from where the page stands in the next frame, never standing still for held frames, and with a late frame and a tick of the page clock on its way it moves every frame towards its end, the first no more than the page was moving or an eighth of the gap and none more than that or the finger’s own slide at its steepest', async () => {
+    const now = oneFakePageClock();
     const frames = framesByHand();
     try {
       const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
       await vi.dynamicImportSettled();
       swipe.follow(220);
       finishVisit();
-      await drawnUnder();
+      await drawnUnderOnTheFakeClock();
       const closing = [offsetOf(over())];
-      for (const at of [16, 32, 48]) {
-        frames.run(at);
+      for (let frame = 0; frame < 3; frame++) {
+        await vi.advanceTimersByTimeAsync(16);
+        frames.run(now());
         closing.push(offsetOf(over()));
       }
       const liftedAt = closing.at(-1)!;
@@ -2596,20 +2598,21 @@ describe('Given the app on the home screen of a phone opened straight on the don
         speed: 1,
       };
       void swipe.settle(end);
-      await Promise.resolve();
-      frames.run(64);
-      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(16);
+      frames.run(now());
+      await vi.advanceTimersByTimeAsync(0);
       expect(offsetOf(over()), 'the page stood still in the frame after the lift').toBeGreaterThan(
         liftedAt,
       );
 
       const offsets = [liftedAt, offsetOf(over())];
-      for (const gap of [16, 50, 16, 'tick', 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16]) {
+      const gaps: (number | 'tick')[] = [16, 50, 16, 'tick', ...Array<number>(30).fill(16)];
+      for (const gap of gaps) {
         if (gap === 'tick') {
-          await new Promise((done) => setTimeout(done, FRAME_LATE_MS + 20));
+          await vi.advanceTimersByTimeAsync(FRAME_LATE_MS + 20);
         } else {
-          await Promise.resolve();
-          frames.run(80 + offsets.length * 16 + (gap === 50 ? 34 : 0));
+          await vi.advanceTimersByTimeAsync(gap);
+          frames.run(now());
         }
         const page = document.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`);
         if (page === null) {
@@ -3132,6 +3135,7 @@ describe('Given the app on a phone with a sheet open at its list', () => {
   });
 
   it('when a section opens inside the sheet, then the page that slides in is the section over the list it leaves', () => {
+    const frames = heldFrames();
     transitions.stepInSheet({
       kind: 'push',
       depth: 1,
@@ -3140,13 +3144,36 @@ describe('Given the app on a phone with a sheet open at its list', () => {
       placed: () => undefined,
     });
     TestBed.inject(ApplicationRef).tick();
+    drawFrame(frames);
 
     expect(overlayPage('under')?.textContent).toContain('Účet');
     expect(overlayPage('over')?.textContent).toContain('Moje dary');
     expect(overlayPage('over')?.textContent).not.toContain('Účet');
   });
 
+  it('when a section opens inside the sheet, then its copies are placed in the frame drawn after it rendered, marked as placed inside a frame, and its motions are let go in the frame after', () => {
+    const frames = heldFrames();
+    performance.clearMarks(PLACING_MARK);
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      owner: sheet,
+      change: () => (sheet.textContent = 'Moje dary'),
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+    drawFrame(frames);
+    const marks = performance.getEntriesByName(PLACING_MARK) as PerformanceMark[];
+    const held = document.querySelector(`.${PAGE_TRANSITION_CLASS}`)?.classList;
+
+    expect(marks.map((mark) => (mark.detail as { kind: string }).kind)).toEqual(['raf']);
+    expect(held).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    drawFrame(frames);
+    expect(held).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
   it('when a section opens inside the sheet under a head that stands, then only the title it leaves shows as the step starts', () => {
+    const frames = heldFrames();
     sheet.replaceChildren(headOf('Účet'));
     transitions.stepInSheet({
       kind: 'push',
@@ -3156,6 +3183,7 @@ describe('Given the app on a phone with a sheet open at its list', () => {
       placed: () => undefined,
     });
     TestBed.inject(ApplicationRef).tick();
+    drawFrame(frames);
 
     expect(headTitles().map((title) => [title.textContent?.trim(), title.style.opacity])).toEqual(
       expect.arrayContaining([
@@ -3242,6 +3270,7 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     });
     const frames = heldFrames();
     stepBackToTheList();
+    drawFrame(frames);
     overlayPage('over')!.style.transform = `matrix(1, 0, 0, 1, ${window.innerWidth / 2}, 0)`;
 
     drawFrame(frames);
