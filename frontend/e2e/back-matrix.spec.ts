@@ -653,7 +653,7 @@ test.describe('Given the probe that watches a step of the back matrix', () => {
     times.map((at) => ({ at: at + lagMs, offset: Math.min(300, Math.max(0, at - startAt)) }));
 
   testWithoutBrowser(
-    'when the probe’s own frames show the page standing still through the motion’s time, as a still page does, then the screencast’s silence excuses nothing, since a screencast draws no frame of a page that does not change (the Prodesk, still page 1 of 3)',
+    'when the probe’s own frames show the page standing still through the motion’s time, as a still page does, then the screencast’s silence excuses nothing, since a screencast draws no frame of a page that does not change (the Prodesk, still page 1 of 3), and fewer than two probe frames in the motion’s time prove no motion either, so they excuse nothing',
     () => {
       const still = [0, 100, 300, 600, 900, 1100].map((at) => frameAt(1000 + at, 1000 + at, 0));
       const moving = [0, 100, 300, 600, 900, 1100].map((at) =>
@@ -662,7 +662,8 @@ test.describe('Given the probe that watches a step of the back matrix', () => {
 
       expect(probeSawTheMotion(still, 1000, 1000)).toBe(false);
       expect(probeSawTheMotion(moving, 1000, 1000)).toBe(true);
-      expect(probeSawTheMotion(still.slice(0, 1), 1000, 1000)).toBe(true);
+      expect(probeSawTheMotion(still.slice(0, 1), 1000, 1000)).toBe(false);
+      expect(probeSawTheMotion([], 1000, 1000)).toBe(false);
     },
   );
 
