@@ -730,6 +730,8 @@ async function expectTheDoubleTapToReachNothingOnRemoval(page: Page): Promise<st
 
 async function disconnectClaudeWatchingDividers(page: Page): Promise<Frame[]> {
   await openSettingsWithTwoConnections(page);
+  const disconnect = page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' });
+  await disconnect.scrollIntoViewIfNeeded();
   await settled(page, '.connections');
 
   const frames = await framesWhile(
@@ -742,8 +744,8 @@ async function disconnectClaudeWatchingDividers(page: Page): Promise<Frame[]> {
       nextRow: otherConnectionRow,
       nextClient: `${otherConnectionRow} .connection-client`,
     },
-    () => page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click(),
-    { dividers: '.connection, .connection-slot' },
+    () => disconnect.click(),
+    { removed: claudeConnectionRow, dividers: '.connection, .connection-slot' },
   );
 
   await expect(page.locator('.connection-client')).toHaveText(['chatgpt.com']);
@@ -881,7 +883,7 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
       page,
       { row: olderInstalledAppRow, next: nextOlderRow },
       () => question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
-      { dividers: '#devices-older, #devices-older .device' },
+      { removed: olderInstalledAppRow, dividers: '#devices-older, #devices-older .device' },
     );
 
     await expect(page.locator('#devices-older .device-name')).toHaveText(['Windows · Edge']);
