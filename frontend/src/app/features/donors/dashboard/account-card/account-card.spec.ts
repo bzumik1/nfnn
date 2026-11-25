@@ -298,6 +298,7 @@ describe('Given the sign-in and security card of the details page', () => {
   describe('when the donor collapses the passkeys panel right after removing a key, while its row still leaves', () => {
     let scrolled: unknown[];
     let finishClosing: () => void;
+    let closed: Promise<void>;
     let manage: HTMLButtonElement;
 
     beforeEach(async () => {
@@ -315,11 +316,11 @@ describe('Given the sign-in and security card of the details page', () => {
         scrolled.push(options);
       };
       const panel = card.element('#account-passkeys-panel');
-      const finished = new Promise<void>((resolve) => (finishClosing = resolve));
+      closed = new Promise<void>((resolve) => (finishClosing = resolve));
       card.root().getAnimations = () =>
         [
           {
-            finished,
+            finished: closed,
             effect: { target: panel, getComputedTiming: () => ({ endTime: 60_000 }) },
           },
         ] as never;
@@ -350,7 +351,8 @@ describe('Given the sign-in and security card of the details page', () => {
 
         await card.clickButton('Spravovat přístupové klíče');
         finishClosing();
-        await card.settle();
+        await closed;
+        await new Promise<void>((resolve) => setTimeout(resolve));
 
         expect(document.activeElement).toBe(manage);
         expect(scrolled).toEqual([]);

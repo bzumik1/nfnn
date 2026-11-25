@@ -580,6 +580,25 @@ describe('Given a row whose leave moves the focus to a control below it', () => 
     await Promise.resolve();
   }
 
+  it('when it is forgotten while it waits for the row to be removed, then it stops watching the list', () => {
+    const focus = focusAfter();
+    const row = byId('leaving');
+    focus.rowLeaving(row);
+    focus.moveFocus(row, byId('below'));
+    focus.rowLeaveEnded(row);
+    const pending = focus['pending'] as unknown as { stopWatching: () => void };
+    const stopWatching = pending.stopWatching;
+    let stops = 0;
+    pending.stopWatching = () => {
+      stops += 1;
+      stopWatching();
+    };
+
+    focus.forget();
+
+    expect(stops).toBe(1);
+  });
+
   it('when the control takes the focus before the row is removed, then it glides into view only once the row is gone', async () => {
     const focus = focusAfter();
     const row = byId('leaving');
@@ -1076,8 +1095,8 @@ describe('Given a control that takes the focus back while the panel below it clo
 
     control.blur();
     finish();
-    await Promise.resolve();
-    await Promise.resolve();
+    await motion.finished;
+    await new Promise<void>((resolve) => setTimeout(resolve));
 
     expect(scrolled).toEqual([]);
   });

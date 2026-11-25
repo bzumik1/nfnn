@@ -821,6 +821,51 @@ describe("Given a donor's signed-in devices card", () => {
       expect(scrolled).toEqual([focused]);
     });
 
+    function foldStillClosing(fold: HTMLElement): () => void {
+      const list = fold.parentNode!;
+      const following = Array.from(list.childNodes).slice(
+        Array.from(list.childNodes).indexOf(fold) + 1,
+      );
+      const removal = new MutationObserver(() => {
+        if (fold.isConnected) {
+          return;
+        }
+        removal.disconnect();
+        list.insertBefore(fold, following.find((node) => node.parentNode === list) ?? null);
+      });
+      removal.observe(list, { childList: true });
+      return () => {
+        removal.disconnect();
+        fold.remove();
+      };
+    }
+
+    it('and the donor closes Starší before the device is signed out, then the control that took the focus is brought into view once the closing fold is gone', async () => {
+      const row = document.getElementById(`device-row-${OLD_IPAD.id}`)!;
+      const fold = element('.devices-older');
+      const foldClosed = foldStillClosing(fold);
+      await ask(signOutButton(rows()[3]));
+      await confirmSignOut();
+      element<HTMLButtonElement>('.devices-older-toggle').click();
+      await settle();
+      await vi.waitFor(() => expect(fold.isConnected).toBe(true));
+      expect(fold.contains(row)).toBe(true);
+
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${OLD_IPAD.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+      const focused = document.activeElement;
+      expect(focused).toBe(signOutButton(rows()[2]));
+      expect(scrolled).toEqual([]);
+
+      foldClosed();
+      await settle();
+
+      expect(row.isConnected).toBe(false);
+      await vi.waitFor(() => expect(scrolled).toEqual([focused]));
+    });
+
     it('and the donor closes Starší while the device signs out, then the control that took the focus is brought into view once the fold is gone, without waiting for another sign-out', async () => {
       const row = document.getElementById(`device-row-${OLD_IPAD.id}`)!;
       const fold = element('.devices-older');
