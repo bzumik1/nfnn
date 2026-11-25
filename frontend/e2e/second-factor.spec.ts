@@ -56,6 +56,29 @@ async function scrollTop(page: Page): Promise<number> {
   return page.evaluate(() => Math.round(window.scrollY));
 }
 
+async function standsStillForTwoFrames(element: Locator): Promise<boolean> {
+  return element.evaluate(
+    (shown) =>
+      new Promise<boolean>((done) => {
+        const scrolled = window.scrollY;
+        const top = shown.getBoundingClientRect().top;
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() =>
+            done(window.scrollY === scrolled && shown.getBoundingClientRect().top === top),
+          ),
+        );
+      }),
+  );
+}
+
+async function roomFitsNotice(notice: Locator): Promise<boolean> {
+  return notice.evaluate(
+    (bar) =>
+      document.documentElement.style.getPropertyValue('--floating-notice-height') ===
+      `${(bar as HTMLElement).offsetHeight}px`,
+  );
+}
+
 async function sheetScrollTop(page: Page): Promise<number> {
   return page
     .locator('dialog[open] .dialog-panel')
@@ -489,10 +512,15 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
     failFirstSync();
     const notice = page.locator('.first-sync');
     await expect(notice.getByText(/nepodařilo uložit/)).toBeVisible();
+    await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
+    await expect.poll(() => roomFitsNotice(notice)).toBe(true);
     const copy = page.getByRole('button', { name: 'Kopírovat klíč' });
+    await expect.poll(() => standsStillForTwoFrames(copy)).toBe(true);
     await copy.evaluate((button) =>
       button.scrollIntoView({ block: 'center', behavior: 'instant' }),
     );
+    await expect.poll(() => standsStillForTwoFrames(copy)).toBe(true);
+    await expect(copy).toBeInViewport({ ratio: 1 });
     await pressHandsFocusToPageAsIos(copy);
     const before = await scrollTop(page);
     expect(
