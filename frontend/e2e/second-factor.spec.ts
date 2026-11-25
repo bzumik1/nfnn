@@ -14,6 +14,7 @@ import {
   signIn,
 } from './donor-session';
 import { Locator, Page } from '@playwright/test';
+import { focusAtPress, pressHandsFocusToPageAsIos } from './ios-press';
 import jsQR from 'jsqr';
 
 const QUIET_ZONE = 4;
@@ -49,6 +50,39 @@ async function plainQrText(qr: Locator): Promise<string | undefined> {
   return side > 2 * QUIET_ZONE
     ? jsQR(pixels, width, width, { inversionAttempts: 'dontInvert' })?.data
     : undefined;
+}
+
+async function scrollTop(page: Page): Promise<number> {
+  return page.evaluate(() => Math.round(window.scrollY));
+}
+
+async function standsStillForTwoFrames(element: Locator): Promise<boolean> {
+  return element.evaluate(
+    (shown) =>
+      new Promise<boolean>((done) => {
+        const scrolled = window.scrollY;
+        const top = shown.getBoundingClientRect().top;
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() =>
+            done(window.scrollY === scrolled && shown.getBoundingClientRect().top === top),
+          ),
+        );
+      }),
+  );
+}
+
+async function roomFitsNotice(notice: Locator): Promise<boolean> {
+  return notice.evaluate(
+    (bar) =>
+      document.documentElement.style.getPropertyValue('--floating-notice-height') ===
+      `${(bar as HTMLElement).offsetHeight}px`,
+  );
+}
+
+async function sheetScrollTop(page: Page): Promise<number> {
+  return page
+    .locator('dialog[open] .dialog-panel')
+    .evaluate((panel) => Math.round(panel.scrollTop));
 }
 
 const protectedDonor = {
@@ -317,13 +351,25 @@ test.describe('Given a donor who protects the account with an authenticator app'
 });
 
 test.describe('Given a donor turning on the code from an authenticator app', () => {
-  async function showKey(page: Page, width: number): Promise<void> {
+  async function showKey(
+    page: Page,
+    width: number,
+    rootPx?: number,
+    afterMocks?: (page: Page) => Promise<unknown>,
+  ): Promise<void> {
     await mockDonorApi(page);
+    await afterMocks?.(page);
     await page.route('**/api/donors/me/second-factor/setup', (route) =>
       route.fulfill({ json: secondFactorEnrolment }),
     );
     await page.setViewportSize({ width: 1280, height: 900 });
     await signIn(page);
+    if (rootPx !== undefined) {
+      await page.addStyleTag({ content: `html { font-size: ${rootPx}px; }` });
+      await expect
+        .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).fontSize))
+        .toBe(`${rootPx}px`);
+    }
     await page.setViewportSize({ width, height: 900 });
     await openDonorSection(page, 'Údaje a zabezpečení');
     await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
@@ -351,6 +397,20 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
     });
   }
 
+  async function settledGroupLines(key: Locator): Promise<GroupLine[]> {
+    let groups: GroupLine[] = [];
+    await expect(async () => {
+      await key.scrollIntoViewIfNeeded();
+      const before = await groupLines(key);
+      await key.evaluate(
+        () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+      );
+      groups = await groupLines(key);
+      expect(groups).toEqual(before);
+    }).toPass();
+    return groups;
+  }
+
   for (const width of [1280, 390]) {
     test(`when the key shows in a ${width} px window, then its one text breaks into two balanced lines of four whole groups`, async ({
       page,
@@ -360,7 +420,7 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
       await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       await page.evaluate(() => document.fonts.ready);
 
-      const groups = await groupLines(key);
+      const groups = await settledGroupLines(key);
       const groupsPerLine = [...new Set(groups.map((group) => group.top))].map(
         (top) => groups.filter((group) => group.top === top).length,
       );
@@ -379,7 +439,7 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
       await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
       await page.evaluate(() => document.fonts.ready);
 
-      const groups = await groupLines(key);
+      const groups = await settledGroupLines(key);
       const firstOnSecondLine = groups.find((group) => group.top !== groups[0].top)!;
       expect(firstOnSecondLine).toBeDefined();
 
@@ -404,17 +464,113 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
     });
   }
 
+  test('when they press Kopírovat klíč and the press hands the focus to the page around it as iOS does, then the focus stays on that button, the page keeps its place and Zkopírováno is said once', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: () => Promise.resolve() },
+        configurable: true,
+      });
+    });
+    await showKey(page, 1280);
+    await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
+    const copy = page.getByRole('button', { name: 'Kopírovat klíč' });
+    await copy.scrollIntoViewIfNeeded();
+    await pressHandsFocusToPageAsIos(copy);
+    const before = await scrollTop(page);
+
+    await copy.click();
+
+    await expect(page.getByRole('status').filter({ hasText: 'Zkopírováno.' })).toHaveCount(1);
+    expect(await focusAtPress(page)).toBe('obsah');
+    await expect(copy).toBeFocused();
+    expect(await scrollTop(page)).toBe(before);
+  });
+
+  test('when they press Kopírovat klíč while the notice that the overview could not be stored on the device floats at the bottom and the press hands the focus to the page around it as iOS does, then the page keeps its place and the button stays in view', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: () => Promise.resolve() },
+        configurable: true,
+      });
+    });
+    let failFirstSync: () => void = () => undefined;
+    const firstSyncFails = new Promise<void>((resolve) => (failFirstSync = resolve));
+    await showKey(page, 1280, undefined, (mocked) =>
+      mocked.route(
+        (url) => url.pathname === '/api/donations/me/sync',
+        async (route) => {
+          await firstSyncFails;
+          await route.fulfill(problem(500, 'server-error', 'Chyba serveru', 'Zkuste to znovu.'));
+        },
+      ),
+    );
+    await expect(page.locator('.first-sync--saving')).toBeVisible();
+    failFirstSync();
+    const notice = page.locator('.first-sync');
+    await expect(notice.getByText(/nepodařilo uložit/)).toBeVisible();
+    await expect(notice).toHaveCount(1);
+    await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
+    await expect.poll(() => roomFitsNotice(notice)).toBe(true);
+    const copy = page.getByRole('button', { name: 'Kopírovat klíč' });
+    await expect.poll(() => standsStillForTwoFrames(copy)).toBe(true);
+    await copy.evaluate((button) =>
+      button.scrollIntoView({ block: 'center', behavior: 'instant' }),
+    );
+    await expect.poll(() => standsStillForTwoFrames(copy)).toBe(true);
+    await expect(copy).toBeInViewport({ ratio: 1 });
+    await pressHandsFocusToPageAsIos(copy);
+    const before = await scrollTop(page);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
+    ).toBeGreaterThan(before);
+
+    await copy.click();
+
+    await expect(page.getByRole('status').filter({ hasText: 'Zkopírováno.' })).toHaveCount(1);
+    expect(await focusAtPress(page)).toBe('obsah');
+    await expect(copy).toBeFocused();
+    expect(await scrollTop(page)).toBe(before);
+    await expect(copy).toBeInViewport({ ratio: 1 });
+    const copyBox = (await copy.boundingBox())!;
+    const noticeBox = (await notice.boundingBox())!;
+    expect(copyBox.y + copyBox.height).toBeLessThanOrEqual(noticeBox.y);
+  });
+
+  test('when they press Kopírovat klíč in the account sheet of a 390 px window after typing in Kód z aplikace and the press hands the focus to the sheet as iOS does, then the focus moves to that button, the sheet keeps its place and Zkopírováno is said once', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: () => Promise.resolve() },
+        configurable: true,
+      });
+    });
+    await showKey(page, 390);
+    const sheet = page.getByRole('dialog');
+    const code = sheet.getByLabel('Kód z aplikace');
+    await code.focus();
+    await expect(code).toBeFocused();
+    const copy = sheet.getByRole('button', { name: 'Kopírovat klíč' });
+    await copy.scrollIntoViewIfNeeded();
+    await pressHandsFocusToPageAsIos(copy);
+    const before = await sheetScrollTop(page);
+
+    await copy.click();
+
+    await expect(page.getByRole('status').filter({ hasText: 'Zkopírováno.' })).toHaveCount(1);
+    expect(await focusAtPress(page)).toBe('dialog');
+    await expect(copy).toBeFocused();
+    expect(await sheetScrollTop(page)).toBe(before);
+  });
+
   test('when the key shows in a 375 px window with the largest system text, then no part of it reaches past its card', async ({
     page,
   }) => {
-    await page.addInitScript((px) => {
-      document.addEventListener('DOMContentLoaded', () => {
-        const style = document.createElement('style');
-        style.textContent = `html { font-size: ${px}px; }`;
-        document.head.append(style);
-      });
-    }, LARGEST_SYSTEM_TEXT_PX);
-    await showKey(page, 375);
+    await showKey(page, 375, LARGEST_SYSTEM_TEXT_PX);
     const key = page.locator('.account-secret-value');
     await expect(key).toHaveText('GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ');
     await page.evaluate(() => document.fonts.ready);

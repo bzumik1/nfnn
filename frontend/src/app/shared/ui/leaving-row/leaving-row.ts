@@ -39,14 +39,37 @@ function canTakeFocus(control: HTMLElement): boolean {
 export interface LeaveWithClass {
   readonly leaves?: (target: HTMLElement) => boolean;
   readonly left?: (target: HTMLElement) => void;
+  readonly settling?: string;
 }
 
 const LEAVE_GRACE_MS = 300;
+const DOUBLE_TAP_MS = 300;
 const LEAVE_ENDS = ['animationend', 'animationcancel'] as const;
+const settlingHolds = new WeakMap<Element, number>();
+
+function settleRowsBelow(row: Element, className: string): () => void {
+  const below: Element[] = [];
+  for (let next = row.nextElementSibling; next !== null; next = next.nextElementSibling) {
+    below.push(next);
+    settlingHolds.set(next, (settlingHolds.get(next) ?? 0) + 1);
+    next.classList.add(className);
+  }
+  return () => {
+    setTimeout(() => {
+      for (const settled of below) {
+        const holds = (settlingHolds.get(settled) ?? 1) - 1;
+        settlingHolds.set(settled, holds);
+        if (holds === 0) {
+          settled.classList.remove(className);
+        }
+      }
+    }, DOUBLE_TAP_MS);
+  };
+}
 
 export function leaveWithClass(
   className: string,
-  { leaves = () => true, left = () => undefined }: LeaveWithClass = {},
+  { leaves = () => true, left = () => undefined, settling }: LeaveWithClass = {},
 ): (event: AnimationCallbackEvent) => void {
   return ({ target, animationComplete }) => {
     const element = target as HTMLElement;
@@ -54,6 +77,7 @@ export function leaveWithClass(
       animationComplete();
       return;
     }
+    const settled = settling === undefined ? () => undefined : settleRowsBelow(element, settling);
     if (!element.hasAttribute('inert')) {
       element.setAttribute('inert', '');
     }
@@ -66,6 +90,7 @@ export function leaveWithClass(
     if (longest === 0) {
       left(element);
       animationComplete();
+      settled();
       return;
     }
     let done = false;
@@ -80,6 +105,7 @@ export function leaveWithClass(
       }
       left(element);
       animationComplete();
+      settled();
     };
     const ended = (event: Event): void => {
       const running = (element.getAnimations?.() ?? []).some(

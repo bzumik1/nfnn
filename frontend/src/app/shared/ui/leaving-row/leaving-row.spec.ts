@@ -253,3 +253,125 @@ describe('Given a row that leaves through its leaving class', () => {
     expect(left).toEqual([row]);
   });
 });
+
+describe('Given a list whose row leaves while the rows below it settle into its place', () => {
+  let list: HTMLUListElement;
+  let completions: (() => void)[];
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    list = document.createElement('ul');
+    list.innerHTML = `
+      <li id="first"></li>
+      <li id="second"></li>
+      <li id="third"></li>
+      <li id="fourth"></li>
+    `;
+    document.body.append(list);
+    completions = [];
+  });
+
+  afterEach(() => {
+    list.remove();
+    vi.useRealTimers();
+  });
+
+  function byId(id: string): HTMLElement {
+    return document.getElementById(id) as HTMLElement;
+  }
+
+  function settling(): string[] {
+    return Array.from(list.querySelectorAll('.row--settling')).map((row) => row.id);
+  }
+
+  function leave(id: string): void {
+    const row = byId(id);
+    let finish: (value: Animation) => void = () => undefined;
+    const finished = new Promise<Animation>((done) => (finish = done));
+    Object.defineProperty(row, 'getAnimations', {
+      value: () => [
+        { finished, playState: 'running', effect: { getComputedTiming: () => ({ endTime: 150 }) } },
+      ],
+    });
+    leaveWithClass('row--leaving', { settling: 'row--settling' })({
+      target: row,
+      animationComplete: () => row.remove(),
+    });
+    completions.push(() => finish({} as Animation));
+  }
+
+  async function finishLeave(index: number): Promise<void> {
+    completions[index]();
+    for (let turn = 0; turn < 5; turn += 1) {
+      await Promise.resolve();
+    }
+  }
+
+  it('when a row in the middle starts to leave, then only the rows below it settle, and they stay out of the reach of presses only, never inert', () => {
+    leave('second');
+
+    expect(settling()).toEqual(['third', 'fourth']);
+    expect(byId('third').hasAttribute('inert')).toBe(false);
+    expect(byId('fourth').hasAttribute('inert')).toBe(false);
+  });
+
+  it('when its leave is complete, then the rows below keep settling for a double tap of 300 ms, and then take presses again', async () => {
+    leave('second');
+    await finishLeave(0);
+
+    vi.advanceTimersByTime(299);
+    expect(settling()).toEqual(['third', 'fourth']);
+    vi.advanceTimersByTime(1);
+
+    expect(settling()).toEqual([]);
+  });
+
+  it('when no end of its motion ever arrives, then the rows below settle until 300 ms after its leave is complete', () => {
+    leave('second');
+
+    vi.advanceTimersByTime(450 + 299);
+    expect(settling()).toEqual(['third', 'fourth']);
+    vi.advanceTimersByTime(1);
+
+    expect(settling()).toEqual([]);
+  });
+
+  it('when a second row leaves while the rows below still settle, then they settle until 300 ms after the later leave is complete', async () => {
+    leave('first');
+    await finishLeave(0);
+    vi.advanceTimersByTime(200);
+    leave('second');
+    vi.advanceTimersByTime(100);
+    expect(settling()).toEqual(['third', 'fourth']);
+
+    await finishLeave(1);
+    vi.advanceTimersByTime(299);
+    expect(settling()).toEqual(['third', 'fourth']);
+    vi.advanceTimersByTime(1);
+
+    expect(settling()).toEqual([]);
+  });
+
+  it('when a row with no motion of its own leaves, then the rows below still settle for a double tap of 300 ms, and then take presses again', () => {
+    const row = byId('second');
+    Object.defineProperty(row, 'getAnimations', { value: () => [] });
+
+    leaveWithClass('row--leaving', { settling: 'row--settling' })({
+      target: row,
+      animationComplete: () => row.remove(),
+    });
+
+    expect(byId('second')).toBeNull();
+    vi.advanceTimersByTime(299);
+    expect(settling()).toEqual(['third', 'fourth']);
+    vi.advanceTimersByTime(1);
+
+    expect(settling()).toEqual([]);
+  });
+
+  it('when a row leaves without settling the rows below, then none of them carries a class', () => {
+    leaveWithClass('row--leaving')({ target: byId('second'), animationComplete: () => undefined });
+
+    expect(list.querySelectorAll('[class]')).toHaveLength(1);
+  });
+});

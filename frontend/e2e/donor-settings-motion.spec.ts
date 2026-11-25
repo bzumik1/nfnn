@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import {
   administrator,
   claudeConnection,
@@ -24,6 +24,7 @@ interface Frame {
 interface FrameWatch {
   settingsFrames: Frame[];
   settingsWatched: boolean;
+  settingsActed: boolean;
 }
 
 const COMPUTER = { width: 1280, height: 800 };
@@ -54,18 +55,31 @@ const otherConnection = {
   client: 'chatgpt.com',
 };
 const claudeConnectionRow = `#connection-row-${claudeConnection.id}`;
+const otherConnectionRow = `#connection-row-${otherConnection.id}`;
+
+interface DoubleTapWatch {
+  leaveHeld: boolean;
+  pressedOnRemoval: string | null | undefined;
+}
 
 async function framesWhile(
   page: Page,
   watched: Record<string, string>,
   act: () => Promise<void>,
+  removed?: string,
 ): Promise<Frame[]> {
   await page.evaluate(
-    ({ watched, watchedMs }) => {
+    ({ watched, watchedMs, removed }) => {
       const watch = window as unknown as FrameWatch;
       watch.settingsFrames = [];
       watch.settingsWatched = false;
+      watch.settingsActed = false;
       const began = performance.now();
+      let sampledAfterAct = false;
+      const cardSettled = (): boolean =>
+        (document.querySelector(watched['card'])?.getAnimations({ subtree: true }) ?? []).every(
+          (animation) => animation.playState === 'finished',
+        );
       const sample = (frameTime: DOMHighResTimeStamp): void => {
         const boxes: Record<string, Box | null> = {};
         for (const [name, selector] of Object.entries(watched)) {
@@ -79,7 +93,14 @@ async function framesWhile(
                 };
         }
         watch.settingsFrames.push({ at: frameTime - began, boxes });
-        if (performance.now() - began < watchedMs) {
+        sampledAfterAct ||= watch.settingsActed;
+        const stillThere = removed !== null && document.querySelector(removed) !== null;
+        if (
+          performance.now() - began < watchedMs ||
+          !sampledAfterAct ||
+          stillThere ||
+          !cardSettled()
+        ) {
           requestAnimationFrame(sample);
         } else {
           watch.settingsWatched = true;
@@ -87,9 +108,12 @@ async function framesWhile(
       };
       requestAnimationFrame(sample);
     },
-    { watched, watchedMs: WATCHED_MS },
+    { watched, watchedMs: WATCHED_MS, removed: removed ?? null },
   );
   await act();
+  await page.evaluate(() => {
+    (window as unknown as FrameWatch).settingsActed = true;
+  });
   await expect
     .poll(() => page.evaluate(() => (window as unknown as FrameWatch).settingsWatched))
     .toBe(true);
@@ -308,8 +332,11 @@ async function confirmSigningOutTheIPhone(page: Page): Promise<Frame[]> {
   await settled(page, '.devices');
   await recordRowsShownAgain(page, '.device-slot', 'device-slot--leaving');
 
-  const frames = await framesWhile(page, { row: otherRow, card: '.devices' }, () =>
-    question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
+  const frames = await framesWhile(
+    page,
+    { row: otherRow, card: '.devices' },
+    () => question.getByRole('button', { name: 'Odhlásit', exact: true }).click(),
+    otherRow,
   );
 
   await expect(devices.locator('.device-name')).toHaveText(['Mac · Safari']);
@@ -353,6 +380,7 @@ async function confirmRemovingTheIPhonePasskey(page: Page): Promise<Frame[]> {
     page,
     { row: iphonePasskeyRow, card: 'app-account-card .ui-card' },
     () => confirm.click(),
+    iphonePasskeyRow,
   );
 
   await expect(page.locator('.passkey-name')).toHaveText(['Pracovní notebook']);
@@ -383,13 +411,109 @@ async function openSettingsWithTwoConnections(page: Page): Promise<() => void> {
   return disconnectClaudeElsewhere;
 }
 
+async function openSettingsCountingDisconnects(page: Page): Promise<string[]> {
+  const disconnected: string[] = [];
+  let listed = [claudeConnection, otherConnection];
+  await openSettings(page, signedInDevices, administrator, async () => {
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/connections',
+      (route) => route.fulfill({ json: { items: listed } }),
+    );
+    await page.route(
+      (url) => url.pathname.startsWith('/api/donors/me/connections/'),
+      async (route) => {
+        const id = new URL(route.request().url()).pathname.split('/').pop() ?? '';
+        disconnected.push(id);
+        listed = listed.filter((connection) => connection.id !== id);
+        await route.fulfill({ status: 204 });
+      },
+    );
+  });
+  await expect(page.locator('.connection-client')).toHaveText(['claude.ai', 'chatgpt.com']);
+  await settled(page, '.connections');
+  return disconnected;
+}
+
+async function holdTheLeaveOf(page: Page, row: string): Promise<void> {
+  await page.evaluate(
+    ({ row, leaving }) => {
+      const watch = window as unknown as DoubleTapWatch;
+      watch.leaveHeld = false;
+      const observer = new MutationObserver(() => {
+        const element = document.querySelector(row);
+        if (element === null || !element.classList.contains(leaving)) {
+          return;
+        }
+        observer.disconnect();
+        for (const motion of element.getAnimations()) {
+          motion.pause();
+        }
+        watch.leaveHeld = true;
+      });
+      observer.observe(document.body, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class'],
+      });
+    },
+    { row, leaving: 'connection-slot--leaving' },
+  );
+}
+
+async function pressWhereItWasOnRemoval(page: Page, row: string, button: Locator): Promise<void> {
+  await button.scrollIntoViewIfNeeded();
+  const box = await button.boundingBox();
+  if (box === null) {
+    throw new Error(`${row} has no Odpojit on the screen`);
+  }
+  await page.evaluate(
+    ({ row, x, y }) => {
+      const watch = window as unknown as DoubleTapWatch;
+      watch.pressedOnRemoval = undefined;
+      const observer = new MutationObserver(() => {
+        if (document.querySelector(row) !== null) {
+          return;
+        }
+        observer.disconnect();
+        const reached = document.elementFromPoint(x, y)?.closest('button');
+        watch.pressedOnRemoval =
+          reached === null || reached === undefined
+            ? null
+            : `${reached.textContent?.trim()} of ${reached.closest('li')?.id}`;
+      });
+      observer.observe(document.body, { subtree: true, childList: true });
+    },
+    { row, x: box.x + box.width / 2, y: box.y + box.height / 2 },
+  );
+}
+
+function pressedOnRemoval(page: Page): Promise<string | null | undefined> {
+  return page.evaluate(() => (window as unknown as DoubleTapWatch).pressedOnRemoval);
+}
+
+async function expectTheDoubleTapToReachNothingOnRemoval(page: Page): Promise<string[]> {
+  const disconnected = await openSettingsCountingDisconnects(page);
+  const disconnect = page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' });
+  await pressWhereItWasOnRemoval(page, claudeConnectionRow, disconnect);
+
+  await disconnect.click();
+
+  await expect.poll(() => pressedOnRemoval(page)).not.toBeUndefined();
+  expect(await pressedOnRemoval(page)).toBeNull();
+  await expect(page.locator('.connection-client')).toHaveText(['chatgpt.com']);
+  return disconnected;
+}
+
 async function disconnectClaude(page: Page): Promise<Frame[]> {
   const connections = page.locator('.connections');
   await settled(page, '.connections');
   await recordRowsShownAgain(page, '.connection-slot', 'connection-slot--leaving');
 
-  const frames = await framesWhile(page, { row: claudeConnectionRow, card: '.connections' }, () =>
-    page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click(),
+  const frames = await framesWhile(
+    page,
+    { row: claudeConnectionRow, card: '.connections' },
+    () => page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click(),
+    claudeConnectionRow,
   );
 
   await expect(connections.locator('.connection-client')).toHaveText(['chatgpt.com']);
@@ -458,7 +582,12 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
 
     await unfold();
     await recordLeavingRows(page, '.device-slot', 'device-slot--leaving');
-    const frames = await framesWhile(page, { card: '.devices' }, () => older.click());
+    const frames = await framesWhile(
+      page,
+      { card: '.devices' },
+      () => older.click(),
+      '#devices-older',
+    );
     await expect(page.locator('#devices-older')).toHaveCount(0);
     await settled(page, '.devices');
     const folded = await heightOf(page, '.devices');
@@ -536,6 +665,38 @@ test.describe('Given a donor in Údaje a zabezpečení with motion allowed', () 
     await expect(page.locator('.connection-client')).toHaveText(['chatgpt.com']);
     expect(await leavingRows(page)).toEqual([{ id: claudeConnectionRow.slice(1), inert: true }]);
   });
+
+  test('when they press Odpojit for claude.ai and the second press of a double tap lands on Odpojit of chatgpt.com while claude.ai leaves, then only claude.ai is disconnected', async ({
+    page,
+    isMobile,
+  }) => {
+    const disconnected = await openSettingsCountingDisconnects(page);
+    await holdTheLeaveOf(page, claudeConnectionRow);
+    await page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' }).click();
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as DoubleTapWatch).leaveHeld))
+      .toBe(true);
+    const next = page.locator(otherConnectionRow).getByRole('button', { name: 'Odpojit' });
+
+    await (isMobile ? next.tap({ force: true }) : next.click({ force: true }));
+
+    await expect(page.locator('.connection-client')).toHaveText(['chatgpt.com']);
+    await expect(page.locator('.connections').getByRole('status')).toContainText(
+      'Aplikace claude.ai je odpojená.',
+    );
+    expect(disconnected).toEqual([claudeConnection.id]);
+  });
+
+  test('when the second press of a double tap on Odpojit for claude.ai comes as its row is removed, then it reaches nothing where the first one was, and Odpojit of chatgpt.com answers again a moment later', async ({
+    page,
+  }) => {
+    const disconnected = await expectTheDoubleTapToReachNothingOnRemoval(page);
+
+    await page.locator(otherConnectionRow).getByRole('button', { name: 'Odpojit' }).click();
+
+    await expect(page.locator('.connection-client')).toHaveCount(0);
+    expect(disconnected).toEqual([claudeConnection.id, otherConnection.id]);
+  });
 });
 
 test.describe('Given a donor in Údaje a zabezpečení who asks for less motion', () => {
@@ -569,5 +730,17 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
     await openSettingsWithTwoConnections(page);
 
     await disconnectClaude(page);
+  });
+
+  test('when the second press of a double tap on Odpojit for claude.ai comes as its row is removed, then it reaches nothing where the first one was, and Odpojit of chatgpt.com answers again a moment later', async ({
+    page,
+  }) => {
+    const disconnected = await expectTheDoubleTapToReachNothingOnRemoval(page);
+    expect(disconnected).toEqual([claudeConnection.id]);
+
+    await page.locator(otherConnectionRow).getByRole('button', { name: 'Odpojit' }).click();
+
+    await expect(page.locator('.connection-client')).toHaveCount(0);
+    expect(disconnected).toEqual([claudeConnection.id, otherConnection.id]);
   });
 });
