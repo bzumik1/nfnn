@@ -19,6 +19,7 @@ import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { isTextEntry } from '../../../core/layout/soft-keyboard';
 import { motionAllowed, PageTransitions } from '../../../core/navigation/page-transitions';
+import { SHEET_LOOKS } from '../../../core/navigation/sheet-stepping';
 
 const SHEET_PANEL = '.dialog-panel';
 const HEIGHT = '--sheet-head-height';
@@ -135,7 +136,8 @@ export class SheetHead {
 
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
-  private readonly stepping = inject(PageTransitions).stepping;
+  private readonly transitions = inject(PageTransitions);
+  private readonly stepping = this.transitions.stepping;
   private readonly compact = inject(CompactLayout).isCompact;
   private readonly shownTitle = viewChild<ElementRef<HTMLElement>>('shownTitle');
   protected readonly shown = linkedSignal(() => this.title());
@@ -144,6 +146,7 @@ export class SheetHead {
   private lettingGo: number | null = null;
 
   constructor() {
+    this.transitions.sheets ??= SHEET_LOOKS;
     effect(() => {
       this.title();
       untracked(() => this.letFadeGo());
