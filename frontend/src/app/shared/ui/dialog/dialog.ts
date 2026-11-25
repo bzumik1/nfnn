@@ -174,11 +174,13 @@ export class Dialog implements AfterViewInit, OnDestroy {
       this.history.close(this.historyEntry);
     }
     const dialog = this.element().nativeElement;
+    const opener =
+      this.opener instanceof HTMLElement && this.opener.isConnected ? this.opener : null;
     if (dialog.open) {
-      dialog.close();
+      this.focusReturn.whileReturning(opener, () => dialog.close());
     }
-    if (this.opener instanceof HTMLElement && this.opener.isConnected) {
-      this.returnFocusTo(this.opener);
+    if (opener !== null) {
+      this.returnFocusTo(opener);
     } else {
       this.document.querySelector<HTMLElement>('main#obsah')?.focus({ preventScroll: true });
     }

@@ -5,9 +5,13 @@ export class FocusReturn {
   private returning: Element | null = null;
 
   returnTo(element: HTMLElement): void {
+    this.whileReturning(element, () => element.focus({ preventScroll: true }));
+  }
+
+  whileReturning(element: Element | null, action: () => void): void {
     this.returning = element;
     try {
-      element.focus({ preventScroll: true });
+      action();
     } finally {
       this.returning = null;
     }
