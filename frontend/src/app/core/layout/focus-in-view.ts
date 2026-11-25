@@ -14,9 +14,13 @@ export function focusInView(target: HTMLElement, options: FocusOptions = {}): bo
 }
 
 function bringWhollyIntoView(target: HTMLElement): void {
-  const view = target.ownerDocument.defaultView;
+  const document = target.ownerDocument;
+  const view = document.defaultView;
   if (view !== null && liesInPageBanner(target) && scrollerAround(view, target) === null) {
-    view.scrollBy({ top: shortfallOf(target), behavior: 'instant' });
+    (document.scrollingElement ?? document.documentElement).scrollBy({
+      top: shortfallOf(target),
+      behavior: 'instant',
+    });
     return;
   }
   target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
