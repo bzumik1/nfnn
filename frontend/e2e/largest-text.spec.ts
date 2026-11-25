@@ -2203,6 +2203,20 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
     });
   }
 
+  test('when they open /sprava/darci, then the initials of every donor without a portrait stay inside their circle', async ({
+    page,
+  }) => {
+    await serveRecentDonors(page);
+    await page.goto('/sprava/darci');
+    await expect(page.getByRole('heading', { level: 1, name: 'Dárci' })).toBeVisible();
+    const avatars = page.locator('main .donor-avatar:not(:has(img))');
+    await expect(avatars.first()).toBeVisible();
+
+    for (const avatar of await avatars.all()) {
+      expect(await lettersPastTheirCircle(avatar, avatar)).toBeLessThanOrEqual(0);
+    }
+  });
+
   test('when they open the monthly report, then Uložit nastavení keeps room for Ukládáme… and both labels wrap within the button and its form instead of being cut', async ({
     page,
   }) => {
