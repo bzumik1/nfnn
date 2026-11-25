@@ -938,7 +938,13 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
       };
       const markMovingPage = (): void => {
         const over = document.querySelector('.page-transition__page--over');
-        if (!paced || over === null || over.querySelector(`.${marker.className}`) !== null) {
+        if (!paced || over === null) {
+          return;
+        }
+        const kept = over.querySelector(`.${marker.className}`);
+        if (kept !== null) {
+          probe.markerY = Math.round(kept.getBoundingClientRect().top);
+          probe.markedAt = performance.now();
           return;
         }
         const box = over.getBoundingClientRect();
