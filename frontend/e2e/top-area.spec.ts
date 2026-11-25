@@ -541,16 +541,30 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
         nfnnGrewInside: number[];
         nfnnHeldBack: boolean;
         nfnnLetGoAt: number | null;
+        nfnnHeldFrames: number[];
+        nfnnEveryFrame: number[];
+        nfnnRecording: boolean;
       };
       held.nfnnGrewInside = [];
       held.nfnnHeldBack = false;
       held.nfnnLetGoAt = null;
+      held.nfnnHeldFrames = [];
+      held.nfnnEveryFrame = [];
+      held.nfnnRecording = true;
+      const record = (now: number): void => {
+        if (held.nfnnRecording) {
+          held.nfnnEveryFrame.push(now);
+          requestAnimationFrame(record);
+        }
+      };
+      requestAnimationFrame(record);
       held.nfnnLateFrames = {
         until: 0,
         read(reader) {
           const tick = (now: number): void => {
             if (performance.now() < held.nfnnLateFrames.until) {
               held.nfnnHeldBack = true;
+              held.nfnnHeldFrames.push(now);
               requestAnimationFrame(tick);
             } else {
               if (held.nfnnHeldBack && held.nfnnLetGoAt === null) {
@@ -575,17 +589,36 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
 
     const frames = await whileTheSheetOpens(page);
 
-    const { grew, letGoAt } = await page.evaluate(() => {
-      const held = window as unknown as { nfnnGrewInside: number[]; nfnnLetGoAt: number | null };
-      return { grew: held.nfnnGrewInside, letGoAt: held.nfnnLetGoAt };
+    const { grew, letGoAt, heldFrames, everyFrame } = await page.evaluate(() => {
+      const held = window as unknown as {
+        nfnnGrewInside: number[];
+        nfnnLetGoAt: number | null;
+        nfnnHeldFrames: number[];
+        nfnnEveryFrame: number[];
+        nfnnRecording: boolean;
+      };
+      held.nfnnRecording = false;
+      return {
+        grew: held.nfnnGrewInside,
+        letGoAt: held.nfnnLetGoAt,
+        heldFrames: held.nfnnHeldFrames,
+        everyFrame: held.nfnnEveryFrame,
+      };
     });
     expect(grew.length).toBeGreaterThan(0);
     expect(grew.filter((count) => count > 0)).toEqual([]);
-    const gaps = frames.slice(1).map((frame, index) => frame.at - frames[index].at);
     const afterHold = frames.findIndex((frame) => frame.at === letGoAt);
     expect(afterHold).toBeGreaterThan(0);
-    expect(frames[afterHold].at - frames[afterHold - 1].at).toBe(Math.max(...gaps));
-    expect(Math.max(...gaps)).toBeGreaterThanOrEqual(HOLD_MS - FRAME_START_BEFORE_CHECK_MS);
+    expect(heldFrames.length).toBeGreaterThan(0);
+    expect(heldFrames.filter((at) => at <= frames[afterHold - 1].at || at >= letGoAt!)).toEqual([]);
+    const first = frames[0].at;
+    const last = frames[frames.length - 1].at;
+    expect(frames.map((frame) => frame.at)).toEqual(
+      everyFrame.filter((at) => at >= first && at <= last && !heldFrames.includes(at)),
+    );
+    expect(frames[afterHold].at - frames[afterHold - 1].at).toBeGreaterThanOrEqual(
+      HOLD_MS - FRAME_START_BEFORE_CHECK_MS,
+    );
     expect(veilJumps(frames)).toEqual([]);
   });
 
