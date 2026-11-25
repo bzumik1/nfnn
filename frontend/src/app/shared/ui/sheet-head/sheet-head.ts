@@ -198,7 +198,9 @@ export class SheetHead {
   private follow(late: string | null, stepping: boolean, compact: boolean): void {
     this.stopLettingGo();
     if (late === null) {
-      if (!stepping) {
+      if (!compact) {
+        this.showOwnTitle();
+      } else if (!stepping) {
         this.letGoNextFrame();
       }
       return;
