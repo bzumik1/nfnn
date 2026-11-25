@@ -484,13 +484,20 @@ test.describe(`Given an administrator in the app on the home screen of a phone w
             }
             hidden.disconnect();
             overlay.style.visibility = 'hidden';
+            const ticker = document.createElement('div');
+            ticker.style.cssText =
+              'position:fixed;left:0;bottom:0;width:2px;height:2px;z-index:2147483647;pointer-events:none';
+            document.body.append(ticker);
+            let frames = 0;
             const showOnceFar = (): void => {
               const over = document.querySelector('.page-transition__page--over');
               const transform = over === null ? 'none' : getComputedStyle(over).transform;
               const offset = transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m41;
-              if (offset >= shownLateShare * innerWidth) {
+              if (offset >= shownLateShare * innerWidth || !overlay.isConnected) {
                 overlay.style.visibility = '';
-              } else if (overlay.isConnected) {
+                ticker.remove();
+              } else {
+                ticker.style.background = ++frames % 2 === 0 ? '#000' : '#fff';
                 requestAnimationFrame(showOnceFar);
               }
             };
@@ -885,7 +892,7 @@ test.describe('Given the probe that watches a step of the back matrix', () => {
     },
   );
 
-  const shownLate = (firstShare: number, shownBeforeAt: number | null) =>
+  const shownLate = (firstShare: number, shownBeforeAt: number | null, lagFrames = 0) =>
     motionOf(
       [firstShare, 0.72, 0.8, 0.86, 0.98, 1].map((share, index) => ({
         at: 1017 + index * 17,
@@ -898,16 +905,25 @@ test.describe('Given the probe that watches a step of the back matrix', () => {
         placedAt: 900,
         startTime: 950,
         anchor: 'first-moved',
-        lagFrames: 3,
+        lagFrames,
         shownBeforeAt,
       },
     );
   const firstShownJump = /^the first frame the screen showed of the step was already/;
 
   testWithoutBrowser(
-    'when the first frame the screen shows of a step is already 60 % of its way one frame after the frame before it, as the iPhone SE showed the step back from an article in round 29 (219 to 240 of 375 px), then the judge reports the jump at the start, though every frame lies on the curve from the start the browser set',
+    'when the first frame the screen shows of a step is already 60 % of its way one frame after the frame before it, as the iPhone SE’s recording showed the step back from an article in round 29 (219 to 240 of 375 px) with its frames at their own times, then the judge reports the jump at the start, though every frame lies on the curve from the start the browser set',
     () => {
       expect(judgedOnTheScreen(shownLate(0.6, 1000))).toEqual(
+        expect.arrayContaining([expect.stringMatching(firstShownJump)]),
+      );
+    },
+  );
+
+  testWithoutBrowser(
+    'when the same first frame at 60 % comes from a screencast stamped up to CI’s p99 lag of 3 frames late, then the judge cannot tell it from a step whose first frames were stamped late and reports nothing, so on CI it judges a jump at the start only on a long step, as the planted one, and the iPhone’s case is the simulator’s to decide',
+    () => {
+      expect(judgedOnTheScreen(shownLate(0.6, 1000, 3))).not.toEqual(
         expect.arrayContaining([expect.stringMatching(firstShownJump)]),
       );
     },
@@ -923,9 +939,9 @@ test.describe('Given the probe that watches a step of the back matrix', () => {
   );
 
   testWithoutBrowser(
-    'when the screencast drew nothing for longer than 1.5 steady frames before the first frame it shows of a step, then that frame says nothing of where the step was first shown and the judge leaves its start to the other checks',
+    'when the screencast drew nothing for 200 ms before the first frame it shows of a step, then the curve may have covered that far meanwhile and the judge reports no jump at the start, nor when no frame came before it at all',
     () => {
-      expect(judgedOnTheScreen(shownLate(0.6, 1017 - 40))).not.toEqual(
+      expect(judgedOnTheScreen(shownLate(0.6, 1017 - 200))).not.toEqual(
         expect.arrayContaining([expect.stringMatching(firstShownJump)]),
       );
       expect(judgedOnTheScreen(shownLate(0.6, null))).not.toEqual(

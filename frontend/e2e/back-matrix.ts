@@ -1456,20 +1456,16 @@ function shownFirstProblems(
   shown: readonly { at: number; share: number }[],
 ): string[] {
   const first = shown[0];
-  if (
-    first === undefined ||
-    motion.shownBeforeAt == null ||
-    first.at - motion.shownBeforeAt > LATE_FRAME_PAST_THE_STEADY_ONE * motion.steadyMs
-  ) {
+  if (first === undefined || motion.shownBeforeAt == null) {
     return [];
   }
-  const allowed = springShareAt(
-    motion.curve,
-    Math.min(1, (FIRST_SHOWN_WITHIN_FRAMES * motion.steadyMs) / motion.durationMs),
-  );
+  const sinceBefore = first.at - motion.shownBeforeAt;
+  const withinMs =
+    sinceBefore + (FIRST_SHOWN_WITHIN_FRAMES - 1 + motion.lagFrames) * motion.steadyMs;
+  const allowed = springShareAt(motion.curve, Math.min(1, withinMs / motion.durationMs));
   return first.share > allowed + BACK_AT_MOST
     ? [
-        `the first frame the screen showed of the step was already ${percentOf(first.share)} of its way, ${(first.at - motion.shownBeforeAt).toFixed(0)} ms after the frame before it, more than the ${percentOf(allowed)} its curve covers in its first ${FIRST_SHOWN_WITHIN_FRAMES} steady frames, a jump at the start`,
+        `the first frame the screen showed of the step was already ${percentOf(first.share)} of its way, ${sinceBefore.toFixed(0)} ms after the frame before it, more than the ${percentOf(allowed)} its curve covers in that time, ${FIRST_SHOWN_WITHIN_FRAMES - 1} more steady frame and the screencast's p99 stamp lag of ${motion.lagFrames.toFixed(2)} frames, a jump at the start`,
       ]
     : [];
 }
