@@ -396,11 +396,21 @@ function followingFinger(
   let stepAtMost = 0;
   let closedIn = false;
   let catchingUp = false;
+  let presenting = false;
+  const present = (): void => {
+    presentedStep = shown - presented;
+    presented = shown;
+  };
   const place = (at: number, drawn = true): void => {
     shown = at;
     if (drawn) {
-      presentedStep = at - presented;
-      presented = at;
+      present();
+    } else if (!presenting) {
+      presenting = true;
+      view.requestAnimationFrame(() => {
+        presenting = false;
+        present();
+      });
     }
     follow();
   };

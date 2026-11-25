@@ -2674,6 +2674,58 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
+  it('when the page clock closes the last of the gap while no frame is drawn for 520 ms, frames come again showing the page at the still finger, and the finger lets go, then the slide never shows the page behind where the last drawn frame showed it, and no frame steps back', async () => {
+    const now = oneFakePageClock();
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnderOnTheFakeClock();
+      for (let frame = 0; frame < 60 && 220 - offsetOf(over()) > 220 / 8; frame++) {
+        await vi.advanceTimersByTimeAsync(16);
+        frames.run(now());
+      }
+      expect(offsetOf(over()), 'the page an eighth of the gap from the finger').toBe(220 - 220 / 8);
+      await vi.advanceTimersByTimeAsync(520);
+      expect(offsetOf(over()), 'the page clock closed the gap unseen').toBe(220);
+      await vi.advanceTimersByTimeAsync(16);
+      frames.run(now());
+      await vi.advanceTimersByTimeAsync(16);
+      frames.run(now());
+
+      void swipe.settle({
+        completes: true,
+        from: 220,
+        to: 390,
+        durationMs: 150,
+        easing: 'cubic-bezier(0.25, 0.5, 0.25, 1)',
+        speed: 1,
+      });
+      const offsets = [220];
+      for (let frame = 0; frame < 40; frame++) {
+        await vi.advanceTimersByTimeAsync(16);
+        frames.run(now());
+        await vi.advanceTimersByTimeAsync(0);
+        const page = document.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`);
+        if (page === null) {
+          break;
+        }
+        offsets.push(offsetOf(page));
+      }
+      const steps = offsets.slice(1).map((at, frame) => at - offsets[frame]);
+
+      expect(
+        steps.filter((step) => step < -1e-6),
+        `steps back in ${offsets.map((at) => at.toFixed(1)).join(', ')}`,
+      ).toEqual([]);
+      expect(offsets.at(-1), 'where the slide ended').toBe(390);
+    } finally {
+      frames.restore();
+    }
+  });
+
   it('when the finger lets go once the page has closed in on it, then the page slides on in the next frame drawn, never holding still for frames, since the close-in has drawn the page beneath already', async () => {
     Object.defineProperty(HTMLElement.prototype, 'animate', {
       configurable: true,
