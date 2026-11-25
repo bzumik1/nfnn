@@ -334,7 +334,7 @@ export function afterDrawnFrames(
       return;
     }
     if (drawn) {
-      afterDrawnFrames(view, document, frames - 1, then, mayEndByClock, goesOn);
+      afterDrawnFrames(view, document, frames - 1, then, () => false, goesOn);
     } else {
       then();
     }

@@ -815,6 +815,19 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
   });
 
+  it('when no frame came between the press and the placing, as a quick tap, a trackpad’s tap-to-click or a test’s click, and the hold then draws its first frame, then the page clock never ends the hold afterwards, since the next frame may be held back while the copies are painted (round 28)', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    document.dispatchEvent(new Event('pointerdown'));
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    draw(5000);
+
+    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS);
+
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
   it('when a second press comes while the step is held, then the hold keeps the frames-since-the-press its step began with, so the clock never lets it go', async () => {
     watchHeldMotions();
     const draw = framesOnRequest();
