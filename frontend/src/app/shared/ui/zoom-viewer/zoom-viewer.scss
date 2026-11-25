@@ -51,13 +51,7 @@
   transform-origin: center;
 
   &.is-easing {
-    transition:
-      transform var(--duration-base) ease,
-      translate var(--duration-base) ease;
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
+    @include motion.move((transform, translate), base, standard);
   }
 }
 

@@ -148,6 +148,54 @@ async function sampleFocusFrames(page: Page, control: Locator): Promise<JSHandle
   }, element);
 }
 
+interface FieldFocused {
+  readonly transitions: string[];
+  readonly unfocused: string | null;
+  readonly borders: (string | null)[];
+}
+
+async function focusFieldByKey(page: Page, field: Locator, key: string): Promise<FieldFocused> {
+  await field.evaluate((element) => {
+    const seen = window as unknown as { transitionsOnFocus: string[] | null };
+    seen.transitionsOnFocus = null;
+    element.addEventListener(
+      'focus',
+      () => {
+        seen.transitionsOnFocus = element
+          .getAnimations()
+          .filter((animation): animation is CSSTransition => animation instanceof CSSTransition)
+          .map((transition) => transition.transitionProperty);
+      },
+      { once: true },
+    );
+  });
+  const sampler = await sampleFocusFrames(page, field);
+  await expect
+    .poll(() =>
+      sampler.evaluate((sampled) => sampled.frames.filter((frame) => !frame.focused).length),
+    )
+    .toBeGreaterThan(1);
+
+  await page.keyboard.press(key);
+
+  await expect(field).toBeFocused();
+  await expect
+    .poll(() =>
+      sampler.evaluate((sampled) => sampled.frames.filter((frame) => frame.focused).length),
+    )
+    .toBeGreaterThan(2);
+  const frames = await sampler.evaluate((sampled) => sampled.stop());
+  const transitions = await page.evaluate(
+    () => (window as unknown as { transitionsOnFocus: string[] | null }).transitionsOnFocus,
+  );
+  expect(transitions).not.toBeNull();
+  return {
+    transitions: transitions ?? [],
+    unfocused: frames.filter((frame) => !frame.focused).at(-1)?.border ?? null,
+    borders: frames.filter((frame) => frame.focused).map((frame) => frame.border),
+  };
+}
+
 function press(page: Page, control: Locator, browserName: string): Promise<void> {
   return browserName === 'webkit' ? control.tap() : control.click();
 }
@@ -327,7 +375,7 @@ test.describe('Given a keyboard user in the sign-in dialog who asks for less mot
 test.describe('Given a visitor on the Přispět page who asks for less motion and has typed their own amount', () => {
   test.use({ reducedMotion: 'reduce' });
 
-  test('when the amount field takes the focus again, then its border shows the colour of focus from its first frame', async ({
+  test('when Tab brings the focus back to the amount field, then nothing transitions and its border shows the colour of focus from its first frame', async ({
     page,
   }) => {
     await openDonatePage(page);
@@ -337,26 +385,32 @@ test.describe('Given a visitor on the Přispět page who asks for less motion an
     await amount.fill('1000');
     await other.focus();
     await expect(amount).not.toBeFocused();
-    const sampler = await sampleFocusFrames(page, amount);
-    await expect
-      .poll(() =>
-        sampler.evaluate((sampled) => sampled.frames.filter((frame) => !frame.focused).length),
-      )
-      .toBeGreaterThan(1);
 
-    await amount.focus();
+    const focused = await focusFieldByKey(page, amount, 'Tab');
 
-    await expect(amount).toBeFocused();
-    await expect
-      .poll(() =>
-        sampler.evaluate((sampled) => sampled.frames.filter((frame) => frame.focused).length),
-      )
-      .toBeGreaterThan(2);
-    const frames = await sampler.evaluate((sampled) => sampled.stop());
-    const unfocused = frames.filter((frame) => !frame.focused).at(-1)?.border;
-    const borders = frames.filter((frame) => frame.focused).map((frame) => frame.border);
-    expect(borders.at(-1)).not.toBe(unfocused);
-    expect([...new Set(borders)]).toEqual([borders.at(-1)]);
+    expect(focused.transitions).toEqual([]);
+    expect(focused.borders.at(-1)).not.toBe(focused.unfocused);
+    expect([...new Set(focused.borders)]).toEqual([focused.borders.at(-1)]);
+  });
+});
+
+test.describe('Given a visitor on the verification page who asks for less motion', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('when Shift+Tab brings the focus from Ověřit odkaz to the link field, then nothing transitions and its border shows the colour of focus from its first frame', async ({
+    page,
+  }) => {
+    await page.goto('/overit');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ověření potvrzení o daru');
+    const link = page.locator('#proof-link');
+    await page.getByRole('button', { name: 'Ověřit odkaz' }).focus();
+    await expect(link).not.toBeFocused();
+
+    const focused = await focusFieldByKey(page, link, 'Shift+Tab');
+
+    expect(focused.transitions).toEqual([]);
+    expect(focused.borders.at(-1)).not.toBe(focused.unfocused);
+    expect([...new Set(focused.borders)]).toEqual([focused.borders.at(-1)]);
   });
 });
 

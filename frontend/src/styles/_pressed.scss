@@ -10,6 +10,8 @@
   }
 }
 
+$_at-once: 0s;
+
 @mixin tint-layer {
   background-image: linear-gradient(
     color-mix(in srgb, currentColor var(--pressed-tint), transparent),
@@ -25,7 +27,7 @@
     opacity var(--duration-base) var(--ease-standard);
 
   &:where(:active) {
-    transition: none;
+    transition-duration: $_at-once;
   }
 }
 
