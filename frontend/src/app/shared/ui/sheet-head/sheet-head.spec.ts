@@ -588,6 +588,36 @@ describe('Given the head of a page inside a sheet whose title arrives only after
     expect(shown()).toBe('Dárce');
   });
 
+  it('when a step back to a page under the same title lets the late title go and the page gives the same name again while the step moves, as a donor’s card does after one of its sections, then the head keeps the name throughout and never fades', async () => {
+    await arrives('Petr Svoboda');
+    await fades[0].end();
+    stepping.set(true);
+
+    fixture.componentRef.setInput('lateTitle', null);
+    await fixture.whenStable();
+    expect(shown()).toBe('Petr Svoboda');
+
+    await arrives('Petr Svoboda');
+    stepping.set(false);
+    await fixture.whenStable();
+
+    expect(shown()).toBe('Petr Svoboda');
+    expect(fades).toHaveLength(2);
+  });
+
+  it('when a step lets the late title go and no title arrives before the step ends, then the head shows its own title once the step has ended, never the last name', async () => {
+    await arrives('Petr Svoboda');
+    await fades[0].end();
+    stepping.set(true);
+
+    fixture.componentRef.setInput('lateTitle', null);
+    await fixture.whenStable();
+    stepping.set(false);
+    await fixture.whenStable();
+
+    expect(shown()).toBe('Dárce');
+  });
+
   it('when the late title is let go during its fade under the same title of the head, then the head shows that title and the fade is let go', async () => {
     await arrives('Petr Svoboda');
 
