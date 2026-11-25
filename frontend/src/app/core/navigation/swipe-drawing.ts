@@ -36,6 +36,40 @@ const HEADER = 'app-header .app-header';
 const SIDE_NAVIGATION = '.side-nav-panel';
 const TAB_BAR = 'app-tab-bar .tab-bar';
 const STANDING_PARTS = 'app-header, .side-nav-panel, app-tab-bar';
+const CATCH_UP_SPANS = 3;
+const FRAME_MS = 16;
+
+export interface CatchUp {
+  readonly finger: () => number;
+  readonly from: number;
+  readonly show: (offset: number) => void;
+  readonly goesOn: () => boolean;
+  readonly caughtUp: () => void;
+}
+
+export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp): void {
+  const closing = Math.max(1, fastMs / CATCH_UP_SPANS);
+  let last: number | null = null;
+  let gap = catchUp.finger() - catchUp.from;
+  const closeIn = (now: number): void => {
+    if (!catchUp.goesOn()) {
+      return;
+    }
+    const elapsed = last === null ? FRAME_MS : Math.max(0, now - last);
+    last = now;
+    gap *= Math.exp(-elapsed / closing);
+    if (Math.abs(gap) < 1) {
+      gap = 0;
+    }
+    catchUp.show(catchUp.finger() - gap);
+    if (gap === 0) {
+      catchUp.caughtUp();
+    } else {
+      nextFrame(view, closeIn);
+    }
+  };
+  nextFrame(view, closeIn);
+}
 
 export async function withoutFocus<T>(
   document: Document,
@@ -199,7 +233,6 @@ export function startSwipe(
   const running: Running = { kind: 'pop', overlay, swiping: true, sheet, revealed: false };
   stage.running = running;
   stage.sheetUnder(sheet);
-  const drawsUnder = behind === null && destination.path !== null && !stage.dirtyForms.any();
   return followingFinger(stage, view, {
     running,
     under: arriving.box,
@@ -207,9 +240,8 @@ export function startSwipe(
     bar: { items: dress(arriving) },
     width: Math.max(1, content?.width ?? view.innerWidth),
     ready: behind !== null,
-    follows: behind !== null || drawsUnder,
     draw: (bar, takeOver) =>
-      drawsUnder && destination.path !== null
+      behind === null && destination.path !== null && !stage.dirtyForms.any()
         ? drawUnder(stage, destination.path, running, arriving, (into) => {
             bar.items = dress(into);
             return takeOver();
@@ -240,7 +272,6 @@ export function startSheetSwipe(stage: PageTransitions, under: HTMLElement): Swi
     bar: { items: stage.dressChrome(overlay, leaving, arriving) },
     width: Math.max(1, view.innerWidth),
     ready: true,
-    follows: true,
     draw: () => Promise.resolve(),
     handOver: () => (stage.sheetHandOver = running),
     discard: () => undefined,
@@ -254,7 +285,6 @@ interface FingerStage {
   readonly bar: { items: BarItem[] };
   readonly width: number;
   readonly ready: boolean;
-  readonly follows: boolean;
   readonly draw: (bar: { items: BarItem[] }, takeOver: () => Promise<void>) => Promise<void>;
   readonly handOver: () => void;
   readonly discard: () => void;
@@ -263,15 +293,17 @@ interface FingerStage {
 function followingFinger(
   stage: PageTransitions,
   view: Window,
-  { running, under, over, bar, width, follows, draw, handOver, discard, ...start }: FingerStage,
+  { running, under, over, bar, width, draw, handOver, discard, ...start }: FingerStage,
 ): SwipePreview {
   const dim = under.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__dim`);
   let progress = 0;
   let offset = 0;
   let ready = start.ready;
+  let shown = 0;
+  let catchingUp = false;
   const follow = (): void => {
-    progress = offset / width;
-    over.style.transform = `translateX(${offset}px)`;
+    progress = shown / width;
+    over.style.transform = `translateX(${shown}px)`;
     under.style.transform = parallaxAt(progress);
     if (dim !== null) {
       dim.style.opacity = String(1 - progress);
@@ -285,9 +317,21 @@ function followingFinger(
       return;
     }
     ready = true;
+    catchingUp = true;
+    closeInOnFinger(view, stage.durationOf('--duration-fast'), {
+      finger: () => offset,
+      from: shown,
+      show: (at) => {
+        shown = at;
+        follow();
+      },
+      goesOn: () => catchingUp && stage.running === running,
+      caughtUp: () => (catchingUp = false),
+    });
   };
   const drawn = draw(bar, takeOver);
   const settle = async (end: SwipeSettle): Promise<boolean> => {
+    catchingUp = false;
     if (stage.running !== running) {
       return false;
     }
@@ -342,7 +386,8 @@ function followingFinger(
   return {
     follow: (to) => {
       offset = Math.min(width, Math.max(0, to));
-      if (follows) {
+      if (ready && !catchingUp) {
+        shown = offset;
         follow();
       }
     },

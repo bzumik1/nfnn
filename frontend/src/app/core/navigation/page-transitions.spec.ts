@@ -1969,40 +1969,65 @@ describe('Given the app on the home screen of a phone opened straight on the don
     return Number.parseFloat(/translateX\(([-\d.]+)px\)/.exec(page.style.transform)?.[1] ?? '0');
   }
 
-  it('when a finger takes the page before the page Zpět leads to is drawn, then the page follows the finger at once, and only the page beneath comes late', async () => {
+  it('when a finger takes the page before the page Zpět leads to is drawn, then the page stays over it, never over an empty ground', async () => {
     const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
     await vi.dynamicImportSettled();
 
-    swipe.follow(40);
     swipe.follow(120);
 
-    expect(offsetOf(over())).toBe(120);
+    expect(over().style.transform).toBe('');
   });
 
-  it('when the page Zpět leads to is drawn while the finger keeps moving, then the page stays with the finger in every frame, never jumping when the page beneath arrives', async () => {
+  it('when the page Zpět leads to is drawn while the finger keeps moving, then the page closes in on the finger frame by frame until it is with it and then follows it 1:1, never jumping at an end set in advance', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
     const frames = framesByHand();
     try {
       const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
       await vi.dynamicImportSettled();
+      swipe.follow(120);
+      finishVisit();
+      await drawnUnder();
+
       const gaps: number[] = [];
-      for (let frame = 1; frame <= 20; frame++) {
-        const finger = 100 + frame * 3;
+      for (let frame = 1; frame <= 40; frame++) {
+        const finger = 120 + frame * 3;
         swipe.follow(finger);
-        if (frame === 5) {
-          finishVisit();
-          await drawnUnder();
-        }
         frames.run(frame * 16);
         gaps.push(finger - offsetOf(over()));
       }
 
-      expect(gaps).toEqual(gaps.map(() => 0));
+      expect(gaps[0]).toBeGreaterThan(30);
+      gaps.slice(1).forEach((gap, frame) => expect(gap).toBeLessThanOrEqual(gaps[frame]));
+      expect(gaps.at(-1)).toBe(0);
+      swipe.follow(300);
+      expect(offsetOf(over())).toBe(300);
+      expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)?.classList).not.toContain(
+        `${PAGE_TRANSITION_CLASS}--catching-up`,
+      );
     } finally {
       frames.restore();
+      document.documentElement.style.removeProperty('--duration-fast');
     }
   });
 
-  it('when the page Zpět leads to is drawn under a page the finger has taken 39 px, then the header of the page under it shows only as much as the page has moved, so its avatar never flashes', async () => {
+  it('when the browser stops giving animation frames while the page closes in on the finger, then the page still closes in on the clock and ends with the finger', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(120);
+      finishVisit();
+      await drawnUnder();
+
+      await expect.poll(() => offsetOf(over()), { timeout: 2000 }).toBe(120);
+    } finally {
+      frames.restore();
+      document.documentElement.style.removeProperty('--duration-fast');
+    }
+  });
+
+  it('when the page Zpět leads to is drawn under a page that has not moved yet, then the header of the page under it shows no more than the page does, so its avatar never flashes', async () => {
     const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
     await vi.dynamicImportSettled();
     swipe.follow(39);
@@ -2013,7 +2038,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
     const avatar = document.querySelector<HTMLElement>(
       `.${PAGE_TRANSITION_CLASS}__bar .account-button`,
     );
-    expect(Number(avatar?.style.opacity)).toBeCloseTo(39 / window.innerWidth, 5);
+    expect(avatar?.style.opacity).toBe('0');
   });
 
   it('when the page Zpět leads to cannot be drawn, then letting go past half leaves the page where it is and says it did not leave', async () => {
