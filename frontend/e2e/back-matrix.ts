@@ -2177,7 +2177,14 @@ export async function swipeBack(
   await restLongerThanAFlick(page);
   await watchTheStep(page);
   await touchAt(page, 'touchend', letGoAt);
-  return { probe: await stepSeen(page), letGoAt: letGoAt - EDGE };
+  const probe = await stepSeen(page);
+  if (measuresFrames(page)) {
+    expect(
+      probe.markedAt,
+      'the probe never marked the page the finger let go, so the screen could not judge its way',
+    ).toBeDefined();
+  }
+  return { probe, letGoAt: letGoAt - EDGE };
 }
 
 async function stepBackFrom(page: Page, screens: Screens, row: Row, way: Way): Promise<void> {
