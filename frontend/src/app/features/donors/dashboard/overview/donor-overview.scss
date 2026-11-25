@@ -23,7 +23,7 @@
 }
 
 .last-gift-amount,
-.stat-value.ui-figures--groups {
+.stat-value:has(> .ui-figures--groups) {
   text-wrap: balance;
 }
 

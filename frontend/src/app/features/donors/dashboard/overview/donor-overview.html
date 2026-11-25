@@ -129,11 +129,12 @@
     <dl class="overview-stats-list">
       <div class="overview-stat">
         <dt i18n="@@donor.dashboard.stat.total">Celkem darováno</dt>
-        <dd class="stat-value ui-figures ui-figures--groups">
-          <ng-container
-            [ngTemplateOutlet]="crownGroupsOf"
-            [ngTemplateOutletContext]="{ $implicit: donations.summary()?.totalAmountMinor ?? 0 }"
-          />
+        <dd class="stat-value ui-figures">
+          <span class="ui-figures--groups" role="text"
+            ><ng-container
+              [ngTemplateOutlet]="crownGroupsOf"
+              [ngTemplateOutletContext]="{ $implicit: donations.summary()?.totalAmountMinor ?? 0 }"
+          /></span>
         </dd>
       </div>
       <div class="overview-stat">
@@ -154,11 +155,12 @@
       @if (currentYear(); as year) {
         <div class="overview-stat">
           <dt i18n="@@donor.overview.stat.currentYear">Darováno v&nbsp;roce {{ year.year }}</dt>
-          <dd class="stat-value ui-figures ui-figures--groups">
-            <ng-container
-              [ngTemplateOutlet]="crownGroupsOf"
-              [ngTemplateOutletContext]="{ $implicit: year.totalAmountMinor }"
-            />
+          <dd class="stat-value ui-figures">
+            <span class="ui-figures--groups" role="text"
+              ><ng-container
+                [ngTemplateOutlet]="crownGroupsOf"
+                [ngTemplateOutletContext]="{ $implicit: year.totalAmountMinor }"
+            /></span>
           </dd>
         </div>
       }
@@ -210,7 +212,7 @@
         Poslední dar
       </h2>
       <p class="last-gift-main">
-        <span class="last-gift-amount ui-figures ui-figures--groups"
+        <span class="last-gift-amount ui-figures ui-figures--groups" role="text"
           ><ng-container
             [ngTemplateOutlet]="crownGroupsOf"
             [ngTemplateOutletContext]="{ $implicit: gift.amountMinor }" /></span

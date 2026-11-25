@@ -154,7 +154,7 @@ describe("Given the donor's overview while the gifts load", () => {
     expect(root().querySelector('.last-gift')?.classList).not.toContain('ui-skeleton-reveal');
   });
 
-  it('when gifts with a long total arrive, then every amount is its digit groups and one tail piece holding the last group and Kč, and still reads as one figure', async () => {
+  it('when gifts with a long total arrive, then every amount is its digit groups and one tail piece holding the last group and Kč, inside one role text element that reads as one figure', async () => {
     await open();
     items.set(twoYearDonations().items);
     summary.set({
@@ -167,8 +167,15 @@ describe("Given the donor's overview while the gifts load", () => {
     await wait(400);
 
     const figures = all('.stat-value.ui-figures, .last-gift-amount');
+    const textsOfEachFigure = figures.map((figure) =>
+      [figure, ...figure.querySelectorAll('*')].filter(
+        (node) => node.getAttribute('role') === 'text',
+      ),
+    );
+    expect(textsOfEachFigure.map((texts) => texts.length)).toEqual([1, 1, 1]);
+    const wholeFigures = textsOfEachFigure.map(([text]) => text);
     expect(
-      figures.map((figure) =>
+      wholeFigures.map((figure) =>
         [...figure.children].map((piece) =>
           piece.classList.contains('amount-tail')
             ? [...piece.children].map((part) => part.textContent)
@@ -176,7 +183,7 @@ describe("Given the donor's overview while the gifts load", () => {
         ),
       ),
     ).toEqual([['1', '252', ['063,50', 'Kč']], ['1', '000', ['000,50', 'Kč']], [['500', 'Kč']]]);
-    expect(figures.map((figure) => figure.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+    expect(wholeFigures.map((figure) => figure.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
       '1 252 063,50 Kč',
       '1 000 000,50 Kč',
       '500 Kč',
