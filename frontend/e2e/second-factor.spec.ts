@@ -512,6 +512,7 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
     failFirstSync();
     const notice = page.locator('.first-sync');
     await expect(notice.getByText(/nepodařilo uložit/)).toBeVisible();
+    await expect(notice).toHaveCount(1);
     await expect(page.getByLabel('Kód z aplikace')).toBeFocused();
     await expect.poll(() => roomFitsNotice(notice)).toBe(true);
     const copy = page.getByRole('button', { name: 'Kopírovat klíč' });
