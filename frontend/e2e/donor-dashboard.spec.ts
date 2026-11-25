@@ -847,7 +847,9 @@ test.describe('Given a signed-in donor on a computer', () => {
         await expect(button).toBeVisible();
         await synced;
         await expect(page.locator('.first-sync')).toHaveCount(0);
-        await expect(page.locator('.page-fade--leaving')).toHaveCount(0);
+        await expect(page.locator('html')).not.toHaveClass(
+          /(^|\s)page-fade-(hidden|arriving)(\s|$)/,
+        );
         await page.evaluate(() => document.fonts.ready);
         await expect(async () => {
           await button.evaluate((element) => element.scrollIntoView({ block: 'center' }));

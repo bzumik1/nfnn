@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
+import { InputModality } from '../../../../core/input/input-modality';
 import { Donor, Passkey } from '../../../../core/auth/donor';
 import { PasskeyAuthenticator } from '../../../../core/auth/passkey-authenticator';
 import {
@@ -292,6 +293,91 @@ describe('Given the sign-in and security card of the details page', () => {
     await card.settle();
 
     expect(card.values()[3]).toBe('1 klíč');
+  });
+
+  describe('when the donor collapses the passkeys panel right after removing a key, while its row still leaves', () => {
+    let scrolled: unknown[];
+    let finishClosing: () => void;
+    let closed: Promise<void>;
+    let manage: HTMLButtonElement;
+
+    beforeEach(async () => {
+      await render([IPHONE, WINDOWS]);
+      await card.clickButton('Spravovat přístupové klíče');
+      await card.clickButton('Odebrat');
+      await card.clickButton('Ano, odebrat');
+      http
+        .expectOne({ method: 'DELETE', url: `${PASSKEYS_URL}/${IPHONE.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await card.settle();
+      scrolled = [];
+      manage = card.button('Spravovat přístupové klíče')!;
+      manage.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+        scrolled.push(options);
+      };
+      const panel = card.element('#account-passkeys-panel');
+      closed = new Promise<void>((resolve) => (finishClosing = resolve));
+      card.root().getAnimations = () =>
+        [
+          {
+            finished: closed,
+            effect: { target: panel, getComputedTiming: () => ({ endTime: 60_000 }) },
+          },
+        ] as never;
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(card.root(), 'getAnimations');
+    });
+
+    it('then Spravovat přístupové klíče takes the focus and glides into view only once the panel has closed', async () => {
+      await card.clickButton('Spravovat přístupové klíče');
+
+      expect(document.activeElement).toBe(manage);
+      expect(manage.getAttribute('aria-expanded')).toBe('false');
+      expect(scrolled).toEqual([]);
+
+      finishClosing();
+
+      await vi.waitFor(() => expect(scrolled).toEqual([{ block: 'nearest', behavior: 'smooth' }]));
+    });
+
+    it('and a finger pressed Spravovat přístupové klíče where it stands in the window, then it is left where it is', async () => {
+      const modality = TestBed.inject(InputModality);
+      modality.start();
+      try {
+        manage.getBoundingClientRect = () => new DOMRect(0, 100, 300, 40);
+        manage.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+        await card.clickButton('Spravovat přístupové klíče');
+        finishClosing();
+        await closed;
+        await new Promise<void>((resolve) => setTimeout(resolve));
+
+        expect(document.activeElement).toBe(manage);
+        expect(scrolled).toEqual([]);
+      } finally {
+        modality.stop();
+      }
+    });
+
+    it('and the last pointer press went elsewhere, then Spravovat přístupové klíče half under the top of the window is still brought into view once the panel has closed', async () => {
+      const modality = TestBed.inject(InputModality);
+      modality.start();
+      try {
+        manage.getBoundingClientRect = () => new DOMRect(0, -20, 300, 40);
+        document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+        await card.clickButton('Spravovat přístupové klíče');
+        finishClosing();
+
+        await vi.waitFor(() =>
+          expect(scrolled).toEqual([{ block: 'nearest', behavior: 'smooth' }]),
+        );
+      } finally {
+        modality.stop();
+      }
+    });
   });
 
   describe('when the donor turns the second factor on', () => {
@@ -742,6 +828,21 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(normalized(withOrdinarySpaces(document.activeElement?.textContent))).toBe(
         'Změnit e-mail',
       );
+    });
+
+    it('and cancels, then the focus returns to the row action without the browser scrolling to it first, so the reveal once the form has closed is the only scroll', async () => {
+      const action = card.button('Změnit e-mail')!;
+      const focusings: (FocusOptions | undefined)[] = [];
+      const focus = action.focus.bind(action);
+      action.focus = (options?: FocusOptions) => {
+        focusings.push(options);
+        focus(options);
+      };
+
+      await card.click('.account-cancel');
+
+      expect(document.activeElement).toBe(action);
+      expect(focusings).toEqual([{ preventScroll: true }]);
     });
 
     it('and the session has ended, then the details page is told to send the donor to sign in', async () => {
