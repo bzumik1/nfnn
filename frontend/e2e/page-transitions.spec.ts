@@ -975,7 +975,7 @@ test.describe('Given the app on the home screen of an iPhone with Face ID, the a
     await publishedArticle(page);
   });
 
-  for (const share of [0.04, 0.08, 0.15]) {
+  for (const share of [0.08, 0.15, 0.25]) {
     test(`when the step is held at ${share * 100} % of its time, the arriving page still well to the right, then under the page's rounded corner shows only the dimmed list beside it, never a ground of its own, and the band under the clock on the arriving page has the colour it keeps once it has arrived`, async ({
       page,
     }) => {
@@ -988,10 +988,14 @@ test.describe('Given the app on the home screen of an iPhone with Face ID, the a
         pose.overLeft,
         'the arriving page lies far enough in to read beside it',
       ).toBeGreaterThan(40);
+      expect(
+        pose.overLeft + BAND_READ_INSIDE_PX,
+        'the band on the arriving page lies inside the window, past its corner',
+      ).toBeLessThan(390);
 
       const underTheCorner = await pixelAt(page, pose.overLeft + 2, 1);
       const beside = await pixelAt(page, pose.overLeft - 4, 1);
-      const bandOnTheWay = await pixelAt(page, pose.overLeft + 60, 2);
+      const bandOnTheWay = await pixelAt(page, pose.overLeft + BAND_READ_INSIDE_PX, 2);
       await page.evaluate(() =>
         document
           .querySelector('.page-transition')
@@ -1000,7 +1004,7 @@ test.describe('Given the app on the home screen of an iPhone with Face ID, the a
       );
       await expect(page).toHaveURL(`/aktuality/${article.slug}`);
       await expect(overlays(page)).toHaveCount(0);
-      const bandArrived = await pixelAt(page, 60, 2);
+      const bandArrived = await pixelAt(page, BAND_READ_INSIDE_PX, 2);
 
       expect(
         closeColours(underTheCorner, beside),
@@ -1013,6 +1017,8 @@ test.describe('Given the app on the home screen of an iPhone with Face ID, the a
     });
   }
 });
+
+const BAND_READ_INSIDE_PX = 40;
 
 async function onTheHomeScreenWithBottomInset(page: Page, inset: string): Promise<void> {
   await page.addInitScript((bottom) => {
