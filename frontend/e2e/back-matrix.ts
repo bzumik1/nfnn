@@ -1273,20 +1273,11 @@ export function screencastMissedTheMotion(
   durationMs: number,
   frameMs: number,
 ): string | null {
-  const times = [...shotTimes].sort((one, other) => one - other);
   const endAt = startAt + durationMs;
-  const gaps = times
-    .slice(1)
-    .map((at, index) => ({ from: times[index], to: at }))
-    .filter(({ from, to }) => to > startAt && from < endAt)
-    .map(({ from, to }) => to - from);
-  if (!times.some((at) => at >= endAt)) {
-    gaps.push(endAt - (times.filter((at) => at <= endAt).at(-1) ?? startAt));
-  }
-  if (!times.some((at) => at <= startAt)) {
-    gaps.push((times.find((at) => at >= startAt) ?? endAt) - startAt);
-  }
-  const gap = Math.max(0, ...gaps);
+  const within = [startAt, ...shotTimes.filter((at) => at > startAt && at < endAt), endAt].sort(
+    (one, other) => one - other,
+  );
+  const gap = Math.max(0, ...within.slice(1).map((at, index) => at - within[index]));
   return gap >= durationMs - frameMs
     ? `the screencast drew no frame for ${Math.round(gap)} ms of a ${Math.round(durationMs)} ms motion, so the page's way cannot be judged on this runner`
     : null;
