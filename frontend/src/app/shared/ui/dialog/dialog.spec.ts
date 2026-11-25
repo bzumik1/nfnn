@@ -1281,6 +1281,8 @@ describe('Given a long sheet whose buttons stay at its bottom edge', () => {
       >
         <span>Smazat data</span>
       </button>
+      <input id="outer-field" aria-label="Číslo účtu" />
+      <button type="button" id="outer-submit" (click)="nested.set(true)">Uložit</button>
       @if (nested()) {
         <app-dialog labelledBy="nested-title" presentation="sheet" (dismissed)="nested.set(false)">
           <h2 id="nested-title">Smazat data?</h2>
@@ -1544,6 +1546,53 @@ describe('Given a dialog opened inside a sheet by VoiceOver or Switch Control, w
 
   it('when it has opened, then the activation it took as its opener is not left for a dialog that opens later', () => {
     expect(modality.lastPressedControl()).toBeNull();
+  });
+});
+
+describe('Given a dialog opened inside a sheet by Enter in a field of the sheet, which the browser turns into a click on its submit button', () => {
+  let fixture: ComponentFixture<NestedDialogHost>;
+  let modality: InputModality;
+
+  const dialogs = () =>
+    fixture.nativeElement.querySelectorAll('dialog') as NodeListOf<HTMLDialogElement>;
+  const field = () => fixture.nativeElement.querySelector('#outer-field') as HTMLInputElement;
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [NestedDialogHost],
+      providers: [
+        { provide: DialogHistory, useClass: FakeDialogHistory },
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    modality = TestBed.inject(InputModality);
+    modality.start();
+    deviceAsksForLessMotion(true);
+    fixture = TestBed.createComponent(NestedDialogHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    field().focus();
+    field().dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+    (fixture.nativeElement.querySelector('#outer-submit') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    window.matchMedia = realMatchMedia;
+    modality?.stop();
+    fixture?.nativeElement.remove();
+  });
+
+  it('when it has gone, then the focus returns to the field, as it did before', () => {
+    expect(dialogs()).toHaveLength(2);
+
+    (dialogs()[1].querySelector('.dialog-close') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(dialogs()).toHaveLength(1);
+    expect(document.activeElement).toBe(field());
   });
 });
 

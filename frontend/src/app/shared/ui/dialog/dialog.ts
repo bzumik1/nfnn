@@ -405,7 +405,13 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private openerOf(focused: Element | null): Element | null {
     const pressed = this.modality.takePressedControl();
     const holder = focused?.closest('dialog') ?? null;
-    return pressed !== null && holder !== null && holder.contains(pressed) ? pressed : focused;
+    return pressed !== null &&
+      holder !== null &&
+      focused !== null &&
+      standsForItsDialog(holder, focused) &&
+      holder.contains(pressed)
+      ? pressed
+      : focused;
   }
 
   private returnFocusTo(opener: HTMLElement): void {
@@ -613,6 +619,14 @@ export class Dialog implements AfterViewInit, OnDestroy {
       { injector: this.injector },
     );
   }
+}
+
+function standsForItsDialog(dialog: HTMLDialogElement, focused: Element): boolean {
+  if (focused === dialog) {
+    return true;
+  }
+  const [titleId] = (dialog.getAttribute('aria-labelledby') ?? '').split(/\s+/);
+  return titleId !== '' && focused.id === titleId;
 }
 
 interface VisibleBand {
