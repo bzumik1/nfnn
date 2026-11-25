@@ -5,6 +5,7 @@ export const STEADY_FRAME_LONGEST_MS = 34;
 export const STEADY_FRAMES_KEPT = 10;
 export const STEADY_GAPS_IN_MOTION = 3;
 export const STEADY_FRAME_MARK = 'nfnn.steady-frame-before-the-motion';
+export const PLACING_MARK = 'nfnn.step-placing';
 
 export function steadyFrameMs(gaps: readonly number[]): number {
   return gaps.length === 0 ? STEADY_FRAME_LONGEST_MS : bounded(medianOf(gaps));

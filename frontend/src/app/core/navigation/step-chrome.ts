@@ -4,6 +4,8 @@ import {
   BarItem,
   DISPLAY_FRAME_MS,
   FollowedTitle,
+  FRAME_LATE_MS,
+  HELD_WITHOUT_A_FRAME_MS,
   IN_SHEET_CLASS,
   MOVING_CLASS,
   ON_GROUND_CLASS,
@@ -16,6 +18,7 @@ import {
 const PLACED_WITHIN_FRAMES = 9;
 const FIRST_OPENING_PLACED_WITHIN_FRAMES = 18;
 const FRAMES_TO_PLACE = 2;
+const LONG_TASK_MS = 50;
 const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
 const BAR_ITEMS = ['.back-button', '.account-button'];
 const GROUND_CHANGES_CLASS = `${PAGE_TRANSITION_CLASS}--ground-changes`;
@@ -35,7 +38,7 @@ interface StepMeasure {
   readonly fadeAt: number;
 }
 
-export const STEP_CHROME: StepChrome = { dress: dressChrome, readsWaitLeftMs };
+export const STEP_CHROME: StepChrome = { dress: dressChrome, readsWaitLeftMs, afterDrawnFrames };
 
 function readsWaitLeftMs(stage: PageTransitions): number {
   const frames = loadedItsCode(stage) ? FIRST_OPENING_PLACED_WITHIN_FRAMES : PLACED_WITHIN_FRAMES;
@@ -302,4 +305,59 @@ function fadingIn(progress: number, fadeAt: number): number {
     return progress >= 1 ? 1 : 0;
   }
   return Math.min(1, Math.max(0, (progress - fadeAt) / (1 - fadeAt)));
+}
+
+export function afterDrawnFrames(
+  view: Window,
+  document: Document,
+  frames: number,
+  then: () => void,
+  mayEndByClock: () => boolean = () => false,
+  goesOn: () => boolean = () => true,
+): void {
+  if (frames <= 0) {
+    then();
+    return;
+  }
+  const startedAt = view.performance.now();
+  let armedAt = startedAt;
+  let looked = 0;
+  let done = false;
+  let byClock = 0;
+  const goOn = (drawn: boolean): void => {
+    if (done) {
+      return;
+    }
+    done = true;
+    view.clearTimeout(byClock);
+    if (!goesOn()) {
+      return;
+    }
+    if (drawn) {
+      afterDrawnFrames(view, document, frames - 1, then, mayEndByClock, goesOn);
+    } else {
+      then();
+    }
+  };
+  const look = (): void => {
+    if (!goesOn()) {
+      done = true;
+      return;
+    }
+    const now = view.performance.now();
+    looked += FRAME_LATE_MS;
+    const ranOnTime = now - armedAt <= FRAME_LATE_MS + LONG_TASK_MS;
+    const waitedMs = Math.max(looked, now - startedAt);
+    if (
+      (document.visibilityState === 'hidden' && waitedMs >= HELD_WITHOUT_A_FRAME_MS) ||
+      (ranOnTime && mayEndByClock())
+    ) {
+      goOn(false);
+      return;
+    }
+    armedAt = now;
+    byClock = view.setTimeout(look, FRAME_LATE_MS);
+  };
+  byClock = view.setTimeout(look, FRAME_LATE_MS);
+  view.requestAnimationFrame(() => goOn(true));
 }

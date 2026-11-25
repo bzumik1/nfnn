@@ -35,7 +35,7 @@ import { DirtyForms } from '../updates/dirty-forms';
 import { NavigationPreview } from './navigation-preview';
 import { PagePlacement } from './page-placement';
 import { stillCopyOf } from './still-copy';
-import { STEADY_FRAME_MARK, STEADY_FRAMES_KEPT, steadyFrameMs } from './frame-pace';
+import { PLACING_MARK, STEADY_FRAME_MARK, STEADY_FRAMES_KEPT, steadyFrameMs } from './frame-pace';
 
 export const PAGE_LAYER_CLASS = 'page-layer';
 export const PAGE_TRANSITION_CLASS = 'page-transition';
@@ -44,7 +44,7 @@ export const PAGE_COVER_LONGEST_MS = 5000;
 export const KEPT_PAGES = 3;
 export const FRAME_LATE_MS = 100;
 export const HELD_WITHOUT_A_FRAME_MS = PAGE_TRANSITION_LONGEST_MS / 4;
-const LONG_TASK_MS = 50;
+export type PlacingKind = 'raf' | 'resize-observer' | 'task';
 const SWIPE_HANDED_OVER_AFTER_FRAMES = 2;
 export const DISPLAY_FRAME_MS = 1000 / 60;
 const PRESS_LEADS_WITHIN_MS = 1000;
@@ -129,6 +129,14 @@ export interface StepChrome {
     arriving: PlacedPage | null,
   ): BarItem[];
   readsWaitLeftMs(stage: PageTransitions): number;
+  afterDrawnFrames(
+    view: Window,
+    document: Document,
+    frames: number,
+    then: () => void,
+    mayEndByClock?: () => boolean,
+    goesOn?: () => boolean,
+  ): void;
 }
 
 export interface SheetLooks {
@@ -207,7 +215,7 @@ export class PageTransitions {
     const hidden = (): void => this.endWhenHidden();
     const sample = (event: Event): void => {
       this.pressedAt = event.timeStamp;
-      this.drawnSincePress = false;
+      this.drawnSincePress = event.type === 'keydown';
       this.document.defaultView?.requestAnimationFrame?.(() => (this.drawnSincePress = true));
       this.sampleFramePace();
     };
@@ -461,14 +469,19 @@ export class PageTransitions {
       this.finish();
       return;
     }
-    this.moveTo(running, view, { ...this.shown(layer), sheet: running.sheet }, inFrame);
+    this.moveTo(
+      running,
+      view,
+      { ...this.shown(layer), sheet: running.sheet },
+      inFrame ? 'raf' : this.placement.placesInRendering ? 'resize-observer' : 'task',
+    );
   }
 
-  moveTo(running: Running, view: Window, arriving: KeptPage, inFrame = false): void {
+  moveTo(running: Running, view: Window, arriving: KeptPage, kind: PlacingKind = 'task'): void {
     const shown = this.place(running.overlay, arriving, running.kind === 'push' ? 'over' : 'under');
     const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
     this.dressChrome(running.overlay, left, shown);
-    this.startMoving(running, view, shown.box, inFrame);
+    this.startMoving(running, view, shown.box, kind);
   }
 
   private moveOver(running: Running, view: Window, leaving: KeptPage, arriving: KeptPage): void {
@@ -477,11 +490,13 @@ export class PageTransitions {
     left.scroll();
     shown.scroll();
     this.dressChrome(running.overlay, this.placedPage(running.overlay, 'over'), shown.page);
-    this.startMoving(running, view, shown.page.box);
+    this.startMoving(running, view, shown.page.box, 'task');
   }
 
-  private startMoving(running: Running, view: Window, page: HTMLElement, inFrame = false): void {
+  private startMoving(running: Running, view: Window, page: HTMLElement, kind: PlacingKind): void {
     running.overlay.classList.add(HELD_CLASS, MOVING_CLASS);
+    publishMark(view, PLACING_MARK, { kind });
+    const framesStopped = !this.drawnSincePress;
     const still = this.finishWhenStill(running, page, view);
     let released = false;
     const release = (): void => {
@@ -496,7 +511,14 @@ export class PageTransitions {
         view.setTimeout(still, this.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
       );
     };
-    afterDrawnFrames(view, this.document, inFrame ? 1 : 2, release, () => !this.drawnSincePress);
+    (this.dressing?.afterDrawnFrames ?? ((...wait) => wait[3]()))(
+      view,
+      this.document,
+      kind === 'task' ? 2 : 1,
+      release,
+      () => framesStopped,
+      () => this.running === running,
+    );
   }
 
   private now(): number {
@@ -794,58 +816,17 @@ export function nextFrame(view: Window, then: (now: number, drawn: boolean) => v
   view.requestAnimationFrame((now) => once(now, true));
 }
 
-export function afterDrawnFrames(
-  view: Window,
-  document: Document,
-  frames: number,
-  then: () => void,
-  mayEndByClock: () => boolean = () => false,
-): void {
-  if (frames <= 0) {
-    then();
-    return;
-  }
-  let armedAt = view.performance.now();
-  let waitedMs = 0;
-  let done = false;
-  let byClock = 0;
-  const goOn = (drawn: boolean): void => {
-    if (done) {
-      return;
-    }
-    done = true;
-    view.clearTimeout(byClock);
-    if (drawn) {
-      afterDrawnFrames(view, document, frames - 1, then, mayEndByClock);
-    } else {
-      then();
-    }
-  };
-  const look = (): void => {
-    const now = view.performance.now();
-    waitedMs += FRAME_LATE_MS;
-    const ranOnTime = now - armedAt <= FRAME_LATE_MS + LONG_TASK_MS;
-    if (
-      (document.visibilityState === 'hidden' && waitedMs >= HELD_WITHOUT_A_FRAME_MS) ||
-      (ranOnTime && mayEndByClock())
-    ) {
-      goOn(false);
-      return;
-    }
-    armedAt = now;
-    byClock = view.setTimeout(look, FRAME_LATE_MS);
-  };
-  byClock = view.setTimeout(look, FRAME_LATE_MS);
-  view.requestAnimationFrame(() => goOn(true));
+export function publishSteadyFrame(view: Window, steadyBeforeMs: number): void {
+  publishMark(view, STEADY_FRAME_MARK, { steadyBeforeMs });
 }
 
-export function publishSteadyFrame(view: Window, steadyBeforeMs: number): void {
+function publishMark(view: Window, name: string, detail: object): void {
   const timing = view.performance;
   if (typeof timing?.mark !== 'function' || typeof timing.clearMarks !== 'function') {
     return;
   }
-  timing.clearMarks(STEADY_FRAME_MARK);
-  timing.mark(STEADY_FRAME_MARK, { detail: { steadyBeforeMs } });
+  timing.clearMarks(name);
+  timing.mark(name, { detail });
 }
 
 function afterFrames(view: Window, frames: number, then: () => void): void {

@@ -5,6 +5,7 @@ import { viewBand, type ViewBand } from '../src/app/core/layout/focus-in-view';
 import {
   LATE_FRAME_PAST_THE_STEADY_ONE,
   FIRST_HALF_JUDGED_WITHIN_MS,
+  PLACING_MARK,
   STEADY_FRAME_MARK,
   steadyFrameInMotion,
   steadyFrameMs,
@@ -79,6 +80,7 @@ const SCREEN_ANCHOR: ScreenAnchor = 'first-moved';
 const SCROLL_SETTLES_WITHIN_MS = 5000;
 export const LONGEST_FRAME_BEFORE_PLACING = 3;
 export const PLACING_ANNOTATION = 'nfnn-placing';
+export const FIRST_MOVE_ANNOTATION = 'nfnn-first-move';
 const NOT_JUDGED_REASON =
   'not judged on this runner: its screencast drew no frame for at least the motion’s length less one frame';
 const HIDDEN_TITLE_AT_MOST = 0.1;
@@ -201,6 +203,7 @@ interface TimeSpent {
 
 interface LateFrames {
   until: number;
+  readonly frameAt: () => number;
   read: (reader: FrameRequestCallback) => void;
   callbacks: TimeSpent[];
 }
@@ -220,6 +223,8 @@ export interface StepProbe {
   done: boolean;
   tappedAt: number | null;
   placedAt: number | null;
+  anchoredAt: number | null;
+  placingKind: string | null;
   loadedCode: boolean;
   busyFrameAt: number | null;
   longFrames: LongFrame[] | null;
@@ -665,6 +670,7 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
       arrivesLaterPattern,
       lateTitleWithinMs,
       steadyFrameMark,
+      placingMark,
       kept,
       marker,
     }) => {
@@ -707,6 +713,8 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
         done: false,
         tappedAt: null,
         placedAt: null,
+        anchoredAt: null,
+        placingKind: null,
         loadedCode: false,
         busyFrameAt: null,
         longFrames: null,
@@ -869,6 +877,7 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
         };
         const state: LateFrames = {
           until: 0,
+          frameAt: () => frameAt,
           callbacks,
           read: (reader: FrameRequestCallback): void => {
             readers.push(reader);
@@ -991,6 +1000,15 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
         placed.disconnect();
         const placedAt = performance.now();
         probe.placedAt = placedAt;
+        const placing = performance.getEntriesByName(placingMark, 'mark').at(-1) as
+          PerformanceMark | undefined;
+        const kind = (placing?.detail as { kind?: unknown } | undefined)?.kind;
+        probe.placingKind = typeof kind === 'string' ? kind : null;
+        if (probe.placingKind === 'raf' || probe.placingKind === 'resize-observer') {
+          probe.anchoredAt = late.frameAt();
+        } else {
+          requestAnimationFrame((now) => (probe.anchoredAt ??= now));
+        }
         probe.loadedCode = performance
           .getEntriesByType('resource')
           .some(
@@ -1113,6 +1131,7 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
       arrivesLaterPattern: TITLE_ARRIVES_LATER.source,
       lateTitleWithinMs: LATE_TITLE_WITHIN_MS,
       steadyFrameMark: STEADY_FRAME_MARK,
+      placingMark: PLACING_MARK,
       kept: KEPT_CALLBACK_TIMES,
       marker: {
         className: MARKER_CLASS,
@@ -2003,12 +2022,23 @@ export function expectWithinTheBudget(probe: StepProbe, restingAt?: number): voi
   expect(moved, 'the page never moved').not.toBeNull();
   const busyFrameAt = probe.busyFrameAt;
   expect(busyFrameAt, 'no frame was drawn after both copies were placed').not.toBeNull();
+  const anchoredAt = probe.anchoredAt ?? probe.placedAt!;
   const framesBefore = probe.frames.filter(
-    (frame) => frame.at > probe.placedAt! && frame.at < moved!.at,
+    (frame) => frame.at > anchoredAt && frame.at < moved!.at,
   ).length;
+  test.info().annotations.push({
+    type: FIRST_MOVE_ANNOTATION,
+    description: JSON.stringify({
+      kind: probe.placingKind,
+      placingToAnchorMs: Math.round((anchoredAt - probe.placedAt!) * 10) / 10,
+      anchorToFirstMoveMs: Math.round((moved!.at - anchoredAt) * 10) / 10,
+      frames: framesBefore,
+      atMost: movesWithinFramesOfThePlacing(lagFramesOf(probe)),
+    }),
+  });
   expect(
     framesBefore,
-    'frames drawn between the placing and the first frame on the screen in which the page moved',
+    'frames drawn between the first frame that can paint both copies and the first frame on the screen in which the page moved',
   ).toBeLessThanOrEqual(movesWithinFramesOfThePlacing(lagFramesOf(probe)));
 }
 

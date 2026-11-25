@@ -72,7 +72,8 @@ export function placeOnceGrown(restored: Scroll, injector: Injector, placed: () 
     timer = view.setTimeout(stop, PLACE_WAIT_LONGEST_MS);
     VISITOR_MOVES.forEach((type) => view.addEventListener(type, stop, LISTENING));
     view.addEventListener('scroll', movedByOthers, LISTENING);
-    growth = new ResizeObserver(placeOnceReached);
+    const placement = injector.get(PagePlacement);
+    growth = new ResizeObserver(() => placement.inRendering(placeOnceReached));
     growth.observe(view.document.body);
     placeOnceReached();
   });

@@ -19,7 +19,6 @@ import { PagePlacement } from './page-placement';
 import { ACCOUNT_RETURNS_KEY } from './page-transitions';
 import { NavigationPreview } from './navigation-preview';
 import {
-  afterDrawnFrames,
   FRAME_LATE_MS,
   HELD_WITHOUT_A_FRAME_MS,
   PAGE_LAYER_CLASS,
@@ -30,7 +29,8 @@ import {
 } from './page-transitions';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 import { closeOnceCovered, SHEET_STEPPING, sheetOnly, swipeBackInSheet } from './sheet-stepping';
-import { STEP_CHROME } from './step-chrome';
+import { steepestStepOver } from './back-swipe';
+import { afterDrawnFrames, STEP_CHROME } from './step-chrome';
 
 @Component({ template: '' })
 class Blank {}
@@ -784,7 +784,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
   });
 
-  it('when the browser has drawn no frame since the press but the page clock’s wait ran late, as after a long task, then the hold still waits for its frames', async () => {
+  it('when the browser has drawn no frame since the press but the page clock’s look runs late, as after a long task, then that late look does not let the held motions go, and the frames that come next do', async () => {
     watchHeldMotions();
     const draw = framesOnRequest();
     document.dispatchEvent(new Event('pointerdown'));
@@ -800,6 +800,75 @@ describe('Given a phone that animates, an article opened from the news, and the 
     draw(5016);
 
     expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
+  it('when the browser drew a frame after the press, as an iPhone does before it holds the next one back while it paints the copies, then the page clock never lets the held motions go in a visible page, not even after 500 ms of looks on time (round 28)', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    document.dispatchEvent(new Event('pointerdown'));
+    draw(1000);
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS);
+
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
+  it('when a second press comes while the step is held, then the hold keeps the frames-since-the-press its step began with, so the clock never lets it go', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    document.dispatchEvent(new Event('pointerdown'));
+    draw(1000);
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    document.dispatchEvent(new Event('pointerdown'));
+
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS + 50);
+
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
+  it('when the step comes from a key, whose press and click share one task before any frame, then the page clock never lets the held motions go in a visible page, as an iPad with a keyboard may hold that frame back', async () => {
+    watchHeldMotions();
+    framesOnRequest();
+    document.dispatchEvent(new Event('keydown'));
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS + 50);
+
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
+  it('when the news is placed by a resize observer, inside the frame that draws it, then the motions are held through that frame only and let go in the next', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    const placement = TestBed.inject(PagePlacement);
+    const placed = placement.pending();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 10);
+
+    placement.inRendering(placed);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(moving()?.classList, 'held in the frame that placed the copies').toContain(
+      `${PAGE_TRANSITION_CLASS}--held`,
+    );
+    draw(5000);
+
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  });
+
+  it('when the step ends while its motions are held and no frame comes, then the page clock stops looking', async () => {
+    watchHeldMotions();
+    framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    dressedTransitions().finish();
+
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 3);
+
+    expect(vi.getTimerCount(), 'timers still pending after the step ended').toBe(0);
   });
 
   function hiddenWithoutTellingThePage(): void {
@@ -2487,6 +2556,65 @@ describe('Given the app on the home screen of a phone opened straight on the don
     } finally {
       frames.restore();
       document.documentElement.style.removeProperty('--duration-fast');
+    }
+  });
+
+  it('when the finger lets go past half while the page still closes in on it, then the slide through the real swipe holds two drawn frames, and with a late frame and a tick of the page clock on its way it moves every frame towards its end, the first no more than the page was moving or an eighth of the gap and none more than that or the finger’s own slide at its steepest', async () => {
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnder();
+      const closing = [offsetOf(over())];
+      for (const at of [16, 32, 48]) {
+        frames.run(at);
+        closing.push(offsetOf(over()));
+      }
+      const liftedAt = closing.at(-1)!;
+      const lastStep = liftedAt - closing.at(-2)!;
+      const end = {
+        completes: true,
+        from: 220,
+        to: 390,
+        durationMs: 150,
+        easing: 'cubic-bezier(0.25, 0.5, 0.25, 1)',
+        speed: 1,
+      };
+      void swipe.settle(end);
+      await Promise.resolve();
+      frames.run(64);
+      frames.run(80);
+      await Promise.resolve();
+      expect(offsetOf(over()), 'the page moved in the two held frames').toBe(liftedAt);
+
+      const offsets = [liftedAt];
+      for (const gap of [16, 50, 16, 'tick', 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16]) {
+        if (gap === 'tick') {
+          await new Promise((done) => setTimeout(done, FRAME_LATE_MS + 20));
+        } else {
+          await Promise.resolve();
+          frames.run(80 + offsets.length * 16 + (gap === 50 ? 34 : 0));
+        }
+        const page = document.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`);
+        if (page === null) {
+          break;
+        }
+        offsets.push(offsetOf(page));
+      }
+      const steps = offsets.slice(1).map((at, frame) => at - offsets[frame]);
+      const firstAtMost = Math.max(lastStep, 220 / 8);
+      const anyAtMost = Math.max(firstAtMost, steepestStepOver(end, 1000 / 60));
+
+      expect(steps[0], 'the first frame of the slide').toBeLessThanOrEqual(firstAtMost + 1e-6);
+      steps.forEach((step, frame) => {
+        expect(step, `frame ${frame + 1} went back`).toBeGreaterThanOrEqual(-1e-6);
+        expect(step, `frame ${frame + 1}`).toBeLessThanOrEqual(anyAtMost + 1e-6);
+      });
+      expect(offsets.at(-1), 'where the slide ended').toBe(390);
+    } finally {
+      frames.restore();
     }
   });
 

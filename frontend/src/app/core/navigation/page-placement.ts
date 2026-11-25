@@ -73,6 +73,21 @@ export class PagePlacement {
     };
   }
 
+  private rendering = false;
+
+  get placesInRendering(): boolean {
+    return this.rendering;
+  }
+
+  inRendering(run: () => void): void {
+    this.rendering = true;
+    try {
+      run();
+    } finally {
+      queueMicrotask(() => (this.rendering = false));
+    }
+  }
+
   isSettled(): boolean {
     return this.waiting.size === 0;
   }

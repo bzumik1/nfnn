@@ -11,7 +11,6 @@ import { BackDestination } from './back-target';
 import { curveOf, easedAt, settleFrom, steepestStepOver, SwipeSettle } from './back-swipe';
 import {
   BarCurve,
-  afterDrawnFrames,
   BarItem,
   DISPLAY_FRAME_MS,
   FRAME_LATE_MS,
@@ -31,6 +30,7 @@ import {
   SwipePreview,
 } from './page-transitions';
 import { sheetOnly, sheetOverlay, standingSheetCopy } from './sheet-stepping';
+import { afterDrawnFrames } from './step-chrome';
 
 const SECTION_LINKS = 'nav a[href]';
 const NOT_COPIED = 'iframe, video, audio, object, embed, dialog';
