@@ -361,10 +361,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { browser: chromium, shard: 1/2, projects: "--project=chromium --project=baseline", install: "chromium" }
-          - { browser: chromium, shard: 2/2, projects: "--project=chromium --project=baseline", install: "chromium" }
-          - { browser: webkit, shard: 1/2, projects: "--project=iphone --project=device-*", install: "webkit chromium" }
-          - { browser: webkit, shard: 2/2, projects: "--project=iphone --project=device-*", install: "webkit chromium" }
+          - { browser: chromium, shard: 1/3, projects: "--project=chromium --project=baseline", install: "chromium" }
+          - { browser: chromium, shard: 2/3, projects: "--project=chromium --project=baseline", install: "chromium" }
+          - { browser: chromium, shard: 3/3, projects: "--project=chromium --project=baseline", install: "chromium" }
+          - { browser: webkit, shard: 1/3, projects: "--project=iphone", install: "webkit chromium" }
+          - { browser: webkit, shard: 2/3, projects: "--project=iphone", install: "webkit chromium" }
+          - { browser: webkit, shard: 3/3, projects: "--project=iphone", install: "webkit chromium" }
+          - { browser: devices, shard: 1/1, projects: "--project=device-*", install: "webkit chromium" }
+          - { browser: webkit-sprava, shard: 1/2, projects: "--project=iphone-sprava", install: "webkit" }
+          - { browser: webkit-sprava, shard: 2/2, projects: "--project=iphone-sprava", install: "webkit" }
     defaults:
       run:
         working-directory: frontend
@@ -1799,6 +1804,11 @@ jobs:
           path: frontend/test-results/device-report/
           if-no-files-found: ignore
           retention-days: 3
+
+      - name: The back matrix on the screen, and the stamp lag of its step frames against the reviewed value
+        if: ${{ !cancelled() && steps.device-report.outcome == 'success' }}
+        working-directory: frontend
+        run: node scripts/motion-judged-summary.mjs "$RUNNER_TEMP/e2e-merged.json" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Every listed end-to-end test ran in exactly one shard
         id: shards

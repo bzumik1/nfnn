@@ -27,6 +27,7 @@ const onlyWebApp =
 const safari = !!process.env.SAFARI;
 
 const SAFARI_TEST_TIMEOUT_MS = 60_000;
+const TIMED_MOTION = /@timed-motion/;
 const SAFARI_MAX_FAILURES = 10;
 const safariProjects = SAFARI_POSES.map((pose) => ({
   name: `${DEVICE_PROJECT_PREFIX}${pose.id}`,
@@ -55,13 +56,29 @@ export default defineConfig<DeviceOptions, { safariPose?: SafariPose }>({
         {
           name: 'chromium',
           testIgnore: /baseline\/|pwa\/|devices\/(devices|safari)\.spec\.ts$/,
+          grepInvert: TIMED_MOTION,
+          use: { ...devices['Desktop Chrome'] },
+        },
+        {
+          name: 'motion-timed',
+          default: false,
+          testMatch: /back-matrix\.spec\.ts$/,
+          grep: TIMED_MOTION,
+          workers: 1,
           use: { ...devices['Desktop Chrome'] },
         },
         {
           name: 'iphone',
           testMatch:
-            /(receipt-pdf|yearly-pdf-phone|verify-receipt|donate-qr|pressed-tint|second-factor|dialog-back|security-headers|device-copy|app-shell|tab-bar-drag|largest-text|diagnostics|offline-sign-in|page-transitions|tab-switching|story-grid|edge-swipe|busy-announcement|back-keeps-scroll|back-motion-start|admin-donor-search-names|failure-and-loading|focus-ring|account-sheet-fit|offline-pill-page-end|top-area|donor-settings-motion)\.spec\.ts$/,
-          testIgnore: /pwa\//,
+            /(receipt-pdf|yearly-pdf-phone|verify-receipt|donate-qr|pressed-tint|second-factor|dialog-back|security-headers|device-copy|app-shell|tab-bar-drag|largest-text|diagnostics|offline-sign-in|page-transitions|tab-switching|story-grid|edge-swipe|busy-announcement|back-keeps-scroll|back-motion-start|admin-donor-search-names|failure-and-loading|focus-ring|account-sheet-fit|offline-pill-page-end|top-area|donor-settings-motion|back-matrix)\.spec\.ts$/,
+          testIgnore: /pwa\/|sprava-back-matrix\.spec\.ts$/,
+          grepInvert: TIMED_MOTION,
+          use: { ...devices['iPhone 15'] },
+        },
+        {
+          name: 'iphone-sprava',
+          testMatch: /sprava-back-matrix\.spec\.ts$/,
+          grepInvert: TIMED_MOTION,
           use: { ...devices['iPhone 15'] },
         },
         {

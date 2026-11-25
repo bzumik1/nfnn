@@ -193,6 +193,80 @@ describe('Given a dialog opened from a button', () => {
     expect(document.activeElement?.id).toBe('opener');
   });
 
+  describe('when it goes away and the focus returns to the button that opened it', () => {
+    const header = 64;
+    const height = window.innerHeight;
+    let focusOptions: (FocusOptions | undefined)[];
+    let scrolls: (boolean | ScrollIntoViewOptions | undefined)[];
+
+    function openerAt(top: number): HTMLButtonElement {
+      const opener = fixture.nativeElement.querySelector('#opener') as HTMLButtonElement;
+      opener.getBoundingClientRect = () => new DOMRect(0, top, 44, 44);
+      const focus = opener.focus.bind(opener);
+      opener.focus = (options?: FocusOptions) => {
+        focusOptions.push(options);
+        focus(options);
+      };
+      opener.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+        scrolls.push(options);
+      };
+      return opener;
+    }
+
+    function closeDialog(): void {
+      host.open.set(false);
+      fixture.detectChanges();
+    }
+
+    beforeEach(() => {
+      focusOptions = [];
+      scrolls = [];
+      document.documentElement.style.scrollPaddingTop = `${header}px`;
+      document.documentElement.style.scrollPaddingBottom = '80px';
+    });
+
+    afterEach(() => {
+      document.documentElement.style.scrollPaddingTop = '';
+      document.documentElement.style.scrollPaddingBottom = '';
+    });
+
+    it('then the page stays where it is while the button shows', () => {
+      openerAt(300);
+
+      closeDialog();
+
+      expect(document.activeElement?.id).toBe('opener');
+      expect(focusOptions).toEqual([{ preventScroll: true }]);
+      expect(scrolls).toEqual([]);
+    });
+
+    it('then the page moves the least it can to show the button when it lies out of the window', () => {
+      openerAt(height + 200);
+
+      closeDialog();
+
+      expect(document.activeElement?.id).toBe('opener');
+      expect(focusOptions).toEqual([{ preventScroll: true }]);
+      expect(scrolls).toEqual([{ block: 'nearest', inline: 'nearest' }]);
+    });
+
+    it('then the page moves the least it can to show the button when it hides under the head', () => {
+      openerAt(header - 50);
+
+      closeDialog();
+
+      expect(scrolls).toEqual([{ block: 'nearest', inline: 'nearest' }]);
+    });
+
+    it('then the page moves the least it can to show the button when it hides under the bar at the bottom', () => {
+      openerAt(height - 60);
+
+      closeDialog();
+
+      expect(scrolls).toEqual([{ block: 'nearest', inline: 'nearest' }]);
+    });
+  });
+
   it('when it goes away after the button that opened it is gone, then the focus goes to the page content instead of being lost', () => {
     const main = document.createElement('main');
     main.id = 'obsah';
@@ -1412,6 +1486,60 @@ describe('Given a dialog whose page moves on to a further step inside it', () =>
     await fixture.whenStable();
 
     expect(showStep).toHaveBeenCalledWith(1, history.listener);
+  });
+});
+
+@Component({
+  imports: [Dialog],
+  template: `
+    @if (sheetOpen()) {
+      <app-dialog labelledBy="sheet-title">
+        <h2 id="sheet-title">Účet</h2>
+      </app-dialog>
+    }
+    @if (questionOpen()) {
+      <app-dialog labelledBy="question-title" [pushesHistory]="false">
+        <h2 id="question-title">Zahodit rozepsané údaje?</h2>
+      </app-dialog>
+    }
+  `,
+})
+class StackedHost {
+  readonly sheetOpen = signal(true);
+  readonly questionOpen = signal(false);
+}
+
+describe('Given an open sheet and a question that may open over it', () => {
+  let fixture: ComponentFixture<StackedHost>;
+
+  const dialogNamed = (title: string) =>
+    fixture.nativeElement.querySelector(`dialog[aria-labelledby="${title}"]`) as HTMLDialogElement;
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [StackedHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    });
+    fixture = TestBed.createComponent(StackedHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('when the sheet opens with no other dialog open, then it does not count as standing over another', () => {
+    expect(dialogNamed('sheet-title').classList).not.toContain('dialog--stacked');
+  });
+
+  it('when the question opens over the sheet, then the question counts as standing over another, so a step that draws the sheet under it leaves it shown', async () => {
+    fixture.componentInstance.questionOpen.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(dialogNamed('question-title').open).toBe(true);
+    expect(dialogNamed('question-title').classList).toContain('dialog--stacked');
+    expect(dialogNamed('sheet-title').classList).not.toContain('dialog--stacked');
   });
 });
 

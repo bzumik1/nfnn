@@ -1,3 +1,6 @@
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+
 import { PagePlacement } from '../navigation/page-placement';
 import { ScrollHold } from '../navigation/scroll-hold';
 import { keepThePageEnd, ScrolledView } from './page-end';
@@ -146,8 +149,13 @@ describe('Given a reader at the end of a page whose place the app itself may sti
   let scrollHold: ScrollHold;
 
   beforeEach(() => {
-    placement = new PagePlacement();
-    scrollHold = new ScrollHold();
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    placement = TestBed.inject(PagePlacement);
+    scrollHold = TestBed.inject(ScrollHold);
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
   });
 
   it('when a step back is still putting the page where it was left, then a bar arriving does not move the page', () => {

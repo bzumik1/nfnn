@@ -4,7 +4,7 @@ import { DirtyForms } from '../updates/dirty-forms';
 import { BackSwipe, SwipePoint } from './back-swipe';
 import { BackTarget } from './back-target';
 import { isHomeScreenApp } from './edge-swipe-back-start';
-import { PageTransitions, SwipePreview } from './page-transitions';
+import { liveDialogs, PageTransitions, SwipePreview } from './page-transitions';
 import { lendKeptPagesToThePreview } from './preview-lending';
 import { RouteChrome } from './route-chrome';
 import { SheetSteps, StepsInside } from './sheet-steps';
@@ -116,12 +116,11 @@ export class EdgeSwipeBack {
   }
 
   private stepsHere(): { steps: StepsInside; ofPage: boolean } | null {
-    if (this.document.querySelector(LEAVING_DIALOG) !== null) {
+    if (liveDialogs(this.document, LEAVING_DIALOG).length > 0) {
       return null;
     }
-    const dialogs = this.document.querySelectorAll<HTMLDialogElement>(OPEN_DIALOG);
-    if (dialogs.length > 0) {
-      const top = dialogs.item(dialogs.length - 1);
+    const top = liveDialogs(this.document, OPEN_DIALOG).at(-1);
+    if (top !== undefined) {
       const steps = this.sheetSteps.of(top) ?? sectionBackOf(top);
       return steps === null ? null : { steps, ofPage: false };
     }

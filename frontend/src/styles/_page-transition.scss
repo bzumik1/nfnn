@@ -1,9 +1,13 @@
+@use 'sheet';
+
 .page-transition {
   position: fixed;
   inset: 0;
   z-index: 160;
   overflow: hidden;
   pointer-events: auto;
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
 }
 
 .page-transition--under-tab-bar {
@@ -11,6 +15,8 @@
 }
 
 .page-transition__page {
+  --page-transition-ground: transparent;
+
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -20,24 +26,96 @@
   box-shadow: var(--shadow-page-edge);
 }
 
-@media (display-mode: standalone) {
-  .page-transition__page--over {
-    border-start-start-radius: var(--radius-page-card);
-    border-end-start-radius: var(--radius-page-card);
-  }
-}
-
 .page-transition__scroller :is(.back-button, .account-button, .skip-link) {
   visibility: hidden;
 }
 
-.page-transition--heads-held .page-transition__scroller app-sheet-head {
+.page-transition--heads-held
+  :is(.page-transition__scroller, .page-transition__sheet)
+  app-sheet-head {
   visibility: hidden;
 }
 
-.page-transition-sheet-under :modal,
-.page-transition-sheet-under :modal::backdrop {
+.page-transition--titles-follow .page-transition__scroller .edge-title {
+  visibility: hidden;
+}
+
+.page-transition__title {
+  overflow: clip;
+  transition: none !important;
+}
+
+.page-transition__bar-part .page-transition__title {
+  visibility: visible;
+}
+
+.page-transition__title-text {
+  --page-title-travel: 0;
+
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+  translate: calc(var(--page-title-shift) * var(--page-title-travel)) 0;
+}
+
+.page-transition--on-ground {
+  &::before {
+    @include sheet.ground;
+
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .page-transition__page {
+    background-color: transparent !important;
+    box-shadow: none;
+  }
+
+  .page-transition__dim,
+  .page-transition__sheet-backdrop,
+  .page-transition__scroller .admin-sheet-backdrop,
+  .page-transition__page:has(> .page-transition__sheet) > .page-transition__scroller {
+    visibility: hidden;
+  }
+
+  .page-transition__sheet > dialog {
+    background-color: transparent !important;
+  }
+}
+
+.page-transition--in-sheet {
+  backdrop-filter: blur(var(--blur-backdrop));
+  -webkit-backdrop-filter: blur(var(--blur-backdrop));
+
+  &::before {
+    background: var(--color-backdrop);
+  }
+}
+
+.page-transition--ground-changes .page-transition__page--under:has(> .page-transition__sheet) {
+  background-color: var(--page-transition-ground) !important;
+  transform: none !important;
+
+  > .page-transition__scroller,
+  > .page-transition__sheet > .page-transition__sheet-backdrop,
+  > .page-transition__dim {
+    visibility: visible;
+  }
+
+  > .page-transition__dim {
+    @include sheet.ground;
+  }
+}
+
+.page-transition-sheet-under :modal:not(.dialog--stacked),
+.page-transition-sheet-under :modal:not(.dialog--stacked)::backdrop {
   opacity: 0 !important;
+  transition: none !important;
 }
 
 .page-transition--under-tab-bar .page-transition__scroller app-tab-bar {

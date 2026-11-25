@@ -10,7 +10,8 @@
     <app-sheet-head
       role="banner"
       class="admin-sheet-head"
-      [title]="pageTitle()"
+      [title]="headTitle()"
+      [lateTitle]="arrivedTitle()"
       (backPressed)="back()"
       (closePressed)="close()"
     />

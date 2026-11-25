@@ -1,23 +1,28 @@
-import { ApplicationRef, Component, signal } from '@angular/core';
+import { Location } from '@angular/common';
+import { ApplicationRef, Component, signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   GuardsCheckEnd,
+  NavigationEnd,
   provideRouter,
   Router,
   RouterOutlet,
   withInMemoryScrolling,
 } from '@angular/router';
 import { CompactLayout } from '../layout/compact-layout';
+import { STEADY_FRAME_MARK } from './frame-pace';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from './back-target';
 import { PagePlacement } from './page-placement';
 import { ACCOUNT_RETURNS_KEY } from './page-transitions';
 import { NavigationPreview } from './navigation-preview';
 import {
+  afterDrawn,
   FRAME_LATE_MS,
   PAGE_LAYER_CLASS,
   PAGE_TRANSITION_CLASS,
   PAGE_TRANSITION_LONGEST_MS,
   PageTransitions,
+  publishSteadyFrame,
 } from './page-transitions';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 
@@ -45,6 +50,7 @@ describe('Given a phone that animates and a page of the news with an article to 
   let router: Router;
   let layer: HTMLElement;
   let coveredAtGuards: boolean[];
+  let transitions: PageTransitions;
 
   beforeEach(async () => {
     Object.defineProperty(window, 'matchMedia', {
@@ -65,7 +71,7 @@ describe('Given a phone that animates and a page of the news with an article to 
       ],
     });
     router = TestBed.inject(Router);
-    TestBed.inject(PageTransitions);
+    transitions = TestBed.inject(PageTransitions);
     coveredAtGuards = [];
     router.events.subscribe((event) => {
       if (event instanceof GuardsCheckEnd) {
@@ -103,6 +109,263 @@ describe('Given a phone that animates and a page of the news with an article to 
     await router.navigateByUrl('/aktuality/clanek');
 
     expect(coveredAtGuards.at(-1)).toBe(true);
+  });
+
+  describe('when a sheet standing open leaves for the article', () => {
+    let closedUnderCover: boolean[];
+
+    beforeEach(() => {
+      const sheet = document.createElement('dialog');
+      sheet.className = 'dialog dialog--sheet';
+      sheet.setAttribute('open', '');
+      document.body.append(sheet);
+      closedUnderCover = [];
+    });
+
+    function leaveTheSheet(): void {
+      transitions.closeOnceCovered(() =>
+        closedUnderCover.push(document.querySelector(`.${PAGE_TRANSITION_CLASS}`) !== null),
+      );
+    }
+
+    it('then the sheet closes only once the copies cover the screen, never a frame before', async () => {
+      leaveTheSheet();
+
+      expect(closedUnderCover).toEqual([]);
+      await router.navigateByUrl('/aktuality/clanek');
+
+      expect(closedUnderCover).toEqual([true]);
+    });
+
+    it('and the navigation fails, then the sheet still closes once', async () => {
+      leaveTheSheet();
+
+      await router.navigateByUrl('/nikde').catch(() => undefined);
+
+      expect(closedUnderCover).toEqual([false]);
+    });
+
+    it('and the system asks for less motion, then the sheet closes at once', () => {
+      Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        value: (query: string) =>
+          ({ matches: query.includes('prefers-reduced-motion'), media: query }) as MediaQueryList,
+      });
+
+      leaveTheSheet();
+
+      expect(closedUnderCover).toEqual([false]);
+    });
+  });
+});
+
+interface HeldMotion {
+  pending: boolean;
+  startTime: number | null;
+  readonly currentTime: number | null;
+  readonly startsSetByThePage: number;
+  readonly currentTimesSetByThePage: number;
+  finished: Promise<unknown>;
+  play(): void;
+}
+
+const frameClock = { at: 0 };
+const playedUntilDrawn = new Set<{ pending: boolean; started: (at: number) => void }>();
+
+function drawnAt(at: number): void {
+  playedUntilDrawn.forEach((motion) => motion.started(at));
+  playedUntilDrawn.clear();
+}
+
+function heldMotion(): HeldMotion {
+  let startTime: number | null = null;
+  let startsSetByThePage = 0;
+  let currentTimesSetByThePage = 0;
+  const motion = {
+    pending: true,
+    finished: new Promise(() => undefined),
+    get startTime(): number | null {
+      return startTime;
+    },
+    set startTime(at: number | null) {
+      startsSetByThePage++;
+      startTime = at;
+      motion.pending = false;
+    },
+    get currentTime(): number | null {
+      return startTime === null ? 0 : frameClock.at - startTime;
+    },
+    set currentTime(_at: number | null) {
+      currentTimesSetByThePage++;
+    },
+    get startsSetByThePage(): number {
+      return startsSetByThePage;
+    },
+    get currentTimesSetByThePage(): number {
+      return currentTimesSetByThePage;
+    },
+    started: (at: number): void => {
+      startTime ??= at;
+      motion.pending = false;
+    },
+    play: (): void => {
+      if (startTime === null) {
+        motion.pending = true;
+        playedUntilDrawn.add(motion);
+      }
+    },
+  };
+  return motion;
+}
+
+function watchHeldMotions(): Map<Element, HeldMotion> {
+  const motions = new Map<Element, HeldMotion>();
+  const motionOf = (element: Element): HeldMotion => {
+    if (!motions.has(element)) {
+      motions.set(element, heldMotion());
+    }
+    return motions.get(element)!;
+  };
+  const ownAnimations = Object.getOwnPropertyDescriptor(Element.prototype, 'getAnimations');
+  Object.defineProperty(Element.prototype, 'getAnimations', {
+    configurable: true,
+    value(this: Element, options?: GetAnimationsOptions) {
+      const elements = options?.subtree ? [this, ...this.querySelectorAll('*')] : [this];
+      return elements
+        .filter((element) => element.closest(`.${PAGE_TRANSITION_CLASS}`) !== null)
+        .map(motionOf);
+    },
+  });
+  onTestFinished(() => {
+    playedUntilDrawn.clear();
+    if (ownAnimations === undefined) {
+      delete (Element.prototype as { getAnimations?: unknown }).getAnimations;
+    } else {
+      Object.defineProperty(Element.prototype, 'getAnimations', ownAnimations);
+    }
+  });
+  return motions;
+}
+
+function framesOnRequest(): (at: number) => void {
+  const frames: FrameRequestCallback[] = [];
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
+    frames.push(frame);
+    return frames.length;
+  });
+  onTestFinished(() => vi.mocked(window.requestAnimationFrame).mockRestore());
+  return (at) => {
+    frameClock.at = at;
+    drawnAt(at);
+    frames.splice(0).forEach((frame) => frame(at));
+  };
+}
+
+function moving(): Element | null {
+  return document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
+}
+describe('Given a phone that animates, whose app has drawn frames at a steady pace since it started and no press since', () => {
+  let router: Router;
+  let layer: HTMLElement;
+
+  beforeEach(async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
+    });
+    document.documentElement.style.setProperty('--duration-page', '300ms');
+    layer = document.createElement('div');
+    layer.className = PAGE_LAYER_CLASS;
+    layer.textContent = 'Aktuality';
+    document.body.append(layer);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: 'aktuality', component: Blank },
+          { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
+        ]),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+    layer.remove();
+    document.documentElement.style.removeProperty('--duration-page');
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
+  it('when a frame in the first half of a step back comes long, then the step publishes the steady pace of the frames drawn since the app started and the long frame moves no start', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    router = TestBed.inject(Router);
+    const transitions = TestBed.inject(PageTransitions);
+    for (let frame = 0; frame <= 10; frame++) {
+      draw(1000 + frame * 16);
+    }
+    await router.navigateByUrl('/aktuality');
+    await router.navigateByUrl('/aktuality/clanek');
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+    motions.clear();
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    for (let waited = 0; moving() === null && waited < PAGE_TRANSITION_LONGEST_MS; waited += 5) {
+      await vi.advanceTimersByTimeAsync(5);
+    }
+    draw(5000);
+    draw(5016);
+    draw(5032);
+    draw(5112);
+
+    expect(motions.size).toBeGreaterThan(1);
+    expect(transitions.steadyFrameMs()).toBe(16);
+    expect(new Set([...motions.values()].map((motion) => motion.startTime))).toEqual(
+      new Set([5016]),
+    );
+  });
+
+  it('when a step was drawn slowly to its end and the page then drew steadily again, then the next step publishes the pace of the frames drawn after the step, not those of its motion', async () => {
+    document.documentElement.style.setProperty('--duration-page', '600ms');
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    router = TestBed.inject(Router);
+    const transitions = TestBed.inject(PageTransitions);
+    for (let frame = 0; frame <= 10; frame++) {
+      draw(1000 + frame * 16);
+    }
+    await router.navigateByUrl('/aktuality');
+    await router.navigateByUrl('/aktuality/clanek');
+    for (let waited = 0; moving() === null && waited < PAGE_TRANSITION_LONGEST_MS; waited += 5) {
+      await vi.advanceTimersByTimeAsync(5);
+    }
+    for (let at = 2000; at <= 2000 + 700; at += 30) {
+      draw(at);
+    }
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+    for (let frame = 0; frame <= 10; frame++) {
+      draw(4000 + frame * 16);
+    }
+    motions.clear();
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    for (let waited = 0; moving() === null && waited < PAGE_TRANSITION_LONGEST_MS; waited += 5) {
+      await vi.advanceTimersByTimeAsync(5);
+    }
+    draw(5000);
+    draw(5016);
+    draw(5032);
+    draw(5082);
+
+    expect(motions.size).toBeGreaterThan(1);
+    expect(transitions.steadyFrameMs()).toBe(16);
+    expect(new Set([...motions.values()].map((motion) => motion.startTime))).toEqual(
+      new Set([5016]),
+    );
   });
 });
 
@@ -165,7 +428,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(moved).toBe(true);
   });
 
-  it('when the news moves in, then its motion holds still at its start until the frame that shows both pages has been drawn', async () => {
+  async function heldWhenTheMotionBegins(step: () => Promise<boolean>): Promise<boolean[]> {
     const heldWhenItBegins: boolean[] = [];
     const first = new MutationObserver(() => {
       const moving = document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
@@ -175,13 +438,238 @@ describe('Given a phone that animates, an article opened from the news, and the 
     });
     first.observe(document.body, { subtree: true, attributes: true, childList: true });
     try {
-      await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+      await step();
       await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
-
-      expect(heldWhenItBegins).toEqual([true]);
+      return heldWhenItBegins;
     } finally {
       first.disconnect();
     }
+  }
+
+  it('when the news moves in, then its motion holds still at its start until the frame that shows both pages has been drawn', async () => {
+    const held = await heldWhenTheMotionBegins(() =>
+      router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION }),
+    );
+
+    expect(held).toEqual([true]);
+  });
+
+  async function holdBegun(): Promise<void> {
+    for (let waited = 0; moving() === null && waited < PAGE_TRANSITION_LONGEST_MS; waited += 5) {
+      await vi.advanceTimersByTimeAsync(5);
+    }
+    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+  }
+
+  function drawnSteadilyBeforeTheTap(draw: (at: number) => void, gapMs: number): void {
+    document.dispatchEvent(new Event('pointerdown'));
+    for (let frame = 0; frame <= 10; frame++) {
+      draw(1000 + frame * gapMs);
+    }
+  }
+
+  function startTimes(motions: Map<Element, HeldMotion>): Set<number | null> {
+    return new Set([...motions.values()].map((motion) => motion.startTime));
+  }
+
+  it('when the first frame of the step is drawn, then its motions are let go in it, but the browser starts none of them before the next frame however long that frame takes within the motion’s length, so two frames show both pages at rest', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    draw(5000);
+    await vi.advanceTimersByTimeAsync(300 + 2 * FRAME_LATE_MS - 20);
+
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    expect(motions.size).toBeGreaterThan(0);
+    expect(startTimes(motions)).toEqual(new Set([null]));
+    draw(5480);
+    expect(startTimes(motions)).toEqual(new Set([5480]));
+    await vi.advanceTimersByTimeAsync(300 - 10);
+    expect(moving(), 'the motion was cut before its end').not.toBeNull();
+  });
+
+  it('when the browser commits the let-go motions 270 ms late, then the step is not cut before the motion has run its whole length from that frame, and it ends within that length and 200 ms', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    draw(5000);
+    await vi.advanceTimersByTimeAsync(270);
+    draw(5270);
+
+    await vi.advanceTimersByTimeAsync(300 - 10);
+    expect(moving(), 'the motion was cut before its end').not.toBeNull();
+    await vi.advanceTimersByTimeAsync(2 * FRAME_LATE_MS + 20);
+
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+  });
+
+  it('when no frame comes after the hold begins, then the page clock lets the held motions go within the time a frame may be late, well within a quick change, and each starts with the first frame drawn after', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(5200);
+
+    expect(motions.size).toBeGreaterThan(0);
+    expect(startTimes(motions)).toEqual(new Set([5200]));
+  });
+
+  it('when the page clock lets the held motions go between two frames, then they start with the next frame drawn and no later long frame moves that start', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    drawnSteadilyBeforeTheTap(draw, 16);
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+    draw(5048);
+
+    for (const at of [5064, 5131, 5164]) {
+      draw(at);
+    }
+
+    expect(startTimes(motions)).toEqual(new Set([5048]));
+  });
+
+  it('when the motions of the step never report that they are ready or finished, then the step still ends within its motion’s length after it is let go, not only after its longest time', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    draw(5000);
+    draw(5016);
+
+    await vi.advanceTimersByTimeAsync(300 + 2 * FRAME_LATE_MS + 1);
+
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+  });
+
+  it('when no frame comes at all, then the step ends after its longest time instead of leaving its cover over the page', async () => {
+    watchHeldMotions();
+    framesOnRequest();
+
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+  });
+
+  it('when the frame after the first one of the step is drawn, then the browser starts every motion at its time, so that frame still shows both pages at rest and the third frame moves', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    draw(5000);
+    draw(5140);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(motions.size).toBeGreaterThan(0);
+    expect(startTimes(motions)).toEqual(new Set([5140]));
+  });
+
+  it('when the held motions are let go, then the page never writes their start time nor their current time, so the browser starts each with the first frame it draws it in and that frame shows it at its start', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    draw(5000);
+    draw(5140);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(motions.size).toBeGreaterThan(0);
+    expect([...motions.values()].map((motion) => motion.startsSetByThePage)).toEqual(
+      [...motions.values()].map(() => 0),
+    );
+    expect([...motions.values()].map((motion) => motion.currentTimesSetByThePage)).toEqual(
+      [...motions.values()].map(() => 0),
+    );
+  });
+
+  async function releasedAt(draw: (at: number) => void, first: number, second: number) {
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    draw(first);
+    draw(second);
+    await vi.advanceTimersByTimeAsync(0);
+  }
+
+  it('when a later frame comes late after the first frame of the motion was drawn, then its startTime does not move later, since the browser may already have drawn it further, and nothing goes back', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    drawnSteadilyBeforeTheTap(draw, 16);
+    await releasedAt(draw, 5000, 5016);
+    draw(5032);
+
+    draw(5112);
+
+    expect(motions.size).toBeGreaterThan(1);
+    expect(startTimes(motions)).toEqual(new Set([5016]));
+  });
+
+  it('when frames come long one after another, then the motions keep the start the browser gave them', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    drawnSteadilyBeforeTheTap(draw, 16);
+    await releasedAt(draw, 5000, 5016);
+
+    for (const at of [5116, 5216, 5316, 5416]) {
+      draw(at);
+    }
+
+    expect(startTimes(motions)).toEqual(new Set([5016]));
+  });
+
+  it('when the device draws steadily at 30 frames a second, then the motions keep the start they were given', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    drawnSteadilyBeforeTheTap(draw, 33);
+    await releasedAt(draw, 5000, 5033);
+
+    for (const at of [5066, 5099, 5132, 5165]) {
+      draw(at);
+    }
+
+    expect(startTimes(motions)).toEqual(new Set([5033]));
+  });
+
+  it('when a frame comes long after the first half of the motion, then the motions keep their start', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    drawnSteadilyBeforeTheTap(draw, 16);
+    await releasedAt(draw, 5000, 5016);
+    for (let at = 5032; at <= 5016 + 176; at += 16) {
+      draw(at);
+    }
+
+    draw(5016 + 176 + 80);
+
+    expect(startTimes(motions)).toEqual(new Set([5016]));
+  });
+
+  it('when the tab is hidden while the step moves, then the step ends at once instead of running on the clock it would come back to', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    await releasedAt(draw, 5000, 5016);
+    expect(moving()).not.toBeNull();
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    onTestFinished(() => visibility.mockRestore());
+
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+  });
+
+  it('when another article opens from this one, then its motion holds still at its start until the frame that shows both pages has been drawn', async () => {
+    const held = await heldWhenTheMotionBegins(() => router.navigateByUrl('/aktuality/druhy'));
+
+    expect(held).toEqual([true]);
   });
 
   it('when the news is never placed, then the step back moves in after the duration of a page step all the same', async () => {
@@ -212,6 +700,145 @@ describe('Given a phone that animates, an article opened from the news, and the 
     } finally {
       frames.mockRestore();
     }
+  });
+});
+
+describe('Given a phone that animates and an article opened from the news, which was kept behind it', () => {
+  let router: Router;
+  let layer: HTMLElement;
+  let moved: boolean;
+  let watch: MutationObserver;
+
+  beforeEach(async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
+    });
+    document.documentElement.style.setProperty('--duration-page', '300ms');
+    layer = document.createElement('div');
+    layer.className = PAGE_LAYER_CLASS;
+    layer.textContent = 'Aktuality';
+    document.body.append(layer);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: 'aktuality', component: Blank },
+          { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
+        ]),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    router = TestBed.inject(Router);
+    router.setUpLocationChangeListener();
+    TestBed.inject(PageTransitions);
+    vi.useFakeTimers();
+    await router.navigateByUrl('/aktuality');
+    await router.navigateByUrl('/aktuality/clanek');
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+    layer.textContent = 'Článek';
+    moved = false;
+    watch = new MutationObserver(() => {
+      moved ||= document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`) !== null;
+    });
+    watch.observe(document.body, { subtree: true, attributes: true, childList: true });
+  });
+
+  afterEach(() => {
+    watch.disconnect();
+    vi.useRealTimers();
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+    layer.remove();
+    document.documentElement.style.removeProperty('--duration-page');
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
+  async function stepsBack(): Promise<void> {
+    const returned = new Promise<void>((done) => {
+      const events = router.events.subscribe((event) => {
+        if (event instanceof NavigationEnd) {
+          events.unsubscribe();
+          done();
+        }
+      });
+    });
+    TestBed.inject(Location).back();
+    await vi.advanceTimersByTimeAsync(0);
+    await returned;
+  }
+
+  it('when the app steps back to it, then the news moves in at once over the copy kept at the push, never waiting for the live news to be drawn and placed', async () => {
+    TestBed.inject(PagePlacement).pending();
+
+    await stepsBack();
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+
+    expect(moved).toBe(true);
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under`)?.textContent).toContain(
+      'Aktuality',
+    );
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--over`)?.textContent).toContain(
+      'Článek',
+    );
+  });
+
+  it('when the app steps back to it, then both copies lie in the cover before anything is scrolled or read, so the screen is laid out once', async () => {
+    const pagesInCover = (): number =>
+      document.querySelectorAll(`.${PAGE_TRANSITION_CLASS} .${PAGE_TRANSITION_CLASS}__page`).length;
+    const onePageWhen: string[] = [];
+    const scrolling = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop')!;
+    Object.defineProperty(Element.prototype, 'scrollTop', {
+      configurable: true,
+      get(this: Element) {
+        return scrolling.get!.call(this);
+      },
+      set(this: Element, top: number) {
+        if (pagesInCover() === 1) {
+          onePageWhen.push('scrolled');
+        }
+        scrolling.set!.call(this, top);
+      },
+    });
+    const styleOf = window.getComputedStyle;
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => {
+      if (pagesInCover() === 1) {
+        onePageWhen.push('read');
+      }
+      return styleOf.call(window, element, pseudo);
+    });
+    onTestFinished(() => {
+      Object.defineProperty(Element.prototype, 'scrollTop', scrolling);
+    });
+
+    await stepsBack();
+
+    expect(document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}__page`)).toHaveLength(2);
+    expect(onePageWhen).toEqual([]);
+  });
+
+  it('when the news has moved in over its kept copy, then the cover stays until the live news is placed, and goes once it is', async () => {
+    const placed = TestBed.inject(PagePlacement).pending();
+
+    await stepsBack();
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).not.toBeNull();
+    placed();
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+  });
+
+  it('when the window has another width than when the news was kept, then the step back waits for the live news as before', async () => {
+    const width = Object.getOwnPropertyDescriptor(window, 'innerWidth')!;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 420 });
+    onTestFinished(() => {
+      Object.defineProperty(window, 'innerWidth', width);
+    });
+    TestBed.inject(PagePlacement).pending();
+
+    await stepsBack();
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+
+    expect(moved).toBe(false);
   });
 });
 
@@ -271,6 +898,97 @@ describe('Given the app on the home screen of a phone, scrolling restored, with 
 
     expect(swipe).not.toBeNull();
     expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}--swipe`)).not.toBeNull();
+  });
+});
+
+describe('Given the app on the home screen of a phone, scrolling restored, on the news with an article to open, in a browser that gives no frame for now', () => {
+  let router: Router;
+  let layer: HTMLElement;
+
+  beforeEach(async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
+    });
+    layer = document.createElement('div');
+    layer.className = PAGE_LAYER_CLASS;
+    layer.textContent = 'Aktuality';
+    document.body.append(layer);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(
+          [
+            { path: 'aktuality', component: Blank },
+            { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
+          ],
+          withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
+        ),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    router = TestBed.inject(Router);
+    TestBed.inject(PageTransitions);
+    document.body.append(document.createElement('app-scrolled-shell'));
+    TestBed.inject(ApplicationRef).bootstrap(ScrolledShell);
+    vi.useFakeTimers();
+    await router.navigateByUrl('/aktuality');
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 0);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    document
+      .querySelectorAll(`.${PAGE_TRANSITION_CLASS}, app-scrolled-shell`)
+      .forEach((node) => node.remove());
+    layer.remove();
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
+  function copiesPlaced(position: 'over' | 'under'): string[] {
+    const placed: string[] = [];
+    const watch = new MutationObserver((records) =>
+      records
+        .flatMap((record) => Array.from(record.addedNodes))
+        .filter(
+          (node): node is HTMLElement =>
+            node instanceof HTMLElement &&
+            node.classList.contains(`${PAGE_TRANSITION_CLASS}__page--${position}`),
+        )
+        .forEach((page) => placed.push(page.textContent ?? '')),
+    );
+    watch.observe(document.body, { subtree: true, childList: true });
+    onTestFinished(() => watch.disconnect());
+    return placed;
+  }
+
+  it('when the article opens, then its copy joins the cover as soon as the router has scrolled it, never waiting for a frame first', async () => {
+    const arriving = copiesPlaced('over');
+
+    await router.navigateByUrl('/aktuality/clanek');
+    layer.textContent = 'Článek';
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS / 2);
+
+    expect(arriving).toEqual(['Článek']);
+  });
+
+  it('when the news comes back with no copy kept of it, then its copy joins the cover as soon as the router has put its scroll back, never waiting for a frame first', async () => {
+    await router.navigateByUrl('/aktuality/clanek');
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
+    const width = Object.getOwnPropertyDescriptor(window, 'innerWidth')!;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 420 });
+    onTestFinished(() => {
+      Object.defineProperty(window, 'innerWidth', width);
+    });
+
+    const returning = copiesPlaced('under');
+
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    layer.textContent = 'Aktuality';
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS / 2);
+
+    expect(returning).toEqual(['Aktuality']);
   });
 });
 
@@ -367,6 +1085,7 @@ describe('Given the app on the home screen of a phone, where the news led to the
       state: { [APP_DEPTH_KEY]: depth, ...(sheetReturns ? { [ACCOUNT_RETURNS_KEY]: '' } : {}) },
     });
     paint(layer, overview);
+    transitions.finish();
   }
 
   beforeEach(async () => {
@@ -504,6 +1223,74 @@ describe('Given the app on the home screen of a phone, where the news led to the
     }
   });
 
+  it('when the step ends while a dialog over the sheet fades out, then that dialog keeps its fade out to its end, so it still closes as it leaves', async () => {
+    await openOverviewFromTheNews({ title: 'Aktuality', sheet: true }, { title: 'Přehled' }, true);
+    const asking = document.createElement('dialog');
+    const fadingOut = {
+      effect: { target: asking, getComputedTiming: () => ({ endTime: 300 }) },
+      finish: vi.fn(),
+    };
+    Object.defineProperty(asking, 'getAnimations', {
+      configurable: true,
+      value: () => [fadingOut],
+    });
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => motionEnding(Promise.resolve()),
+    });
+    try {
+      const swipe = swipeBack();
+      asking.setAttribute('open', '');
+      asking.className = 'dialog dialog--leaving';
+      document.body.append(asking);
+      await vi.dynamicImportSettled();
+
+      await swipe.slideBack();
+
+      expect(document.documentElement.classList).not.toContain(
+        `${PAGE_TRANSITION_CLASS}-sheet-under`,
+      );
+      expect(fadingOut.finish).not.toHaveBeenCalled();
+    } finally {
+      asking.remove();
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
+  it('when the step ends while a question that opened over the sheet fades in, then the question keeps its own fade, since the step never drew it', async () => {
+    await openOverviewFromTheNews({ title: 'Aktuality', sheet: true }, { title: 'Přehled' }, true);
+    const asking = document.createElement('dialog');
+    const fadingIn = {
+      effect: { target: asking, getComputedTiming: () => ({ endTime: 300 }) },
+      finish: vi.fn(),
+    };
+    Object.defineProperty(asking, 'getAnimations', {
+      configurable: true,
+      value: () => [fadingIn],
+    });
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => motionEnding(Promise.resolve()),
+    });
+    try {
+      const swipe = swipeBack();
+      asking.setAttribute('open', '');
+      asking.className = 'dialog dialog--stacked';
+      document.body.append(asking);
+      await vi.dynamicImportSettled();
+
+      await swipe.slideBack();
+
+      expect(document.documentElement.classList).not.toContain(
+        `${PAGE_TRANSITION_CLASS}-sheet-under`,
+      );
+      expect(fadingIn.finish).not.toHaveBeenCalled();
+    } finally {
+      asking.remove();
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
   it('when both pages are sheets of the administration, then the head of the sheet stands while the pages move and its title changes in place', async () => {
     await openOverviewFromTheNews(
       { title: 'Dárci', head: 'Dárci' },
@@ -531,6 +1318,20 @@ describe('Given the app on the home screen of a phone, where the news led to the
     expect(overlay().classList).not.toContain(`${PAGE_TRANSITION_CLASS}--heads-held`);
   });
 
+  it('when only the page being left is a sheet, then the title of its head is followed from the start of the step, so it fades by half the way as it rides with the page', async () => {
+    await openOverviewFromTheNews({ title: 'Aktuality' }, { title: 'Přehled', head: 'Přehled' });
+    const title = document.createElement('h2');
+    title.className = 'sheet-head-title';
+    title.textContent = 'Přehled';
+    layer.querySelector('app-sheet-head')!.replaceChildren(title);
+
+    swipeBack();
+
+    const riding = over().querySelector<HTMLElement>('.sheet-head-title');
+    expect(riding?.style.opacity).toBe('1');
+    expect(riding?.style.getPropertyValue('--page-title-travel')).toBe('');
+  });
+
   function slidesWhenReleased(): () => void {
     let release: () => void = () => undefined;
     const slid = new Promise<void>((done) => (release = done));
@@ -548,6 +1349,33 @@ describe('Given the app on the home screen of a phone, where the news led to the
     durationMs: 150,
     easing: 'ease-out',
   } as const;
+
+  it('when the slide after the finger lets go never reports that it finished, then the swipe still settles within the slide’s length, long before its longest time', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => ({
+        finished: new Promise(() => undefined),
+        ready: new Promise(() => undefined),
+        pause: () => undefined,
+        play: () => undefined,
+      }),
+    });
+    try {
+      await openOverviewFromTheNews({ title: 'Aktuality' }, { title: 'Přehled' });
+      const left = swipeBack().settle(LET_GO_PAST_HALF);
+
+      const settled = await Promise.race([
+        left.then(() => 'settled'),
+        new Promise((late) =>
+          setTimeout(() => late('still sliding'), PAGE_TRANSITION_LONGEST_MS / 2),
+        ),
+      ]);
+
+      expect(settled).toBe('settled');
+    } finally {
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
 
   it('when the finger lets go, then the page holds where it was let go until the frame drawn next and only then slides on', async () => {
     const steps: string[] = [];
@@ -568,6 +1396,53 @@ describe('Given the app on the home screen of a phone, where the news led to the
       expect(atOnce.length).toBeGreaterThan(0);
       expect(new Set(atOnce)).toEqual(new Set(['holds']));
       expect(steps).toEqual([...atOnce, ...atOnce.map(() => 'slides')]);
+    } finally {
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
+  it('when a frame in the first half of the slide after the finger lets go comes long, then the page never sets the start of a motion of the slide, which starts with the frame the browser first draws it in and never later', async () => {
+    const slides: HeldMotion[] = [];
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => {
+        const slide = Object.assign(heldMotion(), { pause: () => undefined });
+        slides.push(slide);
+        return slide;
+      },
+    });
+    try {
+      await openOverviewFromTheNews({ title: 'Aktuality' }, { title: 'Přehled' });
+      const waiting: FrameRequestCallback[] = [];
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+        waiting.push(callback);
+        return waiting.length;
+      });
+      const draw = async (at: number): Promise<void> => {
+        frameClock.at = at;
+        drawnAt(at);
+        waiting.splice(0).forEach((callback) => callback(at));
+        await vi.dynamicImportSettled();
+      };
+      document.dispatchEvent(new Event('pointerdown'));
+      for (let frame = 0; frame <= 10; frame++) {
+        await draw(1000 + frame * 16);
+      }
+
+      void swipeBack().settle(LET_GO_PAST_HALF);
+      let at = 5000;
+      while (slides.length === 0 || slides.some((slide) => slide.startTime === null)) {
+        expect(at, 'the slide never started').toBeLessThan(5400);
+        await draw(at);
+        at += 16;
+      }
+      const slidFrom = slides[0].startTime!;
+      await draw(slidFrom + 16);
+      await draw(slidFrom + 16 + 80);
+
+      expect(new Set(slides.map((slide) => slide.startTime))).toEqual(new Set([slidFrom]));
+      expect(slides.map((slide) => slide.startsSetByThePage)).toEqual(slides.map(() => 0));
+      expect(slides.map((slide) => slide.currentTimesSetByThePage)).toEqual(slides.map(() => 0));
     } finally {
       delete (HTMLElement.prototype as { animate?: unknown }).animate;
     }
@@ -1249,5 +2124,349 @@ describe('Given the app on the home screen of a phone opened straight on the don
 
     expect(await left).toBe(false);
     expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+  });
+});
+
+describe('Given the app on a phone with a sheet open at its list', () => {
+  let sheet: HTMLDialogElement;
+  let transitions: PageTransitions;
+  let compact: WritableSignal<boolean>;
+
+  function headOf(title: string): HTMLElement {
+    const head = document.createElement('app-sheet-head');
+    const back = document.createElement('button');
+    back.className = 'sheet-head-button sheet-head-back';
+    const name = document.createElement('h2');
+    name.className = 'sheet-head-title';
+    name.textContent = title;
+    const close = document.createElement('button');
+    close.className = 'sheet-head-button sheet-head-close';
+    head.append(back, name, close);
+    return head;
+  }
+
+  function headTitles(): HTMLElement[] {
+    return Array.from(
+      document.querySelectorAll<HTMLElement>(
+        `.${PAGE_TRANSITION_CLASS}__bar .${PAGE_TRANSITION_CLASS}__title`,
+      ),
+    );
+  }
+
+  function overlayPage(position: 'over' | 'under'): HTMLElement | null {
+    return document.querySelector<HTMLElement>(
+      `.${PAGE_TRANSITION_CLASS} .${PAGE_TRANSITION_CLASS}__page--${position}`,
+    );
+  }
+
+  function withLessMotion(lessMotion: boolean): void {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) =>
+        ({
+          matches: query.includes('prefers-reduced-motion') && lessMotion,
+          media: query,
+        }) as MediaQueryList,
+    });
+  }
+
+  function heldFrames(): FrameRequestCallback[] {
+    const frames: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
+      frames.push(frame);
+      return frames.length;
+    });
+    return frames;
+  }
+
+  function drawFrame(frames: FrameRequestCallback[]): void {
+    frames.splice(0).forEach((frame) => frame(performance.now()));
+  }
+
+  function stepBackToTheList(): void {
+    sheet.replaceChildren(headOf('Moje dary'));
+    transitions.stepInSheet({
+      kind: 'pop',
+      depth: 0,
+      owner: sheet,
+      change: () => sheet.replaceChildren(headOf('Účet')),
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+  }
+
+  function titleOpacities(): string[][] {
+    return headTitles().map((title) => [title.textContent?.trim() ?? '', title.style.opacity]);
+  }
+
+  beforeEach(() => {
+    withLessMotion(false);
+    sheet = document.createElement('dialog');
+    sheet.setAttribute('open', '');
+    sheet.textContent = 'Účet';
+    document.body.append(sheet);
+    compact = signal(true);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+      ],
+    });
+    transitions = TestBed.inject(PageTransitions);
+  });
+
+  afterEach(() => {
+    transitions.finish();
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}, dialog`).forEach((node) => node.remove());
+    delete (window as { matchMedia?: unknown }).matchMedia;
+    delete (window as { DOMMatrixReadOnly?: unknown }).DOMMatrixReadOnly;
+    document.documentElement.style.removeProperty('--page-title-fade-at');
+    vi.restoreAllMocks();
+  });
+
+  it('when a section opens inside the sheet, then the page that slides in is the section over the list it leaves', () => {
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      owner: sheet,
+      change: () => (sheet.textContent = 'Moje dary'),
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(overlayPage('under')?.textContent).toContain('Účet');
+    expect(overlayPage('over')?.textContent).toContain('Moje dary');
+    expect(overlayPage('over')?.textContent).not.toContain('Účet');
+  });
+
+  it('when a section opens inside the sheet under a head that stands, then only the title it leaves shows as the step starts', () => {
+    sheet.replaceChildren(headOf('Účet'));
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      owner: sheet,
+      change: () => sheet.replaceChildren(headOf('Moje dary')),
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(headTitles().map((title) => [title.textContent?.trim(), title.style.opacity])).toEqual(
+      expect.arrayContaining([
+        ['Účet', '1'],
+        ['Moje dary', '0'],
+      ]),
+    );
+    expect(headTitles()).toHaveLength(2);
+  });
+
+  it('when the window grows past the side navigation while a step moves, then the step ends at once', () => {
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      owner: sheet,
+      change: () => (sheet.textContent = 'Moje dary'),
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+
+    compact.set(false);
+    TestBed.tick();
+
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    expect(transitions.running).toBeNull();
+  });
+
+  it('when the head of a step back is dressed, then it reads neither the root nor the place or width of the leaving section before the next frame, and each only once for the whole step', () => {
+    const frames = heldFrames();
+    const overlay = transitions.overlay('pop');
+    sheet.replaceChildren(headOf('Moje dary'));
+    const leaving = transitions.place(
+      overlay,
+      transitions.sheetOnly(transitions.standingSheetCopy()!),
+      'over',
+    );
+    sheet.replaceChildren(headOf('Účet'));
+    const arriving = transitions.place(
+      overlay,
+      transitions.sheetOnly(transitions.standingSheetCopy()!),
+      'under',
+    );
+    const styled: Element[] = [];
+    const style = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => {
+      styled.push(element);
+      return style(element, pseudo);
+    });
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get');
+    const readRoot = (): number =>
+      styled.filter((element) => element === document.documentElement).length;
+    const readLeaving = (): number => styled.filter((element) => element === leaving.box).length;
+
+    transitions.dressChrome(overlay, leaving, arriving);
+
+    expect(readRoot()).toBe(0);
+    expect(readLeaving()).toBe(0);
+    expect(width).not.toHaveBeenCalled();
+    expect(titleOpacities()).toEqual(
+      expect.arrayContaining([
+        ['Moje dary', '1'],
+        ['Účet', '0'],
+      ]),
+    );
+
+    drawFrame(frames);
+    drawFrame(frames);
+
+    expect(readRoot()).toBe(1);
+    expect(readLeaving()).toBe(2);
+    expect(width).toHaveBeenCalledTimes(1);
+  });
+
+  it('when the theme fades the titles of the head at once, then the title a step back brings shows whole as soon as the step has begun', () => {
+    document.documentElement.style.setProperty('--page-title-fade-at', '0');
+    Object.defineProperty(window, 'DOMMatrixReadOnly', {
+      configurable: true,
+      value: class {
+        readonly m41: number;
+        constructor(transform: string) {
+          this.m41 = Number(transform.split(',')[4]);
+        }
+      },
+    });
+    const frames = heldFrames();
+    stepBackToTheList();
+    overlayPage('over')!.style.transform = `matrix(1, 0, 0, 1, ${window.innerWidth / 2}, 0)`;
+
+    drawFrame(frames);
+
+    expect(titleOpacities()).toEqual(
+      expect.arrayContaining([
+        ['Moje dary', '0'],
+        ['Účet', '1'],
+      ]),
+    );
+  });
+
+  it('when the system asks for less motion and a section opens inside the sheet, then the section stands at once with no page moving', () => {
+    withLessMotion(true);
+    const placed = vi.fn();
+
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      owner: sheet,
+      change: () => (sheet.textContent = 'Moje dary'),
+      placed,
+    });
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(sheet.textContent).toBe('Moje dary');
+    expect(placed).toHaveBeenCalledTimes(1);
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    expect(transitions.running).toBeNull();
+  });
+
+  describe('when a section opened inside the sheet with motion', () => {
+    beforeEach(async () => {
+      await transitions.loadDrawing();
+      transitions.stepInSheet({
+        kind: 'push',
+        depth: 1,
+        owner: sheet,
+        change: () => (sheet.textContent = 'Moje dary'),
+        placed: () => undefined,
+      });
+      TestBed.inject(ApplicationRef).tick();
+      transitions.finish();
+    });
+
+    it('and a finger takes the section back, then the list it left follows the finger under it', () => {
+      expect(transitions.startSheetSwipe(1)).not.toBeNull();
+      expect(overlayPage('under')?.textContent).toContain('Účet');
+    });
+
+    it('and the system then asks for less motion, then nothing follows a finger and the step back comes at once', () => {
+      withLessMotion(true);
+
+      expect(transitions.startSheetSwipe(1)).toBeNull();
+      expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    });
+
+    it('and the sheet that kept the list is gone, then no copy of that list is left for a finger to follow', () => {
+      transitions.forgetSheetsOf(sheet);
+
+      expect(transitions.startSheetSwipe(1)).toBeNull();
+      expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    });
+
+    it('and another sheet is gone, then the copy of the list stays', () => {
+      transitions.forgetSheetsOf(document.createElement('dialog'));
+
+      expect(transitions.startSheetSwipe(1)).not.toBeNull();
+    });
+  });
+});
+
+describe('Given the steady frame a step is judged against', () => {
+  it('when two steps publish it one after the other, then whoever reads the frames finds only the last one', () => {
+    const marks: { name: string; detail: unknown }[] = [];
+    const view = {
+      performance: {
+        mark: (name: string, options?: PerformanceMarkOptions) =>
+          marks.push({ name, detail: options?.detail }),
+        clearMarks: (name?: string) =>
+          marks.splice(0, marks.length, ...marks.filter((mark) => mark.name !== name)),
+      },
+    } as unknown as Window;
+
+    publishSteadyFrame(view, 16.7);
+    publishSteadyFrame(view, 25);
+
+    expect(marks).toEqual([{ name: STEADY_FRAME_MARK, detail: { steadyBeforeMs: 25 } }]);
+  });
+});
+
+describe('Given a page that waits for two drawn frames before it starts a motion', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function framesOf(): { view: Window; draw: (at: number) => void } {
+    let waiting: FrameRequestCallback[] = [];
+    const view = {
+      requestAnimationFrame: (callback: FrameRequestCallback) => waiting.push(callback),
+      setTimeout: window.setTimeout.bind(window),
+      clearTimeout: window.clearTimeout.bind(window),
+      performance: window.performance,
+    } as unknown as Window;
+    return {
+      view,
+      draw: (at) => {
+        const now = waiting;
+        waiting = [];
+        now.forEach((callback) => callback(at));
+      },
+    };
+  }
+
+  it('when both frames are drawn, then it starts at the time of the second frame and says a frame was drawn then', async () => {
+    const { view, draw } = framesOf();
+    const drawn = afterDrawn(view);
+
+    draw(5000);
+    draw(5016);
+
+    await expect(drawn).resolves.toEqual({ at: 5016, drawn: true });
+  });
+
+  it('when the second frame comes later than a frame may be late, then it starts by the page clock and says no frame was drawn then', async () => {
+    vi.useFakeTimers();
+    const { view, draw } = framesOf();
+    const drawn = afterDrawn(view);
+    draw(5000);
+
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+
+    await expect(drawn).resolves.toEqual({ at: expect.any(Number), drawn: false });
   });
 });

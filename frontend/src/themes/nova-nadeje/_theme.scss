@@ -326,9 +326,10 @@
   --motion-scale-enter: 0.96;
   --motion-scale-done: 0.8;
   --page-parallax: -30%;
+  --page-title-shift: 50%;
+  --page-title-fade-at: 0.5;
   --color-page-dim: color-mix(in srgb, #000000 10%, transparent);
   --shadow-page-edge: -8px 0 24px color-mix(in srgb, #000000 12%, transparent);
-  --radius-page-card: 55px;
   --pressed-tint-amount: 8%;
   --pressed-brightness: 0.92;
   --pressed-scale: 0.97;
@@ -567,6 +568,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   :root {
+    --page-title-shift: 0%;
+    --page-title-fade-at: 0;
     --duration-entrance: var(--duration-reduced);
     --duration-stagger: 0s;
     --ease-spring-bouncy: var(--ease-standard);

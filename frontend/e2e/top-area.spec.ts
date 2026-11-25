@@ -1,7 +1,14 @@
 import { Locator, Page } from '@playwright/test';
 import { BREAKPOINTS } from '../src/app/core/layout/breakpoints';
 import { mockPublicContent } from './baseline/screen-mocks';
-import { mockDonorApi, rememberedDonorSession } from './donor-session';
+import {
+  administrator,
+  mockDonorApi,
+  rememberedDonorSession,
+  session,
+  whenAdministrationCopied,
+} from './donor-session';
+import { STAMP_LAG_P99_FRAMES } from './back-matrix';
 import { fingerAlong } from './finger';
 import { expect, test, testWithoutBrowser } from './fixtures';
 import {
@@ -11,6 +18,11 @@ import {
   blurOutOfStep,
   Rgb,
   ScreenFrame,
+  sampleFrames,
+  groundNotJudgedOnThisRunner,
+  groundJumpsUnderClock,
+  groundStepsBackUnderClock,
+  NOT_JUDGED_ANNOTATION,
   groundOutOfStep,
   scrollbarOutOfStep,
   TopAreaFrame,
@@ -62,6 +74,163 @@ function planted(strengths: (number | null)[], more: Partial<TopAreaFrame> = {})
     ...more,
   }));
 }
+
+testWithoutBrowser.describe(
+  'Given screencast frames of the ground under the clock planted by hand',
+  () => {
+    const shownAt = (lightness: number, at: number): ScreenFrame => ({ lightness, edges: 0, at });
+
+    testWithoutBrowser(
+      'when the ground flashes most of its way from rest in one frame and back, then the check reports the jump',
+      () => {
+        const flash = [
+          shownAt(48, 0),
+          shownAt(48, 32),
+          shownAt(102, 158),
+          shownAt(48, 191),
+          shownAt(61, 275),
+          shownAt(75, 291),
+          shownAt(89, 308),
+          shownAt(100, 325),
+          shownAt(108, 400),
+        ];
+
+        expect(groundJumpsUnderClock({ frames: [], screens: flash })).not.toEqual([]);
+      },
+    );
+
+    testWithoutBrowser(
+      'when the screencast drops the first frames of the fade and later one more, then the fade is no jump',
+      () => {
+        const fade = [
+          shownAt(48, 0),
+          shownAt(48, 248),
+          shownAt(88.8, 298),
+          shownAt(100.2, 315),
+          shownAt(105, 348),
+          shownAt(107, 365),
+          shownAt(108, 400),
+        ];
+
+        expect(groundJumpsUnderClock({ frames: [], screens: fade })).toEqual([]);
+      },
+    );
+
+    testWithoutBrowser(
+      'when the ground goes from rest to 87 % of its way, back to 45 % and on again, as a motion whose start moved later after the compositor drew it, then the check reports the step back',
+      () => {
+        const steppedBack = [
+          shownAt(48, 0),
+          shownAt(100.2, 17),
+          shownAt(75, 34),
+          shownAt(88.8, 51),
+          shownAt(100.2, 68),
+          shownAt(108, 85),
+        ];
+
+        expect(groundStepsBackUnderClock({ frames: [], screens: steppedBack })).toEqual([
+          'the ground under the clock steps back from 87 % to 45 % of its way in screencast frame 2',
+        ]);
+      },
+    );
+
+    testWithoutBrowser(
+      'when the ground fades on its way with a little noise, then it never steps back',
+      () => {
+        const fade = [
+          shownAt(48, 0),
+          shownAt(60, 17),
+          shownAt(59.5, 34),
+          shownAt(80, 51),
+          shownAt(100, 68),
+          shownAt(108, 85),
+        ];
+
+        expect(groundStepsBackUnderClock({ frames: [], screens: fade })).toEqual([]);
+      },
+    );
+
+    const FADE_MS = 350;
+    const everyFrame = (lightness: (frame: number) => number, frames: number): ScreenFrame[] =>
+      Array.from({ length: frames }, (_, frame) => shownAt(lightness(frame), frame * 17));
+
+    const SPRING = { curve: [0.32, 0.72, 0, 1], durationMs: FADE_MS, lagFrames: 3 };
+    const fromRest = (lightness: number, afterMs: number): ScreenFrame[] => [
+      shownAt(48, 0),
+      shownAt(48, 17),
+      shownAt(48, 33),
+      shownAt(lightness, 33 + afterMs),
+      shownAt(108, 33 + afterMs + 400),
+    ];
+
+    testWithoutBrowser(
+      'when the ground leaves its rest along its spring curve, 87 % of its way in a frame stamped 67 ms after the one at rest, as run 45563830284 drew, then the check finds no jump, since the curve reaches that within the time and the screencast’s stamp lag',
+      () => {
+        expect(groundJumpsUnderClock({ frames: [], screens: fromRest(100.2, 67) }, SPRING)).toEqual(
+          [],
+        );
+      },
+    );
+
+    testWithoutBrowser(
+      'when the ground leaves its rest faster than its spring curve and the stamp lag allow, 95 % of its way in a frame stamped 17 ms after the one at rest, then the check reports the jump with the share its curve allows',
+      () => {
+        expect(groundJumpsUnderClock({ frames: [], screens: fromRest(105, 17) }, SPRING)).toEqual([
+          'the ground under the clock goes from 0 % to 95 % of its way in screencast frame 3, 17 ms after the frame before, more than the 80 % its curve reaches in that time and 1.5 steady frames plus the stamp lag of 3.00',
+        ]);
+      },
+    );
+
+    testWithoutBrowser(
+      'when the screencast drew no frame for longer than the fade less one frame, between the ground at rest and at its end, then the row is not judged on this runner',
+      () => {
+        const sparse = [shownAt(48, 0), shownAt(48, 17), shownAt(108, 400), shownAt(108, 417)];
+
+        expect(groundNotJudgedOnThisRunner({ frames: [], screens: sparse }, FADE_MS)).toMatch(
+          /^the screencast drew no frame for 383 ms of a 350 ms fade/,
+        );
+      },
+    );
+
+    testWithoutBrowser(
+      'when the ground never changes, as with the scrim lost, then the row is judged, never skipped, and fails',
+      () => {
+        const still = { frames: [], screens: everyFrame(() => 48, 30) };
+
+        expect(groundNotJudgedOnThisRunner(still, FADE_MS)).toBeNull();
+        expect(groundJumpsUnderClock(still)).not.toEqual([]);
+      },
+    );
+
+    testWithoutBrowser(
+      'when the ground swaps from rest to its end in one frame of a dense screencast, then the row is judged, never skipped, and fails',
+      () => {
+        const swap = { frames: [], screens: everyFrame((frame) => (frame < 10 ? 48 : 108), 20) };
+
+        expect(groundNotJudgedOnThisRunner(swap, FADE_MS)).toBeNull();
+        expect(groundJumpsUnderClock(swap)).toEqual([
+          'the ground under the clock goes from 0 % to 100 % of its way in screencast frame 10, 17 ms after the frame before',
+        ]);
+      },
+    );
+
+    testWithoutBrowser(
+      'when the ground fades and then covers the rest of its way in one frame, then the check reports the jump',
+      () => {
+        const cut = [
+          shownAt(48, 0),
+          shownAt(48, 200),
+          shownAt(54, 217),
+          shownAt(60, 234),
+          shownAt(108, 251),
+          shownAt(108, 300),
+        ];
+
+        expect(groundJumpsUnderClock({ frames: [], screens: cut })).not.toEqual([]);
+      },
+    );
+  },
+);
 
 testWithoutBrowser.describe('Given frames of the top of the page planted by hand', () => {
   testWithoutBrowser(
@@ -433,6 +602,7 @@ const STATUS_BAR_PX = 59;
 const HOLD_MS = 100;
 const BUSY_MS = 120;
 const FRAME_START_BEFORE_CHECK_MS = 1;
+const CPU_SLOWER_AS_ON_A_LOADED_RUNNER = 3;
 const PULL_DOWNS = [0, 20, 80, 400];
 const CLASSIC_SCROLLBARS_ONLY =
   'an iPhone draws no classic scrollbar beside the backdrop; Safari’s own strips are #1694 and the device checklist';
@@ -471,6 +641,56 @@ for (const { place, path } of [
     });
   });
 }
+
+test.describe('Given the copy of a standing sheet planted over a page, its backdrop and its dialog each veiling 60 %', () => {
+  const plantCopy = (page: Page, layers: readonly ('backdrop' | 'dialog')[]): Promise<void> =>
+    page.evaluate((planted) => {
+      const veil = 'color-mix(in srgb, rgb(10 15 40) 60%, transparent)';
+      const overlay = document.createElement('div');
+      overlay.className = 'page-transition';
+      const sheet = document.createElement('div');
+      sheet.className = 'page-transition__sheet';
+      const fill = (element: HTMLElement, colour: string): void => {
+        element.style.cssText = `position: fixed; inset: 0; margin: 0; border: 0; padding: 0; width: 100vw; height: 100vh; max-width: none; max-height: none; background-color: ${colour};`;
+      };
+      const backdrop = document.createElement('div');
+      backdrop.className = 'page-transition__sheet-backdrop';
+      fill(backdrop, planted.includes('backdrop') ? veil : 'transparent');
+      const dialog = document.createElement('dialog');
+      dialog.setAttribute('open', '');
+      fill(dialog, planted.includes('dialog') ? veil : 'transparent');
+      sheet.append(backdrop, dialog);
+      overlay.append(sheet);
+      document.body.append(overlay);
+    }, layers);
+
+  const veilOf = async (page: Page): Promise<number | null> => {
+    const sampling = await sampleFrames(page);
+    const frames = await sampling.stopWhenStill();
+    return frames.at(-1)!.veil;
+  };
+
+  test.beforeEach(async ({ page }) => {
+    await mockPublicContent(page);
+    await page.goto('/');
+  });
+
+  test('when only its backdrop veils the page, then the probe reads one veil of 60 %', async ({
+    page,
+  }) => {
+    await plantCopy(page, ['backdrop']);
+
+    expect(await veilOf(page)).toBeCloseTo(0.6, 2);
+  });
+
+  test('when its dialog veils the page over its backdrop, then the probe reads both veils together, 84 %, not the stronger one alone', async ({
+    page,
+  }) => {
+    await plantCopy(page, ['backdrop', 'dialog']);
+
+    expect(await veilOf(page)).toBeCloseTo(0.84, 2);
+  });
+});
 
 test.describe('Given a signed-in donor reading the news on a computer that animates', () => {
   test.use({
@@ -932,4 +1152,107 @@ test.describe('Given a signed-in donor on the landing page of a phone in the dar
     expect(bandUnderClockOutOfStep(opening)).toEqual([]);
     expect(bandUnderClockOutOfStep(closing)).toEqual([]);
   });
+});
+
+test.describe('Given an administrator in the app on the home screen of a phone in the light appearance, on the landing page with the account sheet open', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    colorScheme: 'light',
+    reducedMotion: 'no-preference',
+    hasTouch: true,
+  });
+
+  test.beforeEach(async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', SCREENCAST_ONLY);
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+      Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
+      localStorage.setItem('nfnn.donor-session-app', '1');
+    });
+    await mockDonorApi(page);
+    await mockPublicContent(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await expect(accountButton(page)).toBeVisible();
+    await underTheClock(page);
+    await whileTheSheetOpens(page);
+  });
+
+  for (const slowdown of [1, CPU_SLOWER_AS_ON_A_LOADED_RUNNER]) {
+    test(`when Správa is opened from it${slowdown > 1 ? ` on a CPU ${slowdown}× slower` : ''}, then the ground under the clock moves from the sheet’s ground to Správa’s with the scrim, never in one frame and never back`, async ({
+      page,
+    }) => {
+      if (slowdown > 1) {
+        const cdp = await page.context().newCDPSession(page);
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: slowdown });
+      }
+      const copied = whenAdministrationCopied(page);
+
+      const opening = await topAreaWhile(
+        page,
+        () =>
+          accountSheet(page)
+            .getByRole('link', { name: /^Správa/ })
+            .click(),
+        async () => {
+          await expect(page).toHaveURL(/\/sprava$/);
+          await expect(accountSheet(page)).toBeHidden();
+          await expect(page.locator('.page-transition')).toHaveCount(0);
+        },
+        'under the clock',
+      );
+      await copied();
+
+      const fadeMs = await page.evaluate(() => {
+        const token = getComputedStyle(document.documentElement)
+          .getPropertyValue('--duration-page')
+          .trim();
+        return Number.parseFloat(token) * (token.endsWith('ms') ? 1 : 1000);
+      });
+      const notJudged = groundNotJudgedOnThisRunner(opening, fadeMs);
+      if (notJudged !== null) {
+        test.info().annotations.push({ type: NOT_JUDGED_ANNOTATION, description: notJudged });
+      }
+      test.skip(notJudged !== null, `not judged on this runner: ${notJudged}`);
+      const curve = await page.evaluate(() =>
+        (
+          /cubic-bezier\(([^)]+)\)/.exec(
+            getComputedStyle(document.documentElement).getPropertyValue('--ease-page'),
+          )?.[1] ?? ''
+        )
+          .split(',')
+          .map((point) => Number(point.trim())),
+      );
+      expect(curve, 'the theme names the curve of the page and its scrim').toHaveLength(4);
+      const problems = [
+        ...groundJumpsUnderClock(opening, {
+          curve,
+          durationMs: fadeMs,
+          lagFrames: STAMP_LAG_P99_FRAMES,
+        }),
+        ...groundStepsBackUnderClock(opening),
+      ];
+      if (problems.length > 0) {
+        test.info().attachments.push({
+          name: 'nfnn-ground-evidence.json',
+          contentType: 'application/json',
+          body: Buffer.from(
+            JSON.stringify(
+              {
+                problems,
+                curve,
+                fadeMs,
+                screens: opening.screens.map(({ at, lightness }) => ({ at, lightness })),
+              },
+              null,
+              1,
+            ),
+          ),
+        });
+      }
+      expect(problems).toEqual([]);
+    });
+  }
 });

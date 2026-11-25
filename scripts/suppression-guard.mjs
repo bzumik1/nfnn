@@ -39,6 +39,8 @@ const CHECK_SCRIPTS = new Set([
   'frontend/scripts/app-routes.mjs',
   'frontend/scripts/serve-dist.mjs',
   'frontend/scripts/dev-port.mjs',
+  'frontend/scripts/motion-judged-summary.mjs',
+  'frontend/e2e/stamp-lag.json',
   'frontend/eslint-confinement.js',
   'scripts/agent-context-budget.mjs',
   'scripts/readme-links.mjs',

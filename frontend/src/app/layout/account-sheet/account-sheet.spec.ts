@@ -12,7 +12,8 @@ import { sampleDonor } from '../../core/auth/testing/donor-fixtures';
 import { SignedOutNotice } from '../../core/auth/signed-out-notice';
 import { CompactLayout } from '../../core/layout/compact-layout';
 import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
-import { APP_ACCOUNT_KEY } from './account-return';
+import { PageTransitions } from '../../core/navigation/page-transitions';
+import { AccountReturn, APP_ACCOUNT_KEY, APP_ACCOUNT_SCROLL_KEY } from './account-return';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { FakeDialogHistory } from '../../shared/ui/dialog/testing/fake-dialog-history';
 import { AccountBadges } from '../../core/layout/account-badges';
@@ -269,6 +270,27 @@ describe('Given the account sheet of a signed-in donor', () => {
       expect(closed).toBe(0);
     });
 
+    it('and the visitor goes back, then the row they came from takes the focus without moving the list it shows in', async () => {
+      const focused: (FocusOptions | undefined)[] = [];
+      const focus = HTMLElement.prototype.focus;
+      const spy = vi.spyOn(HTMLElement.prototype, 'focus').mockImplementation(function (
+        this: HTMLElement,
+        options?: FocusOptions,
+      ) {
+        if (this.getAttribute('href') === '/darce/potvrzeni') {
+          focused.push(options);
+        }
+        focus.call(this, options);
+      });
+
+      history.listener?.stepBack();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      spy.mockRestore();
+
+      expect(focused).toEqual([{ preventScroll: true }]);
+    });
+
     it('and Zavřít is pressed, then the whole sheet closes over the page, as at its first step', async () => {
       sheet.querySelector<HTMLButtonElement>('button[aria-label="Zavřít"]')!.click();
       fixture.detectChanges();
@@ -398,7 +420,11 @@ describe('Given the account sheet of a signed-in donor', () => {
       expect(history.handedOver).toEqual(['/overit']);
       expect(navigate).toHaveBeenCalledWith('/overit', {
         replaceUrl: true,
-        state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '/darce/potvrzeni' },
+        state: {
+          [APP_DEPTH_KEY]: 1,
+          [APP_ACCOUNT_KEY]: '/darce/potvrzeni',
+          [APP_ACCOUNT_SCROLL_KEY]: [0, 0],
+        },
       });
     });
 
@@ -494,8 +520,139 @@ describe('Given the account sheet of a signed-in donor', () => {
 
     expect(navigate).toHaveBeenCalledWith('/sprava', {
       replaceUrl: true,
-      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '' },
+      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '', [APP_ACCOUNT_SCROLL_KEY]: [0] },
     });
+  });
+
+  it('when a link in a section opened from the scrolled list leads elsewhere, then that page names the scroll of the list as well as of the section', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    const sheet = open();
+    const scrolled = vi.spyOn(Element.prototype, 'scrollTop', 'get').mockImplementation(function (
+      this: Element,
+    ) {
+      return this.classList.contains('dialog-panel') ? 92 : 0;
+    });
+    sheet
+      .querySelector<HTMLAnchorElement>('nav a[href="/darce/potvrzeni"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    scrolled.mockImplementation(function (this: Element) {
+      return this.classList.contains('dialog-panel') ? 40 : 0;
+    });
+
+    sheet
+      .querySelector<HTMLAnchorElement>('a.stub-elsewhere')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    scrolled.mockRestore();
+
+    expect(navigate).toHaveBeenCalledWith('/overit', {
+      replaceUrl: true,
+      state: {
+        [APP_DEPTH_KEY]: 1,
+        [APP_ACCOUNT_KEY]: '/darce/potvrzeni',
+        [APP_ACCOUNT_SCROLL_KEY]: [92, 40],
+      },
+    });
+  });
+
+  it('when a step back opens it again on a section left from the scrolled list, then the section stands at its scroll and Zpět brings the list back at its own', async () => {
+    vi.spyOn(TestBed.inject(AccountReturn), 'takeScrollToReopen').mockReturnValue([92, 40]);
+    const placed: number[] = [];
+    const scrollTop = vi.spyOn(Element.prototype, 'scrollTop', 'set');
+    scrollTop.mockImplementation(function (this: Element, top: number) {
+      if (this.classList.contains('dialog-panel')) {
+        placed.push(top);
+      }
+    });
+    fixture = TestBed.createComponent(AccountSheet);
+    fixture.componentRef.setInput('reopenedOn', '/darce/potvrzeni');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    history.listener?.stepBack();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    scrollTop.mockRestore();
+
+    expect(placed).toEqual([40, 92]);
+  });
+
+  it('when the sheet closes, then the copies of its screens kept for a finger to follow go with it', () => {
+    const forget = vi.spyOn(TestBed.inject(PageTransitions), 'forgetSheetsOf');
+    open();
+
+    fixture.destroy();
+
+    expect(forget).toHaveBeenCalledWith(TestBed.inject(AccountReturn));
+  });
+
+  it('when it leaves a section for a page it returns from, then the copies of its screens kept for a finger stay, and the sheet a step back opens again takes them', async () => {
+    const transitions = TestBed.inject(PageTransitions);
+    const owners: object[] = [];
+    vi.spyOn(transitions, 'stepInSheet').mockImplementation((step) => {
+      owners.push(step.owner);
+      step.change();
+      step.placed();
+    });
+    const forget = vi.spyOn(transitions, 'forgetSheetsOf');
+    const sheet = open();
+    sheet
+      .querySelector<HTMLAnchorElement>('nav a[href="/darce/potvrzeni"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    sheet
+      .querySelector<HTMLAnchorElement>('a.stub-elsewhere')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    fixture.destroy();
+
+    expect(forget).not.toHaveBeenCalled();
+
+    fixture = TestBed.createComponent(AccountSheet);
+    fixture.componentRef.setInput('reopenedOn', '/darce/potvrzeni');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.destroy();
+
+    expect(owners).toHaveLength(1);
+    expect(forget).toHaveBeenCalledWith(owners[0]);
+  });
+
+  it('when it signs out, then the copies of its screens kept for a finger go, as no step back opens it again', async () => {
+    const forget = vi.spyOn(TestBed.inject(PageTransitions), 'forgetSheetsOf');
+    const sheet = open();
+
+    sheet.querySelector<HTMLButtonElement>('.account-sign-out')!.click();
+    await fixture.whenStable();
+    fixture.destroy();
+
+    expect(forget).toHaveBeenCalledWith(TestBed.inject(AccountReturn));
+  });
+
+  it('when a step back from the administration opens it again on its list scrolled before, then the list stands at that scroll again', async () => {
+    admin.set(true);
+    vi.spyOn(TestBed.inject(AccountReturn), 'takeScrollToReopen').mockReturnValue([92]);
+    const placed: number[] = [];
+    const scrollTop = vi.spyOn(Element.prototype, 'scrollTop', 'set');
+    scrollTop.mockImplementation(function (this: Element, top: number) {
+      if (this.classList.contains('dialog-panel')) {
+        placed.push(top);
+      }
+    });
+    fixture = TestBed.createComponent(AccountSheet);
+    fixture.componentRef.setInput('reopenedOn', '');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    scrollTop.mockRestore();
+
+    expect(placed).toEqual([92]);
   });
 
   it('when a step back opens it again on a section, then it stands on that section with its step at once', async () => {
@@ -767,7 +924,7 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(closed).toBe(1);
     expect(navigate).toHaveBeenCalledWith('/zasady-ochrany-osobnich-udaju', {
       replaceUrl: true,
-      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '' },
+      state: { [APP_DEPTH_KEY]: 1, [APP_ACCOUNT_KEY]: '', [APP_ACCOUNT_SCROLL_KEY]: [0] },
     });
   });
 
