@@ -1323,7 +1323,7 @@ export function probeSawTheMotion(
     .filter((frame) => frame.at >= startAt && frame.at <= startAt + durationMs)
     .map((frame) => frame.offset)
     .filter((offset): offset is number => offset !== null);
-  return offsets.length < 2 || Math.max(...offsets) - Math.min(...offsets) >= 1;
+  return offsets.length >= 2 && Math.max(...offsets) - Math.min(...offsets) >= 1;
 }
 
 function screencastMissedTheStep(probe: StepProbe, moving: readonly Frame[]): string | null {
