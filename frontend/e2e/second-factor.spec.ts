@@ -7,6 +7,7 @@ import {
   openDonorSection,
   openSignInDialog,
   problem,
+  rememberedDonorSession,
   secondFactorEnrolment,
   secondFactorRecovery,
   secondFactorRequired,
@@ -362,8 +363,10 @@ test.describe('Given a donor turning on the code from an authenticator app', () 
     await page.route('**/api/donors/me/second-factor/setup', (route) =>
       route.fulfill({ json: secondFactorEnrolment }),
     );
+    await rememberedDonorSession(page);
     await page.setViewportSize({ width: 1280, height: 900 });
-    await signIn(page);
+    await page.goto('/darce/prehled');
+    await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
     if (rootPx !== undefined) {
       await page.addStyleTag({ content: `html { font-size: ${rootPx}px; }` });
       await expect
