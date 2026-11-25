@@ -9,6 +9,7 @@ import {
   manifestProblems,
   motionProblems,
   motionStillProblems,
+  partialMotionStillProblems,
   receiptTokensOutsideRoot,
   springPairingProblems,
   themeAssetProblems,
@@ -908,12 +909,54 @@ describe('Given a style that writes a transition through --motion-still', () => 
       .chevron {
         transition: var(--motion-still, transform var(--duration-base)) !important;
       }
+    `;
+
+    assert.deepEqual(motionStillProblems('field.scss', style), []);
+  });
+
+  it('when the motion module returns it whole from its function, then nothing is reported', () => {
+    const style = `
       @function _still-when-reduced($transition) {
         @return var(--motion-still, #{$transition});
       }
     `;
 
-    assert.deepEqual(motionStillProblems('field.scss', style), []);
+    assert.deepEqual(motionStillProblems('src/styles/_motion.scss', style), []);
+  });
+
+  it('when another style returns it from a function of its own, then the style is reported', () => {
+    const style = `
+      @function f($x) {
+        @return var(--motion-still, $x);
+      }
+      .a {
+        transition: f(color 1s), opacity 1s;
+      }
+    `;
+
+    assert.deepEqual(motionStillProblems('src/app/a.scss', style), [
+      'src/app/a.scss writes var(--motion-still, …) as part of a value, so it stops only part of the transition under reduced motion; write it as the whole transition value',
+    ]);
+  });
+
+  it('when a theme writes it as part of a transition, then the theme is reported', () => {
+    const theme = `
+      :root {
+        --motion-rise: 8px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        :root {
+          --motion-still: none;
+        }
+      }
+      .glass {
+        transition: var(--motion-still, opacity 1s), transform 1s;
+      }
+    `;
+
+    assert.deepEqual(partialMotionStillProblems('src/themes/calm/_theme.scss', theme), [
+      'src/themes/calm/_theme.scss writes var(--motion-still, …) as part of a value, so it stops only part of the transition under reduced motion; write it as the whole transition value',
+    ]);
   });
 
   it('when another transition follows it or it sits inside another value, then each is reported', () => {

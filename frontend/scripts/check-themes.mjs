@@ -692,15 +692,21 @@ function closingParenthesis(code, open) {
   return code.length;
 }
 
-export function motionStillProblems(file, source) {
-  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-  const problems = declared(code).has(MOTION_STILL)
-    ? [
-        `${file} sets ${MOTION_STILL}, which only the themes set in their prefers-reduced-motion :root`,
-      ]
-    : [];
+function withoutComments(source) {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+}
+
+const MOTION_MODULE = 'src/styles/_motion.scss';
+
+export function partialMotionStillProblems(file, source) {
+  const code = withoutComments(source);
+  const wholeValue =
+    file === MOTION_MODULE
+      ? /(?:^|[;{\s])(?:transition\s*:|@return)\s*$/
+      : /(?:^|[;{\s])transition\s*:\s*$/;
+  const problems = [];
   for (const match of code.matchAll(/var\(\s*--motion-still\b/g)) {
-    const starts = /(?:^|[;{\s])(?:transition\s*:|@return)\s*$/.test(code.slice(0, match.index));
+    const starts = wholeValue.test(code.slice(0, match.index));
     const end = closingParenthesis(code, match.index + 'var'.length);
     const ends = /^\s*(?:!important\s*)?[;}]/.test(code.slice(end + 1));
     if (!starts || !ends) {
@@ -710,6 +716,15 @@ export function motionStillProblems(file, source) {
     }
   }
   return problems;
+}
+
+export function motionStillProblems(file, source) {
+  const declaresIt = declared(withoutComments(source)).has(MOTION_STILL)
+    ? [
+        `${file} sets ${MOTION_STILL}, which only the themes set in their prefers-reduced-motion :root`,
+      ]
+    : [];
+  return [...declaresIt, ...partialMotionStillProblems(file, source)];
 }
 
 const SPRING_DURATIONS = new Map([['--ease-spring-bouncy', '--duration-done']]);
@@ -1032,6 +1047,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     problems.push(...barContrastProblems(theme, source));
     problems.push(...appearanceProblems(theme, source));
     problems.push(...motionProblems(theme, source));
+    problems.push(...partialMotionStillProblems(`src/themes/${theme}/_theme.scss`, source));
     const assetsDir = join(themesDir, theme, 'assets');
     problems.push(
       ...manifestProblems({
