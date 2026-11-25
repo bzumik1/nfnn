@@ -39,8 +39,7 @@ const SIDE_NAVIGATION = '.side-nav-panel';
 const TAB_BAR = 'app-tab-bar .tab-bar';
 const STANDING_PARTS = 'app-header, .side-nav-panel, app-tab-bar';
 const CATCH_UP_SPANS = 3;
-const DRAWN_GAPS_TO_TRUST = 2;
-const SHORTEST_DISPLAY_FRAME_MS = 1000 / 120;
+const CLOSE_IN_FRAMES_AT_LEAST = 8;
 
 export interface CatchUp {
   readonly frameMs: number;
@@ -53,44 +52,37 @@ export interface CatchUp {
 
 export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp): void {
   const closing = Math.max(1, fastMs / CATCH_UP_SPANS);
-  const startGap = catchUp.finger() - catchUp.from;
+  const startGap = Math.max(0, catchUp.finger() - catchUp.from);
+  const stepAtMost = startGap / CLOSE_IN_FRAMES_AT_LEAST;
+  let behind = startGap;
   let last: number | null = null;
   let lastDrawnAt = view.performance.now();
-  let drawnBefore: number | null = null;
-  let shortestDrawnGap = Number.POSITIVE_INFINITY;
-  let drawnGaps = 0;
   let elapsed = 0;
   const closeIn = (now: number, drawn: boolean): void => {
     if (!catchUp.goesOn()) {
       return;
     }
+    const stopped = !drawn && now - lastDrawnAt >= HELD_WITHOUT_A_FRAME_MS;
     if (drawn) {
-      if (drawnBefore !== null && now > drawnBefore) {
-        shortestDrawnGap = Math.min(shortestDrawnGap, now - drawnBefore);
-        drawnGaps++;
-      }
-      const displayFrame =
-        drawnGaps < DRAWN_GAPS_TO_TRUST
-          ? DISPLAY_FRAME_MS
-          : Math.max(SHORTEST_DISPLAY_FRAME_MS, shortestDrawnGap);
       elapsed += Math.min(
         catchUp.frameMs,
-        displayFrame,
         last === null ? DISPLAY_FRAME_MS : Math.max(0, now - last),
       );
-      drawnBefore = now;
       last = now;
       lastDrawnAt = now;
-    } else if (now - lastDrawnAt >= HELD_WITHOUT_A_FRAME_MS) {
+    } else if (stopped) {
       elapsed += Math.max(0, now - (last ?? lastDrawnAt));
       last = now;
     }
-    const spans = elapsed / closing;
-    const left = startGap * (1 + spans) * Math.exp(-spans);
-    const gap = Math.abs(left) < 1 ? 0 : left;
-    const finger = Math.max(0, catchUp.finger());
-    catchUp.show(Math.min(finger, Math.max(0, finger - gap)));
-    if (gap === 0) {
+    if (drawn || stopped) {
+      const spans = elapsed / closing;
+      const left = startGap * (1 + spans) * Math.exp(-spans);
+      const target = left < 1 ? 0 : left;
+      behind = stopped ? target : Math.max(target, behind - stepAtMost);
+      const finger = Math.max(0, catchUp.finger());
+      catchUp.show(Math.min(finger, Math.max(0, finger - behind)));
+    }
+    if (behind === 0) {
       catchUp.caughtUp();
     } else {
       nextFrame(view, closeIn);
