@@ -682,6 +682,18 @@ test.describe('Given the probe that watches a step of the back matrix', () => {
   );
 
   testWithoutBrowser(
+    'when the screencast started just before a finger let go first gave the frame the page drew before its rest, stamped seconds earlier, and then frames during the release, then only the part of each gap within the motion counts and the step is judged',
+    () => {
+      const release = [-2575, 20, 55, 90, 125, 160].map((at) => 10_000 + at);
+
+      expect(screencastMissedTheMotion(release, 10_000, 150, 16.7)).toBeNull();
+      expect(screencastMissedTheMotion([10_000 - 2575, 10_400], 10_000, 150, 16.7)).toMatch(
+        /^the screencast drew no frame for 150 ms of a 150 ms motion/,
+      );
+    },
+  );
+
+  testWithoutBrowser(
     'when the scroll watch saw a scroll and a frame after the focus returned in which the page stood 31 px from its kept scroll, as WebKit drew in run 45550415459, then both are reported even though the page stood back at the kept scroll by the end',
     () => {
       const href = '/sprava/darci/d1/vymaz';
