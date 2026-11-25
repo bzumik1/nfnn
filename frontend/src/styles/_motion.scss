@@ -155,6 +155,10 @@ $_pressed: (--pressed-tint, filter);
     transition: _transition($properties, map.get($_durations, $duration), map.get($_eases, $ease));
     @include _tint-at-once($properties, map.get($_durations, $duration));
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none !important;
+  }
 }
 
 @mixin present($panel, $leaving, $from-opacity: 0, $from-scale: var(--motion-scale-enter)) {

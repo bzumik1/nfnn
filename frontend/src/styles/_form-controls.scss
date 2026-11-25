@@ -9,6 +9,10 @@
   font-family: var(--font-sans);
   transition: border-color var(--duration-base);
 
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
   &:focus {
     border-color: var(--color-accent);
   }
