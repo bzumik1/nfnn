@@ -1064,7 +1064,9 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
       signOut.answer();
       await expect(page.locator(`#device-row-${windowsEdge?.id}`)).toHaveCount(0);
       await expect(devices.locator('#devices-older .device-sign-out')).toBeFocused();
-      await placeTheTopOf(starsi, 200);
+      await expect.poll(() => layoutAtRest(starsi)).toBe(true);
+      await placeJustBelowTheHeader(starsi);
+      await expectWhollyBetweenHeaderAndWhatCoversTheBottom(starsi);
 
       await starsi.dispatchEvent('click');
 
@@ -1129,6 +1131,20 @@ async function placeTheTopOf(control: Locator, top: number): Promise<void> {
       window.scrollBy({ top: element.getBoundingClientRect().top - wanted, behavior: 'instant' }),
     top,
   );
+}
+
+async function placeJustBelowTheHeader(control: Locator): Promise<void> {
+  const place = await placeBetweenHeaderAndWhatCoversTheBottom(control);
+  await control.evaluate(
+    (_, by) => window.scrollBy({ top: by, behavior: 'instant' }),
+    place.top - place.headerBottom,
+  );
+}
+
+async function expectWhollyBetweenHeaderAndWhatCoversTheBottom(target: Locator): Promise<void> {
+  const place = await placeBetweenHeaderAndWhatCoversTheBottom(target);
+  expect(place.top).toBeGreaterThanOrEqual(place.headerBottom);
+  expect(place.bottom).toBeLessThanOrEqual(place.lowerEdge);
 }
 
 async function askToSignOutWindows(devices: Locator): Promise<Locator> {
