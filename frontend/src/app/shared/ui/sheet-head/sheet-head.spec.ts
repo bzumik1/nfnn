@@ -338,16 +338,16 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
         expect(padding()).toBe('');
       });
 
-      it('when the press focuses a field half under the head, then the panel keeps its scroll padding and leaves the field to keyboard avoidance', async () => {
+      it('when the press focuses a field half under the head and no software keyboard moves it, then the panel keeps its scroll padding for keyboard avoidance and brings the field below the head in the next frame', async () => {
         const field = control('#below');
         standAt(field, 130, 40);
 
         pressByFinger(field);
         field.focus();
+        expect(padding()).toBe('');
         await nextFrame();
 
-        expect(padding()).toBe('');
-        expect(scrolled).toEqual([]);
+        expect(scrolled).toEqual([-27]);
       });
     });
 

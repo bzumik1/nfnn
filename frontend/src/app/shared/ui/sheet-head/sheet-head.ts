@@ -78,11 +78,8 @@ function keepFocusClearOfHead(
     if (!ofItsOwnPanel(focused)) {
       return;
     }
-    if (pressedByPointer() && wasPressed(focused)) {
-      if (
-        !takesText(focused) &&
-        focused.getBoundingClientRect().bottom > head.getBoundingClientRect().bottom
-      ) {
+    if (pressedByPointer() && wasPressed(focused) && !takesText(focused)) {
+      if (focused.getBoundingClientRect().bottom > head.getBoundingClientRect().bottom) {
         holdStillForTwoFrames(focused);
       }
       return;
