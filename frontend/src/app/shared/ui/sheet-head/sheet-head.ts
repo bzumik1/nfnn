@@ -20,6 +20,7 @@ import { CompactLayout } from '../../../core/layout/compact-layout';
 import { isTextEntry } from '../../../core/layout/soft-keyboard';
 import { motionAllowed, PageTransitions } from '../../../core/navigation/page-transitions';
 import { SHEET_STEPPING } from '../../../core/navigation/sheet-stepping';
+import { FocusReturn } from '../dialog/focus-return';
 
 const SHEET_PANEL = '.dialog-panel';
 const HEIGHT = '--sheet-head-height';
@@ -41,6 +42,7 @@ function keepFocusClearOfHead(
   head: HTMLElement,
   view: Window,
   pressedByPointer: () => boolean,
+  returning: (element: Element) => boolean,
 ): () => void {
   let pending = 0;
   let restoring = 0;
@@ -83,7 +85,7 @@ function keepFocusClearOfHead(
       panel.style.setProperty(PADDING_TOP, '0px');
       return;
     }
-    if (!ofItsOwnPanel(focused)) {
+    if (!ofItsOwnPanel(focused) || returning(focused)) {
       return;
     }
     if (pressedByPointer() && wasPressed(focused) && !takesText(focused)) {
@@ -163,6 +165,7 @@ export class SheetHead {
     const Observer = inject(SHEET_HEAD_RESIZE_OBSERVER);
     const view = inject(DOCUMENT).defaultView;
     const modality = inject(InputModality);
+    const focusReturn = inject(FocusReturn);
     afterNextRender(() => {
       const panel = head.closest<HTMLElement>(SHEET_PANEL);
       if (panel === null) {
@@ -189,7 +192,13 @@ export class SheetHead {
       destroyRef.onDestroy(() => panel.style.removeProperty(HEIGHT));
       if (view !== null) {
         destroyRef.onDestroy(
-          keepFocusClearOfHead(panel, head, view, () => modality.lastPressByPointer()),
+          keepFocusClearOfHead(
+            panel,
+            head,
+            view,
+            () => modality.lastPressByPointer(),
+            (element) => focusReturn.isReturning(element),
+          ),
         );
       }
     });

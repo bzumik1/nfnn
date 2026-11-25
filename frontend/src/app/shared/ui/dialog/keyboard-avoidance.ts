@@ -58,7 +58,12 @@ export class KeyboardAvoidance {
   revealFocused(): void {
     const focused = this.document.activeElement;
     const panel = this.panel();
-    if (!this.keyboard.isOpen() || !(focused instanceof HTMLElement) || !panel?.contains(focused)) {
+    if (
+      !this.keyboard.isOpen() ||
+      !isTextEntry(focused) ||
+      !panel?.contains(focused) ||
+      focused.closest('dialog') !== this.dialog
+    ) {
       return;
     }
     const scroller = getComputedStyle(panel).overflowY === 'auto' ? panel : this.dialog;

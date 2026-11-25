@@ -19,6 +19,7 @@ import {
 } from '@angular/core';
 
 import { DialogAnnouncer } from './dialog-announcer';
+import { FocusReturn } from './focus-return';
 import { DialogHistory, DialogHistoryListener } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { DIALOG_SUSPENSION } from './dialog-suspension';
@@ -34,12 +35,15 @@ import {
   STACKED_DIALOG_CLASS,
 } from '../../../core/navigation/page-transitions';
 import { SHEET_STEPPING } from '../../../core/navigation/sheet-stepping';
+import { scrollIntoViewFitting } from '../leaving-row/leaving-row';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 const CLOSING_GRACE_MS = 300;
 const SHEET_DURATION = '--duration-sheet';
 const REPAINTING = 'dialog--repainting';
+const PANEL = '.dialog-panel';
+const ACTIONS = '.ui-dialog__actions';
 
 type Exit = 'open' | 'leaving' | 'gone';
 
@@ -96,7 +100,6 @@ export class Dialog implements AfterViewInit, OnDestroy {
     const offset = this.dragOffset();
     return offset > 0 ? `0 ${offset}px` : null;
   });
-  private readonly opener = this.document.activeElement;
   private readonly history = inject(DialogHistory);
   private readonly injector = inject(Injector);
   private readonly historyEntry: DialogHistoryListener = {
@@ -106,6 +109,8 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private readonly suspension = inject(DIALOG_SUSPENSION);
   private readonly layout = inject(CompactLayout);
   private readonly modality = inject(InputModality);
+  private readonly focusReturn = inject(FocusReturn);
+  private readonly opener = this.openerOf(this.document.activeElement);
   private readonly appearance = inject(Appearance);
   private dragPointer: number | null = null;
   private touchOrigin: TouchOrigin | null = null;
@@ -177,12 +182,14 @@ export class Dialog implements AfterViewInit, OnDestroy {
       this.history.close(this.historyEntry);
     }
     const dialog = this.element().nativeElement;
+    const opener =
+      this.opener instanceof HTMLElement && this.opener.isConnected ? this.opener : null;
     if (dialog.open) {
-      dialog.close();
+      this.focusReturn.whileReturning(opener, () => dialog.close());
     }
     this.restackOthers();
-    if (this.opener instanceof HTMLElement && this.opener.isConnected) {
-      focusInView(this.opener);
+    if (opener !== null) {
+      this.returnFocusTo(opener);
     } else {
       this.document.querySelector<HTMLElement>('main#obsah')?.focus({ preventScroll: true });
     }
@@ -382,9 +389,14 @@ export class Dialog implements AfterViewInit, OnDestroy {
 
   protected keepFocusAboveActions(event: FocusEvent): void {
     const target = event.target;
-    const panel = this.panel().nativeElement;
-    const actions = panel.querySelector<HTMLElement>('.ui-dialog__actions');
-    if (!(target instanceof HTMLElement) || actions === null || actions.contains(target)) {
+    if (
+      !(target instanceof HTMLElement) ||
+      target.closest('dialog') !== this.element().nativeElement
+    ) {
+      return;
+    }
+    const actions = this.ownActions();
+    if (actions === null || actions.contains(target)) {
       return;
     }
     if (getComputedStyle(actions).position !== 'sticky') {
@@ -392,7 +404,44 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
     const covered = target.getBoundingClientRect().bottom - actions.getBoundingClientRect().top;
     if (covered > 0) {
-      panel.scrollBy({ top: covered + ROOM_ABOVE_STICKY_ACTIONS_PX });
+      this.panel().nativeElement.scrollBy({ top: covered + ROOM_ABOVE_STICKY_ACTIONS_PX });
+    }
+  }
+
+  private ownActions(): HTMLElement | null {
+    const dialog = this.element().nativeElement;
+    const rows = this.panel().nativeElement.querySelectorAll<HTMLElement>(ACTIONS);
+    return Array.from(rows).find((row) => row.closest('dialog') === dialog) ?? null;
+  }
+
+  private openerOf(focused: Element | null): Element | null {
+    const pressed = this.modality.takePressedControl();
+    const holder = focused?.closest('dialog') ?? null;
+    return pressed !== null &&
+      holder !== null &&
+      focused !== null &&
+      standsForItsDialog(holder, focused) &&
+      holder.contains(pressed)
+      ? pressed
+      : focused;
+  }
+
+  private returnFocusTo(opener: HTMLElement): void {
+    const panel = opener.closest<HTMLElement>(PANEL);
+    if (panel === null) {
+      focusInView(opener);
+      return;
+    }
+    this.focusReturn.returnTo(opener);
+    if (this.document.activeElement !== opener) {
+      opener.closest('dialog')?.focus({ preventScroll: true });
+      return;
+    }
+    const holdsStill = this.modality.lastPressByPointer()
+      ? partlyWithin(panel, opener)
+      : shownWithin(panel, opener);
+    if (!holdsStill) {
+      scrollIntoViewFitting(opener);
     }
   }
 
@@ -591,6 +640,46 @@ export class Dialog implements AfterViewInit, OnDestroy {
       { injector: this.injector },
     );
   }
+}
+
+function standsForItsDialog(dialog: HTMLDialogElement, focused: Element): boolean {
+  if (focused === dialog) {
+    return true;
+  }
+  const [titleId] = (dialog.getAttribute('aria-labelledby') ?? '').split(/\s+/);
+  return titleId !== '' && focused.id === titleId;
+}
+
+interface VisibleBand {
+  readonly top: number;
+  readonly bottom: number;
+}
+
+function visibleBandOf(panel: HTMLElement): VisibleBand {
+  const room = panel.getBoundingClientRect();
+  const frame = panel.closest('dialog')?.getBoundingClientRect() ?? room;
+  const padding = getComputedStyle(panel);
+  return {
+    top: Math.max(room.top, frame.top) + (parseFloat(padding.scrollPaddingTop) || 0),
+    bottom: Math.min(room.bottom, frame.bottom) - (parseFloat(padding.scrollPaddingBottom) || 0),
+  };
+}
+
+function shownWithin(panel: HTMLElement, element: HTMLElement): boolean {
+  const band = visibleBandOf(panel);
+  const margin = getComputedStyle(element);
+  const box = element.getBoundingClientRect();
+  return (
+    box.height > 0 &&
+    box.top - (parseFloat(margin.scrollMarginTop) || 0) >= band.top &&
+    box.bottom + (parseFloat(margin.scrollMarginBottom) || 0) <= band.bottom
+  );
+}
+
+function partlyWithin(panel: HTMLElement, element: HTMLElement): boolean {
+  const band = visibleBandOf(panel);
+  const box = element.getBoundingClientRect();
+  return box.height > 0 && box.bottom > band.top && box.top < band.bottom;
 }
 
 function endsLeaving(animation: Animation): boolean {
