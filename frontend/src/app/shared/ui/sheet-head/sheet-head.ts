@@ -141,6 +141,7 @@ export class SheetHead {
   protected readonly shown = linkedSignal(() => this.title());
   private fades: Animation[] = [];
   private fadingTo: string | null = null;
+  private lettingGo: number | null = null;
 
   constructor() {
     effect(() => {
@@ -155,6 +156,7 @@ export class SheetHead {
     });
     const head = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
     const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => this.stopLettingGo());
     const Observer = inject(SHEET_HEAD_RESIZE_OBSERVER);
     const view = inject(DOCUMENT).defaultView;
     const modality = inject(InputModality);
@@ -191,10 +193,10 @@ export class SheetHead {
   }
 
   private follow(late: string | null, stepping: boolean, compact: boolean): void {
+    this.stopLettingGo();
     if (late === null) {
       if (!stepping) {
-        this.letFadeGo();
-        this.shown.set(this.title());
+        this.letGoNextFrame();
       }
       return;
     }
@@ -266,6 +268,32 @@ export class SheetHead {
       this.fadingTo = null;
       this.fades = [];
     }
+  }
+
+  private letGoNextFrame(): void {
+    const view = this.document.defaultView;
+    if (view === null) {
+      this.showOwnTitle();
+      return;
+    }
+    this.lettingGo = view.requestAnimationFrame(() => {
+      this.lettingGo = null;
+      if (this.lateTitle() === null && !this.stepping()) {
+        this.showOwnTitle();
+      }
+    });
+  }
+
+  private stopLettingGo(): void {
+    if (this.lettingGo !== null) {
+      this.document.defaultView?.cancelAnimationFrame(this.lettingGo);
+      this.lettingGo = null;
+    }
+  }
+
+  private showOwnTitle(): void {
+    this.letFadeGo();
+    this.shown.set(this.title());
   }
 
   private letFadeGo(): void {
