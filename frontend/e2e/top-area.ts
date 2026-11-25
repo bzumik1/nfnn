@@ -191,6 +191,16 @@ export async function sampleFrames(
             tint: [red, green, blue],
           };
         };
+        const layered = (layers: readonly Veil[]): Veil => {
+          const stronger = layers.reduce((strongest, layer) =>
+            layer.strength > strongest.strength ? layer : strongest,
+          );
+          return {
+            strength: 1 - layers.reduce((through, layer) => through * (1 - layer.strength), 1),
+            blur: Math.max(...layers.map((layer) => layer.blur)),
+            tint: stronger.tint,
+          };
+        };
         const liveVeil = (): Veil | null => {
           const modals = document.querySelectorAll('dialog:modal');
           if (modals.length === 0) {
@@ -199,13 +209,7 @@ export async function sampleFrames(
           const dialog = modals[modals.length - 1];
           const own = getComputedStyle(dialog);
           const behind = getComputedStyle(dialog, '::backdrop');
-          const layers = [layerOf(own, ownShare(own)), layerOf(behind, ownShare(behind))];
-          const stronger = layers[1].strength > layers[0].strength ? layers[1] : layers[0];
-          return {
-            strength: 1 - layers.reduce((through, layer) => through * (1 - layer.strength), 1),
-            blur: Math.max(...layers.map((layer) => layer.blur)),
-            tint: stronger.tint,
-          };
+          return layered([layerOf(own, ownShare(own)), layerOf(behind, ownShare(behind))]);
         };
         const point = { x: innerWidth / 2, y: 1 };
         const coversPoint = (element: Element): boolean => {
@@ -224,10 +228,19 @@ export async function sampleFrames(
                 (coversPoint(over) && shownShare(over) > 0)),
           );
         };
-        const copyVeils = (): Veil[] =>
-          Array.from(document.querySelectorAll(regions.veilCopies))
-            .filter((copy) => coversPoint(copy) && !pageAbove(copy))
-            .map((copy) => layerOf(getComputedStyle(copy), shownShare(copy)));
+        const copyVeils = (): Veil[] => {
+          const layersOfCopy = new Map<Element | null, Veil[]>();
+          for (const layer of document.querySelectorAll(regions.veilCopies)) {
+            if (coversPoint(layer) && !pageAbove(layer)) {
+              const copy = layer.parentElement;
+              layersOfCopy.set(copy, [
+                ...(layersOfCopy.get(copy) ?? []),
+                layerOf(getComputedStyle(layer), shownShare(layer)),
+              ]);
+            }
+          }
+          return Array.from(layersOfCopy.values(), layered);
+        };
         const barsOf = (): BarLook[] => {
           const named = new Map<string, Element[]>();
           for (const bar of document.querySelectorAll(`${regions.glass}, ${regions.glassCopies}`)) {
