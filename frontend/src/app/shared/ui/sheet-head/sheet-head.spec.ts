@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SHEET_HEAD_RESIZE_OBSERVER, SheetHead } from './sheet-head';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 import { InputModality } from '../../../core/input/input-modality';
+import { FocusReturn } from '../dialog/focus-return';
 
 @Component({
   imports: [SheetHead],
@@ -292,6 +293,18 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
         toggle.focus();
         await nextFrame();
 
+        expect(scrolled).toEqual([]);
+      });
+
+      it('when a closing dialog returns the focus to the button that opened it, half under the head, after the finger pressed something else, then the panel stays where it is', async () => {
+        const toggle = control('#toggle');
+        standAt(toggle, 130, 40);
+        pressByFinger(control('#cancel'));
+
+        TestBed.inject(FocusReturn).returnTo(toggle);
+        await nextFrame();
+
+        expect(document.activeElement).toBe(toggle);
         expect(scrolled).toEqual([]);
       });
 

@@ -106,20 +106,21 @@ async function sampleEveryFrame(
   );
 }
 
-interface FieldRingFrame {
+interface FocusFrame {
   readonly focused: boolean;
   readonly ring: string | null;
+  readonly border: string | null;
 }
 
-interface FieldRingSampler {
-  readonly frames: FieldRingFrame[];
-  stop(): FieldRingFrame[];
+interface FocusSampler {
+  readonly frames: FocusFrame[];
+  stop(): FocusFrame[];
 }
 
-async function sampleFieldRing(page: Page, control: Locator): Promise<JSHandle<FieldRingSampler>> {
+async function sampleFocusFrames(page: Page, control: Locator): Promise<JSHandle<FocusSampler>> {
   const element = await control.elementHandle();
   return page.evaluateHandle((input) => {
-    const frames: FieldRingFrame[] = [];
+    const frames: FocusFrame[] = [];
     let sampling = true;
     const field = input?.closest('app-form-field') ?? null;
     const sample = () => {
@@ -130,6 +131,7 @@ async function sampleFieldRing(page: Page, control: Locator): Promise<JSHandle<F
           style === null || style.outlineStyle === 'none'
             ? null
             : `${style.outlineWidth} ${style.outlineStyle} ${style.outlineColor} at ${style.outlineOffset}`,
+        border: input === null ? null : getComputedStyle(input).borderTopColor,
       });
       if (sampling) {
         requestAnimationFrame(sample);
@@ -144,6 +146,54 @@ async function sampleFieldRing(page: Page, control: Locator): Promise<JSHandle<F
       },
     };
   }, element);
+}
+
+interface FieldFocused {
+  readonly transitions: string[];
+  readonly unfocused: string | null;
+  readonly borders: (string | null)[];
+}
+
+async function focusFieldByKey(page: Page, field: Locator, key: string): Promise<FieldFocused> {
+  await field.evaluate((element) => {
+    const seen = window as unknown as { transitionsOnFocus: string[] | null };
+    seen.transitionsOnFocus = null;
+    element.addEventListener(
+      'focus',
+      () => {
+        seen.transitionsOnFocus = element
+          .getAnimations()
+          .filter((animation): animation is CSSTransition => animation instanceof CSSTransition)
+          .map((transition) => transition.transitionProperty);
+      },
+      { once: true },
+    );
+  });
+  const sampler = await sampleFocusFrames(page, field);
+  await expect
+    .poll(() =>
+      sampler.evaluate((sampled) => sampled.frames.filter((frame) => !frame.focused).length),
+    )
+    .toBeGreaterThan(1);
+
+  await page.keyboard.press(key);
+
+  await expect(field).toBeFocused();
+  await expect
+    .poll(() =>
+      sampler.evaluate((sampled) => sampled.frames.filter((frame) => frame.focused).length),
+    )
+    .toBeGreaterThan(2);
+  const frames = await sampler.evaluate((sampled) => sampled.stop());
+  const transitions = await page.evaluate(
+    () => (window as unknown as { transitionsOnFocus: string[] | null }).transitionsOnFocus,
+  );
+  expect(transitions).not.toBeNull();
+  return {
+    transitions: transitions ?? [],
+    unfocused: frames.filter((frame) => !frame.focused).at(-1)?.border ?? null,
+    borders: frames.filter((frame) => frame.focused).map((frame) => frame.border),
+  };
 }
 
 function press(page: Page, control: Locator, browserName: string): Promise<void> {
@@ -303,7 +353,7 @@ test.describe('Given a keyboard user in the sign-in dialog who asks for less mot
     const email = page.locator('#login-email');
     const password = page.locator('#login-password');
     await email.focus();
-    const sampler = await sampleFieldRing(page, password);
+    const sampler = await sampleFocusFrames(page, password);
 
     await page.keyboard.press('Tab');
 
@@ -319,6 +369,48 @@ test.describe('Given a keyboard user in the sign-in dialog who asks for less mot
     const rings = frames.filter((frame) => frame.focused).map((frame) => frame.ring);
     expect(rings.at(-1)).not.toBeNull();
     expect([...new Set(rings)]).toEqual([rings.at(-1)]);
+  });
+});
+
+test.describe('Given a visitor on the Přispět page who asks for less motion and has typed their own amount', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('when Tab brings the focus back to the amount field, then nothing transitions and its border shows the colour of focus from its first frame', async ({
+    page,
+  }) => {
+    await openDonatePage(page);
+    const other = page.getByRole('radio', { name: 'Jiná částka' });
+    const amount = page.locator('#donate-custom-amount');
+    await other.click();
+    await amount.fill('1000');
+    await other.focus();
+    await expect(amount).not.toBeFocused();
+
+    const focused = await focusFieldByKey(page, amount, 'Tab');
+
+    expect(focused.transitions).toEqual([]);
+    expect(focused.borders.at(-1)).not.toBe(focused.unfocused);
+    expect([...new Set(focused.borders)]).toEqual([focused.borders.at(-1)]);
+  });
+});
+
+test.describe('Given a visitor on the verification page who asks for less motion', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('when Shift+Tab brings the focus from Ověřit odkaz to the link field, then nothing transitions and its border shows the colour of focus from its first frame', async ({
+    page,
+  }) => {
+    await page.goto('/overit');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ověření potvrzení o daru');
+    const link = page.locator('#proof-link');
+    await page.getByRole('button', { name: 'Ověřit odkaz' }).focus();
+    await expect(link).not.toBeFocused();
+
+    const focused = await focusFieldByKey(page, link, 'Shift+Tab');
+
+    expect(focused.transitions).toEqual([]);
+    expect(focused.borders.at(-1)).not.toBe(focused.unfocused);
+    expect([...new Set(focused.borders)]).toEqual([focused.borders.at(-1)]);
   });
 });
 

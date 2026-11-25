@@ -155,10 +155,7 @@ export class FocusAfterRowLeaves {
   }
 
   private scrollIntoViewFitting(control: HTMLElement): void {
-    control.scrollIntoView?.({
-      block: this.fitsItsScroller(control) ? 'nearest' : 'start',
-      behavior: this.behavior(),
-    });
+    scrollIntoViewFitting(control, this.document);
   }
 
   private revealOnceSettled(focused: HTMLElement, from: HTMLElement, to: HTMLElement | null): void {
@@ -220,9 +217,7 @@ export class FocusAfterRowLeaves {
   }
 
   private behavior(): ScrollBehavior {
-    const reduced =
-      this.document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    return reduced ? 'instant' : 'smooth';
+    return scrollBehaviorOf(this.document);
   }
 
   private partlyInView(control: HTMLElement): boolean {
@@ -235,44 +230,68 @@ export class FocusAfterRowLeaves {
     return box.bottom > band.top && box.top < band.bottom;
   }
 
-  private fitsItsScroller(control: HTMLElement): boolean {
-    const view = this.document.defaultView;
-    if (view === null) {
-      return true;
-    }
-    const band = this.visibleBand(this.scrollerOf(control, view), view);
-    const margin = view.getComputedStyle(control);
-    const needed =
-      control.getBoundingClientRect().height +
-      (parseFloat(margin.scrollMarginTop) || 0) +
-      (parseFloat(margin.scrollMarginBottom) || 0);
-    return needed <= band.bottom - band.top;
-  }
-
   private visibleBand(scroller: HTMLElement, view: Window): VisibleBand {
-    const padding = view.getComputedStyle(scroller);
-    const paddingTop = parseFloat(padding.scrollPaddingTop) || 0;
-    const paddingBottom = parseFloat(padding.scrollPaddingBottom) || 0;
-    if (scroller === this.document.documentElement) {
-      return { top: paddingTop, bottom: view.innerHeight - paddingBottom };
-    }
-    const top = scroller.getBoundingClientRect().top + scroller.clientTop;
-    return { top: top + paddingTop, bottom: top + scroller.clientHeight - paddingBottom };
+    return visibleBandOf(this.document, scroller, view);
   }
 
   private scrollerOf(control: HTMLElement, view: Window): HTMLElement {
-    for (
-      let node = control.parentElement;
-      node !== null && node !== this.document.body;
-      node = node.parentElement
-    ) {
-      const overflow = view.getComputedStyle(node).overflowY;
-      if (overflow === 'auto' || overflow === 'scroll') {
-        return node;
-      }
-    }
-    return this.document.documentElement;
+    return scrollerOf(this.document, control, view);
   }
+}
+
+export function scrollIntoViewFitting(
+  control: HTMLElement,
+  document: Document = control.ownerDocument,
+): void {
+  control.scrollIntoView?.({
+    block: fitsItsScroller(document, control) ? 'nearest' : 'start',
+    behavior: scrollBehaviorOf(document),
+  });
+}
+
+function scrollBehaviorOf(document: Document): ScrollBehavior {
+  const reduced =
+    document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  return reduced ? 'instant' : 'smooth';
+}
+
+function fitsItsScroller(document: Document, control: HTMLElement): boolean {
+  const view = document.defaultView;
+  if (view === null) {
+    return true;
+  }
+  const band = visibleBandOf(document, scrollerOf(document, control, view), view);
+  const margin = view.getComputedStyle(control);
+  const needed =
+    control.getBoundingClientRect().height +
+    (parseFloat(margin.scrollMarginTop) || 0) +
+    (parseFloat(margin.scrollMarginBottom) || 0);
+  return needed <= band.bottom - band.top;
+}
+
+function visibleBandOf(document: Document, scroller: HTMLElement, view: Window): VisibleBand {
+  const padding = view.getComputedStyle(scroller);
+  const paddingTop = parseFloat(padding.scrollPaddingTop) || 0;
+  const paddingBottom = parseFloat(padding.scrollPaddingBottom) || 0;
+  if (scroller === document.documentElement) {
+    return { top: paddingTop, bottom: view.innerHeight - paddingBottom };
+  }
+  const top = scroller.getBoundingClientRect().top + scroller.clientTop;
+  return { top: top + paddingTop, bottom: top + scroller.clientHeight - paddingBottom };
+}
+
+function scrollerOf(document: Document, control: HTMLElement, view: Window): HTMLElement {
+  for (
+    let node = control.parentElement;
+    node !== null && node !== document.body;
+    node = node.parentElement
+  ) {
+    const overflow = view.getComputedStyle(node).overflowY;
+    if (overflow === 'auto' || overflow === 'scroll') {
+      return node;
+    }
+  }
+  return document.documentElement;
 }
 
 function followsRow(row: Element, control: HTMLElement): boolean {

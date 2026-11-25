@@ -1063,6 +1063,33 @@ test.describe('Given the sign-in sheet open on a phone', () => {
       )
       .toBeLessThanOrEqual(CANVAS_ROUNDING);
   });
+
+  test('when the visitor asks for less motion, then its backdrop fades in over the short time of reduced motion', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openSignInDialog(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const sheet = page.locator('dialog.dialog--sheet[open]');
+    await expect(sheet).toBeVisible();
+
+    const fade = await sheet.evaluate((dialog) => {
+      const backdrop = getComputedStyle(dialog, '::backdrop');
+      const properties = backdrop.transitionProperty.split(',').map((name) => name.trim());
+      const durations = backdrop.transitionDuration.split(',').map((time) => parseFloat(time));
+      return {
+        duration: durations[properties.indexOf('opacity')],
+        reduced: parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue('--duration-reduced'),
+        ),
+      };
+    });
+
+    expect(fade.reduced).toBeGreaterThan(0);
+    expect(fade.duration).toBe(fade.reduced);
+  });
 });
 
 const PHOTO_ID = '0199f3e0-0000-7000-8000-00000000a001';

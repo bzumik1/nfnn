@@ -38,6 +38,8 @@ interface FrameWatch {
 }
 
 const COMPUTER = { width: 1280, height: 800 };
+const SMALL_PHONE = { width: 375, height: 667 };
+const LARGEST_SYSTEM_TEXT_PX = 53;
 const ROOM_FOR_THREE_CONNECTIONS = 1600;
 const ROOM_FOR_THE_OLDER_QUESTION = 1600;
 const ROOM_FOR_THE_CONNECTIONS = 1600;
@@ -702,6 +704,16 @@ async function confirmSigningOutTheIPhone(page: Page): Promise<Frame[]> {
   await expect(devices.getByRole('heading', { name: 'Přihlášená zařízení' })).toBeFocused();
   expectOnlyClosedUntilRemoved(frames, await rowsShownAgain(page));
   return frames;
+}
+
+async function showLargestSystemText(page: Page): Promise<void> {
+  await page.addInitScript((px) => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = `html { font-size: ${px}px; }`;
+      document.head.append(style);
+    });
+  }, LARGEST_SYSTEM_TEXT_PX);
 }
 
 async function openSettingsWithPasskeys(
@@ -1440,6 +1452,41 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
     expect(present(frames, 'add').length).toBe(frames.length);
     expect(frames.at(-1)?.boxes['row']).toBeNull();
     expect(risesAboveItsEndWithin(frames, 'empty', 'card')).toEqual([]);
+    expect(movesDownWithin(frames, 'add', 'card')).toEqual([]);
+  });
+
+  test('when they remove their last passkey on a phone 375 pt wide showing the largest accessibility text, where the empty text ends taller than the row stands once its question closes, then Přidat přístupový klíč below it never moves down, the frame in which the list is removed included', async ({
+    page,
+  }) => {
+    await showLargestSystemText(page);
+    await offerPasskeysAsAnIPhoneDoes(page);
+    await openSettingsWithPasskeys(page, [iphonePasskey]);
+    await page.setViewportSize(SMALL_PHONE);
+    const row = page.locator(iphonePasskeyRow);
+    await row.getByRole('button', { name: 'Odebrat' }).click();
+    const confirm = row.getByRole('button', { name: 'Ano, odebrat' });
+    await expect(confirm).toBeVisible();
+    await settled(page, 'app-account-card .ui-card');
+    const rowWithItsQuestion = (await row.boundingBox())?.height ?? Infinity;
+    const question = (await row.locator('.passkey-confirm').boundingBox())?.height ?? 0;
+    const rowOnceItsQuestionCloses = rowWithItsQuestion - question;
+
+    const frames = await framesWhile(
+      page,
+      {
+        row: iphonePasskeyRow,
+        card: 'app-account-card .ui-card',
+        empty: '.passkeys-empty',
+        add: '.passkeys > button.passkeys-action',
+      },
+      () => confirm.click(),
+      { removed: '.passkey-list' },
+    );
+
+    await expect(page.locator('.passkey-name')).toHaveCount(0);
+    expect(frames.at(-1)?.boxes['empty']?.height ?? 0).toBeGreaterThan(rowOnceItsQuestionCloses);
+    expect(present(frames, 'add').length).toBe(frames.length);
+    expect(frames.at(-1)?.boxes['row']).toBeNull();
     expect(movesDownWithin(frames, 'add', 'card')).toEqual([]);
   });
 
