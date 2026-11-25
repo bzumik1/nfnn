@@ -903,12 +903,27 @@ function closeColours(one: readonly number[], other: readonly number[]): boolean
   return one.every((channel, index) => Math.abs(channel - other[index]) <= 8);
 }
 
-for (const { phone, inset, radius } of [
-  { phone: 'an iPhone with Face ID', inset: '34px', radius: '39px' },
-  { phone: 'an iPhone SE, whose display has square corners', inset: '0px', radius: '0px' },
+for (const { phone, dppx, inset, radius } of [
+  { phone: 'an iPhone with Face ID at 3 dppx', dppx: 3, inset: '34px', radius: '39px' },
+  {
+    phone: 'an iPad or an iPhone 11 at 2 dppx, whose display corner is smaller',
+    dppx: 2,
+    inset: '20px',
+    radius: '18px',
+  },
+  {
+    phone: 'an iPhone SE, whose display has square corners',
+    dppx: 3,
+    inset: '0px',
+    radius: '0px',
+  },
 ]) {
   test.describe(`Given the app on the home screen of ${phone}, reading the news`, () => {
-    test.use({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' });
+    test.use({
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: dppx,
+      reducedMotion: 'no-preference',
+    });
 
     test.beforeEach(async ({ page }) => {
       await page.addInitScript((bottom) => {
@@ -951,7 +966,11 @@ for (const { phone, inset, radius } of [
 }
 
 test.describe('Given the app on the home screen of an iPhone with Face ID, the article opening over the news', () => {
-  test.use({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' });
+  test.use({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    reducedMotion: 'no-preference',
+  });
 
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
