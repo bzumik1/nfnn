@@ -5,6 +5,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   DOCUMENT,
   ElementRef,
   inject,
@@ -56,6 +57,7 @@ type Panel =
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const AUTHENTICATOR_QR_LEVEL = 'M';
 const SECRET_GROUP = 4;
+const PASSIVE_CAPTURE: AddEventListenerOptions = { passive: true, capture: true };
 
 @Component({
   selector: 'app-account-card',
@@ -87,6 +89,7 @@ export class AccountCard {
   private readonly document = inject(DOCUMENT);
   private readonly modality = inject(InputModality);
   private readonly focusAfterClosing = new FocusAfterRowLeaves(this.document, () => null);
+  private lastPressed: Node | null = null;
 
   readonly sessionEnded = output<void>();
 
@@ -173,6 +176,16 @@ export class AccountCard {
   protected newPassword = '';
   protected newPasswordConfirmation = '';
   protected code = '';
+
+  constructor() {
+    const pressed = (event: Event) => {
+      this.lastPressed = event.target instanceof Node ? event.target : null;
+    };
+    this.document.addEventListener('pointerdown', pressed, PASSIVE_CAPTURE);
+    inject(DestroyRef).onDestroy(() =>
+      this.document.removeEventListener('pointerdown', pressed, PASSIVE_CAPTURE),
+    );
+  }
 
   protected formatTime(isoInstant: string): string {
     return formatBankTime(isoInstant);
@@ -466,15 +479,19 @@ export class AccountCard {
         if (button === undefined) {
           return;
         }
-        button.focus();
+        button.focus({ preventScroll: true });
         this.focusAfterClosing.keepInViewOnceSettled(
           button,
           this.closingAbove(button),
-          pressedByPointer,
+          pressedByPointer && this.pressedLast(button),
         );
       },
       { injector: this.injector },
     );
+  }
+
+  private pressedLast(button: HTMLElement): boolean {
+    return this.lastPressed !== null && button.contains(this.lastPressed);
   }
 
   private closingAbove(button: HTMLElement): Animation[] {
