@@ -39,6 +39,7 @@ interface FrameWatch {
 const COMPUTER = { width: 1280, height: 800 };
 const ROOM_FOR_THREE_CONNECTIONS = 1600;
 const ROOM_FOR_THE_OLDER_QUESTION = 1600;
+const ROOM_FOR_THE_CONNECTIONS = 1600;
 const WATCHED_MS = 1000;
 const SUBPIXEL_PX = 0.5;
 const GONE_OPACITY = 0.01;
@@ -581,6 +582,25 @@ function dividersBrighterThanTheRow(frames: readonly Frame[]): string[] {
   });
 }
 
+function framesWithBothRowsAndOneDivider(frames: readonly Frame[]): number {
+  return frames.filter(({ boxes, lines }) => {
+    const row = boxes['row'];
+    const nextRow = boxes['nextRow'];
+    return (
+      row !== null &&
+      nextRow !== null &&
+      row.opacity > STANDING_OPACITY &&
+      nextRow.opacity > STANDING_OPACITY &&
+      lines.filter((line) => line.alpha > STANDING_OPACITY).length === 1
+    );
+  }).length;
+}
+
+async function giveTheConnectionsRoom(page: Page): Promise<void> {
+  const { width } = page.viewportSize()!;
+  await page.setViewportSize({ width, height: ROOM_FOR_THE_CONNECTIONS });
+}
+
 function moreThanOneStandingDivider(frames: readonly Frame[]): string[] {
   return frames.flatMap(({ at, lines }) => {
     const standing = lines.filter((line) => line.alpha > STANDING_OPACITY);
@@ -882,6 +902,7 @@ async function disconnectClaudeWatchingDividers(page: Page): Promise<Frame[]> {
 }
 
 async function disconnectChatGptWatchingDividers(page: Page): Promise<Frame[]> {
+  await giveTheConnectionsRoom(page);
   await openSettingsWithTwoConnections(page);
   const disconnect = page.locator(otherConnectionRow).getByRole('button', { name: 'Odpojit' });
   await disconnect.scrollIntoViewIfNeeded();
@@ -914,15 +935,41 @@ async function disconnectChatGptWatchingDividers(page: Page): Promise<Frame[]> {
 }
 
 async function bothConnectionsLeaveOnReturnWatchingDividers(page: Page): Promise<Frame[]> {
+  await giveTheConnectionsRoom(page);
   const disconnectElsewhere = await openSettingsWithTwoConnections(page);
   await openDonorSection(page, 'Můj přehled');
   disconnectElsewhere([claudeConnection.id, otherConnection.id]);
+  let answer = (): void => undefined;
+  const answered = new Promise<void>((resolve) => (answer = resolve));
+  await page.route(
+    (url) => url.pathname === '/api/donors/me/connections',
+    async (route) => {
+      await answered;
+      await route.fallback();
+    },
+  );
+  const asked = page.waitForRequest(
+    (request) => new URL(request.url()).pathname === '/api/donors/me/connections',
+  );
+  await openDonorSection(page, 'Údaje a zabezpečení');
+  await asked;
+  await expect(page.locator('.connection-client')).toHaveText(['claude.ai', 'chatgpt.com']);
+  await page.locator(otherConnectionRow).scrollIntoViewIfNeeded();
+  await settled(page, '.connections');
+  await expect(page.locator(claudeConnectionRow)).toBeInViewport({ ratio: 1 });
+  await expect(page.locator(otherConnectionRow)).toBeInViewport({ ratio: 1 });
   await recordLeavingRows(page, '.connection-slot', 'connection-slot--leaving');
 
   const frames = await framesWhile(
     page,
-    { row: claudeConnectionRow, nextRow: otherConnectionRow, card: '.connections' },
-    () => openDonorSection(page, 'Údaje a zabezpečení'),
+    {
+      row: claudeConnectionRow,
+      nextRow: otherConnectionRow,
+      card: '.connections',
+      client: `${claudeConnectionRow} .connection-client`,
+      nextClient: `${otherConnectionRow} .connection-client`,
+    },
+    async () => answer(),
     { removed: '.connection-list', dividers: '.connection, .connection-slot' },
   );
 
@@ -930,10 +977,12 @@ async function bothConnectionsLeaveOnReturnWatchingDividers(page: Page): Promise
   expect((await leavingRows(page)).map(({ id }) => id).sort()).toEqual(
     [claudeConnectionRow.slice(1), otherConnectionRow.slice(1)].sort(),
   );
-  expect(present(frames, 'nextRow').length).toBeGreaterThan(0);
+  expect(framesWithBothRowsAndOneDivider(frames)).toBeGreaterThan(0);
   expect(frames.at(-1)?.boxes['row']).toBeNull();
   expect(frames.at(-1)?.boxes['nextRow']).toBeNull();
   expect(moreThanOneStandingDivider(frames)).toEqual([]);
+  expect(movesWithinFromTheFirstFrame(frames, 'client', 'card')).toEqual([]);
+  expect(movesDownWithin(frames, 'nextClient', 'card')).toEqual([]);
   expect(dividersOffTheTopOf(frames, 'nextRow')).toEqual([]);
   expect(dividersThickerThanOnePx(frames)).toEqual([]);
   expect(dividersLeftAfterRemoval(frames)).toEqual([]);
@@ -1350,7 +1399,7 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
     expect(notOneDividerAboveTheLastRow(frames)).toEqual([]);
   });
 
-  test('when they remove their last passkey, then the empty text never stands above the place it ends at, the frame in which the list is removed included', async ({
+  test('when they remove their last passkey, then the empty text never stands above the place it ends at, the frame in which the list is removed included, and Přidat přístupový klíč below it never moves down while the row fades', async ({
     page,
   }) => {
     await openSettingsWithPasskeys(page, [iphonePasskey]);
@@ -1362,15 +1411,22 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
 
     const frames = await framesWhile(
       page,
-      { row: iphonePasskeyRow, card: 'app-account-card .ui-card', empty: '.passkeys-empty' },
+      {
+        row: iphonePasskeyRow,
+        card: 'app-account-card .ui-card',
+        empty: '.passkeys-empty',
+        add: '.passkeys > button.passkeys-action',
+      },
       () => confirm.click(),
       { removed: '.passkey-list' },
     );
 
     await expect(page.locator('.passkey-name')).toHaveCount(0);
     expect(present(frames, 'empty').length).toBeGreaterThan(0);
+    expect(present(frames, 'add').length).toBe(frames.length);
     expect(frames.at(-1)?.boxes['row']).toBeNull();
     expect(risesAboveItsEndWithin(frames, 'empty', 'card')).toEqual([]);
+    expect(movesDownWithin(frames, 'add', 'card')).toEqual([]);
   });
 
   test('when the second press of a double tap on Odpojit for claude.ai comes as its row is removed, then it reaches nothing where the first one was, and Odpojit of chatgpt.com answers again a moment later', async ({
@@ -1387,13 +1443,10 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
 });
 
 test.describe('Given a keyboard user in Údaje a zabezpečení with two connected applications', () => {
-  test.skip(
-    ({ browserName }) => browserName !== 'chromium',
-    "Tab stops are a computer's keyboard; the phone's keyboard focus is on Jakub's device checklist",
-  );
-
-  test.beforeEach(async ({ page }) => {
-    await page.setViewportSize(COMPUTER);
+  test.beforeEach(async ({ page, isMobile }) => {
+    if (!isMobile) {
+      await page.setViewportSize(COMPUTER);
+    }
   });
 
   test("when Tab moves from Odpojit of claude.ai to Odpojit of chatgpt.com, then claude.ai's row covers no part of the ring", async ({
