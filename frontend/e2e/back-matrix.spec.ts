@@ -384,7 +384,14 @@ for (const gate of MOTION_GATES) {
             await expect(page.getByRole('heading', { name: 'Zpráva 8' })).toBeVisible();
             const account = page.getByRole('banner').getByRole('button', { name: 'Účet' });
             const stillShown = await account.evaluate((button: HTMLElement) =>
-              Math.max(0, Math.floor(button.getBoundingClientRect().top + window.scrollY) - 1),
+              Math.max(
+                0,
+                Math.floor(
+                  button.getBoundingClientRect().top +
+                    window.scrollY -
+                    (Number.parseFloat(getComputedStyle(button).scrollMarginTop) || 0),
+                ) - 1,
+              ),
             );
             const top = await pageScroll(page).scrollTo(away ? SCROLLED_BY_PX : stillShown);
             expect((await placementOf(account)).shown, 'Účet shows before the sheet opens').toBe(
