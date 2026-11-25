@@ -286,6 +286,44 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
       expect(scrolled).toEqual([]);
     });
 
+    describe('when a finger pressed last', () => {
+      beforeEach(() => {
+        const modality = TestBed.inject(InputModality);
+        modality.start();
+        onTestFinished(() => modality.stop());
+        document.dispatchEvent(new Event('pointerdown'));
+      });
+
+      it('when code returns the focus to a button partly below the head, then the panel drops its scroll padding while the browser scrolls, so the button stays under the finger', () => {
+        let paddingWhenFocused: string | null = null;
+        const button = control('#below');
+        standAt(button, 130, 40);
+        button.addEventListener('focusin', () => (paddingWhenFocused = padding()));
+
+        button.focus();
+
+        expect(paddingWhenFocused).toBe('0px');
+      });
+
+      it('when two frames have passed since, then the panel takes its scroll padding again', async () => {
+        standAt(control('#below'), 130, 40);
+
+        control('#below').focus();
+        await nextFrame();
+        await nextFrame();
+
+        expect(padding()).toBe('');
+      });
+
+      it('when code moves the focus to a control hidden entirely under the head, then the panel keeps its scroll padding, so the browser brings it below the head', () => {
+        standAt(control('#below'), 100, 40);
+
+        control('#below').focus();
+
+        expect(padding()).toBe('');
+      });
+    });
+
     it('when a focused field already stands below the head, then the panel stays where it is', async () => {
       standAt(control('#below'), 170, 40);
 

@@ -30,6 +30,7 @@ function keepFocusClearOfHead(
   pressedByPointer: () => boolean,
 ): () => void {
   let pending = 0;
+  let restoring = 0;
   const uncover = (focused: HTMLElement) => {
     if (focused.ownerDocument.activeElement !== focused) {
       return;
@@ -41,6 +42,19 @@ function keepFocusClearOfHead(
       panel.scrollBy({ top: -covered, behavior: 'instant' });
     }
   };
+  const holdStillForTwoFrames = (focused: HTMLElement) => {
+    panel.style.setProperty(PADDING_TOP, '0px');
+    view.cancelAnimationFrame(restoring);
+    restoring = view.requestAnimationFrame(() => {
+      restoring = view.requestAnimationFrame(() => {
+        if (!head.contains(focused.ownerDocument.activeElement)) {
+          panel.style.removeProperty(PADDING_TOP);
+        }
+      });
+    });
+  };
+  const ofItsOwnPanel = (focused: HTMLElement) =>
+    focused.closest(SHEET_PANEL) === panel && focused.closest('dialog') === panel.closest('dialog');
   const focusEntered = (event: FocusEvent) => {
     const focused = event.target;
     if (!(focused instanceof HTMLElement) || focused === panel) {
@@ -50,14 +64,17 @@ function keepFocusClearOfHead(
       panel.style.setProperty(PADDING_TOP, '0px');
       return;
     }
-    if (
-      !pressedByPointer() &&
-      focused.closest(SHEET_PANEL) === panel &&
-      focused.closest('dialog') === panel.closest('dialog')
-    ) {
-      view.cancelAnimationFrame(pending);
-      pending = view.requestAnimationFrame(() => uncover(focused));
+    if (!ofItsOwnPanel(focused)) {
+      return;
     }
+    if (pressedByPointer()) {
+      if (focused.getBoundingClientRect().bottom > head.getBoundingClientRect().bottom) {
+        holdStillForTwoFrames(focused);
+      }
+      return;
+    }
+    view.cancelAnimationFrame(pending);
+    pending = view.requestAnimationFrame(() => uncover(focused));
   };
   const focusLeft = (event: FocusEvent) => {
     if (!(event.relatedTarget instanceof Node && head.contains(event.relatedTarget))) {
@@ -68,6 +85,7 @@ function keepFocusClearOfHead(
   panel.addEventListener('focusout', focusLeft);
   return () => {
     view.cancelAnimationFrame(pending);
+    view.cancelAnimationFrame(restoring);
     panel.removeEventListener('focusin', focusEntered);
     panel.removeEventListener('focusout', focusLeft);
     panel.style.removeProperty(PADDING_TOP);
