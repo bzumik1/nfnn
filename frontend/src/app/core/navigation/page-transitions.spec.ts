@@ -19,6 +19,7 @@ import { PagePlacement } from './page-placement';
 import { ACCOUNT_RETURNS_KEY } from './page-transitions';
 import { NavigationPreview } from './navigation-preview';
 import {
+  afterTwoFrames,
   FRAME_LATE_MS,
   HELD_WITHOUT_A_FRAME_MS,
   PAGE_LAYER_CLASS,
@@ -30,7 +31,6 @@ import {
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 import { closeOnceCovered, SHEET_STEPPING, sheetOnly, swipeBackInSheet } from './sheet-stepping';
 import { dressChrome } from './step-chrome';
-import { afterDrawn } from './swipe-drawing';
 
 @Component({ template: '' })
 class Blank {}
@@ -2098,6 +2098,97 @@ describe('Given the app on the home screen of a phone opened straight on the don
     }
   });
 
+  it('when the page clock ticks before a frame that comes 120 ms late, as when an iPhone SE paints for 120 ms, then that tick advances the close-in by one frame of the display too, so the late frame moves the page no more than an eighth of the gap', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnder();
+      const offsets = [offsetOf(over())];
+      for (const at of [16, 32]) {
+        frames.run(at);
+        offsets.push(offsetOf(over()));
+      }
+
+      await new Promise((done) => setTimeout(done, FRAME_LATE_MS + 20));
+      frames.run(152);
+      offsets.push(offsetOf(over()));
+      const steps = offsets.slice(1).map((offset, frame) => offset - offsets[frame]);
+
+      expect(Math.max(...steps), 'the longest step on the screen').toBeLessThanOrEqual(220 / 8);
+    } finally {
+      frames.restore();
+      document.documentElement.style.removeProperty('--duration-fast');
+    }
+  });
+
+  it('when the app draws steadily at 30 frames a second, as in Low Power Mode, then the close-in advances by its own frame of 33 ms, so the page is with the finger within 12 of its frames', async () => {
+    document.documentElement.style.setProperty('--duration-fast', '150ms');
+    const frames = framesByHand();
+    try {
+      const transitions = dressedTransitions();
+      document.dispatchEvent(new Event('pointerdown'));
+      for (let frame = 0; frame <= 11; frame++) {
+        frames.run(1000 + frame * 33);
+      }
+      const swipe = transitions.startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(220);
+      finishVisit();
+      await drawnUnder();
+
+      for (let frame = 1; frame <= 12; frame++) {
+        frames.run(2000 + frame * 33);
+      }
+
+      expect(offsetOf(over())).toBe(220);
+    } finally {
+      frames.restore();
+      document.documentElement.style.removeProperty('--duration-fast');
+    }
+  });
+
+  it('when a flick lets the page go before the page Zpět leads to is drawn, then its slide starts only after two drawn frames, never by the page clock in a visible page, so the copy just placed is painted before the slide’s clock runs', async () => {
+    let played = 0;
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      value: () => ({
+        finished: new Promise(() => undefined),
+        pause: () => undefined,
+        play: () => played++,
+      }),
+    });
+    const frames = framesByHand();
+    try {
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
+      await vi.dynamicImportSettled();
+      swipe.follow(120);
+      void swipe.settle({
+        completes: false,
+        from: 120,
+        to: 0,
+        durationMs: 150,
+        easing: 'ease-out',
+      });
+      finishVisit();
+      await drawnUnder();
+
+      await new Promise((done) => setTimeout(done, 2 * FRAME_LATE_MS + 50));
+      expect(played, 'the slide was let go by the clock').toBe(0);
+      frames.run(16);
+      expect(played).toBe(0);
+      frames.run(32);
+
+      await vi.waitFor(() => expect(played).toBeGreaterThan(0));
+    } finally {
+      frames.restore();
+      delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    }
+  });
+
   it('when a frame of the close-in comes 100 ms late, as when the article is drawn again behind the cover on an iPhone SE, then the close-in advances by one frame of the display, so that frame moves the page no more than an eighth of the gap either', async () => {
     document.documentElement.style.setProperty('--duration-fast', '150ms');
     const frames = framesByHand();
@@ -2860,25 +2951,46 @@ describe('Given a page that waits for two drawn frames before it starts a motion
     };
   }
 
-  it('when both frames are drawn, then it starts at the time of the second frame and says a frame was drawn then', async () => {
+  it('when both frames are drawn, then it goes on in the second', () => {
     const { view, draw } = framesOf();
-    const drawn = afterDrawn(view);
+    let wentOn = 0;
+    afterTwoFrames(view, document, () => wentOn++);
 
+    draw(5000);
+    expect(wentOn).toBe(0);
+    draw(5016);
+
+    expect(wentOn).toBe(1);
+  });
+
+  it('when the second frame of a visible page comes later than the clock’s bound, then it still waits for that frame and never goes on by the clock', async () => {
+    vi.useFakeTimers();
+    const { view, draw } = framesOf();
+    let wentOn = 0;
+    afterTwoFrames(view, document, () => wentOn++);
+    draw(5000);
+
+    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS + 100);
+    expect(wentOn).toBe(0);
+    draw(5600);
+
+    expect(wentOn).toBe(1);
+  });
+
+  it('when the page is hidden and no frame comes, then the page clock lets it go on after HELD_WITHOUT_A_FRAME_MS, once', async () => {
+    vi.useFakeTimers();
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    onTestFinished(() => visibility.mockRestore());
+    const { view, draw } = framesOf();
+    let wentOn = 0;
+    afterTwoFrames(view, document, () => wentOn++);
+
+    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS);
+    expect(wentOn).toBe(1);
     draw(5000);
     draw(5016);
 
-    await expect(drawn).resolves.toEqual({ at: 5016, drawn: true });
-  });
-
-  it('when the second frame comes later than a frame may be late, then it starts by the page clock and says no frame was drawn then', async () => {
-    vi.useFakeTimers();
-    const { view, draw } = framesOf();
-    const drawn = afterDrawn(view);
-    draw(5000);
-
-    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
-
-    await expect(drawn).resolves.toEqual({ at: expect.any(Number), drawn: false });
+    expect(wentOn).toBe(1);
   });
 });
 

@@ -494,20 +494,7 @@ export class PageTransitions {
         view.setTimeout(still, this.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
       );
     };
-    const releaseIfHidden = (): void => {
-      if (this.document.visibilityState === 'hidden') {
-        release();
-      }
-    };
-    const byClock = view.setTimeout(releaseIfHidden, HELD_WITHOUT_A_FRAME_MS);
-    view.requestAnimationFrame(() => {
-      view.clearTimeout(byClock);
-      const secondByClock = view.setTimeout(releaseIfHidden, HELD_WITHOUT_A_FRAME_MS);
-      view.requestAnimationFrame(() => {
-        view.clearTimeout(secondByClock);
-        release();
-      });
-    });
+    afterTwoFrames(view, this.document, release);
   }
 
   private loadedItsCode(): boolean {
@@ -523,6 +510,10 @@ export class PageTransitions {
 
   private now(): number {
     return this.document.defaultView?.performance.now() ?? 0;
+  }
+
+  measuredFrameMs(): number | null {
+    return this.frameGaps.length === 0 ? null : this.steadyFrameMs();
   }
 
   steadyFrameMs(): number {
@@ -812,9 +803,28 @@ export function nextFrame(view: Window, then: (now: number, drawn: boolean) => v
   view.requestAnimationFrame((now) => once(now, true));
 }
 
-export interface DrawnAt {
-  readonly at: number;
-  readonly drawn: boolean;
+export function afterTwoFrames(view: Window, document: Document, then: () => void): void {
+  let done = false;
+  const goOn = (): void => {
+    if (!done) {
+      done = true;
+      then();
+    }
+  };
+  const goOnIfHidden = (): void => {
+    if (document.visibilityState === 'hidden') {
+      goOn();
+    }
+  };
+  const byClock = view.setTimeout(goOnIfHidden, HELD_WITHOUT_A_FRAME_MS);
+  view.requestAnimationFrame(() => {
+    view.clearTimeout(byClock);
+    const secondByClock = view.setTimeout(goOnIfHidden, HELD_WITHOUT_A_FRAME_MS);
+    view.requestAnimationFrame(() => {
+      view.clearTimeout(secondByClock);
+      goOn();
+    });
+  });
 }
 
 export function publishSteadyFrame(view: Window, steadyBeforeMs: number): void {

@@ -11,7 +11,7 @@ import { BackDestination } from './back-target';
 import { SwipeSettle } from './back-swipe';
 import {
   BarCurve,
-  DrawnAt,
+  afterTwoFrames,
   BarItem,
   DISPLAY_FRAME_MS,
   FRAME_LATE_MS,
@@ -38,6 +38,7 @@ const SIDE_NAVIGATION = '.side-nav-panel';
 const TAB_BAR = 'app-tab-bar .tab-bar';
 const STANDING_PARTS = 'app-header, .side-nav-panel, app-tab-bar';
 const CATCH_UP_SPANS = 3;
+const FRAMES_STOPPED_AFTER_UNDRAWN_TICKS = 2;
 
 export interface CatchUp {
   readonly frameMs: number;
@@ -53,12 +54,17 @@ export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp):
   const startGap = catchUp.finger() - catchUp.from;
   let last: number | null = null;
   let elapsed = 0;
+  let undrawnInARow = 0;
   const closeIn = (now: number, drawn: boolean): void => {
     if (!catchUp.goesOn()) {
       return;
     }
+    undrawnInARow = drawn ? 0 : undrawnInARow + 1;
     const sinceLast = last === null ? catchUp.frameMs : Math.max(0, now - last);
-    elapsed += drawn ? Math.min(catchUp.frameMs, sinceLast) : sinceLast;
+    elapsed +=
+      undrawnInARow >= FRAMES_STOPPED_AFTER_UNDRAWN_TICKS
+        ? sinceLast
+        : Math.min(catchUp.frameMs, sinceLast);
     last = now;
     const spans = elapsed / closing;
     const left = startGap * (1 + spans) * Math.exp(-spans);
@@ -322,7 +328,7 @@ function followingFinger(
     ready = true;
     catchingUp = true;
     closeInOnFinger(view, stage.durationOf('--duration-fast'), {
-      frameMs: Math.min(stage.steadyFrameMs(), DISPLAY_FRAME_MS),
+      frameMs: stage.measuredFrameMs() ?? DISPLAY_FRAME_MS,
       finger: () => offset,
       from: shown,
       show: (at) => {
@@ -362,7 +368,7 @@ function followingFinger(
       ...barMotions(bar.items, end.completes ? 1 : 0, timing),
     ];
     motions.forEach((motion) => motion.pause());
-    await afterDrawn(view);
+    await new Promise<void>((drawn) => afterTwoFrames(view, stage.document, drawn));
     motions.forEach((motion) => motion.play());
     publishSteadyFrame(view, stage.steadyFrameMs());
     await Promise.race([
@@ -468,19 +474,4 @@ function barMotions(
 
 function parallaxAt(progress: number): string {
   return `translateX(calc(var(--page-parallax) * ${1 - progress}))`;
-}
-
-export function afterDrawn(view: Window, longestMs?: number): Promise<DrawnAt> {
-  const drawn = new Promise<DrawnAt>((done) =>
-    nextFrame(view, () => nextFrame(view, (at, inFrame) => done({ at, drawn: inFrame }))),
-  );
-  if (longestMs === undefined) {
-    return drawn;
-  }
-  return Promise.race([
-    drawn,
-    new Promise<DrawnAt>((done) =>
-      view.setTimeout(() => done({ at: view.performance.now(), drawn: false }), longestMs),
-    ),
-  ]);
 }
