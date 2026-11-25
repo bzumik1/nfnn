@@ -280,7 +280,6 @@ describe('Given a phone that animates and the news, with an article whose page a
   let arrived: string | null;
   let watch: MutationObserver;
   const arriving = (): string | null => arrived;
-  const later = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms));
 
   beforeEach(async () => {
     Object.defineProperty(window, 'matchMedia', {
@@ -317,9 +316,11 @@ describe('Given a phone that animates and the news, with an article whose page a
       }
     });
     watch.observe(document.body, { childList: true, subtree: true });
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     watch.disconnect();
     document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
     layer.remove();
@@ -330,11 +331,12 @@ describe('Given a phone that animates and the news, with an article whose page a
     await router.navigateByUrl('/aktuality/zahrada-pro-deti');
     layer.textContent = 'Načítáme stránku…';
     expect(readsInFlight).toHaveLength(1);
-    await later(PAGE_TRANSITION_LONGEST_MS / 4 + 20);
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 10);
+    expect(arriving(), 'the article was copied before its text came').toBeNull();
 
     layer.textContent = 'Zahrada pro děti';
     readsInFlight[0]();
-    await later(FRAME_LATE_MS + 50);
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
 
     expect(arriving()).toBe('Zahrada pro děti');
   });
@@ -342,7 +344,9 @@ describe('Given a phone that animates and the news, with an article whose page a
   it('when the text never comes, then the article still slides in within the time a frame may be late, with its waiting line', async () => {
     await router.navigateByUrl('/aktuality/zahrada-pro-deti');
     layer.textContent = 'Načítáme stránku…';
-    await later(PAGE_TRANSITION_LONGEST_MS / 4 + FRAME_LATE_MS + 50);
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + FRAME_LATE_MS - 10);
+    expect(arriving(), 'the article was copied before the time a frame may be late').toBeNull();
+    await vi.advanceTimersByTimeAsync(10 + FRAME_LATE_MS);
 
     expect(arriving()).toBe('Načítáme stránku…');
   });
