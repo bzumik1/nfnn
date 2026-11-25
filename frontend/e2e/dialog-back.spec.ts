@@ -197,6 +197,8 @@ interface SheetLeave {
   slideDuration: number;
   slideStartedAt: number | null;
   veilTo: number | null;
+  blurToken: number | null;
+  restingBlur: number | null;
   blurTo: number | null;
   removedAt: number | null;
 }
@@ -227,6 +229,8 @@ async function watchSheetLeave(page: Page): Promise<void> {
       slideDuration: 0,
       slideStartedAt: null,
       veilTo: null,
+      blurToken: null,
+      restingBlur: null,
       blurTo: null,
       removedAt: null,
     };
@@ -241,8 +245,6 @@ async function watchSheetLeave(page: Page): Promise<void> {
       }
       return null;
     };
-    const targetOf = (element: Element, property: RegExp): string | null =>
-      lastOf(element.getAnimations(), property);
     const backdropTargetOf = (element: Element, property: RegExp): string | null => {
       const own = new Set(element.getAnimations());
       return lastOf(
@@ -269,15 +271,15 @@ async function watchSheetLeave(page: Page): Promise<void> {
       record.slideFrom = downOf(keyframes[0]?.['translate']);
       record.slideTo = String(keyframes.at(-1)?.['translate'] ?? '');
       record.slideDuration = Number(slide?.effect?.getTiming().duration ?? 0);
-      const style = getComputedStyle(dialog);
       const behind = getComputedStyle(dialog, '::backdrop');
-      record.veilTo =
-        alphaOf(behind.backgroundColor) *
-        Number(backdropTargetOf(dialog, /^opacity$/) ?? behind.opacity);
-      record.blurTo = blurOf(
-        targetOf(dialog, /backdropFilter$/i) ??
-          (style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter')),
-      );
+      const behindFilter =
+        behind.backdropFilter || behind.getPropertyValue('-webkit-backdrop-filter');
+      const opacityTo = Number(backdropTargetOf(dialog, /^opacity$/) ?? behind.opacity);
+      record.veilTo = alphaOf(behind.backgroundColor) * opacityTo;
+      record.blurToken = parseFloat(getComputedStyle(dialog).getPropertyValue('--blur-backdrop'));
+      record.restingBlur = blurOf(behindFilter);
+      record.blurTo =
+        blurOf(backdropTargetOf(dialog, /backdropFilter$/i) ?? behindFilter) * opacityTo;
     }).observe(dialog, { attributes: true, attributeFilter: ['class'] });
     new MutationObserver((_, observer) => {
       if (!dialog.isConnected) {
@@ -300,6 +302,8 @@ function expectSlidOffTheScreen(leave: SheetLeave, from: number): void {
     leave.slideDuration - SLIDE_START_TOLERANCE_MS,
   );
   expect(leave.veilTo!).toBeLessThan(0.05);
+  expect(leave.blurToken!).toBeGreaterThan(0);
+  expect(leave.restingBlur!).toBeCloseTo(leave.blurToken!, 1);
   expect(leave.blurTo!).toBeLessThan(0.5);
 }
 
@@ -994,10 +998,17 @@ const CANVAS_ROUNDING = 1;
 
 async function backdropOverWhiteAtRest(sheet: Locator): Promise<number[] | null> {
   return sheet.evaluate((element) => {
+    const ownOrBackdrop = (animation: Animation): boolean => {
+      const effect = animation.effect as KeyframeEffect | null;
+      return (
+        effect?.target === element &&
+        (effect.pseudoElement === null || effect.pseudoElement === '::backdrop')
+      );
+    };
     if (
-      element
-        .getAnimations({ subtree: true })
-        .some((animation) => animation.playState === 'running')
+      document
+        .getAnimations()
+        .some((animation) => ownOrBackdrop(animation) && animation.playState === 'running')
     ) {
       return null;
     }
