@@ -714,6 +714,46 @@ describe("Given a donor's signed-in devices card", () => {
       ]);
     });
 
+    it('and the control that took the focus is taller than the room the window leaves it, then it is brought into view from its top once the row has left', async () => {
+      deviceAsksForLessMotion(true);
+      const leave = slowToLeave(UNKNOWN);
+      await signOutUnknown();
+      const focused = document.activeElement as HTMLElement;
+      const room = window.innerHeight;
+      focused.getBoundingClientRect = () => new DOMRect(0, -room, 300, room + 1);
+
+      await leave();
+
+      expect(scrolled).toEqual([
+        { element: focused, options: { block: 'start', behavior: 'instant' } },
+      ]);
+    });
+
+    it('and the device asks for less motion and the row has left before the control takes the focus, then that control jumps into view as it takes the focus', async () => {
+      deviceAsksForLessMotion(true);
+      const row = rowOf(UNKNOWN);
+      await ask(signOutButton(rows()[2]));
+      await confirmSignOut();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${UNKNOWN.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      row.getAnimations = () => [];
+      fixture.componentInstance['rowLeaves']({
+        target: row,
+        animationComplete: () => row.remove(),
+      });
+
+      await settle();
+
+      expect(document.activeElement).toBe(element('.devices-older-toggle'));
+      expect(scrolled).toEqual([
+        {
+          element: element('.devices-older-toggle'),
+          options: { block: 'nearest', behavior: 'instant' },
+        },
+      ]);
+    });
+
     it('and the donor moves the focus elsewhere before the row has left, then nothing scrolls', async () => {
       const leave = slowToLeave(UNKNOWN);
       await signOutUnknown();
