@@ -25,6 +25,7 @@ import {
 } from './page-transitions';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 import { closeOnceCovered, SHEET_STEPPING, sheetOnly, swipeBackInSheet } from './sheet-stepping';
+import { dressChrome } from './step-chrome';
 import { afterDrawn } from './swipe-drawing';
 
 @Component({ template: '' })
@@ -79,7 +80,7 @@ describe('Given a phone that animates and a page of the news with an article to 
       ],
     });
     router = TestBed.inject(Router);
-    transitions = TestBed.inject(PageTransitions);
+    transitions = dressedTransitions();
     transitions.sheets = SHEET_STEPPING;
     coveredAtGuards = [];
     router.events.subscribe((event) => {
@@ -306,7 +307,7 @@ describe('Given a phone that animates and the news, with an article whose page a
       ],
     });
     router = TestBed.inject(Router);
-    TestBed.inject(PageTransitions).sheets = SHEET_STEPPING;
+    dressedTransitions().sheets = SHEET_STEPPING;
     await router.navigateByUrl('/aktuality');
     arrived = null;
     watch = new MutationObserver(() => {
@@ -390,7 +391,7 @@ describe('Given a phone that animates, whose app has drawn frames at a steady pa
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     router = TestBed.inject(Router);
-    const transitions = TestBed.inject(PageTransitions);
+    const transitions = dressedTransitions();
     transitions.sheets = SHEET_STEPPING;
     for (let frame = 0; frame <= 10; frame++) {
       draw(1000 + frame * 16);
@@ -422,7 +423,7 @@ describe('Given a phone that animates, whose app has drawn frames at a steady pa
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     router = TestBed.inject(Router);
-    const transitions = TestBed.inject(PageTransitions);
+    const transitions = dressedTransitions();
     transitions.sheets = SHEET_STEPPING;
     for (let frame = 0; frame <= 10; frame++) {
       draw(1000 + frame * 16);
@@ -485,7 +486,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
       ],
     });
     router = TestBed.inject(Router);
-    TestBed.inject(PageTransitions);
+    dressedTransitions();
     vi.useFakeTimers();
     await router.navigateByUrl('/aktuality');
     await router.navigateByUrl('/aktuality/clanek');
@@ -820,7 +821,7 @@ describe('Given a phone that animates and an article opened from the news, which
     });
     router = TestBed.inject(Router);
     router.setUpLocationChangeListener();
-    TestBed.inject(PageTransitions);
+    dressedTransitions();
     vi.useFakeTimers();
     await router.navigateByUrl('/aktuality');
     await router.navigateByUrl('/aktuality/clanek');
@@ -959,10 +960,10 @@ describe('Given the app on the home screen of a phone, scrolling restored, with 
       ],
     });
     router = TestBed.inject(Router);
-    TestBed.inject(PageTransitions);
+    dressedTransitions();
     document.body.append(document.createElement('app-scrolled-shell'));
     TestBed.inject(ApplicationRef).bootstrap(ScrolledShell);
-    await TestBed.inject(PageTransitions).loadDrawing();
+    await dressedTransitions().loadDrawing();
     await router.navigateByUrl('/aktuality');
     vi.useFakeTimers();
     await router.navigateByUrl('/aktuality/clanek');
@@ -980,7 +981,7 @@ describe('Given the app on the home screen of a phone, scrolling restored, with 
 
   it('when a finger starts dragging it back as soon as it has slid in, then the list stays under the finger past the moment the article would have been revealed', async () => {
     expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
-    const swipe = TestBed.inject(PageTransitions).startSwipe(
+    const swipe = dressedTransitions().startSwipe(
       TestBed.inject(BackTarget).destination('/aktuality'),
     );
 
@@ -1017,7 +1018,7 @@ describe('Given the app on the home screen of a phone, scrolling restored, on th
       ],
     });
     router = TestBed.inject(Router);
-    TestBed.inject(PageTransitions);
+    dressedTransitions();
     document.body.append(document.createElement('app-scrolled-shell'));
     TestBed.inject(ApplicationRef).bootstrap(ScrolledShell);
     vi.useFakeTimers();
@@ -1209,9 +1210,9 @@ describe('Given the app on the home screen of a phone, where the news led to the
       ],
     });
     router = TestBed.inject(Router);
-    transitions = TestBed.inject(PageTransitions);
+    transitions = dressedTransitions();
     transitions.sheets = SHEET_STEPPING;
-    await TestBed.inject(PageTransitions).loadDrawing();
+    await dressedTransitions().loadDrawing();
     await router.navigateByUrl('/aktuality');
   });
 
@@ -1866,7 +1867,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
         },
       ],
     });
-    await TestBed.inject(PageTransitions).loadDrawing();
+    await dressedTransitions().loadDrawing();
     await TestBed.inject(Router).navigateByUrl('/darce/prehled');
     paint(layer, { title: 'Přehled' });
   });
@@ -1911,7 +1912,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
   }
 
   it('when a finger takes the page before the page Zpět leads to is drawn, then the page stays over it, never over an empty ground', async () => {
-    const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+    const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
     await vi.dynamicImportSettled();
 
     swipe.follow(120);
@@ -1923,7 +1924,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
     document.documentElement.style.setProperty('--duration-fast', '150ms');
     const frames = framesByHand();
     try {
-      const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
       await vi.dynamicImportSettled();
       swipe.follow(120);
       finishVisit();
@@ -1955,7 +1956,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
     document.documentElement.style.setProperty('--duration-fast', '150ms');
     const frames = framesByHand();
     try {
-      const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
       await vi.dynamicImportSettled();
       swipe.follow(120);
       finishVisit();
@@ -1969,7 +1970,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
   });
 
   it('when the page Zpět leads to is drawn under a page that has not moved yet, then the header of the page under it shows no more than the page does, so its avatar never flashes', async () => {
-    const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+    const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
     await vi.dynamicImportSettled();
     swipe.follow(39);
 
@@ -1988,7 +1989,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
       value: () => motionEnding(Promise.resolve()),
     });
     try {
-      const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+      const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
       await vi.dynamicImportSettled();
       swipe.follow(300);
       const left = swipe.settle({
@@ -2008,7 +2009,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
   });
 
   it('when a finger takes the page, then the page Zpět leads to is drawn under cover and then lies under the finger', async () => {
-    TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' });
+    dressedTransitions().startSwipe({ kind: 'parent', path: '/' });
     await vi.dynamicImportSettled();
     const under = () =>
       withOrdinarySpaces(
@@ -2098,7 +2099,7 @@ describe('Given the app on a wide screen, where the header and the side navigati
       ],
     });
     router = TestBed.inject(Router);
-    transitions = TestBed.inject(PageTransitions);
+    transitions = dressedTransitions();
     transitions.sheets = SHEET_STEPPING;
     await transitions.loadDrawing();
     await router.navigateByUrl('/aktuality');
@@ -2230,7 +2231,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
       ],
     });
     router = TestBed.inject(Router);
-    await TestBed.inject(PageTransitions).loadDrawing();
+    await dressedTransitions().loadDrawing();
     await router.navigateByUrl('/darce/prehled');
     paint(layer, { title: 'Přehled' });
   });
@@ -2244,7 +2245,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
   });
 
   it('when the finger lets go past half before the router has come to rest, then the still copy keeps covering the page until it has, and the swipe ends without a step', async () => {
-    const swipe = TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' })!;
+    const swipe = dressedTransitions().startSwipe({ kind: 'parent', path: '/' })!;
     swipe.follow(300);
     const left = swipe.settle({
       completes: true,
@@ -2352,7 +2353,7 @@ describe('Given the app on a phone with a sheet open at its list', () => {
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
       ],
     });
-    transitions = TestBed.inject(PageTransitions);
+    transitions = dressedTransitions();
     transitions.sheets = SHEET_STEPPING;
   });
 
@@ -2643,7 +2644,7 @@ describe('Given a step of the app, whose top page has the display’s corners on
   it('when it runs from the home screen of an iPhone, then its layer says so, so only there the top page gets the corners', () => {
     homeScreen(true, false);
 
-    const overlay = TestBed.inject(PageTransitions).overlay('push');
+    const overlay = dressedTransitions().overlay('push');
 
     expect(overlay.classList).toContain(`${PAGE_TRANSITION_CLASS}--home-screen`);
     overlay.remove();
@@ -2652,7 +2653,7 @@ describe('Given a step of the app, whose top page has the display’s corners on
   it('when it runs as an installed app on another system, then its layer says so too', () => {
     homeScreen(false, true);
 
-    const overlay = TestBed.inject(PageTransitions).overlay('pop');
+    const overlay = dressedTransitions().overlay('pop');
 
     expect(overlay.classList).toContain(`${PAGE_TRANSITION_CLASS}--home-screen`);
     overlay.remove();
@@ -2661,9 +2662,15 @@ describe('Given a step of the app, whose top page has the display’s corners on
   it('when it runs in a browser tab, then its layer does not, so no page of the step is rounded', () => {
     homeScreen(false, false);
 
-    const overlay = TestBed.inject(PageTransitions).overlay('push');
+    const overlay = dressedTransitions().overlay('push');
 
     expect(overlay.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--home-screen`);
     overlay.remove();
   });
 });
+
+function dressedTransitions(): PageTransitions {
+  const transitions = TestBed.inject(PageTransitions);
+  transitions.dressing = dressChrome;
+  return transitions;
+}

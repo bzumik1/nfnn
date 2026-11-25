@@ -21,6 +21,8 @@ import {
 } from '@angular/router';
 import { KeptTabPages } from '../../core/navigation/kept-tab-pages';
 import { PageFocus } from '../../core/navigation/page-focus';
+import { PageTransitions } from '../../core/navigation/page-transitions';
+import { dressChrome } from '../../core/navigation/step-chrome';
 import { chromeOf, RouteChrome } from '../../core/navigation/route-chrome';
 import { AppHeader } from '../app-header/app-header';
 import { TabBar } from '../tab-bar/tab-bar';
@@ -47,6 +49,7 @@ export class PublicShell {
   protected readonly roomForTabBar = computed(() => this.tabBar() && !this.chrome().landing);
 
   constructor() {
+    inject(PageTransitions).dressing ??= dressChrome;
     inject(SetupRedirect).checkOnce();
     const keptTabPages = inject(KeptTabPages);
     const destroyRef = inject(DestroyRef);

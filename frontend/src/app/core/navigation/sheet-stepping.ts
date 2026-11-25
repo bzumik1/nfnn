@@ -20,6 +20,7 @@ import {
   STANDING_DIALOG,
 } from './page-transitions';
 import { stillCopyOf } from './still-copy';
+import { addTitle, barItem } from './step-chrome';
 
 const SHEET_HEAD = 'app-sheet-head';
 const HEADS_HELD_CLASS = `${PAGE_TRANSITION_CLASS}--heads-held`;
@@ -144,16 +145,16 @@ function holdHeads(
   overlay.classList.toggle(HEADS_HELD_CLASS, held);
   if (!held) {
     if (arriving !== null) {
-      stage.addTitle(titles, out?.querySelector<HTMLElement>(SHEET_TITLE), true, false);
-      stage.addTitle(titles, into?.querySelector<HTMLElement>(SHEET_TITLE), false, false);
+      addTitle(stage, titles, out?.querySelector<HTMLElement>(SHEET_TITLE), true, false);
+      addTitle(stage, titles, into?.querySelector<HTMLElement>(SHEET_TITLE), false, false);
     }
     return [];
   }
   const standing = standingCopy(bar, into, arriving.box);
   const leavingHead = standingCopy(bar, out, leaving.box);
-  stage.addTitle(titles, leavingHead.querySelector<HTMLElement>(SHEET_TITLE), true);
-  stage.addTitle(titles, standing.querySelector<HTMLElement>(SHEET_TITLE), false);
-  return [stage.barItem(standing, 'still'), stage.barItem(leavingHead, 'out')];
+  addTitle(stage, titles, leavingHead.querySelector<HTMLElement>(SHEET_TITLE), true);
+  addTitle(stage, titles, standing.querySelector<HTMLElement>(SHEET_TITLE), false);
+  return [barItem(standing, 'still'), barItem(leavingHead, 'out')];
 }
 
 function headOf(page: PlacedPage | null): HTMLElement | null {

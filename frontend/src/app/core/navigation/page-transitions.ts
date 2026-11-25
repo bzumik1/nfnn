@@ -46,8 +46,6 @@ export const ACCOUNT_RETURNS_KEY = 'nfnnAppAccount';
 
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 const PACE_SAMPLED_ON = ['pointerdown', 'touchstart', 'keydown'];
-const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
-const BAR_ITEMS = ['.back-button', '.account-button'];
 export const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
 export const STANDING_DIALOG = 'dialog[open]:not(.dialog--leaving)';
 export const STACKED_DIALOG_CLASS = 'dialog--stacked';
@@ -57,18 +55,9 @@ const HOME_SCREEN_CLASS = `${PAGE_TRANSITION_CLASS}--home-screen`;
 const HELD_CLASS = `${PAGE_TRANSITION_CLASS}--held`;
 export const ON_GROUND_CLASS = `${PAGE_TRANSITION_CLASS}--on-ground`;
 export const IN_SHEET_CLASS = `${PAGE_TRANSITION_CLASS}--in-sheet`;
-const GROUND_CHANGES_CLASS = `${PAGE_TRANSITION_CLASS}--ground-changes`;
-const SHEET_LOOKS = '.dialog--sheet, app-sheet-head';
 export const SHEET_PANEL = '.dialog-panel';
 export const PANEL_SCROLL = 'panelScroll';
-const MOVING_CLASS = `${PAGE_TRANSITION_CLASS}--moving`;
-const TITLES_FOLLOW_CLASS = `${PAGE_TRANSITION_CLASS}--titles-follow`;
-const TITLE_CLASS = `${PAGE_TRANSITION_CLASS}__title`;
-const TITLE_TEXT_CLASS = `${PAGE_TRANSITION_CLASS}__title-text`;
-const SHOWN_EDGE_TITLE = '.edge-title--shown';
-const EDGE_TITLE_TEXT = '.edge-title-text';
-const TITLE_FADE_AT = '--page-title-fade-at';
-const TITLE_TRAVEL = '--page-title-travel';
+export const MOVING_CLASS = `${PAGE_TRANSITION_CLASS}--moving`;
 
 export interface Running {
   readonly kind: PageTransitionKind;
@@ -111,12 +100,6 @@ export interface KeptSheet {
   readonly owner: object;
 }
 
-interface StepMeasure {
-  readonly over: HTMLElement | null;
-  readonly width: number;
-  readonly fadeAt: number;
-}
-
 export interface FollowedTitle {
   readonly title: HTMLElement;
   readonly text: HTMLElement;
@@ -132,6 +115,13 @@ export interface BarItem {
 }
 
 type SwipeDrawing = typeof import('./swipe-drawing');
+
+export type DressChrome = (
+  stage: PageTransitions,
+  overlay: HTMLElement,
+  leaving: PlacedPage | null,
+  arriving: PlacedPage | null,
+) => BarItem[];
 
 export interface SheetLooks {
   stepInSheet(stage: PageTransitions, step: SheetStep): void;
@@ -165,6 +155,7 @@ export class PageTransitions {
   private readonly injector = inject(Injector);
   drawing: SwipeDrawing | null = null;
   sheets: SheetLooks | null = null;
+  dressing: DressChrome | null = null;
   private readonly lent: (() => void)[] = [];
   private readonly kept = new Map<number, KeptPage>();
   readonly keptSheets = new Map<number, KeptSheet>();
@@ -178,7 +169,7 @@ export class PageTransitions {
   private readonly step = signal<Running | null>(null);
   readonly stepping = computed(() => this.step() !== null);
   finishing: number | null = null;
-  private titleFrame: number | null = null;
+  titleFrame: number | null = null;
   private readonly frameGaps: number[] = [];
   private samplingRound = 0;
 
@@ -667,105 +658,10 @@ export class PageTransitions {
     leaving: PlacedPage | null,
     arriving: PlacedPage | null,
   ): BarItem[] {
-    const leavingTabBar = leaving?.copy?.querySelector('app-tab-bar') != null;
-    const arrivingTabBar =
-      arriving?.copy == null || arriving.copy.querySelector('app-tab-bar') !== null;
-    overlay.classList.toggle(
-      `${PAGE_TRANSITION_CLASS}--under-tab-bar`,
-      leavingTabBar && arrivingTabBar,
-    );
-    if (arriving !== null) {
-      const onGround = this.isSheet(leaving) && this.isSheet(arriving);
-      overlay.classList.toggle(ON_GROUND_CLASS, onGround);
-      overlay.classList.toggle(
-        GROUND_CHANGES_CLASS,
-        onGround &&
-          !overlay.classList.contains(IN_SHEET_CLASS) &&
-          leaving !== null &&
-          this.sheetStandsOn(leaving) !== this.sheetStandsOn(arriving),
-      );
-    }
-    this.decideCorners(overlay, leaving, arriving);
-    overlay.querySelector(`.${PAGE_TRANSITION_CLASS}__bar`)?.remove();
-    const bar = this.document.createElement('div');
-    bar.className = `${PAGE_TRANSITION_CLASS}__bar`;
-    overlay.append(bar);
-    const titles: FollowedTitle[] = [];
-    const heads = this.sheets?.holdHeads(this, overlay, bar, leaving, arriving, titles) ?? [];
-    const arrivingPart = this.barPart(bar, arriving);
-    const leavingPart = this.barPart(bar, leaving);
-    this.addTitle(titles, leavingPart?.querySelector<HTMLElement>(SHOWN_EDGE_TITLE), true);
-    this.addTitle(titles, arrivingPart?.querySelector<HTMLElement>(SHOWN_EDGE_TITLE), false);
-    this.followTitles(overlay, titles);
-    return [
-      ...heads,
-      ...BAR_ITEMS.flatMap((selector) => {
-        const out = leavingPart?.querySelector<HTMLElement>(selector) ?? null;
-        const into = arrivingPart?.querySelector<HTMLElement>(selector) ?? null;
-        if (out !== null && into !== null && this.looksAlike(out, into)) {
-          into.remove();
-          return [this.barItem(out, 'still')];
-        }
-        return [
-          ...(out === null ? [] : [this.barItem(out, into === null ? 'out-early' : 'out')]),
-          ...(into === null ? [] : [this.barItem(into, 'in')]),
-        ];
-      }),
-    ];
+    return this.dressing?.(this, overlay, leaving, arriving) ?? [];
   }
 
-  addTitle(
-    titles: FollowedTitle[],
-    title: HTMLElement | null | undefined,
-    leaves: boolean,
-    travels = true,
-  ): void {
-    if (title == null || !this.compact()) {
-      return;
-    }
-    if (!travels) {
-      title.classList.add(TITLE_CLASS);
-      titles.push({ title, text: title, leaves, travels });
-      return;
-    }
-    let text = title.querySelector<HTMLElement>(EDGE_TITLE_TEXT);
-    if (text === null) {
-      text = this.document.createElement('span');
-      text.append(...Array.from(title.childNodes));
-      title.append(text);
-    }
-    title.classList.add(TITLE_CLASS);
-    text.classList.add(TITLE_TEXT_CLASS);
-    titles.push({ title, text, leaves, travels });
-  }
-
-  private followTitles(overlay: HTMLElement, titles: readonly FollowedTitle[]): void {
-    this.stopTitles();
-    const view = this.document.defaultView;
-    overlay.classList.toggle(TITLES_FOLLOW_CLASS, titles.length > 0);
-    if (view === null || titles.length === 0) {
-      return;
-    }
-    const pushes = overlay.classList.contains(`${PAGE_TRANSITION_CLASS}--push`);
-    titles.forEach((title) => showTitle(title, 0, 0, pushes));
-    if (typeof view.requestAnimationFrame !== 'function') {
-      return;
-    }
-    let measured: StepMeasure | null = null;
-    const follow = (): void => {
-      this.titleFrame = null;
-      if (!overlay.isConnected) {
-        return;
-      }
-      const step = (measured ??= measureStep(overlay, this.document.documentElement, view));
-      const progress = stepProgress(overlay, step, pushes, view);
-      titles.forEach((title) => showTitle(title, progress, step.fadeAt, pushes));
-      this.titleFrame = view.requestAnimationFrame(follow);
-    };
-    this.titleFrame = view.requestAnimationFrame(follow);
-  }
-
-  private stopTitles(): void {
+  stopTitles(): void {
     if (this.titleFrame !== null) {
       this.document.defaultView?.cancelAnimationFrame(this.titleFrame);
       this.titleFrame = null;
@@ -779,71 +675,6 @@ export class PageTransitions {
       this.lent.push(giveBack);
     }
     return kept;
-  }
-
-  private decideCorners(
-    overlay: HTMLElement,
-    leaving: PlacedPage | null,
-    arriving: PlacedPage | null,
-  ): void {
-    if (
-      overlay.dataset['corners'] === undefined &&
-      overlay.querySelector(`.${PAGE_TRANSITION_CLASS}__page--over`) !== null
-    ) {
-      overlay.dataset['corners'] = String(
-        leaving?.copy != null &&
-          arriving?.copy != null &&
-          !overlay.classList.contains(ON_GROUND_CLASS),
-      );
-    }
-  }
-
-  private barPart(bar: HTMLElement, page: PlacedPage | null): HTMLElement | null {
-    const header = page?.copy?.querySelector('app-header') ?? null;
-    if (page === null || header === null || this.sheetStandsOn(page)) {
-      return null;
-    }
-    const part = this.document.createElement('div');
-    part.className = `${PAGE_TRANSITION_CLASS}__bar-part`;
-    part.style.top = `${-page.scrollY}px`;
-    part.append(header.cloneNode(true));
-    bar.append(part);
-    return part;
-  }
-
-  private isSheet(page: PlacedPage | null): boolean {
-    return page?.box.querySelector(SHEET_LOOKS) != null;
-  }
-
-  private sheetStandsOn(page: PlacedPage): boolean {
-    return page.box.querySelector(`.${PAGE_TRANSITION_CLASS}__sheet`) !== null;
-  }
-
-  barItem(element: HTMLElement, curve: BarCurve): BarItem {
-    element.classList.add(`${PAGE_TRANSITION_CLASS}__bar-item--${curve}`);
-    return { element, curve };
-  }
-
-  private looksAlike(first: HTMLElement, second: HTMLElement): boolean {
-    const view = this.document.defaultView;
-    if (view === null) {
-      return false;
-    }
-    const one = view.getComputedStyle(first);
-    const other = view.getComputedStyle(second);
-    const box = first.getBoundingClientRect();
-    const otherBox = second.getBoundingClientRect();
-    return (
-      LOOKS.every(
-        (property) => one.getPropertyValue(property) === other.getPropertyValue(property),
-      ) &&
-      first.textContent === second.textContent &&
-      first.querySelector('img')?.getAttribute('src') ===
-        second.querySelector('img')?.getAttribute('src') &&
-      box.left === otherBox.left &&
-      box.top === otherBox.top &&
-      box.width === otherBox.width
-    );
   }
 
   durationOf(name: string): number {
@@ -894,67 +725,6 @@ export class PageTransitions {
       this.sampleFramePace();
     }
   }
-}
-
-function measureStep(overlay: HTMLElement, root: HTMLElement, view: Window): StepMeasure {
-  const over = overlay.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`);
-  const fadeAt = Number.parseFloat(view.getComputedStyle(root).getPropertyValue(TITLE_FADE_AT));
-  return {
-    over,
-    width: over === null ? view.innerWidth : over.offsetWidth || view.innerWidth,
-    fadeAt: Number.isFinite(fadeAt) ? fadeAt : 0,
-  };
-}
-
-function stepProgress(
-  overlay: HTMLElement,
-  { over, width }: StepMeasure,
-  pushes: boolean,
-  view: Window,
-): number {
-  if (over === null || (pushes && !overlay.classList.contains(MOVING_CLASS))) {
-    return 0;
-  }
-  const transform = view.getComputedStyle(over).transform;
-  const Matrix = (view as Window & { DOMMatrixReadOnly?: typeof DOMMatrixReadOnly })
-    .DOMMatrixReadOnly;
-  const offset =
-    typeof Matrix === 'function' && transform !== '' && transform !== 'none'
-      ? new Matrix(transform).m41
-      : 0;
-  const along = width > 0 ? Math.min(1, Math.max(0, offset / width)) : 0;
-  return pushes ? 1 - along : along;
-}
-
-function showTitle(
-  { title, text, leaves, travels }: FollowedTitle,
-  progress: number,
-  fadeAt: number,
-  pushes: boolean,
-): void {
-  const opacity = leaves ? fadingOut(progress, fadeAt) : fadingIn(progress, fadeAt);
-  title.style.opacity = String(opacity);
-  if (travels) {
-    const travel = (pushes ? -1 : 1) * (leaves ? progress : progress - 1);
-    text.style.setProperty(TITLE_TRAVEL, String(travel));
-  }
-}
-
-function fadingOut(progress: number, fadeAt: number): number {
-  if (fadeAt <= 0) {
-    return progress > 0 ? 0 : 1;
-  }
-  return Math.min(1, Math.max(0, 1 - progress / fadeAt));
-}
-
-function fadingIn(progress: number, fadeAt: number): number {
-  if (fadeAt <= 0) {
-    return progress > 0 ? 1 : 0;
-  }
-  if (fadeAt >= 1) {
-    return progress >= 1 ? 1 : 0;
-  }
-  return Math.min(1, Math.max(0, (progress - fadeAt) / (1 - fadeAt)));
 }
 
 function startHeldMotions(overlay: HTMLElement): void {
