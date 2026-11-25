@@ -135,11 +135,23 @@ export class FocusAfterRowLeaves {
       this.revealSpan(from, to);
       return;
     }
-    void Promise.allSettled(motions.map((motion) => motion.finished)).then(() => {
+    const longest = Math.max(
+      0,
+      ...motions.map((motion) => Number(motion.effect?.getComputedTiming().endTime ?? 0)),
+    );
+    let done = false;
+    const reveal = (): void => {
+      if (done) {
+        return;
+      }
+      done = true;
+      clearTimeout(fallback);
       if (this.document.activeElement === focused && from.isConnected) {
         this.revealSpan(from, to);
       }
-    });
+    };
+    void Promise.allSettled(motions.map((motion) => motion.finished)).then(reveal);
+    const fallback = setTimeout(reveal, (Number.isFinite(longest) ? longest : 0) + LEAVE_GRACE_MS);
   }
 
   private revealSpan(from: HTMLElement, to: HTMLElement | null): void {

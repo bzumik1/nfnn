@@ -875,6 +875,32 @@ describe('Given the only row whose leave leaves no control to move the focus to'
     );
   });
 
+  it('when the result moves in without end, then it is revealed anyway once the grace after its motion has passed', async () => {
+    const focus = focusAfter();
+    const row = only();
+    standing(result, -300, 40);
+    standing(add, -250, 40);
+    result.getAnimations = () =>
+      [
+        {
+          finished: new Promise<void>(() => undefined),
+          effect: { getComputedTiming: () => ({ endTime: Infinity }) },
+        },
+      ] as never;
+    focus.rowLeaving(row);
+    focus.focusInPlace(region, { row, from: result, to: add });
+    focus.rowLeaveEnded(row);
+    await removed(row);
+
+    await vi.waitFor(
+      () =>
+        expect(scrolled).toEqual([
+          { element: result, options: { block: 'start', behavior: 'smooth' } },
+        ]),
+      { timeout: 2000 },
+    );
+  });
+
   it('when the reveal names a row it was not told about, then nothing scrolls', async () => {
     const focus = focusAfter();
     const row = only();
