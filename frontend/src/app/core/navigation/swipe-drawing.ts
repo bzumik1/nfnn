@@ -10,8 +10,8 @@ import { pushWithinSection } from './page-transition-kind';
 import { BackDestination } from './back-target';
 import { SwipeSettle } from './back-swipe';
 import {
-  afterDrawn,
   BarCurve,
+  DrawnAt,
   BarItem,
   FRAME_LATE_MS,
   liveDialogs,
@@ -28,6 +28,7 @@ import {
   SHOWN_DIALOG,
   SwipePreview,
 } from './page-transitions';
+import { sheetOnly, sheetOverlay, standingSheetCopy } from './sheet-stepping';
 
 const SECTION_LINKS = 'nav a[href]';
 const NOT_COPIED = 'iframe, video, audio, object, embed, dialog';
@@ -253,14 +254,14 @@ export function startSwipe(
 
 export function startSheetSwipe(stage: PageTransitions, under: HTMLElement): SwipePreview | null {
   const view = stage.document.defaultView;
-  const shown = stage.standingSheetCopy();
+  const shown = standingSheetCopy(stage);
   if (view === null || shown === null || stage.running !== null || !motionAllowed(view)) {
     return null;
   }
-  const overlay = stage.sheetOverlay('pop');
+  const overlay = sheetOverlay(stage, 'pop');
   overlay.classList.add(`${PAGE_TRANSITION_CLASS}--swipe`);
-  const arriving = stage.place(overlay, stage.sheetOnly(under), 'under');
-  const leaving = stage.place(overlay, stage.sheetOnly(shown), 'over');
+  const arriving = stage.place(overlay, sheetOnly(stage, under), 'under');
+  const leaving = stage.place(overlay, sheetOnly(stage, shown), 'over');
   const running: Running = { kind: 'pop', overlay, swiping: true, sheet: shown, revealed: true };
   stage.running = running;
   stage.sheetUnder(shown);
@@ -464,4 +465,19 @@ function barMotions(
 
 function parallaxAt(progress: number): string {
   return `translateX(calc(var(--page-parallax) * ${1 - progress}))`;
+}
+
+export function afterDrawn(view: Window, longestMs?: number): Promise<DrawnAt> {
+  const drawn = new Promise<DrawnAt>((done) =>
+    nextFrame(view, () => nextFrame(view, (at, inFrame) => done({ at, drawn: inFrame }))),
+  );
+  if (longestMs === undefined) {
+    return drawn;
+  }
+  return Promise.race([
+    drawn,
+    new Promise<DrawnAt>((done) =>
+      view.setTimeout(() => done({ at: view.performance.now(), drawn: false }), longestMs),
+    ),
+  ]);
 }

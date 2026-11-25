@@ -49,31 +49,22 @@ const PACE_SAMPLED_ON = ['pointerdown', 'touchstart', 'keydown'];
 const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
 const BAR_ITEMS = ['.back-button', '.account-button'];
 export const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
-const STANDING_DIALOG = 'dialog[open]:not(.dialog--leaving)';
+export const STANDING_DIALOG = 'dialog[open]:not(.dialog--leaving)';
 export const STACKED_DIALOG_CLASS = 'dialog--stacked';
 const DRAWN_DIALOG = `${STANDING_DIALOG}:not(.${STACKED_DIALOG_CLASS})`;
-const SHEET_HEAD = 'app-sheet-head';
-const BACKDROP_LOOKS = [
-  'background-color',
-  'opacity',
-  'backdrop-filter',
-  '-webkit-backdrop-filter',
-];
 const SHEET_UNDER_CLASS = `${PAGE_TRANSITION_CLASS}-sheet-under`;
 const HOME_SCREEN_CLASS = `${PAGE_TRANSITION_CLASS}--home-screen`;
 const HELD_CLASS = `${PAGE_TRANSITION_CLASS}--held`;
-const ON_GROUND_CLASS = `${PAGE_TRANSITION_CLASS}--on-ground`;
-const IN_SHEET_CLASS = `${PAGE_TRANSITION_CLASS}--in-sheet`;
+export const ON_GROUND_CLASS = `${PAGE_TRANSITION_CLASS}--on-ground`;
+export const IN_SHEET_CLASS = `${PAGE_TRANSITION_CLASS}--in-sheet`;
 const GROUND_CHANGES_CLASS = `${PAGE_TRANSITION_CLASS}--ground-changes`;
 const SHEET_LOOKS = '.dialog--sheet, app-sheet-head';
-const SHEET_PANEL = '.dialog-panel';
-const PANEL_SCROLL = 'panelScroll';
+export const SHEET_PANEL = '.dialog-panel';
+export const PANEL_SCROLL = 'panelScroll';
 const MOVING_CLASS = `${PAGE_TRANSITION_CLASS}--moving`;
-const HEADS_HELD_CLASS = `${PAGE_TRANSITION_CLASS}--heads-held`;
 const TITLES_FOLLOW_CLASS = `${PAGE_TRANSITION_CLASS}--titles-follow`;
 const TITLE_CLASS = `${PAGE_TRANSITION_CLASS}__title`;
 const TITLE_TEXT_CLASS = `${PAGE_TRANSITION_CLASS}__title-text`;
-const SHEET_TITLE = '.sheet-head-title';
 const SHOWN_EDGE_TITLE = '.edge-title--shown';
 const EDGE_TITLE_TEXT = '.edge-title-text';
 const TITLE_FADE_AT = '--page-title-fade-at';
@@ -114,7 +105,7 @@ export interface SheetStep {
   readonly placed: () => void;
 }
 
-interface KeptSheet {
+export interface KeptSheet {
   readonly sheet: HTMLElement;
   readonly width: number;
   readonly owner: object;
@@ -126,7 +117,7 @@ interface StepMeasure {
   readonly fadeAt: number;
 }
 
-interface FollowedTitle {
+export interface FollowedTitle {
   readonly title: HTMLElement;
   readonly text: HTMLElement;
   readonly leaves: boolean;
@@ -141,6 +132,19 @@ export interface BarItem {
 }
 
 type SwipeDrawing = typeof import('./swipe-drawing');
+
+export interface SheetLooks {
+  stepInSheet(stage: PageTransitions, step: SheetStep): void;
+  standingSheetCopy(stage: PageTransitions): HTMLElement | null;
+  holdHeads(
+    stage: PageTransitions,
+    overlay: HTMLElement,
+    bar: HTMLElement,
+    leaving: PlacedPage | null,
+    arriving: PlacedPage | null,
+    titles: FollowedTitle[],
+  ): BarItem[];
+}
 
 export interface SwipePreview {
   follow(offset: number): void;
@@ -160,9 +164,10 @@ export class PageTransitions {
   private readonly placement = inject(PagePlacement);
   private readonly injector = inject(Injector);
   drawing: SwipeDrawing | null = null;
+  sheets: SheetLooks | null = null;
   private readonly lent: (() => void)[] = [];
   private readonly kept = new Map<number, KeptPage>();
-  private readonly keptSheets = new Map<number, KeptSheet>();
+  readonly keptSheets = new Map<number, KeptSheet>();
   handingOver = false;
   sheetHandOver: Running | null = null;
   private trigger: NavigationFacts['trigger'] = 'imperative';
@@ -299,6 +304,19 @@ export class PageTransitions {
     return this.drawing?.startSheetSwipe(this, under.sheet) ?? null;
   }
 
+  stepInSheet(step: SheetStep): void {
+    if (this.sheets === null) {
+      step.change();
+      this.afterRender(step.placed);
+      return;
+    }
+    this.sheets.stepInSheet(this, step);
+  }
+
+  standingSheetCopy(): HTMLElement | null {
+    return this.sheets?.standingSheetCopy(this) ?? null;
+  }
+
   forgetSheetsOf(owner: object): void {
     for (const [depth, kept] of [...this.keptSheets]) {
       if (kept.owner === owner) {
@@ -307,77 +325,7 @@ export class PageTransitions {
     }
   }
 
-  stepInSheet(step: SheetStep): void {
-    const view = this.document.defaultView;
-    const handOver = this.sheetHandOver;
-    if (handOver !== null) {
-      this.sheetHandOver = null;
-      step.change();
-      this.afterRender(() => {
-        step.placed();
-        if (this.running === handOver) {
-          this.finish();
-        }
-      });
-      return;
-    }
-    const moves = view !== null && this.compact() && motionAllowed(view) && this.running === null;
-    const leaving = moves ? this.standingSheetCopy() : null;
-    if (view === null || leaving === null) {
-      step.change();
-      this.afterRender(step.placed);
-      return;
-    }
-    if (step.kind === 'push') {
-      this.keptSheets.set(step.depth - 1, {
-        sheet: leaving,
-        width: view.innerWidth,
-        owner: step.owner,
-      });
-    }
-    const overlay = this.sheetOverlay(step.kind);
-    const left = this.place(
-      overlay,
-      this.sheetOnly(leaving),
-      step.kind === 'push' ? 'under' : 'over',
-    );
-    this.dressChrome(overlay, left, null);
-    const running: Running = {
-      kind: step.kind,
-      overlay,
-      swiping: false,
-      sheet: leaving,
-      revealed: true,
-    };
-    this.running = running;
-    this.sheetUnder(leaving);
-    this.finishing = view.setTimeout(() => this.finish(), PAGE_COVER_LONGEST_MS);
-    step.change();
-    this.afterRender(() => {
-      step.placed();
-      if (this.running !== running) {
-        return;
-      }
-      const arriving = this.standingSheetCopy();
-      if (arriving === null) {
-        this.finish();
-        return;
-      }
-      this.moveTo(running, view, this.sheetOnly(arriving));
-    });
-  }
-
-  sheetOnly(sheet: HTMLElement): KeptPage {
-    return {
-      copy: null,
-      scrollY: 0,
-      ground: 'transparent',
-      width: this.document.defaultView?.innerWidth ?? 0,
-      sheet,
-    };
-  }
-
-  private afterRender(then: () => void): void {
+  afterRender(then: () => void): void {
     afterNextRender(then, { injector: this.injector });
   }
 
@@ -513,7 +461,7 @@ export class PageTransitions {
     this.moveTo(running, view, { ...this.shown(layer), sheet: running.sheet });
   }
 
-  private moveTo(running: Running, view: Window, arriving: KeptPage): void {
+  moveTo(running: Running, view: Window, arriving: KeptPage): void {
     const shown = this.place(running.overlay, arriving, running.kind === 'push' ? 'over' : 'under');
     const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
     this.dressChrome(running.overlay, left, shown);
@@ -630,12 +578,6 @@ export class PageTransitions {
         (typeof view.matchMedia === 'function' &&
           view.matchMedia('(display-mode: standalone)').matches))
     );
-  }
-
-  sheetOverlay(kind: PageTransitionKind): HTMLElement {
-    const overlay = this.overlay(kind);
-    overlay.classList.add(ON_GROUND_CLASS, IN_SHEET_CLASS);
-    return overlay;
   }
 
   private keep(layer: HTMLElement): KeptPage {
@@ -760,7 +702,7 @@ export class PageTransitions {
     bar.className = `${PAGE_TRANSITION_CLASS}__bar`;
     overlay.append(bar);
     const titles: FollowedTitle[] = [];
-    const heads = this.holdHeads(overlay, bar, leaving, arriving, titles);
+    const heads = this.sheets?.holdHeads(this, overlay, bar, leaving, arriving, titles) ?? [];
     const arrivingPart = this.barPart(bar, arriving);
     const leavingPart = this.barPart(bar, leaving);
     this.addTitle(titles, leavingPart?.querySelector<HTMLElement>(SHOWN_EDGE_TITLE), true);
@@ -783,40 +725,7 @@ export class PageTransitions {
     ];
   }
 
-  private holdHeads(
-    overlay: HTMLElement,
-    bar: HTMLElement,
-    leaving: PlacedPage | null,
-    arriving: PlacedPage | null,
-    titles: FollowedTitle[],
-  ): BarItem[] {
-    const out = this.headOf(leaving);
-    const into = this.headOf(arriving);
-    const held = leaving !== null && arriving !== null && out !== null && into !== null;
-    overlay.classList.toggle(HEADS_HELD_CLASS, held);
-    if (!held) {
-      if (arriving !== null) {
-        this.addTitle(titles, out?.querySelector<HTMLElement>(SHEET_TITLE), true, false);
-        this.addTitle(titles, into?.querySelector<HTMLElement>(SHEET_TITLE), false, false);
-      }
-      return [];
-    }
-    const standing = this.standingCopy(bar, into, arriving.box);
-    const leavingHead = this.standingCopy(bar, out, leaving.box);
-    this.addTitle(titles, leavingHead.querySelector<HTMLElement>(SHEET_TITLE), true);
-    this.addTitle(titles, standing.querySelector<HTMLElement>(SHEET_TITLE), false);
-    return [this.barItem(standing, 'still'), this.barItem(leavingHead, 'out')];
-  }
-
-  private headOf(page: PlacedPage | null): HTMLElement | null {
-    return (
-      page?.box.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__sheet ${SHEET_HEAD}`) ??
-      page?.copy?.querySelector<HTMLElement>(SHEET_HEAD) ??
-      null
-    );
-  }
-
-  private addTitle(
+  addTitle(
     titles: FollowedTitle[],
     title: HTMLElement | null | undefined,
     leaves: boolean,
@@ -874,21 +783,6 @@ export class PageTransitions {
     }
   }
 
-  private standingCopy(bar: HTMLElement, head: HTMLElement, box: HTMLElement): HTMLElement {
-    const place = head.getBoundingClientRect();
-    const origin = box.getBoundingClientRect();
-    const copy = head.cloneNode(true) as HTMLElement;
-    copy.classList.add(`${PAGE_TRANSITION_CLASS}__head`);
-    copy.style.position = 'absolute';
-    copy.style.margin = '0';
-    copy.style.top = `${place.top - origin.top}px`;
-    copy.style.left = `${place.left - origin.left}px`;
-    copy.style.width = `${place.width}px`;
-    copy.style.height = `${place.height}px`;
-    bar.append(copy);
-    return copy;
-  }
-
   shown(layer: HTMLElement): KeptPage {
     const kept = this.keep(layer);
     const giveBack = this.drawing?.lendPhotos(layer, kept.copy);
@@ -896,26 +790,6 @@ export class PageTransitions {
       this.lent.push(giveBack);
     }
     return kept;
-  }
-
-  standingSheetCopy(): HTMLElement | null {
-    const top = liveDialogs(this.document, STANDING_DIALOG).at(-1);
-    const view = this.document.defaultView;
-    if (top === undefined || view === null) {
-      return null;
-    }
-    const layer = this.document.createElement('div');
-    layer.className = `${PAGE_TRANSITION_CLASS}__sheet`;
-    const backdrop = this.document.createElement('div');
-    backdrop.className = `${PAGE_TRANSITION_CLASS}__sheet-backdrop`;
-    const look = view.getComputedStyle(top, '::backdrop');
-    BACKDROP_LOOKS.forEach((property) =>
-      backdrop.style.setProperty(property, look.getPropertyValue(property)),
-    );
-    layer.append(backdrop, stillCopyOf(top));
-    const panel = top.querySelector<HTMLElement>(SHEET_PANEL);
-    layer.dataset[PANEL_SCROLL] = String(panel?.scrollTop ?? 0);
-    return layer;
   }
 
   private barPart(bar: HTMLElement, page: PlacedPage | null): HTMLElement | null {
@@ -939,7 +813,7 @@ export class PageTransitions {
     return page.box.querySelector(`.${PAGE_TRANSITION_CLASS}__sheet`) !== null;
   }
 
-  private barItem(element: HTMLElement, curve: BarCurve): BarItem {
+  barItem(element: HTMLElement, curve: BarCurve): BarItem {
     element.classList.add(`${PAGE_TRANSITION_CLASS}__bar-item--${curve}`);
     return { element, curve };
   }
@@ -1142,21 +1016,6 @@ export function publishSteadyFrame(view: Window, steadyBeforeMs: number): void {
   }
   timing.clearMarks(STEADY_FRAME_MARK);
   timing.mark(STEADY_FRAME_MARK, { detail: { steadyBeforeMs } });
-}
-
-export function afterDrawn(view: Window, longestMs?: number): Promise<DrawnAt> {
-  const drawn = new Promise<DrawnAt>((done) =>
-    nextFrame(view, () => nextFrame(view, (at, inFrame) => done({ at, drawn: inFrame }))),
-  );
-  if (longestMs === undefined) {
-    return drawn;
-  }
-  return Promise.race([
-    drawn,
-    new Promise<DrawnAt>((done) =>
-      view.setTimeout(() => done({ at: view.performance.now(), drawn: false }), longestMs),
-    ),
-  ]);
 }
 
 function afterFrames(view: Window, frames: number, then: () => void): void {

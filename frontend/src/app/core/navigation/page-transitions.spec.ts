@@ -16,7 +16,6 @@ import { PagePlacement } from './page-placement';
 import { ACCOUNT_RETURNS_KEY } from './page-transitions';
 import { NavigationPreview } from './navigation-preview';
 import {
-  afterDrawn,
   FRAME_LATE_MS,
   PAGE_LAYER_CLASS,
   PAGE_TRANSITION_CLASS,
@@ -25,6 +24,8 @@ import {
   publishSteadyFrame,
 } from './page-transitions';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
+import { SHEET_LOOKS, sheetOnly } from './sheet-stepping';
+import { afterDrawn } from './swipe-drawing';
 
 @Component({ template: '' })
 class Blank {}
@@ -72,6 +73,7 @@ describe('Given a phone that animates and a page of the news with an article to 
     });
     router = TestBed.inject(Router);
     transitions = TestBed.inject(PageTransitions);
+    transitions.sheets = SHEET_LOOKS;
     coveredAtGuards = [];
     router.events.subscribe((event) => {
       if (event instanceof GuardsCheckEnd) {
@@ -303,6 +305,7 @@ describe('Given a phone that animates, whose app has drawn frames at a steady pa
     const draw = framesOnRequest();
     router = TestBed.inject(Router);
     const transitions = TestBed.inject(PageTransitions);
+    transitions.sheets = SHEET_LOOKS;
     for (let frame = 0; frame <= 10; frame++) {
       draw(1000 + frame * 16);
     }
@@ -334,6 +337,7 @@ describe('Given a phone that animates, whose app has drawn frames at a steady pa
     const draw = framesOnRequest();
     router = TestBed.inject(Router);
     const transitions = TestBed.inject(PageTransitions);
+    transitions.sheets = SHEET_LOOKS;
     for (let frame = 0; frame <= 10; frame++) {
       draw(1000 + frame * 16);
     }
@@ -1120,6 +1124,7 @@ describe('Given the app on the home screen of a phone, where the news led to the
     });
     router = TestBed.inject(Router);
     transitions = TestBed.inject(PageTransitions);
+    transitions.sheets = SHEET_LOOKS;
     await TestBed.inject(PageTransitions).loadDrawing();
     await router.navigateByUrl('/aktuality');
   });
@@ -1960,6 +1965,7 @@ describe('Given the app on a wide screen, where the header and the side navigati
     });
     router = TestBed.inject(Router);
     transitions = TestBed.inject(PageTransitions);
+    transitions.sheets = SHEET_LOOKS;
     await transitions.loadDrawing();
     await router.navigateByUrl('/aktuality');
     paintWide('Aktuality');
@@ -2213,6 +2219,7 @@ describe('Given the app on a phone with a sheet open at its list', () => {
       ],
     });
     transitions = TestBed.inject(PageTransitions);
+    transitions.sheets = SHEET_LOOKS;
   });
 
   afterEach(() => {
@@ -2282,13 +2289,13 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     sheet.replaceChildren(headOf('Moje dary'));
     const leaving = transitions.place(
       overlay,
-      transitions.sheetOnly(transitions.standingSheetCopy()!),
+      sheetOnly(transitions, transitions.standingSheetCopy()!),
       'over',
     );
     sheet.replaceChildren(headOf('Účet'));
     const arriving = transitions.place(
       overlay,
-      transitions.sheetOnly(transitions.standingSheetCopy()!),
+      sheetOnly(transitions, transitions.standingSheetCopy()!),
       'under',
     );
     const styled: Element[] = [];

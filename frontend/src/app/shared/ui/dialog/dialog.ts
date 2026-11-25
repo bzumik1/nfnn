@@ -28,7 +28,12 @@ import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { focusInView } from '../../../core/layout/focus-in-view';
 import { EDGE_SWIPE_DRAGGING_CLASS } from '../../../core/navigation/edge-swipe-back';
-import { liveDialogs, STACKED_DIALOG_CLASS } from '../../../core/navigation/page-transitions';
+import {
+  liveDialogs,
+  PageTransitions,
+  STACKED_DIALOG_CLASS,
+} from '../../../core/navigation/page-transitions';
+import { SHEET_LOOKS } from '../../../core/navigation/sheet-stepping';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
@@ -115,6 +120,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private leaveTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
+    inject(PageTransitions).sheets ??= SHEET_LOOKS;
     effect(() => {
       const suspended = this.suspension();
       untracked(() => this.follow(suspended));
