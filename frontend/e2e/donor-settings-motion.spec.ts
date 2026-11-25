@@ -1455,20 +1455,21 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
     expect(movesDownWithin(frames, 'add', 'card')).toEqual([]);
   });
 
-  test('when they remove their last passkey on a phone 375 pt wide showing the largest accessibility text, where the empty text ends taller than the row stands without its question, then Přidat přístupový klíč below it never moves down, the frame in which the list is removed included', async ({
+  test('when they remove their last passkey on a phone 375 pt wide showing the largest accessibility text, where the empty text ends taller than the row stands once its question closes, then Přidat přístupový klíč below it never moves down, the frame in which the list is removed included', async ({
     page,
   }) => {
     await showLargestSystemText(page);
     await offerPasskeysAsAnIPhoneDoes(page);
     await openSettingsWithPasskeys(page, [iphonePasskey]);
     await page.setViewportSize(SMALL_PHONE);
-    await settled(page, 'app-account-card .ui-card');
     const row = page.locator(iphonePasskeyRow);
-    const rowWithoutItsQuestion = (await row.boundingBox())?.height ?? Infinity;
     await row.getByRole('button', { name: 'Odebrat' }).click();
     const confirm = row.getByRole('button', { name: 'Ano, odebrat' });
     await expect(confirm).toBeVisible();
     await settled(page, 'app-account-card .ui-card');
+    const rowWithItsQuestion = (await row.boundingBox())?.height ?? Infinity;
+    const question = (await row.locator('.passkey-confirm').boundingBox())?.height ?? 0;
+    const rowOnceItsQuestionCloses = rowWithItsQuestion - question;
 
     const frames = await framesWhile(
       page,
@@ -1483,7 +1484,17 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
     );
 
     await expect(page.locator('.passkey-name')).toHaveCount(0);
-    expect(frames.at(-1)?.boxes['empty']?.height ?? 0).toBeGreaterThan(rowWithoutItsQuestion);
+    test.info().annotations.push({
+      type: 'diagnostic-2044',
+      description: JSON.stringify({
+        rowWithItsQuestion,
+        question,
+        rowOnceItsQuestionCloses,
+        rows: present(frames, 'row').map(({ at, box }) => [Math.round(at), box.height]),
+        empty: frames.at(-1)?.boxes['empty']?.height,
+      }),
+    });
+    expect(frames.at(-1)?.boxes['empty']?.height ?? 0).toBeGreaterThan(rowOnceItsQuestionCloses);
     expect(present(frames, 'add').length).toBe(frames.length);
     expect(frames.at(-1)?.boxes['row']).toBeNull();
     expect(movesDownWithin(frames, 'add', 'card')).toEqual([]);
