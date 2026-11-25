@@ -258,6 +258,15 @@ describe('Given a dialog opened from a button', () => {
       expect(scrolls).toEqual([{ block: 'nearest', inline: 'nearest' }]);
     });
 
+    it('then the page moves the least it can to show the whole button when half of it lies under the head, as the plain focus before did', () => {
+      openerAt(header - 22);
+
+      closeDialog();
+
+      expect(document.activeElement?.id).toBe('opener');
+      expect(scrolls).toEqual([{ block: 'nearest', inline: 'nearest' }]);
+    });
+
     it('then the page moves the least it can to show the button when it hides under the bar at the bottom', () => {
       openerAt(height - 60);
 
