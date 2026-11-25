@@ -5,6 +5,7 @@ import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { Donor, SignedInDevice } from '../../../../core/auth/donor';
 import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
+import { InputModality } from '../../../../core/input/input-modality';
 import { DonorNotifiedDevices } from '../../../operations/donor-notified-devices';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { deviceNameInSentence } from './device-labels';
@@ -978,6 +979,31 @@ describe("Given a donor's signed-in devices card", () => {
 
       expect(document.activeElement).toBe(toggle());
       expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('and the answer came before the fold closed and the tap on Starší moved the focus to the card before its click, as Safari does, then Starší takes the focus', async () => {
+      const modality = TestBed.inject(InputModality);
+      modality.start();
+      try {
+        await listed([THIS_MAC, IPHONE, OLD_IPAD, OLD_WINDOWS]);
+        await openStarsi();
+        await ask(signOutButton(rows()[2]));
+        await confirmSignOut();
+        answerSignOut(OLD_IPAD);
+        await settle();
+        expect(document.activeElement).toBe(signOutButton(rows()[2]));
+        const card = root();
+        card.tabIndex = -1;
+
+        toggle().dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        card.focus({ preventScroll: true });
+        await closeStarsi();
+
+        expect(document.activeElement).toBe(toggle());
+        expect(toggle().getAttribute('aria-expanded')).toBe('false');
+      } finally {
+        modality.stop();
+      }
     });
   });
 

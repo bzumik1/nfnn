@@ -1075,6 +1075,30 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
       await expect(starsi).toBeFocused();
       await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
     });
+
+    test('when they sign out Windows · Edge and tap Starší as Safari does, the focus going to the container before the click, after the answer came, then Starší takes the focus and stands between the header and whatever covers the bottom of the window', async ({
+      page,
+    }) => {
+      const signOut = await holdTheOlderDeviceSignOut(page);
+      const devices = await openStarsiOnTheAccountPageWithLargestText(page);
+      const starsi = devices.locator('.devices-older-toggle');
+      const confirm = await askToSignOutWindows(devices);
+      await confirm.click();
+      await signOut.asked;
+      signOut.answer();
+      await expect(page.locator(`#device-row-${windowsEdge?.id}`)).toHaveCount(0);
+      await expect(devices.locator('#devices-older .device-sign-out')).toBeFocused();
+      await expect.poll(() => layoutAtRest(starsi)).toBe(true);
+      await placeJustBelowTheHeader(starsi);
+      await expectWhollyBetweenHeaderAndWhatCoversTheBottom(starsi);
+
+      await tapAsSafariDoes(starsi);
+
+      await expect(starsi).toHaveAttribute('aria-expanded', 'false');
+      await expect(devices.locator('#devices-older')).toHaveCount(0);
+      await expect(starsi).toBeFocused();
+      await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
+    });
   });
 }
 
@@ -1131,6 +1155,19 @@ async function placeTheTopOf(control: Locator, top: number): Promise<void> {
       window.scrollBy({ top: element.getBoundingClientRect().top - wanted, behavior: 'instant' }),
     top,
   );
+}
+
+async function tapAsSafariDoes(control: Locator): Promise<void> {
+  await control.dispatchEvent('pointerdown', { pointerType: 'touch', isPrimary: true });
+  await control.evaluate((pressed) => {
+    const container = pressed.parentElement?.closest<HTMLElement>('[tabindex]') ?? null;
+    if (container === null) {
+      (document.activeElement as HTMLElement | null)?.blur();
+    } else {
+      container.focus({ preventScroll: true });
+    }
+  });
+  await control.dispatchEvent('click');
 }
 
 async function placeJustBelowTheHeader(control: Locator): Promise<void> {
