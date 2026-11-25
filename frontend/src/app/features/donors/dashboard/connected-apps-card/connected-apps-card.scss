@@ -28,6 +28,7 @@
   justify-content: space-between;
   gap: var(--space-2-5) var(--space-4);
   padding: var(--space-3) 0;
+  transition-property: none;
 }
 
 .connection-slot + .connection-slot .connection {
@@ -36,6 +37,27 @@
 
 .connection-slot--leaving {
   @include motion.row-leave;
+}
+
+.connection-slot:first-child:has(+ .connection-slot:not(.connection-slot--leaving)) {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    border-bottom: 1px solid var(--color-divider);
+    transition-property: none;
+  }
+
+  .connection {
+    padding-bottom: calc(var(--space-3) + 1px);
+  }
+
+  + .connection-slot .connection {
+    border-top-width: 0;
+  }
 }
 
 .connection-slot--settling {
