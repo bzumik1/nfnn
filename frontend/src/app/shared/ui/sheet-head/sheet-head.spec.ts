@@ -87,22 +87,34 @@ describe('Given the head of a page inside a sheet', () => {
 
 describe('Given the head of a page standing in the scrolling panel of a sheet', () => {
   let fixture: ComponentFixture<SheetPanel>;
-  let resized: ResizeObserverCallback[];
+  let watchers: WatchedSizes[];
 
   class WatchedSizes {
-    constructor(private readonly callback: ResizeObserverCallback) {}
+    readonly targets = new Set<Element>();
 
-    observe(): void {
-      resized.push(this.callback);
+    constructor(readonly callback: ResizeObserverCallback) {}
+
+    observe(target: Element): void {
+      this.targets.add(target);
+      if (!watchers.includes(this)) {
+        watchers.push(this);
+      }
     }
 
     disconnect(): void {
-      resized = resized.filter((callback) => callback !== this.callback);
+      watchers = watchers.filter((watcher) => watcher !== this);
     }
   }
 
+  const deliver = (entry: Partial<ResizeObserverEntry>) =>
+    watchers
+      .filter((watcher) => entry.target !== undefined && watcher.targets.has(entry.target))
+      .forEach((watcher) =>
+        watcher.callback([entry as ResizeObserverEntry], watcher as unknown as ResizeObserver),
+      );
+
   beforeEach(async () => {
-    resized = [];
+    watchers = [];
     await TestBed.configureTestingModule({
       imports: [SheetPanel],
       providers: [
@@ -121,12 +133,11 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
   const head = () =>
     (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('app-sheet-head');
 
-  const resizeTo = (blockSize: number) => {
-    const entry = { target: head(), borderBoxSize: [{ blockSize, inlineSize: 390 }] };
-    resized.forEach((callback) =>
-      callback([entry as unknown as ResizeObserverEntry], {} as ResizeObserver),
-    );
-  };
+  const resizeTo = (blockSize: number) =>
+    deliver({
+      target: head() ?? undefined,
+      borderBoxSize: [{ blockSize, inlineSize: 390 }],
+    });
 
   it('when its border box is measured 63.2 px tall, then the panel knows its height rounded up, so a control scrolled into view stops below it', () => {
     resizeTo(63.2);
@@ -182,14 +193,20 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
     resizeTo(57);
     standAt(head()!, 119, 57);
 
-    resized.forEach((callback) =>
-      callback(
-        [{ target: panel(), borderBoxSize: [] } as unknown as ResizeObserverEntry],
-        {} as ResizeObserver,
-      ),
-    );
+    deliver({ target: panel(), borderBoxSize: [] });
 
     expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('76px');
+  });
+
+  it("when the head keeps its size and only the panel changes, then the panel takes the head's new offset", () => {
+    standAt(panel(), 100, 600);
+    standAt(head()!, 119, 57);
+    resizeTo(57);
+    standAt(panel(), 81, 640);
+
+    deliver({ target: panel(), borderBoxSize: [{ blockSize: 640, inlineSize: 390 }] });
+
+    expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('95px');
   });
 
   it('when an entry carries no box sizes, then the head keeps the height it had', () => {
@@ -197,9 +214,7 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
     standAt(head()!, 100, 57);
     resizeTo(57);
 
-    resized.forEach((callback) =>
-      callback([{ target: head() } as unknown as ResizeObserverEntry], {} as ResizeObserver),
-    );
+    deliver({ target: head()! });
 
     expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('57px');
   });
@@ -218,7 +233,7 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
 
     resizeTo(64);
 
-    expect(resized).toEqual([]);
+    expect(watchers).toEqual([]);
     expect(panel().style.getPropertyValue('--sheet-head-height')).toBe('');
   });
 });
