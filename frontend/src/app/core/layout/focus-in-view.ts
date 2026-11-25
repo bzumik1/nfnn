@@ -7,7 +7,9 @@ export function focusInView(target: HTMLElement, options: FocusOptions = {}): bo
   if (!focusWithoutScroll(target, options)) {
     return false;
   }
-  bringIntoView(target);
+  if (!liesWhollyInView(target)) {
+    target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }
   return true;
 }
 
@@ -41,6 +43,17 @@ export function liesInView(target: Element): boolean {
   const band = viewBand(target);
   const box = target.getBoundingClientRect();
   return box.bottom > band.top && box.top < band.bottom;
+}
+
+export function liesWhollyInView(target: Element): boolean {
+  const band = viewBand(target);
+  const box = target.getBoundingClientRect();
+  const margins = target.ownerDocument.defaultView?.getComputedStyle(target);
+  const reach = (value: string | undefined): number => Number.parseFloat(value ?? '') || 0;
+  return (
+    box.top - reach(margins?.scrollMarginTop) >= band.top &&
+    box.bottom + reach(margins?.scrollMarginBottom) <= band.bottom
+  );
 }
 
 export function viewBand(target: Element): ViewBand {
