@@ -75,6 +75,77 @@ async function anchorNoScrollAsSafariDoes(page: Page): Promise<void> {
   });
 }
 
+async function placeBetweenHeaderAndWhatCoversTheBottom(target: Locator): Promise<{
+  top: number;
+  bottom: number;
+  headerBottom: number;
+  lowerEdge: number;
+}> {
+  return target.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const header = [...document.querySelectorAll<HTMLElement>('app-header a, app-header button')]
+      .filter((control) => getComputedStyle(control).visibility !== 'hidden')
+      .map((control) => control.getBoundingClientRect())
+      .filter((control) => control.width > 0 && control.height > 0 && control.bottom > 0)
+      .map((control) => control.bottom);
+    const coveringTops = [
+      ...document.querySelectorAll<HTMLElement>(
+        'app-tab-bar nav, .ui-notice--floating, app-offline-status .offline-pill',
+      ),
+    ]
+      .map((cover) => cover.getBoundingClientRect())
+      .filter((cover) => cover.height > 0 && cover.top > window.innerHeight / 2)
+      .map((cover) => cover.top);
+    return {
+      top: box.top,
+      bottom: box.bottom,
+      headerBottom: Math.max(0, ...header),
+      lowerEdge: Math.min(window.innerHeight, ...coveringTops),
+    };
+  });
+}
+
+async function expectFocusBetweenHeaderAndWhatCoversTheBottom(page: Page): Promise<void> {
+  await expect(async () => {
+    const place = await placeBetweenHeaderAndWhatCoversTheBottom(page.locator(':focus'));
+    expect(place.top).toBeGreaterThanOrEqual(place.headerBottom);
+    expect(place.bottom).toBeLessThanOrEqual(place.lowerEdge);
+  }).toPass();
+}
+
+async function expectTopBetweenHeaderAndWhatCoversTheBottom(target: Locator): Promise<void> {
+  await expect(async () => {
+    const place = await placeBetweenHeaderAndWhatCoversTheBottom(target);
+    expect(place.top).toBeGreaterThanOrEqual(place.headerBottom);
+    expect(place.top).toBeLessThanOrEqual(place.lowerEdge);
+  }).toPass();
+}
+
+async function expectFocusBelowTheSheetHeadInsideTheSheet(page: Page): Promise<void> {
+  await expect(async () => {
+    const place = await page.evaluate(() => {
+      const control = document.activeElement!;
+      const box = control.getBoundingClientRect();
+      const ring = getComputedStyle(control);
+      const ringReach = Math.max(0, parseFloat(ring.outlineWidth) + parseFloat(ring.outlineOffset));
+      const head = document
+        .querySelector('app-account-sheet app-sheet-head')!
+        .getBoundingClientRect();
+      const panel = document
+        .querySelector('app-account-sheet .dialog-panel')!
+        .getBoundingClientRect();
+      return {
+        ringTop: box.top - ringReach,
+        ringBottom: box.bottom + ringReach,
+        headBottom: head.bottom,
+        panelBottom: panel.bottom,
+      };
+    });
+    expect(place.ringTop).toBeGreaterThanOrEqual(place.headBottom);
+    expect(place.ringBottom).toBeLessThanOrEqual(place.panelBottom);
+  }).toPass();
+}
+
 async function linesOf(control: Locator): Promise<number> {
   return control.evaluate((element) => {
     const range = document.createRange();
@@ -956,34 +1027,7 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
 
       await expect(devices.getByRole('button', { name: /Starší \(2\)/ })).toBeFocused();
       await expect(page.locator(`#device-row-${iphone?.id}`)).toHaveCount(0);
-      await expect(async () => {
-        const place = await page.evaluate(() => {
-          const box = document.activeElement!.getBoundingClientRect();
-          const header = [
-            ...document.querySelectorAll<HTMLElement>('app-header a, app-header button'),
-          ]
-            .filter((element) => getComputedStyle(element).visibility !== 'hidden')
-            .map((element) => element.getBoundingClientRect())
-            .filter((control) => control.width > 0 && control.height > 0 && control.bottom > 0)
-            .map((control) => control.bottom);
-          const coveringTops = [
-            ...document.querySelectorAll<HTMLElement>(
-              'app-tab-bar nav, .ui-notice--floating, app-offline-status .offline-pill',
-            ),
-          ]
-            .map((element) => element.getBoundingClientRect())
-            .filter((cover) => cover.height > 0 && cover.top > window.innerHeight / 2)
-            .map((cover) => cover.top);
-          return {
-            top: box.top,
-            bottom: box.bottom,
-            headerBottom: Math.max(0, ...header),
-            lowerEdge: Math.min(window.innerHeight, ...coveringTops),
-          };
-        });
-        expect(place.top).toBeGreaterThanOrEqual(place.headerBottom);
-        expect(place.bottom).toBeLessThanOrEqual(place.lowerEdge);
-      }).toPass();
+      await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
     });
   });
 }
@@ -1029,31 +1073,228 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
 
       await expect(devices.getByRole('button', { name: /Starší \(2\)/ })).toBeFocused();
       await expect(sheet.locator(`#device-row-${iphone?.id}`)).toHaveCount(0);
-      await expect(async () => {
-        const place = await page.evaluate(() => {
-          const control = document.activeElement!;
-          const box = control.getBoundingClientRect();
-          const ring = getComputedStyle(control);
-          const ringReach = Math.max(
-            0,
-            parseFloat(ring.outlineWidth) + parseFloat(ring.outlineOffset),
-          );
-          const head = document
-            .querySelector('app-account-sheet app-sheet-head')!
-            .getBoundingClientRect();
-          const panel = document
-            .querySelector('app-account-sheet .dialog-panel')!
-            .getBoundingClientRect();
-          return {
-            ringTop: box.top - ringReach,
-            ringBottom: box.bottom + ringReach,
-            headBottom: head.bottom,
-            panelBottom: panel.bottom,
-          };
-        });
-        expect(place.ringTop).toBeGreaterThanOrEqual(place.headBottom);
-        expect(place.ringBottom).toBeLessThanOrEqual(place.panelBottom);
-      }).toPass();
+      await expectFocusBelowTheSheetHeadInsideTheSheet(page);
+    });
+  });
+}
+
+const iphonePasskey = {
+  id: '019a1b2c-3d4e-7f00-8000-000000000001',
+  name: 'iPhone',
+  createdAt: '2026-10-23T10:00:00Z',
+  lastUsedAt: null,
+};
+const notebookPasskey = {
+  id: '019a1b2c-3d4e-7f00-8000-000000000002',
+  name: 'Pracovní notebook',
+  createdAt: '2026-10-24T10:00:00Z',
+  lastUsedAt: '2026-10-25T08:00:00Z',
+};
+
+type ListedPasskey = typeof iphonePasskey | typeof notebookPasskey;
+
+const CONTENT_RISE_PER_FRAME_PX = 64;
+
+interface SheetScrollRecord {
+  tops: number[];
+  recording: boolean;
+}
+
+async function mockRemovablePasskeys(
+  page: Page,
+  passkeys: readonly ListedPasskey[],
+): Promise<void> {
+  let listed = [...passkeys];
+  await page.route(
+    (url) => url.pathname === '/api/donors/me/passkeys',
+    (route) => route.fulfill({ json: { items: listed } }),
+  );
+  await page.route(
+    (url) => passkeys.some((passkey) => url.pathname === `/api/donors/me/passkeys/${passkey.id}`),
+    async (route) => {
+      const removed = new URL(route.request().url()).pathname.split('/').pop();
+      listed = listed.filter((passkey) => passkey.id !== removed);
+      await route.fulfill({ status: 204 });
+    },
+  );
+}
+
+async function offerPasskeysAsAnIPhoneDoes(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const refused = () => Promise.reject(new DOMException('Not in this test', 'NotAllowedError'));
+    if (typeof window.PublicKeyCredential !== 'function') {
+      Object.defineProperty(window, 'PublicKeyCredential', {
+        configurable: true,
+        value: class {},
+      });
+    }
+    if (typeof navigator.credentials?.create !== 'function') {
+      Object.defineProperty(navigator, 'credentials', {
+        configurable: true,
+        value: { create: refused, get: refused },
+      });
+    }
+  });
+}
+
+async function openThePasskeys(scope: Locator): Promise<Locator> {
+  await scope.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
+  return scope.getByRole('region', { name: 'Přístupové klíče' });
+}
+
+async function askToRemove(passkeys: Locator, passkey: ListedPasskey): Promise<Locator> {
+  const row = passkeys.locator(`#passkey-row-${passkey.id}`);
+  await row.getByRole('button', { name: 'Odebrat', exact: true }).click();
+  const confirm = row.getByRole('button', { name: 'Ano, odebrat' });
+  await expect(confirm).toBeVisible();
+  return confirm;
+}
+
+async function removeThePasskey(passkeys: Locator, passkey: ListedPasskey): Promise<void> {
+  const confirm = await askToRemove(passkeys, passkey);
+
+  await confirm.click();
+
+  await expect(passkeys.locator(`#passkey-row-${passkey.id}`)).toHaveCount(0);
+}
+
+function renameButtonOf(passkeys: Locator, passkey: ListedPasskey): Locator {
+  return passkeys
+    .locator(`#passkey-row-${passkey.id}`)
+    .getByRole('button', { name: 'Přejmenovat' });
+}
+
+async function expectTheResultInViewWithTheAddButton(passkeys: Locator): Promise<void> {
+  await expect(passkeys).toBeFocused();
+  const result = passkeys.getByText('Zatím nemáte žádný přístupový klíč.');
+  await expectTopBetweenHeaderAndWhatCoversTheBottom(result);
+  await expect(result).toBeInViewport();
+  await expect(passkeys.getByRole('button', { name: 'Přidat přístupový klíč' })).toBeInViewport();
+}
+
+async function recordSheetScrollEachFrameFromTheNextClick(
+  page: Page,
+): Promise<() => Promise<number[]>> {
+  await page.evaluate(() => {
+    const panel = document.querySelector('app-account-sheet .dialog-panel')!;
+    const record: SheetScrollRecord = { tops: [], recording: true };
+    (window as unknown as { sheetScroll: SheetScrollRecord }).sheetScroll = record;
+    const sample = () => {
+      if (record.recording) {
+        record.tops.push(panel.scrollTop);
+        requestAnimationFrame(sample);
+      }
+    };
+    document.addEventListener(
+      'click',
+      () => {
+        record.tops.push(panel.scrollTop);
+        requestAnimationFrame(sample);
+      },
+      { capture: true, once: true },
+    );
+  });
+  return () =>
+    page.evaluate(() => {
+      const record = (window as unknown as { sheetScroll: SheetScrollRecord }).sheetScroll;
+      record.recording = false;
+      return record.tops;
+    });
+}
+
+async function signInOnTheAccountPageWithLargestText(page: Page): Promise<Locator> {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page);
+  await openDonorSection(page, 'Údaje a zabezpečení');
+  await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+  await page.setViewportSize({ width: 375, height: 667 });
+  return openThePasskeys(page.locator('app-account-card'));
+}
+
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  test.describe(`Given a donor on an iPhone 375 pt wide whose installed app shows the largest accessibility text, asks for ${reducedMotion} motion and has passkeys`, () => {
+    test.use({ viewport: { width: 375, height: 667 }, reducedMotion });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await anchorNoScrollAsSafariDoes(page);
+      await offerPasskeysAsAnIPhoneDoes(page);
+      await mockDonorApi(page);
+    });
+
+    test('when they remove the first passkey, then Přejmenovat of the key below takes the focus and stands between the header and whatever covers the bottom of the window', async ({
+      page,
+    }) => {
+      await mockRemovablePasskeys(page, [iphonePasskey, notebookPasskey]);
+      const passkeys = await signInOnTheAccountPageWithLargestText(page);
+
+      await removeThePasskey(passkeys, iphonePasskey);
+
+      await expect(renameButtonOf(passkeys, notebookPasskey)).toBeFocused();
+      await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
+    });
+
+    test('when they remove their only passkey, then the panel takes the focus and the result is brought into view with Přidat přístupový klíč, its top between the header and whatever covers the bottom of the window', async ({
+      page,
+    }) => {
+      await mockRemovablePasskeys(page, [iphonePasskey]);
+      const passkeys = await signInOnTheAccountPageWithLargestText(page);
+
+      await removeThePasskey(passkeys, iphonePasskey);
+
+      await expectTheResultInViewWithTheAddButton(passkeys);
+    });
+
+    test('when they remove one passkey and then the last one left, then the panel takes the focus and the result is brought into view with Přidat přístupový klíč, its top between the header and whatever covers the bottom of the window', async ({
+      page,
+    }) => {
+      await mockRemovablePasskeys(page, [iphonePasskey, notebookPasskey]);
+      const passkeys = await signInOnTheAccountPageWithLargestText(page);
+      await removeThePasskey(passkeys, iphonePasskey);
+      await expect(renameButtonOf(passkeys, notebookPasskey)).toBeFocused();
+      await expectFocusBetweenHeaderAndWhatCoversTheBottom(page);
+
+      await removeThePasskey(passkeys, notebookPasskey);
+
+      await expectTheResultInViewWithTheAddButton(passkeys);
+    });
+  });
+}
+
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  test.describe(`Given a donor on an iPhone 390 pt wide whose phone shows the largest accessibility text, asks for ${reducedMotion} motion and has two passkeys in Údaje a zabezpečení inside the account sheet`, () => {
+    test.use({ viewport: { width: 390, height: 844 }, reducedMotion });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await anchorNoScrollAsSafariDoes(page);
+      await offerPasskeysAsAnIPhoneDoes(page);
+    });
+
+    test('when they remove the first passkey, then the sheet never jumps by more than one frame of motion and Přejmenovat of the key below takes the focus and stands below the sheet head, inside the sheet', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await mockRemovablePasskeys(page, [iphonePasskey, notebookPasskey]);
+      await rememberedDonorSession(page);
+      await page.goto('/darce/prehled');
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      const sheet = page.locator('app-account-sheet');
+      await expect(sheet.locator('app-sheet-head')).toBeVisible();
+      await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+      const passkeys = await openThePasskeys(sheet.locator('app-account-card'));
+      const confirm = await askToRemove(passkeys, iphonePasskey);
+      const scrollTops = await recordSheetScrollEachFrameFromTheNextClick(page);
+
+      await confirm.click();
+
+      await expect(passkeys.locator(`#passkey-row-${iphonePasskey.id}`)).toHaveCount(0);
+      await expect(renameButtonOf(passkeys, notebookPasskey)).toBeFocused();
+      await expectFocusBelowTheSheetHeadInsideTheSheet(page);
+      const tops = await scrollTops();
+      const rises = tops.slice(1).map((top, frame) => top - tops[frame]);
+      expect(tops.length).toBeGreaterThan(1);
+      expect(Math.max(0, ...rises)).toBeLessThanOrEqual(CONTENT_RISE_PER_FRAME_PX);
     });
   });
 }

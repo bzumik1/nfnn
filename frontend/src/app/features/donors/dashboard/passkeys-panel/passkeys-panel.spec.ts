@@ -19,6 +19,7 @@ import {
 } from '../../../../core/auth/testing/donor-fixtures';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { PasskeysPanel } from './passkeys-panel';
+import { leavesAsInTheBrowser } from '../../../../shared/ui/leaving-row/testing/leaves-as-in-the-browser';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
 function expectLockedInPlace(button: HTMLButtonElement): void {
@@ -527,6 +528,116 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
       expect(root().querySelector('.passkey')).toBeNull();
       expect(document.activeElement).toBe(element('.passkeys'));
+    });
+
+    describe('and the removed row takes a while to leave', () => {
+      function leavesSlowly(
+        passkey: typeof IPHONE,
+        leavingWith: (row: HTMLElement) => HTMLElement = (row) => row,
+      ): () => Promise<void> {
+        const row = document.getElementById(`passkey-row-${passkey.id}`)!;
+        const leaving = leavingWith(row);
+        const finish = leavesAsInTheBrowser(
+          row,
+          (event) => fixture.componentInstance['rowLeaves'](event),
+          () => leaving.remove(),
+          leaving,
+        );
+        return async () => {
+          finish();
+          await settle();
+          await vi.waitFor(() => expect(row.isConnected).toBe(false));
+        };
+      }
+
+      function standWithTheAddButtonRightUnder(emptyText: HTMLElement, top: number): void {
+        const addButton = Array.from(root().querySelectorAll<HTMLElement>('button')).find(
+          (button) => accessibleText(button).includes('Přidat přístupový klíč'),
+        );
+        expect(addButton, 'button "Přidat přístupový klíč"').toBeDefined();
+        emptyText.getBoundingClientRect = () => new DOMRect(0, top, 300, 40);
+        addButton!.getBoundingClientRect = () => new DOMRect(0, top + 56, 300, 44);
+      }
+
+      function scrollsOf(control: HTMLElement): unknown[] {
+        const scrolled: unknown[] = [];
+        control.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+          scrolled.push(options);
+        };
+        return scrolled;
+      }
+
+      it('then the key below that took the focus is scrolled into view only once the row is gone', async () => {
+        await renderOnPage();
+        const below = document.getElementById(`passkey-rename-button-${WINDOWS.id}`)!;
+        const scrolled = scrollsOf(below);
+        const leave = leavesSlowly(IPHONE);
+
+        await removeThe(IPHONE);
+
+        expect(document.activeElement).toBe(below);
+        expect(scrolled).toEqual([]);
+
+        await leave();
+
+        expect(scrolled).toEqual([{ block: 'nearest', behavior: 'smooth' }]);
+      });
+
+      it('and the donor moves the focus elsewhere before the row is gone, then nothing scrolls', async () => {
+        await renderOnPage();
+        const below = document.getElementById(`passkey-rename-button-${WINDOWS.id}`)!;
+        const scrolled = scrollsOf(below);
+        const leave = leavesSlowly(IPHONE);
+        await removeThe(IPHONE);
+
+        element('.passkeys').focus();
+        await leave();
+
+        expect(scrolled).toEqual([]);
+      });
+
+      it('and it was the only key, so the list leaves with it, then the panel takes the focus in place and only the empty text above the window is brought into view, once the list is gone', async () => {
+        await renderOnPage([IPHONE]);
+        const region = element('.passkeys');
+        const regionScrolled = scrollsOf(region);
+        const leave = leavesSlowly(IPHONE, (row) => row.parentElement!);
+        await removeThe(IPHONE);
+        const emptyText = element('.passkeys-empty');
+        standWithTheAddButtonRightUnder(emptyText, -300);
+        const emptyTextScrolled = scrollsOf(emptyText);
+
+        expect(document.activeElement).toBe(region);
+        expect(emptyTextScrolled).toEqual([]);
+
+        await leave();
+
+        expect(document.activeElement).toBe(region);
+        expect(regionScrolled).toEqual([]);
+        expect(emptyTextScrolled).toEqual([{ block: 'start', behavior: 'smooth' }]);
+      });
+
+      it('and the donor then removes the last key left, so the list leaves with it, then the empty text far above the window is brought into view once the list is gone', async () => {
+        await renderOnPage();
+        const leaveIphone = leavesSlowly(IPHONE);
+        await removeThe(IPHONE);
+        await leaveIphone();
+        const region = element('.passkeys');
+        const regionScrolled = scrollsOf(region);
+        const leaveWindows = leavesSlowly(WINDOWS, (row) => row.parentElement!);
+        await removeThe(WINDOWS);
+        const emptyText = element('.passkeys-empty');
+        standWithTheAddButtonRightUnder(emptyText, -2000);
+        const emptyTextScrolled = scrollsOf(emptyText);
+
+        expect(document.activeElement).toBe(region);
+        expect(emptyTextScrolled).toEqual([]);
+
+        await leaveWindows();
+
+        expect(document.activeElement).toBe(region);
+        expect(regionScrolled).toEqual([]);
+        expect(emptyTextScrolled).toEqual([{ block: 'start', behavior: 'smooth' }]);
+      });
     });
   });
 
