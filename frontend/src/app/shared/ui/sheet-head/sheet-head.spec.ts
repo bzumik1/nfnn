@@ -658,6 +658,18 @@ describe('Given the head of a page inside a sheet whose title arrives only after
     expect(shown()).toBe('Dárce');
   });
 
+  it('when the late title is let go on a window as wide as a computer’s, past the bar of tabs, then the head shows its own title at once, never the last donor’s name for a frame', async () => {
+    compact.set(false);
+    await fixture.whenStable();
+    await arrives('Petr Svoboda');
+    expect(shown()).toBe('Petr Svoboda');
+
+    fixture.componentRef.setInput('lateTitle', null);
+    await fixture.whenStable();
+
+    expect(shown()).toBe('Dárce');
+  });
+
   it('when the title arrives on a window as wide as a computer’s, past the bar of tabs, then it shows at once, never faded', async () => {
     compact.set(false);
     await fixture.whenStable();
