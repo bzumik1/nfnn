@@ -415,7 +415,7 @@ describe('Given an administrator on a donor card', () => {
       'Bankovní účty jsme s osobními údaji dárce smazali; další platby se mu už nepřiřadí.',
     );
     expect(sectionText('Dary')).toContain('2026-000001');
-    expect(sectionText('Vystavená potvrzení')).toContain('2026-000001');
+    expect(sectionText('Potvrzení')).toContain('2026-000001');
   });
 
   it('when the erasure is refused, then the dialog stays open with the backend title and detail', async () => {
@@ -489,7 +489,7 @@ describe('Given an administrator on a donor card', () => {
     expect(donations).toContain('podle variabilního symbolu');
     expect(donations).toContain('2026-000001');
 
-    const receipts = sectionText('Vystavená potvrzení');
+    const receipts = sectionText('Potvrzení');
     expect(receipts).toContain('2026-000001');
     expect(receipts).toContain('Dar z 10. 10. 2026');
     expect(receipts).toContain('17. 10. 2026 11:00 čeština');
@@ -557,9 +557,7 @@ describe('Given an administrator on a donor card', () => {
       'Z žádného účtu zatím nepřišla platba s variabilním symbolem dárce.',
     );
     expect(sectionText('Dary')).toContain('Dárce zatím nemá žádný přiřazený dar.');
-    expect(sectionText('Vystavená potvrzení')).toContain(
-      'Dárci zatím nikdo žádné potvrzení nevystavil.',
-    );
+    expect(sectionText('Potvrzení')).toContain('Dárci zatím nikdo žádné potvrzení nevystavil.');
   });
 
   it('when a yearly receipt was replaced, then the receipts card names the year and the replacement', async () => {
@@ -579,7 +577,7 @@ describe('Given an administrator on a donor card', () => {
       }),
     );
 
-    const receipts = sectionText('Vystavená potvrzení');
+    const receipts = sectionText('Potvrzení');
     expect(receipts).toContain('Rok 2025');
     expect(receipts).toContain('angličtina');
     expect(receipts).toContain('nahrazeno novějším');
@@ -603,15 +601,15 @@ describe('Given an administrator on a donor card', () => {
       }),
     );
 
-    const receipts = sectionText('Vystavená potvrzení');
+    const receipts = sectionText('Potvrzení');
     expect(receipts).toContain('Rok 2026');
     expect(receipts).toContain('zrušeno, dary se změnily');
     expect(receipts).not.toContain('nahrazeno novějším');
-    expect(section('Vystavená potvrzení').querySelector('.receipt-pdf')).toBeNull();
+    expect(section('Potvrzení').querySelector('.receipt-pdf')).toBeNull();
   });
 
   function issueSelect(): HTMLSelectElement {
-    return section('Vystavená potvrzení').querySelector('select') as HTMLSelectElement;
+    return section('Potvrzení').querySelector('select') as HTMLSelectElement;
   }
 
   function optionLabels(): string[] {
@@ -637,8 +635,7 @@ describe('Given an administrator on a donor card', () => {
   function receiptsNotice(kind: 'status' | 'alert'): string {
     return (
       withOrdinarySpaces(
-        section('Vystavená potvrzení').querySelector(`app-live-notice [role="${kind}"]`)
-          ?.textContent,
+        section('Potvrzení').querySelector(`app-live-notice [role="${kind}"]`)?.textContent,
       ) ?? ''
     )
       .replace(/\s+/g, ' ')
@@ -695,17 +692,17 @@ describe('Given an administrator on a donor card', () => {
     expect(withOrdinarySpaces(issueSelect().labels?.[0]?.textContent)?.trim()).toBe(
       'Potvrzení k vystavení',
     );
-    expect(button(section('Vystavená potvrzení'), 'Vystavit potvrzení').disabled).toBe(false);
+    expect(button(section('Potvrzení'), 'Vystavit potvrzení').disabled).toBe(false);
   });
 
   it('when a receipt is issued, then the button names the wait, the choice is posted and the status line names the number, the time and that it is valid', async () => {
     await loaded();
     await choose('Dar z 10. 10. 2026, 500 Kč');
 
-    button(section('Vystavená potvrzení'), 'Vystavit potvrzení').click();
+    button(section('Potvrzení'), 'Vystavit potvrzení').click();
     await settle();
 
-    const waiting = button(section('Vystavená potvrzení'), 'Vystavujeme potvrzení…');
+    const waiting = button(section('Potvrzení'), 'Vystavujeme potvrzení…');
     expect(waiting.disabled).toBe(true);
     expect(labelFaces(waiting)).toEqual(['Vystavit potvrzení', 'Vystavujeme potvrzení…']);
     expect(accessibleText(waiting)).toBe('Vystavujeme potvrzení…');
@@ -719,9 +716,9 @@ describe('Given an administrator on a donor card', () => {
     expect(receiptsNotice('status')).toBe(
       'Vystavili jsme potvrzení 2026-000002 z 17. 10. 2026 11:00. Je platné.',
     );
-    const notice = section('Vystavená potvrzení').querySelector('app-live-notice') as HTMLElement;
+    const notice = section('Potvrzení').querySelector('app-live-notice') as HTMLElement;
     expect(document.activeElement).toBe(notice);
-    expect(button(section('Vystavená potvrzení'), 'Vystavit potvrzení').disabled).toBe(false);
+    expect(button(section('Potvrzení'), 'Vystavit potvrzení').disabled).toBe(false);
     http.expectOne(DETAIL_URL).flush(
       donorDetail({
         receipts: [
@@ -731,14 +728,14 @@ describe('Given an administrator on a donor card', () => {
       }),
     );
     await settle();
-    expect(sectionText('Vystavená potvrzení')).toContain('2026-000002');
+    expect(sectionText('Potvrzení')).toContain('2026-000002');
     expect(receiptsNotice('status')).toContain('2026-000002');
   });
 
   it('when a yearly receipt is chosen, then the year is posted alone', async () => {
     await loaded(donorAccount(), withYearAndOlderGifts());
 
-    button(section('Vystavená potvrzení'), 'Vystavit potvrzení').click();
+    button(section('Potvrzení'), 'Vystavit potvrzení').click();
     fixture.detectChanges();
 
     const request = http.expectOne(ISSUE_URL);
@@ -756,7 +753,7 @@ describe('Given an administrator on a donor card', () => {
     await loaded();
     await choose('Dar z 10. 10. 2026, 500 Kč');
 
-    button(section('Vystavená potvrzení'), 'Vystavit potvrzení').click();
+    button(section('Potvrzení'), 'Vystavit potvrzení').click();
     fixture.detectChanges();
     http.expectOne(ISSUE_URL).flush(
       issuedReceipt({
@@ -778,7 +775,7 @@ describe('Given an administrator on a donor card', () => {
     await loaded();
     await choose('Dar z 10. 10. 2026, 500 Kč');
 
-    button(section('Vystavená potvrzení'), 'Vystavit potvrzení').click();
+    button(section('Potvrzení'), 'Vystavit potvrzení').click();
     fixture.detectChanges();
     http.expectOne(ISSUE_URL).flush(
       issuedReceipt({
@@ -803,7 +800,7 @@ describe('Given an administrator on a donor card', () => {
   it('when issuing is refused, then the alert shows the backend title and detail and the button comes back', async () => {
     await loaded();
 
-    button(section('Vystavená potvrzení'), 'Vystavit potvrzení').click();
+    button(section('Potvrzení'), 'Vystavit potvrzení').click();
     fixture.detectChanges();
     const refusal = problem(
       409,
@@ -818,7 +815,7 @@ describe('Given an administrator on a donor card', () => {
       'Příliš mnoho nových potvrzení. Další půjde vystavit zítra.',
     );
     expect(receiptsNotice('status')).toBe('');
-    const again = button(section('Vystavená potvrzení'), 'Vystavit potvrzení');
+    const again = button(section('Potvrzení'), 'Vystavit potvrzení');
     expect(again.disabled).toBe(false);
     expect(document.activeElement).toBe(again);
   });
@@ -826,7 +823,7 @@ describe('Given an administrator on a donor card', () => {
   it('when issuing fails without an answer, then the alert says what to do next', async () => {
     await loaded();
 
-    button(section('Vystavená potvrzení'), 'Vystavit potvrzení').click();
+    button(section('Potvrzení'), 'Vystavit potvrzení').click();
     fixture.detectChanges();
     http.expectOne(ISSUE_URL).error(new ProgressEvent('error'));
     await settle();
@@ -841,9 +838,9 @@ describe('Given an administrator on a donor card', () => {
       donorAccount(),
       donorDetail({ donations: { items: [], totalAmountMinor: 0, currency: 'CZK', count: 0 } }),
     );
-    expect(section('Vystavená potvrzení').querySelector('select')).toBeNull();
-    expect(buttonNames(section('Vystavená potvrzení'))).not.toContain('Vystavit potvrzení');
-    expect(sectionText('Vystavená potvrzení')).toContain(
+    expect(section('Potvrzení').querySelector('select')).toBeNull();
+    expect(buttonNames(section('Potvrzení'))).not.toContain('Vystavit potvrzení');
+    expect(sectionText('Potvrzení')).toContain(
       'Dárce nemá žádný dar, za který by šlo potvrzení vystavit.',
     );
   });
@@ -854,13 +851,13 @@ describe('Given an administrator on a donor card', () => {
       ...erased,
       donor: { ...erased.donor, erasedAt: '2026-10-20T08:00:00Z' },
     });
-    const receipts = section('Vystavená potvrzení');
+    const receipts = section('Potvrzení');
     expect(receipts.querySelector('app-live-notice [role="status"]')).not.toBeNull();
     expect(receipts.querySelector('app-live-notice [role="alert"]')).not.toBeNull();
-    expect(sectionText('Vystavená potvrzení')).toContain('2026-000001');
+    expect(sectionText('Potvrzení')).toContain('2026-000001');
     expect(receipts.querySelector('select')).toBeNull();
     expect(buttonNames(receipts)).not.toContain('Vystavit potvrzení');
-    expect(sectionText('Vystavená potvrzení')).not.toContain('za který by šlo');
+    expect(sectionText('Potvrzení')).not.toContain('za který by šlo');
   });
 
   it('when gifts lie in the year after the last completed one, then that year is not offered as a yearly receipt while its gifts are offered singly', async () => {
@@ -1191,6 +1188,17 @@ describe('Given an administrator on a donor card', () => {
     expect(sectionText('Bankovní účty')).toContain('Potvrzené starší symboly: 6123456789');
   });
 
+  it('when the account has two confirmed older symbols, then they are joined by a comma with no space before it', async () => {
+    await loaded(
+      donorAccount(),
+      donorDetail({
+        bankAccounts: [adminBankAccount({ confirmedSymbols: ['777', '6123456789'] })],
+      }),
+    );
+
+    expect(sectionText('Bankovní účty')).toContain('Potvrzené starší symboly: 777, 6123456789');
+  });
+
   it('when the removal fails without an answer, then the alert names the bank account and what to do next', async () => {
     await loaded();
 
@@ -1296,9 +1304,7 @@ describe('Given an administrator on a donor card', () => {
 
     function rowNote(number: string): string | null {
       const row = Array.from(
-        section('Vystavená potvrzení').querySelectorAll(
-          'tbody tr',
-        ) as NodeListOf<HTMLTableRowElement>,
+        section('Potvrzení').querySelectorAll('tbody tr') as NodeListOf<HTMLTableRowElement>,
       ).find((candidate) => withOrdinarySpaces(candidate.textContent)?.includes(number));
       const note = row?.querySelector('.receipt-key-note');
       return note === null || note === undefined
@@ -1332,16 +1338,14 @@ describe('Given an administrator on a donor card', () => {
       expect(rowNote('2026-000001')).toBe(withOrdinarySpaces(REVOKED_NOTE));
       expect(rowNote('2027-000001')).toBeNull();
       const buttons = Array.from(
-        section('Vystavená potvrzení').querySelectorAll<HTMLButtonElement>('button.receipt-pdf'),
+        section('Potvrzení').querySelectorAll<HTMLButtonElement>('button.receipt-pdf'),
       );
       const warned = buttons.find((candidate) =>
         withOrdinarySpaces(candidate.textContent)?.includes('2026-000001'),
       );
       const described = warned?.getAttribute('aria-describedby') ?? '';
       expect(
-        withOrdinarySpaces(
-          section('Vystavená potvrzení').querySelector(`[id="${described}"]`)?.textContent,
-        )
+        withOrdinarySpaces(section('Potvrzení').querySelector(`[id="${described}"]`)?.textContent)
           ?.replace(/\s+/g, ' ')
           .trim(),
       ).toBe(withOrdinarySpaces(REVOKED_NOTE));
@@ -1365,7 +1369,7 @@ describe('Given an administrator on a donor card', () => {
       await settle();
 
       expect(rowNote('2026-000001')).toBeNull();
-      expect(section('Vystavená potvrzení').querySelectorAll('button.receipt-pdf').length).toBe(2);
+      expect(section('Potvrzení').querySelectorAll('button.receipt-pdf').length).toBe(2);
     });
   });
 
@@ -1384,9 +1388,7 @@ describe('Given an administrator on a donor card', () => {
 
     function receiptRow(number: string): HTMLTableRowElement {
       const row = Array.from(
-        section('Vystavená potvrzení').querySelectorAll(
-          'tbody tr',
-        ) as NodeListOf<HTMLTableRowElement>,
+        section('Potvrzení').querySelectorAll('tbody tr') as NodeListOf<HTMLTableRowElement>,
       ).find((candidate) => withOrdinarySpaces(candidate.textContent)?.includes(number));
       if (row === undefined) {
         throw new Error(`No receipt row ${number}`);
@@ -1656,9 +1658,9 @@ describe('Given an administrator on a donor card', () => {
       donor: { ...erased.donor, erasedAt: '2026-10-20T08:00:00Z' },
     });
 
-    expect(
-      buttonNames(section('Vystavená potvrzení')).some((name) => name.startsWith('Stáhnout PDF')),
-    ).toBe(true);
+    expect(buttonNames(section('Potvrzení')).some((name) => name.startsWith('Stáhnout PDF'))).toBe(
+      true,
+    );
   });
 });
 
@@ -1884,6 +1886,24 @@ describe('Given an administrator on a donor card opened part by part', () => {
     expect(rows[2]).toContain('vráceno');
   });
 
+  it('when the gifts part opens, then a gift paired by its symbol keeps „variabilního symbolu“ together on one line', async () => {
+    await open('dary', true, {
+      detailBody: donorDetail({
+        donations: {
+          items: [adminDonation({ pairedBy: 'VARIABLE_SYMBOL', senderAccount: null })],
+          totalAmountMinor: 30000,
+          currency: 'CZK',
+          count: 1,
+        },
+      }),
+    });
+
+    const meta = fixture.nativeElement.querySelector(
+      '.donation-rows .ui-list__meta',
+    ) as HTMLElement;
+    expect(meta.textContent).toContain('podle variabilního\u00a0symbolu');
+  });
+
   describe('when the gifts are still loading', () => {
     it('then the gifts part and the receipts part show the wait under their own titles, and their rows name no count', async () => {
       await open('dary', true, { detail: 'pending' });
@@ -1935,7 +1955,7 @@ describe('Given an administrator on a donor card opened part by part', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(cardTitles()).toEqual(['Vystavená potvrzení']);
+    expect(cardTitles()).toEqual(['Potvrzení']);
     expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h1'));
   });
 
@@ -1992,7 +2012,7 @@ describe('Given an administrator on a donor card opened part by part', () => {
 
     expect(fixture.nativeElement.querySelector('.card-rows')).toBeNull();
     expect(cardTitles()).toContain('Údaje');
-    expect(cardTitles()).toContain('Vystavená potvrzení');
+    expect(cardTitles()).toContain('Potvrzení');
     expect(document.activeElement?.id).toBe('potvrzeni');
     expect(textOf(crumb())).toBe('← Dárci');
   });

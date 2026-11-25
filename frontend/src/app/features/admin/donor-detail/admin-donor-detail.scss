@@ -85,7 +85,7 @@
     }
   }
 
-  @include bp.container-down(donor-summary, pair) {
+  @include bp.container-down(donor-summary, narrow) {
     .summary-list {
       flex-basis: 100%;
       display: grid;
@@ -101,10 +101,8 @@
   }
 }
 
-@include bp.up(nav) {
-  .summary-symbol app-copy-button {
-    margin-block: calc(-1 * var(--space-1-5));
-  }
+.summary-symbol app-copy-button {
+  margin-block: calc(-1 * var(--space-1-5));
 }
 
 .summary-symbol {
@@ -447,4 +445,9 @@ td.amount {
 
 .donations-card--rows {
   overflow: clip;
+}
+
+.donation-receipt {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
