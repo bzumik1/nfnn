@@ -37,6 +37,7 @@ interface FrameWatch {
 }
 
 const COMPUTER = { width: 1280, height: 800 };
+const ROOM_FOR_THREE_CONNECTIONS = 1600;
 const WATCHED_MS = 1000;
 const SUBPIXEL_PX = 0.5;
 const GONE_OPACITY = 0.01;
@@ -1116,6 +1117,8 @@ test.describe('Given a donor in Údaje a zabezpečení who asks for less motion'
   test('when they disconnect claude.ai above chatgpt.com and cursor.com, then every divider stays 1 px thick and exactly one stands between chatgpt.com and cursor.com in every frame, the one after the removal included', async ({
     page,
   }) => {
+    const { width } = page.viewportSize()!;
+    await page.setViewportSize({ width, height: ROOM_FOR_THREE_CONNECTIONS });
     await openSettingsWithConnections(page, [claudeConnection, otherConnection, thirdConnection]);
     const disconnect = page.locator(claudeConnectionRow).getByRole('button', { name: 'Odpojit' });
     await page.locator(thirdConnectionRow).scrollIntoViewIfNeeded();
