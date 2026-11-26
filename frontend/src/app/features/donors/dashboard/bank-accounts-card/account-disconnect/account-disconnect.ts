@@ -24,4 +24,12 @@ export class AccountDisconnect {
   readonly disconnectAsked = output<void>();
   readonly disconnectConfirmed = output<void>();
   readonly disconnectKept = output<void>();
+  readonly returned = output<void>();
+
+  protected settle(event: TransitionEvent): void {
+    const fold = event.currentTarget as HTMLElement;
+    if (event.target === fold && fold.getAnimations().length === 0) {
+      this.returned.emit();
+    }
+  }
 }

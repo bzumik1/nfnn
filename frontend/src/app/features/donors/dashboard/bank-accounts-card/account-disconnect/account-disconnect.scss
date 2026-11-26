@@ -19,8 +19,6 @@
 }
 
 .account-action-fold {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 1fr;
 }
 
@@ -42,6 +40,8 @@
 
 .account-action-fold--closing {
   @extend .account-confirm--closing;
+  display: grid;
+  transition-behavior: normal;
 }
 
 .account-action-fold--closing,
