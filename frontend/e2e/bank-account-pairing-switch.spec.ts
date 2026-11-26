@@ -16,6 +16,42 @@ import {
 
 const SWAP_IN_MOTION = '.account-swap--opening, .account-swap--closing';
 
+interface SwapPart {
+  readonly className: string;
+  readonly display: string;
+  readonly motions: string[];
+}
+
+function holdMotions(row: Locator): Promise<void> {
+  return row.evaluate((element) => {
+    element.getAnimations({ subtree: true }).forEach((motion) => motion.pause());
+  });
+}
+
+function finishMotions(row: Locator): Promise<void> {
+  return row.evaluate((element) => {
+    element
+      .getAnimations({ subtree: true })
+      .filter((motion) => Number.isFinite(Number(motion.effect?.getComputedTiming().endTime)))
+      .forEach((motion) => motion.finish());
+  });
+}
+
+function swapParts(row: Locator): Promise<SwapPart[]> {
+  return row.evaluate((element) =>
+    Array.from(element.querySelectorAll<HTMLElement>('.account-swap'), (part) => ({
+      className: part.className,
+      display: getComputedStyle(part).display,
+      motions: part
+        .getAnimations()
+        .map(
+          (motion) =>
+            `${(motion as CSSTransition).transitionProperty ?? (motion as CSSAnimation).animationName}:${motion.playState}`,
+        ),
+    })),
+  );
+}
+
 async function openVerifiedAccount(page: Page, width: number): Promise<Locator> {
   await mockDonorApi(page);
   await page.route(
@@ -82,18 +118,23 @@ test.describe('Given a signed-in donor with a verified bank account on a compute
 
     await exclude.click();
     await expect(row.getByRole('button', { name: 'Ponechat' })).toBeFocused();
+    await holdMotions(row);
+    await expect(row.locator('.account-action-fold.account-swap--closing')).toBeAttached();
     await page.keyboard.press('Enter');
+    await finishMotions(row);
 
     await expect(exclude).toBeFocused();
     await untilAtRest(row);
     await expect(exclude).toBeFocused();
+    const parts = await swapParts(row);
     expect(
-      await row.evaluate((element) =>
-        Array.from(element.querySelectorAll('.account-action-fold'), (fold) => ({
-          moving: /--(opening|returning|closing)\b/.test(fold.className),
-          display: getComputedStyle(fold).display,
+      parts
+        .filter((part) => part.className.includes('account-action-fold'))
+        .map((part) => ({
+          moving: /--(opening|returning|closing)\b/.test(part.className),
+          display: part.display,
         })),
-      ),
+      JSON.stringify(parts),
     ).toEqual([{ moving: false, display: 'block' }]);
   });
 
@@ -108,8 +149,10 @@ test.describe('Given a signed-in donor with a verified bank account on a compute
     await expect(keep).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(exclude).toBeFocused();
+    await holdMotions(row);
     await expect(row.locator('.account-confirm.account-swap--closing')).toBeAttached();
     await page.keyboard.press('Enter');
+    await finishMotions(row);
 
     await expect(keep).toBeFocused();
     await untilAtRest(row);
