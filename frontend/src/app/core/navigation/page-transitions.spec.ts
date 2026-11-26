@@ -27,21 +27,18 @@ import {
   PAGE_TRANSITION_LONGEST_MS,
   PageTransitions,
   SECTION_READS_WITHIN_MS,
-  STEP_ENDS_LATE_BY_MS,
+  MOTION_ENDS_LATE_BY_MS,
 } from './page-transitions';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 import { closeOnceCovered, SHEET_STEPPING, sheetOnly, swipeBackInSheet } from './sheet-stepping';
 import { steepestStepOver } from './back-swipe';
 import { afterDrawnFrames, publishSteadyFrame, STEP_CHROME } from './step-chrome';
+import { CLOCK_ONLY } from './testing/clock-only';
 
 @Component({ template: '' })
 class Blank {}
 
 const readsInFlight: (() => void)[] = [];
-
-const CLOCK_ONLY: Parameters<typeof vi.useFakeTimers>[0] = {
-  toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
-};
 
 function asksForItsText(): boolean {
   readsInFlight.push(inject(PagePlacement).reading());
@@ -997,7 +994,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     ];
   }
 
-  it('when the frames stop right after the one that lets the motions go and the motions never report that they finished, as on a cold runner, then the step still ends within its motion’s length and STEP_ENDS_LATE_BY_MS, without waiting for another frame, leaving no copy and nothing inert', async () => {
+  it('when the frames stop right after the one that lets the motions go and the motions never report that they finished, as on a cold runner, then the step still ends within its motion’s length and MOTION_ENDS_LATE_BY_MS, without waiting for another frame, leaving no copy and nothing inert', async () => {
     watchHeldMotions();
     const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
@@ -1008,12 +1005,12 @@ describe('Given a phone that animates, an article opened from the news, and the 
       `${PAGE_TRANSITION_CLASS}--held`,
     );
 
-    await vi.advanceTimersByTimeAsync(300 + STEP_ENDS_LATE_BY_MS);
+    await vi.advanceTimersByTimeAsync(300 + MOTION_ENDS_LATE_BY_MS);
 
     expect(stepLeftOver()).toEqual([]);
   });
 
-  it('when frames come only every 600 ms and the motions never report that they finished, then the step ends within its motion’s length and STEP_ENDS_LATE_BY_MS after the frame that lets them go, not after the next frame or its longest time', async () => {
+  it('when frames come only every 600 ms and the motions never report that they finished, then the step ends within its motion’s length and MOTION_ENDS_LATE_BY_MS after the frame that lets them go, not after the next frame or its longest time', async () => {
     watchHeldMotions();
     const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
@@ -1026,7 +1023,30 @@ describe('Given a phone that animates, an article opened from the news, and the 
       `${PAGE_TRANSITION_CLASS}--held`,
     );
 
-    await vi.advanceTimersByTimeAsync(300 + STEP_ENDS_LATE_BY_MS);
+    await vi.advanceTimersByTimeAsync(300 + MOTION_ENDS_LATE_BY_MS);
+
+    expect(stepLeftOver()).toEqual([]);
+  });
+
+  it('when the frame after the one that lets the motions go comes 250 ms late, then the step is not cut before 250 ms and its 300 ms motion, and ends within those and MOTION_ENDS_LATE_BY_MS', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    draw(5000);
+    draw(5016);
+    expect(moving()?.classList, 'the motions were not let go').not.toContain(
+      `${PAGE_TRANSITION_CLASS}--held`,
+    );
+
+    await vi.advanceTimersByTimeAsync(250);
+    draw(5266);
+    await vi.advanceTimersByTimeAsync(300 + MOTION_ENDS_LATE_BY_MS - 10);
+    expect(
+      stepLeftOver(),
+      'the step was cut before its motion ran from its late first frame',
+    ).toContain('the step runs');
+    await vi.advanceTimersByTimeAsync(20);
 
     expect(stepLeftOver()).toEqual([]);
   });
@@ -3604,10 +3624,12 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     );
   }
 
-  it('when a section opens inside the sheet and the frames stop right after the one that lets its motions go, which never report that they finished, as on a cold runner, then the step ends within its motion’s length and STEP_ENDS_LATE_BY_MS, leaving no copy of the list beside the section', async () => {
+  it('when a section opens inside the sheet and the frames stop right after the one that lets its motions go, which never report that they finished, as on a cold runner, then the step runs its 350 ms and ends within them and MOTION_ENDS_LATE_BY_MS, leaving no copy of the list beside the section', async () => {
+    document.documentElement.style.setProperty('--duration-page', '350ms');
     vi.useFakeTimers(CLOCK_ONLY);
     onTestFinished(() => {
       vi.useRealTimers();
+      document.documentElement.style.removeProperty('--duration-page');
     });
     watchHeldMotions();
     const frames = heldFrames();
@@ -3616,13 +3638,15 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     drawFrame(frames);
     drawFrame(frames);
 
-    await vi.advanceTimersByTimeAsync(STEP_ENDS_LATE_BY_MS);
+    await vi.advanceTimersByTimeAsync(350);
+    expect(sheetStepLeftOver(), 'the step was cut before its length').toContain('the step runs');
+    await vi.advanceTimersByTimeAsync(MOTION_ENDS_LATE_BY_MS);
 
     expect(sheetStepLeftOver()).toEqual([]);
     expect(sheet.textContent).toBe('Můj přehled');
   });
 
-  it('when a section opens inside the sheet before the step chrome has registered, and the chrome registers while the step runs, then the step still ends with the section shown and no copy left', async () => {
+  it('when a section opens inside the sheet before the step chrome has registered, and the chrome registers while the step runs and the frames stop right after the one that lets its motions go, then the step still ends within MOTION_ENDS_LATE_BY_MS of that frame with the section shown and no copy left', async () => {
     vi.useFakeTimers(CLOCK_ONLY);
     onTestFinished(() => {
       vi.useRealTimers();
@@ -3636,7 +3660,7 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     drawFrame(frames);
     drawFrame(frames);
 
-    await vi.advanceTimersByTimeAsync(STEP_ENDS_LATE_BY_MS);
+    await vi.advanceTimersByTimeAsync(MOTION_ENDS_LATE_BY_MS);
 
     expect(sheetStepLeftOver()).toEqual([]);
     expect(sheet.textContent).toBe('Můj přehled');

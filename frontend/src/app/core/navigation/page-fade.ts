@@ -25,6 +25,7 @@ import { pathOf } from './app-tabs';
 import { pageFadeFor } from './page-transition-kind';
 import {
   FRAME_LATE_MS,
+  MOTION_ENDS_LATE_BY_MS,
   PAGE_COVER_LONGEST_MS,
   PAGE_LAYER_CLASS,
   PAGE_TRANSITION_LONGEST_MS,
@@ -44,9 +45,8 @@ const ADMINISTRATION = '/sprava';
 const INTERRUPTIONS = ['pointerdown', 'keydown', 'wheel'] as const;
 const PRESS_ENDS = ['pointerup', 'pointercancel'] as const;
 const RENDERED_AFTER_FRAMES = 2;
-const STILL_LATE_BY_MS = 2 * FRAME_LATE_MS;
-export const PAGE_FADE_ENDS_LATE_BY_MS =
-  RENDERED_AFTER_FRAMES * FRAME_LATE_MS + 2 * STILL_LATE_BY_MS;
+export const PAGE_FADE_WITHOUT_FRAMES_ENDS_LATE_BY_MS =
+  RENDERED_AFTER_FRAMES * FRAME_LATE_MS + 2 * MOTION_ENDS_LATE_BY_MS;
 
 interface Prepared {
   readonly layer: HTMLElement;
@@ -212,7 +212,15 @@ export class PageFade {
     };
     view.getComputedStyle(element).getPropertyValue('animation-name');
     const motions = typeof element.getAnimations === 'function' ? element.getAnimations() : [];
-    this.limit = view.setTimeout(once, stillWithinMs(motions));
+    const withinMs = stillWithinMs(motions);
+    const asked = view.setTimeout(once, withinMs);
+    this.limit = asked;
+    view.requestAnimationFrame(() => {
+      if (!done && this.limit === asked) {
+        view.clearTimeout(asked);
+        this.limit = view.setTimeout(once, withinMs);
+      }
+    });
     void Promise.allSettled(motions.map((motion) => motion.finished)).then(once);
   }
 
@@ -305,11 +313,13 @@ function isClear(colour: string): boolean {
 }
 
 function stillWithinMs(motions: readonly Animation[]): number {
-  const longestMs = Math.max(
-    0,
-    ...motions.map((motion) => Number(motion.effect?.getComputedTiming().endTime ?? 0)),
-  );
-  return Math.min(PAGE_TRANSITION_LONGEST_MS, longestMs + STILL_LATE_BY_MS);
+  const longestMs = Math.max(0, ...motions.map(lengthOf));
+  return Math.min(PAGE_TRANSITION_LONGEST_MS, longestMs + MOTION_ENDS_LATE_BY_MS);
+}
+
+function lengthOf(motion: Animation): number {
+  const end = motion.effect?.getComputedTiming().endTime ?? 0;
+  return typeof end === 'number' && Number.isFinite(end) ? end : PAGE_TRANSITION_LONGEST_MS;
 }
 
 function afterFrames(view: Window, frames: number, then: () => void): void {

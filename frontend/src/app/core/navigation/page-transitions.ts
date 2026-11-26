@@ -42,7 +42,7 @@ export const PAGE_TRANSITION_LONGEST_MS = 2000;
 export const PAGE_COVER_LONGEST_MS = 5000;
 export const KEPT_PAGES = 3;
 export const FRAME_LATE_MS = 100;
-export const STEP_ENDS_LATE_BY_MS = 2 * FRAME_LATE_MS;
+export const MOTION_ENDS_LATE_BY_MS = 2 * FRAME_LATE_MS;
 export const SECTION_READS_WITHIN_MS = 150;
 export const FIRST_SECTION_READS_WITHIN_MS = 300;
 export const HELD_WITHOUT_A_FRAME_MS = PAGE_TRANSITION_LONGEST_MS / 4;
@@ -454,7 +454,7 @@ export class PageTransitions {
   motionEndsWithinMs(): number {
     return Math.min(
       PAGE_TRANSITION_LONGEST_MS,
-      this.durationOf('--duration-page') + STEP_ENDS_LATE_BY_MS,
+      this.durationOf('--duration-page') + MOTION_ENDS_LATE_BY_MS,
     );
   }
 

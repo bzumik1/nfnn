@@ -6,12 +6,17 @@ import { AdministrationAccess } from '../auth/administration-access';
 import { CompactLayout } from '../layout/compact-layout';
 import {
   PAGE_FADE_CLASS,
-  PAGE_FADE_ENDS_LATE_BY_MS,
+  PAGE_FADE_WITHOUT_FRAMES_ENDS_LATE_BY_MS,
   PAGE_FADE_HIDDEN_CLASS,
   PageFade,
 } from './page-fade';
-import { PAGE_LAYER_CLASS, PAGE_TRANSITION_LONGEST_MS } from './page-transitions';
+import {
+  MOTION_ENDS_LATE_BY_MS,
+  PAGE_LAYER_CLASS,
+  PAGE_TRANSITION_LONGEST_MS,
+} from './page-transitions';
 import { ScrollHold } from './scroll-hold';
+import { CLOCK_ONLY } from './testing/clock-only';
 
 @Component({ template: '' })
 class Blank {}
@@ -25,10 +30,6 @@ interface SeenAtArrival {
 }
 
 let slowPage: Subject<string>;
-
-const CLOCK_ONLY: Parameters<typeof vi.useFakeTimers>[0] = {
-  toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
-};
 
 function computerWith(compact: boolean, administrationUnlocked = true): void {
   TestBed.configureTestingModule({
@@ -171,19 +172,19 @@ describe('Given a computer that animates, with O nás open', () => {
     ];
   }
 
-  it('when no frame comes at all, as on a cold runner, then the copy goes and the content shows within PAGE_FADE_ENDS_LATE_BY_MS, not only after the cover’s longest time', async () => {
+  it('when no frame comes at all, as on a cold runner, then the copy goes and the content shows within PAGE_FADE_WITHOUT_FRAMES_ENDS_LATE_BY_MS, not only after the cover’s longest time', async () => {
     await start(false);
     const frames = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
     onTestFinished(() => frames.mockRestore());
     vi.useFakeTimers(CLOCK_ONLY);
 
     await router.navigateByUrl('/aktuality');
-    await vi.advanceTimersByTimeAsync(PAGE_FADE_ENDS_LATE_BY_MS);
+    await vi.advanceTimersByTimeAsync(PAGE_FADE_WITHOUT_FRAMES_ENDS_LATE_BY_MS);
 
     expect(fadeLeftOver()).toEqual([]);
   });
 
-  it('when the fades never report that they finished, then the copy goes and the content shows within their length and PAGE_FADE_ENDS_LATE_BY_MS, not only after the longest time of each', async () => {
+  it('when the fades never report that they finished, then the copy goes and the content shows within their length and PAGE_FADE_WITHOUT_FRAMES_ENDS_LATE_BY_MS, not only after the longest time of each', async () => {
     await start(false);
     const fadeMs = 100;
     const frames = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
@@ -206,7 +207,69 @@ describe('Given a computer that animates, with O nás open', () => {
     vi.useFakeTimers(CLOCK_ONLY);
 
     await router.navigateByUrl('/aktuality');
-    await vi.advanceTimersByTimeAsync(2 * fadeMs + PAGE_FADE_ENDS_LATE_BY_MS);
+    await vi.advanceTimersByTimeAsync(2 * fadeMs + PAGE_FADE_WITHOUT_FRAMES_ENDS_LATE_BY_MS);
+
+    expect(fadeLeftOver()).toEqual([]);
+  });
+
+  function fadesReporting(endTime: unknown): void {
+    Object.defineProperty(Element.prototype, 'getAnimations', {
+      configurable: true,
+      value: () => [
+        {
+          finished: new Promise(() => undefined),
+          effect: { getComputedTiming: () => ({ endTime }) },
+        },
+      ],
+    });
+    onTestFinished(() => {
+      delete (Element.prototype as { getAnimations?: unknown }).getAnimations;
+    });
+  }
+
+  function framesByHand(): () => void {
+    const waiting: FrameRequestCallback[] = [];
+    const frames = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
+      waiting.push(frame);
+      return waiting.length;
+    });
+    onTestFinished(() => frames.mockRestore());
+    return () => waiting.splice(0).forEach((frame) => frame(performance.now()));
+  }
+
+  it('when the first frame of the fade out comes 250 ms after it was asked for, as on an iPad that stalls, then the copy still fades its whole length from that frame instead of popping away', async () => {
+    await start(false);
+    const fadeMs = 100;
+    fadesReporting(fadeMs);
+    const draw = framesByHand();
+    vi.useFakeTimers(CLOCK_ONLY);
+    await router.navigateByUrl('/aktuality');
+    draw();
+    draw();
+
+    await vi.advanceTimersByTimeAsync(250);
+    draw();
+    await vi.advanceTimersByTimeAsync(fadeMs + MOTION_ENDS_LATE_BY_MS - 10);
+    expect(cover(), 'the fade out was cut before its length from its first frame').not.toBeNull();
+    await vi.advanceTimersByTimeAsync(20);
+
+    expect(cover()).toBeNull();
+  });
+
+  it('when a fade reports its end as a CSS value rather than a number, as with a scroll-driven timeline, then the copy is not cut away at once and still goes within the longest time of the fade', async () => {
+    await start(false);
+    fadesReporting({ value: 100, unit: 'ms' });
+    const frames = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
+      frame(performance.now());
+      return 1;
+    });
+    onTestFinished(() => frames.mockRestore());
+    vi.useFakeTimers(CLOCK_ONLY);
+
+    await router.navigateByUrl('/aktuality');
+    await vi.advanceTimersByTimeAsync(300);
+    expect(cover(), 'the copy was cut away at once').not.toBeNull();
+    await vi.advanceTimersByTimeAsync(2 * PAGE_TRANSITION_LONGEST_MS);
 
     expect(fadeLeftOver()).toEqual([]);
   });
