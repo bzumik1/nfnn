@@ -161,6 +161,12 @@ describe('Given a list of the administration that a step back returns to from th
 
         expect(scrolledBy).not.toHaveBeenCalled();
       });
+
+      it('then a step back about to copy the list keeps the restored scroll while the row still shows, though it stands elsewhere than when the card opened, since the page above may still be settling (sprava-back-matrix, the scroll kept at 160 against 152 and 218)', async () => {
+        await placedByTheStepBackWithTheLinkMovedTo(429);
+
+        expect(scrolledBy).not.toHaveBeenCalled();
+      });
     });
 
     it('then the link takes the focus from the heading without moving the page while the row shows', async () => {

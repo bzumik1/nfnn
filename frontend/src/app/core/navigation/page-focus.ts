@@ -148,7 +148,7 @@ export class PageFocus {
       return;
     }
     const target = this.returnTarget(scope)?.() ?? null;
-    if (target === null || scrollsInABoxOfItsOwn(view, target)) {
+    if (target === null || scrollsInABoxOfItsOwn(view, target) || liesInView(target)) {
       return;
     }
     const drift = target.getBoundingClientRect().top - top;
