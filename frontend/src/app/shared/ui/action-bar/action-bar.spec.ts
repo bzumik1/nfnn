@@ -32,17 +32,31 @@ class FakeResizeObserver {
 
 describe('Given a sticky action bar at the bottom of a page', () => {
   let fixture: ComponentFixture<Host>;
-  let height: number;
-  let bottom: number;
+  let heightOf: (bar: HTMLElement) => number;
+  let bottomOf: (bar: HTMLElement) => number;
+  let viewportHeight: number;
+
+  const third = () => Math.ceil(viewportHeight / 3) + 1;
+  const isResting = (bar: HTMLElement) => bar.classList.contains('ui-action-bar--resting');
+  const isInFlow = (bar: HTMLElement) => bar.classList.contains('ui-action-bar--in-flow');
 
   beforeEach(async () => {
-    height = 84;
-    bottom = window.innerHeight;
+    viewportHeight = 768;
+    heightOf = () => 84;
+    bottomOf = () => viewportHeight;
     vi.stubGlobal('ResizeObserver', FakeResizeObserver);
-    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(() => height);
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-      () => new DOMRect(0, bottom - height, 320, height),
-    );
+    vi.spyOn(window, 'innerHeight', 'get').mockImplementation(() => viewportHeight);
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return heightOf(this);
+    });
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const height = heightOf(this);
+      return new DOMRect(0, bottomOf(this) - height, 320, height);
+    });
     await TestBed.configureTestingModule({ imports: [Host] }).compileComponents();
     fixture = TestBed.createComponent(Host);
     await fixture.whenStable();
@@ -54,77 +68,155 @@ describe('Given a sticky action bar at the bottom of a page', () => {
     document.documentElement.style.removeProperty('--action-bar-height');
   });
 
+  function bar(): HTMLElement {
+    return fixture.nativeElement.querySelector('.ui-action-bar');
+  }
+
+  async function scroll(times = 1): Promise<void> {
+    for (let frame = 0; frame < times; frame++) {
+      window.dispatchEvent(new Event('scroll'));
+      await fixture.whenStable();
+    }
+  }
+
+  async function resize(times = 1): Promise<void> {
+    for (let frame = 0; frame < times; frame++) {
+      FakeResizeObserver.latest?.callback();
+      await fixture.whenStable();
+    }
+  }
+
   it('when it is shown, then the page knows its height so a focused field scrolls above it', () => {
     expect(document.documentElement.style.getPropertyValue('--action-bar-height')).toBe('84px');
-    expect(FakeResizeObserver.latest?.observed).toEqual([
-      fixture.nativeElement.querySelector('.ui-action-bar'),
-    ]);
+    expect(FakeResizeObserver.latest?.observed).toContain(bar());
   });
 
-  it('when it grows because a message appears, then the page knows the new height', () => {
-    height = 132;
-    FakeResizeObserver.latest?.callback();
+  it('when what stands above it changes its size, then the bar looks again where it stands', () => {
+    expect(FakeResizeObserver.latest?.observed).toContain(bar().parentElement);
+  });
+
+  it('when it grows because a message appears, then the page knows the new height', async () => {
+    heightOf = () => 132;
+    await resize();
 
     expect(document.documentElement.style.getPropertyValue('--action-bar-height')).toBe('132px');
   });
 
-  it('when it goes away, then the page forgets it and stops watching', async () => {
+  it('when the page scrolls and the height stays the same, then the page height is written only once', async () => {
+    const writes = vi.spyOn(document.documentElement.style, 'setProperty');
+
+    await scroll(5);
+
+    expect(writes).not.toHaveBeenCalled();
+  });
+
+  it('when it goes away, then the page forgets it, stops watching and stops listening to the window', async () => {
+    const removed = vi.spyOn(window, 'removeEventListener');
+
     fixture.componentInstance.shown.set(false);
     await fixture.whenStable();
 
     expect(document.documentElement.style.getPropertyValue('--action-bar-height')).toBe('');
     expect(FakeResizeObserver.latest?.disconnected).toBe(true);
+    expect(removed.mock.calls.map(([type]) => type)).toEqual(
+      expect.arrayContaining(['scroll', 'resize']),
+    );
   });
 
-  function bar(): HTMLElement {
-    return fixture.nativeElement.querySelector('.ui-action-bar');
-  }
-
   it('when it stands on the bottom of the screen while the page scrolls under it, then it floats over the page', () => {
-    expect(bar().classList).not.toContain('ui-action-bar--resting');
-    expect(bar().classList).not.toContain('ui-action-bar--in-flow');
+    expect(isResting(bar())).toBe(false);
+    expect(isInFlow(bar())).toBe(false);
   });
 
   it('when the page scrolls to where the bar stops above the bottom of the screen, then it rests in the page like a card', async () => {
-    bottom = window.innerHeight - 120;
-    window.dispatchEvent(new Event('scroll'));
-    await fixture.whenStable();
+    bottomOf = () => viewportHeight - 120;
+    await scroll();
 
-    expect(bar().classList).toContain('ui-action-bar--resting');
+    expect(isResting(bar())).toBe(true);
   });
 
   it('when the page scrolls back until the bar reaches the bottom of the screen, then it floats again', async () => {
-    bottom = window.innerHeight - 120;
-    window.dispatchEvent(new Event('scroll'));
-    await fixture.whenStable();
-    bottom = window.innerHeight;
-    window.dispatchEvent(new Event('scroll'));
-    await fixture.whenStable();
+    bottomOf = () => viewportHeight - 120;
+    await scroll();
+    bottomOf = () => viewportHeight;
+    await scroll();
 
-    expect(bar().classList).not.toContain('ui-action-bar--resting');
+    expect(isResting(bar())).toBe(false);
+  });
+
+  it('when the bar stands at the edge where it starts to rest and its own look moves it by a pixel, then it keeps one state over the next frames', async () => {
+    bottomOf = (element) => viewportHeight - (isResting(element) ? 1 : 2.5);
+    const seen: boolean[] = [];
+
+    for (let frame = 0; frame < 6; frame++) {
+      await scroll();
+      seen.push(isResting(bar()));
+      await resize();
+      seen.push(isResting(bar()));
+    }
+
+    expect(new Set(seen.slice(1)).size).toBe(1);
   });
 
   it('when it grows taller than a third of the screen, then it stays in the page instead of covering the fields and the page reserves no room for it', async () => {
-    height = Math.ceil(window.innerHeight / 3) + 1;
-    FakeResizeObserver.latest?.callback();
-    await fixture.whenStable();
+    heightOf = () => third();
+    await resize();
 
-    expect(bar().classList).toContain('ui-action-bar--in-flow');
-    expect(bar().classList).toContain('ui-action-bar--resting');
+    expect(isInFlow(bar())).toBe(true);
+    expect(isResting(bar())).toBe(true);
     expect(document.documentElement.style.getPropertyValue('--action-bar-height')).toBe('0px');
   });
 
-  it('when it shrinks back to a third of the screen, then it floats again', async () => {
-    height = Math.ceil(window.innerHeight / 3) + 1;
-    FakeResizeObserver.latest?.callback();
-    await fixture.whenStable();
-    height = Math.floor(window.innerHeight / 3);
-    FakeResizeObserver.latest?.callback();
-    await fixture.whenStable();
+  it('when it shrinks well below a third of the screen, then it floats again', async () => {
+    heightOf = () => third();
+    await resize();
+    heightOf = () => Math.floor(viewportHeight * 0.25);
+    await resize();
 
-    expect(bar().classList).not.toContain('ui-action-bar--in-flow');
+    expect(isInFlow(bar())).toBe(false);
     expect(document.documentElement.style.getPropertyValue('--action-bar-height')).toBe(
-      `${height}px`,
+      `${Math.floor(viewportHeight * 0.25)}px`,
     );
+  });
+
+  it('when its height in the page differs a little from its floating height at the third of the screen, then it keeps one state over the next frames', async () => {
+    heightOf = (element) => (isInFlow(element) ? third() - 6 : third());
+    const seen: boolean[] = [];
+
+    for (let frame = 0; frame < 6; frame++) {
+      await resize();
+      seen.push(isInFlow(bar()));
+      await scroll();
+      seen.push(isInFlow(bar()));
+    }
+
+    expect(seen.every(Boolean)).toBe(true);
+  });
+
+  it('when the Safari toolbar shows again and makes the screen shorter, then a bar between the two thirds keeps floating', async () => {
+    const tallThird = third();
+    viewportHeight = 700;
+    heightOf = () => tallThird - 2;
+    await scroll(3);
+
+    expect(isInFlow(bar())).toBe(false);
+  });
+
+  it('when the administrator pressed inside the floating bar and a save makes it taller than a third of the screen, then it keeps floating under the finger', async () => {
+    bar().dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    heightOf = () => third();
+    await resize();
+
+    expect(isInFlow(bar())).toBe(false);
+  });
+
+  it('when a control inside the floating bar has the focus and the bar grows taller than a third of the screen, then it keeps floating', async () => {
+    const button = document.createElement('button');
+    bar().append(button);
+    button.focus();
+    heightOf = () => third();
+    await resize();
+
+    expect(isInFlow(bar())).toBe(false);
   });
 });
