@@ -5,6 +5,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import {
+  FakeSoftKeyboard,
+  provideFakeSoftKeyboard,
+} from '../../../core/layout/testing/fake-soft-keyboard';
 import { ShortViewport } from '../../../core/layout/short-viewport';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
@@ -1127,5 +1131,111 @@ describe('Given the payment panel of a visitor without a variable symbol', () =>
     expect(feed.following).toBe(0);
     http.verify();
     vi.unstubAllGlobals();
+  });
+});
+
+describe('Given the custom amount on a phone whose keyboard opens over the page', () => {
+  const KEYBOARD_COVERS_FROM = 374;
+  const ROOM_ABOVE_KEYBOARD = 16;
+  let fixture: ComponentFixture<PaymentPanel>;
+  let keyboard: FakeSoftKeyboard;
+  let scrolled: number[];
+  const root = document.documentElement;
+
+  beforeEach(async () => {
+    keyboard = new FakeSoftKeyboard();
+    scrolled = [];
+    await TestBed.configureTestingModule({
+      imports: [PaymentPanel],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideFakeSoftKeyboard(keyboard),
+      ],
+    }).compileComponents();
+    root.scrollBy = ((options: ScrollToOptions) => scrolled.push(options.top ?? 0)) as never;
+    fixture = TestBed.createComponent(PaymentPanel);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController)
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(foundationPaymentDetails());
+    await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    delete (root as { scrollBy?: unknown }).scrollBy;
+    fixture.nativeElement.remove();
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  function customAmountAt(top: number, bottom: number): HTMLInputElement {
+    const otherAmount = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).find((candidate) => candidate.textContent?.trim() === 'Jiná částka')!;
+    otherAmount.click();
+    const field = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    field.getBoundingClientRect = () => ({ top, bottom, height: bottom - top }) as DOMRect;
+    return field;
+  }
+
+  it('when the first tap on Jiná částka opens the keyboard over the field, then the page scrolls the field above the keyboard', async () => {
+    const field = customAmountAt(422, 470);
+    expect(document.activeElement).toBe(field);
+
+    keyboard.show({ top: 0, height: KEYBOARD_COVERS_FROM });
+    await fixture.whenStable();
+
+    expect(scrolled).toEqual([470 - (KEYBOARD_COVERS_FROM - ROOM_ABOVE_KEYBOARD)]);
+  });
+
+  it('when the donor drags the page while typing so the field goes under the keyboard, then the page does not jump back', async () => {
+    const field = customAmountAt(422, 470);
+    keyboard.show({ top: 0, height: KEYBOARD_COVERS_FROM });
+    await fixture.whenStable();
+
+    field.getBoundingClientRect = () => ({ top: 600, bottom: 648, height: 48 }) as DOMRect;
+    keyboard.show({ top: 2, height: KEYBOARD_COVERS_FROM });
+    await fixture.whenStable();
+
+    expect(scrolled).toEqual([470 - (KEYBOARD_COVERS_FROM - ROOM_ABOVE_KEYBOARD)]);
+  });
+
+  it('when the focus comes to the field while the keyboard is already open, then the page scrolls the field above it at once', async () => {
+    const field = customAmountAt(422, 470);
+    field.blur();
+    await fixture.whenStable();
+    keyboard.show({ top: 0, height: KEYBOARD_COVERS_FROM });
+    await fixture.whenStable();
+    expect(scrolled).toEqual([]);
+
+    field.focus();
+    await fixture.whenStable();
+
+    expect(scrolled).toEqual([470 - (KEYBOARD_COVERS_FROM - ROOM_ABOVE_KEYBOARD)]);
+  });
+
+  it('when the panel stands in a sheet whose own keyboard avoidance scrolls it, then the page behind the sheet stays still', async () => {
+    const sheet = document.createElement('dialog');
+    sheet.setAttribute('open', '');
+    document.body.appendChild(sheet);
+    sheet.appendChild(fixture.nativeElement);
+    customAmountAt(422, 470);
+
+    keyboard.show({ top: 0, height: KEYBOARD_COVERS_FROM });
+    await fixture.whenStable();
+    sheet.remove();
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when the keyboard opens and the field already stands above it, then the page stays', async () => {
+    customAmountAt(151, 199);
+
+    keyboard.show({ top: 0, height: KEYBOARD_COVERS_FROM });
+    await fixture.whenStable();
+
+    expect(scrolled).toEqual([]);
   });
 });

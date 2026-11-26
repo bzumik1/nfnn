@@ -359,7 +359,7 @@ test.describe('Given a signed-in donor', () => {
     await expect(toggle).toBeInViewport();
   });
 
-  test('when the payment details fail on a phone, then the card Poslat dar says only that at the height it had while loading, with no bank buttons, other device or QR left under it', async ({
+  test('when the payment details fail on a phone, then the card Poslat dar shrinks to that message and its retry, with no bank buttons, other device or QR left under it', async ({
     page,
   }) => {
     await mockDonorApi(page, noDonations);
@@ -384,7 +384,13 @@ test.describe('Given a signed-in donor', () => {
     await expect(bank.getByRole('alert')).toHaveText(
       'Platební údaje se nepodařilo načíst. Zkuste to prosím znovu. Když to nepomůže, napište na info@nfnn.cz.',
     );
-    expect(Math.abs((await bank.boundingBox())!.height - loadingHeight)).toBeLessThanOrEqual(1);
+    const box = (await bank.boundingBox())!;
+    const failure = (await bank.locator('.bank-failure').boundingBox())!;
+    const above = failure.y - box.y;
+    const below = box.y + box.height - (failure.y + failure.height);
+    expect(Math.abs(above - below)).toBeLessThanOrEqual(1);
+    expect(above).toBeLessThan(failure.height);
+    expect(box.height).toBeLessThan(loadingHeight);
     await expect(card.locator('.pay-actions')).toHaveAttribute('inert', '');
     await expect(card.locator('.bank-app')).toBeHidden();
     await expect(card.locator('.other-device')).toBeHidden();
