@@ -1,6 +1,7 @@
 import { APPEARANCE_STORAGE_KEY, Appearance } from '../appearance/appearance';
 import { HttpHeaders, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AdministrationAccess } from './administration-access';
 import {
@@ -11,6 +12,7 @@ import {
 } from './auth-store';
 import { Donor } from './donor';
 import { PasskeyAuthenticator } from './passkey-authenticator';
+import { PASSKEY_AUTHENTICATOR_LOADER } from './passkey-authenticator-loader';
 import { TimeoutError } from 'rxjs';
 import { Connectivity, PROBE_PATH, PROBE_TIMEOUT_MS } from '../connectivity/connectivity';
 import {
@@ -964,4 +966,28 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
     channel.posted.length = 0;
   }
+});
+
+describe('Given the auth store when the passkey code cannot be loaded', () => {
+  it('when a confirmation asks for a passkey, then it ends with the load error and the app is stable again', async () => {
+    const failure = new TypeError('Failed to fetch dynamically imported module');
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: PASSKEY_AUTHENTICATOR_LOADER, useValue: () => Promise.reject(failure) },
+      ],
+    });
+    const store = TestBed.inject(AuthStore);
+    TestBed.tick();
+    const http = TestBed.inject(HttpTestingController);
+    const failed = vi.fn();
+
+    store.confirmWith(null).subscribe({ error: failed });
+    http.expectOne('/api/donors/auth/passkey/options').flush(passkeySignInOptions());
+
+    await vi.waitFor(() => expect(failed).toHaveBeenCalledWith(failure));
+    await expect(TestBed.inject(ApplicationRef).whenStable()).resolves.toBeUndefined();
+    http.verify();
+  });
 });
