@@ -100,10 +100,55 @@ test.describe('Given a signed-in donor with a verified bank account on a compute
     await expect(keep).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(exclude).toBeFocused();
+    await expect(row.locator('.account-confirm.account-swap--closing')).toBeAttached();
     await page.keyboard.press('Enter');
 
     await expect(keep).toBeFocused();
     await untilAtRest(row);
     await expect(keep).toBeFocused();
   });
+
+  for (const width of [1280, 900]) {
+    test(`when a row asks about an older symbol ${width} px wide, then Nepřiřazovat platby z tohoto účtu stands under the question set apart by twice the row's gap`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donations/me/bank-accounts',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                bankAccountItem({
+                  symbolOffer: {
+                    variableSymbol: '6123456789',
+                    paymentCount: 14,
+                    firstMonth: '2025-01',
+                    lastMonth: '2026-10',
+                  },
+                }),
+              ],
+            },
+          }),
+      );
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height: 900 });
+      await openDonorSection(page, 'Bankovní účty');
+      const row = page.locator('.account').filter({ hasText: '2900233333/2010' });
+      await expect(row.locator('app-symbol-claim')).toBeVisible();
+      await untilAtRest(row);
+
+      const placed = await row.evaluate((element) => {
+        const body = element.querySelector('.account-body')!;
+        const question = element.querySelector('app-symbol-claim')!.getBoundingClientRect();
+        const button = element.querySelector('.account-action')!.getBoundingClientRect();
+        return {
+          offset: Math.round(button.top - question.bottom),
+          twiceTheGap: Math.round(2 * parseFloat(getComputedStyle(body).rowGap)),
+        };
+      });
+      expect(placed.offset).toBe(placed.twiceTheGap);
+    });
+  }
 });
