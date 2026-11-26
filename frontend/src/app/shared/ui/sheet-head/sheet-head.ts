@@ -34,6 +34,7 @@ function keepFocusClearOfHead(
   head: HTMLElement,
   view: Window,
   pressedByPointer: () => boolean,
+  asksForLessMotion: () => boolean,
   returning: (element: Element) => boolean,
 ): () => void {
   let pending = 0;
@@ -42,11 +43,14 @@ function keepFocusClearOfHead(
     if (focused.ownerDocument.activeElement !== focused) {
       return;
     }
+    const box = focused.getBoundingClientRect();
+    if (box.bottom <= panel.getBoundingClientRect().top) {
+      return;
+    }
     const margin = parseFloat(view.getComputedStyle(focused).scrollMarginTop) || 0;
-    const covered =
-      head.getBoundingClientRect().bottom - (focused.getBoundingClientRect().top - margin);
+    const covered = head.getBoundingClientRect().bottom - (box.top - margin);
     if (covered > 0) {
-      panel.scrollBy({ top: -covered, behavior: 'instant' });
+      panel.scrollBy({ top: -covered, behavior: asksForLessMotion() ? 'instant' : 'smooth' });
     }
   };
   const holdStillForTwoFrames = (focused: HTMLElement) => {
@@ -112,6 +116,17 @@ export const SHEET_HEAD_RESIZE_OBSERVER = new InjectionToken<typeof ResizeObserv
   { providedIn: 'root', factory: () => inject(DOCUMENT).defaultView?.ResizeObserver ?? null },
 );
 
+export const SHEET_HEAD_ASKS_FOR_LESS_MOTION = new InjectionToken<() => boolean>(
+  'SHEET_HEAD_ASKS_FOR_LESS_MOTION',
+  {
+    providedIn: 'root',
+    factory: () => {
+      const view = inject(DOCUMENT).defaultView;
+      return () => view?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    },
+  },
+);
+
 @Component({
   selector: 'app-sheet-head',
   templateUrl: './sheet-head.html',
@@ -130,6 +145,7 @@ export class SheetHead {
     const Observer = inject(SHEET_HEAD_RESIZE_OBSERVER);
     const view = inject(DOCUMENT).defaultView;
     const modality = inject(InputModality);
+    const asksForLessMotion = inject(SHEET_HEAD_ASKS_FOR_LESS_MOTION);
     const focusReturn = inject(FocusReturn);
     afterNextRender(() => {
       const panel = head.closest<HTMLElement>(SHEET_PANEL);
@@ -162,6 +178,7 @@ export class SheetHead {
             head,
             view,
             () => modality.lastPressByPointer(),
+            asksForLessMotion,
             (element) => focusReturn.isReturning(element),
           ),
         );
