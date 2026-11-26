@@ -47,6 +47,10 @@
   gap: var(--space-3);
 }
 
+.lock-actions > .lock-note {
+  margin-block-start: calc(-1 * var(--space-2));
+}
+
 .lock-form {
   text-align: start;
 }

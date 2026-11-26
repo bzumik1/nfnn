@@ -36,6 +36,7 @@
         <button
           type="button"
           class="ui-button ui-button--primary ui-button--block lock-passkey"
+          aria-describedby="lock-passkey-note"
           [disabled]="busy()"
           (click)="withPasskey()"
         >
@@ -48,6 +49,7 @@
         <button
           type="button"
           class="ui-button ui-button--primary ui-button--block lock-passkey"
+          aria-describedby="lock-passkey-note"
           appNeedsConnection
           [disabled]="busy() || !online()"
           (click)="withAccountPasskey()"
@@ -57,6 +59,11 @@
             <span when-busy i18n="@@admin.lock.passkey.busy">Čekáme na přístupový klíč…</span>
           </app-busy-label>
         </button>
+      }
+      @if (offersPasskey()) {
+        <p id="lock-passkey-note" class="lock-note" i18n="@@admin.lock.passkeyNote">
+          Face ID, otisk prstu nebo zámek obrazovky.
+        </p>
       }
       @if (passwordUnlocks()) {
         <button
@@ -71,11 +78,6 @@
         </button>
       }
     </div>
-    @if (offersPasskey()) {
-      <p class="lock-note" i18n="@@admin.lock.passkeyNote">
-        Face ID, otisk prstu nebo zámek obrazovky.
-      </p>
-    }
     @if (nothingUnlocks()) {
       <p class="lock-note" i18n="@@admin.lock.nothing">
         Na tomto zařízení správu odemknout nejde. Odhlaste se a&nbsp;přihlaste se znovu.
