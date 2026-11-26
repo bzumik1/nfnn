@@ -1,6 +1,12 @@
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { requestsInFlight, settled } from './settled';
+import {
+  chunkLoadNotice,
+  openAboutThenLoseNewChunks,
+  openPolicyFromContact,
+  withoutSessionStorage,
+} from './lost-chunks';
 
 const SMALL_PHONE = { width: 375, height: 667 };
 const KEYBOARD_HEIGHT = 262;
@@ -53,6 +59,49 @@ async function expectAboveKeyboard(locator: Locator): Promise<void> {
   expect(box).not.toBeNull();
   expect(box!.y).toBeGreaterThanOrEqual(0);
   expect(box!.y + box!.height).toBeLessThanOrEqual(SMALL_PHONE.height - KEYBOARD_HEIGHT);
+}
+
+type Hit = 'field' | 'notice' | 'other';
+
+function hitOnFieldCentre(page: Page): Promise<Hit> {
+  return page.evaluate(() => {
+    const field = document.querySelector('#contact-name')!;
+    const box = field.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    if (hit === field) {
+      return 'field';
+    }
+    return hit?.closest('.ui-notice--floating') ? 'notice' : 'other';
+  });
+}
+
+function hitOnNoticeCentre(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const notice = document.querySelector('.ui-notice--floating')!;
+    const box = notice.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    return hit !== null && notice.contains(hit);
+  });
+}
+
+function scrollFieldUnderNotice(page: Page): Promise<void> {
+  return page.evaluate(() => {
+    const field = document.querySelector('#contact-name')!.getBoundingClientRect();
+    const notice = document.querySelector('.ui-notice--floating')!.getBoundingClientRect();
+    window.scrollBy({
+      top: field.top + field.height / 2 - (notice.top + notice.height / 2),
+      behavior: 'instant',
+    });
+  });
+}
+
+function scrollTopAfterTwoFrames(page: Page): Promise<number> {
+  return page.evaluate(
+    () =>
+      new Promise<number>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve(window.scrollY))),
+      ),
+  );
 }
 
 test.describe('Given a small phone whose on-screen keyboard covers the lower part of the screen', () => {
@@ -123,5 +172,54 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
     await page.getByRole('radio', { name: 'Jiná částka' }).tap();
 
     await expect(page.locator('#donate-custom-amount')).toBeFocused();
+  });
+
+  test.describe('when a floating notice shows over the field the visitor types into', () => {
+    test.beforeEach(async ({ page }) => {
+      await withoutSessionStorage(page);
+      await openAboutThenLoseNewChunks(page);
+      await openPolicyFromContact(page);
+      await expect(chunkLoadNotice(page)).toBeVisible();
+      await page.locator('#contact-name').focus();
+      await expect
+        .poll(async () => {
+          await scrollFieldUnderNotice(page);
+          return hitOnFieldCentre(page);
+        })
+        .toBe('notice');
+    });
+
+    test('and the keyboard comes up, then the notice steps aside for the field without moving the page, is still heard, and comes back when the keyboard goes down', async ({
+      page,
+    }) => {
+      const scrollTop = await page.evaluate(() => window.scrollY);
+
+      await showKeyboard(page);
+
+      await expect.poll(() => hitOnFieldCentre(page)).toBe('field');
+      expect(await scrollTopAfterTwoFrames(page)).toBe(scrollTop);
+      expect(await chunkLoadNotice(page).ariaSnapshot()).toContain('Načíst znovu');
+
+      await hideKeyboard(page);
+
+      await expect.poll(() => hitOnNoticeCentre(page)).toBe(true);
+      expect(await scrollTopAfterTwoFrames(page)).toBe(scrollTop);
+    });
+
+    test('and the visitor drags the page while typing, then the page stays where the drag left it', async ({
+      page,
+    }) => {
+      await showKeyboard(page);
+      await expect.poll(() => hitOnFieldCentre(page)).toBe('field');
+
+      const dragged = await page.evaluate(() => {
+        window.scrollBy({ top: -40, behavior: 'instant' });
+        window.visualViewport?.dispatchEvent(new Event('scroll'));
+        return window.scrollY;
+      });
+
+      expect(await scrollTopAfterTwoFrames(page)).toBe(dragged);
+      expect(await hitOnFieldCentre(page)).toBe('field');
+    });
   });
 });
