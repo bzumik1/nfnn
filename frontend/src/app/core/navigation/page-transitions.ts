@@ -28,9 +28,8 @@ import {
 import { CompactLayout } from '../layout/compact-layout';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackDestination, BackTarget } from './back-target';
 import { SwipeSettle } from './back-swipe';
-import { NavigationFacts, PageTransitionKind, pageTransitionFor } from './page-transition-kind';
-import { tabOf } from './app-tabs';
-import { chromeOf, RouteChrome } from './route-chrome';
+import { NavigationFacts, PageTransitionKind } from './page-transition-kind';
+import { RouteChrome } from './route-chrome';
 import { DirtyForms } from '../updates/dirty-forms';
 import { NavigationPreview } from './navigation-preview';
 import { PagePlacement } from './page-placement';
@@ -52,7 +51,7 @@ export const DISPLAY_FRAME_MS = 1000 / 60;
 const PRESS_LEADS_WITHIN_MS = 1000;
 export const ACCOUNT_RETURNS_KEY = 'nfnnAppAccount';
 
-const LESS_MOTION = '(prefers-reduced-motion: reduce)';
+export const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 const PACE_SAMPLED_ON = ['pointerdown', 'touchstart', 'keydown'];
 export const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
 export const STANDING_DIALOG = 'dialog[open]:not(.dialog--leaving)';
@@ -135,6 +134,7 @@ export interface StepChrome {
   samplePace(stage: PageTransitions): void;
   hold(view: Window, overlay: HTMLElement, kind: PlacingKind): void;
   release(view: Window, overlay: HTMLElement, steadyBeforeMs: number): void;
+  cover(stage: PageTransitions, event: GuardsCheckEnd): void;
   afterDrawnFrames(
     view: Window,
     document: Document,
@@ -143,6 +143,23 @@ export interface StepChrome {
     mayEndByClock?: () => boolean,
     goesOn?: () => boolean,
   ): void;
+  arrive(stage: PageTransitions, running: Running): void;
+  moveOnceAnswered(stage: PageTransitions, running: Running, view: Window): void;
+  moveTo(
+    stage: PageTransitions,
+    running: Running,
+    view: Window,
+    arriving: KeptPage,
+    kind: PlacingKind,
+  ): void;
+  moveOver(
+    stage: PageTransitions,
+    running: Running,
+    view: Window,
+    leaving: KeptPage,
+    arriving: KeptPage,
+  ): void;
+  whenSectionDrawn(stage: PageTransitions, view: Window, then: () => void): void;
 }
 
 export interface SheetLooks {
@@ -168,24 +185,24 @@ export interface SwipePreview {
 export class PageTransitions {
   readonly document = inject(DOCUMENT);
   readonly router = inject(Router);
-  private readonly chrome = inject(RouteChrome).current;
+  readonly chrome = inject(RouteChrome).current;
   readonly compact = inject(CompactLayout).isCompact;
-  private readonly backTarget = inject(BackTarget);
+  readonly backTarget = inject(BackTarget);
   readonly preview = inject(NavigationPreview);
   readonly dirtyForms = inject(DirtyForms);
-  private readonly placement = inject(PagePlacement);
+  readonly placement = inject(PagePlacement);
   private readonly injector = inject(Injector);
   drawing: SwipeDrawing | null = null;
   sheets: SheetLooks | null = null;
   private stepChrome: StepChrome | null = null;
   private readonly lent: (() => void)[] = [];
-  private readonly kept = new Map<number, KeptPage>();
+  readonly kept = new Map<number, KeptPage>();
   readonly keptSheets = new Map<number, KeptSheet>();
   handingOver = false;
   sheetHandOver: Running | null = null;
-  private trigger: NavigationFacts['trigger'] = 'imperative';
-  private restoredDepth: number | null = null;
-  private standingSheet: HTMLElement | null = null;
+  trigger: NavigationFacts['trigger'] = 'imperative';
+  restoredDepth: number | null = null;
+  standingSheet: HTMLElement | null = null;
   closesWhenCovered: (() => void) | null = null;
   closingSheet: HTMLDialogElement | null = null;
   private readonly step = signal<Running | null>(null);
@@ -197,7 +214,7 @@ export class PageTransitions {
   private pressedAt = Number.NEGATIVE_INFINITY;
   tappedAt = 0;
   readonly loadedRoutes = new Set<Route>();
-  private drawnSincePress = true;
+  drawnSincePress = true;
 
   get dressing(): StepChrome | null {
     return this.stepChrome;
@@ -278,7 +295,7 @@ export class PageTransitions {
     } else if (event instanceof RouteConfigLoadStart) {
       this.loadedRoutes.add(event.route);
     } else if (event instanceof GuardsCheckEnd && event.shouldActivate) {
-      this.cover(event);
+      this.dressing?.cover(this, event);
       this.closeCoveredSheet();
     } else if (event instanceof Scroll) {
       this.reveal();
@@ -344,29 +361,12 @@ export class PageTransitions {
   }
 
   whenSectionDrawn(view: Window, then: () => void): void {
-    const placedAlready = this.placement.isSettled();
-    if (placedAlready && this.placement.isAnswered()) {
+    if (this.dressing === null) {
       this.placement.stopCountingReads();
       then();
       return;
     }
-    const readsWithinMs = placedAlready ? SECTION_READS_WITHIN_MS : FIRST_SECTION_READS_WITHIN_MS;
-    void this.placement
-      .placed(view, PAGE_TRANSITION_LONGEST_MS)
-      .then(() => this.placement.answered(view, readsWithinMs))
-      .then(() => {
-        this.placement.stopCountingReads();
-        let drawn = false;
-        const go = (): void => {
-          if (!drawn) {
-            drawn = true;
-            view.clearTimeout(late);
-            then();
-          }
-        };
-        const late = view.setTimeout(go, FRAME_LATE_MS);
-        this.afterRender(go);
-      });
+    this.dressing.whenSectionDrawn(this, view, then);
   }
 
   afterRender(then: () => void): void {
@@ -381,82 +381,6 @@ export class PageTransitions {
     this.document.documentElement.classList.toggle(SHEET_UNDER_CLASS, sheet !== null);
     if (sheet !== null) {
       void this.loadDrawing();
-    }
-  }
-
-  private cover(event: GuardsCheckEnd): void {
-    if (this.running?.swiping === true) {
-      return;
-    }
-    const view = this.document.defaultView;
-    const layer = this.layer();
-    const extras = untracked(this.router.currentNavigation)?.extras ?? {};
-    const destination = chromeOf(event.state.root);
-    const standingSheet = this.standingSheet;
-    this.standingSheet = null;
-    const returningSheet = sheetReturnsIn(extras.state) ? standingSheet : null;
-    const kind = pageTransitionFor({
-      first: event.id === 1 || !this.router.navigated,
-      reducedMotion: view?.matchMedia?.(LESS_MOTION).matches !== false,
-      compact: this.compact(),
-      dialogOpen: liveDialogs(this.document, SHOWN_DIALOG).some(
-        (dialog) => dialog !== this.closingSheet,
-      ),
-      fromSheet:
-        returningSheet !== null && this.trigger === 'imperative' && extras.info !== BACK_NAVIGATION,
-      trigger: this.trigger,
-      back: extras.info === BACK_NAVIGATION,
-      replaceUrl: extras.replaceUrl === true,
-      skipLocationChange: extras.skipLocationChange === true,
-      from: { url: this.router.url, parent: this.chrome().parent },
-      to: { url: event.urlAfterRedirects, parent: destination.parent },
-    });
-    if (layer === null || view === null || !motionAllowed(view)) {
-      return;
-    }
-    const deepens =
-      !extras.skipLocationChange &&
-      sameTab(this.router.url, event.urlAfterRedirects) &&
-      this.trigger === 'imperative' &&
-      extras.info !== BACK_NAVIGATION &&
-      (!extras.replaceUrl || depthIn(extras.state) >= this.backTarget.nextDepth());
-    if (kind === null || !this.compact()) {
-      if (deepens) {
-        this.keepBehind(this.backTarget.nextDepth() - 1, {
-          ...this.keep(layer),
-          sheet: returningSheet,
-        });
-      }
-      return;
-    }
-    const left = { ...this.shown(layer), sheet: kind === 'push' ? returningSheet : null };
-    const overlay = this.overlay(kind);
-    if (kind === 'push') {
-      this.keepBehind(this.backTarget.nextDepth() - 1, { ...left, url: this.router.url });
-    }
-    const behind =
-      kind === 'pop' && this.restoredDepth !== null ? this.keptAt(this.restoredDepth, view) : null;
-    const sheet = behind?.sheet ?? null;
-    const ahead = behind?.copy != null && behind.url === event.urlAfterRedirects;
-    const running: Running = {
-      kind,
-      overlay,
-      swiping: false,
-      sheet,
-      fromSheet: kind === 'push' && returningSheet !== null,
-      shownScrollY: ahead ? behind.scrollY : undefined,
-      revealed: false,
-      ahead,
-    };
-    if (!ahead) {
-      const placed = this.place(overlay, left, kind === 'push' ? 'under' : 'over');
-      this.dressChrome(overlay, placed, null);
-    }
-    this.running = running;
-    this.sheetUnder(sheet ?? left.sheet);
-    this.finishAfter(view, PAGE_COVER_LONGEST_MS);
-    if (ahead) {
-      this.moveOver(running, view, left, behind);
     }
   }
 
@@ -487,102 +411,24 @@ export class PageTransitions {
       });
       return;
     }
-    void this.placement
-      .placed(view, this.durationOf('--duration-page'))
-      .then(() => (running.ahead ? this.arrive(running) : this.moveOnceAnswered(running, view)));
-  }
-
-  private moveOnceAnswered(running: Running, view: Window): void {
-    const waitsMs = running.fromSheet
-      ? PAGE_TRANSITION_LONGEST_MS
-      : Math.min(FRAME_LATE_MS, this.dressing?.readsWaitLeftMs(this) ?? 0);
-    if (this.placement.isAnswered() || waitsMs <= 0) {
-      this.move(running, view);
-      return;
-    }
-    void this.placement
-      .answered(view, waitsMs)
-      .then(() => nextFrame(view, (_, inFrame) => this.move(running, view, inFrame)));
-  }
-
-  private arrive(running: Running): void {
-    if (this.running !== running) {
-      return;
-    }
-    running.arrived = true;
-    this.standWhereTheCopyShowed(running);
-    if (running.still) {
-      this.finish();
-    }
-  }
-
-  private standWhereTheCopyShowed(running: Running): void {
-    const view = this.document.defaultView;
-    const top = running.shownScrollY;
-    if (view !== null && top !== undefined && Math.abs(view.scrollY - top) > 1) {
-      view.scrollTo({ top, behavior: 'instant' });
-    }
-  }
-
-  private move(running: Running, view: Window, inFrame = false): void {
-    const layer = this.layer();
-    if (this.running !== running) {
-      return;
-    }
-    if (layer === null) {
-      this.finish();
-      return;
-    }
-    this.moveTo(
-      running,
-      view,
-      { ...this.shown(layer), sheet: running.sheet },
-      inFrame ? 'raf' : this.placement.placesInRendering ? 'resize-observer' : 'task',
-    );
+    void this.placement.placed(view, this.durationOf('--duration-page')).then(() => {
+      const chrome = this.dressing;
+      if (chrome === null) {
+        this.finish();
+      } else if (running.ahead) {
+        chrome.arrive(this, running);
+      } else {
+        chrome.moveOnceAnswered(this, running, view);
+      }
+    });
   }
 
   moveTo(running: Running, view: Window, arriving: KeptPage, kind: PlacingKind = 'task'): void {
-    const shown = this.place(running.overlay, arriving, running.kind === 'push' ? 'over' : 'under');
-    const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
-    this.dressChrome(running.overlay, left, shown);
-    this.startMoving(running, view, shown.box, kind);
-  }
-
-  private moveOver(running: Running, view: Window, leaving: KeptPage, arriving: KeptPage): void {
-    const left = this.put(running.overlay, leaving, 'over');
-    const shown = this.put(running.overlay, arriving, 'under');
-    left.scroll();
-    shown.scroll();
-    this.dressChrome(running.overlay, this.placedPage(running.overlay, 'over'), shown.page);
-    this.startMoving(running, view, shown.page.box, 'task');
-  }
-
-  private startMoving(running: Running, view: Window, page: HTMLElement, kind: PlacingKind): void {
-    const chrome = this.dressing;
-    chrome?.hold(view, running.overlay, kind);
-    running.overlay.classList.add(MOVING_CLASS);
-    const framesStopped = !this.drawnSincePress;
-    const still = this.finishWhenStill(running, page, view);
-    let released = false;
-    const release = (): void => {
-      if (released || this.running !== running) {
-        return;
-      }
-      released = true;
-      this.finishAfter(view, PAGE_TRANSITION_LONGEST_MS);
-      chrome?.release(view, running.overlay, this.steadyFrameMs());
-      view.requestAnimationFrame(() =>
-        view.setTimeout(still, this.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
-      );
-    };
-    (chrome?.afterDrawnFrames ?? ((...wait) => wait[3]()))(
-      view,
-      this.document,
-      kind === 'task' ? 2 : 1,
-      release,
-      () => framesStopped,
-      () => this.running === running,
-    );
+    if (this.dressing === null) {
+      this.finish();
+      return;
+    }
+    this.dressing.moveTo(this, running, view, arriving, kind);
   }
 
   private now(): number {
@@ -604,7 +450,7 @@ export class PageTransitions {
     this.finishing = view.setTimeout(() => this.finish(), ms);
   }
 
-  private finishWhenStill(running: Running, page: HTMLElement, view: Window): () => void {
+  finishWhenStill(running: Running, page: HTMLElement, view: Window): () => void {
     this.finishAfter(view, PAGE_TRANSITION_LONGEST_MS);
     view.getComputedStyle(page).getPropertyValue('animation-name');
     const motions = typeof page.getAnimations === 'function' ? page.getAnimations() : [];
@@ -630,7 +476,7 @@ export class PageTransitions {
     return overlay;
   }
 
-  private keep(layer: HTMLElement): KeptPage {
+  keep(layer: HTMLElement): KeptPage {
     const view = this.document.defaultView;
     return {
       copy: stillCopyOf(layer),
@@ -654,25 +500,13 @@ export class PageTransitions {
     return kept !== undefined && kept.width === view.innerWidth ? kept : null;
   }
 
-  private keepBehind(depth: number, page: KeptPage): void {
-    for (const kept of [...this.kept.keys()]) {
-      if (kept >= depth) {
-        this.kept.delete(kept);
-      }
-    }
-    this.kept.set(depth, page);
-    while (this.kept.size > KEPT_PAGES) {
-      this.kept.delete(Math.min(...this.kept.keys()));
-    }
-  }
-
   place(overlay: HTMLElement, kept: KeptPage, position: 'under' | 'over'): PlacedPage {
     const placed = this.put(overlay, kept, position);
     placed.scroll();
     return placed.page;
   }
 
-  private put(
+  put(
     overlay: HTMLElement,
     kept: KeptPage,
     position: 'under' | 'over',
@@ -711,7 +545,7 @@ export class PageTransitions {
     };
   }
 
-  private placedPage(overlay: HTMLElement, position: 'under' | 'over'): PlacedPage | null {
+  placedPage(overlay: HTMLElement, position: 'under' | 'over'): PlacedPage | null {
     const box = overlay.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--${position}`);
     if (box === null) {
       return null;
@@ -808,26 +642,12 @@ export function motionAllowed(view: Window): boolean {
   return view.matchMedia?.(LESS_MOTION).matches === false;
 }
 
-function sheetReturnsIn(state: unknown): boolean {
-  return (
-    typeof state === 'object' &&
-    state !== null &&
-    typeof (state as Record<string, unknown>)[ACCOUNT_RETURNS_KEY] === 'string'
-  );
-}
-
-function depthIn(state: unknown): number {
+export function depthIn(state: unknown): number {
   const depth =
     typeof state === 'object' && state !== null
       ? (state as Record<string, unknown>)[APP_DEPTH_KEY]
       : undefined;
   return typeof depth === 'number' ? depth : 0;
-}
-
-function sameTab(from: string, to: string): boolean {
-  const here = tabOf(from);
-  const there = tabOf(to);
-  return here === null || there === null || here.id === there.id;
 }
 
 export function nextFrame(view: Window, then: (now: number, drawn: boolean) => void): void {

@@ -1,18 +1,37 @@
-import { ActivatedRouteSnapshot } from '@angular/router';
+import { untracked } from '@angular/core';
+import { ActivatedRouteSnapshot, GuardsCheckEnd } from '@angular/router';
+import { tabOf } from './app-tabs';
+import { BACK_NAVIGATION } from './back-target';
+import { pageTransitionFor } from './page-transition-kind';
+import { chromeOf } from './route-chrome';
 import {
   BarCurve,
   BarItem,
   DISPLAY_FRAME_MS,
   FollowedTitle,
   FRAME_LATE_MS,
+  ACCOUNT_RETURNS_KEY,
+  depthIn,
+  FIRST_SECTION_READS_WITHIN_MS,
+  KEPT_PAGES,
+  LESS_MOTION,
+  liveDialogs,
+  PAGE_COVER_LONGEST_MS,
+  SHOWN_DIALOG,
   HELD_WITHOUT_A_FRAME_MS,
   IN_SHEET_CLASS,
+  KeptPage,
   motionAllowed,
   MOVING_CLASS,
+  nextFrame,
   ON_GROUND_CLASS,
   PAGE_TRANSITION_CLASS,
+  PAGE_TRANSITION_LONGEST_MS,
   PageTransitions,
   PlacedPage,
+  PlacingKind,
+  Running,
+  SECTION_READS_WITHIN_MS,
   StepChrome,
 } from './page-transitions';
 import { PLACING_MARK, STEADY_FRAME_MARK, STEADY_FRAMES_KEPT } from './frame-pace';
@@ -58,7 +77,151 @@ export const STEP_CHROME: StepChrome = {
     publishSteadyFrame(view, steadyBeforeMs);
   },
   afterDrawnFrames,
+  cover,
+  arrive,
+  moveOnceAnswered,
+  moveTo,
+  moveOver,
+  whenSectionDrawn,
 };
+
+function whenSectionDrawn(stage: PageTransitions, view: Window, then: () => void): void {
+  const placement = stage.placement;
+  const placedAlready = placement.isSettled();
+  if (placedAlready && placement.isAnswered()) {
+    placement.stopCountingReads();
+    then();
+    return;
+  }
+  const readsWithinMs = placedAlready ? SECTION_READS_WITHIN_MS : FIRST_SECTION_READS_WITHIN_MS;
+  void placement
+    .placed(view, PAGE_TRANSITION_LONGEST_MS)
+    .then(() => placement.answered(view, readsWithinMs))
+    .then(() => {
+      placement.stopCountingReads();
+      let drawn = false;
+      const go = (): void => {
+        if (!drawn) {
+          drawn = true;
+          view.clearTimeout(late);
+          then();
+        }
+      };
+      const late = view.setTimeout(go, FRAME_LATE_MS);
+      stage.afterRender(go);
+    });
+}
+
+function moveOnceAnswered(stage: PageTransitions, running: Running, view: Window): void {
+  const waitsMs = running.fromSheet
+    ? PAGE_TRANSITION_LONGEST_MS
+    : Math.min(FRAME_LATE_MS, readsWaitLeftMs(stage));
+  if (stage.placement.isAnswered() || waitsMs <= 0) {
+    move(stage, running, view);
+    return;
+  }
+  void stage.placement
+    .answered(view, waitsMs)
+    .then(() => nextFrame(view, (_, inFrame) => move(stage, running, view, inFrame)));
+}
+
+function arrive(stage: PageTransitions, running: Running): void {
+  if (stage.running !== running) {
+    return;
+  }
+  running.arrived = true;
+  standWhereTheCopyShowed(stage, running);
+  if (running.still) {
+    stage.finish();
+  }
+}
+
+function standWhereTheCopyShowed(stage: PageTransitions, running: Running): void {
+  const view = stage.document.defaultView;
+  const top = running.shownScrollY;
+  if (view !== null && top !== undefined && Math.abs(view.scrollY - top) > 1) {
+    view.scrollTo({ top, behavior: 'instant' });
+  }
+}
+
+function move(stage: PageTransitions, running: Running, view: Window, inFrame = false): void {
+  const layer = stage.layer();
+  if (stage.running !== running) {
+    return;
+  }
+  if (layer === null) {
+    stage.finish();
+    return;
+  }
+  moveTo(
+    stage,
+    running,
+    view,
+    { ...stage.shown(layer), sheet: running.sheet },
+    inFrame ? 'raf' : stage.placement.placesInRendering ? 'resize-observer' : 'task',
+  );
+}
+
+function moveTo(
+  stage: PageTransitions,
+  running: Running,
+  view: Window,
+  arriving: KeptPage,
+  kind: PlacingKind,
+): void {
+  const shown = stage.place(running.overlay, arriving, running.kind === 'push' ? 'over' : 'under');
+  const left = stage.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
+  stage.dressChrome(running.overlay, left, shown);
+  startMoving(stage, running, view, shown.box, kind);
+}
+
+function moveOver(
+  stage: PageTransitions,
+  running: Running,
+  view: Window,
+  leaving: KeptPage,
+  arriving: KeptPage,
+): void {
+  const left = stage.put(running.overlay, leaving, 'over');
+  const shown = stage.put(running.overlay, arriving, 'under');
+  left.scroll();
+  shown.scroll();
+  stage.dressChrome(running.overlay, stage.placedPage(running.overlay, 'over'), shown.page);
+  startMoving(stage, running, view, shown.page.box, 'task');
+}
+
+function startMoving(
+  stage: PageTransitions,
+  running: Running,
+  view: Window,
+  page: HTMLElement,
+  kind: PlacingKind,
+): void {
+  STEP_CHROME.hold(view, running.overlay, kind);
+  running.overlay.classList.add(MOVING_CLASS);
+  const framesStopped = !stage.drawnSincePress;
+  const still = stage.finishWhenStill(running, page, view);
+  let released = false;
+  const release = (): void => {
+    if (released || stage.running !== running) {
+      return;
+    }
+    released = true;
+    stage.finishAfter(view, PAGE_TRANSITION_LONGEST_MS);
+    STEP_CHROME.release(view, running.overlay, stage.steadyFrameMs());
+    view.requestAnimationFrame(() =>
+      view.setTimeout(still, stage.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
+    );
+  };
+  afterDrawnFrames(
+    view,
+    stage.document,
+    kind === 'task' ? 2 : 1,
+    release,
+    () => framesStopped,
+    () => stage.running === running,
+  );
+}
 
 export function publishSteadyFrame(view: Window, steadyBeforeMs: number): void {
   publishMark(view, STEADY_FRAME_MARK, { steadyBeforeMs });
@@ -424,4 +587,106 @@ export function afterDrawnFrames(
   };
   byClock = view.setTimeout(look, FRAME_LATE_MS);
   view.requestAnimationFrame(() => goOn(true));
+}
+
+function cover(stage: PageTransitions, event: GuardsCheckEnd): void {
+  if (stage.running?.swiping === true) {
+    return;
+  }
+  const view = stage.document.defaultView;
+  const layer = stage.layer();
+  const extras = untracked(stage.router.currentNavigation)?.extras ?? {};
+  const destination = chromeOf(event.state.root);
+  const standingSheet = stage.standingSheet;
+  stage.standingSheet = null;
+  const returningSheet = sheetReturnsIn(extras.state) ? standingSheet : null;
+  const kind = pageTransitionFor({
+    first: event.id === 1 || !stage.router.navigated,
+    reducedMotion: view?.matchMedia?.(LESS_MOTION).matches !== false,
+    compact: stage.compact(),
+    dialogOpen: liveDialogs(stage.document, SHOWN_DIALOG).some(
+      (dialog) => dialog !== stage.closingSheet,
+    ),
+    fromSheet:
+      returningSheet !== null && stage.trigger === 'imperative' && extras.info !== BACK_NAVIGATION,
+    trigger: stage.trigger,
+    back: extras.info === BACK_NAVIGATION,
+    replaceUrl: extras.replaceUrl === true,
+    skipLocationChange: extras.skipLocationChange === true,
+    from: { url: stage.router.url, parent: stage.chrome().parent },
+    to: { url: event.urlAfterRedirects, parent: destination.parent },
+  });
+  if (layer === null || view === null || !motionAllowed(view)) {
+    return;
+  }
+  const deepens =
+    !extras.skipLocationChange &&
+    sameTab(stage.router.url, event.urlAfterRedirects) &&
+    stage.trigger === 'imperative' &&
+    extras.info !== BACK_NAVIGATION &&
+    (!extras.replaceUrl || depthIn(extras.state) >= stage.backTarget.nextDepth());
+  if (kind === null || !stage.compact()) {
+    if (deepens) {
+      keepBehind(stage, stage.backTarget.nextDepth() - 1, {
+        ...stage.keep(layer),
+        sheet: returningSheet,
+      });
+    }
+    return;
+  }
+  const left = { ...stage.shown(layer), sheet: kind === 'push' ? returningSheet : null };
+  const overlay = stage.overlay(kind);
+  if (kind === 'push') {
+    keepBehind(stage, stage.backTarget.nextDepth() - 1, { ...left, url: stage.router.url });
+  }
+  const behind =
+    kind === 'pop' && stage.restoredDepth !== null ? stage.keptAt(stage.restoredDepth, view) : null;
+  const sheet = behind?.sheet ?? null;
+  const ahead = behind?.copy != null && behind.url === event.urlAfterRedirects;
+  const running: Running = {
+    kind,
+    overlay,
+    swiping: false,
+    sheet,
+    fromSheet: kind === 'push' && returningSheet !== null,
+    shownScrollY: ahead ? behind.scrollY : undefined,
+    revealed: false,
+    ahead,
+  };
+  if (!ahead) {
+    const placed = stage.place(overlay, left, kind === 'push' ? 'under' : 'over');
+    stage.dressChrome(overlay, placed, null);
+  }
+  stage.running = running;
+  stage.sheetUnder(sheet ?? left.sheet);
+  stage.finishAfter(view, PAGE_COVER_LONGEST_MS);
+  if (ahead) {
+    moveOver(stage, running, view, left, behind);
+  }
+}
+
+function keepBehind(stage: PageTransitions, depth: number, page: KeptPage): void {
+  for (const kept of [...stage.kept.keys()]) {
+    if (kept >= depth) {
+      stage.kept.delete(kept);
+    }
+  }
+  stage.kept.set(depth, page);
+  while (stage.kept.size > KEPT_PAGES) {
+    stage.kept.delete(Math.min(...stage.kept.keys()));
+  }
+}
+
+function sheetReturnsIn(state: unknown): boolean {
+  return (
+    typeof state === 'object' &&
+    state !== null &&
+    typeof (state as Record<string, unknown>)[ACCOUNT_RETURNS_KEY] === 'string'
+  );
+}
+
+function sameTab(from: string, to: string): boolean {
+  const here = tabOf(from);
+  const there = tabOf(to);
+  return here === null || there === null || here.id === there.id;
 }
