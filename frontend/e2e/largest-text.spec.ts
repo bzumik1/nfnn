@@ -1656,6 +1656,20 @@ async function openOtherLoggerLevel(page: Page): Promise<OpenedTitle> {
   return { title: sheet.locator('#level-sheet-title'), column: sheet };
 }
 
+async function openLogEntry(page: Page): Promise<OpenedTitle> {
+  await mockDonorApi(page);
+  await routeLogsApi(page);
+  await rememberedSession(page);
+  const copied = whenAdministrationCopied(page);
+  await page.goto('/sprava/logy/soubor?nazev=backend.log');
+  await copied();
+  await page.getByRole('radio', { name: 'Chyby', exact: true }).click();
+  await page.getByRole('main').locator('.entry').first().click();
+  const sheet = page.getByRole('dialog', { name: 'Chyba v 10:00:38' });
+  await expect(sheet).toBeVisible();
+  return { title: sheet.locator('#log-entry-title'), column: sheet };
+}
+
 interface TitledDialog {
   readonly group: string;
   readonly open: (page: Page) => Promise<OpenedTitle>;
@@ -1670,6 +1684,7 @@ const TITLED_DIALOGS: Record<string, TitledDialog> = {
   'Přiřazená platba': { group: SHARED_TITLE_CLASS, open: openPairedPayment },
   'Vymazat osobní údaje': { group: SHARED_TITLE_CLASS, open: openErasure },
   'Úroveň jiného loggeru': { group: SHARED_TITLE_CLASS, open: openOtherLoggerLevel },
+  'Chyba v 10:00:38': { group: SHARED_TITLE_CLASS, open: openLogEntry },
 };
 
 async function titleTextsBrokenInside(

@@ -1,8 +1,10 @@
 import { Locator } from '@playwright/test';
+import { BREAKPOINTS } from '../src/app/core/layout/breakpoints';
 import { expect, test } from './fixtures';
 import { openSignInDialog } from './donor-session';
 
 const FOCUS_RING_REACH_PX = 3;
+const PHONE_SIZE_ONLY = 'the iphone project runs the phone sizes, a computer is Chromium only';
 
 for (const [width, height] of [
   [1280, 640],
@@ -13,7 +15,8 @@ for (const [width, height] of [
   test.describe(`Given a visitor on a window ${width} × ${height} px who sends the empty registration form from its end`, () => {
     test.use({ viewport: { width, height } });
 
-    test.beforeEach(async ({ page }) => {
+    test.beforeEach(async ({ page, isMobile }) => {
+      test.skip(isMobile && width > BREAKPOINTS.phone, PHONE_SIZE_ONLY);
       await openSignInDialog(page);
       const dialog = page.getByRole('dialog');
       await dialog.getByRole('button', { name: 'Registrace', exact: true }).click();
