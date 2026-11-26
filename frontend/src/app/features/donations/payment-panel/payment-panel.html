@@ -174,11 +174,46 @@
               <div class="bank-rows">
                 @for (row of skeletonRows(); track row) {
                   <div class="bank-row">
-                    <span class="bank-key"><span class="bank-skeleton-line"></span></span>
+                    <span class="bank-key"
+                      ><span class="bank-skeleton-line">
+                        @if (!detailsFailed()) {
+                          <span>
+                            @switch (row) {
+                              @case ('account') {
+                                <ng-container i18n="@@home.donate.bank.account"
+                                  >Číslo účtu</ng-container
+                                >
+                              }
+                              @case ('amount') {
+                                <ng-container i18n="@@home.donate.bank.amount">Částka</ng-container>
+                              }
+                              @case ('symbol') {
+                                <ng-container i18n="@@home.donate.bank.vs"
+                                  >Variabilní symbol</ng-container
+                                >
+                              }
+                              @case ('iban') {
+                                <ng-container i18n="@@home.donate.bank.iban">IBAN</ng-container>
+                              }
+                            }
+                          </span>
+                        }
+                      </span></span
+                    >
                     <span class="bank-value-wrap">
-                      <span class="bank-value"
-                        ><span class="bank-skeleton-line bank-skeleton-value"></span
-                      ></span>
+                      @if (row === 'iban') {
+                        <span class="bank-value ui-figures ui-figures--groups"
+                          ><span class="bank-skeleton-line">
+                            @if (!detailsFailed()) {
+                              <span>{{ skeletonIban }}</span>
+                            }
+                          </span></span
+                        >
+                      } @else {
+                        <span class="bank-value"
+                          ><span class="bank-skeleton-line bank-skeleton-value"></span
+                        ></span>
+                      }
                       <span class="ui-pill-button bank-skeleton-pill"
                         ><span i18n="@@ui.copy.action">Kopírovat</span></span
                       >
