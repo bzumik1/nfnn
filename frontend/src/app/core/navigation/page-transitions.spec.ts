@@ -39,6 +39,10 @@ class Blank {}
 
 const readsInFlight: (() => void)[] = [];
 
+const CLOCK_ONLY: Parameters<typeof vi.useFakeTimers>[0] = {
+  toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+};
+
 function asksForItsText(): boolean {
   readsInFlight.push(inject(PagePlacement).reading());
   return true;
@@ -3601,7 +3605,7 @@ describe('Given the app on a phone with a sheet open at its list', () => {
   }
 
   it('when a section opens inside the sheet and the frames stop right after the one that lets its motions go, which never report that they finished, as on a cold runner, then the step ends within its motion’s length and STEP_ENDS_LATE_BY_MS, leaving no copy of the list beside the section', async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers(CLOCK_ONLY);
     onTestFinished(() => {
       vi.useRealTimers();
     });
@@ -3619,7 +3623,7 @@ describe('Given the app on a phone with a sheet open at its list', () => {
   });
 
   it('when a section opens inside the sheet before the step chrome has registered, and the chrome registers while the step runs, then the step still ends with the section shown and no copy left', async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers(CLOCK_ONLY);
     onTestFinished(() => {
       vi.useRealTimers();
     });

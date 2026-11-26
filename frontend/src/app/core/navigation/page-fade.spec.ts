@@ -26,6 +26,10 @@ interface SeenAtArrival {
 
 let slowPage: Subject<string>;
 
+const CLOCK_ONLY: Parameters<typeof vi.useFakeTimers>[0] = {
+  toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+};
+
 function computerWith(compact: boolean, administrationUnlocked = true): void {
   TestBed.configureTestingModule({
     providers: [
@@ -171,7 +175,7 @@ describe('Given a computer that animates, with O nás open', () => {
     await start(false);
     const frames = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
     onTestFinished(() => frames.mockRestore());
-    vi.useFakeTimers();
+    vi.useFakeTimers(CLOCK_ONLY);
 
     await router.navigateByUrl('/aktuality');
     await vi.advanceTimersByTimeAsync(PAGE_FADE_ENDS_LATE_BY_MS);
@@ -199,7 +203,7 @@ describe('Given a computer that animates, with O nás open', () => {
     onTestFinished(() => {
       delete (Element.prototype as { getAnimations?: unknown }).getAnimations;
     });
-    vi.useFakeTimers();
+    vi.useFakeTimers(CLOCK_ONLY);
 
     await router.navigateByUrl('/aktuality');
     await vi.advanceTimersByTimeAsync(2 * fadeMs + PAGE_FADE_ENDS_LATE_BY_MS);
