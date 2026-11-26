@@ -1190,6 +1190,46 @@ describe('Given the custom amount on a phone whose keyboard opens over the page'
     expect(scrolled).toEqual([470 - (KEYBOARD_COVERS_FROM - ROOM_ABOVE_KEYBOARD)]);
   });
 
+  it('when the donor drags the page while typing so the field goes under the keyboard, then the page does not jump back', async () => {
+    const field = customAmountAt(422, 470);
+    keyboard.show({ top: 0, height: KEYBOARD_COVERS_FROM });
+    await fixture.whenStable();
+
+    field.getBoundingClientRect = () => ({ top: 600, bottom: 648, height: 48 }) as DOMRect;
+    keyboard.show({ top: 2, height: KEYBOARD_COVERS_FROM });
+    await fixture.whenStable();
+
+    expect(scrolled).toEqual([470 - (KEYBOARD_COVERS_FROM - ROOM_ABOVE_KEYBOARD)]);
+  });
+
+  it('when the focus comes to the field while the keyboard is already open, then the page scrolls the field above it at once', async () => {
+    const field = customAmountAt(422, 470);
+    field.blur();
+    await fixture.whenStable();
+    keyboard.show({ top: 0, height: KEYBOARD_COVERS_FROM });
+    await fixture.whenStable();
+    expect(scrolled).toEqual([]);
+
+    field.focus();
+    await fixture.whenStable();
+
+    expect(scrolled).toEqual([470 - (KEYBOARD_COVERS_FROM - ROOM_ABOVE_KEYBOARD)]);
+  });
+
+  it('when the panel stands in a sheet whose own keyboard avoidance scrolls it, then the page behind the sheet stays still', async () => {
+    const sheet = document.createElement('dialog');
+    sheet.setAttribute('open', '');
+    document.body.appendChild(sheet);
+    sheet.appendChild(fixture.nativeElement);
+    customAmountAt(422, 470);
+
+    keyboard.show({ top: 0, height: KEYBOARD_COVERS_FROM });
+    await fixture.whenStable();
+    sheet.remove();
+
+    expect(scrolled).toEqual([]);
+  });
+
   it('when the keyboard opens and the field already stands above it, then the page stays', async () => {
     customAmountAt(151, 199);
 
