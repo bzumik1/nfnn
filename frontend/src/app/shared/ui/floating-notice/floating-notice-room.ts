@@ -1,4 +1,5 @@
 import { HeldScroll, keepThePageEnd, SettlingPlacement } from '../../../core/layout/page-end';
+import { KEYBOARD_OPEN_CLASS } from '../../../core/layout/soft-keyboard';
 
 const ROOM_CLASS = 'has-floating-notice';
 const ROOM_HEIGHT = '--floating-notice-height';
@@ -62,6 +63,9 @@ export function keepRoomForFloatingNotice(
       return;
     }
     view?.requestAnimationFrame(() => {
+      if (document.documentElement.classList.contains(KEYBOARD_OPEN_CLASS)) {
+        return;
+      }
       const focused = document.activeElement;
       if (mayHideUnderBar(focused)) {
         scrollAboveBar(focused);
