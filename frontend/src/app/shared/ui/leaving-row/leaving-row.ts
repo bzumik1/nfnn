@@ -210,23 +210,16 @@ export class FocusAfterRowLeaves {
     if (view === null || view === undefined || Observer === undefined) {
       return () => undefined;
     }
-    pending.view = view;
-    const scroller = this.scrollerOf(pending.row, view);
-    const observer = new Observer(() => this.keepBelowTheTop(pending, view));
-    observer.observe(pending.row);
-    for (let node = pending.row.parentElement; node !== null; node = node.parentElement) {
-      observer.observe(node);
-      if (node === scroller || node === this.document.body) {
-        break;
-      }
-    }
+    const observer = asksForLessMotion(this.document)
+      ? this.watchTheClose(pending, view, Observer)
+      : null;
     let stopped = false;
     const stop = (): void => {
       if (stopped) {
         return;
       }
       stopped = true;
-      observer.disconnect();
+      observer?.disconnect();
       stopListening();
     };
     const stopListening = this.untilVisitorMoves(() => {
@@ -238,6 +231,24 @@ export class FocusAfterRowLeaves {
       }
     });
     return stop;
+  }
+
+  private watchTheClose(
+    pending: PendingReveal,
+    view: Window,
+    Observer: typeof ResizeObserver,
+  ): ResizeObserver {
+    pending.view = view;
+    const scroller = this.scrollerOf(pending.row, view);
+    const observer = new Observer(() => this.keepBelowTheTop(pending, view));
+    observer.observe(pending.row);
+    for (let node = pending.row.parentElement; node !== null; node = node.parentElement) {
+      observer.observe(node);
+      if (node === scroller || node === this.document.body) {
+        break;
+      }
+    }
+    return observer;
   }
 
   private untilVisitorMoves(moved: () => void): () => void {
@@ -459,9 +470,11 @@ export function scrollIntoViewFitting(
 }
 
 function scrollBehaviorOf(document: Document): ScrollBehavior {
-  const reduced =
-    document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-  return reduced ? 'instant' : 'smooth';
+  return asksForLessMotion(document) ? 'instant' : 'smooth';
+}
+
+function asksForLessMotion(document: Document): boolean {
+  return document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
 function fitsItsScroller(document: Document, control: HTMLElement): boolean {
