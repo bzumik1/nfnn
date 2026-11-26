@@ -180,7 +180,11 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
       await openAboutThenLoseNewChunks(page);
       await openPolicyFromContact(page);
       await expect(chunkLoadNotice(page)).toBeVisible();
+      await expect(
+        chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' }),
+      ).toBeFocused();
       await page.locator('#contact-name').focus();
+      await expect(page.locator('#contact-name')).toBeFocused();
       await expect
         .poll(async () => {
           await scrollFieldUnderNotice(page);
@@ -196,6 +200,8 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
 
       await showKeyboard(page);
 
+      await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toBeHidden();
+      await expect(page.locator('#contact-name')).toBeFocused();
       await expect.poll(() => hitOnFieldCentre(page)).toBe('field');
       expect(await scrollTopAfterTwoFrames(page)).toBe(scrollTop);
       expect(await chunkLoadNotice(page).ariaSnapshot()).toContain('Načíst znovu');
@@ -210,6 +216,8 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
       page,
     }) => {
       await showKeyboard(page);
+      await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toBeHidden();
+      await expect(page.locator('#contact-name')).toBeFocused();
       await expect.poll(() => hitOnFieldCentre(page)).toBe('field');
 
       const dragged = await page.evaluate(() => {
