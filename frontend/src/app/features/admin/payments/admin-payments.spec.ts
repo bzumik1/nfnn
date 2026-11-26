@@ -1,6 +1,5 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { Location } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -1420,36 +1419,28 @@ describe('Given an administrator on the bank payments page where lists show as r
       });
     });
 
-    it("then a step back by the system from the donor card focuses the payment's row and brings it into view", async () => {
+    it('then its row names the donor card it leads to, so a step back from that card returns the focus to the row', async () => {
       await listResponds(paymentList([unpairedPayment()]));
       button('Přiřazené').click();
       await settle();
       await listResponds(
-        paymentList([unpairedPayment({ donation: pairedDonation() })], { availableYears: [2026] }),
-        PAIRED_PAGE,
-      );
-      TestBed.inject(Router).setUpLocationChangeListener();
-      await harness.navigateByUrl('/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369');
-
-      const scrolled = vi.fn();
-      Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
-        value: scrolled,
-        configurable: true,
-      });
-      onTestFinished(() => {
-        Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
-      });
-      TestBed.inject(Location).back();
-      await vi.waitFor(() => expect(TestBed.inject(Router).url).toContain('/sprava/platby'));
-      await settle();
-      await listResponds(
-        paymentList([unpairedPayment({ donation: pairedDonation() })], { availableYears: [2026] }),
+        paymentList(
+          [
+            unpairedPayment({ donation: pairedDonation() }),
+            unpairedPayment({
+              id: 'p2',
+              donation: pairedDonation({ id: 'd2', donorName: null }),
+            }),
+          ],
+          { availableYears: [2026] },
+        ),
         PAIRED_PAGE,
       );
 
-      expect(document.activeElement).toBe(paymentRows()[0]);
-      expect(scrolled.mock.contexts).toEqual([paymentRows()[0]]);
-      expect(scrolled).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+      expect(paymentRows().map((row) => row.getAttribute('data-leads-to'))).toEqual([
+        '/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369',
+        null,
+      ]);
     });
 
     it('then a gift with an issued receipt cannot be unpaired from the sheet', async () => {

@@ -21,5 +21,7 @@ While a nightly job is red, the next slice of its area waits (plan v3, 5.6 e). T
 | `release` ("Zkouška vydání", `deployed` and `latest`) | operations, schema and images | the next slice with a Liquibase changeset or a change to the images, compose, backups or the import (2.3, 2.4, 2.9, 2.12, 2.17, 2.27) |
 | `sync-convergence` ("Konvergence synchronizace") | the donor's device copy and its sync | the next slice that changes the sync or the device copy (2.13, 2.17) |
 | `bulk-receipts` ("Hromadná potvrzení (300)") | drawing receipts in the browser and the bulk receipts | the next slice that changes the receipt drawing or the bulk receipts (2.19) |
+| `throttled-motion` ("Známá vada #1982: pohyb při 4× pomalejším CPU") | the motion of the app's steps | nothing: it is red on purpose until #1982 lands, and the `report` job leaves the issue alone for it |
+| `timed-motion` ("Pohyb v čase proti Prodesku (brána C)") | the motion of the app's steps | the next slice that changes the motion of the app's steps |
 
 - `public-screens` counts only shots outside `/darce` and `/sprava` (the app areas are compared with the approved mockups, plan v3 3.8). A PR that changes a public page on purpose adds its state to `regression/public-screens-since-v2.json` as `{"state", "since", "reason"}` in the same PR, and removes a listed state that no longer differs (the report lists it). A removed shot always fails, listed or not. The guard of a public page's look is each PR's `visual` job.

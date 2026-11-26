@@ -27,7 +27,14 @@ import { canPullSheetFrom, PullIntent, pullIntent, SheetDrag, TouchOrigin } from
 import { Appearance } from '../../../core/appearance/appearance';
 import { InputModality } from '../../../core/input/input-modality';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { focusInView } from '../../../core/layout/focus-in-view';
 import { EDGE_SWIPE_DRAGGING_CLASS } from '../../../core/navigation/edge-swipe-back';
+import {
+  liveDialogs,
+  PageTransitions,
+  STACKED_DIALOG_CLASS,
+} from '../../../core/navigation/page-transitions';
+import { SHEET_STEPPING } from '../../../core/navigation/sheet-stepping';
 import { scrollIntoViewFitting } from '../leaving-row/leaving-row';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
@@ -118,6 +125,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private leaveTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
+    inject(PageTransitions).sheets ??= SHEET_STEPPING;
     effect(() => {
       const suspended = this.suspension();
       untracked(() => this.follow(suspended));
@@ -179,6 +187,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     if (dialog.open) {
       this.focusReturn.whileReturning(opener, () => dialog.close());
     }
+    this.restackOthers();
     if (opener !== null) {
       this.returnFocusTo(opener);
     } else {
@@ -198,6 +207,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   protected onClose(): void {
+    this.restackOthers();
     if (this.steppedAside) {
       return;
     }
@@ -419,7 +429,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private returnFocusTo(opener: HTMLElement): void {
     const panel = opener.closest<HTMLElement>(PANEL);
     if (panel === null) {
-      opener.focus();
+      focusInView(opener);
       return;
     }
     this.focusReturn.returnTo(opener);
@@ -435,8 +445,17 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
   }
 
+  private restackOthers(): void {
+    const open = liveDialogs(this.document, 'dialog[open]');
+    if (open.length === 1) {
+      open[0].classList.remove(STACKED_DIALOG_CLASS);
+    }
+  }
+
   private showModal(): void {
     const dialog = this.element().nativeElement;
+    const overAnother = liveDialogs(this.document, 'dialog[open]').some((open) => open !== dialog);
+    dialog.classList.toggle(STACKED_DIALOG_CLASS, overAnother);
     dialog.showModal();
     if (this.modality.lastPressByPointer()) {
       this.focusTitle(dialog);

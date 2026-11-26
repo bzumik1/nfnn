@@ -10,7 +10,10 @@ export interface SwipeSettle {
   readonly to: number;
   readonly durationMs: number;
   readonly easing: string;
+  readonly speed?: number;
 }
+
+export type Curve = readonly [number, number, number, number];
 
 const TAP_SLOP_PX = 10;
 const HOLD_BEFORE_MOVE_MS = 500;
@@ -22,6 +25,15 @@ const HEADING_BACK_PX_PER_MS = 0.3;
 const SETTLE_MIN_MS = 150;
 const SETTLE_MAX_MS = 350;
 const EASING_START_X = 0.25;
+const EASING_HALVINGS = 40;
+const SAMPLED_EVERY_MS = 1;
+const NAMED_CURVES: Readonly<Record<string, Curve>> = {
+  linear: [0, 0, 1, 1],
+  ease: [0.25, 0.1, 0.25, 1],
+  'ease-in': [0.42, 0, 1, 1],
+  'ease-out': [0, 0, 0.58, 1],
+  'ease-in-out': [0.42, 0, 0.58, 1],
+};
 
 type Phase = 'tracking' | 'dragging' | 'abandoned';
 
@@ -80,7 +92,7 @@ export class BackSwipe {
     const distance = Math.abs(to - from);
     const towards = Math.max(0, completes ? speed : -speed);
     if (distance === 0) {
-      return { completes, from, to, durationMs: 0, easing: easingLeavingAt(0) };
+      return { completes, from, to, durationMs: 0, easing: easingLeavingAt(0), speed: towards };
     }
     const durationMs = clamp(
       distance / Math.max(towards, this.width / SETTLE_MAX_MS),
@@ -88,7 +100,14 @@ export class BackSwipe {
       SETTLE_MAX_MS,
     );
     const startSlope = (towards * durationMs) / distance;
-    return { completes, from, to, durationMs, easing: easingLeavingAt(startSlope) };
+    return {
+      completes,
+      from,
+      to,
+      durationMs,
+      easing: easingLeavingAt(startSlope),
+      speed: towards,
+    };
   }
 
   private lockedBy(point: SwipePoint): Phase {
@@ -106,6 +125,69 @@ export class BackSwipe {
   private offsetAt(x: number): number {
     return clamp(x - this.start.x, 0, this.width);
   }
+}
+
+export function settleFrom(end: SwipeSettle, at: number, width: number): SwipeSettle {
+  const distance = Math.abs(end.to - at);
+  if (end.speed === undefined || distance === 0) {
+    return { ...end, from: at, durationMs: distance === 0 ? 0 : end.durationMs };
+  }
+  const durationMs = clamp(
+    distance / Math.max(end.speed, width / SETTLE_MAX_MS),
+    SETTLE_MIN_MS,
+    SETTLE_MAX_MS,
+  );
+  return {
+    ...end,
+    from: at,
+    durationMs,
+    easing: easingLeavingAt((end.speed * durationMs) / distance),
+  };
+}
+
+export function curveOf(easing: string): Curve {
+  const named = NAMED_CURVES[easing];
+  if (named !== undefined) {
+    return named;
+  }
+  const points = /cubic-bezier\(([^)]*)\)/.exec(easing)?.[1].split(',').map(Number);
+  return points?.length === 4 && points.every(Number.isFinite)
+    ? [points[0], points[1], points[2], points[3]]
+    : NAMED_CURVES['ease'];
+}
+
+export function easedAt([x1, y1, x2, y2]: Curve, x: number): number {
+  const along = Math.min(1, Math.max(0, x));
+  let low = 0;
+  let high = 1;
+  for (let halving = 0; halving < EASING_HALVINGS; halving++) {
+    const middle = (low + high) / 2;
+    if (bezierAt(x1, x2, middle) < along) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+  return bezierAt(y1, y2, (low + high) / 2);
+}
+
+export function steepestStepOver(settle: SwipeSettle, stepMs: number): number {
+  if (settle.durationMs <= 0) {
+    return Math.abs(settle.to - settle.from);
+  }
+  const curve = curveOf(settle.easing);
+  const way = Math.abs(settle.to - settle.from);
+  let steepest = 0;
+  for (let at = 0; at < settle.durationMs; at += SAMPLED_EVERY_MS) {
+    const step =
+      easedAt(curve, (at + stepMs) / settle.durationMs) - easedAt(curve, at / settle.durationMs);
+    steepest = Math.max(steepest, way * step);
+  }
+  return steepest;
+}
+
+function bezierAt(first: number, second: number, t: number): number {
+  return 3 * (1 - t) ** 2 * t * first + 3 * (1 - t) * t ** 2 * second + t ** 3;
 }
 
 export function easingLeavingAt(slope: number): string {

@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, provideRouter, Router } from '@angular/router';
 import { RouteChrome } from './route-chrome';
 
 @Component({ template: '' })
@@ -32,6 +32,34 @@ describe('Given the chrome a route asks for', () => {
           },
           { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
           { path: 'darci/:id/:section', component: Blank, data: { parent: '/darci/:id' } },
+          {
+            path: 'sprava',
+            data: { headTitle: 'Správa' },
+            children: [
+              { path: '', component: Blank },
+              { path: 'platby', component: Blank, data: { headTitle: 'Platby' } },
+              {
+                path: 'prehledy/:month',
+                component: Blank,
+                data: {
+                  headTitle: (route: ActivatedRouteSnapshot) =>
+                    `Přehled za ${route.params['month']}`,
+                },
+              },
+              {
+                path: 'logy/soubor',
+                component: Blank,
+                data: {
+                  headTitle: (route: ActivatedRouteSnapshot) => route.queryParams['nazev'] ?? '',
+                },
+              },
+              {
+                path: 'darci/:id',
+                component: Blank,
+                data: { headTitle: 'Dárce', headTitleFollowsHeading: true },
+              },
+            ],
+          },
           { path: '**', component: Blank },
         ]),
       ],
@@ -50,7 +78,38 @@ describe('Given the chrome a route asks for', () => {
       landing: false,
       backOnWide: true,
       darkThroughout: false,
+      headTitle: null,
+      headTitleFollowsHeading: false,
     });
+  });
+
+  it('when a page names the title of its head, then the head shows it from the first pass', async () => {
+    await router.navigateByUrl('/sprava/platby');
+
+    expect(chrome.current().headTitle).toBe('Platby');
+    expect(chrome.current().headTitleFollowsHeading).toBe(false);
+  });
+
+  it('when a page names the title of its head from its parameters, then the head shows it composed from them', async () => {
+    await router.navigateByUrl('/sprava/prehledy/2026-10');
+    expect(chrome.current().headTitle).toBe('Přehled za 2026-10');
+
+    await router.navigateByUrl('/sprava/logy/soubor?nazev=backend.log');
+    expect(chrome.current().headTitle).toBe('backend.log');
+  });
+
+  it('when a page of an area names no title of its own, then it takes the title of its area', async () => {
+    await router.navigateByUrl('/sprava');
+
+    expect(chrome.current().headTitle).toBe('Správa');
+  });
+
+  it('when a page says its heading arrives later, then its head starts with the title it names and follows its heading', async () => {
+    await router.navigateByUrl('/sprava/darci/0192f0a1');
+
+    expect(chrome.current()).toEqual(
+      expect.objectContaining({ headTitle: 'Dárce', headTitleFollowsHeading: true }),
+    );
   });
 
   it('when a page names its parent, then the back button leads there', async () => {

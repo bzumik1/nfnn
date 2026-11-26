@@ -4,14 +4,22 @@ import {
   Component,
   DestroyRef,
   DOCUMENT,
+  effect,
   ElementRef,
   inject,
   InjectionToken,
+  Injector,
   input,
+  linkedSignal,
   output,
+  untracked,
+  viewChild,
 } from '@angular/core';
 import { InputModality } from '../../../core/input/input-modality';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { isTextEntry } from '../../../core/layout/soft-keyboard';
+import { motionAllowed, PageTransitions } from '../../../core/navigation/page-transitions';
+import { SHEET_STEPPING } from '../../../core/navigation/sheet-stepping';
 import { FocusReturn } from '../dialog/focus-return';
 
 const SHEET_PANEL = '.dialog-panel';
@@ -116,6 +124,9 @@ export const SHEET_HEAD_RESIZE_OBSERVER = new InjectionToken<typeof ResizeObserv
   { providedIn: 'root', factory: () => inject(DOCUMENT).defaultView?.ResizeObserver ?? null },
 );
 
+const FADE_DURATION = '--duration-fast';
+const FADE_EASE = '--ease-standard';
+
 export const SHEET_HEAD_ASKS_FOR_LESS_MOTION = new InjectionToken<() => boolean>(
   'SHEET_HEAD_ASKS_FOR_LESS_MOTION',
   {
@@ -135,13 +146,37 @@ export const SHEET_HEAD_ASKS_FOR_LESS_MOTION = new InjectionToken<() => boolean>
 })
 export class SheetHead {
   readonly title = input.required<string>();
+  readonly lateTitle = input<string | null>(null);
   readonly titleId = input<string | null>(null);
   readonly backPressed = output<void>();
   readonly closePressed = output<void>();
 
+  private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
+  private readonly transitions = inject(PageTransitions);
+  private readonly stepping = this.transitions.stepping;
+  private readonly compact = inject(CompactLayout).isCompact;
+  private readonly shownTitle = viewChild<ElementRef<HTMLElement>>('shownTitle');
+  protected readonly shown = linkedSignal(() => this.title());
+  private fades: Animation[] = [];
+  private fadingTo: string | null = null;
+  private lettingGo: number | null = null;
+
   constructor() {
+    this.transitions.sheets ??= SHEET_STEPPING;
+    effect(() => {
+      this.title();
+      untracked(() => this.letFadeGo());
+    });
+    effect(() => {
+      const late = this.lateTitle();
+      const stepping = this.stepping();
+      const compact = this.compact();
+      untracked(() => this.follow(late, stepping, compact));
+    });
     const head = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
     const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => this.stopLettingGo());
     const Observer = inject(SHEET_HEAD_RESIZE_OBSERVER);
     const view = inject(DOCUMENT).defaultView;
     const modality = inject(InputModality);
@@ -184,5 +219,116 @@ export class SheetHead {
         );
       }
     });
+  }
+
+  private follow(late: string | null, stepping: boolean, compact: boolean): void {
+    this.stopLettingGo();
+    if (late === null) {
+      if (!compact) {
+        this.showOwnTitle();
+      } else if (!stepping) {
+        this.letGoNextFrame();
+      }
+      return;
+    }
+    if (!compact) {
+      this.letFadeGo();
+      this.shown.set(late);
+      return;
+    }
+    if (stepping || late === this.shown() || late === this.fadingTo) {
+      return;
+    }
+    this.fadeTo(late);
+  }
+
+  private fadeTo(late: string): void {
+    const element = this.shownTitle()?.nativeElement;
+    const view = this.document.defaultView;
+    if (
+      element === undefined ||
+      view === null ||
+      typeof element.animate !== 'function' ||
+      !motionAllowed(view)
+    ) {
+      this.letFadeGo();
+      this.shown.set(late);
+      return;
+    }
+    this.letFadeGo();
+    const timing = this.fadeTiming(view);
+    const out = element.animate([{ opacity: 1 }, { opacity: 0 }], { ...timing, fill: 'forwards' });
+    this.fades = [out];
+    this.fadingTo = late;
+    out.finished
+      .then(() => {
+        if (this.fadingTo !== late) {
+          return;
+        }
+        this.shown.set(late);
+        afterNextRender(
+          () => {
+            if (this.fadingTo !== late) {
+              return;
+            }
+            const into = element.animate([{ opacity: 0 }, { opacity: 1 }], timing);
+            out.cancel();
+            this.fades = [into];
+            void into.finished.then(
+              () => this.fadeEnded(late),
+              () => this.fadeEnded(late),
+            );
+          },
+          { injector: this.injector },
+        );
+      })
+      .catch(() => this.fadeEnded(late));
+  }
+
+  private fadeTiming(view: Window): KeyframeAnimationOptions {
+    const root = view.getComputedStyle(this.document.documentElement);
+    const token = root.getPropertyValue(FADE_DURATION).trim();
+    const value = Number.parseFloat(token);
+    const duration = Number.isFinite(value) ? (token.endsWith('ms') ? value : value * 1000) : 0;
+    const easing = root.getPropertyValue(FADE_EASE).trim();
+    return { duration: duration / 2, ...(easing === '' ? {} : { easing }) };
+  }
+
+  private fadeEnded(late: string): void {
+    if (this.fadingTo === late) {
+      this.fadingTo = null;
+      this.fades = [];
+    }
+  }
+
+  private letGoNextFrame(): void {
+    const view = this.document.defaultView;
+    if (view === null) {
+      this.showOwnTitle();
+      return;
+    }
+    this.lettingGo = view.requestAnimationFrame(() => {
+      this.lettingGo = null;
+      if (this.lateTitle() === null && !this.stepping()) {
+        this.showOwnTitle();
+      }
+    });
+  }
+
+  private stopLettingGo(): void {
+    if (this.lettingGo !== null) {
+      this.document.defaultView?.cancelAnimationFrame(this.lettingGo);
+      this.lettingGo = null;
+    }
+  }
+
+  private showOwnTitle(): void {
+    this.letFadeGo();
+    this.shown.set(this.title());
+  }
+
+  private letFadeGo(): void {
+    this.fadingTo = null;
+    this.fades.splice(0).forEach((fade) => fade.cancel());
   }
 }

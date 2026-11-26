@@ -31,7 +31,7 @@ import {
 } from '../../admin-api';
 import { IMPORT_FAILURE_LABELS } from '../../import-failure-labels';
 import { LogPageAccess } from '../../logs/log-page-access';
-import { formatReportMonth } from '../report-month';
+import { formatReportMonth, REPORT_MONTH_SHAPE } from '../report-month';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -54,7 +54,6 @@ interface ReportBlock {
   groups: ReportGroup[];
 }
 
-const MONTH_SHAPE = /^\d{4}-(0[1-9]|1[0-2])$/;
 const NOT_FOUND = 'donations/sent-report-not-found';
 
 @Component({
@@ -71,7 +70,7 @@ export class AdminSentReport {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly month = inject(ActivatedRoute).snapshot.paramMap.get('month') ?? '';
 
-  protected readonly known = MONTH_SHAPE.test(this.month);
+  protected readonly known = REPORT_MONTH_SHAPE.test(this.month);
   protected readonly monthName = this.known ? formatReportMonth(this.month) : '';
   protected readonly state = signal<LoadState>(this.known ? 'loading' : 'not-found');
   protected readonly loadView = loadingView(this.state, (state) => state === 'loading');

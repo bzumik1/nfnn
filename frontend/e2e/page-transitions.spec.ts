@@ -10,6 +10,7 @@ import {
   whenAdministrationCopied,
 } from './donor-session';
 import { expect, test } from './fixtures';
+import { cornerProblems, seenCorners, watchCorners } from './back-matrix';
 
 const article = {
   id: '0199f3e0-0000-7000-8000-00000000c011',
@@ -831,3 +832,254 @@ test.describe('Given an administrator in the app on the home screen of a phone w
     await expect(page).toHaveURL('/aktuality');
   });
 });
+
+interface CornerPose {
+  readonly overRadius: string;
+  readonly underRadius: string;
+  readonly overTop: number;
+  readonly overHeight: number;
+  readonly overLeft: number;
+  readonly windowHeight: number;
+}
+
+const HELD_STEP_MS = 3000;
+
+async function holdTheNextStepAt(page: Page, share: number): Promise<void> {
+  await page.evaluate(
+    ({ share, stepMs }) => {
+      document.documentElement.style.setProperty('--duration-page', `${stepMs}ms`);
+      const held = new MutationObserver(() => {
+        const overlay = document.querySelector('.page-transition--moving');
+        if (overlay === null || overlay.classList.contains('page-transition--held')) {
+          return;
+        }
+        held.disconnect();
+        overlay.getAnimations({ subtree: true }).forEach((motion) => {
+          motion.pause();
+          motion.currentTime = share * stepMs;
+        });
+        document.documentElement.dataset['stepHeld'] = 'true';
+      });
+      held.observe(document.body, { subtree: true, attributes: true, childList: true });
+    },
+    { share, stepMs: HELD_STEP_MS },
+  );
+}
+
+async function heldStep(page: Page): Promise<CornerPose> {
+  await expect(page.locator('html[data-step-held="true"]')).toHaveCount(1);
+  return page.evaluate(() => {
+    const over = document.querySelector<HTMLElement>('.page-transition__page--over')!;
+    const under = document.querySelector<HTMLElement>('.page-transition__page--under')!;
+    const box = over.getBoundingClientRect();
+    return {
+      overRadius: getComputedStyle(over).borderTopLeftRadius,
+      underRadius: getComputedStyle(under).borderTopLeftRadius,
+      overTop: box.top,
+      overHeight: box.height,
+      overLeft: box.left,
+      windowHeight: window.innerHeight,
+    };
+  });
+}
+
+async function pixelAt(page: Page, x: number, y: number): Promise<number[]> {
+  const shot = await page.screenshot({
+    clip: { x: Math.round(x), y: Math.round(y), width: 1, height: 1 },
+    animations: 'allow',
+  });
+  return page.evaluate(
+    async (bytes) => {
+      const bitmap = await createImageBitmap(
+        new Blob([new Uint8Array(bytes)], { type: 'image/png' }),
+      );
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const context = canvas.getContext('2d')!;
+      context.drawImage(bitmap, 0, 0);
+      return [...context.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+    },
+    [...shot],
+  );
+}
+
+function closeColours(one: readonly number[], other: readonly number[]): boolean {
+  return one.every((channel, index) => Math.abs(channel - other[index]) <= 8);
+}
+
+for (const { phone, dppx, inset, radius } of [
+  { phone: 'an iPhone with Face ID at 3 dppx', dppx: 3, inset: '34px', radius: '39px' },
+  {
+    phone: 'an iPad or an iPhone 11 at 2 dppx, whose display corner is smaller',
+    dppx: 2,
+    inset: '20px',
+    radius: '18px',
+  },
+  {
+    phone: 'an iPhone SE, whose display has square corners',
+    dppx: 3,
+    inset: '0px',
+    radius: '0px',
+  },
+]) {
+  test.describe(`Given the app on the home screen of ${phone}, reading the news`, () => {
+    test.use({
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: dppx,
+      reducedMotion: 'no-preference',
+    });
+
+    test.beforeEach(async ({ page }) => {
+      await onTheHomeScreenWithBottomInset(page, inset);
+      await mockDonorApi(page);
+      await publishedArticle(page);
+    });
+
+    test(`when an article opens over the list, then only the arriving page on top, with the shadow on its edge, has ${radius} corners like the display, from the very top of the screen, and the list beneath has none`, async ({
+      page,
+    }) => {
+      await page.goto('/aktuality');
+      await holdTheNextStepAt(page, 0.4);
+
+      await page.getByRole('link', { name: article.title }).click();
+      const pose = await heldStep(page);
+
+      expect(pose.overRadius).toBe(radius);
+      expect(pose.underRadius).toBe('0px');
+      expect(pose.overTop).toBe(0);
+      expect(pose.overHeight).toBe(pose.windowHeight);
+    });
+
+    test(`when Zpět takes the article away, then only the leaving page on top has ${radius} corners and the list beneath has none`, async ({
+      page,
+    }) => {
+      await openArticleFromList(page);
+      await holdTheNextStepAt(page, 0.4);
+
+      await back(page).click();
+      const pose = await heldStep(page);
+
+      expect(pose.overRadius).toBe(radius);
+      expect(pose.underRadius).toBe('0px');
+      expect(pose.overTop).toBe(0);
+    });
+  });
+}
+
+test.describe('Given the app on the home screen of an iPhone with Face ID, the article opening over the news', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await onTheHomeScreenWithBottomInset(page, '34px');
+    await mockDonorApi(page);
+    await publishedArticle(page);
+  });
+
+  for (const share of [0.08, 0.15, 0.25]) {
+    test(`when the step is held at ${share * 100} % of its time, the arriving page still well to the right, then under the page's rounded corner shows only the dimmed list beside it, never a ground of its own, and the band under the clock on the arriving page has the colour it keeps once it has arrived`, async ({
+      page,
+    }) => {
+      await page.goto('/aktuality');
+      await holdTheNextStepAt(page, share);
+      await page.getByRole('link', { name: article.title }).click();
+      const pose = await heldStep(page);
+      expect(pose.overRadius).toBe('39px');
+      expect(
+        pose.overLeft,
+        'the arriving page lies far enough in to read beside it',
+      ).toBeGreaterThan(40);
+      expect(
+        pose.overLeft + BAND_READ_INSIDE_PX,
+        'the band on the arriving page lies inside the window, past its corner',
+      ).toBeLessThan(390);
+
+      const underTheCorner = await pixelAt(page, pose.overLeft + 2, 1);
+      const beside = await pixelAt(page, pose.overLeft - 4, 1);
+      const bandOnTheWay = await pixelAt(page, pose.overLeft + BAND_READ_INSIDE_PX, 2);
+      await page.evaluate(() =>
+        document
+          .querySelector('.page-transition')
+          ?.getAnimations({ subtree: true })
+          .forEach((motion) => motion.play()),
+      );
+      await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+      await expect(overlays(page)).toHaveCount(0);
+      const bandArrived = await pixelAt(page, BAND_READ_INSIDE_PX, 2);
+
+      expect(
+        closeColours(underTheCorner, beside),
+        `under the corner ${underTheCorner} against the dimmed list beside it ${beside}`,
+      ).toBe(true);
+      expect(
+        closeColours(bandOnTheWay, bandArrived),
+        `the band under the clock ${bandOnTheWay} on the way against ${bandArrived} once arrived`,
+      ).toBe(true);
+    });
+  }
+});
+
+test.describe('Given the app on the home screen of an iPhone with Face ID, opened straight on an article, so the news before it was never drawn', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await onTheHomeScreenWithBottomInset(page, '34px');
+    await mockDonorApi(page);
+    await publishedArticle(page);
+    await page.goto(`/aktuality/${article.slug}`);
+    await expect(page.getByRole('heading', { level: 1, name: article.title })).toBeVisible();
+  });
+
+  test('when Zpět steps back to the news, then the leaving article keeps one look of its corners through the whole step and never shows a corner without the news drawn and dimmed beneath it', async ({
+    page,
+  }) => {
+    await watchCorners(page);
+
+    await back(page).click();
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(overlays(page)).toHaveCount(0);
+    expect(cornerProblems(await seenCorners(page))).toEqual([]);
+  });
+
+  test('when a finger takes the article back past half while the news is still being drawn under it, then the article keeps one look of its corners through the whole step and never shows a corner over the bare ground', async ({
+    page,
+  }) => {
+    await watchCorners(page);
+
+    await fingerFromEdge(page.getByRole('main'), [...DRAGGED_ACROSS, 300]);
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(overlays(page)).toHaveCount(0);
+    expect(cornerProblems(await seenCorners(page))).toEqual([]);
+  });
+});
+
+const BAND_READ_INSIDE_PX = 40;
+
+async function onTheHomeScreenWithBottomInset(page: Page, inset: string): Promise<void> {
+  await page.addInitScript((bottom) => {
+    Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+    Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
+    const setInset = (root: HTMLElement): void =>
+      root.style.setProperty('--safe-area-bottom', bottom);
+    if (document.documentElement !== null) {
+      setInset(document.documentElement);
+      return;
+    }
+    const rooted = new MutationObserver(() => {
+      if (document.documentElement !== null) {
+        rooted.disconnect();
+        setInset(document.documentElement);
+      }
+    });
+    rooted.observe(document, { childList: true });
+  }, inset);
+}
