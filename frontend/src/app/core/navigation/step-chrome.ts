@@ -134,9 +134,9 @@ function move(stage: PageTransitions, running: Running, view: Window, inFrame = 
     return;
   }
   const returning =
-    running.kind === 'pop' ? stage.injector.get(PageFocus).bringReturnIntoView(layer) : null;
+    running.kind === 'pop' ? stage.injector.get(PageFocus).returnTargetIn(layer) : null;
   if (returning !== null) {
-    keepWhereTheCopyShows(stage, view, returning);
+    standWhereTheCopyShows(stage, view, returning);
   }
   moveTo(
     stage,
@@ -147,19 +147,31 @@ function move(stage: PageTransitions, running: Running, view: Window, inFrame = 
   );
 }
 
-function keepWhereTheCopyShows(stage: PageTransitions, view: Window, row: HTMLElement): void {
-  if (typeof ResizeObserver === 'undefined') {
+function standWhereTheCopyShows(stage: PageTransitions, view: Window, row: HTMLElement): void {
+  if (scrollsInABoxOfItsOwn(view, row)) {
     return;
   }
   const shownAt = row.getBoundingClientRect().top;
-  const growth = new ResizeObserver(() => {
+  stage.whenFinished(() => {
     const drift = row.getBoundingClientRect().top - shownAt;
     if (row.isConnected && Math.abs(drift) >= 1) {
       view.scrollBy({ top: drift, behavior: 'instant' });
     }
   });
-  growth.observe(stage.document.body);
-  stage.whenFinished(() => growth.disconnect());
+}
+
+function scrollsInABoxOfItsOwn(view: Window, element: HTMLElement): boolean {
+  const { body, documentElement } = element.ownerDocument;
+  for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
+    if (parent === body || parent === documentElement) {
+      return false;
+    }
+    const overflow = view.getComputedStyle(parent).overflowY;
+    if (overflow === 'auto' || overflow === 'scroll') {
+      return true;
+    }
+  }
+  return false;
 }
 
 function moveTo(

@@ -6,6 +6,7 @@ import {
   inject,
   Injectable,
   Injector,
+  untracked,
 } from '@angular/core';
 import { NavigationStart, Router } from '@angular/router';
 import { InputModality } from '../input/input-modality';
@@ -22,7 +23,7 @@ import { BackTarget } from './back-target';
 import { LISTENING, VISITOR_MOVES } from './growing-page';
 import { NavigationPreview } from './navigation-preview';
 import { PagePlacement } from './page-placement';
-import { liveDialogs } from './page-transitions';
+import { liveDialogs, PageTransitions } from './page-transitions';
 
 export const RETURNING_FOCUS_LONGEST_MS = 3000;
 const FOCUS_DRAWN_AT_FRAME_CALLBACK = 3;
@@ -140,15 +141,11 @@ export class PageFocus {
     return active.localName === 'dialog' && places.includes(active as HTMLElement);
   }
 
-  bringReturnIntoView(scope: HTMLElement): HTMLElement | null {
+  returnTargetIn(scope: HTMLElement): HTMLElement | null {
     if (!this.layout.isCompact() || this.preview.drives()) {
       return null;
     }
-    const target = this.returnTarget(scope)?.() ?? null;
-    if (target !== null) {
-      bringIntoView(target);
-    }
-    return target;
+    return this.returnTarget(scope)?.() ?? null;
   }
 
   returnAfterStepBack(scope: HTMLElement): void {
@@ -295,6 +292,18 @@ export class PageFocus {
   }
 
   private bringIntoViewOnceStill(target: HTMLElement): void {
+    const stage = this.injector.get(PageTransitions);
+    if (stage.running !== null) {
+      stage.whenFinished(() => {
+        if (
+          this.document.activeElement === target &&
+          untracked(this.router.currentNavigation) === null
+        ) {
+          this.bringAndKeep(target);
+        }
+      });
+      return;
+    }
     const view = this.document.defaultView;
     const motions = motionsMoving(target);
     if (view === null || motions.length === 0) {

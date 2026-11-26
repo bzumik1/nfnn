@@ -13,6 +13,7 @@ import { InputModality } from '../input/input-modality';
 import { CompactLayout } from '../layout/compact-layout';
 import { PageFocus, RETURNING_FOCUS_LONGEST_MS } from './page-focus';
 import { PagePlacement } from './page-placement';
+import { PageTransitions } from './page-transitions';
 
 @Component({ template: '' })
 class Blank {}
@@ -130,28 +131,40 @@ describe('Given a list of the administration that a step back returns to from th
       document.documentElement.style.scrollPaddingBottom = '';
     });
 
-    async function copiedByTheStepBackWithTheLinkAt(top: number): Promise<void> {
+    it('then a step back about to copy the list finds the row the focus will return to, without moving the page or the focus (#2088)', async () => {
       link = row({ href: CARD });
-      link.getBoundingClientRect = () => new DOMRect(0, top, 300, 56);
+      link.getBoundingClientRect = () => new DOMRect(0, header - 56, 300, 56);
       scope.append(link);
       await openTheCard(link);
       await stepBack();
       shown = vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>();
       link.scrollIntoView = shown;
-      focus.bringReturnIntoView(scope);
-    }
 
-    it('then a step back about to copy the list brings the row hidden under the head into view at once, the least it can, and leaves the focus to the return, so the copy shows the list where it will stand (#2088)', async () => {
-      await copiedByTheStepBackWithTheLinkAt(header - 56);
-
-      expect(shown).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+      expect(focus.returnTargetIn(scope)).toBe(link);
+      expect(shown).not.toHaveBeenCalled();
       expect(document.activeElement).toBe(heading);
     });
 
-    it('then a step back about to copy the list leaves a row that shows where it is (#2088)', async () => {
-      await copiedByTheStepBackWithTheLinkAt(300);
+    it('then a row hidden under the head is brought into view only once the cover of the step back has gone, so the page never moves under the copy the step shows (#2088)', async () => {
+      const transitions = TestBed.inject(PageTransitions);
+      onTestFinished(() => transitions.finish());
+      link = row({ href: CARD });
+      link.getBoundingClientRect = () => new DOMRect(0, header - 56, 300, 56);
+      scope.append(link);
+      await openTheCard(link);
+      await stepBack();
+      shown = vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>();
+      link.scrollIntoView = shown;
+      const overlay = transitions.overlay('pop');
+      transitions.running = { kind: 'pop', overlay, swiping: false, sheet: null, revealed: true };
 
-      expect(shown).not.toHaveBeenCalled();
+      focus.returnAfterStepBack(scope);
+      const underTheCover = shown.mock.calls.length;
+      transitions.finish();
+
+      expect(document.activeElement).toBe(link);
+      expect(underTheCover).toBe(0);
+      expect(shown).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
     });
 
     it('then the link takes the focus from the heading without moving the page while the row shows', async () => {
