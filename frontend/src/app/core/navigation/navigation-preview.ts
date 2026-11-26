@@ -14,6 +14,7 @@ import { pathOf } from './app-tabs';
 export const PREVIEW_OUT = 'nfnn.preview.out';
 export const PREVIEW_BACK = 'nfnn.preview.back';
 export const PREVIEW_DRAWING_LONGEST_MS = 300;
+export const PREVIEW_FRAMES_LONGEST_MS = 200;
 export const PREVIEW_STEP_LONGEST_MS = 1000;
 
 type Phase = 'none' | 'out' | 'back';
@@ -164,9 +165,15 @@ export class NavigationPreview {
       stable,
       new Promise((done) => view.setTimeout(done, PREVIEW_DRAWING_LONGEST_MS)),
     ]).catch(() => undefined);
-    await new Promise<void>((done) =>
-      view.requestAnimationFrame(() => view.requestAnimationFrame(() => done())),
-    );
+    await new Promise<void>((done) => {
+      const limit = view.setTimeout(done, PREVIEW_FRAMES_LONGEST_MS);
+      view.requestAnimationFrame(() =>
+        view.requestAnimationFrame(() => {
+          view.clearTimeout(limit);
+          done();
+        }),
+      );
+    });
   }
 
   private watch(router: Router): void {
