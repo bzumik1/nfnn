@@ -24,48 +24,67 @@ export async function untilAtRest(measured: Locator): Promise<void> {
     .toBe(0);
 }
 
-export interface HeightFrame {
-  readonly height: number;
-  readonly moving: boolean;
+export interface MotionHeights {
+  readonly path: number[];
+  readonly finished: number;
+  readonly rest: number;
 }
 
-export function heightsUntilAtRest(element: Locator): Promise<HeightFrame[]> {
+export function heightsThroughTheMotion(element: Locator, steps = 20): Promise<MotionHeights> {
   return element.evaluate(
-    (watched) =>
-      new Promise<HeightFrame[]>((resolve) => {
-        const frames: HeightFrame[] = [];
+    (watched, stepCount) =>
+      new Promise<MotionHeights>((resolve) => {
+        const height = () => watched.getBoundingClientRect().height;
+        const endOf = (motion: Animation) => Number(motion.effect!.getComputedTiming().endTime);
+        const running = () =>
+          watched
+            .getAnimations({ subtree: true })
+            .filter((motion) => motion.playState === 'running' && Number.isFinite(endOf(motion)));
+        const path = [height()];
         const started = performance.now();
         let moved = false;
+        let finished = path[0];
         let stillFrames = 0;
         const sample = () => {
-          const moving = watched
-            .getAnimations({ subtree: true })
-            .some((motion) => motion.playState === 'running');
-          frames.push({ height: watched.getBoundingClientRect().height, moving });
-          moved ||= moving;
-          stillFrames = moving ? 0 : stillFrames + 1;
+          const motions = running();
+          if (motions.length > 0) {
+            moved = true;
+            stillFrames = 0;
+            motions.forEach((motion) => motion.pause());
+            const end = Math.max(...motions.map(endOf));
+            for (let step = 0; step <= stepCount; step++) {
+              const time = (end * step) / stepCount;
+              motions.forEach((motion) => {
+                motion.currentTime = Math.min(time, endOf(motion));
+              });
+              path.push(height());
+            }
+            motions.forEach((motion) => motion.finish());
+            finished = height();
+            path.push(finished);
+          } else if (moved) {
+            stillFrames += 1;
+          }
           if ((moved && stillFrames >= 3) || performance.now() - started > 3000) {
-            resolve(frames);
+            resolve({ path, finished, rest: height() });
             return;
           }
           requestAnimationFrame(sample);
         };
         sample();
       }),
+    steps,
   );
 }
 
-export function stepsAgainst(frames: HeightFrame[], direction: 'grows' | 'shrinks'): number[] {
-  return frames
+export function stepsAgainst(heights: number[], direction: 'grows' | 'shrinks'): number[] {
+  return heights
     .slice(1)
-    .map((frame, index) => frame.height - frames[index].height)
+    .map((height, index) => height - heights[index])
     .filter((step) => (direction === 'grows' ? step < -0.5 : step > 0.5));
 }
 
-export function stepsAfterTheMotion(frames: HeightFrame[]): number[] {
-  const lastMoving = frames.map((frame) => frame.moving).lastIndexOf(true);
-  return frames
-    .slice(lastMoving + 1)
-    .map((frame) => frame.height - frames[lastMoving].height)
-    .filter((step) => Math.abs(step) > 0.5);
+export function stepAfterTheMotion(heights: MotionHeights): number[] {
+  const step = heights.rest - heights.finished;
+  return Math.abs(step) > 0.5 ? [step] : [];
 }

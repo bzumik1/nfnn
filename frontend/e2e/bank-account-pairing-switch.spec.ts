@@ -2,8 +2,8 @@ import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { bankAccountItem, mockDonorApi, openDonorSection, signIn } from './donor-session';
 import {
-  heightsUntilAtRest,
-  stepsAfterTheMotion,
+  heightsThroughTheMotion,
+  stepAfterTheMotion,
   stepsAgainst,
   untilAtRest,
 } from './motion-frames';
@@ -36,32 +36,32 @@ test.describe('Given a signed-in donor with a verified bank account on a compute
         await page.emulateMedia({ reducedMotion: motion.reducedMotion });
         const row = await openVerifiedAccount(page, width);
 
-        const asking = heightsUntilAtRest(row);
+        const asking = heightsThroughTheMotion(row);
         await row.getByRole('button', { name: /Nepřiřazovat platby z\stohoto účtu/ }).click();
         const opening = await asking;
         await expect(row.getByRole('button', { name: 'Ponechat' })).toBeFocused();
 
-        const answering = heightsUntilAtRest(row);
+        const answering = heightsThroughTheMotion(row);
         await row.getByRole('button', { name: 'Ponechat' }).click();
         const closing = await answering;
         await expect(
           row.getByRole('button', { name: /Nepřiřazovat platby z\stohoto účtu/ }),
         ).toBeFocused();
 
-        expect(opening.some((frame) => frame.moving)).toBe(true);
-        expect(closing.some((frame) => frame.moving)).toBe(true);
+        expect(opening.path.length).toBeGreaterThan(1);
+        expect(closing.path.length).toBeGreaterThan(1);
         expect({
-          opening: stepsAgainst(opening, 'grows'),
-          openingAfterTheMotion: stepsAfterTheMotion(opening),
-          closing: stepsAgainst(closing, 'shrinks'),
-          closingAfterTheMotion: stepsAfterTheMotion(closing),
+          opening: stepsAgainst(opening.path, 'grows'),
+          openingAfterTheMotion: stepAfterTheMotion(opening),
+          closing: stepsAgainst(closing.path, 'shrinks'),
+          closingAfterTheMotion: stepAfterTheMotion(closing),
         }).toEqual({
           opening: [],
           openingAfterTheMotion: [],
           closing: [],
           closingAfterTheMotion: [],
         });
-        expect(Math.abs(closing.at(-1)!.height - opening[0].height)).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(closing.rest - opening.path[0])).toBeLessThanOrEqual(0.5);
       });
     }
   }
