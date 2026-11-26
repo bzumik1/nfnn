@@ -14,6 +14,7 @@
           [class.active]="!customChosen() && presetAmount() === preset.amount"
           [attr.aria-checked]="!customChosen() && presetAmount() === preset.amount"
           [tabindex]="!customChosen() && presetAmount() === preset.amount ? 0 : -1"
+          (pointerdown)="noteAmountPress()"
           (click)="choosePreset(preset.amount)"
         >
           {{ preset.label }}
@@ -26,6 +27,7 @@
         [class.active]="customChosen()"
         [attr.aria-checked]="customChosen()"
         [tabindex]="customChosen() ? 0 : -1"
+        (pointerdown)="noteAmountPress()"
         (click)="chooseCustomAmount()"
         i18n="@@home.donate.amount.other"
       >
@@ -33,41 +35,47 @@
       </button>
     </div>
 
-    @if (customChosen()) {
-      <div class="custom-amount">
-        <label
-          [for]="customAmountId()"
-          class="visually-hidden"
-          i18n="@@home.donate.amount.customLabel"
-          >Vlastní částka v korunách</label
-        >
-        <input
-          #customAmountField
-          [id]="customAmountId()"
-          type="text"
-          inputmode="numeric"
-          enterkeyhint="done"
-          autocomplete="off"
-          [value]="customText()"
-          [attr.aria-invalid]="showAmountHint()"
-          [attr.aria-describedby]="customAmountDescription()"
-          (input)="enterCustomAmount($event)"
-          (blur)="leaveCustomAmount()"
-          (keydown.enter)="finishCustomAmount()"
-        />
-        <span class="custom-amount-currency" aria-hidden="true" i18n="@@home.donate.amount.currency"
-          >Kč</span
-        >
-        <span class="visually-hidden" [id]="redrawHintId()" i18n="@@home.donate.qr.redrawHint"
-          >QR kód se překreslí, když přestanete psát.</span
-        >
-      </div>
-      @if (showAmountHint()) {
-        <p class="amount-hint" [id]="amountHintId()" i18n="@@home.donate.amount.invalid">
-          Zadejte celou částku od 1 do 1 000 000&nbsp;Kč.
-        </p>
+    <app-fold [open]="customChosen()">
+      @if (customChosen()) {
+        <div class="custom-amount">
+          <label
+            [for]="customAmountId()"
+            class="visually-hidden"
+            i18n="@@home.donate.amount.customLabel"
+            >Vlastní částka v korunách</label
+          >
+          <input
+            #customAmountField
+            [id]="customAmountId()"
+            type="text"
+            inputmode="numeric"
+            enterkeyhint="done"
+            autocomplete="off"
+            [value]="customText()"
+            [attr.aria-invalid]="showAmountHint()"
+            [attr.aria-describedby]="customAmountDescription()"
+            (input)="enterCustomAmount($event)"
+            (focus)="forgetAmountPress()"
+            (blur)="leaveCustomAmount()"
+            (keydown.enter)="finishCustomAmount()"
+          />
+          <span
+            class="custom-amount-currency"
+            aria-hidden="true"
+            i18n="@@home.donate.amount.currency"
+            >Kč</span
+          >
+          <span class="visually-hidden" [id]="redrawHintId()" i18n="@@home.donate.qr.redrawHint"
+            >QR kód se překreslí, když přestanete psát.</span
+          >
+        </div>
+        @if (showAmountHint()) {
+          <p class="amount-hint" [id]="amountHintId()" i18n="@@home.donate.amount.invalid">
+            Zadejte celou částku od 1 do 1 000 000&nbsp;Kč.
+          </p>
+        }
       }
-    }
+    </app-fold>
   </div>
 
   <ng-content />

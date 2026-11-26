@@ -179,6 +179,7 @@ export class PaymentPanel {
   protected readonly retrying = signal(false);
   protected readonly failedAttempts = signal(0);
   private choosingByKey = false;
+  private amountPressed = false;
   private readonly announced = signal<number | null>(null);
   private lastAnnounced: number | null = null;
   private retried = false;
@@ -358,6 +359,7 @@ export class PaymentPanel {
   }
 
   choosePreset(amount: number): void {
+    this.amountPressed = false;
     this.clearNotices();
     this.customChosen.set(false);
     this.presetAmount.set(amount);
@@ -367,6 +369,7 @@ export class PaymentPanel {
   }
 
   chooseCustomAmount(): void {
+    this.amountPressed = false;
     if (!this.customChosen()) {
       this.openCustomAmount();
     }
@@ -411,8 +414,18 @@ export class PaymentPanel {
     this.announceAfterQuiet();
   }
 
+  noteAmountPress(): void {
+    this.amountPressed = true;
+  }
+
+  forgetAmountPress(): void {
+    this.amountPressed = false;
+  }
+
   leaveCustomAmount(): void {
-    this.customAmountLeft.set(true);
+    if (!this.amountPressed) {
+      this.customAmountLeft.set(true);
+    }
   }
 
   focusBankDetails(): void {
