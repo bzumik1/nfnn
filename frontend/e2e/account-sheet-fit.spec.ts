@@ -1,6 +1,12 @@
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { bankAccountItem, mockDonorApi, openAccountItem, signIn } from './donor-session';
+import {
+  bankAccountItem,
+  mockDonorApi,
+  openAccountItem,
+  showAccountList,
+  signIn,
+} from './donor-session';
 
 const FACTS_MAXIMUM_HEIGHT = 300;
 
@@ -204,5 +210,66 @@ test.describe('Given a signed-in donor whose phone shows the largest accessibili
       }));
       expect(place.top).toBeGreaterThanOrEqual(place.headBottom);
     }).toPass();
+  });
+});
+
+test.describe('Given a signed-in donor with the account sheet open on a phone', () => {
+  test('when the list shows, then the profile card sets its avatar and chevron on the edges of the rows under it', async ({
+    page,
+  }) => {
+    await signInOnPhone(page, 390);
+    const sheet = await showAccountList(page);
+
+    const edges = await sheet.evaluate((element) => {
+      const box = (selector: string) => element.querySelector(selector)!.getBoundingClientRect();
+      return {
+        avatar: box('.account-profile .account-initials').left,
+        chevron: box('.account-profile .ui-list__chevron').right,
+        title: box('.account-nav .ui-list__title').left,
+        rowChevron: box('.account-nav .ui-list__chevron').right,
+      };
+    });
+
+    expect(Math.abs(edges.avatar - edges.title)).toBeLessThanOrEqual(1);
+    expect(Math.abs(edges.chevron - edges.rowChevron)).toBeLessThanOrEqual(1);
+  });
+
+  test('when each section is scrolled to its end, then every section leaves the same space under its last card', async ({
+    page,
+  }) => {
+    await signInOnPhone(page, 390);
+    const spaces: Record<string, number> = {};
+
+    for (const section of [
+      'Můj přehled',
+      'Moje dary',
+      'Potvrzení o daru',
+      'Bankovní účty',
+      'Údaje a zabezpečení',
+    ]) {
+      await openAccountItem(page, section);
+      const panel = page.getByRole('dialog', { name: section }).locator(':scope > .dialog-panel');
+      await expect(panel.locator('.account-section-body .ui-card').first()).toBeVisible();
+      spaces[section] = await panel.evaluate((element) => {
+        const cards = Array.from(
+          element.querySelectorAll('.account-section-body .ui-card'),
+          (card) => card.getBoundingClientRect(),
+        ).filter((box) => box.height > 0);
+        const lastCardBottom = Math.max(...cards.map((box) => box.bottom));
+        const contentEnd =
+          element.getBoundingClientRect().top +
+          element.clientTop +
+          element.scrollHeight -
+          element.scrollTop;
+        return Math.round(contentEnd - lastCardBottom);
+      });
+    }
+
+    const first = spaces['Můj přehled'];
+    for (const [section, space] of Object.entries(spaces)) {
+      expect(Math.abs(space - first), `${section}: ${space} against ${first}`).toBeLessThanOrEqual(
+        1,
+      );
+    }
   });
 });
