@@ -299,5 +299,44 @@ for (const [width, height] of [
         );
       }
     });
+
+    test('when the bank details arrive after their skeleton, then no Kopírovat moves sideways', async ({
+      page,
+    }) => {
+      await mockDonorApi(page, noDonations);
+      let answerDetails!: () => void;
+      const detailsHeld = new Promise<void>((answer) => (answerDetails = answer));
+      await page.route(
+        (url) => url.pathname === '/api/donations/payment-details',
+        async (route) => {
+          await detailsHeld;
+          await route.fallback();
+        },
+      );
+      await rememberedDonorSession(page);
+      await page.setViewportSize({ width, height });
+      await page.goto('/darce/prehled');
+      const skeleton = page.locator('.send-gift .bank-skeleton.is-shown');
+      await expect(skeleton).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const skeletonPills = await skeleton
+        .locator('.bank-skeleton-pill')
+        .evaluateAll((all) => all.map((pill) => Math.round(pill.getBoundingClientRect().left)));
+
+      answerDetails();
+      const rows = page.locator('.send-gift .bank > .bank-rows > .bank-row');
+      await expect(rows.filter({ hasText: 'IBAN' })).toBeVisible();
+      const loadedCopies = await rows
+        .locator('app-copy-button button')
+        .evaluateAll((all) => all.map((copy) => Math.round(copy.getBoundingClientRect().left)));
+
+      expect(skeletonPills).toHaveLength(loadedCopies.length);
+      for (const [index, left] of skeletonPills.entries()) {
+        expect(
+          Math.abs(left - loadedCopies[index]),
+          JSON.stringify({ skeletonPills, loadedCopies }),
+        ).toBeLessThanOrEqual(1);
+      }
+    });
   });
 }
