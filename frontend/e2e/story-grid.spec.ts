@@ -128,10 +128,11 @@ test.describe('Given a year of stories without photos on the Pomáháme tab', ()
 });
 
 test.describe('Given a year of stories on the Pomáháme tab of a phone', () => {
-  test('when the tiles show, then each tag starts on the edge of its title and a small tile’s title stands as far below the photo as it stands from the side', async ({
+  test('when the tiles show, then each tag starts on the edge of its title as far from the tile’s top as the title from its side, the large tile’s too, and a small tile’s title stands as far below the photo as it stands from the side', async ({
     page,
   }) => {
     await openStories(page, 4, 390);
+    await expect(page.locator('app-story-tile .tile--large')).toHaveCount(1);
 
     const tiles = await page.locator('app-story-tile .tile').evaluateAll((all) =>
       all.map((tile) => {
@@ -140,7 +141,10 @@ test.describe('Given a year of stories on the Pomáháme tab of a phone', () => 
           large: tile.classList.contains('tile--large'),
           tileLeft:
             tile.getBoundingClientRect().left + parseFloat(getComputedStyle(tile).borderLeftWidth),
+          tileTop:
+            tile.getBoundingClientRect().top + parseFloat(getComputedStyle(tile).borderTopWidth),
           tagLeft: box('.tile-tag').left,
+          tagTop: box('.tile-tag').top,
           titleLeft: box('.tile-title').left,
           titleTop: box('.tile-title').top,
           mediaBottom: box('.tile-media').bottom,
@@ -151,6 +155,9 @@ test.describe('Given a year of stories on the Pomáháme tab of a phone', () => 
     for (const tile of tiles) {
       const side = tile.titleLeft - tile.tileLeft;
       expect(Math.abs(tile.tagLeft - tile.titleLeft), JSON.stringify(tile)).toBeLessThanOrEqual(
+        EDGE_TOLERANCE_PX,
+      );
+      expect(Math.abs(tile.tagTop - tile.tileTop - side), JSON.stringify(tile)).toBeLessThanOrEqual(
         EDGE_TOLERANCE_PX,
       );
       if (!tile.large) {

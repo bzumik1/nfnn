@@ -799,9 +799,12 @@ for (const colorScheme of ['light', 'dark'] as const) {
       ]);
       expect(contrastBetween(edge, calloutGround)).toBeGreaterThanOrEqual(APART_FROM_PAGE);
 
+      await page.evaluate(() => document.fonts.ready);
       const box = (await button.boundingBox())!;
       const centre = box.x + box.width / 2;
-      for (const lineCentre of await labelLineCentres(button)) {
+      const lineCentres = await labelLineCentres(button);
+      expect(lineCentres.length).toBeGreaterThanOrEqual(2);
+      for (const lineCentre of lineCentres) {
         expect(Math.abs(lineCentre - centre)).toBeLessThanOrEqual(2);
       }
     });
