@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { mockDonorApi, openDonorSection, rememberedDonorSession, signIn } from './donor-session';
 import {
@@ -175,5 +175,34 @@ test.describe('Given a donor on Údaje a zabezpečení of a browser whose part o
       'Prohlížeč zatím nespustil část webu, která upozornění doručuje.',
     );
     expect(await page.evaluate(() => 'e2eBeforeRetry' in window)).toBe(true);
+  });
+});
+
+test.describe('Given a donor signed in without „Zapamatovat si mě“ on Údaje a zabezpečení', () => {
+  test('when the notifications card says where notifications can be turned on, then its two paragraphs stand as far apart as the paragraphs of Smazání účtu', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await signIn(page);
+    await page.goto('/darce/udaje');
+    const notifications = page.locator('.notifications');
+    const state = notifications.locator('.notifications-state');
+    await expect(state).toContainText('Upozornění jdou zapnout jen');
+
+    const gapBefore = (paragraph: Locator) =>
+      paragraph.evaluate((element) => {
+        const previous = element.previousElementSibling!;
+        return element.getBoundingClientRect().top - previous.getBoundingClientRect().bottom;
+      });
+    const deletionGaps = await Promise.all(
+      (await page.locator('.account-deletion .ui-card__intro').all())
+        .slice(1)
+        .map((paragraph) => gapBefore(paragraph)),
+    );
+
+    expect(deletionGaps.length).toBeGreaterThan(0);
+    for (const gap of deletionGaps) {
+      expect(await gapBefore(state)).toBeCloseTo(gap, 0);
+    }
   });
 });
