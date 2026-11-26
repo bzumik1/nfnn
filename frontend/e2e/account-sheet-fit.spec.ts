@@ -1,6 +1,12 @@
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { bankAccountItem, mockDonorApi, openAccountItem, signIn } from './donor-session';
+import {
+  bankAccountItem,
+  mockDonorApi,
+  openAccountItem,
+  showAccountList,
+  signIn,
+} from './donor-session';
 
 const FACTS_MAXIMUM_HEIGHT = 300;
 
@@ -12,6 +18,29 @@ async function signInOnPhone(page: Page, width: number): Promise<void> {
   );
   await signIn(page);
   await page.setViewportSize({ width, height: 800 });
+}
+
+function spaceUnderTheLastCard(panel: HTMLElement): number {
+  const sized = panel.getAttribute('style');
+  Object.assign(panel.style, {
+    flex: 'none',
+    alignSelf: 'start',
+    height: 'auto',
+    minHeight: '0',
+    maxHeight: 'none',
+  });
+  const cards = Array.from(panel.querySelectorAll('.account-section-body .ui-card'), (card) =>
+    card.getBoundingClientRect(),
+  ).filter((box) => box.height > 0);
+  const lastCardBottom = Math.max(...cards.map((box) => box.bottom));
+  const contentEnd =
+    panel.getBoundingClientRect().bottom - parseFloat(getComputedStyle(panel).borderBottomWidth);
+  if (sized === null) {
+    panel.removeAttribute('style');
+  } else {
+    panel.setAttribute('style', sized);
+  }
+  return Math.round(contentEnd - lastCardBottom);
 }
 
 test.describe('Given a signed-in donor adding a bank account on a phone', () => {
@@ -204,5 +233,60 @@ test.describe('Given a signed-in donor whose phone shows the largest accessibili
       }));
       expect(place.top).toBeGreaterThanOrEqual(place.headBottom);
     }).toPass();
+  });
+});
+
+test.describe('Given a signed-in donor with the account sheet open on a phone', () => {
+  test('when the list shows, then the name row with the avatar sets its avatar and chevron on the edges of the rows under it', async ({
+    page,
+  }) => {
+    await signInOnPhone(page, 390);
+    const sheet = await showAccountList(page);
+
+    const edges = await sheet.evaluate((element) => {
+      const box = (selector: string) => element.querySelector(selector)!.getBoundingClientRect();
+      return {
+        avatar: box('.account-profile .account-initials').left,
+        chevron: box('.account-profile .ui-list__chevron').right,
+        title: box('.account-nav .ui-list__title').left,
+        rowChevron: box('.account-nav .ui-list__chevron').right,
+      };
+    });
+
+    expect(Math.abs(edges.avatar - edges.title)).toBeLessThanOrEqual(1);
+    expect(Math.abs(edges.chevron - edges.rowChevron)).toBeLessThanOrEqual(1);
+  });
+
+  test('when each section is scrolled to its end, then every section leaves the same space under its last card', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-accounts',
+      (route) => route.fulfill({ json: { items: [bankAccountItem()] } }),
+    );
+    await page.setViewportSize({ width: 390, height: 800 });
+    await signIn(page);
+    const spaces: Record<string, number> = {};
+
+    for (const section of [
+      'Můj přehled',
+      'Moje dary',
+      'Potvrzení o daru',
+      'Bankovní účty',
+      'Údaje a zabezpečení',
+    ]) {
+      await openAccountItem(page, section);
+      const panel = page.getByRole('dialog', { name: section }).locator(':scope > .dialog-panel');
+      await expect(panel.locator('.account-section-body .ui-card').first()).toBeVisible();
+      spaces[section] = await panel.evaluate(spaceUnderTheLastCard);
+    }
+
+    const first = spaces['Můj přehled'];
+    for (const [section, space] of Object.entries(spaces)) {
+      expect(Math.abs(space - first), `${section}: ${space} against ${first}`).toBeLessThanOrEqual(
+        1,
+      );
+    }
   });
 });

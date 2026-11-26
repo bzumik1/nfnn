@@ -725,6 +725,8 @@ describe('Given a change to a script that decides a required check', () => {
     'frontend/scripts/app-routes.mjs',
     'frontend/scripts/serve-dist.mjs',
     'frontend/scripts/dev-port.mjs',
+    'frontend/scripts/motion-judged-summary.mjs',
+    'frontend/e2e/stamp-lag.json',
     'frontend/eslint-confinement.js',
     'scripts/agent-context-budget.mjs',
     'mcp/src/tool-list.ts',
