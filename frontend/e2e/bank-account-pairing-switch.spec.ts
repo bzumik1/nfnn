@@ -1,6 +1,12 @@
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { bankAccountItem, mockDonorApi, openDonorSection, signIn } from './donor-session';
+import {
+  bankAccountItem,
+  mockDonorApi,
+  openAccountItem,
+  openDonorSection,
+  signIn,
+} from './donor-session';
 import {
   heightsThroughTheMotion,
   stepAfterTheMotion,
@@ -151,6 +157,53 @@ test.describe('Given a signed-in donor with a verified bank account on a compute
         };
       });
       expect(placed.offset).toBe(placed.twiceTheGap);
+    });
+  }
+});
+
+const LARGEST_SYSTEM_TEXT_PX = 53;
+
+test.describe('Given a donor on a 375 pt iPhone whose app shows the largest accessibility text and a verified bank account', () => {
+  for (const motion of [
+    { name: '', reducedMotion: 'no-preference' as const },
+    { name: ' with reduced motion', reducedMotion: 'reduce' as const },
+  ]) {
+    test(`when Nepřiřazovat platby z tohoto účtu asks and Ponechat answers${motion.name}, then each button that takes the focus stands wholly in view once the row has settled`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ reducedMotion: motion.reducedMotion });
+      await page.addInitScript((px) => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = `html { font-size: ${px}px; }`;
+          document.head.append(style);
+        });
+      }, LARGEST_SYSTEM_TEXT_PX);
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donations/me/bank-accounts',
+        (route) => route.fulfill({ json: { items: [bankAccountItem()] } }),
+      );
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width: 375, height: 667 });
+      await openAccountItem(page, 'Bankovní účty');
+      const row = page.locator('.account').filter({ hasText: '2900233333/2010' });
+      const exclude = row.getByRole('button', { name: /Nepřiřazovat platby z\stohoto účtu/ });
+      const keep = row.getByRole('button', { name: 'Ponechat' });
+      await expect(exclude).toBeVisible();
+      await untilAtRest(row);
+
+      await exclude.click();
+      await expect(keep).toBeFocused();
+      await untilAtRest(row);
+      await expect(keep).toBeInViewport({ ratio: 1 });
+
+      await keep.click();
+      await expect(exclude).toBeFocused();
+      await untilAtRest(row);
+      await expect(exclude).toBeInViewport({ ratio: 1 });
+      await expect(exclude).toBeFocused();
     });
   }
 });
