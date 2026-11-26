@@ -128,3 +128,27 @@ test.describe('Given a visitor on a computer who reads the quotes on Přispět a
     expect(Math.abs(about.gap - about.ownSpace)).toBeLessThanOrEqual(SIZE_TOLERANCE);
   });
 });
+
+test.describe('Given a visitor on a phone who reads the founders’ note on O nás', () => {
+  test.use({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await serveFoundersNote(page);
+  });
+
+  test('when the note stands at the start of the line, then its quote mark starts where its text starts', async ({
+    page,
+  }) => {
+    await page.goto('/o-nas');
+    const mark = page.locator('#o-nas .quote-mark');
+    await expect(mark).toBeVisible();
+
+    const starts = await mark.evaluate((host) => ({
+      mark: (host.querySelector('svg') ?? host).getBoundingClientRect().left,
+      text: host.parentElement!.querySelector('.quote-text p')!.getBoundingClientRect().left,
+    }));
+
+    expect(Math.abs(starts.mark - starts.text)).toBeLessThanOrEqual(SIZE_TOLERANCE);
+  });
+});
