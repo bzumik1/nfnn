@@ -33,6 +33,7 @@ import {
   openDonorSection,
   openSignInDialog,
   rememberedDonorSession,
+  samplePngBase64,
   secondFactorRequired,
   showAccountList,
   signedInDevices,
@@ -48,23 +49,12 @@ import {
   boldReservesApartFromTheirLabel,
 } from './kept-together';
 import { offerPasskeysAsAnIPhoneDoes } from './passkeys-offered';
+import { LARGEST_SYSTEM_TEXT_PX, showLargestSystemText } from './system-text';
 import { serveReceiptKeys, serveReceiptStatus, YEARLY_RECEIPT } from './receipt-verification';
-
-const LARGEST_SYSTEM_TEXT_PX = 53;
 
 const PAGES_WITH_A_FULL_WIDTH_TITLE = ['/prispet', '/aktuality', '/projekty'];
 
 const PAGES_WITH_A_TITLE = [...PAGES_WITH_A_FULL_WIDTH_TITLE, '/o-nas'];
-
-async function showLargestSystemText(page: Page): Promise<void> {
-  await page.addInitScript((px) => {
-    document.addEventListener('DOMContentLoaded', () => {
-      const style = document.createElement('style');
-      style.textContent = `html { font-size: ${px}px; }`;
-      document.head.append(style);
-    });
-  }, LARGEST_SYSTEM_TEXT_PX);
-}
 
 async function anchorNoScrollAsSafariDoes(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -2100,6 +2090,129 @@ test.describe('Given a visitor verifying a receipt on a phone 320 pt wide with t
     });
   }
 });
+
+for (const width of [375, 420]) {
+  test.describe(`Given a visitor verifying a receipt on an iPhone ${width} pt wide whose installed app shows the largest accessibility text`, () => {
+    test.use({ viewport: { width, height: 800 } });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await mockDonorApi(page);
+      await serveReceiptKeys(page);
+      await serveReceiptStatus(page, 'active');
+    });
+
+    test('when they open the code of a yearly receipt, then the verdict Podepsáno fondem Nová naděje keeps each of its words whole', async ({
+      page,
+    }) => {
+      await page.goto(`/overit#${YEARLY_RECEIPT.fragment}`);
+      const verdict = page.getByRole('heading', { level: 2, name: 'Podepsáno fondem Nová naděje' });
+      await expect(verdict).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      expect(await wordsSplitAcrossLines(verdict)).toEqual([]);
+    });
+  });
+}
+
+const FEATURED_PHOTO_ID = '0199f3e0-0000-7000-8000-00000000f001';
+
+async function featuredNewsWithAPhoto(page: Page): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/content/news',
+    (route) =>
+      route.fulfill({
+        json: {
+          items: [
+            {
+              id: '0199f3e0-0000-7000-8000-00000000f002',
+              slug: 'zahrada-pro-deti',
+              title: 'Zahrada pro děti',
+              tag: 'Projekt',
+              perex: 'Stavíme zahradu, kde si děti budou hrát celé léto.',
+              body: 'Text.',
+              coverImage: {
+                id: FEATURED_PHOTO_ID,
+                url: `/api/content/media/${FEATURED_PHOTO_ID}`,
+                alt: null,
+                focalPoint: null,
+              },
+              publishedOn: '2026-10-20',
+              createdAt: '2026-10-19T09:00:00Z',
+              updatedAt: '2026-10-20T07:30:00Z',
+              signer: null,
+              lookBackYear: null,
+              live: true,
+            },
+          ],
+          page: 0,
+          size: 10,
+          total: 1,
+          hasMore: false,
+        },
+      }),
+  );
+  await page.route(
+    (url) => url.pathname.startsWith('/api/content/media/'),
+    (route) =>
+      route.fulfill({ contentType: 'image/png', body: Buffer.from(samplePngBase64, 'base64') }),
+  );
+}
+
+for (const { screen, viewport } of [
+  { screen: 'an iPhone on its side', viewport: { width: 844, height: 390 } },
+  { screen: 'an iPad upright', viewport: { width: 820, height: 1180 } },
+]) {
+  test.describe(`Given a visitor on Aktuality on ${screen} whose installed app shows the largest accessibility text`, () => {
+    test.use({ viewport });
+
+    test('when the featured article has a photo, then the card keeps its text and its photo side by side, with no photo-sized gap above the title', async ({
+      page,
+    }) => {
+      await showLargestSystemText(page);
+      await mockDonorApi(page);
+      await featuredNewsWithAPhoto(page);
+      await page.goto('/aktuality');
+      const card = page.locator('app-featured-news article');
+      const photo = card.locator('img');
+      await expect(photo).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      const photoBox = (await photo.boundingBox())!;
+      const textBox = (await card.locator('.featured-text').boundingBox())!;
+      const titleBox = (await card.getByRole('heading').boundingBox())!;
+      expect(photoBox.x).toBeGreaterThanOrEqual(textBox.x + textBox.width - 1);
+      const cardBox = (await card.boundingBox())!;
+      expect(titleBox.y - textBox.y).toBeLessThan(cardBox.width / 3);
+    });
+  });
+}
+
+for (const width of [375, 420]) {
+  test.describe(`Given a visitor on Aktuality on an iPhone ${width} pt wide whose installed app shows the largest accessibility text`, () => {
+    test.use({ viewport: { width, height: 800 } });
+
+    test('when the featured article has a photo, then the photo keeps its own shape above the text instead of stretching over the whole card', async ({
+      page,
+    }) => {
+      await showLargestSystemText(page);
+      await mockDonorApi(page);
+      await featuredNewsWithAPhoto(page);
+      await page.goto('/aktuality');
+      const card = page.locator('app-featured-news article');
+      const photo = card.locator('img');
+      await expect(photo).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      const photoBox = (await photo.boundingBox())!;
+      const cardBox = (await card.boundingBox())!;
+      const titleBox = (await card.getByRole('heading').boundingBox())!;
+      expect(photoBox.height).toBeLessThan(photoBox.width);
+      expect(photoBox.height).toBeLessThan(cardBox.height / 2);
+      expect(titleBox.y).toBeGreaterThanOrEqual(photoBox.y + photoBox.height - 1);
+    });
+  });
+}
 
 async function wordsBrokenInside(element: Locator): Promise<string[]> {
   return element.evaluate((root) => {
@@ -4748,6 +4861,48 @@ for (const width of [390, 1280]) {
       );
 
       await expect.poll(() => linesOfEachFigure(page)).toEqual([1, 1, 1]);
+    });
+  });
+}
+
+async function wrappedCopyButtonsTooCloseToTheirValue(card: Locator): Promise<string[]> {
+  await card.evaluate(() => document.fonts.ready);
+  return card.evaluate((element) => {
+    const gap = 4;
+    return Array.from(element.querySelectorAll<HTMLElement>('.accounting-item dd'))
+      .map((field) => ({
+        value: field.querySelector<HTMLElement>('.accounting-value'),
+        button: field.querySelector<HTMLElement>('app-copy-button button'),
+      }))
+      .filter(({ value, button }) => value && button)
+      .map(({ value, button }) => ({
+        name: value!.textContent!.trim(),
+        value: value!.getBoundingClientRect(),
+        button: button!.getBoundingClientRect(),
+      }))
+      .filter(({ value, button }) => button.top >= value.top + value.height / 2)
+      .filter(({ value, button }) => button.top - value.bottom < gap)
+      .map(({ name, value, button }) => `${name}: ${Math.round(button.top - value.bottom)} px`);
+  });
+}
+
+for (const { screen, viewport } of [
+  { screen: 'an iPhone SE', viewport: { width: 375, height: 667 } },
+  { screen: 'an iPhone Air', viewport: { width: 420, height: 912 } },
+]) {
+  test.describe(`Given an accountant on ${screen} whose text is at its default size`, () => {
+    test.use({ viewport });
+
+    test('when they open Údaje pro účetní on O nás, then every copy button stays clear of its value, and one that drops under its value keeps a gap above it', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.goto('/o-nas');
+      const card = page.locator('app-accounting-details .accounting');
+      await expect(card).toContainText('CZ26 2010 0000 0055 4433 2217');
+
+      expect(await valuesUnderTheirCopyButtons(card)).toEqual([]);
+      expect(await wrappedCopyButtonsTooCloseToTheirValue(card)).toEqual([]);
     });
   });
 }

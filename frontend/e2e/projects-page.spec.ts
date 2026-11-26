@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { mockDonorApi, samplePngBase64 } from './donor-session';
+import { showLargestSystemText } from './system-text';
 
 const PNG = Buffer.from(samplePngBase64, 'base64');
 const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
@@ -157,5 +158,78 @@ test.describe('Given a visitor on the Pomáháme tab', () => {
 
     await expect(band.getByRole('link', { name: 'Přispět' })).toHaveAttribute('href', '/prispet');
     await expect(band.getByRole('link', { name: 'Kde pomáháme' })).toHaveCount(0);
+  });
+});
+
+async function stripPlacement(page: Page, year: number) {
+  const strip = page
+    .locator('section.year')
+    .filter({ has: page.getByRole('heading', { name: new RegExp(String(year)) }) })
+    .locator('ul.strip');
+  await expect(strip.locator('> li').first()).toBeVisible();
+  return strip.evaluate((list) => {
+    const frame = list.getBoundingClientRect();
+    const items = Array.from(list.children).map((item) => item.getBoundingClientRect());
+    return {
+      widths: items.map((item) => Math.round(item.width)),
+      cut: items.filter((item) => item.left < frame.right - 1 && item.right > frame.right + 1)
+        .length,
+    };
+  });
+}
+
+async function tileTitleWordsSplit(page: Page): Promise<string[]> {
+  await page.evaluate(() => document.fonts.ready);
+  return page.locator('ul.strip .tile-link').evaluateAll((links) =>
+    links.flatMap((link) => {
+      const split: string[] = [];
+      const walker = document.createTreeWalker(link, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        for (const word of (node.textContent ?? '').matchAll(/\S+/g)) {
+          const range = document.createRange();
+          range.setStart(node, word.index);
+          range.setEnd(node, word.index + word[0].length);
+          const tops = new Set(
+            Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+          );
+          if (tops.size > 1) {
+            split.push(word[0]);
+          }
+        }
+      }
+      return split;
+    }),
+  );
+}
+
+test.describe('Given a visitor on Pomáháme with every year on an iPad upright', () => {
+  test.use({ viewport: { width: 820, height: 1180 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await publishedStories(page);
+  });
+
+  test('when the strips of 2025 and 2024 show, then each fits the column without a tile cut at its edge and both draw their tiles one size', async ({
+    page,
+  }) => {
+    await page.goto('/projekty?rok=vse');
+
+    const newer = await stripPlacement(page, 2025);
+    const older = await stripPlacement(page, 2024);
+
+    expect(newer.cut).toBe(0);
+    expect(older.cut).toBe(0);
+    expect(new Set([...newer.widths, ...older.widths]).size).toBe(1);
+  });
+
+  test('when the installed app shows the largest accessibility text, then every tile of a strip keeps the words of its title whole', async ({
+    page,
+  }) => {
+    await showLargestSystemText(page);
+    await page.goto('/projekty?rok=vse');
+    await expect(page.locator('ul.strip .tile-link').first()).toBeVisible();
+
+    expect(await tileTitleWordsSplit(page)).toEqual([]);
   });
 });

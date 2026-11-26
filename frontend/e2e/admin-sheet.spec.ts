@@ -116,6 +116,21 @@ test.describe('Given an administrator on a phone', () => {
     await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeFocused();
   });
 
+  test('when they open Ověřit potvrzení, then the head of the sheet carries its title alone and the page heading is there only for a screen reader, as on every other page of Správa', async ({
+    page,
+  }) => {
+    const copied = whenAdministrationCopied(page);
+    await page.goto('/sprava/overit');
+    await copied();
+
+    await expect(
+      page.getByRole('banner').getByText('Ověřit potvrzení', { exact: true }),
+    ).toBeVisible();
+    const pageTitle = page.getByRole('heading', { level: 1, name: 'Ověřit potvrzení' });
+    await expect(pageTitle).toBeFocused();
+    expect((await pageTitle.boundingBox())?.height ?? 0).toBeLessThanOrEqual(1);
+  });
+
   test('when they reload a page deeper in Správa opened over the news and press Zavřít, then the news is still where it leads', async ({
     page,
   }) => {

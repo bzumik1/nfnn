@@ -62,8 +62,12 @@ test.describe('Given an administrator whose device holds the administration copy
 
     await page.goto('/sprava/overit');
     await expect(page).toHaveTitle('Ověřit potvrzení | Správa | Nová naděje – nadační fond');
-    await expect(page.getByRole('heading', { level: 1, name: 'Ověřit potvrzení' })).toBeFocused();
+    const title = page.getByRole('heading', { level: 1, name: 'Ověřit potvrzení' });
+    await expect(title).toBeFocused();
     await expect(page.getByText('Fond ověřuje potvrzení jen na adrese')).toHaveCount(0);
+    const titleBox = (await title.boundingBox())!;
+    const introBox = (await page.locator('.verify-intro').boundingBox())!;
+    expect(introBox.y - (titleBox.y + titleBox.height)).toBeGreaterThanOrEqual(8);
 
     await scanFragment(page, YEARLY_RECEIPT.fragment);
 
