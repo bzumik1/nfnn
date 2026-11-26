@@ -5,6 +5,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import {
+  FakeSoftKeyboard,
+  provideFakeSoftKeyboard,
+} from '../../../core/layout/testing/fake-soft-keyboard';
 import { ShortViewport } from '../../../core/layout/short-viewport';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
@@ -1127,5 +1131,71 @@ describe('Given the payment panel of a visitor without a variable symbol', () =>
     expect(feed.following).toBe(0);
     http.verify();
     vi.unstubAllGlobals();
+  });
+});
+
+describe('Given the custom amount on a phone whose keyboard opens over the page', () => {
+  const KEYBOARD_COVERS_FROM = 374;
+  const ROOM_ABOVE_KEYBOARD = 16;
+  let fixture: ComponentFixture<PaymentPanel>;
+  let keyboard: FakeSoftKeyboard;
+  let scrolled: number[];
+  const root = document.documentElement;
+
+  beforeEach(async () => {
+    keyboard = new FakeSoftKeyboard();
+    scrolled = [];
+    await TestBed.configureTestingModule({
+      imports: [PaymentPanel],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideFakeSoftKeyboard(keyboard),
+      ],
+    }).compileComponents();
+    root.scrollBy = ((options: ScrollToOptions) => scrolled.push(options.top ?? 0)) as never;
+    fixture = TestBed.createComponent(PaymentPanel);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController)
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(foundationPaymentDetails());
+    await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    delete (root as { scrollBy?: unknown }).scrollBy;
+    fixture.nativeElement.remove();
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  function customAmountAt(top: number, bottom: number): HTMLInputElement {
+    const otherAmount = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).find((candidate) => candidate.textContent?.trim() === 'Jiná částka')!;
+    otherAmount.click();
+    const field = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    field.getBoundingClientRect = () => ({ top, bottom, height: bottom - top }) as DOMRect;
+    return field;
+  }
+
+  it('when the first tap on Jiná částka opens the keyboard over the field, then the page scrolls the field above the keyboard', async () => {
+    const field = customAmountAt(422, 470);
+    expect(document.activeElement).toBe(field);
+
+    keyboard.show({ top: 0, height: KEYBOARD_COVERS_FROM });
+    await fixture.whenStable();
+
+    expect(scrolled).toEqual([470 - (KEYBOARD_COVERS_FROM - ROOM_ABOVE_KEYBOARD)]);
+  });
+
+  it('when the keyboard opens and the field already stands above it, then the page stays', async () => {
+    customAmountAt(151, 199);
+
+    keyboard.show({ top: 0, height: KEYBOARD_COVERS_FROM });
+    await fixture.whenStable();
+
+    expect(scrolled).toEqual([]);
   });
 });
