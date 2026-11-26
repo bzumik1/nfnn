@@ -94,7 +94,7 @@ describe('Given the auth store of a remembered session on a device that keeps a 
   afterEach(() => http.verify());
 
   describe('when the app starts offline and the code that reads the copy cannot be loaded', () => {
-    it('then the restore ends and the visitor waits signed out with the hint kept', async () => {
+    it('then the device is not asked to open the copy, the restore ends and the visitor waits signed out with the hint kept', async () => {
       const store = setUp(BROWSER_JAR, [
         {
           provide: DONOR_FROM_COPY_LOADER,
@@ -106,6 +106,7 @@ describe('Given the auth store of a remembered session on a device that keeps a 
 
       await store.restore();
 
+      expect(device.calls).toEqual([]);
       expect(store.status()).toBe('anonymous');
       expect(store.fromDevice()).toBe(false);
       expect(localStorage.getItem(BROWSER_JAR.hintKey)).toBe('1');

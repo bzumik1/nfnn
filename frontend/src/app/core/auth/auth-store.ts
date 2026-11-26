@@ -6,7 +6,6 @@ import {
   effect,
   inject,
   Injectable,
-  Injector,
   PendingTasks,
   signal,
   untracked,
@@ -37,6 +36,7 @@ import { AuthApi, type StoredProfile } from './auth-api';
 import type { PasskeyAuthenticator } from './passkey-authenticator';
 import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
 import { DONOR_FROM_COPY_LOADER } from './copy-profile-loader';
+import { PASSKEY_AUTHENTICATOR_LOADER } from './passkey-authenticator-loader';
 import { AdministrationAccess } from './administration-access';
 import { deviceAccountOf, SESSION_DEVICE, type SignInSecret } from './session-device';
 import {
@@ -84,7 +84,7 @@ export const EMAIL_CONFIRMATION_SESSION: BrowserSessionKind = 'BROWSER';
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
   private readonly api = inject(AuthApi);
-  private readonly injector = inject(Injector);
+  private readonly loadPasskeys = inject(PASSKEY_AUTHENTICATOR_LOADER);
   private readonly pendingTasks = inject(PendingTasks);
   private readonly loadDonorFromCopy = inject(DONOR_FROM_COPY_LOADER);
   private readonly jar = inject(SESSION_JAR);
@@ -349,8 +349,7 @@ export class AuthStore {
     const loading = this.pendingTasks.add();
     let started: Promise<T>;
     try {
-      const module = await import('./passkey-authenticator');
-      started = ceremony(this.injector.get(module.PasskeyAuthenticator));
+      started = ceremony(await this.loadPasskeys());
     } finally {
       loading();
     }
@@ -481,12 +480,17 @@ export class AuthStore {
     }
     const seen = this.changes;
     const expected: SessionKind = this.jar.installed ? 'APP' : 'REMEMBERED';
-    const opening = await withinWait(this.device.openedOffline(expected));
-    const donorFromCopy = opening === null ? null : await withinWait(this.loadDonorFromCopy());
-    if (opening === null || donorFromCopy === null || this.changes !== seen) {
+    const opened = await withinWait(
+      this.loadDonorFromCopy().then(async (donorFromCopy) => {
+        const opening = await this.device.openedOffline?.(expected);
+        return opening ? { opening, donorFromCopy } : null;
+      }),
+    );
+    if (opened === null || this.changes !== seen) {
       this.waitSignedOut();
       return;
     }
+    const { opening, donorFromCopy } = opened;
     this.changes++;
     this.accessToken = null;
     this.currentDonor.set(donorFromCopy(opening.profile));
