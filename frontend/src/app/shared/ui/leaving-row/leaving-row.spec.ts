@@ -1134,6 +1134,7 @@ describe('Given a row whose leave carries the control below it toward the top of
   let revealed: unknown[];
   let margins: Map<Element, Partial<CSSStyleDeclaration>>;
   let listening: number;
+  let timers: Map<number, () => void>;
   let focus: FocusAfterRowLeaves;
 
   class WatchedSizes {
@@ -1158,6 +1159,7 @@ describe('Given a row whose leave carries the control below it toward the top of
     revealed = [];
     margins = new Map();
     listening = 0;
+    timers = new Map();
     list = document.createElement('ul');
     list.innerHTML = `
       <li id="leaving"><button>Odhlásit</button></li>
@@ -1209,6 +1211,12 @@ describe('Given a row whose leave carries the control below it toward the top of
         ResizeObserver: WatchedSizes,
         requestAnimationFrame: (callback: FrameRequestCallback) => requestAnimationFrame(callback),
         scrollBy: (options: ScrollToOptions) => scrolledBy.push(options),
+        setTimeout: (callback: () => void) => {
+          const id = timers.size + 1;
+          timers.set(id, callback);
+          return id;
+        },
+        clearTimeout: (id: number) => timers.delete(id),
       },
     } as unknown as Document;
   }
@@ -1378,7 +1386,7 @@ describe('Given a row whose leave carries the control below it toward the top of
     expect(scrolledBy).toEqual([]);
   });
 
-  for (const key of ['Shift', 'Control', 'Alt', 'Meta']) {
+  for (const key of ['Shift', 'Control', 'Alt', 'AltGraph', 'Meta', 'CapsLock', 'Fn']) {
     it(`when the visitor presses ${key} alone during the close, then the control is still held`, () => {
       focus.rowLeaving(row, () => below);
       focus.moveFocus(row, below);
@@ -1404,7 +1412,7 @@ describe('Given a row whose leave carries the control below it toward the top of
     expect(scrolledBy).toEqual([]);
   });
 
-  it('when it is forgotten after the control was brought into view while the list still moves, then no watcher and no listener is left', async () => {
+  it('when it is forgotten after the control was brought into view while the list still moves, then no watcher, listener or timer is left', async () => {
     list.getAnimations = () =>
       [
         {
@@ -1416,12 +1424,40 @@ describe('Given a row whose leave carries the control below it toward the top of
     focus.moveFocus(row, below);
     focus.rowLeaveEnded(row);
     await removed();
+    const waitingForTheList = timers.size;
 
     focus.forget();
 
     expect(revealed).toHaveLength(1);
     expect(watchers).toEqual([]);
     expect(listening).toBe(0);
+    expect(waitingForTheList).toBe(1);
+    expect(timers.size).toBe(0);
+  });
+
+  it('when the control below the row already stands above the top as the row starts to leave, as after a flick, then no frame of the close scrolls and the control glides into view once the row is gone', async () => {
+    standAt(below, -400);
+    focus.rowLeaving(row, () => below);
+    focus.moveFocus(row, below);
+    focus.rowLeaveEnded(row);
+
+    aFrameOfTheClose();
+    await removed();
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([]);
+    expect(revealed).toEqual([{ block: 'nearest', behavior: 'smooth' }]);
+  });
+
+  it('when the row is removed without its leave ever being reported, as when a leave nested in another is skipped, then the close is no longer watched once the row is gone', async () => {
+    focus.rowLeaving(row, () => below);
+    focus.moveFocus(row, below);
+
+    await removed();
+
+    await vi.waitFor(() => expect(watchers).toEqual([]));
+    expect(listening).toBe(0);
+    expect(revealed).toHaveLength(1);
   });
 
   for (const move of ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown']) {

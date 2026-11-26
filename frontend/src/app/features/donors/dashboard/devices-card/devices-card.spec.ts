@@ -266,6 +266,20 @@ describe("Given a donor's signed-in devices card", () => {
       http.expectNone({ method: 'DELETE' });
     });
 
+    it('and the donor cancels the question, then the iPhone’s Odhlásit is brought into view once the question has closed, as nothing else brings it back', async () => {
+      await ask(signOutButton(rows()[1]));
+      const revealed: unknown[] = [];
+      signOutButton(rows()[1])!.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+        revealed.push(options);
+      };
+
+      element<HTMLButtonElement>('.devices-confirm-no').click();
+      await settle();
+
+      await vi.waitFor(() => expect(revealed).toEqual([{ block: 'nearest', behavior: 'smooth' }]));
+      expect(document.activeElement).toBe(signOutButton(rows()[1]));
+    });
+
     it('and the donor cancels the question, then only the iPhone’s Odhlásit unfolds back, while the list drew every Odhlásit unfolded', async () => {
       const returning = () =>
         rows().map((row) =>

@@ -1110,6 +1110,10 @@ interface HeldSignOut {
 }
 
 async function holdTheOlderDeviceSignOut(page: Page): Promise<HeldSignOut> {
+  return holdTheSignOutOf(page, windowsEdge?.id);
+}
+
+async function holdTheSignOutOf(page: Page, deviceId: string | undefined): Promise<HeldSignOut> {
   let listed = [...signedInDevices, ...longUnusedDevices];
   let answer = (): void => undefined;
   const answered = new Promise<void>((resolve) => (answer = resolve));
@@ -1121,7 +1125,7 @@ async function holdTheOlderDeviceSignOut(page: Page): Promise<HeldSignOut> {
     (route) => route.fulfill({ json: { items: listed } }),
   );
   await page.route(
-    (url) => url.pathname === `/api/donors/me/devices/${windowsEdge?.id}`,
+    (url) => url.pathname === `/api/donors/me/devices/${deviceId}`,
     async (route) => {
       if (route.request().method() !== 'DELETE') {
         await route.fallback();
@@ -1129,7 +1133,7 @@ async function holdTheOlderDeviceSignOut(page: Page): Promise<HeldSignOut> {
       }
       asked();
       await answered;
-      listed = listed.filter((device) => device.id !== windowsEdge?.id);
+      listed = listed.filter((device) => device.id !== deviceId);
       await route.fulfill({ status: 204 });
     },
   );
@@ -4707,8 +4711,18 @@ async function recordTheNeighbourFromTheNextClick(
   row: string,
   inSheet: boolean,
 ): Promise<() => Promise<NeighbourFrame[]>> {
+  return recordTheNeighbour(page, neighbour, row, inSheet, 'the next click');
+}
+
+async function recordTheNeighbour(
+  page: Page,
+  neighbour: string,
+  row: string,
+  inSheet: boolean,
+  from: 'the next click' | 'now',
+): Promise<() => Promise<NeighbourFrame[]>> {
   await page.evaluate(
-    ({ neighbour, row, inSheet }) => {
+    ({ neighbour, row, inSheet, from }) => {
       const record: NeighbourRecord = { frames: [], recording: true };
       (window as unknown as { neighbourRecord: NeighbourRecord }).neighbourRecord = record;
       const edges = (): { upperEdge: number; lowerEdge: number } => {
@@ -4768,16 +4782,17 @@ async function recordTheNeighbourFromTheNextClick(
         });
         afterLayout.observe(probe);
       };
-      document.addEventListener(
-        'click',
-        () => {
-          document.body.append(probe);
-          requestAnimationFrame(sampleAsPainted);
-        },
-        { capture: true, once: true },
-      );
+      const start = (): void => {
+        document.body.append(probe);
+        requestAnimationFrame(sampleAsPainted);
+      };
+      if (from === 'now') {
+        start();
+      } else {
+        document.addEventListener('click', start, { capture: true, once: true });
+      }
     },
-    { neighbour, row, inSheet },
+    { neighbour, row, inSheet, from },
   );
   return async () => {
     await expect
@@ -5011,3 +5026,54 @@ for (const inSheet of [false, true]) {
     });
   });
 }
+
+function framesThatPulledItDownWhileTheRowStood(
+  frames: readonly NeighbourFrame[],
+  topAtTheAnswer: number,
+): string[] {
+  return frames.flatMap((frame, index) =>
+    frame.rowThere && frame.top > topAtTheAnswer + SUBPIXEL_PX
+      ? [`frame ${index}: top ${frame.top.toFixed(1)}, ${topAtTheAnswer.toFixed(1)} at the answer`]
+      : [],
+  );
+}
+
+test.describe('Given a donor on an iPhone SE 375 × 667 pt with the largest accessibility text who allows motion, in Údaje a zabezpečení on the account page', () => {
+  test.use({ viewport: { width: 375, height: 667 }, reducedMotion: 'no-preference' });
+
+  test.beforeEach(async ({ page }) => {
+    await showLargestSystemText(page);
+    await anchorNoScrollAsSafariDoes(page);
+  });
+
+  test('when the page coasts on, as after a flick, until Starší stands above the window while the iPhone above it signs out, then nothing pulls Starší back while the row closes and it glides into view once the row is gone', async ({
+    page,
+  }) => {
+    const iphone = signedInDevices.find((device) => !device.current);
+    const signOut = await holdTheSignOutOf(page, iphone?.id);
+    const scope = await openTheSettingsAt(page, false);
+    const devices = scope.locator('.devices');
+    await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+    const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+    await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+    await settledWithin(devices);
+    await question.getByRole('button', { name: 'Odhlásit', exact: true }).click();
+    await signOut.asked;
+    const starsi = devices.locator('.devices-older-toggle');
+    await placeTheTopOf(starsi, -300);
+    const topAtTheAnswer = await starsi.evaluate((toggle) => toggle.getBoundingClientRect().top);
+    expect(topAtTheAnswer).toBeLessThan(0);
+    const row = `#device-row-${iphone?.id}`;
+    const frames = await recordTheNeighbour(page, '.devices-older-toggle', row, false, 'now');
+
+    signOut.answer();
+
+    await expect(starsi).toBeFocused();
+    await expect(page.locator(row)).toHaveCount(0);
+    await settledWithin(scope);
+    await untilTheLastFrameStandsInView(page);
+    const recorded = await frames();
+    expect(framesThatPulledItDownWhileTheRowStood(recorded, topAtTheAnswer)).toEqual([]);
+    expectTheLastFrameInView(recorded);
+  });
+});
