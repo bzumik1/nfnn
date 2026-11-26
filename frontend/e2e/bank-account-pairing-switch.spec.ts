@@ -21,7 +21,6 @@ const SWAP_IN_MOTION = '.account-swap--opening, .account-swap--closing';
 interface SwapPart {
   readonly className: string;
   readonly display: string;
-  readonly motions: string[];
 }
 
 async function pressOnFocus(row: Locator, focused: string, leaving: string): Promise<void> {
@@ -57,12 +56,6 @@ function swapParts(row: Locator): Promise<SwapPart[]> {
     Array.from(element.querySelectorAll<HTMLElement>('.account-swap'), (part) => ({
       className: part.className,
       display: getComputedStyle(part).display,
-      motions: part
-        .getAnimations()
-        .map(
-          (motion) =>
-            `${(motion as CSSTransition).transitionProperty ?? (motion as CSSAnimation).animationName}:${motion.playState}`,
-        ),
     })),
   );
 }
@@ -138,16 +131,14 @@ test.describe('Given a signed-in donor with a verified bank account on a compute
     await expect(exclude).toBeFocused();
     await untilAtRest(row);
     await expect(exclude).toBeFocused();
-    const parts = await swapParts(row);
-    expect(
-      parts
-        .filter((part) => part.className.includes('account-action-fold'))
-        .map((part) => ({
-          moving: /--(opening|returning|closing)\b/.test(part.className),
+    await expect
+      .poll(async () =>
+        (await swapParts(row)).map((part) => ({
+          className: part.className,
           display: part.display,
         })),
-      JSON.stringify(parts),
-    ).toEqual([{ moving: false, display: 'block' }]);
+      )
+      .toEqual([{ className: 'account-action-fold account-swap', display: 'block' }]);
   });
 
   test('when Nepřiřazovat platby z tohoto účtu is pressed again while the question just answered by Ponechat is still leaving, then the focus lands on Ponechat of the new question', async ({
