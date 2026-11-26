@@ -14,16 +14,15 @@
   font-weight: var(--weight-semibold);
 }
 
-.sheet-title {
+.level-title {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-1) var(--space-2);
-  margin: 0 0 var(--space-4);
-  font-family: var(--font-title);
-  font-size: var(--text-xl);
-  font-weight: var(--weight-semibold);
-  overflow-wrap: anywhere;
+
+  .ui-mono {
+    font-size: var(--text-xl);
+  }
 }
 
 .level-form {

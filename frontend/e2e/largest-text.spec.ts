@@ -1656,13 +1656,20 @@ async function openOtherLoggerLevel(page: Page): Promise<OpenedTitle> {
   return { title: sheet.locator('#level-sheet-title'), column: sheet };
 }
 
-const TITLE_OPENERS: Record<string, (page: Page) => Promise<OpenedTitle>> = {
-  [SHARED_TITLE_CLASS]: openOfflineSheet,
-  'features/donors/dashboard/bank-accounts-card/bank-accounts-card.html#add-account-title':
-    openAddAccount,
-  'features/admin/payments/admin-payments.html#pair-title': openPairedPayment,
-  'features/admin/donor-detail/admin-donor-detail.html#erase-title': openErasure,
-  'features/admin/logs/levels/admin-log-levels.html#sheet-title': openOtherLoggerLevel,
+interface TitledDialog {
+  readonly group: string;
+  readonly open: (page: Page) => Promise<OpenedTitle>;
+}
+
+const TITLED_DIALOGS: Record<string, TitledDialog> = {
+  [SHARED_TITLE_CLASS]: { group: SHARED_TITLE_CLASS, open: openOfflineSheet },
+  'features/donors/dashboard/bank-accounts-card/bank-accounts-card.html#add-account-title': {
+    group: 'features/donors/dashboard/bank-accounts-card/bank-accounts-card.html#add-account-title',
+    open: openAddAccount,
+  },
+  'Přiřazená platba': { group: SHARED_TITLE_CLASS, open: openPairedPayment },
+  'Vymazat osobní údaje': { group: SHARED_TITLE_CLASS, open: openErasure },
+  'Úroveň jiného loggeru': { group: SHARED_TITLE_CLASS, open: openOtherLoggerLevel },
 };
 
 async function titleTextsBrokenInside(
@@ -1776,7 +1783,7 @@ test.describe('Given a donor in Safari on an iPhone 390 pt wide whose text is th
 
 test.describe('Given every title of a sheet or a dialog in the templates', () => {
   test('when they are listed, then each one is measured at the largest text, has no static text or is for screen readers only', () => {
-    const measured = new Set(Object.keys(TITLE_OPENERS));
+    const measured = new Set(Object.values(TITLED_DIALOGS).map((dialog) => dialog.group));
     const unmeasured = everyDialogTitle()
       .filter((title) => title.texts.length > 0)
       .map(titleGroup)
@@ -1794,8 +1801,8 @@ test.describe('Given a visitor on an iPhone 390 pt wide whose installed app show
     await showLargestSystemText(page);
   });
 
-  for (const [group, open] of Object.entries(TITLE_OPENERS)) {
-    test(`when they open a dialog titled by ${group}, then its title and every title of the templates in its place break only between words and stay at least as large as the sheet's body text`, async ({
+  for (const [name, { group, open }] of Object.entries(TITLED_DIALOGS)) {
+    test(`when they open a dialog titled by ${name}, then its title and every title of the templates in its place break only between words and stay at least as large as the sheet's body text`, async ({
       page,
     }) => {
       const { title } = await open(page);
@@ -3626,13 +3633,13 @@ for (const width of [320, 390]) {
       });
     }
 
-    for (const [group, open] of Object.entries(TITLE_OPENERS)) {
-      test(`when they open the sheet titled by ${group}, then no word kept with a one-letter word in its title, buttons or choices reaches past its line`, async ({
+    for (const [name, { open }] of Object.entries(TITLED_DIALOGS)) {
+      test(`when they open the sheet titled by ${name}, then no word kept with a one-letter word in its title, buttons or choices reaches past its line`, async ({
         page,
       }) => {
         await open(page);
 
-        expect.soft(await overflowAtTheLargestText(page), group).toEqual([]);
+        expect.soft(await overflowAtTheLargestText(page), name).toEqual([]);
       });
     }
   });

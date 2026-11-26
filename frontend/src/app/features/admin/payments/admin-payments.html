@@ -543,7 +543,7 @@
 
 @if (pairing(); as payment) {
   <app-dialog #pairingDialog labelledBy="pair-title" (dismissed)="closePairing()">
-    <h2 id="pair-title" class="pair-title" i18n="@@admin.payments.pair.title">
+    <h2 id="pair-title" class="ui-dialog__title" i18n="@@admin.payments.pair.title">
       Přiřadit platbu dárci
     </h2>
     <dl class="pair-payment">
@@ -702,7 +702,7 @@
 }
 @if (opened(); as payment) {
   <app-dialog labelledBy="payment-sheet-title" presentation="sheet" (dismissed)="closePayment()">
-    <h2 id="payment-sheet-title" class="pair-title" i18n="@@admin.payments.sheet.title">
+    <h2 id="payment-sheet-title" class="ui-dialog__title" i18n="@@admin.payments.sheet.title">
       Přiřazená platba
     </h2>
     <dl class="pair-payment">

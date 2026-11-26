@@ -146,7 +146,7 @@
 
 @if (editing(); as sheet) {
   <app-dialog labelledBy="level-sheet-title" presentation="sheet" (dismissed)="closeSheet()">
-    <h2 id="level-sheet-title" class="sheet-title">
+    <h2 id="level-sheet-title" class="ui-dialog__title level-title">
       @if (sheet.logger; as logger) {
         <ng-container i18n="@@admin.logs.level.sheetTitle">Úroveň loggeru</ng-container>
         <span class="ui-mono">{{ logger }}</span>
