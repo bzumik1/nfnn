@@ -13,21 +13,30 @@ describe('Given floating bars at the bottom of the screen', () => {
     return element;
   };
 
+  const releases: (() => void)[] = [];
+
+  const keep = (...room: Parameters<typeof keepRoomForFloatingNotice>): (() => void) => {
+    const release = keepRoomForFloatingNotice(...room);
+    releases.push(release);
+    return release;
+  };
+
   afterEach(() => {
+    releases.splice(0).forEach((release) => release());
     root.classList.remove('has-floating-notice');
     root.style.removeProperty('--floating-notice-height');
     document.body.replaceChildren();
   });
 
   it('when one bar is shown, then the page keeps room as tall as the bar', () => {
-    keepRoomForFloatingNotice(document, bar(80), NOTHING_HELD, NOTHING_SETTLING);
+    keep(document, bar(80), NOTHING_HELD, NOTHING_SETTLING);
 
     expect(root.classList).toContain('has-floating-notice');
     expect(root.style.getPropertyValue('--floating-notice-height')).toBe('80px');
   });
 
   it('when the only bar goes, then the page keeps no room', () => {
-    const release = keepRoomForFloatingNotice(document, bar(80), NOTHING_HELD, NOTHING_SETTLING);
+    const release = keep(document, bar(80), NOTHING_HELD, NOTHING_SETTLING);
 
     release();
 
@@ -36,13 +45,8 @@ describe('Given floating bars at the bottom of the screen', () => {
   });
 
   it('when another bar comes before the first goes, then the page still keeps room for the bar left on screen', () => {
-    const releaseFirst = keepRoomForFloatingNotice(
-      document,
-      bar(80),
-      NOTHING_HELD,
-      NOTHING_SETTLING,
-    );
-    keepRoomForFloatingNotice(document, bar(120), NOTHING_HELD, NOTHING_SETTLING);
+    const releaseFirst = keep(document, bar(80), NOTHING_HELD, NOTHING_SETTLING);
+    keep(document, bar(120), NOTHING_HELD, NOTHING_SETTLING);
 
     releaseFirst();
 
@@ -51,13 +55,8 @@ describe('Given floating bars at the bottom of the screen', () => {
   });
 
   it('when the later bar goes first, then the page keeps room for the earlier one', () => {
-    keepRoomForFloatingNotice(document, bar(80), NOTHING_HELD, NOTHING_SETTLING);
-    const releaseSecond = keepRoomForFloatingNotice(
-      document,
-      bar(120),
-      NOTHING_HELD,
-      NOTHING_SETTLING,
-    );
+    keep(document, bar(80), NOTHING_HELD, NOTHING_SETTLING);
+    const releaseSecond = keep(document, bar(120), NOTHING_HELD, NOTHING_SETTLING);
 
     releaseSecond();
 
@@ -66,18 +65,8 @@ describe('Given floating bars at the bottom of the screen', () => {
   });
 
   it('when both bars go, then the page keeps no room', () => {
-    const releaseFirst = keepRoomForFloatingNotice(
-      document,
-      bar(80),
-      NOTHING_HELD,
-      NOTHING_SETTLING,
-    );
-    const releaseSecond = keepRoomForFloatingNotice(
-      document,
-      bar(120),
-      NOTHING_HELD,
-      NOTHING_SETTLING,
-    );
+    const releaseFirst = keep(document, bar(80), NOTHING_HELD, NOTHING_SETTLING);
+    const releaseSecond = keep(document, bar(120), NOTHING_HELD, NOTHING_SETTLING);
 
     releaseFirst();
     releaseSecond();
@@ -117,7 +106,7 @@ describe('Given floating bars at the bottom of the screen', () => {
   it('when a bar arrives while the reader stands at the end of the page, then the page scrolls to its new end at once', () => {
     const { page, scrolls } = pageScrolledTo(1200);
 
-    keepRoomForFloatingNotice(page, bar(80), NOTHING_HELD, NOTHING_SETTLING);
+    keep(page, bar(80), NOTHING_HELD, NOTHING_SETTLING);
 
     expect(scrolls).toEqual([{ top: 2080, behavior: 'instant' }]);
   });
@@ -125,7 +114,7 @@ describe('Given floating bars at the bottom of the screen', () => {
   it('when a bar arrives at the end of the page while a page transition holds the scroll, then the room grows and the page does not move', () => {
     const { page, scrolls } = pageScrolledTo(1200);
 
-    keepRoomForFloatingNotice(page, bar(80), { holding: true }, NOTHING_SETTLING);
+    keep(page, bar(80), { holding: true }, NOTHING_SETTLING);
 
     expect(root.style.getPropertyValue('--floating-notice-height')).toBe('80px');
     expect(scrolls).toEqual([]);
@@ -134,7 +123,7 @@ describe('Given floating bars at the bottom of the screen', () => {
   it('when a bar arrives while the reader reads further up the page, then the page does not move', () => {
     const { page, scrolls } = pageScrolledTo(600);
 
-    keepRoomForFloatingNotice(page, bar(80), NOTHING_HELD, NOTHING_SETTLING);
+    keep(page, bar(80), NOTHING_HELD, NOTHING_SETTLING);
 
     expect(scrolls).toEqual([]);
   });
@@ -142,6 +131,9 @@ describe('Given floating bars at the bottom of the screen', () => {
   describe('Given a bar whose top stands at 720 px of an 800 px window', () => {
     const BAR_TOP = 720;
     const BAR_GAP = 16;
+    const BAND_TOP = 88;
+    const RING_REACH = 5;
+    const scrollMargins = new WeakMap<Element, number>();
 
     const placedAt = <T extends HTMLElement>(element: T, top: number, bottom: number): T => {
       Object.defineProperty(element, 'getBoundingClientRect', {
@@ -163,7 +155,11 @@ describe('Given floating bars at the bottom of the screen', () => {
         scrollTo: () => undefined,
         scrollBy: (options: ScrollToOptions) => scrolls.push(options),
         requestAnimationFrame: (frame: FrameRequestCallback) => frames.push(frame),
-        getComputedStyle: () => ({ bottom: `${BAR_GAP}px` }),
+        getComputedStyle: (element: Element) => ({
+          bottom: `${BAR_GAP}px`,
+          scrollPaddingTop: element === root ? `${BAND_TOP}px` : '0px',
+          scrollMarginTop: `${scrollMargins.get(element) ?? 0}px`,
+        }),
       };
       const page = {
         documentElement: root,
@@ -187,12 +183,7 @@ describe('Given floating bars at the bottom of the screen', () => {
         focused = element;
       };
       const nextFrame = () => frames.splice(0).forEach((frame) => frame(0));
-      keepRoomForFloatingNotice(
-        page,
-        placedAt(bar(80), BAR_TOP, 800),
-        NOTHING_HELD,
-        NOTHING_SETTLING,
-      );
+      keep(page, placedAt(bar(80), BAR_TOP, 800), NOTHING_HELD, NOTHING_SETTLING);
       return { scrolls, focus, moveFocusQuietly, nextFrame };
     };
 
@@ -244,6 +235,35 @@ describe('Given floating bars at the bottom of the screen', () => {
       nextFrame();
 
       expect(scrolls).toEqual([{ top: 780 - BAR_TOP + BAR_GAP, behavior: 'instant' }]);
+    });
+
+    it('when a control taller than the room between the header and the bar takes the focus with its bottom under the bar, then the page scrolls only until its top reaches the top of the visible band', () => {
+      const { scrolls, focus, nextFrame } = pageWithFocus();
+
+      focus(control(300, 1000));
+      nextFrame();
+
+      expect(scrolls).toEqual([{ top: 300 - BAND_TOP, behavior: 'instant' }]);
+    });
+
+    it('when a taller control that keeps room for its focus ring above it takes the focus with its bottom under the bar, then the page scrolls only until the top of that room reaches the top of the visible band', () => {
+      const { scrolls, focus, nextFrame } = pageWithFocus();
+      const tall = control(300, 1000);
+      scrollMargins.set(tall, RING_REACH);
+
+      focus(tall);
+      nextFrame();
+
+      expect(scrolls).toEqual([{ top: 300 - BAND_TOP - RING_REACH, behavior: 'instant' }]);
+    });
+
+    it('when a control whose top already stands above the top of the visible band, inside the scroll padding under the header, and whose bottom reaches under the bar takes the focus, then the page does not move', () => {
+      const { scrolls, focus, nextFrame } = pageWithFocus();
+
+      focus(control(58, 940));
+      nextFrame();
+
+      expect(scrolls).toEqual([]);
     });
   });
 });
