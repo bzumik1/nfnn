@@ -254,3 +254,49 @@ test.describe('Given a donor on a 375 pt iPhone whose app shows the largest acce
     });
   }
 });
+
+test.describe('Given a donor on the Bankovní účty page of a 375 pt iPhone whose app shows the largest accessibility text', () => {
+  for (const motion of [
+    { name: '', reducedMotion: 'no-preference' as const },
+    { name: ' with reduced motion', reducedMotion: 'reduce' as const },
+  ]) {
+    test(`when something else scrolls the page right after Ponechat restores Nepřiřazovat platby z tohoto účtu${motion.name}, then the focused button still ends wholly in view`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ reducedMotion: motion.reducedMotion });
+      await page.addInitScript((px) => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = `html { font-size: ${px}px; }`;
+          document.head.append(style);
+        });
+      }, LARGEST_SYSTEM_TEXT_PX);
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donations/me/bank-accounts',
+        (route) => route.fulfill({ json: { items: [bankAccountItem()] } }),
+      );
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await openDonorSection(page, 'Bankovní účty');
+      await page.setViewportSize({ width: 375, height: 667 });
+      const row = page.locator('.account').filter({ hasText: '2900233333/2010' });
+      const exclude = row.getByRole('button', { name: /Nepřiřazovat platby z\stohoto účtu/ });
+      const keep = row.getByRole('button', { name: 'Ponechat' });
+      await expect(exclude).toBeVisible();
+      await untilAtRest(row);
+      await exclude.click();
+      await expect(keep).toBeFocused();
+      await untilAtRest(row);
+      await expect(keep).toBeInViewport({ ratio: 1 });
+
+      await keep.click();
+      await expect(exclude).toBeFocused();
+      await untilAtRest(row);
+      await page.evaluate(() => window.scrollBy({ top: 600, behavior: 'instant' }));
+
+      await expect(exclude).toBeInViewport({ ratio: 1 });
+      await expect(exclude).toBeFocused();
+    });
+  }
+});
