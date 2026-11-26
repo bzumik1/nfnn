@@ -62,6 +62,7 @@ import { spayd } from '../../../donations/spayd';
 import { QrCode } from '../../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../../shared/ui/qr-code/qr-matrix';
+import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
 import { AccountDisconnect, OfferedAccountAction } from './account-disconnect/account-disconnect';
 import { PairingHelp } from './pairing-help/pairing-help';
 import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
@@ -166,6 +167,7 @@ export class BankAccountsCard {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly focusAfterSwap = new FocusAfterRowLeaves(this.document, () => null);
 
   readonly variableSymbol = input<string | null>(null);
   readonly sessionEnded = output<void>();
@@ -428,14 +430,30 @@ export class BankAccountsCard {
     this.actionError.set('');
     this.actionDone.set('');
     this.confirming.set(account.id);
-    afterNextRender(() => this.keepButtonOf(account)?.focus(), { injector: this.injector });
+    afterNextRender(() => this.focusOnceSettled(this.keepButtonOf(account)), {
+      injector: this.injector,
+    });
   }
 
   protected cancelDisconnect(account: BankAccountItem): void {
     this.returningAction.set(account.id);
     this.confirming.set(null);
     this.actionError.set('');
-    afterNextRender(() => this.actionButtonOf(account)?.focus(), { injector: this.injector });
+    afterNextRender(() => this.focusOnceSettled(this.actionButtonOf(account)), {
+      injector: this.injector,
+    });
+  }
+
+  private focusOnceSettled(button: HTMLButtonElement | null): void {
+    if (button === null) {
+      return;
+    }
+    button.focus({ preventScroll: true });
+    const row = button.closest('.account') ?? this.host.nativeElement;
+    const motions = (row.getAnimations?.({ subtree: true }) ?? []).filter((motion) =>
+      Number.isFinite(Number(motion.effect?.getComputedTiming().endTime)),
+    );
+    this.focusAfterSwap.keepInViewOnceSettled(button, motions, false);
   }
 
   protected actionReturned(): void {
