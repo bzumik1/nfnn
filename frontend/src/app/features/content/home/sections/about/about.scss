@@ -107,8 +107,8 @@
 }
 
 .quote-mark {
-  margin-bottom: var(--space-6);
-  color: var(--color-accent-fill);
+  margin: 0 auto var(--space-6);
+  color: var(--color-accent);
 }
 
 .quote-text {
@@ -223,6 +223,10 @@
   .founders {
     padding-top: var(--space-10);
     text-align: start;
+  }
+
+  .quote-mark {
+    margin-inline: 0;
   }
 
   .quote-text {
