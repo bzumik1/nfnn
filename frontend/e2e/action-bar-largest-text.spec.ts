@@ -229,7 +229,7 @@ for (const phone of PHONES_AT_DEFAULT_TEXT) {
 
 const FLOATING_ENLARGED_TEXT_PX = [20, 22];
 const SE = { width: 375, height: 667 };
-const SCROLL_STEP_PX = 16;
+const SCROLL_STEP_PX = 24;
 const SETTLE_FRAMES = 3;
 const STILL_FRAMES = 3;
 
