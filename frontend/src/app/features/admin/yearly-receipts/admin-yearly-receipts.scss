@@ -60,6 +60,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+
+  .ui-button {
+    max-width: 100%;
+    white-space: normal;
+  }
 }
 
 .outcomes {
