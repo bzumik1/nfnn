@@ -27,11 +27,13 @@ import {
   PAGE_TRANSITION_LONGEST_MS,
   PageTransitions,
   SECTION_READS_WITHIN_MS,
+  MOTION_ENDS_LATE_BY_MS,
 } from './page-transitions';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 import { closeOnceCovered, SHEET_STEPPING, sheetOnly, swipeBackInSheet } from './sheet-stepping';
 import { steepestStepOver } from './back-swipe';
 import { afterDrawnFrames, publishSteadyFrame, STEP_CHROME } from './step-chrome';
+import { CLOCK_ONLY } from './testing/clock-only';
 
 @Component({ template: '' })
 class Blank {}
@@ -982,6 +984,71 @@ describe('Given a phone that animates, an article opened from the news, and the 
     await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
 
     expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+  });
+
+  function stepLeftOver(): string[] {
+    return [
+      ...Array.from(document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`), () => 'copies'),
+      ...(layer.closest('[inert]') === null ? [] : ['the page is inert']),
+      ...(dressedTransitions().stepping() ? ['the step runs'] : []),
+    ];
+  }
+
+  it('when the frames stop right after the one that lets the motions go and the motions never report that they finished, as on a cold runner, then the step still ends within its motion’s length and MOTION_ENDS_LATE_BY_MS, without waiting for another frame, leaving no copy and nothing inert', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    draw(5000);
+    draw(5016);
+    expect(moving()?.classList, 'the motions were not let go').not.toContain(
+      `${PAGE_TRANSITION_CLASS}--held`,
+    );
+
+    await vi.advanceTimersByTimeAsync(300 + MOTION_ENDS_LATE_BY_MS);
+
+    expect(stepLeftOver()).toEqual([]);
+  });
+
+  it('when frames come only every 600 ms and the motions never report that they finished, then the step ends within its motion’s length and MOTION_ENDS_LATE_BY_MS after the frame that lets them go, not after the next frame or its longest time', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    for (const at of [5600, 6200]) {
+      await vi.advanceTimersByTimeAsync(600);
+      draw(at);
+    }
+    expect(moving()?.classList, 'the motions were not let go').not.toContain(
+      `${PAGE_TRANSITION_CLASS}--held`,
+    );
+
+    await vi.advanceTimersByTimeAsync(300 + MOTION_ENDS_LATE_BY_MS);
+
+    expect(stepLeftOver()).toEqual([]);
+  });
+
+  it('when the frame after the one that lets the motions go comes 250 ms late, then the step is not cut before 250 ms and its 300 ms motion, and ends within those and MOTION_ENDS_LATE_BY_MS', async () => {
+    watchHeldMotions();
+    const draw = framesOnRequest();
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+    draw(5000);
+    draw(5016);
+    expect(moving()?.classList, 'the motions were not let go').not.toContain(
+      `${PAGE_TRANSITION_CLASS}--held`,
+    );
+
+    await vi.advanceTimersByTimeAsync(250);
+    draw(5266);
+    await vi.advanceTimersByTimeAsync(300 + MOTION_ENDS_LATE_BY_MS - 10);
+    expect(
+      stepLeftOver(),
+      'the step was cut before its motion ran from its late first frame',
+    ).toContain('the step runs');
+    await vi.advanceTimersByTimeAsync(20);
+
+    expect(stepLeftOver()).toEqual([]);
   });
 
   it('when the frame after the one that lets the motions go is drawn, then the browser starts every motion at its time, so that frame still shows both pages at rest and the next one moves', async () => {
@@ -3527,6 +3594,76 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     delete (window as { DOMMatrixReadOnly?: unknown }).DOMMatrixReadOnly;
     document.documentElement.style.removeProperty('--page-title-fade-at');
     vi.restoreAllMocks();
+  });
+
+  function sheetStepLeftOver(): string[] {
+    return [
+      ...Array.from(document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`), () => 'copies'),
+      ...(sheet.closest('[inert]') === null ? [] : ['the sheet is inert']),
+      ...(transitions.stepping() ? ['the step runs'] : []),
+    ];
+  }
+
+  function openMyOverviewInTheSheet(): void {
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      owner: sheet,
+      change: () => (sheet.textContent = 'Můj přehled'),
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+  }
+
+  async function copiesPlacedInTheSheet(): Promise<void> {
+    for (let waited = 0; overlayPage('over') === null && waited < 1000; waited += 5) {
+      await vi.advanceTimersByTimeAsync(5);
+    }
+    expect(overlayPage('over')?.textContent ?? '', 'the copies were never placed').toContain(
+      'Můj přehled',
+    );
+  }
+
+  it('when a section opens inside the sheet and the frames stop right after the one that lets its motions go, which never report that they finished, as on a cold runner, then the step runs its 350 ms and ends within them and MOTION_ENDS_LATE_BY_MS, leaving no copy of the list beside the section', async () => {
+    document.documentElement.style.setProperty('--duration-page', '350ms');
+    vi.useFakeTimers(CLOCK_ONLY);
+    onTestFinished(() => {
+      vi.useRealTimers();
+      document.documentElement.style.removeProperty('--duration-page');
+    });
+    watchHeldMotions();
+    const frames = heldFrames();
+    openMyOverviewInTheSheet();
+    await copiesPlacedInTheSheet();
+    drawFrame(frames);
+    drawFrame(frames);
+
+    await vi.advanceTimersByTimeAsync(350);
+    expect(sheetStepLeftOver(), 'the step was cut before its length').toContain('the step runs');
+    await vi.advanceTimersByTimeAsync(MOTION_ENDS_LATE_BY_MS);
+
+    expect(sheetStepLeftOver()).toEqual([]);
+    expect(sheet.textContent).toBe('Můj přehled');
+  });
+
+  it('when a section opens inside the sheet before the step chrome has registered, and the chrome registers while the step runs and the frames stop right after the one that lets its motions go, then the step still ends within MOTION_ENDS_LATE_BY_MS of that frame with the section shown and no copy left', async () => {
+    vi.useFakeTimers(CLOCK_ONLY);
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    watchHeldMotions();
+    const frames = heldFrames();
+    transitions.dressing = null;
+    openMyOverviewInTheSheet();
+    transitions.dressing = STEP_CHROME;
+    await copiesPlacedInTheSheet();
+    drawFrame(frames);
+    drawFrame(frames);
+
+    await vi.advanceTimersByTimeAsync(MOTION_ENDS_LATE_BY_MS);
+
+    expect(sheetStepLeftOver()).toEqual([]);
+    expect(sheet.textContent).toBe('Můj přehled');
   });
 
   it('when a section opens inside the sheet while its page is still being placed, then its copies are placed only once the page is placed and drawn, so it never slides in empty (round 42)', async () => {
