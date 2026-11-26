@@ -29,19 +29,15 @@ export class FocusFirstInvalid {
 
 function bringFieldIntoView(control: HTMLElement): void {
   const field = control.closest('app-form-field') ?? control;
-  if (liesWhollyInView(field)) {
-    return;
-  }
   const band = shownBand(field);
   const box = field.getBoundingClientRect();
   const view = field.ownerDocument.defaultView;
   const scroller = view === null ? null : scrollerAround(view, field);
   if (scroller?.closest('dialog') != null && box.bottom + scroller.scrollTop <= band.bottom) {
     scroller.scrollTo({ top: 0 });
-  } else if (box.height <= band.bottom - band.top) {
-    field.scrollIntoView?.({ block: 'nearest' });
-  } else {
-    control.scrollIntoView?.({ block: 'nearest' });
+  } else if (!liesWhollyInView(field)) {
+    const fitsItsBand = box.height <= band.bottom - band.top;
+    (fitsItsBand ? field : control).scrollIntoView?.({ block: 'nearest' });
   }
 }
 
