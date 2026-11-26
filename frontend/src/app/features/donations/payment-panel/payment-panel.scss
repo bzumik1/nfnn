@@ -252,6 +252,11 @@
   inline-size: 5em;
 }
 
+.bank-skeleton-text {
+  inline-size: auto;
+  color: transparent;
+}
+
 .bank-skeleton-pill {
   display: inline-block;
   color: transparent;
