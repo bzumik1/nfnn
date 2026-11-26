@@ -252,3 +252,10 @@ $contents-width: 20rem;
     max-width: var(--content-max-wide);
   }
 }
+
+@media (pointer: coarse) {
+  .toc a {
+    display: block;
+    padding-block: calc((var(--touch-target-size) - 1lh) / 2);
+  }
+}

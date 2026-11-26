@@ -19,7 +19,7 @@ import {
 } from '../../../../core/auth/testing/donor-fixtures';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { keepRoomForEmptyText, LaidOutBoxes, PasskeysPanel } from './passkeys-panel';
-import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
+import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/focus-after-row-leaves';
 import { leavesAsInTheBrowser } from '../../../../shared/ui/leaving-row/testing/leaves-as-in-the-browser';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 

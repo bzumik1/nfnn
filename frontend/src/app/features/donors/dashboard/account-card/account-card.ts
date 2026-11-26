@@ -29,7 +29,7 @@ import {
 } from '../../../../core/auth/passkey-authenticator';
 import { formatBankTime } from '../../../donations/donation-date';
 import { InputModality } from '../../../../core/input/input-modality';
-import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
+import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/focus-after-row-leaves';
 import { BusyButton } from '../../../../shared/ui/busy-button/busy-button';
 import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
