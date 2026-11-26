@@ -4,11 +4,13 @@ import {
   provideHttpClientTesting,
   type TestRequest,
 } from '@angular/common/http/testing';
+import type { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Connectivity, PROBE_PATH } from '../connectivity/connectivity';
 import { authInterceptor } from './auth-interceptor';
 import { AuthStore, OFFLINE_OPEN_WAIT_MS } from './auth-store';
 import { copyProfileOf } from './copy-profile';
+import { DONOR_FROM_COPY_LOADER } from './copy-profile-loader';
 import {
   type DeviceAccount,
   deviceAccountOf,
@@ -56,7 +58,7 @@ describe('Given the auth store of a remembered session on a device that keeps a 
   let http: HttpTestingController;
   let device: OfflineDevice;
 
-  function setUp(jar = BROWSER_JAR): AuthStore {
+  function setUp(jar = BROWSER_JAR, providers: Provider[] = []): AuthStore {
     localStorage.clear();
     localStorage.setItem(jar.hintKey, '1');
     device = new OfflineDevice();
@@ -66,6 +68,7 @@ describe('Given the auth store of a remembered session on a device that keeps a 
         provideHttpClientTesting(),
         { provide: SESSION_DEVICE, useValue: device },
         { provide: SESSION_JAR, useValue: jar },
+        ...providers,
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -89,6 +92,27 @@ describe('Given the auth store of a remembered session on a device that keeps a 
   }
 
   afterEach(() => http.verify());
+
+  describe('when the app starts offline and the code that reads the copy cannot be loaded', () => {
+    it('then the device is not asked to open the copy, the restore ends and the visitor waits signed out with the hint kept', async () => {
+      const store = setUp(BROWSER_JAR, [
+        {
+          provide: DONOR_FROM_COPY_LOADER,
+          useValue: () =>
+            Promise.reject(new TypeError('Failed to fetch dynamically imported module')),
+        },
+      ]);
+      const probe = goOffline();
+
+      await store.restore();
+
+      expect(device.calls).toEqual([]);
+      expect(store.status()).toBe('anonymous');
+      expect(store.fromDevice()).toBe(false);
+      expect(localStorage.getItem(BROWSER_JAR.hintKey)).toBe('1');
+      probe.error(new ProgressEvent('error'), { status: 0 });
+    });
+  });
 
   describe('when the app starts offline', () => {
     let store: AuthStore;

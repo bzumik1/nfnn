@@ -3,7 +3,7 @@ import { DestroyRef, inject, Injectable } from '@angular/core';
 
 import { Connectivity } from '../connectivity/connectivity';
 import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
-import { EventDetail } from '../diagnostics/diagnostics-schema';
+import { EventDetail } from '../diagnostics/diagnostic-event-schema';
 import { APP_REVISION } from './app-revision';
 import { ClientPlatform, platformOf } from './client-platform';
 import { ErrorKind, ErrorName, errorNameOf, ErrorPlace } from './error-vocabulary';

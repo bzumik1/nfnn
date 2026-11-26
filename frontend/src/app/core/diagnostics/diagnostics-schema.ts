@@ -1,16 +1,14 @@
+import { BROWSERS, DISPLAY_MODES, OPERATING_SYSTEMS } from '../errors/error-vocabulary';
 import {
-  BROWSERS,
-  DISPLAY_MODES,
-  ERROR_KINDS,
-  ERROR_NAMES,
-  ERROR_PLACES,
-  OPERATING_SYSTEMS,
-} from '../errors/error-vocabulary';
+  type DiagnosticEvent,
+  MAX_EVENTS,
+  MAX_SECONDS_AGO,
+  sanitizedEvent,
+} from './diagnostic-event-schema';
+import { field, oneOf, type Reading, record, whole } from './diagnostic-reading';
 
 export const DIAGNOSTICS_FORMAT = 'nfnn-diagnostics';
 export const DIAGNOSTICS_VERSION = 1;
-export const MAX_EVENTS = 50;
-export const MAX_SECONDS_AGO = 86_400;
 export const MAX_BOOT_WAIT_SECONDS = 600;
 export const MAX_MAJOR = 999;
 export const MAX_SERVICE_WORKERS = 9;
@@ -100,10 +98,6 @@ export const COPY_MODES = ['stored', 'memory'] as const;
 export const DONOR_COPY_STATES = ['none', 'open', 'locked'] as const;
 export const ADMINISTRATION_COPY_STATES = ['none', 'locked', 'open'] as const;
 export const AGE_BUCKETS = ['under-1h', 'under-1d', 'under-7d', 'under-30d', 'older'] as const;
-export const DIAGNOSTIC_ONLY_KINDS = ['copy-sync'] as const;
-export const PDF_LOAD_DETAILS = ['tools-missing', 'fonts'] as const;
-export const PDF_RENDER_DETAILS = ['image', 'drawing', 'style'] as const;
-export const SYNC_DETAILS = ['stored', 'failed', 'mismatch', 'no-copy'] as const;
 
 export type DiagnosticSource = (typeof DIAGNOSTIC_SOURCES)[number];
 export type DiagnosticPage = (typeof DIAGNOSTIC_PAGES)[number] | typeof OTHER_PAGE;
@@ -115,22 +109,8 @@ export type CopyMode = (typeof COPY_MODES)[number];
 export type DonorCopyState = (typeof DONOR_COPY_STATES)[number];
 export type AdministrationCopyState = (typeof ADMINISTRATION_COPY_STATES)[number];
 export type AgeBucket = (typeof AGE_BUCKETS)[number];
-export type DiagnosticEventKind =
-  (typeof ERROR_KINDS)[number] | (typeof DIAGNOSTIC_ONLY_KINDS)[number];
-export type EventDetail =
-  | (typeof PDF_LOAD_DETAILS)[number]
-  | (typeof PDF_RENDER_DETAILS)[number]
-  | (typeof SYNC_DETAILS)[number];
 
 type Nullable<T> = { readonly [K in keyof T]: T[K] | null };
-
-export interface DiagnosticEvent {
-  readonly secondsAgo: number;
-  readonly kind: DiagnosticEventKind;
-  readonly place: (typeof ERROR_PLACES)[number] | null;
-  readonly name: (typeof ERROR_NAMES)[number] | null;
-  readonly detail: EventDetail | null;
-}
 
 export interface BootAttempt {
   readonly panelShown: boolean;
@@ -194,30 +174,11 @@ export interface DiagnosticsFile {
 const REVISION = /^(?:[0-9a-f]{7,40}|dev|unknown)$/;
 const BUNDLE = /^main-[A-Z0-9]{8}\.js$/;
 const CREATED_AT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}Z$/;
-const ERROR_EVENT_KINDS: readonly string[] = ERROR_KINDS;
-const DETAILS_OF_KIND: Readonly<Record<string, readonly string[]>> = {
-  'pdf-load': PDF_LOAD_DETAILS,
-  'pdf-render': PDF_RENDER_DETAILS,
-  'copy-sync': SYNC_DETAILS,
-};
 const PAGE_PATTERNS = DIAGNOSTIC_PAGES.map(
   (page) => [page, new RegExp(`^${page.replaceAll(':param', '[^/]+')}$`)] as const,
 );
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
-
-type Reading = Readonly<Record<string, unknown>>;
-
-function record(value: unknown): Reading | null {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-    return null;
-  }
-  return value as Reading;
-}
-
-function field(from: Reading | null, key: string): unknown {
-  return from !== null && Object.prototype.hasOwnProperty.call(from, key) ? from[key] : undefined;
-}
 
 function section(from: Reading | null, key: string): Reading | null {
   return record(field(from, key));
@@ -225,18 +186,6 @@ function section(from: Reading | null, key: string): Reading | null {
 
 function bool(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null;
-}
-
-function whole(value: unknown, max: number, min = 0): number | null {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max
-    ? value
-    : null;
-}
-
-function oneOf<T extends string>(list: readonly T[], value: unknown): T | null {
-  return typeof value === 'string' && (list as readonly string[]).includes(value)
-    ? (value as T)
-    : null;
 }
 
 function matching(pattern: RegExp, value: unknown): string | null {
@@ -265,29 +214,6 @@ function bootAttempt(part: Reading | null): BootAttempt | null {
     return null;
   }
   return { panelShown, codeArrived, waitedSeconds, secondsAgo };
-}
-
-export function sanitizedEvent(value: unknown, age?: number): DiagnosticEvent | null {
-  const part = record(value);
-  const secondsAgo = whole(age ?? field(part, 'secondsAgo'), MAX_SECONDS_AGO);
-  const kind = oneOf<DiagnosticEventKind>(
-    [...ERROR_KINDS, ...DIAGNOSTIC_ONLY_KINDS],
-    field(part, 'kind'),
-  );
-  if (secondsAgo === null || kind === null) {
-    return null;
-  }
-  const fromReporter = ERROR_EVENT_KINDS.includes(kind);
-  return {
-    secondsAgo,
-    kind,
-    place: fromReporter ? oneOf(ERROR_PLACES, field(part, 'place')) : null,
-    name: fromReporter ? oneOf(ERROR_NAMES, field(part, 'name')) : null,
-    detail: oneOf<EventDetail>(
-      (DETAILS_OF_KIND[kind] ?? []) as readonly EventDetail[],
-      field(part, 'detail'),
-    ),
-  };
 }
 
 function events(value: unknown): DiagnosticEvent[] {

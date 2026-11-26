@@ -60,6 +60,7 @@
   margin: 0;
   padding: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-0-5);
 }
 
@@ -68,9 +69,10 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  min-width: 0;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  font-size: var(--text-md);
+  font-size: var(--text-side-nav);
   font-weight: var(--weight-medium);
   color: var(--color-text-secondary);
   text-decoration: none;
@@ -85,6 +87,26 @@
 
   &:focus-visible {
     @include focus-ring.ring(inside);
+  }
+}
+
+.side-nav-label {
+  display: inline-grid;
+  min-width: 0;
+
+  > span,
+  &::after {
+    grid-area: 1 / 1;
+  }
+
+  > span {
+    align-self: center;
+  }
+
+  &::after {
+    content: attr(data-label) / '';
+    font-weight: var(--weight-bold);
+    visibility: hidden;
   }
 }
 

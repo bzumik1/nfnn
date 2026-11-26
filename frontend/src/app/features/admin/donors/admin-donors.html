@@ -52,7 +52,7 @@
     }
     @if (listed().length > 0) {
       @if (rows()) {
-        <ul class="ui-list donor-rows">
+        <ul class="ui-list ui-list--wide-values donor-rows">
           @for (item of listed(); track item.account.donorId) {
             <li>
               <a class="ui-list__row" [routerLink]="['/sprava/darci', item.account.donorId]">
@@ -92,7 +92,7 @@
                 </span>
                 @if (item.lastGift; as gift) {
                   <span class="ui-list__value ui-figures">{{ giftAmount(gift) }}&nbsp;Kč</span>
-                  <span class="ui-list__state">{{ giftDay(gift) }}</span>
+                  <span class="ui-list__state ui-list__state--note">{{ giftDay(gift) }}</span>
                 }
                 @if (
                   item.account.erasedAt ||

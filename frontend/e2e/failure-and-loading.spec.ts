@@ -495,6 +495,30 @@ test.describe('Given a donor on a computer whose portal data fail to load', () =
       .toBeGreaterThanOrEqual(DARK_CONTROL_EDGE_CONTRAST);
   });
 
+  test('when the overview fails, then the failure block rounds its corners with the radius of the callouts', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/summary',
+      (route) => route.fulfill(SERVER_ERROR),
+    );
+    await page.goto('/darce/prehled');
+    const alert = failure(page, 'Přehled darů se nepodařilo načíst.');
+    await expect(alert).toBeVisible();
+
+    const radii = await alert.evaluate((element) => {
+      const block = element.closest('.ui-notice--action') ?? element;
+      const callout = document.createElement('p');
+      callout.className = 'ui-callout';
+      document.body.append(callout);
+      const calloutRadius = getComputedStyle(callout).borderTopLeftRadius;
+      callout.remove();
+      return { block: getComputedStyle(block).borderTopLeftRadius, callout: calloutRadius };
+    });
+
+    expect(radii.block).toBe(radii.callout);
+  });
+
   for (const appearance of [
     { name: 'the dark appearance', media: { colorScheme: 'dark' as const } },
     { name: 'forced colours', media: { forcedColors: 'active' as const } },
