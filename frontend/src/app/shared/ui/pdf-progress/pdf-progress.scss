@@ -39,6 +39,10 @@
   @include motion.appear($rises: false);
 }
 
+.pdf-progress__line > .pdf-progress__leaving {
+  @include motion.expand-content-leave;
+}
+
 .pdf-progress__line--done {
   color: var(--color-success);
 }
