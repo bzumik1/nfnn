@@ -190,7 +190,7 @@ export class PaymentPanel {
   private choosingByKey = false;
   private pressedAmount: HTMLElement | null = null;
   private leftDuringPress = false;
-  private stopWatchingRelease: () => void = () => undefined;
+  private stopWatchingPress: () => void = () => undefined;
   private revealPending = false;
   private deletingSelection = false;
   private readonly announced = signal<number | null>(null);
@@ -455,28 +455,36 @@ export class PaymentPanel {
     }
     this.forgetAmountPress();
     this.pressedAmount = event.currentTarget as HTMLElement;
-    this.watchRelease(event.pointerId);
+    this.watchPressEnd(event.pointerId);
   }
 
-  forgetAmountPress(): void {
-    this.stopWatchingRelease();
+  private forgetAmountPress(): void {
+    this.stopWatchingPress();
     this.pressedAmount = null;
     this.leftDuringPress = false;
   }
 
-  private watchRelease(pointerId: number): void {
+  private watchPressEnd(pointerId: number): void {
     const released = (release: PointerEvent) => {
       if (release.pointerId === pointerId) {
         this.endAmountPress(release);
       }
     };
+    const cancelled = (cancel: PointerEvent) => {
+      if (cancel.pointerId === pointerId) {
+        this.forgetAmountPress();
+      }
+    };
     this.document.addEventListener('pointerup', released, { capture: true });
-    this.stopWatchingRelease = () =>
+    this.document.addEventListener('pointercancel', cancelled, { capture: true });
+    this.stopWatchingPress = () => {
       this.document.removeEventListener('pointerup', released, { capture: true });
+      this.document.removeEventListener('pointercancel', cancelled, { capture: true });
+    };
   }
 
   private endAmountPress(release: PointerEvent): void {
-    this.stopWatchingRelease();
+    this.stopWatchingPress();
     if (this.pressedAmount?.contains(release.target as Node | null)) {
       return;
     }
