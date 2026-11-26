@@ -4,17 +4,17 @@
   </h3>
   <dl class="accounting-list">
     <div class="accounting-item">
-      <dt class="ui-detail__key" i18n="@@home.contact.accounting.name">Název</dt>
+      <dt class="ui-detail-key" i18n="@@home.contact.accounting.name">Název</dt>
       <dd>
-        <span class="accounting-value ui-detail__value" i18n="@@home.contact.accounting.nameValue"
+        <span class="accounting-value ui-detail-value" i18n="@@home.contact.accounting.nameValue"
           >Nová naděje - nadační fond</span
         >
       </dd>
     </div>
     <div class="accounting-item">
-      <dt class="ui-detail__key" i18n="@@home.contact.accounting.ico">IČO</dt>
+      <dt class="ui-detail-key" i18n="@@home.contact.accounting.ico">IČO</dt>
       <dd>
-        <span class="accounting-value ui-detail__value">{{ companyId }}</span>
+        <span class="accounting-value ui-detail-value">{{ companyId }}</span>
         <app-copy-button
           [value]="companyId"
           what="IČO"
@@ -23,9 +23,9 @@
       </dd>
     </div>
     <div class="accounting-item">
-      <dt class="ui-detail__key" i18n="@@home.contact.accounting.seat">Sídlo</dt>
+      <dt class="ui-detail-key" i18n="@@home.contact.accounting.seat">Sídlo</dt>
       <dd>
-        <span class="accounting-value ui-detail__value">{{ seat }}</span>
+        <span class="accounting-value ui-detail-value">{{ seat }}</span>
         <app-copy-button
           [value]="seatToCopy"
           what="sídlo"
@@ -34,10 +34,10 @@
       </dd>
     </div>
     <div class="accounting-item">
-      <dt class="ui-detail__key" i18n="@@home.contact.accounting.registry">Zápis</dt>
+      <dt class="ui-detail-key" i18n="@@home.contact.accounting.registry">Zápis</dt>
       <dd>
         <span
-          class="accounting-value ui-detail__value"
+          class="accounting-value ui-detail-value"
           i18n="@@home.contact.accounting.registryValue"
           >nadační rejstřík vedený Krajským soudem v&nbsp;Ústí&nbsp;nad&nbsp;Labem, oddíl&nbsp;N,
           vložka&nbsp;78</span
@@ -45,10 +45,10 @@
       </dd>
     </div>
     <div class="accounting-item">
-      <dt class="ui-detail__key" i18n="@@home.contact.accounting.account">Číslo účtu</dt>
+      <dt class="ui-detail-key" i18n="@@home.contact.accounting.account">Číslo účtu</dt>
       <dd>
         @if (account(); as known) {
-          <span class="accounting-value ui-detail__value ui-figures">{{ known.number }}</span>
+          <span class="accounting-value ui-detail-value ui-figures">{{ known.number }}</span>
           <app-copy-button
             [value]="known.number"
             what="číslo účtu"
@@ -66,9 +66,9 @@
     </div>
     @if (account(); as known) {
       <div class="accounting-item">
-        <dt class="ui-detail__key" i18n="@@home.contact.accounting.iban">IBAN</dt>
+        <dt class="ui-detail-key" i18n="@@home.contact.accounting.iban">IBAN</dt>
         <dd>
-          <span class="accounting-value ui-detail__value ui-figures ui-figures--groups">
+          <span class="accounting-value ui-detail-value ui-figures ui-figures--groups">
             @for (group of ibanGroups(); track $index) {
               @if (!$first) {
                 &ngsp;
