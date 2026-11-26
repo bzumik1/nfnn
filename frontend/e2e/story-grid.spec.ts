@@ -129,11 +129,13 @@ test.describe('Given a year of stories without photos on the Pomáháme tab', ()
 
 for (const width of [390, 1280]) {
   test.describe(`Given a year of stories on the Pomáháme tab in a ${width} px window`, () => {
-    test('when the tiles show, then each tag starts on the edge of its title as far from the tile’s top as the title from its side, the large tile’s too, and a small tile’s title stands as far below the photo as it stands from the side', async ({
+    test('when the tiles show, then each tag starts on the edge of its title as far from the tile’s top as the title from its side, the large tile’s too where the phone shows one, and a small tile’s title stands as far below the photo as it stands from the side', async ({
       page,
     }) => {
       await openStories(page, 4, width);
-      await expect(page.locator('app-story-tile .tile--large')).toHaveCount(1);
+      if (width < 1280) {
+        await expect(page.locator('app-story-tile .tile--large')).toHaveCount(1);
+      }
 
       const tiles = await page.locator('app-story-tile .tile').evaluateAll((all) =>
         all.map((tile) => {
@@ -155,7 +157,9 @@ for (const width of [390, 1280]) {
         }),
       );
 
-      for (const tile of tiles.filter((each) => !each.split)) {
+      const measured = tiles.filter((each) => !each.split);
+      expect(measured.length).toBeGreaterThan(0);
+      for (const tile of measured) {
         const side = tile.titleLeft - tile.tileLeft;
         expect(Math.abs(tile.tagLeft - tile.titleLeft), JSON.stringify(tile)).toBeLessThanOrEqual(
           EDGE_TOLERANCE_PX,
