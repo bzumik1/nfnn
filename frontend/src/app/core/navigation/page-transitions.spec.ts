@@ -15,6 +15,7 @@ import {
 import { CompactLayout } from '../layout/compact-layout';
 import { PLACING_MARK, STEADY_FRAME_MARK } from './frame-pace';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from './back-target';
+import { PageFocus } from './page-focus';
 import { PagePlacement } from './page-placement';
 import { ACCOUNT_RETURNS_KEY } from './page-transitions';
 import { NavigationPreview } from './navigation-preview';
@@ -1216,6 +1217,24 @@ describe('Given a phone that animates and an article opened from the news, which
 
     expect(moved).toBe(true);
     expect(under).toEqual([expect.stringContaining('Aktuality živě')]);
+  });
+
+  it('when the app steps back to it, then the row the focus returns to is brought into view before the live news is copied under the article, so the copy stands where the news will stand once the focus has returned and the list never jumps at the end (#2088)', async () => {
+    const placed = TestBed.inject(PagePlacement).pending();
+    const seen: string[] = [];
+    vi.spyOn(TestBed.inject(PageFocus), 'bringReturnIntoView').mockImplementation((scope) => {
+      seen.push(
+        `${scope === layer ? 'layer' : 'elsewhere'} ${document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under`) === null ? 'before the copy' : 'after the copy'}`,
+      );
+    });
+
+    await stepsBack();
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
+    placed();
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+
+    expect(moved).toBe(true);
+    expect(seen).toEqual(['layer before the copy']);
   });
 
   it('when the window has another width than when the news was kept, then the step back waits for the live news as before', async () => {

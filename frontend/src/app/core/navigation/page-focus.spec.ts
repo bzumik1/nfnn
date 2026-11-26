@@ -130,6 +130,30 @@ describe('Given a list of the administration that a step back returns to from th
       document.documentElement.style.scrollPaddingBottom = '';
     });
 
+    async function copiedByTheStepBackWithTheLinkAt(top: number): Promise<void> {
+      link = row({ href: CARD });
+      link.getBoundingClientRect = () => new DOMRect(0, top, 300, 56);
+      scope.append(link);
+      await openTheCard(link);
+      await stepBack();
+      shown = vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>();
+      link.scrollIntoView = shown;
+      focus.bringReturnIntoView(scope);
+    }
+
+    it('then a step back about to copy the list brings the row hidden under the head into view at once, the least it can, and leaves the focus to the return, so the copy shows the list where it will stand (#2088)', async () => {
+      await copiedByTheStepBackWithTheLinkAt(header - 56);
+
+      expect(shown).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+      expect(document.activeElement).toBe(heading);
+    });
+
+    it('then a step back about to copy the list leaves a row that shows where it is (#2088)', async () => {
+      await copiedByTheStepBackWithTheLinkAt(300);
+
+      expect(shown).not.toHaveBeenCalled();
+    });
+
     it('then the link takes the focus from the heading without moving the page while the row shows', async () => {
       await returnWithTheLinkAt(300);
 

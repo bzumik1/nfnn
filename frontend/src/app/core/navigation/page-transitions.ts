@@ -179,7 +179,7 @@ export class PageTransitions {
   readonly preview = inject(NavigationPreview);
   readonly dirtyForms = inject(DirtyForms);
   readonly placement = inject(PagePlacement);
-  private readonly injector = inject(Injector);
+  readonly injector = inject(Injector);
   drawing: SwipeDrawing | null = null;
   sheets: SheetLooks | null = null;
   private stepChrome: StepChrome | null = null;

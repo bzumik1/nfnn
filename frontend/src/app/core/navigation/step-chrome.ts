@@ -35,6 +35,7 @@ import {
   StepChrome,
 } from './page-transitions';
 import { PLACING_MARK, STEADY_FRAME_MARK, STEADY_FRAMES_KEPT } from './frame-pace';
+import { PageFocus } from './page-focus';
 
 const PLACED_WITHIN_FRAMES = 9;
 const FIRST_OPENING_PLACED_WITHIN_FRAMES = 18;
@@ -131,6 +132,9 @@ function move(stage: PageTransitions, running: Running, view: Window, inFrame = 
   if (layer === null) {
     stage.finish();
     return;
+  }
+  if (running.kind === 'pop') {
+    stage.injector.get(PageFocus).bringReturnIntoView(layer);
   }
   moveTo(
     stage,
