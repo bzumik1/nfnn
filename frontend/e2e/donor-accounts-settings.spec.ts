@@ -98,6 +98,25 @@ async function signInOnPhone(page: Page, width: number, user: typeof donor = don
   await page.setViewportSize({ width, height: 800 });
 }
 
+async function untilAtRest(dialog: Locator): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        dialog.evaluate(
+          (element) =>
+            element
+              .getAnimations({ subtree: true })
+              .filter(
+                (motion) =>
+                  motion.playState === 'running' &&
+                  motion.effect?.getComputedTiming().iterations !== Infinity,
+              ).length,
+        ),
+      { message: 'the dialog has come to rest' },
+    )
+    .toBe(0);
+}
+
 async function openBankAccounts(page: Page, width: number): Promise<Locator> {
   await signInOnPhone(page, width);
   await openAccountItem(page, 'Bankovní účty');
@@ -211,6 +230,7 @@ test.describe('Given a signed-in donor on a phone', () => {
       const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
       const rows = dialog.locator('.add-account-row');
       await expect(rows).toHaveCount(4);
+      await untilAtRest(dialog);
       const placed = await rows.evaluateAll((found) =>
         found.map((row) => {
           const label = row.querySelector('dt')!.getBoundingClientRect();
