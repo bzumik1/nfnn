@@ -9,6 +9,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  DOCUMENT,
   effect,
   ElementRef,
   inject,
@@ -65,6 +66,7 @@ import { thousandsGroups } from './thousands-groups';
 const DEFAULT_AMOUNT = 500;
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
+const PRIMARY_BUTTON = 0;
 const CURRENCY = 'Kč';
 const CUSTOM_AMOUNT_MAX_LENGTH = `${formatCrowns(MAX_AMOUNT)}\u00a0${CURRENCY}`.length;
 const MINOR_PER_CROWN = 100;
@@ -127,10 +129,7 @@ export type PaymentAccountState =
   templateUrl: './payment-panel.html',
   styleUrls: ['./payment-panel.scss', './bank-rows-table.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    '[class.split]': "layout() === 'split'",
-    '(document:pointerup)': 'endAmountPressOutside($event)',
-  },
+  host: { '[class.split]': "layout() === 'split'" },
 })
 export class PaymentPanel {
   private readonly store = inject(PaymentDetailsStore);
@@ -141,6 +140,7 @@ export class PaymentPanel {
   private readonly giftArrival = inject(GiftArrivalWatch);
   private readonly handOffs = inject(PaymentHandOffs);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
   protected readonly compact = inject(CompactLayout).isCompact;
   private readonly short = inject(ShortViewport).isShort;
   private readonly keyboard = inject(SoftKeyboard);
@@ -190,6 +190,7 @@ export class PaymentPanel {
   private choosingByKey = false;
   private pressedAmount: HTMLElement | null = null;
   private leftDuringPress = false;
+  private stopWatchingRelease: () => void = () => undefined;
   private revealPending = false;
   private deletingSelection = false;
   private readonly announced = signal<number | null>(null);
@@ -373,6 +374,7 @@ export class PaymentPanel {
       this.host.nativeElement.removeEventListener('keydown', noteChoosingKey, { capture: true });
       clearTimeout(this.redrawTimer);
       clearTimeout(this.announceTimer);
+      this.forgetAmountPress();
     });
   }
 
@@ -448,18 +450,34 @@ export class PaymentPanel {
   }
 
   noteAmountPress(event: PointerEvent): void {
+    if (event.button !== PRIMARY_BUTTON || !event.isPrimary) {
+      return;
+    }
+    this.forgetAmountPress();
     this.pressedAmount = event.currentTarget as HTMLElement;
-    this.leftDuringPress = false;
+    this.watchRelease(event.pointerId);
   }
 
   forgetAmountPress(): void {
+    this.stopWatchingRelease();
     this.pressedAmount = null;
     this.leftDuringPress = false;
   }
 
-  endAmountPressOutside(event: PointerEvent): void {
-    const pressed = this.pressedAmount;
-    if (pressed === null || pressed.contains(event.target as Node | null)) {
+  private watchRelease(pointerId: number): void {
+    const released = (release: PointerEvent) => {
+      if (release.pointerId === pointerId) {
+        this.endAmountPress(release);
+      }
+    };
+    this.document.addEventListener('pointerup', released, { capture: true });
+    this.stopWatchingRelease = () =>
+      this.document.removeEventListener('pointerup', released, { capture: true });
+  }
+
+  private endAmountPress(release: PointerEvent): void {
+    this.stopWatchingRelease();
+    if (this.pressedAmount?.contains(release.target as Node | null)) {
       return;
     }
     const leftDuringPress = this.leftDuringPress;
