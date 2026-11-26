@@ -1,12 +1,28 @@
 @use 'motion';
 
 :host {
-  display: contents;
+  display: block;
+  margin-block-start: calc(-1 * var(--space-2-5));
 }
 
-.account-action-fold,
-.account-confirm {
-  max-width: 100%;
+:host(:empty) {
+  display: none;
+}
+
+.account-swap {
+  grid-template-rows: 1fr;
+}
+
+.account-swap > * {
+  min-height: 0;
+  min-inline-size: 0;
+  padding-block-start: var(--space-2-5);
+}
+
+.account-action-fold > * {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .account-action {
@@ -18,39 +34,12 @@
   margin-top: var(--space-2-5);
 }
 
-.account-action-fold {
-  grid-template-rows: 1fr;
-}
-
-.account-action-fold > * {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-height: 0;
-  min-inline-size: 0;
-}
-
-.account-confirm {
+.account-swap--opening {
   @include motion.expand($closes-by: class);
 }
 
-.account-action-fold--returning {
-  @extend .account-confirm;
-}
-
-.account-action-fold--closing {
-  @extend .account-confirm--closing;
+.account-swap--closing {
+  @extend .account-swap--opening--closing;
   display: grid;
   transition-behavior: normal !important;
-}
-
-.account-action-fold--closing,
-.account-confirm--closing {
-  &:not(:last-child) {
-    margin-block-end: calc(-1 * var(--space-2-5));
-  }
-
-  &:last-child:not(:first-child) {
-    margin-block-start: calc(-1 * var(--space-2-5));
-  }
 }

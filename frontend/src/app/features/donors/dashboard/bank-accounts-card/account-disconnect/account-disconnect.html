@@ -1,11 +1,11 @@
 @if (!confirming()) {
   @if (action(); as offered) {
     <div
-      class="account-action-fold"
-      [class.account-action-fold--returning]="returning()"
+      class="account-action-fold account-swap"
+      [class.account-swap--opening]="returning()"
       (transitionend)="settle($event)"
       appDisclosure
-      animate.leave="account-action-fold--closing"
+      animate.leave="account-swap--closing"
     >
       <div>
         @if (offered === 'reconnect') {
@@ -39,11 +39,12 @@
   }
 } @else {
   <div
-    class="account-confirm"
+    class="account-confirm account-swap account-swap--opening"
     role="group"
     [attr.aria-labelledby]="buttonId() + '-confirm'"
+    (transitionend)="settle($event)"
     appDisclosure
-    animate.leave="account-confirm--closing"
+    animate.leave="account-swap--closing"
   >
     <div>
       <div class="ui-confirm account-confirm-box">

@@ -438,10 +438,6 @@ export class BankAccountsCard {
     afterNextRender(() => this.actionButtonOf(account)?.focus(), { injector: this.injector });
   }
 
-  protected actionReturned(): void {
-    this.returningAction.set(null);
-  }
-
   protected disconnect(account: BankAccountItem): void {
     this.run(
       account,
@@ -643,16 +639,16 @@ export class BankAccountsCard {
   }
 
   private actionButtonOf(account: BankAccountItem): HTMLButtonElement | null {
-    const buttons = this.host.nativeElement.querySelectorAll<HTMLButtonElement>(
-      `#${actionButtonId(account)}`,
-    );
-    return Array.from(buttons).find((button) => button.closest('[inert]') === null) ?? null;
+    return this.liveButton(`#${actionButtonId(account)}`);
   }
 
   private keepButtonOf(account: BankAccountItem): HTMLButtonElement | null {
-    return this.host.nativeElement.querySelector<HTMLButtonElement>(
-      `#${actionButtonId(account)}-keep`,
-    );
+    return this.liveButton(`#${actionButtonId(account)}-keep`);
+  }
+
+  private liveButton(selector: string): HTMLButtonElement | null {
+    const buttons = this.host.nativeElement.querySelectorAll<HTMLButtonElement>(selector);
+    return Array.from(buttons).find((button) => button.closest('[inert]') === null) ?? null;
   }
 
   protected actionButtonId(account: BankAccountItem): string {

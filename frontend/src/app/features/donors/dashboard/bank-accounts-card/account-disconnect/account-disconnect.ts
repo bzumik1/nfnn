@@ -1,12 +1,19 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  input,
+  output,
+  Renderer2,
+} from '@angular/core';
 import { BankAccountItem } from '../../../../donations/bank-accounts-api';
 import { Disclosure } from '../../../../../shared/ui/disclosure/disclosure';
 import { NeedsConnection } from '../../../../../shared/ui/needs-connection/needs-connection';
 
 export type OfferedAccountAction = 'reconnect' | 'disconnect';
 
-const RETURNING = 'account-action-fold--returning';
-const CLOSING = 'account-action-fold--closing';
+const OPENING = 'account-swap--opening';
+const CLOSING = 'account-swap--closing';
 
 @Component({
   selector: 'app-account-disconnect',
@@ -27,17 +34,18 @@ export class AccountDisconnect {
   readonly disconnectAsked = output<void>();
   readonly disconnectConfirmed = output<void>();
   readonly disconnectKept = output<void>();
-  readonly returned = output<void>();
+
+  private readonly renderer = inject(Renderer2);
 
   protected settle(event: TransitionEvent): void {
-    const fold = event.currentTarget as HTMLElement;
+    const swap = event.currentTarget as HTMLElement;
     if (
-      event.target === fold &&
-      fold.classList.contains(RETURNING) &&
-      !fold.classList.contains(CLOSING) &&
-      fold.getAnimations().length === 0
+      event.target === swap &&
+      swap.classList.contains(OPENING) &&
+      !swap.classList.contains(CLOSING) &&
+      swap.getAnimations().length === 0
     ) {
-      this.returned.emit();
+      this.renderer.removeClass(swap, OPENING);
     }
   }
 }
