@@ -63,7 +63,9 @@
   }
 
   &.dialog--repainting {
-    visibility: hidden;
+    @supports (-webkit-touch-callout: none) {
+      visibility: hidden;
+    }
   }
 }
 

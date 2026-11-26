@@ -23,7 +23,6 @@ import { FocusReturn } from './focus-return';
 import { DialogHistory, DialogHistoryListener } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { DIALOG_SUSPENSION } from './dialog-suspension';
-import { STATUS_BAR_KEEPS_PAGE_COLOUR } from './status-bar';
 import { canPullSheetFrom, PullIntent, pullIntent, SheetDrag, TouchOrigin } from './sheet-drag';
 import { Appearance } from '../../../core/appearance/appearance';
 import { InputModality } from '../../../core/input/input-modality';
@@ -135,12 +134,6 @@ export class Dialog implements AfterViewInit, OnDestroy {
       const depth = this.depth();
       untracked(() => this.showDepth(depth));
     });
-    if (inject(STATUS_BAR_KEEPS_PAGE_COLOUR)) {
-      this.repaintStatusBarOnAppearanceChange();
-    }
-  }
-
-  private repaintStatusBarOnAppearanceChange(): void {
     let shownAppearance: boolean | null = null;
     effect(() => {
       const dark = this.appearance.dark();
