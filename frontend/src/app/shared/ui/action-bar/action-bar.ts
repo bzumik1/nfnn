@@ -33,6 +33,7 @@ export class ActionBar {
   private screenWidth = 0;
   private publishedHeight: string | null = null;
   private coarsePointer: MediaQueryList | null | undefined;
+  private focusScroll = 0;
 
   constructor() {
     const bar = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -45,6 +46,9 @@ export class ActionBar {
     const place = (releasedByUser = false) => {
       if (!view) {
         return;
+      }
+      if (releasedByUser) {
+        this.focusScroll++;
       }
       const screen = this.stableScreenHeight(view, root);
       const height = bar.offsetHeight;
@@ -79,7 +83,10 @@ export class ActionBar {
       this.held = false;
       place(true);
     };
-    const wheelScrolls = () => {
+    const wheelScrolls = (event: WheelEvent) => {
+      if (event.ctrlKey) {
+        return;
+      }
       this.held = false;
       place(true);
     };
@@ -155,9 +162,14 @@ export class ActionBar {
   private keepTheFocusInView(bar: HTMLElement, document: Document, injector: Injector): void {
     const focused = document.activeElement;
     if (focused instanceof HTMLElement && bar.contains(focused)) {
+      const request = ++this.focusScroll;
       afterNextRender(
         () => {
-          if (document.activeElement === focused && bar.contains(focused)) {
+          if (
+            request === this.focusScroll &&
+            document.activeElement === focused &&
+            bar.contains(focused)
+          ) {
             focused.scrollIntoView?.({ block: 'nearest' });
           }
         },
