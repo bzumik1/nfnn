@@ -1,5 +1,6 @@
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { PREFIXED_ACCOUNT_PAYMENT_DETAILS } from './qr-matrices';
 import {
   bankAccountItem,
   donor,
@@ -397,6 +398,51 @@ test.describe('Given a signed-in donor adding a bank account on a wide screen', 
       .toBeGreaterThanOrEqual(0);
     expect(await numbersBrokenAcrossLines(dialog)).toEqual([]);
   });
+
+  for (const width of [900, 1280]) {
+    for (const text of [
+      { name: 'default', size: null },
+      { name: '200 %', size: '200%' },
+    ]) {
+      test(`when Přidat bankovní účet shows an account number with a prefix ${width} px wide at ${text.name} text, then the number breaks only before its bank code and every payment fact row is as tall`, async ({
+        page,
+      }) => {
+        await mockDonorApi(page);
+        await page.route(
+          (url) => url.pathname === '/api/donations/payment-details',
+          (route) => route.fulfill({ json: PREFIXED_ACCOUNT_PAYMENT_DETAILS }),
+        );
+        await signIn(page);
+        await page.setViewportSize({ width, height: 900 });
+        if (text.size !== null) {
+          await page.addStyleTag({ content: `html { font-size: ${text.size}; }` });
+        }
+        await openDonorSection(page, 'Bankovní účty');
+        await page.getByRole('button', { name: 'Přidat bankovní účet' }).click();
+        const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
+        const rows = dialog.locator('.add-account-row');
+        await expect(rows).toHaveCount(4);
+        await expect(rows.first()).toContainText('19-2000145399/0800');
+        await untilAtRest(dialog);
+
+        expect(await numbersBrokenAcrossLines(dialog)).toEqual([]);
+        const singleLineHeights = await rows.evaluateAll((found) =>
+          found
+            .filter((row) => {
+              const range = document.createRange();
+              range.selectNodeContents(row.querySelector('.bank-value')!);
+              return (
+                new Set(Array.from(range.getClientRects(), (line) => Math.round(line.top))).size ===
+                1
+              );
+            })
+            .map((row) => Math.round(row.getBoundingClientRect().height)),
+        );
+        expect(singleLineHeights.length).toBeGreaterThan(1);
+        expect(new Set(singleLineHeights).size).toBe(1);
+      });
+    }
+  }
 
   test('when Přidat bankovní účet opens on an upright tablet with the largest system text, then no number breaks across lines and every copy button ends at the right edge', async ({
     page,

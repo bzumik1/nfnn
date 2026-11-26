@@ -68,6 +68,8 @@ export const ACCOUNT_VERIFICATION_QR = paymentQr("1 Kč verifying a donor's acco
 
 export const FOUNDATION_PAYMENT_DETAILS = paymentDetailsOf("the foundation's account");
 
+export const PREFIXED_ACCOUNT_PAYMENT_DETAILS = paymentDetailsOf('an account with a prefix');
+
 export async function drawnModulesMatch(
   qrCode: Locator,
   matrix: QrMatrixFixture,
