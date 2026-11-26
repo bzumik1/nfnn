@@ -283,7 +283,9 @@ test.describe('Given a signed-in donor on a phone', () => {
           const label = row.querySelector('dt')!.getBoundingClientRect();
           const value = row.querySelector('.bank-value')!;
           const range = document.createRange();
-          range.selectNodeContents(value);
+          range.selectNodeContents(
+            document.createTreeWalker(value, NodeFilter.SHOW_TEXT).nextNode()!,
+          );
           const text = range.getClientRects()[0];
           const button = row.querySelector('app-copy-button button')?.getBoundingClientRect();
           return {

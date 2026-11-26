@@ -362,9 +362,10 @@
             >
               Platba z&nbsp;účtu
               <span class="watch-account add-account-number ui-figures"
-                >{{ accountParts(account.accountNumber).head }}<wbr />{{
-                  accountParts(account.accountNumber).bankCode
+                ><span class="add-account-number__head">{{
+                  accountParts(account.accountNumber).head
                 }}</span
+                ><wbr />{{ accountParts(account.accountNumber).bankCode }}</span
               >
               dorazila
             </p>
@@ -377,9 +378,10 @@
             >
               Účet
               <span class="watch-account add-account-number ui-figures"
-                >{{ accountParts(account.accountNumber).head }}<wbr />{{
-                  accountParts(account.accountNumber).bankCode
+                ><span class="add-account-number__head">{{
+                  accountParts(account.accountNumber).head
                 }}</span
+                ><wbr />{{ accountParts(account.accountNumber).bankCode }}</span
               >
               je ověřený
             </p>
@@ -442,7 +444,8 @@
           @for (part of verified; track $index) {
             @if (part.account; as account) {
               <span class="add-account-number ui-figures"
-                >{{ account.head }}<wbr />{{ account.bankCode }}</span
+                ><span class="add-account-number__head">{{ account.head }}</span
+                ><wbr />{{ account.bankCode }}</span
               >
             } @else {
               <span>{{ part.text }}</span>
@@ -524,9 +527,10 @@
               <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
               <dd>
                 <span class="bank-value add-account-number ui-figures"
-                  >{{ accountParts(response.account.number).head }}<wbr />{{
-                    accountParts(response.account.number).bankCode
+                  ><span class="add-account-number__head">{{
+                    accountParts(response.account.number).head
                   }}</span
+                  ><wbr />{{ accountParts(response.account.number).bankCode }}</span
                 >
                 <app-copy-button
                   [value]="response.account.number"
