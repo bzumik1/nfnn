@@ -78,10 +78,8 @@ export const STEP_CHROME: StepChrome = {
   },
   afterDrawnFrames,
   cover,
-  arrive,
   moveOnceAnswered,
   moveTo,
-  moveOver,
   whenSectionDrawn,
 };
 
@@ -125,25 +123,6 @@ function moveOnceAnswered(stage: PageTransitions, running: Running, view: Window
     .then(() => nextFrame(view, (_, inFrame) => move(stage, running, view, inFrame)));
 }
 
-function arrive(stage: PageTransitions, running: Running): void {
-  if (stage.running !== running) {
-    return;
-  }
-  running.arrived = true;
-  standWhereTheCopyShowed(stage, running);
-  if (running.still) {
-    stage.finish();
-  }
-}
-
-function standWhereTheCopyShowed(stage: PageTransitions, running: Running): void {
-  const view = stage.document.defaultView;
-  const top = running.shownScrollY;
-  if (view !== null && top !== undefined && Math.abs(view.scrollY - top) > 1) {
-    view.scrollTo({ top, behavior: 'instant' });
-  }
-}
-
 function move(stage: PageTransitions, running: Running, view: Window, inFrame = false): void {
   const layer = stage.layer();
   if (stage.running !== running) {
@@ -173,21 +152,6 @@ function moveTo(
   const left = stage.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
   stage.dressChrome(running.overlay, left, shown);
   startMoving(stage, running, view, shown.box, kind);
-}
-
-function moveOver(
-  stage: PageTransitions,
-  running: Running,
-  view: Window,
-  leaving: KeptPage,
-  arriving: KeptPage,
-): void {
-  const left = stage.put(running.overlay, leaving, 'over');
-  const shown = stage.put(running.overlay, arriving, 'under');
-  left.scroll();
-  shown.scroll();
-  stage.dressChrome(running.overlay, stage.placedPage(running.overlay, 'over'), shown.page);
-  startMoving(stage, running, view, shown.page.box, 'task');
 }
 
 function startMoving(
@@ -407,7 +371,9 @@ function decideCorners(
 ): void {
   if (
     overlay.dataset['corners'] === undefined &&
-    overlay.querySelector(`.${PAGE_TRANSITION_CLASS}__page--over`) !== null
+    arriving !== null &&
+    overlay.querySelector(`.${PAGE_TRANSITION_CLASS}__page--over`) !== null &&
+    overlay.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under`) !== null
   ) {
     overlay.dataset['corners'] = String(
       leaving?.copy != null &&
@@ -637,32 +603,24 @@ function cover(stage: PageTransitions, event: GuardsCheckEnd): void {
   const left = { ...stage.shown(layer), sheet: kind === 'push' ? returningSheet : null };
   const overlay = stage.overlay(kind);
   if (kind === 'push') {
-    keepBehind(stage, stage.backTarget.nextDepth() - 1, { ...left, url: stage.router.url });
+    keepBehind(stage, stage.backTarget.nextDepth() - 1, left);
   }
   const behind =
     kind === 'pop' && stage.restoredDepth !== null ? stage.keptAt(stage.restoredDepth, view) : null;
   const sheet = behind?.sheet ?? null;
-  const ahead = behind?.copy != null && behind.url === event.urlAfterRedirects;
   const running: Running = {
     kind,
     overlay,
     swiping: false,
     sheet,
     fromSheet: kind === 'push' && returningSheet !== null,
-    shownScrollY: ahead ? behind.scrollY : undefined,
     revealed: false,
-    ahead,
   };
-  if (!ahead) {
-    const placed = stage.place(overlay, left, kind === 'push' ? 'under' : 'over');
-    stage.dressChrome(overlay, placed, null);
-  }
+  const placed = stage.place(overlay, left, kind === 'push' ? 'under' : 'over');
+  stage.dressChrome(overlay, placed, null);
   stage.running = running;
   stage.sheetUnder(sheet ?? left.sheet);
   stage.finishAfter(view, PAGE_COVER_LONGEST_MS);
-  if (ahead) {
-    moveOver(stage, running, view, left, behind);
-  }
 }
 
 function keepBehind(stage: PageTransitions, depth: number, page: KeptPage): void {
