@@ -192,6 +192,22 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
         })
         .toBe('notice');
       await expect(page.locator('#contact-name')).toBeFocused();
+      await page.evaluate(() => {
+        const moves: string[] = [];
+        Object.assign(window, { focusMoves: moves });
+        document.addEventListener(
+          'focusin',
+          (event) => {
+            const target = event.target as HTMLElement;
+            const host = target.closest('app-chunk-load-notice, app-tab-bar, header, main, nav');
+            const stack = (new Error().stack ?? '').split('\n').slice(2, 9).join(' < ');
+            moves.push(
+              `${target.tagName}#${target.id} "${target.textContent?.trim().slice(0, 30)}" in ${host?.tagName}: ${stack}`,
+            );
+          },
+          true,
+        );
+      });
     });
 
     test('and the keyboard comes up, then the notice steps aside for the field without moving the page, is still heard, and comes back when the keyboard goes down', async ({
@@ -208,6 +224,7 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
           visibleHeight: window.visualViewport?.height,
           standIn: 'standInKeyboard' in window,
           marked: document.documentElement.classList.contains('keyboard-open'),
+          focusMoves: (window as unknown as { focusMoves: string[] }).focusMoves,
         })),
       ).toEqual({
         focused: 'contact-name',
@@ -215,6 +232,7 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
         visibleHeight: SMALL_PHONE.height - KEYBOARD_HEIGHT,
         standIn: true,
         marked: true,
+        focusMoves: [],
       });
       await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toBeHidden();
       await expect(page.locator('#contact-name')).toBeFocused();
@@ -239,6 +257,7 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
           visibleHeight: window.visualViewport?.height,
           standIn: 'standInKeyboard' in window,
           marked: document.documentElement.classList.contains('keyboard-open'),
+          focusMoves: (window as unknown as { focusMoves: string[] }).focusMoves,
         })),
       ).toEqual({
         focused: 'contact-name',
@@ -246,6 +265,7 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
         visibleHeight: SMALL_PHONE.height - KEYBOARD_HEIGHT,
         standIn: true,
         marked: true,
+        focusMoves: [],
       });
       await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toBeHidden();
       await expect(page.locator('#contact-name')).toBeFocused();
