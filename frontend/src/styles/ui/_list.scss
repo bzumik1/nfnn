@@ -147,6 +147,11 @@ div.ui-list__row {
   margin-inline-start: var(--space-3);
 }
 
+.ui-list__state--note {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 .ui-list__extra {
   grid-column: title-start / -1;
 }
