@@ -168,7 +168,9 @@ export class PaymentPanel {
   protected readonly customAmount = signal<number | null>(
     this.initial.custom ? this.initial.amount : null,
   );
-  protected readonly customText = signal(this.initial.custom ? String(this.initial.amount) : '');
+  protected readonly customText = signal(
+    this.initial.custom ? formatCrowns(this.initial.amount) : '',
+  );
   private readonly customAmountLeft = signal(false);
   protected readonly drawnAmount = signal<number | null>(this.initial.amount);
   protected readonly redrawing = signal(false);
@@ -396,7 +398,10 @@ export class PaymentPanel {
 
   enterCustomAmount(event: Event): void {
     this.clearNotices();
-    const typed = wholeCrowns((event.target as HTMLInputElement).value);
+    const field = event.target as HTMLInputElement;
+    groupThousands(field);
+    this.customText.set(field.value);
+    const typed = wholeCrowns(field.value);
     this.customAmount.set(typed);
     const amount = wholeAmountInRange(typed);
     if (amount !== null) {
@@ -760,6 +765,36 @@ function initialChoice(
   return presets.some((preset) => preset.amount === remembered.amount)
     ? remembered
     : { amount: DEFAULT_AMOUNT, custom: false };
+}
+
+function groupThousands(field: HTMLInputElement): void {
+  const digits = field.value.replace(/\s/g, '');
+  if (!/^\d+$/.test(digits) || !Number.isSafeInteger(Number(digits))) {
+    return;
+  }
+  const grouped = formatCrowns(Number(digits));
+  if (grouped === field.value) {
+    return;
+  }
+  const caret = field.selectionStart ?? field.value.length;
+  const dropped = digits.length - grouped.replace(/\D/g, '').length;
+  const digitsBefore = Math.max(field.value.slice(0, caret).replace(/\D/g, '').length - dropped, 0);
+  field.value = grouped;
+  const position = positionAfterDigits(grouped, digitsBefore);
+  field.setSelectionRange(position, position);
+}
+
+function positionAfterDigits(text: string, count: number): number {
+  let seen = 0;
+  for (let index = 0; index < text.length; index++) {
+    if (seen === count) {
+      return index;
+    }
+    if (/\d/.test(text[index])) {
+      seen++;
+    }
+  }
+  return text.length;
 }
 
 function wholeCrowns(typed: string): number | null {
