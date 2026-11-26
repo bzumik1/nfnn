@@ -212,13 +212,12 @@ async function numbersSplitAcrossLines(element: Locator): Promise<string[]> {
 }
 
 async function lettersPastTheirCircle(circle: Locator, letters: Locator): Promise<number> {
-  await circle.evaluate(() => document.fonts.ready);
-  const circleBox: DOMRect = await circle.evaluate((element) =>
-    element.getBoundingClientRect().toJSON(),
-  );
-  return letters.evaluate((element, frame) => {
+  const lettersElement = await letters.elementHandle();
+  return circle.evaluate(async (element, inner) => {
+    await document.fonts.ready;
+    const frame = element.getBoundingClientRect();
     const range = document.createRange();
-    range.selectNodeContents(element);
+    range.selectNodeContents(inner);
     const box = range.getBoundingClientRect();
     const radius = frame.width / 2;
     const centreX = frame.left + radius;
@@ -230,7 +229,7 @@ async function lettersPastTheirCircle(circle: Locator, letters: Locator): Promis
       [box.right, box.bottom],
     ];
     return Math.max(...corners.map(([x, y]) => Math.hypot(x - centreX, y - centreY) - radius));
-  }, circleBox);
+  }, lettersElement);
 }
 
 async function headingsOffScreen(page: Page): Promise<string[]> {
