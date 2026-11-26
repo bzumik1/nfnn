@@ -1,0 +1,49 @@
+@use 'motion';
+
+:host {
+  display: block;
+  margin-block-start: calc(-1 * var(--space-2-5));
+  overflow-anchor: none;
+}
+
+:host(:empty) {
+  display: none;
+}
+
+.account-swap {
+  grid-template-rows: 1fr;
+}
+
+.account-swap > * {
+  min-height: 0;
+  min-inline-size: 0;
+}
+
+.account-swap > * > * {
+  margin-block-start: var(--space-2-5);
+}
+
+.account-action-fold > * {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.account-action {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.account-swap > * > .account-action--apart {
+  margin-block-start: calc(2 * var(--space-2-5));
+}
+
+.account-swap--opening {
+  @include motion.expand($closes-by: class);
+}
+
+.account-swap--closing {
+  @extend .account-swap--opening--closing;
+  display: grid;
+  transition-behavior: normal !important;
+}
