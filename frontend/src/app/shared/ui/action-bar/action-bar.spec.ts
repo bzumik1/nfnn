@@ -137,15 +137,21 @@ describe('Given a sticky action bar at the bottom of a page', () => {
     expect(writes).not.toHaveBeenCalled();
   });
 
-  it('when it goes away, then the page forgets it, stops watching and stops listening to the window and the bar', async () => {
+  it('when it goes away, then the page forgets it and stops watching', async () => {
+    fixture.componentInstance.shown.set(false);
+    await fixture.whenStable();
+
+    expect(document.documentElement.style.getPropertyValue('--action-bar-height')).toBe('');
+    expect(FakeResizeObserver.latest?.disconnected).toBe(true);
+  });
+
+  it('when it goes away, then it stops listening to the window and the bar', async () => {
     const removedFromWindow = vi.spyOn(window, 'removeEventListener');
     const removedFromBar = vi.spyOn(bar(), 'removeEventListener');
 
     fixture.componentInstance.shown.set(false);
     await fixture.whenStable();
 
-    expect(document.documentElement.style.getPropertyValue('--action-bar-height')).toBe('');
-    expect(FakeResizeObserver.latest?.disconnected).toBe(true);
     expect(removedFromWindow.mock.calls.map(([type]) => type).sort()).toEqual(
       ['focusin', 'pointercancel', 'pointerdown', 'pointerup', 'resize', 'scroll', 'wheel'].sort(),
     );
