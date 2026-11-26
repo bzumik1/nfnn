@@ -833,6 +833,6 @@ test.describe('Given a visitor on Přispět on an upright iPad', () => {
       }
       return [...byTop.entries()].sort(([a], [b]) => a - b).map(([, line]) => line.trim());
     });
-    expect(lines.at(-1), JSON.stringify(lines)).not.toMatch(/^[\d\s ]+Kč\.?$/);
+    expect(lines.at(-1), JSON.stringify(lines)).not.toMatch(/^[\d\s\u00a0]+Kč\.?$/);
   });
 });
