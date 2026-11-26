@@ -4,7 +4,7 @@
       class="account-action-fold account-swap"
       [class.account-swap--opening]="returning()"
       appDisclosure
-      animate.leave="account-swap--closing"
+      (animate.leave)="partLeaves($event)"
     >
       <div>
         @if (offered === 'reconnect') {
@@ -42,7 +42,7 @@
     role="group"
     [attr.aria-labelledby]="buttonId() + '-confirm'"
     appDisclosure
-    animate.leave="account-swap--closing"
+    (animate.leave)="partLeaves($event)"
   >
     <div>
       <div class="ui-confirm account-confirm-box">

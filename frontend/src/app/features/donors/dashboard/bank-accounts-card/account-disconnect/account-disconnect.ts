@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { BankAccountItem } from '../../../../donations/bank-accounts-api';
 import { Disclosure } from '../../../../../shared/ui/disclosure/disclosure';
+import { leaveWithClass } from '../../../../../shared/ui/leaving-row/leaving-row';
 import { NeedsConnection } from '../../../../../shared/ui/needs-connection/needs-connection';
 
 export type OfferedAccountAction = 'reconnect' | 'disconnect';
@@ -39,6 +40,8 @@ export class AccountDisconnect {
   readonly disconnectKept = output<void>();
 
   readonly returned = output<void>();
+
+  protected readonly partLeaves = leaveWithClass(CLOSING);
 
   private readonly renderer = inject(Renderer2);
   private readonly host: HTMLElement = inject(ElementRef<HTMLElement>).nativeElement;
