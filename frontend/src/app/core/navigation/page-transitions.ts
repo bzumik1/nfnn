@@ -68,6 +68,7 @@ export interface Running {
   readonly overlay: HTMLElement;
   readonly swiping: boolean;
   readonly sheet: HTMLElement | null;
+  readonly fromSheet?: boolean;
   revealed: boolean;
   stepped?: boolean;
   ahead?: boolean;
@@ -393,7 +394,15 @@ export class PageTransitions {
       kind === 'pop' && this.restoredDepth !== null ? this.keptAt(this.restoredDepth, view) : null;
     const sheet = behind?.sheet ?? null;
     const ahead = behind?.copy != null && behind.url === event.urlAfterRedirects;
-    const running: Running = { kind, overlay, swiping: false, sheet, revealed: false, ahead };
+    const running: Running = {
+      kind,
+      overlay,
+      swiping: false,
+      sheet,
+      fromSheet: kind === 'push' && returningSheet !== null,
+      revealed: false,
+      ahead,
+    };
     if (!ahead) {
       const placed = this.place(overlay, left, kind === 'push' ? 'under' : 'over');
       this.dressChrome(overlay, placed, null);
@@ -439,13 +448,15 @@ export class PageTransitions {
   }
 
   private moveOnceAnswered(running: Running, view: Window): void {
-    const left = this.dressing?.readsWaitLeftMs(this) ?? 0;
-    if (this.placement.isAnswered() || left <= 0) {
+    const waitsMs = running.fromSheet
+      ? PAGE_TRANSITION_LONGEST_MS
+      : Math.min(FRAME_LATE_MS, this.dressing?.readsWaitLeftMs(this) ?? 0);
+    if (this.placement.isAnswered() || waitsMs <= 0) {
       this.move(running, view);
       return;
     }
     void this.placement
-      .answered(view, Math.min(FRAME_LATE_MS, left))
+      .answered(view, waitsMs)
       .then(() => nextFrame(view, (_, inFrame) => this.move(running, view, inFrame)));
   }
 

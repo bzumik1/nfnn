@@ -399,6 +399,42 @@ describe('Given a phone that animates, whose router puts the scroll back, and ar
     );
   });
 
+  async function opensFromTheAccountSheet(url: string): Promise<() => void> {
+    const sheet = document.createElement('dialog');
+    sheet.textContent = 'Účet';
+    const stage = TestBed.inject(PageTransitions);
+    stage.sheets = { ...SHEET_STEPPING, standingSheetCopy: () => sheet };
+    const placed = TestBed.inject(PagePlacement).pending();
+    document.dispatchEvent(new Event('pointerdown'));
+    void router.navigateByUrl(url, { state: { [ACCOUNT_RETURNS_KEY]: '' } });
+    await vi.advanceTimersByTimeAsync(0);
+    layer.textContent = 'Načítáme stránku…';
+    return placed;
+  }
+
+  it('when a page opens from the account sheet and its reads answer long after the budget of 9 frames, then the step waits for them and the page slides in drawn, never empty (round 42)', async () => {
+    const placed = await opensFromTheAccountSheet('/aktuality/zahrada-pro-deti');
+    placed();
+    await vi.advanceTimersByTimeAsync(600);
+    expect(arrived, 'the page slid in before its reads were answered').toBeNull();
+
+    layer.textContent = 'Zahrada pro děti';
+    readsInFlight[0]();
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+
+    expect(arrived).toBe('Zahrada pro děti');
+  });
+
+  it('when a page opens from the account sheet and its reads never answer, then the page still slides in with its waiting line after the longest time of a step', async () => {
+    const placed = await opensFromTheAccountSheet('/aktuality/zahrada-pro-deti');
+    placed();
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS - 100);
+    expect(arrived).toBeNull();
+    await vi.advanceTimersByTimeAsync(100 + FRAME_LATE_MS);
+
+    expect(arrived).toBe('Načítáme stránku…');
+  });
+
   it('when the page is placed so late that waiting for its text would place the step later than 9 frames after the tap, then the article slides in at once with its waiting line', async () => {
     await opensPlacedAfter('/aktuality/zahrada-pro-deti', 250);
     await vi.advanceTimersByTimeAsync(5);
