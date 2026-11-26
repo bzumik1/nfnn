@@ -143,6 +143,8 @@ describe('Given floating bars at the bottom of the screen', () => {
     const BAR_TOP = 720;
     const BAR_GAP = 16;
     const BAND_TOP = 88;
+    const RING_REACH = 5;
+    const scrollMargins = new WeakMap<Element, number>();
 
     const placedAt = <T extends HTMLElement>(element: T, top: number, bottom: number): T => {
       Object.defineProperty(element, 'getBoundingClientRect', {
@@ -167,7 +169,7 @@ describe('Given floating bars at the bottom of the screen', () => {
         getComputedStyle: (element: Element) => ({
           bottom: `${BAR_GAP}px`,
           scrollPaddingTop: element === root ? `${BAND_TOP}px` : '0px',
-          scrollMarginTop: '0px',
+          scrollMarginTop: `${scrollMargins.get(element) ?? 0}px`,
         }),
       };
       const page = {
@@ -260,7 +262,18 @@ describe('Given floating bars at the bottom of the screen', () => {
       expect(scrolls).toEqual([{ top: 300 - BAND_TOP, behavior: 'instant' }]);
     });
 
-    it('when a control whose top stands just below the header and whose bottom reaches under the bar takes the focus, then the page does not move', () => {
+    it('when a taller control that keeps room for its focus ring above it takes the focus with its bottom under the bar, then the page scrolls only until the top of that room reaches the top of the visible band', () => {
+      const { scrolls, focus, nextFrame } = pageWithFocus();
+      const tall = control(300, 1000);
+      scrollMargins.set(tall, RING_REACH);
+
+      focus(tall);
+      nextFrame();
+
+      expect(scrolls).toEqual([{ top: 300 - BAND_TOP - RING_REACH, behavior: 'instant' }]);
+    });
+
+    it('when a control whose top already stands above the top of the visible band, inside the scroll padding under the header, and whose bottom reaches under the bar takes the focus, then the page does not move', () => {
       const { scrolls, focus, nextFrame } = pageWithFocus();
 
       focus(control(58, 940));
