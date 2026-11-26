@@ -23,6 +23,7 @@ import { Connectivity } from '../../../core/connectivity/connectivity';
 import { formatDataDay } from '../../../core/connectivity/data-time';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ShortViewport } from '../../../core/layout/short-viewport';
+import { SoftKeyboard, VisibleArea } from '../../../core/layout/soft-keyboard';
 import { BusyButton } from '../../../shared/ui/busy-button/busy-button';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
@@ -65,6 +66,7 @@ const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
 const MINOR_PER_CROWN = 100;
 const ANNOUNCE_DELAY_MS = 1200;
+const ROOM_ABOVE_KEYBOARD_PX = 16;
 const PAYMENT_QR_LEVEL = 'H';
 const SAVED_QR_SIDE_PX = 720;
 const CHOOSING_KEYS = new Set(['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End']);
@@ -135,6 +137,7 @@ export class PaymentPanel {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly compact = inject(CompactLayout).isCompact;
   private readonly short = inject(ShortViewport).isShort;
+  private readonly keyboard = inject(SoftKeyboard);
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
   private readonly qrBox = viewChild<ElementRef<HTMLElement>>('qrBox');
   private readonly bankApp = viewChild<ElementRef<HTMLElement>>('bankApp');
@@ -168,7 +171,9 @@ export class PaymentPanel {
   protected readonly customAmount = signal<number | null>(
     this.initial.custom ? this.initial.amount : null,
   );
-  protected readonly customText = signal(this.initial.custom ? String(this.initial.amount) : '');
+  protected readonly customText = signal(
+    this.initial.custom ? formatCrowns(this.initial.amount) : '',
+  );
   private readonly customAmountLeft = signal(false);
   protected readonly drawnAmount = signal<number | null>(this.initial.amount);
   protected readonly redrawing = signal(false);
@@ -177,6 +182,9 @@ export class PaymentPanel {
   protected readonly retrying = signal(false);
   protected readonly failedAttempts = signal(0);
   private choosingByKey = false;
+  private amountPressed = false;
+  private revealPending = false;
+  private deletingSelection = false;
   private readonly announced = signal<number | null>(null);
   private lastAnnounced: number | null = null;
   private retried = false;
@@ -336,6 +344,11 @@ export class PaymentPanel {
     effect(() => this.focusAfterRetry(this.state().kind, this.openReady()));
     afterRenderEffect(() => this.prepareImage());
     effect(() => this.giftArrival.enable(this.variableSymbol() !== null));
+    effect(() => {
+      if (this.keyboard.visibleArea() !== null) {
+        untracked(() => this.revealCustomAmountOnce());
+      }
+    });
     whenLeft(() => this.giftArrival.pageLeft());
     afterNextRender(() => {
       const qrBox = this.qrBox();
@@ -356,6 +369,7 @@ export class PaymentPanel {
   }
 
   choosePreset(amount: number): void {
+    this.amountPressed = false;
     this.clearNotices();
     this.customChosen.set(false);
     this.presetAmount.set(amount);
@@ -365,6 +379,7 @@ export class PaymentPanel {
   }
 
   chooseCustomAmount(): void {
+    this.amountPressed = false;
     if (!this.customChosen()) {
       this.openCustomAmount();
     }
@@ -396,7 +411,25 @@ export class PaymentPanel {
 
   enterCustomAmount(event: Event): void {
     this.clearNotices();
-    const typed = wholeCrowns((event.target as HTMLInputElement).value);
+    this.amountPressed = false;
+    const field = event.target as HTMLInputElement;
+    const typing = event as InputEvent;
+    const deletion = typing.inputType;
+    const deletedSelection = this.deletingSelection;
+    this.deletingSelection = false;
+    if (!typing.isComposing) {
+      if (
+        !deletedSelection &&
+        (deletion === 'deleteContentForward' || deletion === 'deleteContentBackward') &&
+        /^[\d\s]+$/.test(this.customText()) &&
+        digitsOf(field.value) === digitsOf(this.customText())
+      ) {
+        removeDigitBesideCaret(field, deletion === 'deleteContentForward');
+      }
+      groupThousands(field);
+    }
+    this.customText.set(field.value);
+    const typed = wholeCrowns(field.value);
     this.customAmount.set(typed);
     const amount = wholeAmountInRange(typed);
     if (amount !== null) {
@@ -406,8 +439,30 @@ export class PaymentPanel {
     this.announceAfterQuiet();
   }
 
+  noteAmountPress(): void {
+    this.amountPressed = true;
+  }
+
+  forgetAmountPress(): void {
+    this.amountPressed = false;
+  }
+
+  customAmountFocused(): void {
+    this.amountPressed = false;
+    this.revealPending = true;
+    this.revealCustomAmountOnce();
+  }
+
+  noteDeletion(event: Event): void {
+    const field = event.target as HTMLInputElement;
+    this.deletingSelection = field.selectionStart !== field.selectionEnd;
+  }
+
   leaveCustomAmount(): void {
-    this.customAmountLeft.set(true);
+    this.revealPending = false;
+    if (!this.amountPressed) {
+      this.customAmountLeft.set(true);
+    }
   }
 
   focusBankDetails(): void {
@@ -588,6 +643,30 @@ export class PaymentPanel {
     qrCode.pngBlob(SAVED_QR_SIDE_PX).then(keep, () => keep(null));
   }
 
+  private revealCustomAmountOnce(): void {
+    const area = this.keyboard.visibleArea();
+    const field = this.customAmountField()?.nativeElement;
+    if (!this.revealPending || area === null || !field) {
+      return;
+    }
+    this.revealPending = false;
+    if (field.ownerDocument.activeElement === field && field.closest('dialog') === null) {
+      this.revealAboveKeyboard(field, area);
+    }
+  }
+
+  private revealAboveKeyboard(field: HTMLInputElement, area: VisibleArea): void {
+    const root = field.ownerDocument.documentElement;
+    const box = field.getBoundingClientRect();
+    const covered = box.bottom - (area.top + area.height - ROOM_ABOVE_KEYBOARD_PX);
+    if (covered <= 0) {
+      return;
+    }
+    const headerRoom = Number.parseFloat(getComputedStyle(root).scrollPaddingTop) || 0;
+    const room = box.top - (area.top + headerRoom);
+    root.scrollBy({ top: Math.min(covered, Math.max(room, 0)), behavior: 'instant' });
+  }
+
   private redrawLater(): void {
     const delay = this.loadingTimings()?.delayMs ?? 0;
     if (delay <= 0) {
@@ -760,6 +839,54 @@ function initialChoice(
   return presets.some((preset) => preset.amount === remembered.amount)
     ? remembered
     : { amount: DEFAULT_AMOUNT, custom: false };
+}
+
+function groupThousands(field: HTMLInputElement): void {
+  const digits = field.value.replace(/\s/g, '');
+  if (!/^\d+$/.test(digits)) {
+    return;
+  }
+  const grouped = digits.replace(/\B(?=(\d{3})+$)/g, '\u00a0');
+  if (grouped === field.value) {
+    return;
+  }
+  const caret = field.selectionStart ?? field.value.length;
+  const digitsBefore = digitsOf(field.value.slice(0, caret)).length;
+  field.value = grouped;
+  const position = positionAfterDigits(grouped, digitsBefore);
+  field.setSelectionRange(position, position);
+}
+
+function digitsOf(text: string): string {
+  return text.replace(/\D/g, '');
+}
+
+function removeDigitBesideCaret(field: HTMLInputElement, forward: boolean): void {
+  const text = field.value;
+  const caret = field.selectionStart ?? text.length;
+  const step = forward ? 1 : -1;
+  let index = forward ? caret : caret - 1;
+  while (index >= 0 && index < text.length && !/\d/.test(text[index])) {
+    index += step;
+  }
+  if (index < 0 || index >= text.length) {
+    return;
+  }
+  field.value = text.slice(0, index) + text.slice(index + 1);
+  field.setSelectionRange(index, index);
+}
+
+function positionAfterDigits(text: string, count: number): number {
+  let seen = 0;
+  for (let index = 0; index < text.length; index++) {
+    if (seen === count) {
+      return index;
+    }
+    if (/\d/.test(text[index])) {
+      seen++;
+    }
+  }
+  return text.length;
 }
 
 function wholeCrowns(typed: string): number | null {

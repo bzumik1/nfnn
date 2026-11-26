@@ -14,6 +14,8 @@
           [class.active]="!customChosen() && presetAmount() === preset.amount"
           [attr.aria-checked]="!customChosen() && presetAmount() === preset.amount"
           [tabindex]="!customChosen() && presetAmount() === preset.amount ? 0 : -1"
+          (pointerdown)="noteAmountPress()"
+          (pointercancel)="forgetAmountPress()"
           (click)="choosePreset(preset.amount)"
         >
           {{ preset.label }}
@@ -26,6 +28,8 @@
         [class.active]="customChosen()"
         [attr.aria-checked]="customChosen()"
         [tabindex]="customChosen() ? 0 : -1"
+        (pointerdown)="noteAmountPress()"
+        (pointercancel)="forgetAmountPress()"
         (click)="chooseCustomAmount()"
         i18n="@@home.donate.amount.other"
       >
@@ -33,41 +37,48 @@
       </button>
     </div>
 
-    @if (customChosen()) {
-      <div class="custom-amount">
-        <label
-          [for]="customAmountId()"
-          class="visually-hidden"
-          i18n="@@home.donate.amount.customLabel"
-          >Vlastní částka v korunách</label
-        >
-        <input
-          #customAmountField
-          [id]="customAmountId()"
-          type="text"
-          inputmode="numeric"
-          enterkeyhint="done"
-          autocomplete="off"
-          [value]="customText()"
-          [attr.aria-invalid]="showAmountHint()"
-          [attr.aria-describedby]="customAmountDescription()"
-          (input)="enterCustomAmount($event)"
-          (blur)="leaveCustomAmount()"
-          (keydown.enter)="finishCustomAmount()"
-        />
-        <span class="custom-amount-currency" aria-hidden="true" i18n="@@home.donate.amount.currency"
-          >Kč</span
-        >
-        <span class="visually-hidden" [id]="redrawHintId()" i18n="@@home.donate.qr.redrawHint"
-          >QR kód se překreslí, když přestanete psát.</span
-        >
-      </div>
-      @if (showAmountHint()) {
-        <p class="amount-hint" [id]="amountHintId()" i18n="@@home.donate.amount.invalid">
-          Zadejte celou částku od 1 do 1 000 000&nbsp;Kč.
-        </p>
+    <app-fold [open]="customChosen()">
+      @if (customChosen()) {
+        <div class="custom-amount">
+          <label
+            [for]="customAmountId()"
+            class="visually-hidden"
+            i18n="@@home.donate.amount.customLabel"
+            >Vlastní částka v korunách</label
+          >
+          <input
+            #customAmountField
+            [id]="customAmountId()"
+            type="text"
+            inputmode="numeric"
+            enterkeyhint="done"
+            autocomplete="off"
+            [value]="customText()"
+            [attr.aria-invalid]="showAmountHint()"
+            [attr.aria-describedby]="customAmountDescription()"
+            (beforeinput)="noteDeletion($event)"
+            (input)="enterCustomAmount($event)"
+            (focus)="customAmountFocused()"
+            (blur)="leaveCustomAmount()"
+            (keydown.enter)="finishCustomAmount()"
+          />
+          <span
+            class="custom-amount-currency"
+            aria-hidden="true"
+            i18n="@@home.donate.amount.currency"
+            >Kč</span
+          >
+          <span class="visually-hidden" [id]="redrawHintId()" i18n="@@home.donate.qr.redrawHint"
+            >QR kód se překreslí, když přestanete psát.</span
+          >
+        </div>
+        @if (showAmountHint()) {
+          <p class="amount-hint" [id]="amountHintId()" i18n="@@home.donate.amount.invalid">
+            Zadejte celou částku od 1 do 1 000 000&nbsp;Kč.
+          </p>
+        }
       }
-    }
+    </app-fold>
   </div>
 
   <ng-content />
@@ -86,9 +97,10 @@
         </p>
         <div class="bank-rows">
           <div class="bank-row">
-            <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>&ngsp;
+            <span class="bank-key ui-detail-key" i18n="@@home.donate.bank.account">Číslo účtu</span
+            >&ngsp;
             <span class="bank-value-wrap">
-              <span class="bank-value ui-figures"
+              <span class="bank-value ui-detail-value ui-figures"
                 >{{ accountParts(account.number).head }}<wbr />{{
                   accountParts(account.number).bankCode
                 }}</span
@@ -103,9 +115,10 @@
           </div>
           @if (drawnAmount(); as chosen) {
             <div #amountRow class="bank-row bank-row-amount" [class.is-changed]="amountTinted()">
-              <span class="bank-key" i18n="@@home.donate.bank.amount">Částka</span>&ngsp;
+              <span class="bank-key ui-detail-key" i18n="@@home.donate.bank.amount">Částka</span
+              >&ngsp;
               <span class="bank-value-wrap">
-                <span class="bank-value ui-figures"
+                <span class="bank-value ui-detail-value ui-figures"
                   >{{ crowns(chosen) }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
                     >Kč</ng-container
                   ></span
@@ -121,9 +134,11 @@
           }
           @if (variableSymbol(); as symbol) {
             <div class="bank-row">
-              <span class="bank-key" i18n="@@home.donate.bank.vs">Variabilní symbol</span>&ngsp;
+              <span class="bank-key ui-detail-key" i18n="@@home.donate.bank.vs"
+                >Variabilní symbol</span
+              >&ngsp;
               <span class="bank-value-wrap">
-                <span class="bank-value ui-figures">{{ symbol }}</span>
+                <span class="bank-value ui-detail-value ui-figures">{{ symbol }}</span>
                 <app-copy-button
                   [value]="symbol"
                   what="variabilní symbol"
@@ -134,9 +149,9 @@
             </div>
           }
           <div class="bank-row">
-            <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>&ngsp;
+            <span class="bank-key ui-detail-key" i18n="@@home.donate.bank.iban">IBAN</span>&ngsp;
             <span class="bank-value-wrap">
-              <span class="bank-value ui-figures ui-figures--groups"
+              <span class="bank-value ui-detail-value ui-figures ui-figures--groups"
                 ><span class="iban-half">{{ ibanLines()[0] }}</span
                 >&ngsp;<span class="iban-half">{{ ibanLines()[1] }}</span></span
               >
@@ -162,21 +177,17 @@
         }
       } @else {
         <div #pendingCard class="bank-pending" tabindex="-1">
-          <div
-            class="bank-skeleton"
-            [class.is-shown]="detailsLoading() && loadView.skeleton()"
-            [class.is-held]="detailsFailed()"
-          >
-            <div aria-hidden="true">
-              <p class="panel-label">
-                <span class="bank-skeleton-line bank-skeleton-label"></span>
-              </p>
-              <div class="bank-rows">
-                @for (row of skeletonRows(); track row) {
-                  <div class="bank-row">
-                    <span class="bank-key"
-                      ><span class="bank-skeleton-line">
-                        @if (!detailsFailed()) {
+          @if (!detailsFailed()) {
+            <div class="bank-skeleton" [class.is-shown]="detailsLoading() && loadView.skeleton()">
+              <div aria-hidden="true">
+                <p class="panel-label">
+                  <span class="bank-skeleton-line bank-skeleton-label"></span>
+                </p>
+                <div class="bank-rows">
+                  @for (row of skeletonRows(); track row) {
+                    <div class="bank-row">
+                      <span class="bank-key ui-detail-key"
+                        ><span class="bank-skeleton-line">
                           <span>
                             @switch (row) {
                               @case ('account') {
@@ -197,58 +208,56 @@
                               }
                             }
                           </span>
-                        }
-                      </span></span
-                    >
-                    <span class="bank-value-wrap">
-                      @if (row === 'iban') {
-                        <span class="bank-value ui-figures ui-figures--groups"
-                          ><span class="bank-skeleton-line">
-                            @if (!detailsFailed()) {
+                        </span></span
+                      >
+                      <span class="bank-value-wrap">
+                        @if (row === 'iban') {
+                          <span class="bank-value ui-detail-value ui-figures ui-figures--groups"
+                            ><span class="bank-skeleton-line">
                               <span>{{ skeletonIban }}</span>
-                            }
-                          </span></span
+                            </span></span
+                          >
+                        } @else {
+                          <span class="bank-value ui-detail-value"
+                            ><span class="bank-skeleton-line bank-skeleton-value"></span
+                          ></span>
+                        }
+                        <span class="ui-pill-button bank-skeleton-pill"
+                          ><span i18n="@@ui.copy.action">Kopírovat</span></span
                         >
-                      } @else {
-                        <span class="bank-value"
-                          ><span class="bank-skeleton-line bank-skeleton-value"></span
-                        ></span>
+                      </span>
+                    </div>
+                  }
+                </div>
+              </div>
+              @if (qrInBankDetails()) {
+                <div class="qr">
+                  <div class="qr-code">
+                    <div
+                      class="qr-placeholder"
+                      [class.qr-placeholder-loading]="detailsLoading() && loadView.skeleton()"
+                    >
+                      @if (detailsLoading()) {
+                        <span role="status" i18n="@@home.donate.qr.loading"
+                          >Připravujeme QR kód…</span
+                        >
                       }
-                      <span class="ui-pill-button bank-skeleton-pill"
-                        ><span i18n="@@ui.copy.action">Kopírovat</span></span
-                      >
-                    </span>
+                    </div>
                   </div>
-                }
-              </div>
+                  <div class="qr-text" aria-hidden="true">
+                    <p class="qr-title">
+                      <span class="bank-skeleton-line bank-skeleton-label"></span>
+                    </p>
+                    <p class="qr-desc">
+                      <span class="bank-skeleton-line"></span>
+                      <span class="bank-skeleton-line"></span>
+                      <span class="bank-skeleton-line bank-skeleton-value"></span>
+                    </p>
+                  </div>
+                </div>
+              }
             </div>
-            @if (qrInBankDetails()) {
-              <div class="qr">
-                <div class="qr-code">
-                  <div
-                    class="qr-placeholder"
-                    [class.qr-placeholder-loading]="detailsLoading() && loadView.skeleton()"
-                  >
-                    @if (detailsLoading()) {
-                      <span role="status" i18n="@@home.donate.qr.loading"
-                        >Připravujeme QR kód…</span
-                      >
-                    }
-                  </div>
-                </div>
-                <div class="qr-text" aria-hidden="true">
-                  <p class="qr-title">
-                    <span class="bank-skeleton-line bank-skeleton-label"></span>
-                  </p>
-                  <p class="qr-desc">
-                    <span class="bank-skeleton-line"></span>
-                    <span class="bank-skeleton-line"></span>
-                    <span class="bank-skeleton-line bank-skeleton-value"></span>
-                  </p>
-                </div>
-              </div>
-            }
-          </div>
+          }
           @if (detailsFailed()) {
             <div class="bank-failure">
               @for (attempt of [failedAttempts()]; track attempt) {

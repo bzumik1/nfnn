@@ -14,7 +14,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  column-gap: var(--space-4);
+  gap: var(--space-1) var(--space-4);
 
   dt {
     flex: 0 0 6.5rem;
@@ -23,9 +23,10 @@
   dd {
     flex: 1 1 21rem;
     min-width: 0;
+    overflow-wrap: anywhere;
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: var(--space-4) var(--space-3);
   }
@@ -45,6 +46,7 @@
 
 .accounting-value {
   flex: 1 1 10rem;
+  padding-block: max(0rem, (2rem - 1lh) / 2);
   text-wrap: balance;
 }
 
@@ -58,12 +60,9 @@
   }
 }
 
-.accounting-item app-copy-button {
-  translate: 0 calc(0.5lh - 50%);
-}
-
 .accounting-link {
   color: var(--color-accent);
+  font-size: var(--text-md);
   font-weight: var(--weight-semibold);
 }
 
