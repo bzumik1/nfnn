@@ -123,7 +123,26 @@ export async function probeTheReveal(page: Page, info: TestInfo): Promise<void> 
         attributeFilter: ['class'],
         attributeOldValue: true,
       });
+      new ResizeObserver(() =>
+        log.push({
+          t: now(),
+          ev: 'page-size',
+          scrollHeight: document.documentElement.scrollHeight,
+          scrollY,
+        }),
+      ).observe(document.body);
     });
+    for (const type of ['loading', 'loadingdone', 'loadingerror'] as const) {
+      document.fonts.addEventListener(type, (event) =>
+        log.push({
+          t: now(),
+          ev: `fonts-${type}`,
+          faces: (event as FontFaceSetLoadEvent).fontfaces.map(
+            (face) => `${face.family} ${face.weight} ${face.style} ${face.unicodeRange}`,
+          ),
+        }),
+      );
+    }
     addEventListener('scroll', () => log.push({ t: now(), ev: 'scroll', scrollY }), {
       capture: true,
       passive: true,

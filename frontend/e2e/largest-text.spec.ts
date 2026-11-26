@@ -1413,7 +1413,9 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
     });
 
     test.describe('probe 2055', () => {
-      for (const round of Array.from({ length: 20 }, (_, index) => index + 1)) {
+      for (const round of reducedMotion === 'reduce'
+        ? Array.from({ length: 60 }, (_, index) => index + 1)
+        : []) {
         test(`when they remove their only passkey, then the result is brought into view (probe round ${round})`, async ({
           page,
         }) => {
