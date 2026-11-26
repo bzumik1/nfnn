@@ -11,6 +11,7 @@ import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessi
 import { deviceNameInSentence } from './device-labels';
 import { DevicesCard } from './devices-card';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
+import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
 import { leavesAsInTheBrowser } from '../../../../shared/ui/leaving-row/testing/leaves-as-in-the-browser';
 
 function expectLockedInPlace(button: HTMLButtonElement): void {
@@ -163,6 +164,20 @@ describe("Given a donor's signed-in devices card", () => {
       await listed([THIS_MAC, IPHONE, UNKNOWN]);
     });
 
+    it('and the card is destroyed while a signed-out row leaves, then the leave it follows is forgotten, so no watch of it outlives the card', async () => {
+      await ask(signOutButton(rows()[1]));
+      await confirmSignOut();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      const forget = vi.spyOn(FocusAfterRowLeaves.prototype, 'forget');
+      onTestFinished(() => forget.mockRestore());
+
+      fixture.destroy();
+
+      expect(forget).toHaveBeenCalledOnce();
+    });
+
     it('then each row names the device, the browser, the kind of sign-in and the times in Prague', () => {
       expect(rows().map((row) => text(row.querySelector('.device-name')))).toEqual([
         'Mac · Firefox',
@@ -249,6 +264,20 @@ describe("Given a donor's signed-in devices card", () => {
       expect(rows()).toHaveLength(3);
       expect(document.activeElement).toBe(signOutButton(rows()[1]));
       http.expectNone({ method: 'DELETE' });
+    });
+
+    it('and the donor cancels the question, then the iPhone’s Odhlásit is brought into view once the question has closed, as nothing else brings it back', async () => {
+      await ask(signOutButton(rows()[1]));
+      const revealed: unknown[] = [];
+      signOutButton(rows()[1])!.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+        revealed.push(options);
+      };
+
+      element<HTMLButtonElement>('.devices-confirm-no').click();
+      await settle();
+
+      await vi.waitFor(() => expect(revealed).toEqual([{ block: 'nearest', behavior: 'smooth' }]));
+      expect(document.activeElement).toBe(signOutButton(rows()[1]));
     });
 
     it('and the donor cancels the question, then only the iPhone’s Odhlásit unfolds back, while the list drew every Odhlásit unfolded', async () => {
