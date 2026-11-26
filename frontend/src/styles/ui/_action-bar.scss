@@ -75,3 +75,20 @@ html:has(app-root app-tab-bar) {
     font-size: var(--text-sm);
   }
 }
+
+.ui-action-bar.ui-action-bar--in-flow {
+  position: static;
+}
+
+.ui-action-bar.ui-action-bar--resting {
+  margin-inline: 0;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.ui-grouped .ui-action-bar.ui-action-bar--resting {
+  border-color: transparent;
+  border-radius: var(--radius-group);
+  background: var(--color-group-cell);
+  box-shadow: var(--shadow-group);
+}

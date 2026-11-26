@@ -104,8 +104,8 @@ describe('Given a sticky action bar at the bottom of a page', () => {
     expect(bar().classList).not.toContain('ui-action-bar--resting');
   });
 
-  it('when it grows taller than a quarter of the screen, then it stays in the page instead of covering the fields and the page reserves no room for it', async () => {
-    height = Math.ceil(window.innerHeight / 4) + 1;
+  it('when it grows taller than a third of the screen, then it stays in the page instead of covering the fields and the page reserves no room for it', async () => {
+    height = Math.ceil(window.innerHeight / 3) + 1;
     FakeResizeObserver.latest?.callback();
     await fixture.whenStable();
 
@@ -114,11 +114,11 @@ describe('Given a sticky action bar at the bottom of a page', () => {
     expect(document.documentElement.style.getPropertyValue('--action-bar-height')).toBe('0px');
   });
 
-  it('when it shrinks back to a quarter of the screen, then it floats again', async () => {
-    height = Math.ceil(window.innerHeight / 4) + 1;
+  it('when it shrinks back to a third of the screen, then it floats again', async () => {
+    height = Math.ceil(window.innerHeight / 3) + 1;
     FakeResizeObserver.latest?.callback();
     await fixture.whenStable();
-    height = Math.floor(window.innerHeight / 4);
+    height = Math.floor(window.innerHeight / 3);
     FakeResizeObserver.latest?.callback();
     await fixture.whenStable();
 
