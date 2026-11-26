@@ -118,6 +118,52 @@ async function untilAtRest(dialog: Locator): Promise<void> {
     .toBe(0);
 }
 
+interface HeightFrame {
+  readonly height: number;
+  readonly moving: boolean;
+}
+
+function heightsUntilAtRest(element: Locator): Promise<HeightFrame[]> {
+  return element.evaluate(
+    (watched) =>
+      new Promise<HeightFrame[]>((resolve) => {
+        const frames: HeightFrame[] = [];
+        const started = performance.now();
+        let moved = false;
+        let stillFrames = 0;
+        const sample = () => {
+          const moving = watched
+            .getAnimations({ subtree: true })
+            .some((motion) => motion.playState === 'running');
+          frames.push({ height: watched.getBoundingClientRect().height, moving });
+          moved ||= moving;
+          stillFrames = moving ? 0 : stillFrames + 1;
+          if ((moved && stillFrames >= 3) || performance.now() - started > 3000) {
+            resolve(frames);
+            return;
+          }
+          requestAnimationFrame(sample);
+        };
+        sample();
+      }),
+  );
+}
+
+function stepsAgainst(frames: HeightFrame[], direction: 'grows' | 'shrinks'): number[] {
+  return frames
+    .slice(1)
+    .map((frame, index) => frame.height - frames[index].height)
+    .filter((step) => (direction === 'grows' ? step < -0.5 : step > 0.5));
+}
+
+function stepsAfterTheMotion(frames: HeightFrame[]): number[] {
+  const lastMoving = frames.map((frame) => frame.moving).lastIndexOf(true);
+  return frames
+    .slice(lastMoving + 1)
+    .map((frame) => frame.height - frames[lastMoving].height)
+    .filter((step) => Math.abs(step) > 0.5);
+}
+
 async function openBankAccounts(page: Page, width: number): Promise<Locator> {
   await signInOnPhone(page, width);
   await openAccountItem(page, 'Bankovní účty');
@@ -459,4 +505,56 @@ test.describe('Given a signed-in donor adding a bank account on a wide screen', 
     await expect.poll(() => numbersBrokenAcrossLines(dialog)).toEqual([]);
     expect(await copyButtonsOffTheRightEdge(dialog)).toEqual([]);
   });
+});
+
+test.describe('Given a signed-in donor with a verified bank account on a computer', () => {
+  for (const width of [1280, 900]) {
+    test(`when Nepřiřazovat platby z tohoto účtu asks and Ponechat answers ${width} px wide, then the account row only grows while the question opens, only shrinks while it closes and stands still once the motion ends`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donations/me/bank-accounts',
+        (route) => route.fulfill({ json: { items: ACCOUNTS } }),
+      );
+      await signIn(page);
+      await page.setViewportSize({ width, height: 900 });
+      await openDonorSection(page, 'Bankovní účty');
+      const row = page
+        .locator('.account')
+        .filter({
+          has: page.getByRole('button', { name: /Nepřiřazovat platby z\stohoto účtu/ }),
+        })
+        .first();
+      await expect(row).toBeVisible();
+      await untilAtRest(row);
+
+      const asking = heightsUntilAtRest(row);
+      await row.getByRole('button', { name: /Nepřiřazovat platby z\stohoto účtu/ }).click();
+      const opening = await asking;
+      await expect(row.getByRole('button', { name: 'Ponechat' })).toBeFocused();
+
+      const answering = heightsUntilAtRest(row);
+      await row.getByRole('button', { name: 'Ponechat' }).click();
+      const closing = await answering;
+      await expect(
+        row.getByRole('button', { name: /Nepřiřazovat platby z\stohoto účtu/ }),
+      ).toBeFocused();
+
+      expect(opening.some((frame) => frame.moving)).toBe(true);
+      expect(closing.some((frame) => frame.moving)).toBe(true);
+      expect({
+        opening: stepsAgainst(opening, 'grows'),
+        openingAfterTheMotion: stepsAfterTheMotion(opening),
+        closing: stepsAgainst(closing, 'shrinks'),
+        closingAfterTheMotion: stepsAfterTheMotion(closing),
+      }).toEqual({
+        opening: [],
+        openingAfterTheMotion: [],
+        closing: [],
+        closingAfterTheMotion: [],
+      });
+      expect(Math.abs(closing.at(-1)!.height - opening[0].height)).toBeLessThanOrEqual(0.5);
+    });
+  }
 });
