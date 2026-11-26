@@ -545,16 +545,18 @@ test.describe('Given an administrator who asks for less motion and whose saved s
   });
 });
 
-for (const { name, viewport, rootPx } of [
+for (const { name, viewport, rootPx, barFloats } of [
   {
     name: 'a computer 1280 × 720 with the text at 200 %',
     viewport: { width: 1280, height: 720 },
     rootPx: 32,
+    barFloats: true,
   },
   {
     name: 'an iPhone 375 pt wide with the largest accessibility text',
     viewport: { width: 375, height: 667 },
     rootPx: 53,
+    barFloats: false,
   },
 ]) {
   test.describe(`Given an administrator on ${name} changing a setting`, () => {
@@ -576,26 +578,43 @@ for (const { name, viewport, rootPx } of [
       );
     });
 
-    test('when they press Uložit nastavení and the question grows the action bar, then Zrušit keeps the focus inside the screen', async ({
-      page,
-    }) => {
-      await openUnlockedAdministrationPage(page, '/sprava/nastaveni', 'Nastavení');
-      await page.locator('#setting-RECEIPT_FIRST_YEAR').fill('2025');
-      await page.getByRole('button', { name: 'Uložit nastavení' }).click();
+    for (const { way, save } of [
+      {
+        way: 'press Uložit nastavení',
+        save: (page: Page) => page.getByRole('button', { name: 'Uložit nastavení' }).click(),
+      },
+      {
+        way: 'press Enter in the field',
+        save: (page: Page) => page.locator('#setting-RECEIPT_FIRST_YEAR').press('Enter'),
+      },
+    ]) {
+      test(`when they ${way} and the question grows the action bar, then Zrušit keeps the focus inside the screen ${barFloats ? 'on the floating bar' : 'on the bar that moved into the page'}`, async ({
+        page,
+      }) => {
+        await openUnlockedAdministrationPage(page, '/sprava/nastaveni', 'Nastavení');
+        await page.locator('#setting-RECEIPT_FIRST_YEAR').fill('2025');
+        await save(page);
 
-      const cancel = page.getByRole('group', { name: 'Uložit nastavení?' }).getByRole('button', {
-        name: 'Zrušit',
+        const cancel = page
+          .getByRole('group', { name: 'Uložit nastavení?' })
+          .getByRole('button', { name: 'Zrušit' });
+        await expect(cancel).toBeFocused();
+        await page.evaluate(
+          () =>
+            new Promise<void>((done) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => done())),
+            ),
+        );
+
+        const bar = page.locator('.ui-action-bar');
+        if (barFloats) {
+          await expect(bar).not.toHaveClass(/ui-action-bar--in-flow/);
+        } else {
+          await expect(bar).toHaveClass(/ui-action-bar--in-flow/);
+        }
+        await expect(cancel).toBeFocused();
+        await expect(cancel).toBeInViewport({ ratio: 1 });
       });
-      await expect(cancel).toBeFocused();
-      await page.evaluate(
-        () =>
-          new Promise<void>((done) =>
-            requestAnimationFrame(() => requestAnimationFrame(() => done())),
-          ),
-      );
-
-      await expect(cancel).toBeFocused();
-      await expect(cancel).toBeInViewport({ ratio: 1 });
-    });
+    }
   });
 }

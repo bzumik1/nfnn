@@ -155,10 +155,16 @@ test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide
   });
 });
 
-const WIDE_PHONE = { width: 420, height: 746 };
+const PHONES_AT_DEFAULT_TEXT = [
+  { width: 420, height: 746 },
+  { width: 390, height: 700 },
+  { width: 375, height: 667 },
+];
 
 interface BarLook {
   width: number;
+  surfaceLeftGap: number;
+  surfaceRightGap: number;
   sameRadius: boolean;
   sameShadow: boolean;
 }
@@ -166,37 +172,60 @@ interface BarLook {
 function barBesideTheCards(bar: Locator): Promise<BarLook> {
   return bar.evaluate((element) => {
     const card = document.querySelector<HTMLElement>('main .ui-card')!;
+    const own = element.getBoundingClientRect();
+    const cardBox = card.getBoundingClientRect();
     const barStyle = getComputedStyle(element);
+    const surface = getComputedStyle(element, '::before');
+    const drawn = surface.content !== 'none' && surface.content !== 'normal';
+    const look = drawn ? surface : barStyle;
+    const left = drawn
+      ? own.left + Number.parseFloat(barStyle.borderLeftWidth) + Number.parseFloat(surface.left)
+      : own.left;
+    const right = drawn
+      ? own.right - Number.parseFloat(barStyle.borderRightWidth) - Number.parseFloat(surface.right)
+      : own.right;
     const cardStyle = getComputedStyle(card);
     return {
-      width: Math.round(element.getBoundingClientRect().width),
-      sameRadius: barStyle.borderTopLeftRadius === cardStyle.borderTopLeftRadius,
-      sameShadow: barStyle.boxShadow === cardStyle.boxShadow,
+      width: Math.round(own.width),
+      surfaceLeftGap: Math.round(Math.abs(left - cardBox.left)),
+      surfaceRightGap: Math.round(Math.abs(right - cardBox.right)),
+      sameRadius: look.borderTopLeftRadius === cardStyle.borderTopLeftRadius,
+      sameShadow: look.boxShadow === cardStyle.boxShadow,
     };
   });
 }
 
-test.describe(`Given an administrator on an iPhone ${WIDE_PHONE.width} pt wide editing a saved article`, () => {
-  test.use({ viewport: WIDE_PHONE });
+for (const phone of PHONES_AT_DEFAULT_TEXT) {
+  test.describe(`Given an administrator on an iPhone ${phone.width} pt wide editing a saved article`, () => {
+    test.use({ viewport: phone });
 
-  test('when they scroll from the top of the form to its end, then the floating action bar rests with the radius and shadow of the cards and keeps its own width', async ({
-    page,
-  }) => {
-    await openUnlockedAdministration(page, SAVED_ARTICLE_PATH);
-    const bar = page.locator('.ui-action-bar');
-    await expect(bar.getByRole('button').first()).toBeVisible();
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await expect(bar).toBeInViewport({ ratio: 1 });
-    const floating = await barBesideTheCards(bar);
+    test('when they scroll from the top of the form to its end, then the floating action bar keeps its width and rests on a surface with the edges, radius and shadow of the cards', async ({
+      page,
+    }) => {
+      await openUnlockedAdministration(page, SAVED_ARTICLE_PATH);
+      const bar = page.locator('.ui-action-bar');
+      await expect(bar.getByRole('button').first()).toBeVisible();
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await expect(bar).toBeInViewport({ ratio: 1 });
+      await expect(bar).not.toHaveClass(/ui-action-bar--resting/);
+      const floating = await barBesideTheCards(bar);
 
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await expect(bar).toHaveClass(/ui-action-bar--resting/);
 
-    expect(floating.sameShadow).toBe(false);
-    await expect
-      .poll(() => barBesideTheCards(bar))
-      .toEqual({ width: floating.width, sameRadius: true, sameShadow: true });
+      expect(floating.sameShadow).toBe(false);
+      await expect
+        .poll(() => barBesideTheCards(bar))
+        .toEqual({
+          width: floating.width,
+          surfaceLeftGap: 0,
+          surfaceRightGap: 0,
+          sameRadius: true,
+          sameShadow: true,
+        });
+    });
   });
-});
+}
 
 const FLOATING_ENLARGED_TEXT_PX = [24, 26];
 const SE = { width: 375, height: 667 };
