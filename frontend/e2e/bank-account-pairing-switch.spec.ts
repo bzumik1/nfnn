@@ -47,6 +47,46 @@ async function pressOnFocus(row: Locator, focused: string, leaving: string): Pro
   );
 }
 
+const FRAMES_BEFORE_THE_SCROLL = 10;
+
+async function scrollAwayOnceRestored(row: Locator, restored: string): Promise<void> {
+  await row.evaluate(
+    (element, { selector, frames }) => {
+      element.dataset['scrolledAway'] = 'waiting';
+      const scrollAway = (event: FocusEvent) => {
+        const target = event.target as HTMLElement;
+        if (!target.matches(selector)) {
+          return;
+        }
+        element.removeEventListener('focusin', scrollAway);
+        const motions = element
+          .getAnimations({ subtree: true })
+          .filter((motion) => Number.isFinite(Number(motion.effect?.getComputedTiming().endTime)));
+        void Promise.allSettled(motions.map((motion) => motion.finished)).then(() => {
+          let framesLeft = frames;
+          const afterFrames = () => {
+            framesLeft -= 1;
+            if (framesLeft > 0) {
+              requestAnimationFrame(afterFrames);
+              return;
+            }
+            const before = window.scrollY;
+            window.scrollBy({ top: 600, behavior: 'instant' });
+            const placed = target.getBoundingClientRect();
+            element.dataset['scrolledAway'] =
+              window.scrollY !== before && (placed.top < 0 || placed.bottom > window.innerHeight)
+                ? 'out of view'
+                : 'still in view';
+          };
+          requestAnimationFrame(afterFrames);
+        });
+      };
+      element.addEventListener('focusin', scrollAway);
+    },
+    { selector: restored, frames: FRAMES_BEFORE_THE_SCROLL },
+  );
+}
+
 function pressedOnFocus(row: Locator): Promise<string | null> {
   return row.getAttribute('data-pressed-on-focus');
 }
@@ -290,10 +330,10 @@ test.describe('Given a donor on the Bankovní účty page of a 375 pt iPhone who
       await untilAtRest(row);
       await expect(keep).toBeInViewport({ ratio: 1 });
 
+      await scrollAwayOnceRestored(row, '.account-action');
       await keep.click();
       await expect(exclude).toBeFocused();
-      await untilAtRest(row);
-      await page.evaluate(() => window.scrollBy({ top: 600, behavior: 'instant' }));
+      await expect.poll(() => row.getAttribute('data-scrolled-away')).toBe('out of view');
 
       await expect(exclude).toBeInViewport({ ratio: 1 });
       await expect(exclude).toBeFocused();
