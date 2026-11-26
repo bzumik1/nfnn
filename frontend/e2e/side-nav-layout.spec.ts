@@ -131,3 +131,74 @@ for (const area of AREAS) {
     });
   });
 }
+
+const LARGEST_SYSTEM_TEXT_PX = 53;
+const IPAD_ON_ITS_SIDE = { width: 1180, height: 820 };
+
+interface RowFit {
+  label: string;
+  height: number;
+  insideTheColumn: boolean;
+}
+
+function rowFits(page: Page): Promise<RowFit[]> {
+  return page.locator('#donor-nav').evaluate((nav) => {
+    const column = nav.closest('.side-nav')!.getBoundingClientRect();
+    return [...nav.querySelectorAll<HTMLElement>('.side-nav-link')].map((link) => {
+      const row = link.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(link);
+      const lines = [...range.getClientRects()].filter((line) => line.width > 1);
+      return {
+        label: (link.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        height: Math.round(row.height),
+        insideTheColumn:
+          row.left >= column.left - 0.5 &&
+          row.right <= column.right + 0.5 &&
+          lines.every((line) => line.left >= row.left - 0.5 && line.right <= row.right + 0.5),
+      };
+    });
+  });
+}
+
+test.describe('Given a donor on an iPad on its side whose installed app shows the largest accessibility text', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', 'A computer-sized layout check');
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize(IPAD_ON_ITS_SIDE);
+    await page.addInitScript((px) => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent = `html { font-size: ${px}px; }`;
+        document.head.append(style);
+      });
+    }, LARGEST_SYSTEM_TEXT_PX);
+    await mockDonorApi(page, donorWithDonations);
+    await rememberedDonorSession(page);
+  });
+
+  async function rowsOf(page: Page, path: string): Promise<RowFit[]> {
+    await page.goto(path);
+    await expect(page.locator('#donor-nav [aria-current="page"]')).toHaveCount(1);
+    await page.evaluate(() => document.fonts.ready);
+    return rowFits(page);
+  }
+
+  test('when they look at the side navigation, then every row and its whole label stay inside the column', async ({
+    page,
+  }) => {
+    const rows = await rowsOf(page, '/darce/prehled');
+
+    expect(rows.length).toBeGreaterThanOrEqual(5);
+    expect(rows.filter((row) => !row.insideTheColumn).map((row) => row.label)).toEqual([]);
+  });
+
+  test('when they move from Můj přehled to Bankovní účty, then each row keeps its height whether it is current or not', async ({
+    page,
+  }) => {
+    const onOverview = await rowsOf(page, '/darce/prehled');
+    const onAccounts = await rowsOf(page, '/darce/ucty');
+
+    expect(onAccounts.map((row) => row.height)).toEqual(onOverview.map((row) => row.height));
+  });
+});
