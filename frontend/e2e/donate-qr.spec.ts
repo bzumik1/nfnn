@@ -202,6 +202,15 @@ async function edgeAgainstTokens(
   });
 }
 
+async function expectCardFitsFailure(card: Locator): Promise<void> {
+  const box = (await card.boundingBox())!;
+  const failure = (await card.locator('.bank-failure').boundingBox())!;
+  const above = failure.y - box.y;
+  const below = box.y + box.height - (failure.y + failure.height);
+  expect(Math.abs(above - below)).toBeLessThanOrEqual(1);
+  expect(above).toBeLessThan(failure.height);
+}
+
 async function cardHeight(page: Page): Promise<number> {
   return (await page.locator('#prispet .bank').boundingBox())!.height;
 }
@@ -477,6 +486,26 @@ test.describe('Given a visitor on the Přispět page', () => {
     await expect(page.locator('#prispet .bank')).toContainText('300 Kč');
   });
 
+  test.describe('on a computer', () => {
+    test.use({ viewport: { width: 1280, height: 900 } });
+
+    test('when the payment details fail, then the card shrinks to that message and its retry instead of keeping the height it had while loading', async ({
+      page,
+    }) => {
+      const answer = await heldPaymentDetails(page);
+      await page.goto('/prispet');
+      const card = page.locator('#prispet .bank');
+      await expect(card.locator('.bank-skeleton')).toBeAttached();
+      const loadingHeight = await cardHeight(page);
+
+      answer.fail();
+
+      await expect(card.getByRole('alert')).toHaveText(DETAILS_FAILED);
+      await expectCardFitsFailure(card);
+      expect(await cardHeight(page)).toBeLessThan(loadingHeight);
+    });
+  });
+
   test.describe('on a phone', () => {
     test.use({ viewport: { width: 390, height: 844 } });
 
@@ -503,7 +532,7 @@ test.describe('Given a visitor on the Přispět page', () => {
       expect(bankTop).toBeLessThan(qrTop);
     });
 
-    test('when the payment details fail, then the card says only that at the height it had while loading, with no bank buttons, other device or QR left under it', async ({
+    test('when the payment details fail, then the card shrinks to that message and its retry, with no bank buttons, other device or QR left under it', async ({
       page,
     }) => {
       const answer = await heldPaymentDetails(page);
@@ -515,7 +544,8 @@ test.describe('Given a visitor on the Přispět page', () => {
       answer.fail();
 
       await expect(card.getByRole('alert')).toHaveText(DETAILS_FAILED);
-      expect(Math.abs((await cardHeight(page)) - loadingHeight)).toBeLessThanOrEqual(1);
+      await expectCardFitsFailure(card);
+      expect(await cardHeight(page)).toBeLessThan(loadingHeight);
       await expect(page.locator('#prispet .pay-actions')).toHaveAttribute('inert', '');
       await expect(page.locator('#prispet .bank-app')).toBeHidden();
       await expect(page.locator('#prispet .other-device')).toBeHidden();

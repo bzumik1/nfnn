@@ -803,7 +803,7 @@ describe('Given the donate section', () => {
 
     expect(squashed('.bank [role="alert"]')).toBe(DETAILS_FAILED);
     expect(element('.bank [role="alert"] a')?.getAttribute('href')).toBe('mailto:info@nfnn.cz');
-    expect(element('.bank-skeleton').classList.contains('is-held')).toBe(true);
+    expect(element('.bank-skeleton')).toBeNull();
     expect(outsideSkeleton('.qr-code')).toEqual([]);
     expect(outsideSkeleton('.qr-title')).toEqual([]);
     expect(element('.qr-error')).toBeNull();
