@@ -518,3 +518,43 @@ test.describe('Given an iPhone SE whose keyboard pans the visual viewport under 
     expect(await panelAboveItsDialog(dialog)).toBe(0);
   });
 });
+
+test.describe('Given a tablet held sideways whose on-screen keyboard shortens the view under the sign-in sheet', () => {
+  test.use({ viewport: { width: 1024, height: 768 }, hasTouch: true });
+
+  test.beforeEach(async ({ page }) => {
+    await standInForTheKeyboard(page);
+  });
+
+  test('when the visitor types into the e-mail, then the tall sheet stands at the top of the shortened dialog and ends inside it, so only the sheet scrolls', async ({
+    page,
+  }) => {
+    await page.goto('/prispet');
+    await page.getByRole('main').getByRole('button', { name: 'Přihlásit se' }).click();
+    const dialog = page.getByRole('dialog');
+    await page.locator('#login-email').tap();
+
+    await page.evaluate(() => (window as KeyboardWindow).standInKeyboard?.show(400));
+
+    await expect(page.locator('html')).toHaveClass(/keyboard-open/);
+    await expect
+      .poll(() => tallPanelInItsDialog(dialog))
+      .toEqual({ marginTop: '0px', pastTheBottom: 0, dialogScrolls: false });
+  });
+});
+
+function tallPanelInItsDialog(
+  dialog: Locator,
+): Promise<{ marginTop: string; pastTheBottom: number; dialogScrolls: boolean }> {
+  return dialog.evaluate((element) => {
+    const panel = element.querySelector<HTMLElement>('.dialog-panel')!;
+    return {
+      marginTop: getComputedStyle(panel).marginTop,
+      pastTheBottom: Math.max(
+        0,
+        Math.round(panel.getBoundingClientRect().bottom - element.getBoundingClientRect().bottom),
+      ),
+      dialogScrolls: element.scrollHeight > element.clientHeight + 1,
+    };
+  });
+}
