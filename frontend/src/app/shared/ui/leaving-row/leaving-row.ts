@@ -61,7 +61,9 @@ interface PendingReveal {
   follower: HTMLElement | null;
   stoodAt: number;
   cancelled: boolean;
+  scrolledWithoutTheDonor: boolean;
   stopWatching: () => void;
+  stopNoticingScrolls: () => void;
   stopHolding: () => void;
   stopSettling: () => void;
 }
@@ -102,11 +104,14 @@ export class FocusAfterRowLeaves {
         follower: null,
         stoodAt: 0,
         cancelled: false,
+        scrolledWithoutTheDonor: false,
         stopWatching: () => undefined,
+        stopNoticingScrolls: () => undefined,
         stopHolding: () => undefined,
         stopSettling: () => undefined,
       };
       this.pending = pending;
+      pending.stopNoticingScrolls = this.noticeScrollsWithoutTheDonor(pending);
       pending.stopHolding = this.holdBelowTheTop(pending);
       this.stopHolding = () => {
         pending.stopSettling();
@@ -133,7 +138,10 @@ export class FocusAfterRowLeaves {
     control.focus({ preventScroll: true });
     pending.focused = control;
     this.judge(pending, control);
-    pending.reveal = () => this.scrollIntoViewFitting(control);
+    pending.reveal = () => {
+      pending.stopNoticingScrolls();
+      this.scrollIntoViewFitting(control);
+    };
     this.revealOnceRowGone(pending);
   }
 
@@ -181,6 +189,7 @@ export class FocusAfterRowLeaves {
 
   forget(): void {
     this.pending?.stopWatching();
+    this.pending?.stopNoticingScrolls();
     this.stopHolding();
     this.stopHolding = () => undefined;
     this.pending = null;
@@ -351,6 +360,8 @@ export class FocusAfterRowLeaves {
     this.pending = null;
     if (this.document.activeElement === pending.focused) {
       pending.reveal?.();
+    } else {
+      pending.stopNoticingScrolls();
     }
   }
 
@@ -366,19 +377,34 @@ export class FocusAfterRowLeaves {
   ): void {
     const motions = [from, to].flatMap((element) => element?.getAnimations?.() ?? []);
     if (motions.length === 0) {
+      pending.stopNoticingScrolls();
       this.revealSpan(from, to);
-      this.keepInViewWhileSettling(focused, from, to);
+      this.keepInViewWhileSettling(pending, focused, from, to);
       return;
     }
     this.afterMotions(motions, () => {
+      pending.stopNoticingScrolls();
       if (!pending.cancelled && this.document.activeElement === focused && from.isConnected) {
         this.revealSpan(from, to);
-        this.keepInViewWhileSettling(focused, from, to);
+        this.keepInViewWhileSettling(pending, focused, from, to);
       }
     });
   }
 
+  private noticeScrollsWithoutTheDonor(pending: PendingReveal): () => void {
+    const view = this.document.defaultView;
+    if (typeof view?.addEventListener !== 'function') {
+      return () => undefined;
+    }
+    const noticed = (): void => {
+      pending.scrolledWithoutTheDonor = true;
+    };
+    view.addEventListener('scroll', noticed, VISITOR_MOVE_LISTENING);
+    return () => view.removeEventListener('scroll', noticed, VISITOR_MOVE_LISTENING);
+  }
+
   private keepInViewWhileSettling(
+    pending: PendingReveal,
     focused: HTMLElement,
     from: HTMLElement,
     to: HTMLElement | null,
@@ -386,7 +412,13 @@ export class FocusAfterRowLeaves {
     this.stopKeepingInView();
     const view = this.document.defaultView;
     const Observer = view?.ResizeObserver;
-    if (view === null || view === undefined || Observer === undefined) {
+    if (
+      view === null ||
+      view === undefined ||
+      Observer === undefined ||
+      pending.scrolledWithoutTheDonor ||
+      !asksForLessMotion(this.document)
+    ) {
       return;
     }
     let keeping = true;
@@ -414,6 +446,13 @@ export class FocusAfterRowLeaves {
       }
     };
     sizes.observe(this.document.body);
+    const scroller = this.scrollerOf(from, view);
+    if (scroller !== this.document.documentElement) {
+      sizes.observe(scroller);
+      for (const content of Array.from(scroller.children)) {
+        sizes.observe(content);
+      }
+    }
     view.addEventListener('scroll', recheck, VISITOR_MOVE_LISTENING);
     this.stopKeepingInView = stop;
   }
