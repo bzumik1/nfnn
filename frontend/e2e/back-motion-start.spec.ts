@@ -754,9 +754,9 @@ async function openFromWhereItIsSeen(page: Page, href: string): Promise<void> {
   const link = page.locator(`.admin-frame a[href="${href}"]`).first();
   await link.evaluate((element) => {
     const box = element.getBoundingClientRect();
-    const most = document.documentElement.scrollHeight - innerHeight;
-    const top = scrollY + box.top + box.height / 2 - innerHeight / 2;
-    scrollTo({ top: Math.max(0, Math.min(top, most)), behavior: 'instant' });
+    const most = document.documentElement.scrollHeight - window.innerHeight;
+    const top = window.scrollY + box.top + box.height / 2 - window.innerHeight / 2;
+    window.scrollTo({ top: Math.max(0, Math.min(top, most)), behavior: 'instant' });
   });
   expect((await placementOf(link)).shown, `${href} is not on the screen to be tapped`).toBe(true);
   await clickWithoutScrolling(link);
