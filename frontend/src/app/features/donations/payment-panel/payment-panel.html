@@ -14,9 +14,8 @@
           [class.active]="!customChosen() && presetAmount() === preset.amount"
           [attr.aria-checked]="!customChosen() && presetAmount() === preset.amount"
           [tabindex]="!customChosen() && presetAmount() === preset.amount ? 0 : -1"
-          (pointerdown)="noteAmountPress()"
+          (pointerdown)="noteAmountPress($event)"
           (pointercancel)="forgetAmountPress()"
-          (pointerleave)="forgetDraggedOffPress($event)"
           (click)="choosePreset(preset.amount)"
         >
           {{ preset.label }}
@@ -29,9 +28,8 @@
         [class.active]="customChosen()"
         [attr.aria-checked]="customChosen()"
         [tabindex]="customChosen() ? 0 : -1"
-        (pointerdown)="noteAmountPress()"
+        (pointerdown)="noteAmountPress($event)"
         (pointercancel)="forgetAmountPress()"
-        (pointerleave)="forgetDraggedOffPress($event)"
         (click)="chooseCustomAmount()"
         i18n="@@home.donate.amount.other"
       >

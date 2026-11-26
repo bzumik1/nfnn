@@ -127,7 +127,10 @@ export type PaymentAccountState =
   templateUrl: './payment-panel.html',
   styleUrls: ['./payment-panel.scss', './bank-rows-table.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class.split]': "layout() === 'split'" },
+  host: {
+    '[class.split]': "layout() === 'split'",
+    '(document:pointerup)': 'endAmountPressOutside($event)',
+  },
 })
 export class PaymentPanel {
   private readonly store = inject(PaymentDetailsStore);
@@ -185,7 +188,7 @@ export class PaymentPanel {
   protected readonly retrying = signal(false);
   protected readonly failedAttempts = signal(0);
   private choosingByKey = false;
-  private amountPressed = false;
+  private pressedAmount: HTMLElement | null = null;
   private leftDuringPress = false;
   private revealPending = false;
   private deletingSelection = false;
@@ -374,7 +377,7 @@ export class PaymentPanel {
   }
 
   choosePreset(amount: number): void {
-    this.amountPressed = false;
+    this.forgetAmountPress();
     this.clearNotices();
     this.customChosen.set(false);
     this.presetAmount.set(amount);
@@ -384,7 +387,7 @@ export class PaymentPanel {
   }
 
   chooseCustomAmount(): void {
-    this.amountPressed = false;
+    this.forgetAmountPress();
     if (!this.customChosen()) {
       this.openCustomAmount();
     }
@@ -416,7 +419,7 @@ export class PaymentPanel {
 
   enterCustomAmount(event: Event): void {
     this.clearNotices();
-    this.amountPressed = false;
+    this.forgetAmountPress();
     const field = event.target as HTMLInputElement;
     const typing = event as InputEvent;
     const deletion = typing.inputType;
@@ -444,27 +447,30 @@ export class PaymentPanel {
     this.announceAfterQuiet();
   }
 
-  noteAmountPress(): void {
-    this.amountPressed = true;
+  noteAmountPress(event: PointerEvent): void {
+    this.pressedAmount = event.currentTarget as HTMLElement;
     this.leftDuringPress = false;
   }
 
   forgetAmountPress(): void {
-    this.amountPressed = false;
+    this.pressedAmount = null;
+    this.leftDuringPress = false;
   }
 
-  forgetDraggedOffPress(event: PointerEvent): void {
-    if (event.pointerType !== 'mouse' || !this.amountPressed) {
+  endAmountPressOutside(event: PointerEvent): void {
+    const pressed = this.pressedAmount;
+    if (pressed === null || pressed.contains(event.target as Node | null)) {
       return;
     }
-    this.amountPressed = false;
-    if (this.leftDuringPress) {
+    const leftDuringPress = this.leftDuringPress;
+    this.forgetAmountPress();
+    if (leftDuringPress) {
       this.customAmountLeft.set(true);
     }
   }
 
   customAmountFocused(): void {
-    this.amountPressed = false;
+    this.forgetAmountPress();
     this.revealPending = true;
     this.revealCustomAmountOnce();
   }
@@ -476,7 +482,7 @@ export class PaymentPanel {
 
   leaveCustomAmount(): void {
     this.revealPending = false;
-    if (this.amountPressed) {
+    if (this.pressedAmount !== null) {
       this.leftDuringPress = true;
     } else {
       this.customAmountLeft.set(true);
