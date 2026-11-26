@@ -23,6 +23,7 @@
   dd {
     flex: 1 1 21rem;
     min-width: 0;
+    overflow-wrap: anywhere;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
