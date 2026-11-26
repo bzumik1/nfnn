@@ -64,7 +64,7 @@ export class FocusFirstInvalid {
     }
     if (area !== null) {
       placed.keyboardSeen = true;
-    } else if (placed.keyboardSeen) {
+    } else if (placed.keyboardSeen && !hasFocus(placed.control)) {
       this.placed = null;
     }
     this.placeAfterRender(placed.control);
@@ -75,6 +75,10 @@ export class FocusFirstInvalid {
       injector: this.injector,
     });
   }
+}
+
+function hasFocus(control: HTMLElement): boolean {
+  return control.ownerDocument.activeElement === control;
 }
 
 function stillWaitsForInput(control: HTMLElement): boolean {
