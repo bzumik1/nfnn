@@ -542,6 +542,86 @@ describe('Given the donate section', () => {
     });
   });
 
+  describe('when the visitor deletes the leading digit of a round amount', () => {
+    beforeEach(async () => {
+      document.body.appendChild(fixture.nativeElement);
+      await openWithQr();
+    });
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    async function backspaceFirstDigit(typed: string, left: string): Promise<HTMLInputElement> {
+      await enterCustomAmount(typed);
+      const field = element<HTMLInputElement>('#donate-custom-amount');
+      field.value = left;
+      field.setSelectionRange(0, 0);
+      field.dispatchEvent(new InputEvent('input', { inputType: 'deleteContentBackward' }));
+      await settle();
+      return field;
+    }
+
+    it('then Backspace after the space of 1 000 keeps its three zeros', async () => {
+      await enterCustomAmount('1000');
+      const field = element<HTMLInputElement>('#donate-custom-amount');
+      field.value = '1000';
+      field.setSelectionRange(1, 1);
+      field.dispatchEvent(new InputEvent('input', { inputType: 'deleteContentBackward' }));
+      await settle();
+
+      expect(withOrdinarySpaces(field.value)).toBe('000');
+      expect(field.selectionStart).toBe(0);
+    });
+
+    it('then 100 000 without its 1 keeps its five zeros', async () => {
+      const field = await backspaceFirstDigit('100000', '00\u00a0000');
+
+      expect(withOrdinarySpaces(field.value)).toBe('00 000');
+    });
+
+    it('then typing 2 in front of the zeros left by 1 000 gives 2 000', async () => {
+      const field = await backspaceFirstDigit('1000', '\u00a0000');
+
+      field.value = '2' + field.value;
+      field.setSelectionRange(1, 1);
+      field.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: '2' }));
+      await settle();
+
+      expect(withOrdinarySpaces(field.value)).toBe('2 000');
+      expect(field.selectionStart).toBe(1);
+    });
+  });
+
+  it('when the visitor selects the space between thousands and deletes it, then no digit goes with it', async () => {
+    document.body.appendChild(fixture.nativeElement);
+    await openWithQr();
+    await enterCustomAmount('1250');
+    const field = element<HTMLInputElement>('#donate-custom-amount');
+    field.setSelectionRange(1, 2);
+
+    field.dispatchEvent(new InputEvent('beforeinput', { inputType: 'deleteContentBackward' }));
+    field.value = '1250';
+    field.setSelectionRange(1, 1);
+    field.dispatchEvent(new InputEvent('input', { inputType: 'deleteContentBackward' }));
+    await settle();
+
+    expect(withOrdinarySpaces(field.value)).toBe('1 250');
+    fixture.nativeElement.remove();
+  });
+
+  it('when the visitor is still composing a character, then the field is left as the keyboard writes it', async () => {
+    await openWithQr();
+    await enterCustomAmount('12');
+    const field = element<HTMLInputElement>('#donate-custom-amount');
+
+    field.value = '1250';
+    field.dispatchEvent(
+      new InputEvent('input', { inputType: 'insertCompositionText', isComposing: true }),
+    );
+    await settle();
+
+    expect(field.value).toBe('1250');
+  });
+
   it('when the visitor deletes the comma of an amount that was not whole, then no digit goes with it', async () => {
     await openWithQr();
     await enterCustomAmount('12,50');
@@ -611,6 +691,31 @@ describe('Given the donate section', () => {
 
       expect(element('.amount-hint')).toBeNull();
       expect(document.activeElement?.id).toBe('donate-custom-amount');
+    });
+
+    it('and a scroll cancelled the press while the field kept the focus, then leaving the field shows the hint', async () => {
+      element<HTMLInputElement>('#donate-custom-amount').focus();
+      button('500 Kč').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      button('500 Kč').dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      await settle();
+
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+      expect(element('#donate-custom-amount').getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('and the visitor typed after a cancelled press, then Done shows the hint for an amount that is not valid', async () => {
+      const field = element<HTMLInputElement>('#donate-custom-amount');
+      field.focus();
+      button('500 Kč').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      button('500 Kč').dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+      await type('0');
+
+      field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await settle();
+
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
     });
 
     it('and the press chose nothing, then leaving the field later still shows the hint', async () => {

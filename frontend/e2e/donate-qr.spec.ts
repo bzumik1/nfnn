@@ -20,6 +20,7 @@ const PHONE_LAYOUT_MAX_WIDTH = 899;
 const GAP_WITHOUT_ACTIONS = 64;
 const ONE_FRAME_MS = 17;
 const UNFOLD_SAMPLE_MS = 1000;
+const PRESS_FRAMES = 5;
 const DETAILS_FAILED =
   'Platební údaje se nepodařilo načíst. Zkuste to prosím znovu. Když to nepomůže, napište na info@nfnn.cz.';
 
@@ -270,10 +271,66 @@ test.describe('Given a visitor on the Přispět page', () => {
       }).observe(document.body, { childList: true, subtree: true });
     });
 
-    await page.getByRole('radio', { name: '500 Kč' }).click();
+    const preset = (await page.getByRole('radio', { name: '500 Kč' }).boundingBox())!;
+    await page.mouse.move(preset.x + preset.width / 2, preset.y + preset.height / 2);
+
+    await page.mouse.down();
+    await page.evaluate(
+      (frames) =>
+        new Promise<void>((done) => {
+          const next = (left: number) =>
+            left === 0 ? done() : requestAnimationFrame(() => next(left - 1));
+          next(frames);
+        }),
+      PRESS_FRAMES,
+    );
+    const hintWhilePressed = await page.evaluate(() => (window as HintWindow).hintSeen);
+    await page.mouse.up();
 
     await expect(field).toHaveCount(0);
+    expect(hintWhilePressed).toBe(false);
     expect(await page.evaluate(() => (window as HintWindow).hintSeen)).toBe(false);
+  });
+
+  test('when they type, delete and backspace in Jiná částka, then the thousands stay grouped, no digit is lost and the caret stays where they work', async ({
+    page,
+  }) => {
+    await servePaymentDetails(page, []);
+    await page.goto('/prispet');
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
+    const field = page.getByLabel('Vlastní částka v korunách');
+    const caret = () => field.evaluate((input: HTMLInputElement) => input.selectionStart);
+    const placeCaret = (at: number) =>
+      field.evaluate((input: HTMLInputElement, position) => {
+        input.setSelectionRange(position, position);
+      }, at);
+
+    await field.pressSequentially('1250000');
+    await expect(field).toHaveValue('1\u00a0250\u00a0000');
+    expect(await caret()).toBe(9);
+
+    await placeCaret(1);
+    await page.keyboard.press('Delete');
+    await expect(field).toHaveValue('150\u00a0000');
+    expect(await caret()).toBe(1);
+
+    await placeCaret(4);
+    await page.keyboard.press('Backspace');
+    await expect(field).toHaveValue('15\u00a0000');
+    expect(await caret()).toBe(2);
+
+    await field.fill('');
+    await field.pressSequentially('1000');
+    await expect(field).toHaveValue('1\u00a0000');
+    await placeCaret(2);
+    await page.keyboard.press('Backspace');
+    await expect(field).toHaveValue('000');
+    expect(await caret()).toBe(0);
+
+    await page.keyboard.type('2');
+    await expect(field).toHaveValue('2\u00a0000');
+    expect(await caret()).toBe(1);
   });
 
   test('when they open Jiná částka, then its field unfolds over several frames instead of jumping in at once', async ({
@@ -930,5 +987,98 @@ test.describe('Given a visitor on Přispět on an upright iPad', () => {
       return [...byTop.entries()].sort(([a], [b]) => a - b).map(([, line]) => line.trim());
     });
     expect(lines.at(-1), JSON.stringify(lines)).toMatch(/(^|\s)500\u00a0Kč\.$/);
+  });
+});
+
+async function textLinesOf(value: Locator): Promise<string[]> {
+  await value.page().evaluate(() => document.fonts.ready);
+  return value.evaluate((element) => {
+    const lines = new Map<number, string>();
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
+      for (let index = 0; index < text.length; index++) {
+        if (text[index].trim() === '') {
+          continue;
+        }
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + 1);
+        const top = Math.round(range.getBoundingClientRect().top);
+        lines.set(top, (lines.get(top) ?? '') + text[index]);
+      }
+    }
+    return [...lines.entries()].sort(([a], [b]) => a - b).map(([, characters]) => characters);
+  });
+}
+
+interface DetailType {
+  fontSize: string;
+  fontWeight: string;
+  color: string;
+}
+
+async function typeOf(element: Locator): Promise<DetailType> {
+  return element.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { fontSize: style.fontSize, fontWeight: style.fontWeight, color: style.color };
+  });
+}
+
+async function centreOf(element: Locator): Promise<number> {
+  const box = (await element.boundingBox())!;
+  return box.y + box.height / 2;
+}
+
+async function aboutRow(page: Page, label: string): Promise<{ key: Locator; value: Locator }> {
+  await page.goto('/o-nas');
+  const item = page
+    .locator('.accounting-item')
+    .filter({ has: page.getByText(label, { exact: true }) });
+  await expect(item.locator('.accounting-value')).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  return { key: item.locator('dt'), value: item.locator('.accounting-value') };
+}
+
+async function donateRow(page: Page, label: string): Promise<{ key: Locator; value: Locator }> {
+  await page.goto('/prispet');
+  const row = page.locator('#prispet .bank-row', { hasText: label });
+  await expect(row.locator('.bank-value')).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  return { key: row.locator('.bank-key'), value: row.locator('.bank-value') };
+}
+
+test.describe('Given the bank details on O nás and on Přispět', () => {
+  for (const [width, height] of [
+    [390, 844],
+    [1280, 900],
+  ]) {
+    test(`when they show at ${width} × ${height}, then Číslo účtu and IBAN read in one type on both pages`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      for (const label of ['Číslo účtu', 'IBAN']) {
+        const about = await aboutRow(page, label);
+        const aboutKey = await typeOf(about.key);
+        const aboutValue = await typeOf(about.value);
+        const donate = await donateRow(page, label);
+
+        expect(aboutKey).toEqual(await typeOf(donate.key));
+        expect(aboutValue).toEqual(await typeOf(donate.value));
+      }
+    });
+  }
+
+  test('when the IBAN takes two lines on a phone, then Kopírovat sits by the middle of both lines on both pages', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const open of [aboutRow, donateRow]) {
+      const { value } = await open(page, 'IBAN');
+      const copy = value.locator('xpath=..').locator('app-copy-button');
+
+      expect(await textLinesOf(value)).toHaveLength(2);
+      expect(Math.abs((await centreOf(copy)) - (await centreOf(value)))).toBeLessThanOrEqual(1);
+    }
   });
 });
