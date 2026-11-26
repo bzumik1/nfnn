@@ -59,6 +59,7 @@ interface PendingReveal {
   view: Window | null;
   judged: HTMLElement | null;
   follower: HTMLElement | null;
+  heldAt: number;
   cancelled: boolean;
   stopWatching: () => void;
   stopHolding: () => void;
@@ -77,6 +78,7 @@ interface VisibleBand {
 export class FocusAfterRowLeaves {
   private pending: PendingReveal | null = null;
   private stopHolding: () => void = () => undefined;
+  private cancelledRow: HTMLElement | null = null;
 
   constructor(
     private readonly document: Document,
@@ -85,6 +87,7 @@ export class FocusAfterRowLeaves {
 
   rowLeaving(row: HTMLElement | null, neighbour: () => HTMLElement | null = () => null): void {
     this.forget();
+    this.cancelledRow = null;
     if (row !== null) {
       const pending: PendingReveal = {
         row,
@@ -96,6 +99,7 @@ export class FocusAfterRowLeaves {
         view: null,
         judged: null,
         follower: null,
+        heldAt: 0,
         cancelled: false,
         stopWatching: () => undefined,
         stopHolding: () => undefined,
@@ -118,7 +122,11 @@ export class FocusAfterRowLeaves {
   moveFocus(row: HTMLElement | null, control: HTMLElement): void {
     const pending = this.pending;
     if (pending === null || pending.row !== row) {
-      control.focus();
+      if (row !== null && row === this.cancelledRow) {
+        control.focus({ preventScroll: true });
+      } else {
+        control.focus();
+      }
       return;
     }
     control.focus({ preventScroll: true });
@@ -223,6 +231,7 @@ export class FocusAfterRowLeaves {
     };
     const stopListening = this.untilVisitorMoves(() => {
       pending.cancelled = true;
+      this.cancelledRow = pending.row;
       stop();
       if (this.pending === pending) {
         this.forget();
@@ -270,7 +279,7 @@ export class FocusAfterRowLeaves {
       return;
     }
     const scroller = this.scrollerOf(held, view);
-    const above = this.floorOf(held, scroller, view) - held.getBoundingClientRect().top;
+    const above = pending.heldAt - held.getBoundingClientRect().top;
     if (above <= SUBPIXEL_PX) {
       return;
     }
@@ -287,15 +296,18 @@ export class FocusAfterRowLeaves {
       return;
     }
     pending.judged = control;
+    pending.follower = null;
     const view = pending.view;
-    pending.follower =
-      view !== null &&
-      pending.row.isConnected &&
-      followsRow(pending.row, control) &&
-      control.getBoundingClientRect().top >=
-        this.floorOf(control, this.scrollerOf(control, view), view) - SUBPIXEL_PX
-        ? control
-        : null;
+    if (view === null || !pending.row.isConnected || !followsRow(pending.row, control)) {
+      return;
+    }
+    const scroller = this.scrollerOf(control, view);
+    const top = control.getBoundingClientRect().top;
+    if (top < scrollerTopOf(this.document, scroller) - SUBPIXEL_PX) {
+      return;
+    }
+    pending.follower = control;
+    pending.heldAt = Math.min(this.floorOf(control, scroller, view), top);
   }
 
   private floorOf(control: HTMLElement, scroller: HTMLElement, view: Window): number {
@@ -469,11 +481,17 @@ function visibleBandOf(document: Document, scroller: HTMLElement, view: Window):
   const padding = view.getComputedStyle(scroller);
   const paddingTop = parseFloat(padding.scrollPaddingTop) || 0;
   const paddingBottom = parseFloat(padding.scrollPaddingBottom) || 0;
+  const top = scrollerTopOf(document, scroller);
   if (scroller === document.documentElement) {
-    return { top: paddingTop, bottom: view.innerHeight - paddingBottom };
+    return { top: top + paddingTop, bottom: view.innerHeight - paddingBottom };
   }
-  const top = scroller.getBoundingClientRect().top + scroller.clientTop;
   return { top: top + paddingTop, bottom: top + scroller.clientHeight - paddingBottom };
+}
+
+function scrollerTopOf(document: Document, scroller: HTMLElement): number {
+  return scroller === document.documentElement
+    ? 0
+    : scroller.getBoundingClientRect().top + scroller.clientTop;
 }
 
 function scrollerOf(document: Document, control: HTMLElement, view: Window): HTMLElement {
