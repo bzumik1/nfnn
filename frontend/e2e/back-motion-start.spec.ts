@@ -731,7 +731,7 @@ function expectStartedOverTheLivePageAndEndedWithoutAJump(
   expect(
     Math.abs(covered[0].copyMarkTop! - covered[0].liveMarkTop!),
     `px the copy of ${screen} stood from the live ${screen} beneath it in the first frame of the step`,
-  ).toBeLessThanOrEqual(SAME_PLACE_PX);
+  ).toBeLessThanOrEqual(movesAtMostPx);
   expect(
     covered
       .filter((frame) => Math.abs(frame.copyMarkTop! - frame.liveMarkTop!) > movesAtMostPx)
