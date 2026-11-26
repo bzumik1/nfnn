@@ -9,6 +9,8 @@ import {
 } from '../../../core/layout/focus-in-view';
 import { TrackedForm } from '../../../core/updates/tracked-form';
 
+const STICKY_ACTIONS = '.ui-dialog__actions, .ui-action-bar';
+
 @Directive({
   selector: 'form[appFocusFirstInvalid]',
   hostDirectives: [TrackedForm],
@@ -29,15 +31,28 @@ export class FocusFirstInvalid {
 
 function bringFieldIntoView(control: HTMLElement): void {
   const field = control.closest('app-form-field') ?? control;
-  const band = shownBand(field);
-  const box = field.getBoundingClientRect();
   const view = field.ownerDocument.defaultView;
   const scroller = view === null ? null : scrollerAround(view, field);
-  if (scroller?.closest('dialog') != null && box.bottom + scroller.scrollTop <= band.bottom) {
+  if (view === null || scroller === null) {
+    if (!liesWhollyInView(field)) {
+      const fits = field.getBoundingClientRect().height <= bandHeight(shownBand(field));
+      (fits ? field : control).scrollIntoView?.({ block: 'nearest' });
+    }
+    return;
+  }
+  const band = bandAboveStickyActions(view, scroller, shownBand(field));
+  const box = field.getBoundingClientRect();
+  if (scroller.closest('dialog') !== null && box.bottom + scroller.scrollTop <= band.bottom) {
     scroller.scrollTo({ top: 0 });
-  } else if (!liesWhollyInView(field)) {
-    const fitsItsBand = box.height <= band.bottom - band.top;
-    (fitsItsBand ? field : control).scrollIntoView?.({ block: 'nearest' });
+    return;
+  }
+  const shown = (box.height <= bandHeight(band) ? field : control).getBoundingClientRect();
+  const hiddenAbove = band.top - shown.top;
+  const hiddenBelow = shown.bottom - band.bottom;
+  if (hiddenAbove > 0) {
+    scroller.scrollBy({ top: -hiddenAbove });
+  } else if (hiddenBelow > 0) {
+    scroller.scrollBy({ top: hiddenBelow });
   }
 }
 
@@ -45,6 +60,27 @@ function shownBand(field: Element): ViewBand {
   const band = viewBand(field);
   const visual = field.ownerDocument.defaultView?.visualViewport;
   return visual
-    ? { top: band.top, bottom: Math.min(band.bottom, visual.offsetTop + visual.height) }
+    ? {
+        top: Math.max(band.top, visual.offsetTop),
+        bottom: Math.min(band.bottom, visual.offsetTop + visual.height),
+      }
     : band;
+}
+
+function bandAboveStickyActions(view: Window, scroller: Element, band: ViewBand): ViewBand {
+  const dialog = scroller.closest('dialog');
+  const port = scroller.getBoundingClientRect().top + scroller.clientTop + scroller.clientHeight;
+  const tops = Array.from(scroller.querySelectorAll(STICKY_ACTIONS))
+    .filter((actions) => actions.closest('dialog') === dialog)
+    .map((actions) => ({ actions, style: view.getComputedStyle(actions) }))
+    .filter(({ style }) => style.position === 'sticky')
+    .map(
+      ({ actions, style }) =>
+        port - (parseFloat(style.bottom) || 0) - actions.getBoundingClientRect().height,
+    );
+  return { top: band.top, bottom: Math.min(band.bottom, ...tops) };
+}
+
+function bandHeight(band: ViewBand): number {
+  return band.bottom - band.top;
 }
