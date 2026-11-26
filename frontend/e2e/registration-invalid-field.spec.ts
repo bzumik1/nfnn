@@ -4,9 +4,14 @@ import { openSignInDialog } from './donor-session';
 
 const FOCUS_RING_REACH_PX = 3;
 
-for (const width of [1280, 900, 390]) {
-  test.describe(`Given a visitor ${width} px wide who sends the empty registration form from its end`, () => {
-    test.use({ viewport: { width, height: 640 } });
+for (const [width, height] of [
+  [1280, 640],
+  [900, 640],
+  [390, 640],
+  [390, 844],
+]) {
+  test.describe(`Given a visitor on a window ${width} × ${height} px who sends the empty registration form from its end`, () => {
+    test.use({ viewport: { width, height } });
 
     test.beforeEach(async ({ page }) => {
       await openSignInDialog(page);
