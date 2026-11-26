@@ -597,12 +597,8 @@ test.describe('Given the bank details on O nás and on Přispět', () => {
     for (const open of [aboutRow, donateRow]) {
       const { value } = await open(page, 'IBAN');
       const copy = value.locator('xpath=..').locator('app-copy-button');
-      const valueBox = (await value.boundingBox())!;
-      const lineHeight = await value.evaluate((node) =>
-        parseFloat(getComputedStyle(node).lineHeight),
-      );
 
-      expect(valueBox.height).toBeGreaterThan(lineHeight * 1.5);
+      expect(await ibanLinesOf(value)).toHaveLength(2);
       expect(Math.abs((await centreOf(copy)) - (await centreOf(value)))).toBeLessThanOrEqual(
         PIXEL_TOLERANCE,
       );

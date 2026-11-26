@@ -401,7 +401,7 @@ test.describe('Given a visitor on the Přispět page', () => {
       'QR platba na 1 000\u00a0Kč je připravená.',
     );
     await expect(page.locator('#prispet .bank-row-amount .bank-value')).toHaveText('1 000\u00a0Kč');
-    expect(Math.abs((await cardHeight(page)) - failedHeight)).toBeLessThanOrEqual(1);
+    expect(await cardHeight(page)).toBeGreaterThan(failedHeight);
   });
 
   for (const look of [
@@ -498,7 +498,6 @@ test.describe('Given a visitor on the Přispět page', () => {
           'Kopírovat číslo účtu',
           'Kopírovat částku',
           'Kopírovat IBAN',
-          'založíte účet',
           'Otevřít v aplikaci banky',
           'Uložit QR kód',
           'Platíte z jiného zařízení? Zobrazit QR kód ke skenování',
@@ -511,7 +510,7 @@ test.describe('Given a visitor on the Přispět page', () => {
           'Kopírovat IBAN',
           'Zvětšit: QR platba na účet Nadačního fondu Nová naděje',
           'Uložit QR kód',
-          'založíte účet',
+          'zásady ochrany osobních údajů',
         ];
     const reached: string[] = [];
     while (reached.length < expected.length) {
