@@ -41,11 +41,27 @@ const VISITOR_MOVES = ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydo
 const VISITOR_MOVE_LISTENING: AddEventListenerOptions = { capture: true, passive: true };
 const SUBPIXEL_PX = 0.5;
 const KEPT_IN_VIEW_WHILE_SETTLING_MS = 1000;
+const ROUNDING_PX = 1;
+
+interface ScrollPlace {
+  readonly top: number;
+  readonly length: number;
+  readonly end: number;
+}
+
+function movedByTheBrowser(before: ScrollPlace, now: ScrollPlace): boolean {
+  const shift = now.top - before.top;
+  const change = now.length - before.length;
+  const clampedToTheNewEnd = change < 0 && shift < 0 && now.top >= now.end - ROUNDING_PX;
+  const anchoredByTheChange = change !== 0 && Math.abs(shift - change) <= ROUNDING_PX;
+  return clampedToTheNewEnd || anchoredByTheChange;
+}
 
 export class FocusAfterRowLeaves {
   private pending: PendingReveal | null = null;
   private stopHolding: () => void = () => undefined;
   private stopKeepingInView: () => void = () => undefined;
+  private stopRevealingInPlace: () => void = () => undefined;
   private cancelledRow: HTMLElement | null = null;
 
   constructor(
@@ -158,6 +174,8 @@ export class FocusAfterRowLeaves {
     this.stopHolding();
     this.stopHolding = () => undefined;
     this.pending = null;
+    this.stopRevealingInPlace();
+    this.stopRevealingInPlace = () => undefined;
     this.stopKeepingInView();
   }
 
@@ -347,25 +365,59 @@ export class FocusAfterRowLeaves {
       this.keepInViewWhileSettling(pending, focused, from, to);
       return;
     }
-    this.afterMotions(motions, () => {
+    const stopWaiting = this.afterMotions(motions, () => {
+      this.stopRevealingInPlace = () => undefined;
       pending.stopNoticingScrolls();
       if (!pending.cancelled && this.document.activeElement === focused && from.isConnected) {
         this.revealSpan(from, to);
         this.keepInViewWhileSettling(pending, focused, from, to);
       }
     });
+    this.stopRevealingInPlace = () => {
+      stopWaiting();
+      pending.stopNoticingScrolls();
+    };
   }
 
   private noticeScrollsWithoutTheDonor(pending: PendingReveal): () => void {
     const view = this.document.defaultView;
-    if (typeof view?.addEventListener !== 'function') {
+    if (
+      view === null ||
+      view === undefined ||
+      typeof this.document.addEventListener !== 'function'
+    ) {
       return () => undefined;
     }
-    const noticed = (): void => {
-      pending.scrolledWithoutTheDonor = true;
+    const scroller = this.scrollerOf(pending.row, view);
+    const page = scroller === this.document.documentElement;
+    let before = this.placeOf(scroller, view);
+    const noticed = (event: Event): void => {
+      if (page ? event.target instanceof Element : event.target !== scroller) {
+        return;
+      }
+      const now = this.placeOf(scroller, view);
+      if (!movedByTheBrowser(before, now)) {
+        pending.scrolledWithoutTheDonor = true;
+      }
+      before = now;
     };
-    view.addEventListener('scroll', noticed, VISITOR_MOVE_LISTENING);
-    return () => view.removeEventListener('scroll', noticed, VISITOR_MOVE_LISTENING);
+    this.document.addEventListener('scroll', noticed, VISITOR_MOVE_LISTENING);
+    return () => this.document.removeEventListener('scroll', noticed, VISITOR_MOVE_LISTENING);
+  }
+
+  private placeOf(scroller: HTMLElement, view: Window): ScrollPlace {
+    if (scroller === this.document.documentElement) {
+      return {
+        top: view.scrollY,
+        length: scroller.scrollHeight,
+        end: scroller.scrollHeight - view.innerHeight,
+      };
+    }
+    return {
+      top: scroller.scrollTop,
+      length: scroller.scrollHeight,
+      end: scroller.scrollHeight - scroller.clientHeight,
+    };
   }
 
   private keepInViewWhileSettling(
@@ -405,7 +457,7 @@ export class FocusAfterRowLeaves {
       sizes.disconnect();
       stopListening();
       cancelSettling();
-      view.removeEventListener('scroll', recheck, VISITOR_MOVE_LISTENING);
+      this.document.removeEventListener('scroll', recheck, VISITOR_MOVE_LISTENING);
       if (this.stopKeepingInView === stop) {
         this.stopKeepingInView = () => undefined;
       }
@@ -418,7 +470,7 @@ export class FocusAfterRowLeaves {
         sizes.observe(content);
       }
     }
-    view.addEventListener('scroll', recheck, VISITOR_MOVE_LISTENING);
+    this.document.addEventListener('scroll', recheck, VISITOR_MOVE_LISTENING);
     this.stopKeepingInView = stop;
   }
 
