@@ -36,6 +36,7 @@ import { Connectivity, isUnreachable } from '../connectivity/connectivity';
 import { AuthApi, type StoredProfile } from './auth-api';
 import type { PasskeyAuthenticator } from './passkey-authenticator';
 import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
+import { DONOR_FROM_COPY_LOADER } from './copy-profile-loader';
 import { AdministrationAccess } from './administration-access';
 import { deviceAccountOf, SESSION_DEVICE, type SignInSecret } from './session-device';
 import {
@@ -85,6 +86,7 @@ export class AuthStore {
   private readonly api = inject(AuthApi);
   private readonly injector = inject(Injector);
   private readonly pendingTasks = inject(PendingTasks);
+  private readonly loadDonorFromCopy = inject(DONOR_FROM_COPY_LOADER);
   private readonly jar = inject(SESSION_JAR);
   private readonly locks = inject(TAB_LOCKS);
   private readonly channel = inject(SESSION_CHANNEL)();
@@ -480,14 +482,14 @@ export class AuthStore {
     const seen = this.changes;
     const expected: SessionKind = this.jar.installed ? 'APP' : 'REMEMBERED';
     const opening = await withinWait(this.device.openedOffline(expected));
-    const profiles = opening === null ? null : await import('./copy-profile');
-    if (opening === null || profiles === null || this.changes !== seen) {
+    const donorFromCopy = opening === null ? null : await withinWait(this.loadDonorFromCopy());
+    if (opening === null || donorFromCopy === null || this.changes !== seen) {
       this.waitSignedOut();
       return;
     }
     this.changes++;
     this.accessToken = null;
-    this.currentDonor.set(profiles.donorFromCopy(opening.profile));
+    this.currentDonor.set(donorFromCopy(opening.profile));
     this.currentSession.set(opening.session.kind);
     this.acceptedAt.set(null);
     this.fromCopy.set(true);
