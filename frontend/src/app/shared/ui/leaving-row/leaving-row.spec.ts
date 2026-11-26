@@ -1309,6 +1309,24 @@ describe('Given a row whose leave carries the control below it toward the top of
     expect(document.activeElement).toBe(below);
   });
 
+  it('when a sheet keeps no scroll padding for a moment as the row starts to leave, as its head does for two frames after a press, then the control is held below the head once the padding is back', () => {
+    const panel = document.createElement('div');
+    const panelScrolls: ScrollToOptions[] = [];
+    panel.scrollBy = ((options: ScrollToOptions) => panelScrolls.push(options)) as never;
+    panel.getBoundingClientRect = () => new DOMRect(0, 100, 375, 500);
+    margins.set(panel, { overflowY: 'auto', scrollPaddingTop: '0px' });
+    document.body.append(panel);
+    panel.append(list);
+    onTestFinished(() => panel.remove());
+    focus.rowLeaving(row, () => below);
+    margins.set(panel, { overflowY: 'auto', scrollPaddingTop: '57px' });
+    standAt(below, 150);
+
+    aFrameOfTheClose();
+
+    expect(panelScrolls).toEqual([{ top: -7, behavior: 'instant' }]);
+  });
+
   it('when the control stands in a scrolling panel, then the panel scrolls back, not the page', () => {
     const panel = document.createElement('div');
     const panelScrolls: ScrollToOptions[] = [];
