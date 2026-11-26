@@ -35,6 +35,7 @@ import {
 import { routeReleaseApi } from '../admin-logs-api';
 import { openRequests, quietNetwork } from '../settled';
 import { serveReceiptKeys, serveReceiptStatus, YEARLY_RECEIPT } from '../receipt-verification';
+import { FOUR_DONORS, mockYearlyReceipts } from '../yearly-receipts';
 
 interface ElementShot {
   name: string;
@@ -549,6 +550,25 @@ const SCREENS_SINCE_V2: Screen[] = [
       expect(
         page.locator('.devices').getByRole('group', { name: 'Odhlásit iPhone · Safari?' }),
       ).toBeVisible(),
+  },
+  {
+    name: 'donor-details-edit',
+    open: async (page) => {
+      await mockDonorApi(page, donorWithDonations);
+      await rememberedSession(page, donor);
+      await page.goto('/darce/udaje');
+      await page.getByRole('button', { name: 'Upravit údaje' }).click();
+    },
+    ready: (page) => expect(page.getByLabel('Jazyk potvrzení')).toBeVisible(),
+  },
+  {
+    name: 'admin-yearly-receipts',
+    open: (page) =>
+      openAdminPage(page, '/sprava/hromadna-potvrzeni', async (target) => {
+        await serveEmptyAdministrationCopy(target);
+        await mockYearlyReceipts(target, { donors: FOUR_DONORS });
+      }),
+    ready: (page) => expect(page.locator('.donors-table tbody tr').first()).toBeVisible(),
   },
   {
     name: 'admin-donors-recent',

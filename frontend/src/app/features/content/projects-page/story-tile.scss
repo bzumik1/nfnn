@@ -71,7 +71,7 @@
 
 .tile-media {
   position: relative;
-  aspect-ratio: 360 / 196;
+  aspect-ratio: var(--ratio-story-tile-photo);
   overflow: hidden;
   background: var(--color-accent-soft);
 
