@@ -775,3 +775,35 @@ test.describe('Given a visitor opening a news article or a story on a computer w
     }
   }
 });
+
+test.describe('Given a visitor on the Aktuality tab on a phone whose sharing fails', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
+      Object.defineProperty(navigator, 'share', {
+        value: () => Promise.reject(new DOMException('Not allowed', 'NotAllowedError')),
+        configurable: true,
+      });
+    });
+  });
+
+  test('when they share an older news card and the share fails, then Kopírovat odkaz stands at the trailing edge where Sdílet stood', async ({
+    page,
+  }) => {
+    await openNews(page, [article(1), article(2), article(3)], { width: 390, height: 844 });
+    const card = page.locator('app-news-card').first();
+    const share = card.locator('.news-share').getByRole('button', { name: /^Sdílet/ });
+    await share.scrollIntoViewIfNeeded();
+    const shareRight = (await boxOf(share)).right;
+
+    await share.click();
+
+    await expect(card.getByRole('alert')).toHaveText(
+      'Sdílení se nepodařilo. Odkaz na stránku si můžete zkopírovat.',
+    );
+    const copy = card.getByRole('button', { name: /^Kopírovat odkaz/ });
+    await expect(copy).toBeVisible();
+    expect(Math.abs((await boxOf(copy)).right - shareRight)).toBeLessThanOrEqual(EDGE_TOLERANCE_PX);
+  });
+});
