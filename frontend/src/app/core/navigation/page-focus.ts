@@ -140,14 +140,15 @@ export class PageFocus {
     return active.localName === 'dialog' && places.includes(active as HTMLElement);
   }
 
-  bringReturnIntoView(scope: HTMLElement): void {
+  bringReturnIntoView(scope: HTMLElement): HTMLElement | null {
     if (!this.layout.isCompact() || this.preview.drives()) {
-      return;
+      return null;
     }
     const target = this.returnTarget(scope)?.() ?? null;
     if (target !== null) {
       bringIntoView(target);
     }
+    return target;
   }
 
   returnAfterStepBack(scope: HTMLElement): void {

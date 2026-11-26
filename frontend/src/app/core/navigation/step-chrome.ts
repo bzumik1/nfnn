@@ -133,8 +133,10 @@ function move(stage: PageTransitions, running: Running, view: Window, inFrame = 
     stage.finish();
     return;
   }
-  if (running.kind === 'pop') {
-    stage.injector.get(PageFocus).bringReturnIntoView(layer);
+  const returning =
+    running.kind === 'pop' ? stage.injector.get(PageFocus).bringReturnIntoView(layer) : null;
+  if (returning !== null) {
+    keepWhereTheCopyShows(stage, view, returning);
   }
   moveTo(
     stage,
@@ -143,6 +145,21 @@ function move(stage: PageTransitions, running: Running, view: Window, inFrame = 
     { ...stage.shown(layer), sheet: running.sheet },
     inFrame ? 'raf' : stage.placement.placesInRendering ? 'resize-observer' : 'task',
   );
+}
+
+function keepWhereTheCopyShows(stage: PageTransitions, view: Window, row: HTMLElement): void {
+  if (typeof ResizeObserver === 'undefined') {
+    return;
+  }
+  const shownAt = row.getBoundingClientRect().top;
+  const growth = new ResizeObserver(() => {
+    const drift = row.getBoundingClientRect().top - shownAt;
+    if (row.isConnected && Math.abs(drift) >= 1) {
+      view.scrollBy({ top: drift, behavior: 'instant' });
+    }
+  });
+  growth.observe(stage.document.body);
+  stage.whenFinished(() => growth.disconnect());
 }
 
 function moveTo(

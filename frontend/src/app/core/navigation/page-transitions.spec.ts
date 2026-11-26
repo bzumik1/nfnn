@@ -1226,6 +1226,7 @@ describe('Given a phone that animates and an article opened from the news, which
       seen.push(
         `${scope === layer ? 'layer' : 'elsewhere'} ${document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under`) === null ? 'before the copy' : 'after the copy'}`,
       );
+      return null;
     });
 
     await stepsBack();
@@ -1235,6 +1236,52 @@ describe('Given a phone that animates and an article opened from the news, which
 
     expect(moved).toBe(true);
     expect(seen).toEqual(['layer before the copy']);
+  });
+
+  it('when the live news changes above the row the focus returns to while the cover stands, as late answers do after a cold launch, then the row is kept where the copy shows it until the cover goes, so the list never jumps at the end (#2088)', async () => {
+    const placed = TestBed.inject(PagePlacement).pending();
+    const row = document.createElement('a');
+    layer.append(row);
+    let rowTop = 166;
+    row.getBoundingClientRect = () => new DOMRect(0, rowTop, 300, 56);
+    vi.spyOn(TestBed.inject(PageFocus), 'bringReturnIntoView').mockReturnValue(row);
+    const resized: (() => void)[] = [];
+    const observing = vi.fn<(target: Element) => void>();
+    const stopped = vi.fn<() => void>();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(changed: () => void) {
+          resized.push(changed);
+        }
+        observe = observing;
+        disconnect = stopped;
+      },
+    );
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+    });
+    const scrolledBy = vi.spyOn(window, 'scrollBy').mockImplementation(((
+      options: ScrollToOptions,
+    ) => {
+      rowTop -= options.top ?? 0;
+    }) as typeof window.scrollBy);
+
+    await stepsBack();
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
+    placed();
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
+    rowTop = 40;
+    resized.forEach((changed) => changed());
+    const keptAt = rowTop;
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS);
+
+    expect(moved).toBe(true);
+    expect(observing).toHaveBeenCalledWith(document.body);
+    expect(scrolledBy).toHaveBeenCalledWith({ top: -126, behavior: 'instant' });
+    expect(keptAt).toBe(166);
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    expect(stopped).toHaveBeenCalled();
   });
 
   it('when the window has another width than when the news was kept, then the step back waits for the live news as before', async () => {
