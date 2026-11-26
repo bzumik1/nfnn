@@ -635,6 +635,37 @@ describe('Given the donate section', () => {
     expect(withOrdinarySpaces(field.value)).toBe('1 250');
   });
 
+  for (const [space, name] of [
+    [' ', 'ordinary spaces'],
+    ['\u00a0', 'no-break spaces'],
+    ['\u202f', 'narrow no-break spaces'],
+  ] as const) {
+    it(`when the visitor pastes 1 250 Kč written with ${name}, then the field groups 1 250 and the QR is drawn for it without a hint`, async () => {
+      await openWithQr();
+
+      await enterCustomAmount(`1${space}250${space}Kč`);
+      await settle(REDRAW_MS);
+
+      const field = element<HTMLInputElement>('#donate-custom-amount');
+      expect(field.value).toBe('1\u00a0250');
+      expect(drawnMatrixIs(qrOfTyped(1250))).toBe(true);
+      field.dispatchEvent(new Event('blur'));
+      fixture.detectChanges();
+      expect(element('.amount-hint')).toBeNull();
+    });
+  }
+
+  it('when the visitor picks Jiná částka, then the field takes at most the largest amount, 1 000 000 Kč, with its spaces and currency', async () => {
+    await openWithQr();
+
+    button('Jiná částka').click();
+    await settle();
+
+    expect(element<HTMLInputElement>('#donate-custom-amount').maxLength).toBe(
+      '1 000 000 Kč'.length,
+    );
+  });
+
   it('when the visitor types something that is not a whole number, then the field keeps it as typed', async () => {
     await openWithQr();
 
@@ -725,6 +756,48 @@ describe('Given the donate section', () => {
       await settle();
 
       expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+    });
+
+    function mouse(type: string, label: string): void {
+      button(label).dispatchEvent(new PointerEvent(type, { bubbles: true, pointerType: 'mouse' }));
+    }
+
+    it('and the mouse slid off the amount it pressed and the visitor clicked elsewhere, then the hint shows', async () => {
+      mouse('pointerdown', '500 Kč');
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      mouse('pointerleave', '500 Kč');
+      document.body.click();
+      await settle();
+
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+      expect(element('#donate-custom-amount').getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('and the mouse slid off the amount it pressed while the field kept the focus, then clicking elsewhere shows the hint', async () => {
+      mouse('pointerdown', '500 Kč');
+      mouse('pointerleave', '500 Kč');
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      await settle();
+
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+    });
+
+    it('and a finger left the amount it pressed before its click, then no hint shows and the click still chooses 500 Kč', async () => {
+      button('500 Kč').dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }),
+      );
+      button('500 Kč').dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch' }));
+      button('500 Kč').dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'touch' }));
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      await settle();
+
+      expect(element('.amount-hint')).toBeNull();
+
+      button('500 Kč').click();
+      await settle();
+
+      expect(element('.amount-hint')).toBeNull();
+      expect(element('#donate-custom-amount')).toBeNull();
     });
   });
 
