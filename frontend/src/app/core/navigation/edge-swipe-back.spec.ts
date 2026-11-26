@@ -5,10 +5,10 @@ import { Router } from '@angular/router';
 import { appConfig } from '../../app.config';
 import { DirtyForms } from '../updates/dirty-forms';
 import { BackTarget } from './back-target';
-import { EdgeSwipeBack } from './edge-swipe-back';
+import { EdgeSwipeBack, POINTER_LIFT_WAITS_FOR_TOUCH_END_MS } from './edge-swipe-back';
 import { edgeSwipeBackAtStart } from './edge-swipe-back-start';
 import { SheetSteps, StepsInside } from './sheet-steps';
-import { PageTransitions, SwipePreview } from './page-transitions';
+import { PAGE_TRANSITION_CLASS, PageTransitions, SwipePreview } from './page-transitions';
 import { Chrome, RouteChrome } from './route-chrome';
 
 interface Device {
@@ -50,6 +50,8 @@ function chromeWith(parent: string | null): Chrome {
     landing: false,
     backOnWide: true,
     darkThroughout: false,
+    headTitle: null,
+    headTitleFollowsHeading: false,
   };
 }
 
@@ -85,6 +87,15 @@ function touch(type: string, target: EventTarget, point: Point, fingers = 1): Ev
   Object.defineProperty(event, 'timeStamp', { value: point.at });
   target.dispatchEvent(event);
   return event;
+}
+
+function pointer(type: string, pointerType: string, point: Point): void {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'pointerType', { value: pointerType });
+  Object.defineProperty(event, 'clientX', { value: point.x });
+  Object.defineProperty(event, 'clientY', { value: point.y });
+  Object.defineProperty(event, 'timeStamp', { value: point.at });
+  page.dispatchEvent(event);
 }
 
 function drag(target: EventTarget, points: readonly Point[]): { start: Event; end: Event } {
@@ -171,7 +182,7 @@ beforeEach(() => {
 afterEach(() => {
   TestBed.inject(EdgeSwipeBack).stop();
   page.remove();
-  document.querySelectorAll('dialog').forEach((dialog) => dialog.remove());
+  document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}, dialog`).forEach((node) => node.remove());
   delete (navigator as { standalone?: boolean }).standalone;
   delete (navigator as { maxTouchPoints?: number }).maxTouchPoints;
   Object.defineProperty(window, 'innerWidth', jsdomWidth!);
@@ -455,6 +466,25 @@ describe('Given the app opened from the home screen of an iPhone', () => {
     expect(location.back).not.toHaveBeenCalled();
   });
 
+  it('when a step inside the sheet is still moving over still copies of the sheet, then a swipe steps back inside the live sheet', () => {
+    const sheet = openDialog();
+    const steps = sheetSteps();
+    TestBed.inject(SheetSteps).offer(sheet, steps);
+    const overlay = document.createElement('div');
+    overlay.className = `${PAGE_TRANSITION_CLASS} ${PAGE_TRANSITION_CLASS}--push`;
+    overlay.setAttribute('aria-hidden', 'true');
+    const copy = document.createElement('dialog');
+    copy.setAttribute('open', '');
+    overlay.append(copy);
+    document.body.append(overlay);
+
+    drag(sheet, ACROSS);
+
+    expect(steps.back).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
+    expect(location.back).not.toHaveBeenCalled();
+  });
+
   it('when a sheet shows a section of its own under its ‹, then a swipe from the edge does what that ‹ does and the page stays', () => {
     const { sheet, back } = sheetInSection();
 
@@ -689,6 +719,74 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
 
       expect(preview.slideBack).toHaveBeenCalledTimes(1);
       expect(stillUnderway()).toBe(false);
+    });
+
+    it('and a quick flick reports only that its pointer lifted, then the page settles from there a moment later and the app steps back', async () => {
+      vi.useFakeTimers();
+      onTestFinished(() => {
+        vi.useRealTimers();
+      });
+      touch('touchstart', page, { x: 20, y: 300, at: 0 });
+      touch('touchmove', page, { x: 80, y: 300, at: 50 });
+      touch('touchmove', page, { x: 140, y: 300, at: 100 });
+
+      pointer('pointerup', 'touch', { x: 140, y: 300, at: 110 });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(preview.settle, 'settled before a touch end could come').not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(POINTER_LIFT_WAITS_FOR_TOUCH_END_MS);
+
+      expect(preview.settle).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ completes: true, to: 390 }),
+      );
+      expect(stillUnderway()).toBe(false);
+      expect(backTarget.back).toHaveBeenCalledExactlyOnceWith('/aktuality');
+    });
+
+    it('and both the pointer and the touch report the lift, then the page settles once and the app takes one step', async () => {
+      vi.useFakeTimers();
+      onTestFinished(() => {
+        vi.useRealTimers();
+      });
+      touch('touchstart', page, { x: 20, y: 300, at: 0 });
+      touch('touchmove', page, { x: 80, y: 300, at: 50 });
+      touch('touchmove', page, { x: 140, y: 300, at: 100 });
+
+      pointer('pointerup', 'touch', { x: 140, y: 300, at: 110 });
+      touch('touchend', page, { x: 140, y: 300, at: 111 });
+      await vi.advanceTimersByTimeAsync(POINTER_LIFT_WAITS_FOR_TOUCH_END_MS * 2);
+
+      expect(preview.settle).toHaveBeenCalledTimes(1);
+      expect(backTarget.back).toHaveBeenCalledTimes(1);
+    });
+
+    it('and its pointer reports the lift from where the finger was before its last move and its touch end, then the swipe ends where the touch ends and a short quick flick steps back', async () => {
+      vi.useFakeTimers();
+      onTestFinished(() => {
+        vi.useRealTimers();
+      });
+      touch('touchstart', page, { x: 20, y: 300, at: 0 });
+      touch('touchmove', page, { x: 25, y: 300, at: 5 });
+      touch('touchmove', page, { x: 31, y: 300, at: 10 });
+
+      pointer('pointerup', 'touch', { x: 31, y: 300, at: 60 });
+      touch('touchmove', page, { x: 140, y: 300, at: 60 });
+      touch('touchend', page, { x: 140, y: 300, at: 61 });
+      await vi.advanceTimersByTimeAsync(POINTER_LIFT_WAITS_FOR_TOUCH_END_MS * 2);
+
+      expect(preview.settle).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ completes: true, to: 390 }),
+      );
+      expect(backTarget.back).toHaveBeenCalledExactlyOnceWith('/aktuality');
+    });
+
+    it('and a mouse button lifts somewhere, then the swipe goes on', () => {
+      takePage();
+
+      pointer('pointerup', 'mouse', { x: 200, y: 300, at: 150 });
+      touch('touchmove', page, { x: 240, y: 300, at: 200 });
+
+      expect(preview.settle).not.toHaveBeenCalled();
+      expect(preview.follow).toHaveBeenLastCalledWith(220);
     });
 
     it('and the finger rests a while before it moves on or lets go, then the swipe still follows it and steps back', async () => {

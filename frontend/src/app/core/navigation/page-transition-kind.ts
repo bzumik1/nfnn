@@ -12,6 +12,7 @@ export interface NavigationFacts {
   readonly reducedMotion: boolean;
   readonly compact: boolean;
   readonly dialogOpen: boolean;
+  readonly fromSheet?: boolean;
   readonly trigger: 'imperative' | 'popstate' | 'hashchange';
   readonly back: boolean;
   readonly replaceUrl: boolean;
@@ -48,10 +49,15 @@ export function pageTransitionFor(facts: NavigationFacts): PageTransitionKind | 
     facts.first ||
     facts.reducedMotion ||
     !facts.compact ||
-    facts.dialogOpen ||
     facts.skipLocationChange ||
     pathOf(facts.from.url) === pathOf(facts.to.url)
   ) {
+    return null;
+  }
+  if (facts.fromSheet === true) {
+    return 'push';
+  }
+  if (facts.dialogOpen) {
     return null;
   }
   if (facts.trigger === 'popstate' || facts.back) {

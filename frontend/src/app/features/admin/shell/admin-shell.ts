@@ -2,6 +2,7 @@
 
 import { Location, NgComponentOutlet } from '@angular/common';
 import {
+  afterEveryRender,
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
@@ -11,7 +12,7 @@ import {
   ElementRef,
   inject,
   Injector,
-  signal,
+  linkedSignal,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -19,6 +20,8 @@ import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterOutlet } from '@an
 import { filter, map } from 'rxjs';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from '../../../core/navigation/back-target';
+import { PageFocus } from '../../../core/navigation/page-focus';
+import { liveDialogs } from '../../../core/navigation/page-transitions';
 import { RouteChrome } from '../../../core/navigation/route-chrome';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AccountReturn } from '../../../layout/account-sheet/account-return';
@@ -65,6 +68,7 @@ export class AdminShell {
   private readonly location = inject(Location);
   private readonly backTarget = inject(BackTarget);
   private readonly accountReturn = inject(AccountReturn);
+  private readonly pageFocus = inject(PageFocus);
   private readonly chrome = inject(RouteChrome).current;
   private readonly fullScreen = toSignal(
     this.router.events.pipe(
@@ -74,7 +78,11 @@ export class AdminShell {
     { initialValue: framedFullScreen(this.router.routerState.snapshot.root) },
   );
   protected readonly sheet = computed(() => this.compact() && !this.fullScreen());
-  protected readonly pageTitle = signal('');
+  protected readonly headTitle = computed(() => this.chrome().headTitle ?? '');
+  protected readonly arrivedTitle = linkedSignal<unknown, string | null>({
+    source: this.chrome,
+    computation: () => null,
+  });
   private entryDepth: number | null = null;
   private focusBeforeLock: Element | null = null;
   private wasLocked = false;
@@ -88,13 +96,11 @@ export class AdminShell {
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.keepEntry());
-    effect((onCleanup) => {
-      const page = this.sheet() ? this.page()?.nativeElement : undefined;
-      if (page !== undefined) {
-        onCleanup(this.followPageTitle(page));
-      }
-    });
+      .subscribe(() => {
+        this.keepEntry();
+        this.returnFocusAfterStepBack();
+      });
+    afterEveryRender(() => this.followLateHeading());
     effect(() => {
       const locked = this.lock.locked();
       untracked(() => this.followLock(locked));
@@ -111,7 +117,7 @@ export class AdminShell {
       event.defaultPrevented ||
       typesText(event.target) ||
       this.lock.locked() ||
-      this.document.querySelector('dialog[open]') !== null
+      liveDialogs(this.document, 'dialog[open]').length > 0
     ) {
       return;
     }
@@ -130,13 +136,28 @@ export class AdminShell {
     }
   }
 
-  private followPageTitle(page: HTMLElement): () => void {
-    const read = (): void =>
-      this.pageTitle.set(page.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim() ?? '');
-    read();
-    const observer = new MutationObserver(read);
-    observer.observe(page, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
+  private followLateHeading(): void {
+    const chrome = untracked(this.chrome);
+    const page = untracked(this.page)?.nativeElement;
+    if (!chrome.headTitleFollowsHeading || !untracked(this.sheet) || page === undefined) {
+      return;
+    }
+    const heading = page.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    if (heading !== '' && heading !== (untracked(this.arrivedTitle) ?? chrome.headTitle)) {
+      this.arrivedTitle.set(heading);
+    }
+  }
+
+  private returnFocusAfterStepBack(): void {
+    afterNextRender(
+      () => {
+        const page = this.page()?.nativeElement;
+        if (page !== undefined && !this.lock.locked()) {
+          this.pageFocus.returnAfterStepBack(page);
+        }
+      },
+      { injector: this.injector },
+    );
   }
 
   private keptEntry(): number | null {
@@ -177,7 +198,7 @@ export class AdminShell {
 
   protected focusPage(remembered: Element | null): void {
     const page = this.page()?.nativeElement;
-    if (page === undefined || this.document.querySelector('dialog[open]')) {
+    if (page === undefined || liveDialogs(this.document, 'dialog[open]').length > 0) {
       return;
     }
     if (remembered instanceof HTMLElement && remembered.isConnected && page.contains(remembered)) {

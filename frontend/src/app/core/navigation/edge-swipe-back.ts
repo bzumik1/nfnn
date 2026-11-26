@@ -4,7 +4,7 @@ import { DirtyForms } from '../updates/dirty-forms';
 import { BackSwipe, SwipePoint } from './back-swipe';
 import { BackTarget } from './back-target';
 import { isHomeScreenApp } from './edge-swipe-back-start';
-import { PageTransitions, SwipePreview } from './page-transitions';
+import { liveDialogs, PageTransitions, SwipePreview } from './page-transitions';
 import { lendKeptPagesToThePreview } from './preview-lending';
 import { RouteChrome } from './route-chrome';
 import { SheetSteps, StepsInside } from './sheet-steps';
@@ -22,6 +22,8 @@ const PRESS_TAKEN_OVER = `.${EDGE_SWIPE_DRAGGING_CLASS} :active {
   opacity: 1 !important;
   transform: none !important;
 }`;
+
+export const POINTER_LIFT_WAITS_FOR_TOUCH_END_MS = 50;
 
 const PASSIVE: AddEventListenerOptions = { passive: true, capture: true };
 
@@ -47,10 +49,12 @@ export class EdgeSwipeBack {
   private swipe: Swipe | null = null;
   private pressCancel: CSSStyleSheet | null = null;
   private pops = 0;
+  private liftWithoutTouchEnd: ReturnType<typeof setTimeout> | undefined;
 
   private readonly onStart = (event: TouchEvent): void => this.started(event);
   private readonly onMove = (event: TouchEvent): void => this.moved(event);
-  private readonly onEnd = (event: TouchEvent): void => this.ended(event);
+  private readonly onEnd = (event: TouchEvent): void => this.touchEnded(event);
+  private readonly onPointerUp = (event: PointerEvent): void => this.pointerLifted(event);
   private readonly onCancel = (): void => this.callOff();
   private readonly onHidden = (): void => {
     if (this.document.visibilityState === 'hidden') {
@@ -76,6 +80,7 @@ export class EdgeSwipeBack {
     this.document.addEventListener('touchmove', this.onMove, PASSIVE);
     this.document.addEventListener('touchend', this.onEnd, PASSIVE);
     this.document.addEventListener('touchcancel', this.onCancel, PASSIVE);
+    this.document.addEventListener('pointerup', this.onPointerUp, PASSIVE);
     this.document.addEventListener('visibilitychange', this.onHidden, PASSIVE);
     view.addEventListener('popstate', this.onLeave, PASSIVE);
     view.addEventListener('pagehide', this.onPageHide, PASSIVE);
@@ -87,6 +92,7 @@ export class EdgeSwipeBack {
     this.document.removeEventListener('touchmove', this.onMove, PASSIVE);
     this.document.removeEventListener('touchend', this.onEnd, PASSIVE);
     this.document.removeEventListener('touchcancel', this.onCancel, PASSIVE);
+    this.document.removeEventListener('pointerup', this.onPointerUp, PASSIVE);
     this.document.removeEventListener('visibilitychange', this.onHidden, PASSIVE);
     view?.removeEventListener('popstate', this.onLeave, PASSIVE);
     view?.removeEventListener('pagehide', this.onPageHide, PASSIVE);
@@ -116,12 +122,11 @@ export class EdgeSwipeBack {
   }
 
   private stepsHere(): { steps: StepsInside; ofPage: boolean } | null {
-    if (this.document.querySelector(LEAVING_DIALOG) !== null) {
+    if (liveDialogs(this.document, LEAVING_DIALOG).length > 0) {
       return null;
     }
-    const dialogs = this.document.querySelectorAll<HTMLDialogElement>(OPEN_DIALOG);
-    if (dialogs.length > 0) {
-      const top = dialogs.item(dialogs.length - 1);
+    const top = liveDialogs(this.document, OPEN_DIALOG).at(-1);
+    if (top !== undefined) {
       const steps = this.sheetSteps.of(top) ?? sectionBackOf(top);
       return steps === null ? null : { steps, ofPage: false };
     }
@@ -154,6 +159,7 @@ export class EdgeSwipeBack {
   }
 
   private letGo(): void {
+    this.document.defaultView?.clearTimeout(this.liftWithoutTouchEnd);
     this.swipe = null;
     this.document.documentElement.classList.remove(EDGE_SWIPE_DRAGGING_CLASS);
   }
@@ -183,14 +189,32 @@ export class EdgeSwipeBack {
     swipe.preview?.follow(swipe.motion.offset);
   }
 
-  private ended(event: TouchEvent): void {
+  private touchEnded(event: TouchEvent): void {
     const swipe = this.swipe;
     const touch = swipe === null ? undefined : touchOf(event, swipe.id);
-    if (swipe === null || touch === undefined) {
+    if (swipe !== null && touch !== undefined) {
+      this.ended(swipe, pointOf(touch, event));
+    }
+  }
+
+  private pointerLifted(event: PointerEvent): void {
+    const swipe = this.swipe;
+    const view = this.document.defaultView;
+    if (swipe === null || view === null || event.pointerType !== 'touch') {
       return;
     }
+    const point = { x: event.clientX, y: event.clientY, at: event.timeStamp };
+    view.clearTimeout(this.liftWithoutTouchEnd);
+    this.liftWithoutTouchEnd = view.setTimeout(() => {
+      if (this.swipe === swipe) {
+        this.ended(swipe, point);
+      }
+    }, POINTER_LIFT_WAITS_FOR_TOUCH_END_MS);
+  }
+
+  private ended(swipe: Swipe, point: SwipePoint): void {
     this.letGo();
-    const settle = swipe.motion.release(pointOf(touch, event));
+    const settle = swipe.motion.release(point);
     const goesBack = settle?.completes === true && swipe.pops === this.pops;
     const back = (): void => swipe.steps.back();
     const preview = swipe.preview;

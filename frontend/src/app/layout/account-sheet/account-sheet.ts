@@ -6,6 +6,7 @@ import { formatBankTime } from '../../features/donations/donation-date';
 import { Location } from '@angular/common';
 import {
   afterNextRender,
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -28,15 +29,19 @@ import { SignedOutNotice } from '../../core/auth/signed-out-notice';
 import { CompactLayout } from '../../core/layout/compact-layout';
 import { pathOf } from '../../core/navigation/app-tabs';
 import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
-import { APP_ACCOUNT_KEY } from './account-return';
+import { PageTransitions } from '../../core/navigation/page-transitions';
+import { SheetSteps, StepsInside } from '../../core/navigation/sheet-steps';
+import { AccountReturn, APP_ACCOUNT_KEY, APP_ACCOUNT_SCROLL_KEY } from './account-return';
 import { Dialog } from '../../shared/ui/dialog/dialog';
 import { Appearance, AppearanceChoice } from '../../core/appearance/appearance';
 import { AccountSection } from './account-section';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { AccountBadges } from '../../core/layout/account-badges';
+import { bringIntoView, focusInView, focusWithoutScroll } from '../../core/layout/focus-in-view';
 import { AppInstall } from '../../core/install/app-install';
 import { SheetHead } from '../../shared/ui/sheet-head/sheet-head';
+import { closeOnceCovered, swipeBackInSheet } from '../../core/navigation/sheet-stepping';
 
 export type AccountIcon = 'overview' | 'gifts' | 'receipts' | 'accounts' | 'details' | 'admin';
 
@@ -89,6 +94,15 @@ export class AccountSheet {
   private readonly history = inject(DialogHistory);
   private readonly backTarget = inject(BackTarget);
   private readonly signedOut = inject(SignedOutNotice);
+  private readonly transitions = inject(PageTransitions);
+  private readonly sheetSteps = inject(SheetSteps);
+  private readonly scrolls = new Map<number, number>();
+  private readonly accountReturn = inject(AccountReturn);
+  private readonly sectionSteps: StepsInside = {
+    startSwipe: () =>
+      this.sectionHasUnsavedInput() ? null : swipeBackInSheet(this.transitions, this.depth()),
+    back: () => this.back(),
+  };
 
   readonly portrait = input<string | null>(null);
   readonly reopenedOn = input<string | null>(null);
@@ -144,6 +158,7 @@ export class AccountSheet {
   private readonly dialog = viewChild.required(Dialog);
   protected readonly discardAsked = signal<'back' | 'close' | null>(null);
   private discarding = false;
+  private leftWithReturn = false;
   protected readonly appearance = inject(Appearance);
   protected readonly appearanceLabel = computed(() => APPEARANCE_LABELS[this.appearance.choice()]);
   private readonly announcer = inject(DialogAnnouncer);
@@ -158,12 +173,21 @@ export class AccountSheet {
   constructor() {
     const followInSection = (event: MouseEvent): void => this.followInSection(event);
     this.host.addEventListener('click', followInSection, true);
-    inject(DestroyRef).onDestroy(() =>
-      this.host.removeEventListener('click', followInSection, true),
-    );
+    inject(DestroyRef).onDestroy(() => {
+      this.host.removeEventListener('click', followInSection, true);
+      if (!this.leftWithReturn) {
+        this.transitions.forgetSheetsOf(this.accountReturn);
+      }
+    });
     afterNextRender(() => {
       if (this.reopenedOn() !== null) {
         this.standAtOnce();
+      }
+    });
+    afterRenderEffect((onCleanup) => {
+      const dialog = this.section() === null ? null : this.host.querySelector('dialog');
+      if (dialog !== null) {
+        onCleanup(this.sheetSteps.offer(dialog, this.sectionSteps));
       }
     });
   }
@@ -175,7 +199,7 @@ export class AccountSheet {
     event.preventDefault();
     const item = sectionAt(url);
     if (item !== null && this.compact() && this.router.url !== url) {
-      this.trail.set([item]);
+      this.stepTo('push', [item]);
       this.focusSectionTitle();
       return;
     }
@@ -224,15 +248,38 @@ export class AccountSheet {
 
   private leaveSection(): void {
     const left = this.section();
-    this.trail.update((trail) => trail.slice(0, -1));
+    this.stepTo('pop', this.trail().slice(0, -1));
     afterNextRender(
       () => {
-        if (left !== null) {
-          this.linkTo(left.path)?.focus();
+        const link = left === null ? null : this.linkTo(left.path);
+        if (link !== null && focusWithoutScroll(link)) {
+          bringIntoView(link);
         }
       },
       { injector: this.injector },
     );
+  }
+
+  private panel(): HTMLElement | null {
+    return this.host.querySelector<HTMLElement>('.dialog-panel');
+  }
+
+  private stepTo(kind: 'push' | 'pop', trail: AccountItem[]): void {
+    const panel = this.panel();
+    if (kind === 'push') {
+      this.scrolls.set(this.depth(), panel?.scrollTop ?? 0);
+    }
+    this.transitions.stepInSheet({
+      kind,
+      depth: trail.length,
+      owner: this.accountReturn,
+      change: () => this.trail.set(trail),
+      placed: () => {
+        if (panel !== null) {
+          panel.scrollTop = kind === 'push' ? 0 : (this.scrolls.get(trail.length) ?? 0);
+        }
+      },
+    });
   }
 
   private standAtOnce(): void {
@@ -243,10 +290,16 @@ export class AccountSheet {
         .filter((motion) => motion.effect?.getComputedTiming().endTime !== Infinity)
         .forEach((motion) => motion.finish());
     }
+    const scrolls = this.accountReturn.takeScrollToReopen();
+    scrolls.slice(0, -1).forEach((top, depth) => this.scrolls.set(depth, top));
+    const panel = this.panel();
+    if (panel !== null) {
+      panel.scrollTop = scrolls.at(-1) ?? 0;
+    }
     const left = this.backTarget.leftPath;
     const link = left === null ? null : this.linkTo(left);
     if (link !== null) {
-      link.focus();
+      focusInView(link);
     } else if (this.section() !== null) {
       this.host.querySelector<HTMLElement>('#account-section-title')?.focus();
     }
@@ -281,7 +334,7 @@ export class AccountSheet {
       return;
     }
     if (item !== null) {
-      this.trail.update((trail) => [...trail, item]);
+      this.stepTo('push', [...this.trail(), item]);
       this.focusSectionTitle();
     } else {
       this.leaveFor(url);
@@ -324,6 +377,13 @@ export class AccountSheet {
     this.closed.emit();
   }
 
+  private scrollsToHere(): number[] {
+    return [
+      ...Array.from({ length: this.depth() }, (_, depth) => this.scrolls.get(depth) ?? 0),
+      this.panel()?.scrollTop ?? 0,
+    ];
+  }
+
   private leaveFor(url: string, returnsHere = true): void {
     if (this.router.url === url) {
       this.closed.emit();
@@ -331,9 +391,15 @@ export class AccountSheet {
     }
     const depth = this.backTarget.nextDepth();
     const account =
-      returnsHere && this.compact() ? { [APP_ACCOUNT_KEY]: this.section()?.path ?? '' } : null;
+      returnsHere && this.compact()
+        ? {
+            [APP_ACCOUNT_KEY]: this.section()?.path ?? '',
+            [APP_ACCOUNT_SCROLL_KEY]: this.scrollsToHere(),
+          }
+        : null;
+    this.leftWithReturn = account !== null;
     const handedOver = this.history.handOver(url);
-    this.closed.emit();
+    closeOnceCovered(this.transitions, () => this.closed.emit());
     if (handedOver) {
       void this.router.navigateByUrl(url, {
         replaceUrl: true,

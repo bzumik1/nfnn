@@ -1,0 +1,7 @@
+{
+  "prodesk": { "p99Frames": 2.03, "measured": "round 18, 2026-11-22" },
+  "ci": {
+    "p99Frames": 3,
+    "measured": "the step frames of run 45547560058, 2026-11-25, which gave 3.00 above the 2.99 of run 45534955785 (5862 frames, median 1.00, at most 4.01); the lags fall on whole frames"
+  }
+}

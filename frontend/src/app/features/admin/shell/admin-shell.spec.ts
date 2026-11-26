@@ -6,6 +6,7 @@ import { provideRouter, Router } from '@angular/router';
 import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
 import { AccountReturn } from '../../../layout/account-sheet/account-return';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { PAGE_TRANSITION_CLASS } from '../../../core/navigation/page-transitions';
 import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
 import { DIALOG_SUSPENSION } from '../../../shared/ui/dialog/dialog-suspension';
 import { AdminShell } from './admin-shell';
@@ -64,11 +65,16 @@ describe('Given an administrator anywhere in the administration', () => {
           },
         },
         provideRouter([
-          { path: 'sprava', component: Page },
-          { path: 'sprava/darci', component: Page },
-          { path: 'sprava/darci/:id', component: Page },
-          { path: 'sprava/platby', component: Page },
-          { path: 'sprava/lide', component: NamedPage },
+          { path: 'sprava', component: Page, data: { headTitle: 'Stránka' } },
+          { path: 'sprava/darci', component: Page, data: { headTitle: 'Stránka' } },
+          { path: 'sprava/darci/:id', component: Page, data: { headTitle: 'Stránka' } },
+          { path: 'sprava/platby', component: Page, data: { headTitle: 'Platby z banky' } },
+          {
+            path: 'sprava/lide',
+            component: NamedPage,
+            data: { headTitle: 'Načítáme dárce…', headTitleFollowsHeading: true },
+          },
+          { path: 'sprava/stranka', component: NamedPage },
           {
             path: 'sprava/aktuality/nova',
             component: Page,
@@ -230,6 +236,35 @@ describe('Given an administrator anywhere in the administration', () => {
       expect(withOrdinarySpaces(element('main#obsah h1')?.textContent)).toBe('Stránka');
     });
 
+    it('and a page opens, then the head names it from its route in the same pass as the page, never from the heading the page draws', async () => {
+      await router.navigateByUrl('/sprava/platby');
+      fixture.detectChanges();
+
+      expect(
+        clean(
+          withOrdinarySpaces(
+            element('.admin-sheet [role="banner"] p[aria-hidden="true"]')?.textContent,
+          ),
+        ),
+      ).toBe('Platby z banky');
+    });
+
+    it('and a page that names no title of its own changes its heading, then the head stays as its route has it', async () => {
+      await router.navigateByUrl('/sprava/stranka');
+      await settle();
+      const page = fixture.debugElement.query(
+        (node) => node.componentInstance instanceof NamedPage,
+      );
+
+      (page.componentInstance as NamedPage).name.set('Jana Nováková');
+      await settle();
+      await settle();
+
+      expect(
+        clean(element('.admin-sheet [role="banner"] p[aria-hidden="true"]')?.textContent),
+      ).toBe('');
+    });
+
     it('and the page names itself only once its data arrive, then the head follows its heading', async () => {
       await router.navigateByUrl('/sprava/lide');
       await settle();
@@ -249,6 +284,10 @@ describe('Given an administrator anywhere in the administration', () => {
       await settle();
 
       expect(title()).toBe('Jana Nováková');
+      const heading = element('main#obsah h1')!;
+      expect(heading.closest('[aria-hidden="true"]')).toBeNull();
+      expect(getComputedStyle(heading).visibility).not.toBe('hidden');
+      expect(clean(heading.textContent)).toBe('Jana Nováková');
     });
 
     it('and a news editor opens, then it stands full screen under the header of the app, as before', async () => {
@@ -316,6 +355,18 @@ describe('Given an administrator anywhere in the administration', () => {
 
       expect(withOrdinarySpaces(element('main#obsah h1')?.textContent)).toBe('Stránka');
       expect(element('.lock-panel')).toBeNull();
+    });
+
+    it('and it is unlocked again while a step moves the still copy of a sheet, then the focus still moves to the heading of the page that comes back', async () => {
+      document.body.appendChild(fixture.nativeElement);
+      const step = stillCopyOfASheet();
+      locked.set(false);
+      await settle();
+      await settle();
+      step.remove();
+
+      expect(document.activeElement).toBe(element('main#obsah h1'));
+      fixture.nativeElement.remove();
     });
 
     it('and it is unlocked again, then the focus moves to the heading of the page that comes back', async () => {
@@ -601,6 +652,16 @@ describe('Given an administrator who opened the administration on a phone over a
     },
   );
 
+  it('when Esc is pressed while a step moves the still copy of a sheet, then the site steps back the same way as with Zpět', () => {
+    const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
+    const step = stillCopyOfASheet();
+
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    step.remove();
+
+    expect(back).toHaveBeenCalledWith('/');
+  });
+
   it('when Esc is pressed while a dialog of the page is open, then the dialog keeps it and the site stays', () => {
     const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
     const dialog = document.createElement('dialog');
@@ -613,3 +674,13 @@ describe('Given an administrator who opened the administration on a phone over a
     expect(back).not.toHaveBeenCalled();
   });
 });
+
+function stillCopyOfASheet(): HTMLElement {
+  const step = document.createElement('div');
+  step.className = PAGE_TRANSITION_CLASS;
+  const copy = document.createElement('dialog');
+  copy.setAttribute('open', '');
+  step.append(copy);
+  document.body.append(step);
+  return step;
+}
