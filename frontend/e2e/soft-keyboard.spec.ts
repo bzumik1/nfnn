@@ -210,6 +210,41 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
     await expect.poll(() => placeProblems(code, 0)).toEqual([]);
   });
 
+  test('when an administrator taps Zneplatnit klíč with the code still empty and the keyboard dips and rises again while the field gets the focus back, as on an iPhone, then the code field with its error and hint stands above the sticky buttons and the keyboard', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings',
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/nastaveni');
+    await page.getByRole('button', { name: 'Zneplatnit klíč serveru…' }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
+    const code = dialog.getByLabel('Kód z aplikace');
+    await code.tap();
+    await showKeyboard(page);
+
+    await dialog
+      .getByRole('button', { name: 'Zneplatnit klíč', exact: true })
+      .dispatchEvent('click');
+    await expect(dialog.getByText('Opište prosím kód z aplikace.')).toBeVisible();
+    await hideKeyboard(page);
+    await showKeyboard(page);
+
+    await expect(code).toBeFocused();
+    await expect.poll(() => placeProblems(code, KEYBOARD_HEIGHT)).toEqual([]);
+
+    await hideKeyboardAsDoneDoes(page);
+
+    await expect.poll(() => placeProblems(code, 0)).toEqual([]);
+  });
+
   test('when the visitor taps Jiná částka, then the amount field takes the focus in the same tap', async ({
     page,
   }) => {

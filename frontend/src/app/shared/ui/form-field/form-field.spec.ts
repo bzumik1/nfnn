@@ -355,6 +355,23 @@ describe('Given a form built from form fields', () => {
       expect(scrolls).toBe(2);
     });
 
+    it('then a keyboard that dips and rises again while the field keeps the focus places the field again', async () => {
+      placeBelowTheWindow(nameField(), 120);
+      let scrolls = 0;
+      nameField().scrollIntoView = () => (scrolls += 1);
+      keyboard.show();
+      await submit();
+      expect(document.activeElement).toBe(input('name'));
+      const afterSubmit = scrolls;
+
+      keyboard.hide();
+      await fixture.whenStable();
+      keyboard.show();
+      await fixture.whenStable();
+
+      expect(scrolls).toBe(afterSubmit + 2);
+    });
+
     it('then a field taller than the window brings its control into view instead', async () => {
       placeBelowTheWindow(nameField(), 2000);
       const scrolled: string[] = [];
