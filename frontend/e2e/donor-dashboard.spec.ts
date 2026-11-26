@@ -97,11 +97,19 @@ test.describe('Given a signed-in donor', () => {
           [...element.querySelectorAll(selector)].map((cell) =>
             Math.round(cell.getBoundingClientRect().right),
           );
+        const rowEdges = [...element.querySelectorAll('.account-row')].map((row) => {
+          const box = row.getBoundingClientRect();
+          const style = getComputedStyle(row);
+          return {
+            start: Math.round(box.left + parseFloat(style.paddingLeft)),
+            end: Math.round(box.right - parseFloat(style.paddingRight)),
+          };
+        });
         return {
           labels: left('.account-row > dt'),
-          rows: left('.account-row'),
+          rows: rowEdges.map((edge) => edge.start),
           buttons: right('.account-row .account-actions .ui-button:last-child'),
-          rowEnds: right('.account-row'),
+          rowEnds: rowEdges.map((edge) => edge.end),
           valueUnderLabel:
             element.querySelector('.account-row > .account-value')!.getBoundingClientRect().top >=
             element.querySelector('.account-row > dt')!.getBoundingClientRect().bottom,
