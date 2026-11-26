@@ -161,6 +161,24 @@ describe('Given a list of the administration that a step back returns to from th
 
         expect(scrolledBy).not.toHaveBeenCalled();
       });
+
+      it('then a row in a fixed box, which the window’s scroll does not move, is neither scrolled nor handed to the step to keep', async () => {
+        const sheet = document.createElement('div');
+        sheet.style.position = 'fixed';
+        scope.append(sheet);
+        link = row({ href: CARD });
+        let linkTop = 300;
+        link.getBoundingClientRect = () => new DOMRect(0, linkTop, 300, 56);
+        sheet.append(link);
+        await openTheCard(link);
+        await stepBack();
+        linkTop = -76;
+        const scrolls = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+        onTestFinished(() => scrolls.mockRestore());
+
+        expect(focus.placeReturnWhereLeft(scope)).toBeNull();
+        expect(scrolls).not.toHaveBeenCalled();
+      });
     });
 
     it('then the link takes the focus from the heading without moving the page while the row shows', async () => {

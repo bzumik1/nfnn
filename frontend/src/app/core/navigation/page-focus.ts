@@ -141,20 +141,21 @@ export class PageFocus {
     return active.localName === 'dialog' && places.includes(active as HTMLElement);
   }
 
-  placeReturnWhereLeft(scope: HTMLElement): void {
+  placeReturnWhereLeft(scope: HTMLElement): HTMLElement | null {
     const view = this.document.defaultView;
     const top = this.openerTops.get(pathOf(this.router.url));
     if (view === null || top === undefined || !this.layout.isCompact() || this.preview.drives()) {
-      return;
+      return null;
     }
     const target = this.returnTarget(scope)?.() ?? null;
-    if (target === null || scrollsInABoxOfItsOwn(view, target)) {
-      return;
+    if (target === null || !scrollsWithTheWindow(view, target)) {
+      return null;
     }
     const drift = target.getBoundingClientRect().top - top;
     if (Math.abs(drift) >= 1) {
       view.scrollBy({ top: drift, behavior: 'instant' });
     }
+    return target;
   }
 
   returnAfterStepBack(scope: HTMLElement): void {
@@ -491,16 +492,18 @@ export class PageFocus {
   }
 }
 
-function scrollsInABoxOfItsOwn(view: Window, element: HTMLElement): boolean {
+function scrollsWithTheWindow(view: Window, element: HTMLElement): boolean {
   const { body, documentElement } = element.ownerDocument;
-  for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
-    if (parent === body || parent === documentElement) {
-      return false;
-    }
-    const overflow = view.getComputedStyle(parent).overflowY;
-    if (overflow === 'auto' || overflow === 'scroll') {
+  for (let at: HTMLElement | null = element; at !== null; at = at.parentElement) {
+    if (at === body || at === documentElement) {
       return true;
     }
+    const style = view.getComputedStyle(at);
+    const ownScroll =
+      at !== element && (style.overflowY === 'auto' || style.overflowY === 'scroll');
+    if (ownScroll || style.position === 'fixed' || style.position === 'sticky') {
+      return false;
+    }
   }
-  return false;
+  return true;
 }
