@@ -62,8 +62,8 @@ import { spayd } from '../../../donations/spayd';
 import { QrCode } from '../../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../../shared/ui/qr-code/qr-matrix';
-import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
 import { AccountDisconnect, OfferedAccountAction } from './account-disconnect/account-disconnect';
+import { revealWhenStill } from './reveal-when-still';
 import { PairingHelp } from './pairing-help/pairing-help';
 import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
@@ -167,7 +167,6 @@ export class BankAccountsCard {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly focusAfterSwap = new FocusAfterRowLeaves(this.document, () => null);
 
   readonly variableSymbol = input<string | null>(null);
   readonly sessionEnded = output<void>();
@@ -453,7 +452,7 @@ export class BankAccountsCard {
     const motions = (row.getAnimations?.({ subtree: true }) ?? []).filter((motion) =>
       Number.isFinite(Number(motion.effect?.getComputedTiming().endTime)),
     );
-    this.focusAfterSwap.keepInViewOnceSettled(button, motions, false);
+    revealWhenStill(this.document, button, motions);
   }
 
   protected actionReturned(): void {
