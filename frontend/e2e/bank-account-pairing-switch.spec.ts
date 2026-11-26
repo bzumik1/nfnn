@@ -34,11 +34,13 @@ async function pressOnFocus(row: Locator, focused: string, leaving: string): Pro
           return;
         }
         element.removeEventListener('focusin', pressed);
-        element.dataset['pressedOnFocus'] =
-          element.querySelector(selectors.leaving) === null
-            ? 'without the leaving part'
-            : 'while leaving';
-        target.click();
+        setTimeout(() => {
+          element.dataset['pressedOnFocus'] =
+            element.querySelector(selectors.leaving) === null
+              ? 'without the leaving part'
+              : 'while leaving';
+          target.click();
+        });
       };
       element.addEventListener('focusin', pressed);
     },
