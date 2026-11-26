@@ -1124,7 +1124,7 @@ describe('Given a control that takes the focus back while the panel below it clo
   });
 });
 
-describe('Given a row whose leave carries the control below it toward the top of what shows the page', () => {
+describe('Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise', () => {
   let list: HTMLUListElement;
   let row: HTMLElement;
   let below: HTMLElement;
@@ -1174,7 +1174,7 @@ describe('Given a row whose leave carries the control below it toward the top of
       revealed.push(options);
     };
     standAt(below, 200);
-    focus = new FocusAfterRowLeaves(page(), () => list);
+    focus = new FocusAfterRowLeaves(page(true), () => list);
   });
 
   afterEach(() => {
@@ -1481,7 +1481,7 @@ describe('Given a row whose leave carries the control below it toward the top of
     expect(timers.size).toBe(0);
   });
 
-  it('when the control below the row already stands above the top as the row starts to leave, as after a flick, then no frame of the close scrolls and the control glides into view once the row is gone', async () => {
+  it('when the control below the row already stands above the top as the row starts to leave, as after a flick, then no frame of the close scrolls and the control is put into view at once once the row is gone', async () => {
     standAt(below, -400);
     focus.rowLeaving(row, () => below);
     focus.moveFocus(row, below);
@@ -1492,6 +1492,32 @@ describe('Given a row whose leave carries the control below it toward the top of
     aFrameOfTheClose();
 
     expect(scrolledBy).toEqual([]);
+    expect(revealed).toEqual([{ block: 'nearest', behavior: 'instant' }]);
+  });
+
+  it('when the device allows motion and the close comes over several frames, each scroll landing a frame late as on iOS, then nothing scrolls during the close, so the control only rises with it and never jerks back and forth, and it glides into view once the row is gone', async () => {
+    focus = new FocusAfterRowLeaves(page(false), () => list);
+    let collapsed = 0;
+    let landed = 0;
+    let applied = 0;
+    const topNow = () => 538 - collapsed - landed;
+    below.getBoundingClientRect = () => new DOMRect(0, topNow(), 300, 40);
+    focus.rowLeaving(row, () => below);
+    focus.moveFocus(row, below);
+    focus.rowLeaveEnded(row);
+    const painted: number[] = [];
+
+    for (const step of [40, 120, 160, 150, 100, 60, 30]) {
+      landed += scrolledBy.slice(applied).reduce((sum, scroll) => sum + (scroll.top ?? 0), 0);
+      applied = scrolledBy.length;
+      collapsed += step;
+      aFrameOfTheClose();
+      painted.push(topNow());
+    }
+    await removed();
+
+    expect(scrolledBy).toEqual([]);
+    expect(painted).toEqual([...painted].sort((higher, lower) => lower - higher));
     expect(revealed).toEqual([{ block: 'nearest', behavior: 'smooth' }]);
   });
 

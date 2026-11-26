@@ -4991,6 +4991,36 @@ async function recordTheNeighbour(
   };
 }
 
+function framesThatMoveItBackAndForth(frames: readonly NeighbourFrame[]): string[] {
+  return frames.flatMap((frame, index) => {
+    const before = frames[index - 1];
+    if (before === undefined) {
+      return [];
+    }
+    const moved = frame.top - before.top;
+    const back =
+      before.rowThere && frame.rowThere
+        ? moved > SUBPIXEL_PX
+        : !frame.rowThere && !before.rowThere && moved < -SUBPIXEL_PX;
+    return back
+      ? [
+          `frame ${index}: top ${frame.top.toFixed(1)} after ${before.top.toFixed(1)}${frame.rowThere ? ', row there' : ''}`,
+        ]
+      : [];
+  });
+}
+
+function expectHeldOrRidingWithoutJerks(
+  frames: readonly NeighbourFrame[],
+  reducedMotion: 'no-preference' | 'reduce',
+): void {
+  if (reducedMotion === 'reduce') {
+    expect(framesUnderTheTopEdge(frames)).toEqual([]);
+  } else {
+    expect(framesThatMoveItBackAndForth(frames)).toEqual([]);
+  }
+}
+
 function framesUnderTheTopEdge(frames: readonly NeighbourFrame[]): string[] {
   return frames.flatMap((frame, index) =>
     frame.top < frame.upperEdge - SUBPIXEL_PX
@@ -5069,7 +5099,7 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
         await anchorNoScrollAsSafariDoes(page);
       });
 
-      test('when they sign out the iPhone above Starší, then in no frame from the press until the row is gone does Starší rise above the top edge of what shows the page, and it ends in view', async ({
+      test('when they sign out the iPhone above Starší, then Starší never rises above the top edge of what shows the page under reduced motion and never moves back and forth with motion, and it ends in view', async ({
         page,
       }) => {
         const iphone = signedInDevices.find((device) => !device.current);
@@ -5093,12 +5123,13 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
         await expect(older).toBeFocused();
         await expect(page.locator(row)).toHaveCount(0);
         await settledWithin(scope);
+        await untilTheLastFrameStandsInView(page);
         const recorded = await frames();
-        expect(framesUnderTheTopEdge(recorded)).toEqual([]);
+        expectHeldOrRidingWithoutJerks(recorded, reducedMotion);
         expectTheLastFrameInView(recorded);
       });
 
-      test('when they remove the first of two passkeys with its Ano, odebrat at the top of what shows the page, then in no frame from the press until the row is gone does Přejmenovat of the key below rise above the top edge of what shows the page, and it ends in view', async ({
+      test('when they remove the first of two passkeys with its Ano, odebrat at the top of what shows the page, then Přejmenovat of the key below never rises above the top edge of what shows the page under reduced motion and never moves back and forth with motion, and it ends in view', async ({
         page,
       }) => {
         await offerPasskeysAsAnIPhoneDoes(page);
@@ -5123,8 +5154,9 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
         await expect(renameButtonOf(passkeys, notebookPasskey)).toBeFocused();
         await expect(page.locator(row)).toHaveCount(0);
         await settledWithin(scope);
+        await untilTheLastFrameStandsInView(page);
         const recorded = await frames();
-        expect(framesUnderTheTopEdge(recorded)).toEqual([]);
+        expectHeldOrRidingWithoutJerks(recorded, reducedMotion);
         expectTheLastFrameInView(recorded);
       });
     });
