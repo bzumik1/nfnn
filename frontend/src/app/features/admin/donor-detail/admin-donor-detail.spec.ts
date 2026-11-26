@@ -1886,24 +1886,6 @@ describe('Given an administrator on a donor card opened part by part', () => {
     expect(rows[2]).toContain('vráceno');
   });
 
-  it('when the gifts part opens, then a gift paired by its symbol keeps „variabilního symbolu“ together on one line', async () => {
-    await open('dary', true, {
-      detailBody: donorDetail({
-        donations: {
-          items: [adminDonation({ pairedBy: 'VARIABLE_SYMBOL', senderAccount: null })],
-          totalAmountMinor: 30000,
-          currency: 'CZK',
-          count: 1,
-        },
-      }),
-    });
-
-    const meta = fixture.nativeElement.querySelector(
-      '.donation-rows .ui-list__meta',
-    ) as HTMLElement;
-    expect(meta.textContent).toContain('podle variabilního\u00a0symbolu');
-  });
-
   describe('when the gifts are still loading', () => {
     it('then the gifts part and the receipts part show the wait under their own titles, and their rows name no count', async () => {
       await open('dary', true, { detail: 'pending' });

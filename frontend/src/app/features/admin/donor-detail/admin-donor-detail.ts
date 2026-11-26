@@ -110,7 +110,7 @@ const SECTIONS = {
 const SECTION_IDS: ReadonlySet<string> = new Set(Object.values(SECTIONS).map(({ id }) => id));
 
 const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
-  VARIABLE_SYMBOL: $localize`:@@admin.donorDetail.pairing.variableSymbol:podle variabilního\u00a0symbolu`,
+  VARIABLE_SYMBOL: $localize`:@@admin.donorDetail.pairing.variableSymbol:podle variabilního symbolu`,
   SENDER_ACCOUNT: $localize`:@@admin.donorDetail.pairing.senderAccount:podle účtu`,
   CONFIRMED_SYMBOL: $localize`:@@admin.donorDetail.pairing.confirmedSymbol:podle potvrzeného staršího symbolu`,
 };

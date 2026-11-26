@@ -2379,17 +2379,17 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
     });
   });
 
-  test('when they look at the summary at the default text size, then every label stays beside the first line of its value, Kopírovat stays on the line of the symbol and ověřen on the line of the e-mail', async ({
+  test('when they look at the summary at the default text size, then every label stands above its value on one left axis, Kopírovat stays on the line of the symbol without touching its label and ověřen on the line of the e-mail', async ({
     page,
   }) => {
     const summary = await openSummary(page);
 
     const pairs = await summaryPairs(summary);
+    const axis = pairs[0].label.left;
     for (const { label, value } of pairs) {
-      expect(value.left).toBeGreaterThanOrEqual(label.right - 0.5);
-    }
-    for (const { label, value } of await firstLines(summary)) {
-      expect(Math.abs(label.bottom - value.bottom)).toBeLessThanOrEqual(2);
+      expect(value.top).toBeGreaterThanOrEqual(label.bottom - 0.5);
+      expect(Math.abs(label.left - axis)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(value.left - axis)).toBeLessThanOrEqual(0.5);
     }
     const symbol = (await summary.locator('.summary-symbol .ui-figures').boundingBox())!;
     const copy = (await summary
@@ -2397,11 +2397,25 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
       .boundingBox())!;
     expect(copy.y).toBeLessThan(symbol.y + symbol.height / 2);
     expect(copy.y + copy.height).toBeGreaterThan(symbol.y + symbol.height / 2);
+    expect(copy.y).toBeGreaterThanOrEqual(pairs[0].label.bottom);
     const email = (await summary.locator('.email').boundingBox())!;
     const verified = (await summary.getByText('ověřen', { exact: true }).boundingBox())!;
     expect(verified.y).toBeLessThan(email.y + email.height / 2);
     expect(verified.y + verified.height).toBeGreaterThan(email.y + email.height / 2);
     expect(await pastTheirCard(summary)).toEqual([]);
+  });
+
+  test('when they look at the summary on a phone 320 pt wide, then Kopírovat keeps a gap below the label VS', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    const summary = await openSummary(page);
+
+    const [symbolPair] = await summaryPairs(summary);
+    const copy = (await summary
+      .getByRole('button', { name: 'Kopírovat variabilní symbol' })
+      .boundingBox())!;
+    expect(copy.y).toBeGreaterThanOrEqual(symbolPair.label.bottom);
   });
 
   test('when the device could not store the administration and they look at the card at the default text size, then the notice with Uložit znovu keeps the same gap above the summary as the cards keep between them', async ({
@@ -2464,6 +2478,20 @@ test.describe('Given an administrator on an iPhone 390 pt wide whose installed a
     await expect(table.locator('.ui-badge', { hasText: 'variabilním symbolem' })).toBeVisible();
 
     await expect.poll(() => badgesPastTheirRow(table)).toEqual([]);
+  });
+
+  test('when they open the gifts of a donor on an iPhone SE, then the line naming how a gift was paired breaks only between words', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`${PETR_DETAIL_PATH}/dary`);
+    const meta = page.locator('main .donation-rows .ui-list__meta');
+    await expect(meta.first()).toContainText('podle variabilního symbolu');
+    await page.evaluate(() => document.fonts.ready);
+
+    for (const line of await meta.all()) {
+      expect(await wordsBrokenInside(line)).toEqual([]);
+    }
   });
 });
 
