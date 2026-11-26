@@ -257,11 +257,9 @@
   }
 }
 
-@include bp.up(nav) {
+@include bp.up(tablet) {
   .intro {
     grid-template-areas: none;
-    row-gap: var(--space-12);
-    padding-bottom: 0;
   }
 
   .intro-head {
@@ -297,6 +295,13 @@
   .intro-caption {
     grid-row: 3;
     margin-top: 0;
+  }
+}
+
+@include bp.up(nav) {
+  .intro {
+    row-gap: var(--space-12);
+    padding-bottom: 0;
   }
 
   .paragraph {
