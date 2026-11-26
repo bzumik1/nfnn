@@ -650,6 +650,40 @@ describe('Given the passkeys panel of the sign-in card', () => {
         );
       });
 
+      it('and it was the only key, so the list leaves with it, and the list is removed before its leave ends, which sees the row already gone before the removal is recorded, then the empty text enters before the result is measured and the result above the window is brought into view', async () => {
+        await renderOnPage([IPHONE]);
+        const row = document.getElementById(`passkey-row-${IPHONE.id}`)!;
+        const list = row.parentElement!;
+        const region = element('.passkeys');
+        const regionScrolled = scrollsOf(region);
+        leavesAsInTheBrowser(
+          row,
+          (event) => fixture.componentInstance['rowLeaves'](event),
+          () => list.remove(),
+          list,
+        );
+        await removeThe(IPHONE);
+        const emptyText = element('.passkeys-empty');
+        const addButton = Array.from(root().querySelectorAll<HTMLElement>('button')).find(
+          (button) => accessibleText(button).includes('Přidat přístupový klíč'),
+        )!;
+        const emptyTextTop = () =>
+          emptyText.classList.contains('passkeys-empty--behind-leaving-row') ? 300 : -300;
+        emptyText.getBoundingClientRect = () => new DOMRect(0, emptyTextTop(), 300, 40);
+        addButton.getBoundingClientRect = () => new DOMRect(0, emptyTextTop() + 56, 300, 44);
+        const emptyTextScrolled = scrollsOf(emptyText);
+
+        list.remove();
+        row.getAnimations = () => [];
+        row.dispatchEvent(new Event('animationend'));
+        await settle();
+
+        expect(emptyText.classList).not.toContain('passkeys-empty--behind-leaving-row');
+        expect(document.activeElement).toBe(region);
+        expect(regionScrolled).toEqual([]);
+        expect(emptyTextScrolled).toEqual([{ block: 'start', behavior: 'smooth' }]);
+      });
+
       it('and it was the only key, so the list leaves with it, then the empty text is held at the width of the list and the list keeps room for all of it, its margin included, while the list stands', async () => {
         await renderOnPage([IPHONE]);
         const row = document.getElementById(`passkey-row-${IPHONE.id}`)!;
