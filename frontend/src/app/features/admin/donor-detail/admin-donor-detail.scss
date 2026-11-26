@@ -48,6 +48,13 @@
   white-space: nowrap;
 }
 
+.summary-symbol {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .summary-symbol app-copy-button {
   margin-block: calc(-1 * var(--space-1-5));
 }
@@ -82,6 +89,14 @@
         align-items: first baseline;
       }
     }
+
+    .summary-symbol {
+      column-gap: var(--space-1);
+    }
+
+    .summary-symbol app-copy-button {
+      margin-block: calc(-1 * var(--space-2));
+    }
   }
 
   @include bp.container-down(donor-summary, narrow) {
@@ -108,13 +123,6 @@
       margin-block: 0;
     }
   }
-}
-
-.summary-symbol {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 .badges {
