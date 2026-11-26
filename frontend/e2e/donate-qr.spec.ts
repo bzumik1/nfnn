@@ -19,6 +19,7 @@ const QR_NAME = 'QR platba na účet Nadačního fondu Nová naděje';
 const PHONE_LAYOUT_MAX_WIDTH = 899;
 const GAP_WITHOUT_ACTIONS = 64;
 const ONE_FRAME_MS = 17;
+const UNFOLD_SAMPLE_MS = 1000;
 const DETAILS_FAILED =
   'Platební údaje se nepodařilo načíst. Zkuste to prosím znovu. Když to nepomůže, napište na info@nfnn.cz.';
 
@@ -172,6 +173,10 @@ async function failureAfterRefusedQr(page: Page): Promise<FoldedFailure> {
 
 type FoldedFailureWindow = Window & { foldedFailure?: Partial<FoldedFailure> };
 
+type HintWindow = Window & { hintSeen?: boolean };
+
+type UnfoldWindow = Window & { unfoldHeights?: number[]; unfoldSampled?: boolean };
+
 async function heldPaymentDetails(page: Page): Promise<{ fail: () => void }> {
   let fail: () => void = () => undefined;
   const failed = new Promise<void>((resolve) => (fail = resolve));
@@ -244,6 +249,68 @@ test.describe('Given a visitor on the Přispět page', () => {
     expect(PAYMENT_QR_1000.modules).not.toBe(PAYMENT_QR_500.modules);
     expect(asked).toEqual([PAYMENT_DETAILS_PATH]);
     await expect(page.locator('#prispet')).toContainText('CZ26 2010 0000 0055 4433 2217');
+  });
+
+  test('when they open Jiná částka and go back to 500 Kč, then no hint about the amount shows in any frame', async ({
+    page,
+  }) => {
+    await servePaymentDetails(page, []);
+    await page.goto('/prispet');
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
+    const field = page.getByLabel('Vlastní částka v korunách');
+    await expect(field).toBeFocused();
+    await page.evaluate(() => {
+      const watched = window as HintWindow;
+      watched.hintSeen = false;
+      new MutationObserver(() => {
+        if (document.querySelector('#prispet .amount-hint') !== null) {
+          watched.hintSeen = true;
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    });
+
+    await page.getByRole('radio', { name: '500 Kč' }).click();
+
+    await expect(field).toHaveCount(0);
+    expect(await page.evaluate(() => (window as HintWindow).hintSeen)).toBe(false);
+  });
+
+  test('when they open Jiná částka, then its field unfolds over several frames instead of jumping in at once', async ({
+    page,
+  }) => {
+    await servePaymentDetails(page, []);
+    await page.goto('/prispet');
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    const amount = page.locator('#prispet .amount');
+    const closedHeight = (await amount.boundingBox())!.height;
+    await page.evaluate((sampleMs) => {
+      const sampled = window as UnfoldWindow;
+      sampled.unfoldHeights = [];
+      const block = document.querySelector('#prispet .amount') as HTMLElement;
+      const started = performance.now();
+      const sample = () => {
+        sampled.unfoldHeights!.push(block.getBoundingClientRect().height);
+        if (performance.now() - started < sampleMs) {
+          requestAnimationFrame(sample);
+        } else {
+          sampled.unfoldSampled = true;
+        }
+      };
+      requestAnimationFrame(sample);
+    }, UNFOLD_SAMPLE_MS);
+
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
+
+    await expect
+      .poll(() => page.evaluate(() => (window as UnfoldWindow).unfoldSampled === true))
+      .toBe(true);
+    const heights = await page.evaluate(() => (window as UnfoldWindow).unfoldHeights!);
+    const openHeight = heights[heights.length - 1];
+    expect(openHeight).toBeGreaterThan(closedHeight + 1);
+    expect(heights.some((height) => height > closedHeight + 1 && height < openHeight - 1)).toBe(
+      true,
+    );
   });
 
   test('when they type an amount, then its QR payment is drawn and announced once they stop typing', async ({

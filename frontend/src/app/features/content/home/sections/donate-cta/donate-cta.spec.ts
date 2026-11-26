@@ -482,6 +482,101 @@ describe('Given the donate section', () => {
     expect(drawnMatrixIs(qrOfTyped(2500))).toBe(true);
   });
 
+  it('when the visitor types an amount of four or more digits, then the field groups its thousands as the amounts beside it do and keeps the caret at the end', async () => {
+    await openWithQr();
+
+    await enterCustomAmount('1250000');
+
+    const field = element<HTMLInputElement>('#donate-custom-amount');
+    expect(withOrdinarySpaces(field.value)).toBe('1 250 000');
+    expect(field.value).toBe('1\u00a0250\u00a0000');
+    expect(field.selectionStart).toBe(field.value.length);
+  });
+
+  it('when the visitor types a digit in the middle of a grouped amount, then the groups move and the caret stays after that digit', async () => {
+    document.body.appendChild(fixture.nativeElement);
+    await openWithQr();
+    await enterCustomAmount('1250');
+    const field = element<HTMLInputElement>('#donate-custom-amount');
+
+    field.value = '1\u00a02050';
+    field.setSelectionRange(4, 4);
+    field.dispatchEvent(new Event('input'));
+    await settle();
+
+    expect(withOrdinarySpaces(field.value)).toBe('12 050');
+    expect(field.selectionStart).toBe(4);
+    fixture.nativeElement.remove();
+  });
+
+  it('when the visitor types something that is not a whole number, then the field keeps it as typed', async () => {
+    await openWithQr();
+
+    await enterCustomAmount('12,50');
+
+    expect(element<HTMLInputElement>('#donate-custom-amount').value).toBe('12,50');
+  });
+
+  it('when the visitor entered 2 500 Kč and the section opens again, then its field shows the amount grouped', async () => {
+    await openWithQr();
+    await enterCustomAmount('2500');
+    await settle(REDRAW_MS);
+
+    await openAgain();
+
+    expect(withOrdinarySpaces(element<HTMLInputElement>('#donate-custom-amount').value)).toBe(
+      '2 500',
+    );
+  });
+
+  describe('when the visitor leaves an empty Jiná částka by pressing another amount', () => {
+    beforeEach(async () => {
+      document.body.appendChild(fixture.nativeElement);
+      await openWithQr();
+      button('Jiná částka').click();
+      await settle();
+    });
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    function press(label: string): void {
+      button(label).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      fixture.detectChanges();
+    }
+
+    it('then no hint about the amount shows while the press lasts nor after it chose 500 Kč', async () => {
+      press('500 Kč');
+
+      expect(element('.amount-hint')).toBeNull();
+
+      button('500 Kč').dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      button('500 Kč').click();
+      await settle();
+
+      expect(element('.amount-hint')).toBeNull();
+      expect(element('#donate-custom-amount')).toBeNull();
+    });
+
+    it('then pressing Jiná částka itself takes the visitor back to the field without a hint', async () => {
+      press('Jiná částka');
+      button('Jiná částka').click();
+      await settle();
+
+      expect(element('.amount-hint')).toBeNull();
+      expect(document.activeElement?.id).toBe('donate-custom-amount');
+    });
+
+    it('and the press chose nothing, then leaving the field later still shows the hint', async () => {
+      press('500 Kč');
+      element<HTMLInputElement>('#donate-custom-amount').focus();
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      await settle();
+
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+    });
+  });
+
   it('when the QR is ready, then the bank details list the account, the amount and the IBAN, each with a copy button', async () => {
     await openWithQr();
 
