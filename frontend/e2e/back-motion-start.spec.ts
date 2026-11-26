@@ -5,8 +5,7 @@ import {
   HEIGHT,
   onThePhone,
   openAdministrationAt,
-  pageScroll,
-  SCROLLED_BY_PX,
+  placementOf,
   WIDTH,
 } from './back-matrix';
 import { mockDonorApi } from './donor-session';
@@ -751,8 +750,16 @@ function administrationBack(page: Page) {
   return page.getByRole('banner').getByRole('button', { name: 'Zpět' });
 }
 
-async function openFromTheAdministration(page: Page, href: string): Promise<void> {
-  await clickWithoutScrolling(page.locator(`.admin-frame a[href="${href}"]`).first());
+async function openFromWhereItIsSeen(page: Page, href: string): Promise<void> {
+  const link = page.locator(`.admin-frame a[href="${href}"]`).first();
+  await link.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const most = document.documentElement.scrollHeight - innerHeight;
+    const top = scrollY + box.top + box.height / 2 - innerHeight / 2;
+    scrollTo({ top: Math.max(0, Math.min(top, most)), behavior: 'instant' });
+  });
+  expect((await placementOf(link)).shown, `${href} is not on the screen to be tapped`).toBe(true);
+  await clickWithoutScrolling(link);
   await expect(page).toHaveURL((url) => url.pathname === href);
   await expect(page.locator('app-root .admin-page h1')).toBeVisible();
   await expect(page.locator('.page-transition')).toHaveCount(0);
@@ -767,14 +774,13 @@ async function stepBackTo(page: Page, href: string, mark: string): Promise<KeptC
   return step;
 }
 
-test.describe('Given an administrator in the app on the home screen of a phone, launched straight on Správa scrolled down, gone on to Dárci', () => {
+test.describe('Given an administrator in the app on the home screen of a phone, launched straight on Správa and gone on to Dárci from where Správa shows it', () => {
   test.use({ viewport: { width: WIDTH, height: HEIGHT }, hasTouch: true });
 
   test.beforeEach(async ({ page }) => {
     await onThePhone(page, 'light');
     await openAdministrationAt(page, ['/sprava']);
-    await pageScroll(page).scrollTo(SCROLLED_BY_PX);
-    await openFromTheAdministration(page, DONORS_HREF);
+    await openFromWhereItIsSeen(page, DONORS_HREF);
   });
 
   test('when Zpět is pressed for the first time since the launch, then both copies join the cover only once the live Správa is drawn beneath at the place its copy shows, the leaving Dárci stands at rest in the first frame both show, and the step ends on the live Správa without a jump (#2088)', async ({
@@ -786,12 +792,13 @@ test.describe('Given an administrator in the app on the home screen of a phone, 
   });
 });
 
-test.describe('Given an administrator in the app on the home screen of a phone, gone from Správa to Dárci and on to a donor’s card', () => {
+test.describe('Given an administrator in the app on the home screen of a phone, gone from Správa to Dárci and on to a donor’s card, each tapped where its list shows it', () => {
   test.use({ viewport: { width: WIDTH, height: HEIGHT }, hasTouch: true });
 
   test.beforeEach(async ({ page }) => {
     await onThePhone(page, 'light');
-    await openAdministrationAt(page, ['/sprava', DONORS_HREF]);
+    await openAdministrationAt(page, ['/sprava']);
+    await openFromWhereItIsSeen(page, DONORS_HREF);
   });
 
   test('when ‹ steps back to Dárci and again to Správa, then each step’s copies join the cover only once the live page is drawn beneath at the place its copy shows, the leaving page stands at rest in the first frame both show, and each step ends on the live page without a jump (#2088)', async ({
@@ -799,7 +806,7 @@ test.describe('Given an administrator in the app on the home screen of a phone, 
   }) => {
     const card = page.locator(`.admin-frame a[href^="${DONORS_HREF}/"]`).first();
     const cardHref = (await card.getAttribute('href'))!;
-    await openFromTheAdministration(page, cardHref);
+    await openFromWhereItIsSeen(page, cardHref);
 
     const toDonors = await stepBackTo(page, DONORS_HREF, cardHref);
     expectStartedOverTheLivePageAndEndedWithoutAJump(page, toDonors, 'Dárci');
