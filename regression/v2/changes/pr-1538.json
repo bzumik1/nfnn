@@ -6,5 +6,21 @@
     "replacement": "src/app/core/navigation/page-focus.spec.ts > Given a list of the administration that a step back returns to from the card it opened > when the card was opened from a row that leads to it without being a link, then that row takes the focus",
     "reason": "Back gesture from every screen (#1531): the return of the focus after a step back moved from the payments page's own code to the shared PageFocus (one focus owner, plan B), so the payments' own test is replaced by the shared rule's test for a row that leads to the card (`data-leads-to`), which the payments' rows now carry; e2e/admin-back-focus.spec.ts covers Platby, Dárci and Nastavení end to end",
     "contract": "docs/frontend-overview.md, navigation (focus after a step back)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates, an article opened from the news, and the news placed again on the way back > when the news moves in, then its motion holds still at its start until the frame that shows both pages has been drawn",
+    "replacement": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates, an article opened from the news, and the news placed again on the way back > when the news moves in, then its motion is let go as both copies are placed, never held for a drawn frame (vote 10, round 42)",
+    "reason": "Hold reverted per vote 10 (first visible frame > 20 % on SE/17e, #1538 round 42): a step's motions are let go in the task that places both copies, never held for a drawn frame or by the page clock",
+    "contract": "docs/frontend-overview.md, Motion (Round 42)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-motion-start.spec.ts > Given the app on the home screen of a phone with an article opened from the news, whose browser then gives no more animation frames > when Zpět is pressed, then the step back lets its held motion go by the page clock within the duration of a quick change all the same*",
+    "replacement": "e2e/back-motion-start.spec.ts > Given the app on the home screen of a phone with an article opened from the news, whose browser then gives no more animation frames > when Zpět is pressed, then the step back moves on the clock all the same and ends on the news",
+    "reason": "Hold reverted per vote 10 (first visible frame > 20 % on SE/17e, #1538 round 42): a step's motions are let go in the task that places both copies, never held for a drawn frame or by the page clock; with no hold there is no held motion for the page clock to let go, so the row keeps only what still matters in a browser that stops giving frames: the step back still moves and ends on the news",
+    "contract": "docs/frontend-overview.md, Motion (Round 42)"
   }
 ]
