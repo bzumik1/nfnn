@@ -53,7 +53,11 @@ describe('Given a sticky action bar at the bottom of a page', () => {
     vi.stubGlobal(
       'matchMedia',
       (query: string) =>
-        ({ matches: query === '(pointer: coarse)' && coarsePointer }) as MediaQueryList,
+        ({
+          get matches() {
+            return query === '(pointer: coarse)' && coarsePointer;
+          },
+        }) as MediaQueryList,
     );
     heightOf = () => 84;
     bottomOf = () => viewportHeight;

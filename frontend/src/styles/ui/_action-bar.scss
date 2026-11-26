@@ -79,7 +79,8 @@ html:has(app-root app-tab-bar) {
 }
 
 .ui-action-bar.ui-action-bar--in-flow {
-  position: relative;
+  position: static;
+  contain: layout;
 }
 
 .ui-action-bar.ui-action-bar--resting {
@@ -99,6 +100,10 @@ html:has(app-root app-tab-bar) {
     background: var(--color-surface);
     box-shadow: var(--shadow-card);
     pointer-events: none;
+  }
+
+  @media (forced-colors: active) {
+    border-color: Canvas;
   }
 }
 

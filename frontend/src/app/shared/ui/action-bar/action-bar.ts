@@ -32,6 +32,7 @@ export class ActionBar {
   private tallestScreen = 0;
   private screenWidth = 0;
   private publishedHeight: string | null = null;
+  private coarsePointer: MediaQueryList | null | undefined;
 
   constructor() {
     const bar = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -41,7 +42,7 @@ export class ActionBar {
     const destroyRef = inject(DestroyRef);
     const injector = inject(Injector);
 
-    const place = () => {
+    const place = (releasedByUser = false) => {
       if (!view) {
         return;
       }
@@ -54,7 +55,7 @@ export class ActionBar {
       const inFlow = this.inFlow()
         ? this.pressed || height > screen * SHARE_THAT_FLOATS_AGAIN
         : height > screen * SHARE_THAT_MOVES_INTO_THE_PAGE && !this.held;
-      if (inFlow && !this.inFlow()) {
+      if (inFlow && !this.inFlow() && !releasedByUser) {
         this.keepTheFocusInView(bar, document, injector);
       }
       this.inFlow.set(inFlow);
@@ -62,11 +63,12 @@ export class ActionBar {
       this.publish(root, inFlow ? 0 : height);
     };
 
+    const placeAgain = () => place();
     const pressStarts = (event: Event) => {
       const inside = bar.contains(event.target as Node);
       this.pressed = inside;
       this.held = inside;
-      place();
+      place(!inside);
     };
     const pressEnds = () => {
       this.pressed = false;
@@ -75,24 +77,29 @@ export class ActionBar {
     const pressTurnsIntoScroll = () => {
       this.pressed = false;
       this.held = false;
-      place();
+      place(true);
+    };
+    const wheelScrolls = () => {
+      this.held = false;
+      place(true);
     };
     const focusArrives = (event: Event) => {
-      this.held = bar.contains(event.target as Node);
-      place();
+      const inside = bar.contains(event.target as Node);
+      this.held = inside;
+      place(!inside);
     };
     const focusLeaves = (event: FocusEvent) => {
       const next = event.relatedTarget as Node | null;
       if (next !== null && !bar.contains(next)) {
         this.held = false;
-        place();
+        place(true);
       }
     };
 
     afterNextRender(() => {
       place();
       if (typeof ResizeObserver === 'function') {
-        const observer = new ResizeObserver(place);
+        const observer = new ResizeObserver(placeAgain);
         observer.observe(bar);
         if (bar.parentElement) {
           observer.observe(bar.parentElement);
@@ -101,16 +108,18 @@ export class ActionBar {
       }
       if (view) {
         const passive = { passive: true, capture: true };
-        view.addEventListener('scroll', place, { passive: true });
-        view.addEventListener('resize', place, { passive: true });
+        view.addEventListener('scroll', placeAgain, { passive: true });
+        view.addEventListener('resize', placeAgain, { passive: true });
+        view.addEventListener('wheel', wheelScrolls, passive);
         view.addEventListener('pointerdown', pressStarts, passive);
         view.addEventListener('pointerup', pressEnds, passive);
         view.addEventListener('pointercancel', pressTurnsIntoScroll, passive);
         view.addEventListener('focusin', focusArrives, true);
         bar.addEventListener('focusout', focusLeaves);
         destroyRef.onDestroy(() => {
-          view.removeEventListener('scroll', place);
-          view.removeEventListener('resize', place);
+          view.removeEventListener('scroll', placeAgain);
+          view.removeEventListener('resize', placeAgain);
+          view.removeEventListener('wheel', wheelScrolls, true);
           view.removeEventListener('pointerdown', pressStarts, true);
           view.removeEventListener('pointerup', pressEnds, true);
           view.removeEventListener('pointercancel', pressTurnsIntoScroll, true);
@@ -129,7 +138,10 @@ export class ActionBar {
       this.tallestScreen = 0;
       this.held = false;
     }
-    const toolbarsComeAndGo = view.matchMedia?.('(pointer: coarse)').matches ?? false;
+    if (this.coarsePointer === undefined) {
+      this.coarsePointer = view.matchMedia?.('(pointer: coarse)') ?? null;
+    }
+    const toolbarsComeAndGo = this.coarsePointer?.matches ?? false;
     if (
       !toolbarsComeAndGo ||
       current < this.tallestScreen * SHARE_OF_THE_TALLEST_SCREEN_THAT_RESETS_IT
@@ -143,7 +155,14 @@ export class ActionBar {
   private keepTheFocusInView(bar: HTMLElement, document: Document, injector: Injector): void {
     const focused = document.activeElement;
     if (focused instanceof HTMLElement && bar.contains(focused)) {
-      afterNextRender(() => focused.scrollIntoView?.({ block: 'nearest' }), { injector });
+      afterNextRender(
+        () => {
+          if (document.activeElement === focused && bar.contains(focused)) {
+            focused.scrollIntoView?.({ block: 'nearest' });
+          }
+        },
+        { injector },
+      );
     }
   }
 
