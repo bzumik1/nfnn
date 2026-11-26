@@ -545,6 +545,80 @@ test.describe('Given an administrator who asks for less motion and whose saved s
   });
 });
 
+for (const { name, viewport, rootPx, floatingBar } of [
+  {
+    name: 'a computer 1280 × 720 with the text at 200 %',
+    viewport: { width: 1280, height: 720 },
+    rootPx: 32,
+    floatingBar: true,
+  },
+  {
+    name: 'an iPhone 375 pt wide with the largest accessibility text',
+    viewport: { width: 375, height: 667 },
+    rootPx: 53,
+    floatingBar: false,
+  },
+]) {
+  test.describe(`Given an administrator on ${name} changing a setting`, () => {
+    test.use({ viewport });
+
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript((px) => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = `html { font-size: ${px}px; }`;
+          document.head.append(style);
+        });
+      }, rootPx);
+      await mockDonorApi(page);
+      await rememberedSession(page);
+      await page.route(
+        (url) => url.pathname === SETTINGS,
+        (route) => route.fulfill({ json: adminSettings }),
+      );
+    });
+
+    for (const { way, save } of [
+      {
+        way: 'press Uložit nastavení',
+        save: (page: Page) => page.getByRole('button', { name: 'Uložit nastavení' }).click(),
+      },
+      {
+        way: 'press Enter in the field',
+        save: (page: Page) => page.locator('#setting-RECEIPT_FIRST_YEAR').press('Enter'),
+      },
+    ]) {
+      test(`when they ${way} and the question grows the action bar, then Zrušit keeps the focus inside the screen ${floatingBar ? 'on the bar that keeps floating' : 'in the save row of the page, which has no floating bar on a phone'}`, async ({
+        page,
+      }) => {
+        await openUnlockedAdministrationPage(page, '/sprava/nastaveni', 'Nastavení');
+        await page.locator('#setting-RECEIPT_FIRST_YEAR').fill('2025');
+        await save(page);
+
+        const cancel = page
+          .getByRole('group', { name: 'Uložit nastavení?' })
+          .getByRole('button', { name: 'Zrušit' });
+        await expect(cancel).toBeFocused();
+        await page.evaluate(
+          () =>
+            new Promise<void>((done) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => done())),
+            ),
+        );
+
+        const bar = page.locator('.ui-action-bar');
+        if (floatingBar) {
+          await expect(bar).not.toHaveClass(/ui-action-bar--in-flow/);
+        } else {
+          await expect(bar).toHaveCount(0);
+        }
+        await expect(cancel).toBeFocused();
+        await expect(cancel).toBeInViewport({ ratio: 1 });
+      });
+    }
+  });
+}
+
 for (const [width, height] of [
   [375, 667],
   ...[640, 680, 720, 760, 800, 844, 880].map((tall) => [390, tall]),

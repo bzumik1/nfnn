@@ -260,4 +260,25 @@ test.describe('Given a visitor tapping small controls on a phone', () => {
       expect(centre - centres[index]).toBeGreaterThanOrEqual(FINGER_PX);
     }
   });
+
+  test('when they tap near the edges of the contents links of the privacy policy, then a finger-sized area around each still reaches it, and the finger areas of neighbouring links never overlap', async ({
+    page,
+  }) => {
+    await page.goto('/zasady-ochrany-osobnich-udaju');
+    const links = page.getByRole('navigation', { name: 'Obsah' }).getByRole('link');
+    await expect(links.first()).toBeVisible();
+
+    const middles: number[] = [];
+    for (const link of await links.all()) {
+      await expectFingerSized(link);
+      const box = await link.evaluate((element) => {
+        const { top, bottom } = element.getBoundingClientRect();
+        return { top: top + window.scrollY, bottom: bottom + window.scrollY };
+      });
+      middles.push((box.top + box.bottom) / 2);
+    }
+    for (const [index, middle] of middles.slice(1).entries()) {
+      expect(middle - middles[index]).toBeGreaterThanOrEqual(FINGER_PX);
+    }
+  });
 });

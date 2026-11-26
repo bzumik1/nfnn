@@ -16,8 +16,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/focus-after-row-leaves';
 import {
-  FocusAfterRowLeaves,
   leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
