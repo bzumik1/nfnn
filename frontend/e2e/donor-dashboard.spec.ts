@@ -6,7 +6,7 @@ import {
   openReceiptsAfterSignIn,
   pretendIphoneThatShares,
 } from './receipt-donations';
-import { answerReceiptIssuing, RECEIPT_ISSUING_URL } from './receipt-issuing';
+import { answerReceiptIssuing, mockReceiptIssuing, RECEIPT_ISSUING_URL } from './receipt-issuing';
 import { donorWithDonations } from './baseline/screen-mocks';
 import {
   bankAccountItem,
@@ -1305,6 +1305,7 @@ test.describe('Given a signed-in donor on a computer', () => {
       page,
     }) => {
       await mockDonorApi(page, receiptDonations);
+      await mockReceiptIssuing(page, ISSUING);
       await page.setViewportSize({ width, height: 844 });
       await openReceiptsAfterSignIn(page);
       await page.goto('/darce/prehled');

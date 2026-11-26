@@ -99,21 +99,25 @@ async function signInOnPhone(page: Page, width: number, user: typeof donor = don
   await page.setViewportSize({ width, height: 800 });
 }
 
-async function untilAtRest(dialog: Locator): Promise<void> {
+async function untilAtRest(measured: Locator): Promise<void> {
   await expect
     .poll(
       () =>
-        dialog.evaluate(
-          (element) =>
-            element
-              .getAnimations({ subtree: true })
-              .filter(
-                (motion) =>
-                  motion.playState === 'running' &&
-                  motion.effect?.getComputedTiming().iterations !== Infinity,
-              ).length,
-        ),
-      { message: 'the dialog has come to rest' },
+        measured.evaluate((element) => {
+          const ancestors: Element[] = [];
+          for (let node = element.parentElement; node; node = node.parentElement) {
+            ancestors.push(node);
+          }
+          return [
+            ...element.getAnimations({ subtree: true }),
+            ...ancestors.flatMap((ancestor) => ancestor.getAnimations()),
+          ].filter(
+            (motion) =>
+              motion.playState === 'running' &&
+              motion.effect?.getComputedTiming().iterations !== Infinity,
+          ).length;
+        }),
+      { message: 'nothing that moves the measured element is still running' },
     )
     .toBe(0);
 }
@@ -277,7 +281,7 @@ test.describe('Given a signed-in donor on a phone', () => {
       const dialog = page.getByRole('dialog', { name: 'Přidat bankovní účet' });
       const rows = dialog.locator('.add-account-row');
       await expect(rows).toHaveCount(4);
-      await untilAtRest(dialog);
+      await untilAtRest(dialog.locator('.add-account-bank'));
       const placed = await rows.evaluateAll((found) =>
         found.map((row) => {
           const label = row.querySelector('dt')!.getBoundingClientRect();
@@ -471,7 +475,7 @@ test.describe('Given a signed-in donor adding a bank account on a wide screen', 
         const rows = dialog.locator('.add-account-row');
         await expect(rows).toHaveCount(4);
         await expect(rows.first()).toContainText('19-2000145399/0800');
-        await untilAtRest(dialog);
+        await untilAtRest(dialog.locator('.add-account-bank'));
 
         expect(await numbersBrokenAcrossLines(dialog)).toEqual([]);
         const singleLineHeights = await rows.evaluateAll((found) =>
@@ -522,12 +526,7 @@ test.describe('Given a signed-in donor with a verified bank account on a compute
       await signIn(page);
       await page.setViewportSize({ width, height: 900 });
       await openDonorSection(page, 'Bankovní účty');
-      const row = page
-        .locator('.account')
-        .filter({
-          has: page.getByRole('button', { name: /Nepřiřazovat platby z\stohoto účtu/ }),
-        })
-        .first();
+      const row = page.locator('.account').filter({ hasText: '2900233333/2010' });
       await expect(row).toBeVisible();
       await untilAtRest(row);
 
