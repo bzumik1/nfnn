@@ -129,16 +129,8 @@ export interface StepChrome {
   ): BarItem[];
   readsWaitLeftMs(stage: PageTransitions): number;
   samplePace(stage: PageTransitions): void;
-  hold(view: Window, overlay: HTMLElement, kind: PlacingKind): void;
+  markPlacing(view: Window, kind: PlacingKind): void;
   release(view: Window, overlay: HTMLElement, steadyBeforeMs: number): void;
-  afterDrawnFrames(
-    view: Window,
-    document: Document,
-    frames: number,
-    then: () => void,
-    mayEndByClock?: () => boolean,
-    goesOn?: () => boolean,
-  ): void;
 }
 
 export interface SheetLooks {
@@ -193,7 +185,6 @@ export class PageTransitions {
   private pressedAt = Number.NEGATIVE_INFINITY;
   tappedAt = 0;
   readonly loadedRoutes = new Set<Route>();
-  private drawnSincePress = true;
 
   get dressing(): StepChrome | null {
     return this.stepChrome;
@@ -226,8 +217,6 @@ export class PageTransitions {
     const hidden = (): void => this.endWhenHidden();
     const sample = (event: Event): void => {
       this.pressedAt = event.timeStamp;
-      this.drawnSincePress = event.type === 'keydown';
-      this.document.defaultView?.requestAnimationFrame?.(() => (this.drawnSincePress = true));
       this.sampleFramePace();
     };
     this.document.addEventListener('visibilitychange', hidden);
@@ -505,29 +494,12 @@ export class PageTransitions {
 
   private startMoving(running: Running, view: Window, page: HTMLElement, kind: PlacingKind): void {
     const chrome = this.dressing;
-    chrome?.hold(view, running.overlay, kind);
+    chrome?.markPlacing(view, kind);
     running.overlay.classList.add(MOVING_CLASS);
-    const framesStopped = !this.drawnSincePress;
     const still = this.finishWhenStill(running, page, view);
-    let released = false;
-    const release = (): void => {
-      if (released || this.running !== running) {
-        return;
-      }
-      released = true;
-      this.finishAfter(view, PAGE_TRANSITION_LONGEST_MS);
-      chrome?.release(view, running.overlay, this.steadyFrameMs());
-      view.requestAnimationFrame(() =>
-        view.setTimeout(still, this.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
-      );
-    };
-    (chrome?.afterDrawnFrames ?? ((...wait) => wait[3]()))(
-      view,
-      this.document,
-      kind === 'task' ? 2 : 1,
-      release,
-      () => framesStopped,
-      () => this.running === running,
+    chrome?.release(view, running.overlay, this.steadyFrameMs());
+    view.requestAnimationFrame(() =>
+      view.setTimeout(still, this.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
     );
   }
 

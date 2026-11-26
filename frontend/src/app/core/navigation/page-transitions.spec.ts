@@ -381,8 +381,8 @@ describe('Given a phone that animates, whose router puts the scroll back, and ar
     expect(arrived).toBe('Načítáme stránku…');
   });
 
-  it('when the step waits for the page’s text and so places its copies inside a frame, then its motions are let go in the frame after it, since the frame that placed them already draws them', async () => {
-    watchHeldMotions();
+  it('when the step waits for the page’s text and so places its copies inside a frame, then its motions are let go in that frame, never held for another (vote 10, round 42)', async () => {
+    const motions = watchHeldMotions();
     const draw = framesOnRequest();
     await opensPlacedAfter('/aktuality/zahrada-pro-deti', 40);
     await vi.advanceTimersByTimeAsync(5);
@@ -391,12 +391,12 @@ describe('Given a phone that animates, whose router puts the scroll back, and ar
     await vi.advanceTimersByTimeAsync(0);
 
     draw(1000);
-    expect(moving()?.classList, 'held in the frame that placed the copies').toContain(
-      `${PAGE_TRANSITION_CLASS}--held`,
-    );
-    draw(1016);
 
     expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    expect(motions.size).toBeGreaterThan(0);
+    expect(playedUntilDrawn.size, 'motions let go in the frame that placed the copies').toBe(
+      motions.size,
+    );
   });
 
   it('when the page is placed so late that waiting for its text would place the step later than 9 frames after the tap, then the article slides in at once with its waiting line', async () => {
@@ -508,7 +508,7 @@ describe('Given a phone that animates, whose app has drawn frames at a steady pa
     expect(motions.size).toBeGreaterThan(1);
     expect(transitions.steadyFrameMs()).toBe(16);
     expect(new Set([...motions.values()].map((motion) => motion.startTime))).toEqual(
-      new Set([5032]),
+      new Set([5000]),
     );
   });
 
@@ -549,7 +549,7 @@ describe('Given a phone that animates, whose app has drawn frames at a steady pa
     expect(motions.size).toBeGreaterThan(1);
     expect(transitions.steadyFrameMs()).toBe(16);
     expect(new Set([...motions.values()].map((motion) => motion.startTime))).toEqual(
-      new Set([5032]),
+      new Set([5000]),
     );
   });
 });
@@ -631,19 +631,18 @@ describe('Given a phone that animates, an article opened from the news, and the 
     }
   }
 
-  it('when the news moves in, then its motion holds still at its start until the frame that shows both pages has been drawn', async () => {
+  it('when the news moves in, then its motion is let go as both copies are placed, never held for a drawn frame (vote 10, round 42)', async () => {
     const held = await heldWhenTheMotionBegins(() =>
       router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION }),
     );
 
-    expect(held).toEqual([true]);
+    expect(held).toEqual([false]);
   });
 
-  async function holdBegun(): Promise<void> {
+  async function stepBegun(): Promise<void> {
     for (let waited = 0; moving() === null && waited < PAGE_TRANSITION_LONGEST_MS; waited += 5) {
       await vi.advanceTimersByTimeAsync(5);
     }
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
   }
 
   function drawnSteadilyBeforeTheTap(draw: (at: number) => void, gapMs: number): void {
@@ -657,205 +656,9 @@ describe('Given a phone that animates, an article opened from the news, and the 
     return new Set([...motions.values()].map((motion) => motion.startTime));
   }
 
-  it('when the first frame of the step is drawn, then its motions stay held in it, since a phone may show that frame only once it has painted both copies, and they are let go in the next frame', async () => {
+  it('when the news is placed by a resize observer, inside the frame that draws it, then the motions are let go in that frame, never held for another (vote 10, round 42)', async () => {
     const motions = watchHeldMotions();
-    const draw = framesOnRequest();
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-
-    draw(5000);
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    draw(5016);
-
-    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    expect(motions.size).toBeGreaterThan(0);
-    expect(startTimes(motions)).toEqual(new Set([null]));
-  });
-
-  it('when the motions are let go, then the browser starts none of them before the frame after however long that frame takes within the motion’s length, so the screen moves only from a frame that already showed both pages at rest', async () => {
-    const motions = watchHeldMotions();
-    const draw = framesOnRequest();
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-    draw(5000);
-    draw(5016);
-
-    await vi.advanceTimersByTimeAsync(300 + 2 * FRAME_LATE_MS - 20);
-    expect(startTimes(motions)).toEqual(new Set([null]));
-    draw(5480);
-    expect(startTimes(motions)).toEqual(new Set([5480]));
-    await vi.advanceTimersByTimeAsync(300 - 10);
-    expect(moving(), 'the motion was cut before its end').not.toBeNull();
-  });
-
-  it('when a visible page keeps the step held for 1800 ms before its frames come, then the longest time of the step counts from the moment its motion is let go, so the slide runs its whole length and still ends within that length and 200 ms', async () => {
-    watchHeldMotions();
-    const draw = framesOnRequest();
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-    await vi.advanceTimersByTimeAsync(1800);
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    draw(6800);
-    draw(6816);
-    draw(6832);
-
-    await vi.advanceTimersByTimeAsync(300 - 10);
-    expect(moving(), 'the motion was cut before its end').not.toBeNull();
-    await vi.advanceTimersByTimeAsync(2 * FRAME_LATE_MS + 20);
-
-    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
-  });
-
-  it('when the second frame of the hold comes 270 ms late, then the motions are let go only in it, the step is not cut before the motion has run its whole length from the frame after, and it ends within that length and 200 ms', async () => {
-    watchHeldMotions();
-    const draw = framesOnRequest();
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-    draw(5000);
-    await vi.advanceTimersByTimeAsync(270);
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    draw(5270);
-    draw(5286);
-
-    await vi.advanceTimersByTimeAsync(300 - 10);
-    expect(moving(), 'the motion was cut before its end').not.toBeNull();
-    await vi.advanceTimersByTimeAsync(2 * FRAME_LATE_MS + 20);
-
-    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
-  });
-
-  it('when the first frame comes later than a frame may be late, as when a phone takes long to render the page beneath, then the motions stay held through that frame and are let go only in the one after it, never by the clock before the copies are painted', async () => {
-    const motions = watchHeldMotions();
-    const draw = framesOnRequest();
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-
-    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS + 50);
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    draw(5150);
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    draw(5166);
-    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    draw(5182);
-
-    expect(startTimes(motions)).toEqual(new Set([5182]));
-  });
-
-  it('when the page is visible and its main thread is busy past HELD_WITHOUT_A_FRAME_MS, so its first frame is still to come, then the clock never lets the held motions go, and the first frame and the one after it do', async () => {
-    watchHeldMotions();
-    const draw = framesOnRequest();
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-
-    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS + 100);
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    draw(5600);
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    draw(5616);
-
-    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
-  });
-
-  it('when the page is hidden after the first frame of the hold and no frame comes after it, then the page clock lets the held motions go after HELD_WITHOUT_A_FRAME_MS, as when no frame came at all', async () => {
-    watchHeldMotions();
-    const draw = framesOnRequest();
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-    draw(5000);
-    hiddenWithoutTellingThePage();
-
-    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS - 10);
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    await vi.advanceTimersByTimeAsync(10);
-
-    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
-  });
-
-  it('when the browser has drawn no frame since the press, as when it gives no more frames at all, and the page clock’s wait runs on time, then the clock lets the held motions go after the time a frame may be late, in a visible page too', async () => {
-    watchHeldMotions();
     framesOnRequest();
-    document.dispatchEvent(new Event('pointerdown'));
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-
-    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS + 5);
-
-    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
-  });
-
-  it('when the browser has drawn no frame since the press but the page clock’s look runs late, as after a long task, then that late look does not let the held motions go, and the frames that come next do', async () => {
-    watchHeldMotions();
-    const draw = framesOnRequest();
-    document.dispatchEvent(new Event('pointerdown'));
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-    const own = performance.now.bind(performance);
-    const clock = vi.spyOn(performance, 'now').mockImplementation(() => own() + 200);
-    onTestFinished(() => clock.mockRestore());
-
-    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS + 5);
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    draw(5000);
-    draw(5016);
-
-    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
-  });
-
-  it('when the browser drew a frame after the press, as an iPhone does before it holds the next one back while it paints the copies, then the page clock never lets the held motions go in a visible page, not even after 500 ms of looks on time (round 28)', async () => {
-    watchHeldMotions();
-    const draw = framesOnRequest();
-    document.dispatchEvent(new Event('pointerdown'));
-    draw(1000);
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-
-    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS);
-
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-  });
-
-  it('when no frame came between the press and the placing, as a quick tap, a trackpad’s tap-to-click or a test’s click, and the hold then draws its first frame, then the page clock never ends the hold afterwards, since the next frame may be held back while the copies are painted (round 28)', async () => {
-    watchHeldMotions();
-    const draw = framesOnRequest();
-    document.dispatchEvent(new Event('pointerdown'));
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-    draw(5000);
-
-    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS);
-
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-  });
-
-  it('when a second press comes while the step is held, then the hold keeps the frames-since-the-press its step began with, so the clock never lets it go', async () => {
-    watchHeldMotions();
-    const draw = framesOnRequest();
-    document.dispatchEvent(new Event('pointerdown'));
-    draw(1000);
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-    document.dispatchEvent(new Event('pointerdown'));
-
-    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS + 50);
-
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-  });
-
-  it('when the step comes from a key, whose press and click share one task before any frame, then the page clock never lets the held motions go in a visible page, as an iPad with a keyboard may hold that frame back', async () => {
-    watchHeldMotions();
-    framesOnRequest();
-    document.dispatchEvent(new Event('keydown'));
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-
-    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS + 50);
-
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-  });
-
-  it('when the news is placed by a resize observer, inside the frame that draws it, then the motions are held through that frame only and let go in the next', async () => {
-    watchHeldMotions();
-    const draw = framesOnRequest();
     const placement = TestBed.inject(PagePlacement);
     const placed = placement.pending();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
@@ -863,19 +666,16 @@ describe('Given a phone that animates, an article opened from the news, and the 
 
     placement.inRendering(placed);
     await vi.advanceTimersByTimeAsync(0);
-    expect(moving()?.classList, 'held in the frame that placed the copies').toContain(
-      `${PAGE_TRANSITION_CLASS}--held`,
-    );
-    draw(5000);
 
     expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    expect(playedUntilDrawn.size).toBeGreaterThan(0);
   });
 
-  it('when the step ends while its motions are held and no frame comes, then the page clock stops looking', async () => {
+  it('when the step ends before any frame comes, then no timer of the step is left', async () => {
     watchHeldMotions();
     framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
+    await stepBegun();
     dressedTransitions().finish();
 
     await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 3);
@@ -883,50 +683,11 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(vi.getTimerCount(), 'timers still pending after the step ended').toBe(0);
   });
 
-  function hiddenWithoutTellingThePage(): void {
-    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
-    onTestFinished(() => visibility.mockRestore());
-  }
-
-  it('when the page is hidden and no frame comes at all after the hold begins, as in a home-screen app put away, then only the page clock lets the held motions go, after HELD_WITHOUT_A_FRAME_MS, and each starts with the first frame drawn after', async () => {
-    const motions = watchHeldMotions();
-    const draw = framesOnRequest();
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-    hiddenWithoutTellingThePage();
-
-    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS - 10);
-    expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    await vi.advanceTimersByTimeAsync(10);
-    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    draw(5200);
-
-    expect(motions.size).toBeGreaterThan(0);
-    expect(startTimes(motions)).toEqual(new Set([5200]));
-  });
-
-  it('when the page clock lets the held motions go between two frames, then they start with the next frame drawn and no later long frame moves that start', async () => {
-    const motions = watchHeldMotions();
-    const draw = framesOnRequest();
-    drawnSteadilyBeforeTheTap(draw, 16);
-    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-    hiddenWithoutTellingThePage();
-    await vi.advanceTimersByTimeAsync(HELD_WITHOUT_A_FRAME_MS);
-    draw(5048);
-
-    for (const at of [5064, 5131, 5164]) {
-      draw(at);
-    }
-
-    expect(startTimes(motions)).toEqual(new Set([5048]));
-  });
-
-  it('when the motions of the step never report that they are ready or finished, then the step still ends within its motion’s length after it is let go, not only after its longest time', async () => {
+  it('when the motions of the step never report that they are ready or finished, then the step still ends within its motion’s length after its first frame, not only after its longest time', async () => {
     watchHeldMotions();
     const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
+    await stepBegun();
     draw(5000);
     draw(5016);
     draw(5032);
@@ -946,26 +707,25 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
   });
 
-  it('when the frame after the one that lets the motions go is drawn, then the browser starts every motion at its time, so that frame still shows both pages at rest and the next one moves', async () => {
+  it('when the first frame after both copies are placed is drawn, then the browser starts every motion at its time, with no frame held at rest before it (vote 10, round 42)', async () => {
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
+    await stepBegun();
 
     draw(5000);
     draw(5016);
-    draw(5140);
     await vi.advanceTimersByTimeAsync(0);
 
     expect(motions.size).toBeGreaterThan(0);
-    expect(startTimes(motions)).toEqual(new Set([5140]));
+    expect(startTimes(motions)).toEqual(new Set([5000]));
   });
 
-  it('when the held motions are let go, then the page never writes their start time nor their current time, so the browser starts each with the first frame it draws it in and that frame shows it at its start', async () => {
+  it('when the motions are let go, then the page never writes their start time nor their current time, so the browser starts each with the first frame it draws it in and that frame shows it at its start', async () => {
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
+    await stepBegun();
 
     draw(5000);
     draw(5016);
@@ -981,12 +741,10 @@ describe('Given a phone that animates, an article opened from the news, and the 
     );
   });
 
-  async function releasedAt(draw: (at: number) => void, first: number, second: number) {
+  async function startedAt(draw: (at: number) => void, first: number) {
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
-    await holdBegun();
-    draw(2 * first - second);
+    await stepBegun();
     draw(first);
-    draw(second);
     await vi.advanceTimersByTimeAsync(0);
   }
 
@@ -994,7 +752,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     drawnSteadilyBeforeTheTap(draw, 16);
-    await releasedAt(draw, 5000, 5016);
+    await startedAt(draw, 5016);
     draw(5032);
 
     draw(5112);
@@ -1007,7 +765,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     drawnSteadilyBeforeTheTap(draw, 16);
-    await releasedAt(draw, 5000, 5016);
+    await startedAt(draw, 5016);
 
     for (const at of [5116, 5216, 5316, 5416]) {
       draw(at);
@@ -1020,7 +778,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     drawnSteadilyBeforeTheTap(draw, 33);
-    await releasedAt(draw, 5000, 5033);
+    await startedAt(draw, 5033);
 
     for (const at of [5066, 5099, 5132, 5165]) {
       draw(at);
@@ -1033,7 +791,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
     drawnSteadilyBeforeTheTap(draw, 16);
-    await releasedAt(draw, 5000, 5016);
+    await startedAt(draw, 5016);
     for (let at = 5032; at <= 5016 + 176; at += 16) {
       draw(at);
     }
@@ -1046,7 +804,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
   it('when the tab is hidden while the step moves, then the step ends at once instead of running on the clock it would come back to', async () => {
     watchHeldMotions();
     const draw = framesOnRequest();
-    await releasedAt(draw, 5000, 5016);
+    await startedAt(draw, 5016);
     expect(moving()).not.toBeNull();
     const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
     onTestFinished(() => visibility.mockRestore());
@@ -1056,10 +814,10 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
   });
 
-  it('when another article opens from this one, then its motion holds still at its start until the frame that shows both pages has been drawn', async () => {
+  it('when another article opens from this one, then its motion is let go as both copies are placed, never held for a drawn frame (vote 10, round 42)', async () => {
     const held = await heldWhenTheMotionBegins(() => router.navigateByUrl('/aktuality/druhy'));
 
-    expect(held).toEqual([true]);
+    expect(held).toEqual([false]);
   });
 
   it('when the news is never placed, then the step back moves in after the duration of a page step all the same', async () => {
@@ -3467,7 +3225,7 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     expect(overlayPage('over')?.textContent).not.toContain('Účet');
   });
 
-  it('when a section opens inside the sheet, then its copies are placed in the frame drawn after it rendered, marked as placed inside a frame, and its motions are let go in the frame after', () => {
+  it('when a section opens inside the sheet, then its copies are placed in the frame drawn after it rendered, marked as placed inside a frame, and its motions are let go in that frame, never held for another (vote 10, round 42)', () => {
     const frames = heldFrames();
     performance.clearMarks(PLACING_MARK);
     transitions.stepInSheet({
@@ -3483,8 +3241,6 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     const held = document.querySelector(`.${PAGE_TRANSITION_CLASS}`)?.classList;
 
     expect(marks.map((mark) => (mark.detail as { kind: string }).kind)).toEqual(['raf']);
-    expect(held).toContain(`${PAGE_TRANSITION_CLASS}--held`);
-    drawFrame(frames);
     expect(held).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
   });
 

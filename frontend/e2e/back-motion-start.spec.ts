@@ -8,7 +8,6 @@ const FINGER_Y = 420;
 const LIST_TITLE = 'Co je u nás nového';
 const BUSY_AS_ON_THE_PHONE_MS = 140;
 const SMALL_PART_OF_THE_WAY = 0.2;
-const HELD_AT_MOST_MS = 150;
 
 const article = {
   id: '0199f3e0-0000-7000-8000-00000000c031',
@@ -32,7 +31,6 @@ interface SeenFrame {
 declare global {
   interface Window {
     nfnnFramesSeen?: SeenFrame[];
-    nfnnHoldSeen?: { heldAt: number | null; releasedAt: number | null };
   }
 }
 
@@ -168,29 +166,8 @@ async function articleOpenedFromTheNews(page: Page): Promise<void> {
   await openArticleFromList(page);
 }
 
-async function watchTheHoldWithoutFrames(page: Page): Promise<void> {
+async function noMoreFrames(page: Page): Promise<void> {
   await page.evaluate(() => {
-    const seen = { heldAt: null as number | null, releasedAt: null as number | null };
-    window.nfnnHoldSeen = seen;
-    const watch = new MutationObserver((records) => {
-      for (const record of records) {
-        const overlay = record.target;
-        if (
-          !(overlay instanceof HTMLElement) ||
-          !overlay.classList.contains('page-transition--moving')
-        ) {
-          continue;
-        }
-        if (overlay.classList.contains('page-transition--held')) {
-          seen.heldAt ??= performance.now();
-        } else if (seen.heldAt !== null) {
-          seen.releasedAt = performance.now();
-          watch.disconnect();
-          return;
-        }
-      }
-    });
-    watch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
     window.requestAnimationFrame = () => 0;
   });
 }
@@ -267,18 +244,13 @@ test.describe('Given the app on the home screen of a phone with an article opene
 
   test.beforeEach(({ page }) => articleOpenedFromTheNews(page));
 
-  test('when Zpět is pressed, then the step back lets its held motion go by the page clock within the duration of a quick change all the same', async ({
+  test('when Zpět is pressed, then the step back moves on the clock all the same and ends on the news', async ({
     page,
   }) => {
-    await watchTheHoldWithoutFrames(page);
+    await noMoreFrames(page);
 
     await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
 
-    await expect
-      .poll(() => page.evaluate(() => window.nfnnHoldSeen?.releasedAt ?? null))
-      .not.toBeNull();
-    const hold = await page.evaluate(() => window.nfnnHoldSeen!);
-    expect(hold.releasedAt! - hold.heldAt!).toBeLessThanOrEqual(HELD_AT_MOST_MS);
     await expect(page).toHaveURL('/aktuality');
     await expect(page.locator('.page-transition')).toHaveCount(0);
   });
@@ -372,7 +344,6 @@ interface CopyOfTheNews {
   readonly at: number;
   readonly both: boolean;
   readonly overlay: boolean;
-  readonly held: boolean;
   readonly leavingOffset: number | null;
   readonly copyTop: number | null;
   readonly copyMarkTop: number | null;
@@ -497,7 +468,6 @@ async function watchTheReturn(page: Page): Promise<void> {
         at: performance.now(),
         both: over !== null && under !== null,
         overlay: overlay !== null,
-        held: overlay?.classList.contains('page-transition--held') ?? false,
         leavingOffset:
           over === null ? null : new DOMMatrixReadOnly(getComputedStyle(over).transform).m41,
         copyTop: scroller === null ? null : Math.round(scroller.scrollTop),
@@ -575,10 +545,7 @@ test.describe('Given the app on the home screen of a phone with the news and the
 
     const { frames, placed } = await returnSeen(page);
     expect(placed, 'no copy of the news joined the cover').not.toBeNull();
-    expect(
-      { held: placed!.held, leavingOffset: placed!.leavingOffset },
-      'the cover as the copy of the news joined it',
-    ).toEqual({ held: true, leavingOffset: 0 });
+    expect(placed!.leavingOffset, 'the cover as the copy of the news joined it').toBe(0);
     expectTheCopyWhereTheyLeftIt(placed!, listTop, 'as it joined the cover');
     if (measuresFrames(page)) {
       const placedAt = frames.findIndex((frame) => frame.both);
