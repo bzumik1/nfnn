@@ -191,6 +191,7 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
           return hitOnFieldCentre(page);
         })
         .toBe('notice');
+      await expect(page.locator('#contact-name')).toBeFocused();
     });
 
     test('and the keyboard comes up, then the notice steps aside for the field without moving the page, is still heard, and comes back when the keyboard goes down', async ({
@@ -200,6 +201,21 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
 
       await showKeyboard(page);
 
+      expect(
+        await page.evaluate(() => ({
+          focused: document.activeElement?.id || document.activeElement?.tagName,
+          windowHeight: window.innerHeight,
+          visibleHeight: window.visualViewport?.height,
+          standIn: 'standInKeyboard' in window,
+          marked: document.documentElement.classList.contains('keyboard-open'),
+        })),
+      ).toEqual({
+        focused: 'contact-name',
+        windowHeight: SMALL_PHONE.height,
+        visibleHeight: SMALL_PHONE.height - KEYBOARD_HEIGHT,
+        standIn: true,
+        marked: true,
+      });
       await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toBeHidden();
       await expect(page.locator('#contact-name')).toBeFocused();
       await expect.poll(() => hitOnFieldCentre(page)).toBe('field');
@@ -216,6 +232,21 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
       page,
     }) => {
       await showKeyboard(page);
+      expect(
+        await page.evaluate(() => ({
+          focused: document.activeElement?.id || document.activeElement?.tagName,
+          windowHeight: window.innerHeight,
+          visibleHeight: window.visualViewport?.height,
+          standIn: 'standInKeyboard' in window,
+          marked: document.documentElement.classList.contains('keyboard-open'),
+        })),
+      ).toEqual({
+        focused: 'contact-name',
+        windowHeight: SMALL_PHONE.height,
+        visibleHeight: SMALL_PHONE.height - KEYBOARD_HEIGHT,
+        standIn: true,
+        marked: true,
+      });
       await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toBeHidden();
       await expect(page.locator('#contact-name')).toBeFocused();
       await expect.poll(() => hitOnFieldCentre(page)).toBe('field');
