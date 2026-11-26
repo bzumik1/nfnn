@@ -557,10 +557,6 @@ export class PageTransitions {
     }
   }
 
-  whenFinished(then: () => void): void {
-    this.lent.push(then);
-  }
-
   shown(layer: HTMLElement): KeptPage {
     const kept = this.keep(layer);
     const giveBack = this.drawing?.lendPhotos(layer, kept.copy);

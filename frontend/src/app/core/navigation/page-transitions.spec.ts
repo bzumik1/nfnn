@@ -1219,14 +1219,13 @@ describe('Given a phone that animates and an article opened from the news, which
     expect(under).toEqual([expect.stringContaining('Aktuality živě')]);
   });
 
-  it('when the app steps back to it, then the row the focus returns to is found in the live news before the news is copied under the article (#2088)', async () => {
+  it('when the app steps back to it, then the row the focus returns to is put where it stood when the article opened before the live news is copied under the article, so the copy, the live news and the returning focus agree and the list never jumps at the end (#2088)', async () => {
     const placed = TestBed.inject(PagePlacement).pending();
     const seen: string[] = [];
-    vi.spyOn(TestBed.inject(PageFocus), 'returnTargetIn').mockImplementation((scope) => {
+    vi.spyOn(TestBed.inject(PageFocus), 'placeReturnWhereLeft').mockImplementation((scope) => {
       seen.push(
         `${scope === layer ? 'layer' : 'elsewhere'} ${document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under`) === null ? 'before the copy' : 'after the copy'}`,
       );
-      return null;
     });
 
     await stepsBack();
@@ -1236,43 +1235,6 @@ describe('Given a phone that animates and an article opened from the news, which
 
     expect(moved).toBe(true);
     expect(seen).toEqual(['layer before the copy']);
-  });
-
-  it('when the live news changes above the row the focus returns to while the cover stands, as late answers do after a cold launch, then the live news is put where the copy shows that row as the cover goes, so the list never jumps at the end (#2088)', async () => {
-    const placed = TestBed.inject(PagePlacement).pending();
-    const row = document.createElement('a');
-    layer.append(row);
-    let rowTop = 166;
-    row.getBoundingClientRect = () => new DOMRect(0, rowTop, 300, 56);
-    vi.spyOn(TestBed.inject(PageFocus), 'returnTargetIn').mockReturnValue(row);
-    const coverWhenScrolled: boolean[] = [];
-    const scrolledBy = vi.spyOn(window, 'scrollBy').mockImplementation(((
-      options: ScrollToOptions,
-    ) => {
-      coverWhenScrolled.push(document.querySelector(`.${PAGE_TRANSITION_CLASS}`) !== null);
-      rowTop -= options.top ?? 0;
-    }) as typeof window.scrollBy);
-
-    const lateAnswers = new MutationObserver(() => {
-      if (document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under`) !== null) {
-        lateAnswers.disconnect();
-        rowTop = 40;
-      }
-    });
-    lateAnswers.observe(document.body, { subtree: true, childList: true });
-    onTestFinished(() => lateAnswers.disconnect());
-
-    await stepsBack();
-    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
-    placed();
-    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS);
-
-    expect(moved).toBe(true);
-    expect(scrolledBy).toHaveBeenCalledTimes(1);
-    expect(scrolledBy).toHaveBeenCalledWith({ top: -126, behavior: 'instant' });
-    expect(coverWhenScrolled).toEqual([true]);
-    expect(rowTop).toBe(166);
-    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
   });
 
   it('when the window has another width than when the news was kept, then the step back waits for the live news as before', async () => {

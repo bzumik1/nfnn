@@ -13,7 +13,6 @@ import { InputModality } from '../input/input-modality';
 import { CompactLayout } from '../layout/compact-layout';
 import { PageFocus, RETURNING_FOCUS_LONGEST_MS } from './page-focus';
 import { PagePlacement } from './page-placement';
-import { PageTransitions } from './page-transitions';
 
 @Component({ template: '' })
 class Blank {}
@@ -131,40 +130,37 @@ describe('Given a list of the administration that a step back returns to from th
       document.documentElement.style.scrollPaddingBottom = '';
     });
 
-    it('then a step back about to copy the list finds the row the focus will return to, without moving the page or the focus (#2088)', async () => {
-      link = row({ href: CARD });
-      link.getBoundingClientRect = () => new DOMRect(0, header - 56, 300, 56);
-      scope.append(link);
-      await openTheCard(link);
-      await stepBack();
-      shown = vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>();
-      link.scrollIntoView = shown;
+    describe('when the page above the row changed meanwhile, as Správa after a cold launch (#2088)', () => {
+      let scrolledBy: ReturnType<typeof vi.fn<(options?: ScrollToOptions) => void>>;
 
-      expect(focus.returnTargetIn(scope)).toBe(link);
-      expect(shown).not.toHaveBeenCalled();
-      expect(document.activeElement).toBe(heading);
-    });
+      async function placedByTheStepBackWithTheLinkMovedTo(top: number): Promise<void> {
+        let linkTop = 300;
+        link = row({ href: CARD });
+        link.getBoundingClientRect = () => new DOMRect(0, linkTop, 300, 56);
+        scope.append(link);
+        await openTheCard(link);
+        await stepBack();
+        linkTop = top;
+        scrolledBy = vi.fn<(options?: ScrollToOptions) => void>();
+        const scrolls = vi
+          .spyOn(window, 'scrollBy')
+          .mockImplementation(scrolledBy as typeof window.scrollBy);
+        onTestFinished(() => scrolls.mockRestore());
+        focus.placeReturnWhereLeft(scope);
+      }
 
-    it('then a row hidden under the head is brought into view only once the cover of the step back has gone, so the page never moves under the copy the step shows (#2088)', async () => {
-      const transitions = TestBed.inject(PageTransitions);
-      onTestFinished(() => transitions.finish());
-      link = row({ href: CARD });
-      link.getBoundingClientRect = () => new DOMRect(0, header - 56, 300, 56);
-      scope.append(link);
-      await openTheCard(link);
-      await stepBack();
-      shown = vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>();
-      link.scrollIntoView = shown;
-      const overlay = transitions.overlay('pop');
-      transitions.running = { kind: 'pop', overlay, swiping: false, sheet: null, revealed: true };
+      it('then a step back about to copy the list scrolls it so the row stands where it stood when the card opened, and leaves the focus to the return', async () => {
+        await placedByTheStepBackWithTheLinkMovedTo(-76);
 
-      focus.returnAfterStepBack(scope);
-      const underTheCover = shown.mock.calls.length;
-      transitions.finish();
+        expect(scrolledBy).toHaveBeenCalledWith({ top: -376, behavior: 'instant' });
+        expect(document.activeElement).toBe(heading);
+      });
 
-      expect(document.activeElement).toBe(link);
-      expect(underTheCover).toBe(0);
-      expect(shown).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+      it('then a step back about to copy the list leaves a row that stands where it was left', async () => {
+        await placedByTheStepBackWithTheLinkMovedTo(300);
+
+        expect(scrolledBy).not.toHaveBeenCalled();
+      });
     });
 
     it('then the link takes the focus from the heading without moving the page while the row shows', async () => {

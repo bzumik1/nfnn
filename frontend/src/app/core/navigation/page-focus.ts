@@ -6,7 +6,6 @@ import {
   inject,
   Injectable,
   Injector,
-  untracked,
 } from '@angular/core';
 import { NavigationStart, Router } from '@angular/router';
 import { InputModality } from '../input/input-modality';
@@ -23,7 +22,7 @@ import { BackTarget } from './back-target';
 import { LISTENING, VISITOR_MOVES } from './growing-page';
 import { NavigationPreview } from './navigation-preview';
 import { PagePlacement } from './page-placement';
-import { liveDialogs, PageTransitions } from './page-transitions';
+import { liveDialogs } from './page-transitions';
 
 export const RETURNING_FOCUS_LONGEST_MS = 3000;
 const FOCUS_DRAWN_AT_FRAME_CALLBACK = 3;
@@ -58,6 +57,7 @@ export class PageFocus {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly openers = new Map<string, string>();
+  private readonly openerTops = new Map<string, number>();
   private pressed: Press | null = null;
   private stopReturning: (() => void) | null = null;
   private guard: ScrollGuard | null = null;
@@ -141,11 +141,20 @@ export class PageFocus {
     return active.localName === 'dialog' && places.includes(active as HTMLElement);
   }
 
-  returnTargetIn(scope: HTMLElement): HTMLElement | null {
-    if (!this.layout.isCompact() || this.preview.drives()) {
-      return null;
+  placeReturnWhereLeft(scope: HTMLElement): void {
+    const view = this.document.defaultView;
+    const top = this.openerTops.get(pathOf(this.router.url));
+    if (view === null || top === undefined || !this.layout.isCompact() || this.preview.drives()) {
+      return;
     }
-    return this.returnTarget(scope)?.() ?? null;
+    const target = this.returnTarget(scope)?.() ?? null;
+    if (target === null || scrollsInABoxOfItsOwn(view, target)) {
+      return;
+    }
+    const drift = target.getBoundingClientRect().top - top;
+    if (Math.abs(drift) >= 1) {
+      view.scrollBy({ top: drift, behavior: 'instant' });
+    }
   }
 
   returnAfterStepBack(scope: HTMLElement): void {
@@ -236,8 +245,16 @@ export class PageFocus {
     }
     const left = pathOf(this.router.url);
     this.openers.delete(left);
+    this.openerTops.delete(left);
     const opener = pressed !== null && this.now() - pressed.at <= OPENER_FRESH_MS ? pressed : null;
-    if (opener === null || opener.control.id === '' || opener.control.closest('dialog') !== null) {
+    if (opener === null || opener.control.closest('dialog') !== null) {
+      return;
+    }
+    this.openerTops.set(left, opener.control.getBoundingClientRect().top);
+    while (this.openerTops.size > KEPT_OPENERS) {
+      this.openerTops.delete(this.openerTops.keys().next().value!);
+    }
+    if (opener.control.id === '') {
       return;
     }
     this.openers.set(left, opener.control.id);
@@ -292,18 +309,6 @@ export class PageFocus {
   }
 
   private bringIntoViewOnceStill(target: HTMLElement): void {
-    const stage = this.injector.get(PageTransitions);
-    if (stage.running !== null) {
-      stage.whenFinished(() => {
-        if (
-          this.document.activeElement === target &&
-          untracked(this.router.currentNavigation) === null
-        ) {
-          this.bringAndKeep(target);
-        }
-      });
-      return;
-    }
     const view = this.document.defaultView;
     const motions = motionsMoving(target);
     if (view === null || motions.length === 0) {
@@ -484,4 +489,18 @@ export class PageFocus {
     }
     target.focus({ preventScroll: true });
   }
+}
+
+function scrollsInABoxOfItsOwn(view: Window, element: HTMLElement): boolean {
+  const { body, documentElement } = element.ownerDocument;
+  for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
+    if (parent === body || parent === documentElement) {
+      return false;
+    }
+    const overflow = view.getComputedStyle(parent).overflowY;
+    if (overflow === 'auto' || overflow === 'scroll') {
+      return true;
+    }
+  }
+  return false;
 }
