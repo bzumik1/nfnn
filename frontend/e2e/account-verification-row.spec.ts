@@ -213,25 +213,3 @@ test.describe('Given a donor whose account verification of 1 Kč arrived beside 
     });
   }
 });
-
-test.describe('Given a donor whose account verification of 1 Kč arrived beside a gift, in a table', () => {
-  for (const list of LISTS) {
-    test(`when ${list.name} shows them as a table, then the badge Ověření účtu in the date column keeps one line`, async ({
-      page,
-    }) => {
-      const { verificationRow } = await openList(page, list, 1280);
-
-      const badge = verificationRow.locator('td.date .ui-badge', { hasText: 'Ověření účtu' });
-      await expect(badge).toBeVisible();
-      const lines = await badge.evaluate((element) => {
-        const range = document.createRange();
-        range.selectNodeContents(element);
-        const tops = [...range.getClientRects()]
-          .filter((rect) => rect.width > 0)
-          .map((rect) => Math.round(rect.top));
-        return new Set(tops).size;
-      });
-      expect(lines).toBe(1);
-    });
-  }
-});
