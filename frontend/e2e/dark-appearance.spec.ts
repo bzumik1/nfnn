@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { article, mockPublicContent, project } from './baseline/screen-mocks';
-import { mockDonorApi, openSignInDialog, signIn } from './donor-session';
+import { mockDonorApi, noDonations, openSignInDialog, signIn } from './donor-session';
 import { fakeCameraShowing, pngDataUrl, qrCodePng } from './receipt-code-files';
 import {
   serveReceiptKeys,
@@ -752,3 +752,58 @@ test.describe('Given a visitor whose device shows the dark appearance on Aktuali
     expect(contrastBetween(edge, pageGround)).toBeGreaterThanOrEqual(APART_FROM_PAGE);
   });
 });
+
+async function labelLineCentres(target: Locator): Promise<number[]> {
+  return target.evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const lines = new Map<number, { left: number; right: number }>();
+    for (const rect of range.getClientRects()) {
+      if (rect.width === 0) {
+        continue;
+      }
+      const top = Math.round(rect.top);
+      const line = lines.get(top);
+      lines.set(top, {
+        left: Math.min(line?.left ?? rect.left, rect.left),
+        right: Math.max(line?.right ?? rect.right, rect.right),
+      });
+    }
+    return [...lines.values()].map(({ left, right }) => (left + right) / 2);
+  });
+}
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test.describe(`Given a signed-in donor without gifts whose device shows the ${colorScheme} appearance`, () => {
+    test.use({ colorScheme });
+
+    test('when Můj přehled offers to add the account the donor paid from on a 390 px phone, then the button stands apart from its grey callout and every line of its label is centred in it', async ({
+      page,
+    }) => {
+      await mockDonorApi(page, noDonations);
+      await signIn(page);
+      await page.setViewportSize({ width: 390, height: 900 });
+      const callout = page.locator('.missing-gift').first();
+      const button = callout.getByRole('link', {
+        name: 'Přidat bankovní účet, ze kterého jste platili',
+      });
+      await expect(button).toBeVisible();
+
+      const underCallout = [...(await groundsUnder(callout)), await fillOf(callout)];
+      const calloutGround = await paintedFrom(page, underCallout);
+      const rim = await rimOf(button);
+      const edge = await paintedFrom(page, [
+        ...underCallout,
+        await fillOf(button),
+        ...(rim === null ? [] : [rim]),
+      ]);
+      expect(contrastBetween(edge, calloutGround)).toBeGreaterThanOrEqual(APART_FROM_PAGE);
+
+      const box = (await button.boundingBox())!;
+      const centre = box.x + box.width / 2;
+      for (const lineCentre of await labelLineCentres(button)) {
+        expect(Math.abs(lineCentre - centre)).toBeLessThanOrEqual(2);
+      }
+    });
+  });
+}
