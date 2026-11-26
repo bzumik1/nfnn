@@ -547,7 +547,7 @@ test.describe('Given an administrator who asks for less motion and whose saved s
 
 for (const [width, height] of [
   [375, 667],
-  [390, 844],
+  ...[640, 680, 720, 760, 800, 844, 880].map((tall) => [390, tall]),
 ]) {
   test.describe(`Given an administrator on a phone ${width} × ${height} px withdrawing the receipt signing key in its sheet`, () => {
     test.use({ viewport: { width, height } });
