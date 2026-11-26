@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActionBar } from './action-bar';
@@ -37,6 +38,9 @@ describe('Given a sticky action bar at the bottom of a page', () => {
   let viewportHeight: number;
   let viewportWidth: number;
   let coarsePointer: boolean;
+  let scrolledIntoView: Mock<(options?: boolean | ScrollIntoViewOptions) => void>;
+  let originalScrollIntoView: typeof HTMLElement.prototype.scrollIntoView;
+  const placedOutside: HTMLElement[] = [];
 
   const third = () => Math.ceil(viewportHeight / 3) + 1;
   const isResting = (bar: HTMLElement) => bar.classList.contains('ui-action-bar--resting');
@@ -53,6 +57,9 @@ describe('Given a sticky action bar at the bottom of a page', () => {
     );
     heightOf = () => 84;
     bottomOf = () => viewportHeight;
+    originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    scrolledIntoView = vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>();
+    HTMLElement.prototype.scrollIntoView = scrolledIntoView;
     vi.stubGlobal('ResizeObserver', FakeResizeObserver);
     vi.spyOn(window, 'innerHeight', 'get').mockImplementation(() => viewportHeight);
     vi.spyOn(window, 'innerWidth', 'get').mockImplementation(() => viewportWidth);
@@ -73,6 +80,8 @@ describe('Given a sticky action bar at the bottom of a page', () => {
   });
 
   afterEach(() => {
+    placedOutside.splice(0).forEach((element) => element.remove());
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
     document.documentElement.style.removeProperty('--action-bar-height');
@@ -120,17 +129,19 @@ describe('Given a sticky action bar at the bottom of a page', () => {
     expect(writes).not.toHaveBeenCalled();
   });
 
-  it('when it goes away, then the page forgets it, stops watching and stops listening to the window', async () => {
-    const removed = vi.spyOn(window, 'removeEventListener');
+  it('when it goes away, then the page forgets it, stops watching and stops listening to the window and the bar', async () => {
+    const removedFromWindow = vi.spyOn(window, 'removeEventListener');
+    const removedFromBar = vi.spyOn(bar(), 'removeEventListener');
 
     fixture.componentInstance.shown.set(false);
     await fixture.whenStable();
 
     expect(document.documentElement.style.getPropertyValue('--action-bar-height')).toBe('');
     expect(FakeResizeObserver.latest?.disconnected).toBe(true);
-    expect(removed.mock.calls.map(([type]) => type)).toEqual(
-      expect.arrayContaining(['scroll', 'resize']),
+    expect(removedFromWindow.mock.calls.map(([type]) => type).sort()).toEqual(
+      ['focusin', 'pointercancel', 'pointerdown', 'pointerup', 'resize', 'scroll', 'wheel'].sort(),
     );
+    expect(removedFromBar.mock.calls.map(([type]) => type)).toEqual(['focusout']);
   });
 
   it('when it stands on the bottom of the screen while the page scrolls under it, then it floats over the page', () => {
@@ -246,12 +257,12 @@ describe('Given a sticky action bar at the bottom of a page', () => {
     await resize();
     const outside = document.createElement('input');
     document.body.append(outside);
+    placedOutside.push(outside);
 
     outside.focus();
     await fixture.whenStable();
 
     expect(isInFlow(bar())).toBe(true);
-    outside.remove();
   });
 
   it('when the focus moves from one control of the bar to another, then the bar keeps floating', async () => {
@@ -337,5 +348,86 @@ describe('Given a sticky action bar at the bottom of a page', () => {
     await fixture.whenStable();
 
     expect(isInFlow(bar())).toBe(true);
+  });
+
+  function focusInside(): HTMLButtonElement {
+    const button = document.createElement('button');
+    bar().append(button);
+    button.focus();
+    return button;
+  }
+
+  it('when the administrator presses outside while the bar holds the focus past a third of the screen, then the bar moves into the page and the page stays where the finger is', async () => {
+    focusInside();
+    heightOf = () => third();
+    await resize();
+    expect(isInFlow(bar())).toBe(false);
+
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    await fixture.whenStable();
+
+    expect(isInFlow(bar())).toBe(true);
+    expect(scrolledIntoView).not.toHaveBeenCalled();
+  });
+
+  it('when the bar that holds the focus outgrows the screen above its edge, then it moves into the page and scrolls the focused control into view', async () => {
+    const button = focusInside();
+    heightOf = () => viewportHeight + 10;
+
+    await resize();
+
+    expect(isInFlow(bar())).toBe(true);
+    expect(scrolledIntoView.mock.contexts).toEqual([button]);
+  });
+
+  it('when the focus leaves the bar before it is drawn in the page, then nothing is scrolled into view', async () => {
+    const button = focusInside();
+    heightOf = () => viewportHeight + 10;
+    FakeResizeObserver.latest?.callback();
+    const outside = document.createElement('input');
+    document.body.append(outside);
+    placedOutside.push(outside);
+    outside.focus();
+    button.blur();
+
+    await fixture.whenStable();
+
+    expect(isInFlow(bar())).toBe(true);
+    expect(scrolledIntoView).not.toHaveBeenCalled();
+  });
+
+  it('when a press that started in the bar turns into a scroll, then the bar taller than a third of the screen moves into the page', async () => {
+    pressInside();
+    window.dispatchEvent(new Event('pointercancel'));
+    heightOf = () => third();
+
+    await resize();
+
+    expect(isInFlow(bar())).toBe(true);
+    expect(scrolledIntoView).not.toHaveBeenCalled();
+  });
+
+  it('when a press on a bar in the page turns into a scroll and the bar shrinks below 30 %, then it floats again without waiting for a lift', async () => {
+    heightOf = () => third();
+    await resize();
+    pressInside();
+    window.dispatchEvent(new Event('pointercancel'));
+    heightOf = () => Math.floor(viewportHeight * 0.25);
+
+    await resize();
+
+    expect(isInFlow(bar())).toBe(false);
+  });
+
+  it('when the administrator scrolls with a wheel or a trackpad while the bar holds the focus past a third of the screen, then the bar moves into the page without scrolling to it', async () => {
+    focusInside();
+    heightOf = () => third();
+    await resize();
+
+    window.dispatchEvent(new Event('wheel'));
+    await fixture.whenStable();
+
+    expect(isInFlow(bar())).toBe(true);
+    expect(scrolledIntoView).not.toHaveBeenCalled();
   });
 });
