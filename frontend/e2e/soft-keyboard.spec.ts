@@ -255,3 +255,116 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
     await expect(page.locator('#donate-custom-amount')).toBeFocused();
   });
 });
+
+interface PannedViewport {
+  pan(offsetTop: number, height: number, layoutHeight: number): void;
+  rest(): void;
+}
+
+type PannedWindow = Window & { pannedViewport?: PannedViewport };
+
+const PANNED = { offsetTop: 303, height: 364, layoutHeight: 667 };
+
+async function standInForAPanningKeyboard(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const realInnerHeight =
+      Object.getOwnPropertyDescriptor(window, 'innerHeight') ??
+      Object.getOwnPropertyDescriptor(Window.prototype, 'innerHeight');
+    const measuredInnerHeight = () => realInnerHeight?.get?.call(window) as number;
+    let panned: { offsetTop: number; height: number; layoutHeight: number } | null = null;
+    const viewport = new EventTarget();
+    Object.defineProperties(viewport, {
+      height: { get: () => panned?.height ?? measuredInnerHeight() },
+      width: { get: () => window.innerWidth },
+      offsetTop: { get: () => panned?.offsetTop ?? 0 },
+      offsetLeft: { value: 0 },
+      pageTop: { get: () => window.scrollY },
+      pageLeft: { get: () => window.scrollX },
+      scale: { value: 1 },
+    });
+    Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => viewport });
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      get: () => panned?.layoutHeight ?? measuredInnerHeight(),
+    });
+    (window as PannedWindow).pannedViewport = {
+      pan: (offsetTop, height, layoutHeight) => {
+        panned = { offsetTop, height, layoutHeight };
+        viewport.dispatchEvent(new Event('resize'));
+        viewport.dispatchEvent(new Event('scroll'));
+      },
+      rest: () => {
+        panned = null;
+        viewport.dispatchEvent(new Event('resize'));
+        viewport.dispatchEvent(new Event('scroll'));
+      },
+    };
+  });
+}
+
+function fieldOutsideTheShownPanel(code: Locator): Promise<string[]> {
+  return code.evaluate((element) => {
+    const field = element.closest('app-form-field')!.getBoundingClientRect();
+    const dialog = element.closest('dialog')!;
+    const panel = dialog.querySelector('.dialog-panel')!;
+    const viewport = window.visualViewport!;
+    const panelTop = panel.getBoundingClientRect().top + panel.clientTop;
+    let top = Math.max(viewport.offsetTop, panelTop);
+    let bottom = Math.min(viewport.offsetTop + viewport.height, panelTop + panel.clientHeight);
+    for (const actions of dialog.querySelectorAll('.ui-dialog__actions')) {
+      bottom = Math.min(bottom, actions.getBoundingClientRect().top);
+    }
+    top = Math.round(top);
+    bottom = Math.round(bottom);
+    const problems: string[] = [];
+    if (field.top < top - 1) {
+      problems.push(`field ${Math.round(field.top)}–${Math.round(field.bottom)} above ${top}`);
+    }
+    if (field.bottom > bottom + 1) {
+      problems.push(`field ${Math.round(field.top)}–${Math.round(field.bottom)} below ${bottom}`);
+    }
+    return problems;
+  });
+}
+
+test.describe('Given an iPhone SE whose keyboard pans the visual viewport under a fixed dialog, as the home-screen app does', () => {
+  test.use({ viewport: SMALL_PHONE, hasTouch: true });
+
+  test.beforeEach(async ({ page }) => {
+    await standInForAPanningKeyboard(page);
+  });
+
+  test('when an administrator taps Zneplatnit klíč with the code still empty, then the sheet stands in the panned view and the code field with its error and hint stands above its sticky buttons', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings',
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/nastaveni');
+    await page.getByRole('button', { name: 'Zneplatnit klíč serveru…' }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
+    const code = dialog.getByLabel('Kód z aplikace');
+    await code.tap();
+    await page.setViewportSize({ width: SMALL_PHONE.width, height: PANNED.height });
+    await page.evaluate(
+      ({ offsetTop, height, layoutHeight }) =>
+        (window as PannedWindow).pannedViewport?.pan(offsetTop, height, layoutHeight),
+      PANNED,
+    );
+
+    await dialog
+      .getByRole('button', { name: 'Zneplatnit klíč', exact: true })
+      .dispatchEvent('click');
+
+    await expect(code).toBeFocused();
+    await expect(dialog.getByText('Opište prosím kód z aplikace.')).toBeAttached();
+    await expect.poll(() => fieldOutsideTheShownPanel(code)).toEqual([]);
+  });
+});
