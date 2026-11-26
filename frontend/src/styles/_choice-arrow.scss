@@ -20,6 +20,11 @@
     right calc(#{$end-inset} + var(--list-chevron-size) / 4) center,
     right #{$end-inset} center;
 
+  &:disabled {
+    color: var(--color-text-subtle);
+    background-color: var(--color-surface-alt);
+  }
+
   @media (forced-colors: active) {
     appearance: auto;
     background-image: none;

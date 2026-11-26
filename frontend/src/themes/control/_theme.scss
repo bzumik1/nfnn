@@ -254,7 +254,6 @@
   --radius-xl: 3px;
   --radius-card: 4px;
   --card-inset: var(--space-6);
-  --ratio-story-tile-photo: 360 / 196;
   --radius-qr-ground: max(0px, calc(var(--radius-card) - 2px - var(--space-2-5)));
   --radius-group: 0;
   --radius-media: 4px;
@@ -377,6 +376,7 @@
   --text-account-initials: min(var(--text-sm), var(--back-button-size) * 0.34);
   --list-chevron-size: 1rem;
   --icon-beside-text-size: min(1.5em, 2rem);
+  --ratio-story-tile-photo: 360 / 196;
   --donations-column-date: 8.75rem;
   --donations-column-amount: 7.75rem;
   --donations-column-status: 7.25rem;
