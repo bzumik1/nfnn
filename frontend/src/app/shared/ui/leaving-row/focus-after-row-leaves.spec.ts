@@ -479,17 +479,21 @@ describe('Given the only row whose result was brought into view in place while t
   let region: HTMLElement;
   let result: HTMLParagraphElement;
   let add: HTMLButtonElement;
+  let root: HTMLElement;
   let scrolled: { element: HTMLElement; options: unknown }[];
   let page: SettlingPage;
   let focus: FocusAfterRowLeaves;
 
-  class SettlingPage extends EventTarget {
+  class SettlingPage {
     readonly innerHeight = 600;
     reducedMotion = true;
+    scrollY = 4400;
+    pageHeight = 9000;
     readonly observed: Element[] = [];
     private readonly sizeWatchers: (() => void)[] = [];
-    private readonly timers = new Map<number, () => void>();
+    private readonly timers = new Map<number, { due: number; callback: () => void }>();
     private nextTimer = 1;
+    private now = 0;
 
     readonly ResizeObserver = (() => {
       const watchers = this.sizeWatchers;
@@ -524,9 +528,9 @@ describe('Given the only row whose result was brought into view in place while t
       return getComputedStyle(element);
     }
 
-    setTimeout(callback: () => void): number {
+    setTimeout(callback: () => void, delay = 0): number {
       const id = this.nextTimer++;
-      this.timers.set(id, callback);
+      this.timers.set(id, { due: this.now + delay, callback });
       return id;
     }
 
@@ -541,14 +545,22 @@ describe('Given the only row whose result was brought into view in place while t
     }
 
     scrolls(): void {
-      this.dispatchEvent(new Event('scroll'));
+      document.dispatchEvent(new Event('scroll'));
     }
 
-    letTimePass(): void {
-      const due = [...this.timers.values()];
-      this.timers.clear();
-      for (const callback of due) {
-        callback();
+    scrollsTo(scrollY: number, pageHeight = this.pageHeight): void {
+      this.scrollY = scrollY;
+      this.pageHeight = pageHeight;
+      this.scrolls();
+    }
+
+    letTimePass(ms: number): void {
+      this.now += ms;
+      for (const [id, timer] of [...this.timers]) {
+        if (timer.due <= this.now) {
+          this.timers.delete(id);
+          timer.callback();
+        }
       }
     }
   }
@@ -569,31 +581,55 @@ describe('Given the only row whose result was brought into view in place while t
       };
     }
     page = new SettlingPage();
+    root = document.createElement('div');
+    Object.defineProperty(root, 'scrollHeight', { get: () => page.pageHeight });
     focus = new FocusAfterRowLeaves(
       {
         get activeElement() {
           return document.activeElement;
         },
         body: document.body,
-        documentElement: document.documentElement,
+        documentElement: root,
         defaultView: page,
-        addEventListener: page.addEventListener.bind(page),
-        removeEventListener: page.removeEventListener.bind(page),
+        addEventListener: document.addEventListener.bind(document),
+        removeEventListener: document.removeEventListener.bind(document),
       } as unknown as Document,
       () => region,
     );
   });
 
-  async function revealInPlace(beforeTheReveal: () => void = () => undefined): Promise<void> {
-    const row = document.getElementById('only') as HTMLElement;
+  afterEach(() => {
+    focus.forget();
+    region.remove();
+  });
+
+  function only(): HTMLElement {
+    return document.getElementById('only') as HTMLElement;
+  }
+
+  function standing(element: HTMLElement, top: number, height: number): void {
+    element.getBoundingClientRect = () => new DOMRect(0, top, 300, height);
+  }
+
+  function startLeaving(): HTMLElement {
+    const row = only();
     standing(result, -300, 40);
     standing(add, -250, 40);
     focus.rowLeaving(row);
-    beforeTheReveal();
+    return row;
+  }
+
+  async function revealAfter(row: HTMLElement): Promise<void> {
     focus.focusInPlace(region, { row, from: result, to: add });
     focus.rowLeaveEnded(row);
     row.remove();
     await Promise.resolve();
+  }
+
+  async function revealInPlace(beforeTheReveal: () => void = () => undefined): Promise<void> {
+    const row = startLeaving();
+    beforeTheReveal();
+    await revealAfter(row);
     expect(scrolled).toEqual([
       {
         element: result,
@@ -605,18 +641,26 @@ describe('Given the only row whose result was brought into view in place while t
     standing(add, 140, 40);
   }
 
-  afterEach(() => {
-    focus.forget();
-    region.remove();
-  });
-
-  function standing(element: HTMLElement, top: number, height: number): void {
-    element.getBoundingClientRect = () => new DOMRect(0, top, 300, height);
-  }
-
   function leftAbove(): void {
     standing(result, -191, 40);
     standing(add, -135, 40);
+  }
+
+  function broughtBack(): { element: HTMLElement; options: unknown }[] {
+    return [{ element: result, options: { block: 'start', behavior: 'instant' } }];
+  }
+
+  function fadingIn(): () => Promise<void> {
+    let finish: () => void = () => undefined;
+    const finished = new Promise<void>((resolve) => (finish = resolve));
+    result.getAnimations = () =>
+      [{ finished, effect: { getComputedTiming: () => ({ endTime: 150 }) } }] as never;
+    return async () => {
+      finish();
+      for (let turn = 0; turn < 5; turn += 1) {
+        await Promise.resolve();
+      }
+    };
   }
 
   it('when the device allows motion, then no watch starts, as the smooth reveal sends scroll events of its own', async () => {
@@ -630,8 +674,8 @@ describe('Given the only row whose result was brought into view in place while t
     expect(scrolled).toEqual([]);
   });
 
-  it('when the page scrolls without the donor between the row starting to leave and the reveal, as the momentum of a flick does on iOS, then no watch starts', async () => {
-    await revealInPlace(() => page.scrolls());
+  it('when the page scrolls without the donor and without changing its length between the row starting to leave and the reveal, as the momentum of a flick does on iOS, then no watch starts', async () => {
+    await revealInPlace(() => page.scrollsTo(4380));
     leftAbove();
 
     page.resizes();
@@ -640,24 +684,83 @@ describe('Given the only row whose result was brought into view in place while t
     expect(scrolled).toEqual([]);
   });
 
-  it('when the result stands in a scroller of its own, then the watch follows the size of that scroller and of its content as well as the page', async () => {
+  it('when the browser clamps the page to its new end as it shortens before the reveal, then the watch still starts', async () => {
+    page.scrollY = 8300;
+    await revealInPlace(() => page.scrollsTo(8056, 8656));
+    leftAbove();
+
+    page.resizes();
+
+    expect(scrolled).toEqual([
+      { element: result, options: { block: 'start', behavior: 'instant' } },
+    ]);
+  });
+
+  it('when the browser anchors the scroll by exactly what the page lost above before the reveal, then the watch still starts', async () => {
+    await revealInPlace(() => page.scrollsTo(4056, 8656));
+    leftAbove();
+
+    page.resizes();
+
+    expect(scrolled).toEqual([
+      { element: result, options: { block: 'start', behavior: 'instant' } },
+    ]);
+  });
+
+  it('when the result stands in a scroller of its own, then the watch follows the size of that scroller and of its content as well as the page, and hears a scroll inside it', async () => {
     const scroller = document.createElement('div');
     scroller.style.overflowY = 'auto';
+    Object.defineProperty(scroller, 'clientHeight', { get: () => 600 });
     const content = document.createElement('div');
     region.replaceWith(scroller);
     content.append(region);
     scroller.append(content);
     try {
-      focus.rowLeaving(document.getElementById('only') as HTMLElement);
-      focus.focusInPlace(region, { row: document.getElementById('only'), from: result, to: add });
-      focus.rowLeaveEnded(document.getElementById('only') as HTMLElement);
-      document.getElementById('only')!.remove();
-      await Promise.resolve();
+      await revealInPlace();
+      leftAbove();
+
+      scroller.dispatchEvent(new Event('scroll'));
 
       expect(page.observed).toEqual(expect.arrayContaining([document.body, scroller, content]));
+      expect(scrolled).toEqual([
+        { element: result, options: { block: 'start', behavior: 'instant' } },
+      ]);
     } finally {
       scroller.replaceWith(region);
     }
+  });
+
+  it('when the result still fades in as the row is gone, then the watch starts only once the fade has ended and the result was revealed', async () => {
+    const fadeEnds = fadingIn();
+    const row = startLeaving();
+    await revealAfter(row);
+    leftAbove();
+    page.resizes();
+    expect(scrolled).toEqual([]);
+
+    await fadeEnds();
+    expect(scrolled).toEqual([
+      { element: result, options: { block: 'start', behavior: 'instant' } },
+    ]);
+    scrolled = [];
+    page.resizes();
+
+    expect(scrolled).toEqual([
+      { element: result, options: { block: 'start', behavior: 'instant' } },
+    ]);
+  });
+
+  it('when the reveal is forgotten while the result still fades in, then nothing is revealed and no watch starts once the fade ends', async () => {
+    const fadeEnds = fadingIn();
+    const row = startLeaving();
+    await revealAfter(row);
+
+    focus.forget();
+    await fadeEnds();
+    leftAbove();
+    page.resizes();
+
+    expect(scrolled).toEqual([]);
   });
 
   describe('and the device asks for less motion', () => {
@@ -668,9 +771,7 @@ describe('Given the only row whose result was brought into view in place while t
 
       page.resizes();
 
-      expect(scrolled).toEqual([
-        { element: result, options: { block: 'start', behavior: 'instant' } },
-      ]);
+      expect(scrolled).toEqual(broughtBack());
     });
 
     it('when the page is then scrolled by something other than the donor and leaves the result above the window, then the result is brought into view again', () => {
@@ -678,9 +779,7 @@ describe('Given the only row whose result was brought into view in place while t
 
       page.scrolls();
 
-      expect(scrolled).toEqual([
-        { element: result, options: { block: 'start', behavior: 'instant' } },
-      ]);
+      expect(scrolled).toEqual(broughtBack());
     });
 
     it('when the page changes size and the result still stands in the window, then nothing scrolls', () => {
@@ -690,22 +789,13 @@ describe('Given the only row whose result was brought into view in place while t
       expect(scrolled).toEqual([]);
     });
 
-    it('when the donor turns the wheel first, then a later change of the page brings nothing into view', () => {
-      page.dispatchEvent(new Event('wheel'));
-      leftAbove();
-
-      page.resizes();
-      page.scrolls();
-
-      expect(scrolled).toEqual([]);
-    });
-
-    for (const visitorMove of ['touchstart', 'touchmove', 'pointerdown', 'keydown']) {
+    for (const visitorMove of ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown']) {
       it(`when the donor's ${visitorMove} comes first, then a later change of the page brings nothing into view`, () => {
-        page.dispatchEvent(new Event(visitorMove));
+        document.dispatchEvent(new Event(visitorMove));
         leftAbove();
 
         page.resizes();
+        page.scrolls();
 
         expect(scrolled).toEqual([]);
       });
@@ -713,19 +803,17 @@ describe('Given the only row whose result was brought into view in place while t
 
     for (const key of ['Shift', 'Control', 'Alt', 'AltGraph', 'Meta', 'CapsLock', 'Fn']) {
       it(`when the donor presses ${key} alone first, then a later change of the page that leaves the result above the window still brings it into view`, () => {
-        page.dispatchEvent(new KeyboardEvent('keydown', { key }));
+        document.dispatchEvent(new KeyboardEvent('keydown', { key }));
         leftAbove();
 
         page.resizes();
 
-        expect(scrolled).toEqual([
-          { element: result, options: { block: 'start', behavior: 'instant' } },
-        ]);
+        expect(scrolled).toEqual(broughtBack());
       });
     }
 
     it('when the donor presses Tab first, then a later change of the page brings nothing into view', () => {
-      page.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
       leftAbove();
 
       page.resizes();
@@ -742,8 +830,17 @@ describe('Given the only row whose result was brought into view in place while t
       expect(scrolled).toEqual([]);
     });
 
-    it('when the page has been kept for its whole settling time, then a later change of the page brings nothing into view', () => {
-      page.letTimePass();
+    it('when 999 ms of its settling time have passed, then a change of the page still brings the result back', () => {
+      page.letTimePass(999);
+      leftAbove();
+
+      page.resizes();
+
+      expect(scrolled).toEqual(broughtBack());
+    });
+
+    it('when its whole settling time of 1 s has passed, then a later change of the page brings nothing into view', () => {
+      page.letTimePass(1000);
       leftAbove();
 
       page.resizes();
@@ -762,7 +859,6 @@ describe('Given the only row whose result was brought into view in place while t
     });
   });
 });
-
 describe('Given a control that takes the focus back while the panel below it closes', () => {
   let card: HTMLElement;
   let control: HTMLButtonElement;
