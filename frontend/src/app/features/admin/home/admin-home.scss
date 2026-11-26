@@ -152,7 +152,8 @@
   }
 }
 
-.admin-overview .ui-table-frame {
+.overview-frame {
+  container: overview-frame / inline-size;
   margin-inline: calc(-1 * var(--card-inset));
 }
 
@@ -210,14 +211,19 @@
     }
   }
 
-  .overview-columns :is(.col-new, .col-paired),
-  .overview-description .col-new {
+  .overview-columns :is(.col-new, .col-paired) {
     display: none;
   }
 }
 
 @include bp.container-down(ui-table, ledger) {
   @include overview-as-cards;
+}
+
+@include bp.container-down(overview-frame, ledger) {
+  .overview-description .col-new {
+    display: none;
+  }
 }
 
 .admin-failure-message {
