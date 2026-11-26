@@ -1,5 +1,5 @@
 import { Directive } from '@angular/core';
-import { leaveWithClass } from '../leaving-row/leaving-row';
+import { leaveWithClass } from '../leaving-row/leave-with-class';
 
 @Directive({
   selector: '[appLeavingNotice]',

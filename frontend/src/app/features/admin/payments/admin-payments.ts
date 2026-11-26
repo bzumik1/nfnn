@@ -44,10 +44,10 @@ import { LoadFailure } from '../../../shared/ui/load-failure/load-failure';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import {
   afterRemoval,
-  leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
 } from '../../../shared/ui/leaving-row/leaving-row';
+import { leaveWithClass } from '../../../shared/ui/leaving-row/leave-with-class';
 import { BankAccount } from '../../donations/bank-account/bank-account';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';

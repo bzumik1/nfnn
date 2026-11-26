@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 
-import { DiagnosticEvent, MAX_EVENTS, sanitizedEvent } from './diagnostics-schema';
+import { DiagnosticEvent, MAX_EVENTS, sanitizedEvent } from './diagnostic-event-schema';
 
 export type RecordedEvent = Omit<DiagnosticEvent, 'secondsAgo'>;
 

@@ -34,10 +34,10 @@ import { deviceAccountOf, SESSION_DEVICE } from '../../../../core/auth/session-d
 import {
   afterRemoval,
   FocusAfterRowLeaves,
-  leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
 } from '../../../../shared/ui/leaving-row/leaving-row';
+import { leaveWithClass } from '../../../../shared/ui/leaving-row/leave-with-class';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BusyButton } from '../../../../shared/ui/busy-button/busy-button';
 import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';

@@ -1,6 +1,15 @@
 import { Appearance } from '../appearance/appearance';
 import { HttpErrorResponse } from '@angular/common/http';
-import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import {
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  Injectable,
+  Injector,
+  signal,
+  untracked,
+} from '@angular/core';
 import {
   catchError,
   defer,
@@ -24,7 +33,7 @@ import {
 } from 'rxjs';
 import { Connectivity, isUnreachable } from '../connectivity/connectivity';
 import { AuthApi, type StoredProfile } from './auth-api';
-import { PasskeyAuthenticator } from './passkey-authenticator';
+import type { PasskeyAuthenticator } from './passkey-authenticator';
 import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
 import { AdministrationAccess } from './administration-access';
 import { donorFromCopy } from './copy-profile';
@@ -74,7 +83,7 @@ export const EMAIL_CONFIRMATION_SESSION: BrowserSessionKind = 'BROWSER';
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
   private readonly api = inject(AuthApi);
-  private readonly passkeys = inject(PasskeyAuthenticator);
+  private readonly injector = inject(Injector);
   private readonly jar = inject(SESSION_JAR);
   private readonly locks = inject(TAB_LOCKS);
   private readonly channel = inject(SESSION_CHANNEL)();
@@ -181,8 +190,8 @@ export class AuthStore {
     const session = sessionKindFor(this.jar, chosen);
     return this.api.passkeySignInOptions().pipe(
       switchMap((options) =>
-        from(this.device.prfInput()).pipe(
-          switchMap((input) => from(this.passkeys.getWithPrf(options, input))),
+        from(Promise.all([this.passkeyAuthenticator(), this.device.prfInput()])).pipe(
+          switchMap(([passkeys, input]) => from(passkeys.getWithPrf(options, input))),
           switchMap(({ credential, prf }) => {
             let handedOver = false;
             return this.api.signInWithPasskey(options.challenge, credential, session).pipe(
@@ -322,11 +331,17 @@ export class AuthStore {
       .passkeySignInOptions()
       .pipe(
         switchMap((options) =>
-          from(this.passkeys.get(options)).pipe(
+          from(this.passkeyAuthenticator().then((passkeys) => passkeys.get(options))).pipe(
             map((credential) => ({ passkey: { challenge: options.challenge, credential } })),
           ),
         ),
       );
+  }
+
+  private passkeyAuthenticator(): Promise<PasskeyAuthenticator> {
+    return import('./passkey-authenticator').then((module) =>
+      this.injector.get(module.PasskeyAuthenticator),
+    );
   }
 
   setupSecondFactor(confirmation: Confirmation): Observable<SecondFactorEnrolment> {
