@@ -69,7 +69,11 @@ function shownBand(field: Element): ViewBand {
 
 function bandAboveStickyActions(view: Window, scroller: Element, band: ViewBand): ViewBand {
   const dialog = scroller.closest('dialog');
-  const port = scroller.getBoundingClientRect().top + scroller.clientTop + scroller.clientHeight;
+  const port =
+    scroller.getBoundingClientRect().top +
+    scroller.clientTop +
+    scroller.clientHeight -
+    (parseFloat(view.getComputedStyle(scroller).paddingBottom) || 0);
   const tops = Array.from(scroller.querySelectorAll(STICKY_ACTIONS))
     .filter((actions) => actions.closest('dialog') === dialog)
     .map((actions) => ({ actions, style: view.getComputedStyle(actions) }))
