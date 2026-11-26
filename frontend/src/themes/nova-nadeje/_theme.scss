@@ -408,6 +408,7 @@
   --text-receipt-year-total: min(var(--text-2xl), (100cqi - 2 * var(--card-inset)) / 7);
   --text-sheet-account-number: min(var(--text-md), 7vw);
   --side-nav-width: 240px;
+  --text-side-nav: min(var(--text-md), (var(--side-nav-width) - 2 * var(--space-3)) / 7);
   --floating-notice-height: 0rem;
   --offline-pill-height: 0rem;
   --dialog-max-width: 26.25rem;
@@ -464,7 +465,7 @@
   --tab-pill-drag-scale: 1.08;
   --tab-bar-max-width: 420px;
   --tab-bar-home-indicator-overlap: 13px;
-  --tab-icon-size: 1.5rem;
+  --tab-icon-size: min(1.5rem, var(--tab-label-fit) * 2.2);
   --tab-label-fit: calc(
     (100cqi - 32px - 2 * var(--tab-bar-padding-inline) - 3 * var(--tab-bar-item-gap)) / 19
   );

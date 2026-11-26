@@ -13,7 +13,8 @@ html:has(app-root .ui-action-bar) {
   position: sticky;
   bottom: var(--space-3);
   z-index: 5;
-  margin: var(--space-5) 0;
+  --action-bar-bleed: 0px;
+  margin: var(--space-5) calc(-1 * var(--action-bar-bleed));
   padding: var(--space-3-5) var(--space-5);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -60,7 +61,8 @@ html:has(app-root app-tab-bar) {
 @include bp.down(phone) {
   .ui-action-bar {
     bottom: var(--space-2);
-    margin: var(--space-4) calc(-1 * var(--space-2));
+    --action-bar-bleed: var(--space-2);
+    margin: var(--space-4) calc(-1 * var(--action-bar-bleed));
     padding: var(--space-2-5) var(--space-3-5);
   }
 
@@ -74,4 +76,40 @@ html:has(app-root app-tab-bar) {
     padding-inline: var(--space-2-5);
     font-size: var(--text-sm);
   }
+}
+
+.ui-action-bar.ui-action-bar--in-flow {
+  position: static;
+  contain: layout;
+}
+
+.ui-action-bar.ui-action-bar--resting {
+  isolation: isolate;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block: -1px;
+    inset-inline: calc(var(--action-bar-bleed) - 1px);
+    z-index: -1;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-card);
+    pointer-events: none;
+  }
+
+  @media (forced-colors: active) {
+    border-color: Canvas;
+  }
+}
+
+.ui-grouped .ui-action-bar.ui-action-bar--resting::before {
+  border-color: transparent;
+  border-radius: var(--radius-group);
+  background: var(--color-group-cell);
+  box-shadow: var(--shadow-group);
 }
