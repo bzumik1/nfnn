@@ -24,6 +24,7 @@ const LONG_TASK_MS = 50;
 const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
 const BAR_ITEMS = ['.back-button', '.account-button'];
 const GROUND_CHANGES_CLASS = `${PAGE_TRANSITION_CLASS}--ground-changes`;
+const HELD_CLASS = `${PAGE_TRANSITION_CLASS}--held`;
 const HOME_SCREEN_CLASS = `${PAGE_TRANSITION_CLASS}--home-screen`;
 const SHEET_LOOKS = '.dialog--sheet, app-sheet-head';
 const TITLES_FOLLOW_CLASS = `${PAGE_TRANSITION_CLASS}--titles-follow`;
@@ -44,14 +45,19 @@ export const STEP_CHROME: StepChrome = {
   dress: dressChrome,
   readsWaitLeftMs,
   samplePace,
-  markPlacing: (view, kind) => publishMark(view, PLACING_MARK, { kind }),
+  hold: (view, overlay, kind) => {
+    overlay.classList.add(HELD_CLASS);
+    publishMark(view, PLACING_MARK, { kind });
+  },
   release: (view, overlay, steadyBeforeMs) => {
+    overlay.classList.remove(HELD_CLASS);
     overlay
       .getAnimations?.({ subtree: true })
       .filter((motion) => motion.pending)
       .forEach((motion) => motion.play());
     publishSteadyFrame(view, steadyBeforeMs);
   },
+  afterDrawnFrames,
 };
 
 export function publishSteadyFrame(view: Window, steadyBeforeMs: number): void {
