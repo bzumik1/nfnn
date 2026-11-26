@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-function tests(report) {
+export function tests(report) {
   const found = [];
   const walk = (suite, titles) => {
     const path = suite.title && !suite.title.endsWith('.ts') ? [...titles, suite.title] : titles;
