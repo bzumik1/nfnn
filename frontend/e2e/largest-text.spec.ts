@@ -2379,25 +2379,39 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
     });
   });
 
-  test('when they look at the summary at the default text size, then every label stands above its value on one left axis, Kopírovat stays on the line of the symbol without touching its label and ověřen on the line of the e-mail', async ({
+  test('when they look at the summary at the default text size, then every label stays beside the first line of its value, the values start on one column, the rows keep one step, Kopírovat stays on the line of the symbol without adding height and ověřen on the line of the e-mail', async ({
     page,
   }) => {
     const summary = await openSummary(page);
 
     const pairs = await summaryPairs(summary);
-    const axis = pairs[0].label.left;
+    const column = pairs[0].value.left;
     for (const { label, value } of pairs) {
-      expect(value.top).toBeGreaterThanOrEqual(label.bottom - 0.5);
-      expect(Math.abs(label.left - axis)).toBeLessThanOrEqual(0.5);
-      expect(Math.abs(value.left - axis)).toBeLessThanOrEqual(0.5);
+      expect(value.left).toBeGreaterThanOrEqual(label.right - 0.5);
+      expect(Math.abs(value.left - column)).toBeLessThanOrEqual(0.5);
     }
+    for (const { label, value } of await firstLines(summary)) {
+      expect(Math.abs(label.bottom - value.bottom)).toBeLessThanOrEqual(2);
+    }
+    const rows = await summary.locator('dl > div').evaluateAll((elements) =>
+      elements.map((row) => {
+        const box = row.getBoundingClientRect();
+        return { top: box.top, bottom: box.bottom, height: box.height };
+      }),
+    );
+    const gaps = rows.slice(1).map((row, index) => row.top - rows[index].bottom);
+    for (const gap of gaps) {
+      expect(Math.abs(gap - gaps[0])).toBeLessThanOrEqual(0.5);
+    }
+    const symbolRow = rows[0];
+    const lastRow = rows[rows.length - 1];
+    expect(Math.abs(symbolRow.height - lastRow.height)).toBeLessThanOrEqual(1);
     const symbol = (await summary.locator('.summary-symbol .ui-figures').boundingBox())!;
     const copy = (await summary
       .getByRole('button', { name: 'Kopírovat variabilní symbol' })
       .boundingBox())!;
     expect(copy.y).toBeLessThan(symbol.y + symbol.height / 2);
     expect(copy.y + copy.height).toBeGreaterThan(symbol.y + symbol.height / 2);
-    expect(copy.y).toBeGreaterThanOrEqual(pairs[0].label.bottom);
     const email = (await summary.locator('.email').boundingBox())!;
     const verified = (await summary.getByText('ověřen', { exact: true }).boundingBox())!;
     expect(verified.y).toBeLessThan(email.y + email.height / 2);

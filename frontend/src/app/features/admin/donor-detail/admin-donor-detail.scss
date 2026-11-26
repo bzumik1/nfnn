@@ -68,7 +68,7 @@
     }
   }
 
-  @include bp.container-up(donor-summary, narrow) {
+  @include bp.container-up(donor-summary, pair) {
     .summary-list {
       flex-basis: 100%;
       display: grid;
@@ -79,11 +79,12 @@
         display: grid;
         grid-column: 1 / -1;
         grid-template-columns: subgrid;
+        align-items: first baseline;
       }
     }
   }
 
-  @include bp.container-down(donor-summary, narrow) {
+  @include bp.container-down(donor-summary, pair) {
     .summary-list {
       flex-basis: 100%;
       display: grid;
