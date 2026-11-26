@@ -884,7 +884,6 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
   test('when the donor switches from Světlý to Tmavý in the open account sheet, then the backdrop stays over the page in every frame', async ({
     page,
   }) => {
-    test.fixme(true, '#1644: the dialog and its backdrop are hidden for two frames');
     await whileTheSheetOpens(page);
     const appearance = accountSheet(page).getByRole('button', { name: /^Vzhled: / });
     await appearance.press('Enter');

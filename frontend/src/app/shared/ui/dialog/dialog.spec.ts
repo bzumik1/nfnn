@@ -15,6 +15,7 @@ import { DialogHistory } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { FakeDialogHistory } from './testing/fake-dialog-history';
 import { FocusReturn } from './focus-return';
+import { STATUS_BAR_KEEPS_PAGE_COLOUR } from './status-bar';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 
 const realMatchMedia = window.matchMedia;
@@ -2171,7 +2172,7 @@ describe('Given a dialog inside a part of the page that something may cover for 
   });
 });
 
-describe('Given an open sheet and the appearance chosen for the site', () => {
+describe('Given an open sheet and the appearance chosen for the site, on a device whose status bar keeps the page colour of the moment a dialog opened', () => {
   let fixture: ComponentFixture<Host>;
   let frames: FrameRequestCallback[];
 
@@ -2184,7 +2185,10 @@ describe('Given an open sheet and the appearance chosen for the site', () => {
       frames.push(frame);
       return frames.length;
     });
-    await TestBed.configureTestingModule({ imports: [Host] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [Host],
+      providers: [{ provide: STATUS_BAR_KEEPS_PAGE_COLOUR, useValue: true }],
+    }).compileComponents();
     fixture = TestBed.createComponent(Host);
     document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
@@ -2226,5 +2230,35 @@ describe('Given an open sheet and the appearance chosen for the site', () => {
 
       expect(document.activeElement?.id).toBe('first');
     });
+  });
+});
+
+describe('Given an open sheet and the appearance chosen for the site, on a computer, whose status bar never takes the page colour', () => {
+  let fixture: ComponentFixture<Host>;
+
+  const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [Host],
+      providers: [{ provide: STATUS_BAR_KEEPS_PAGE_COLOUR, useValue: false }],
+    }).compileComponents();
+    fixture = TestBed.createComponent(Host);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    fixture.componentInstance.open.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    (fixture.nativeElement.querySelector('#first') as HTMLInputElement).focus();
+  });
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('when the visitor switches the appearance while it is open, then the dialog stays in view and the focus stays where it was', async () => {
+    TestBed.inject(Appearance).choose('dark');
+    await fixture.whenStable();
+
+    expect(native().classList).not.toContain('dialog--repainting');
+    expect(document.activeElement?.id).toBe('first');
   });
 });
