@@ -794,3 +794,45 @@ test.describe('Given the QR payment drawn as small as the Přispět page draws i
     });
   });
 });
+
+test.describe('Given a visitor on Přispět on an upright iPad', () => {
+  test('when Platíte z jiného zařízení? unfolds the QR code, then its card stands on the edges of the payment column and the amount does not stand alone on the caption’s last line', async ({
+    page,
+  }) => {
+    await servePaymentDetails(page, []);
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await page.goto('/prispet');
+    await page.getByRole('button', { name: /Platíte z\sjiného zařízení\?/ }).click();
+    const region = page.locator('#prispet .qr[role="region"]');
+    const card = region.locator('.qr-code');
+    const caption = region.locator('.qr-caption');
+    await expect(caption).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const column = (await page.locator('#prispet .other-device').boundingBox())!;
+    const cardBox = (await card.boundingBox())!;
+    expect(Math.abs(cardBox.x - column.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(cardBox.x + cardBox.width - (column.x + column.width))).toBeLessThanOrEqual(1);
+
+    const lines = await caption.evaluate((element) => {
+      const byTop = new Map<number, string>();
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent ?? '';
+        for (let index = 0; index < text.length; index++) {
+          const range = document.createRange();
+          range.setStart(node, index);
+          range.setEnd(node, index + 1);
+          const rect = range.getBoundingClientRect();
+          if (rect.width === 0) {
+            continue;
+          }
+          const top = Math.round(rect.top);
+          byTop.set(top, (byTop.get(top) ?? '') + text[index]);
+        }
+      }
+      return [...byTop.entries()].sort(([a], [b]) => a - b).map(([, line]) => line.trim());
+    });
+    expect(lines.at(-1), JSON.stringify(lines)).not.toMatch(/^[\d\s ]+Kč\.?$/);
+  });
+});
