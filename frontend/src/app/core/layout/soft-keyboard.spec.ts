@@ -8,6 +8,7 @@ const KEYBOARD_HEIGHT = 262;
 class FakeVisualViewport extends EventTarget {
   height = SCREEN_HEIGHT;
   offsetTop = 0;
+  scale = 1;
 
   showKeyboard(height = KEYBOARD_HEIGHT, offsetTop = 0): void {
     this.height = SCREEN_HEIGHT - height;
@@ -82,6 +83,21 @@ describe('Given a phone whose on-screen keyboard shortens the visual viewport', 
 
       expect(root().style.getPropertyValue('--visual-viewport-top')).toBe('30px');
       expect(root().style.getPropertyValue('--visual-viewport-height')).toBe(`${SCREEN_HEIGHT}px`);
+    });
+
+    it('and the keyboard goes down and the view is whole again, then the page no longer carries where it stands, so dialogs fill the window as they do without a keyboard', () => {
+      viewport.hideKeyboard();
+
+      expect(root().style.getPropertyValue('--visual-viewport-top')).toBe('');
+      expect(root().style.getPropertyValue('--visual-viewport-height')).toBe('');
+    });
+
+    it('and the view is pinch-zoomed, then the page no longer carries where it stands, so a zoomed page keeps its dialogs as they are', () => {
+      viewport.scale = 2;
+      viewport.dispatchEvent(new Event('resize'));
+
+      expect(root().style.getPropertyValue('--visual-viewport-top')).toBe('');
+      expect(root().style.getPropertyValue('--visual-viewport-height')).toBe('');
     });
 
     it('and the keyboard goes down again, then the mark and the visible part are gone', () => {

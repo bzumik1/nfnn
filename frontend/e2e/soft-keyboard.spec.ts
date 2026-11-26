@@ -245,6 +245,33 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
     await expect.poll(() => placeProblems(code, 0)).toEqual([]);
   });
 
+  test('when an administrator types the code in Zneplatnit klíč and the field loses the focus while the keyboard is still up, then the sheet keeps its head inside the short dialog', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings',
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/nastaveni');
+    await page.getByRole('button', { name: 'Zneplatnit klíč serveru…' }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
+    const code = dialog.getByLabel('Kód z aplikace');
+    await code.tap();
+    await showKeyboard(page);
+    await expect(page.locator('html')).toHaveClass(/keyboard-open/);
+
+    await code.evaluate((field) => field.blur());
+
+    await expect(page.locator('html')).not.toHaveClass(/keyboard-open/);
+    await expect.poll(() => panelAboveItsDialog(dialog)).toBe(0);
+  });
+
   test('when the visitor taps Jiná částka, then the amount field takes the focus in the same tap', async ({
     page,
   }) => {
@@ -299,6 +326,20 @@ async function standInForAPanningKeyboard(page: Page): Promise<void> {
         viewport.dispatchEvent(new Event('scroll'));
       },
     };
+  });
+}
+
+function panelAboveItsDialog(dialog: Locator): Promise<number> {
+  return dialog.evaluate((element) => {
+    const panel = element.querySelector('.dialog-panel')!.getBoundingClientRect();
+    return Math.max(0, Math.round(element.getBoundingClientRect().top - panel.top));
+  });
+}
+
+function dialogBox(dialog: Locator): Promise<{ top: number; height: number }> {
+  return dialog.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    return { top: Math.round(box.top), height: Math.round(box.height) };
   });
 }
 
@@ -366,5 +407,39 @@ test.describe('Given an iPhone SE whose keyboard pans the visual viewport under 
     await expect(code).toBeFocused();
     await expect(dialog.getByText('Opište prosím kód z aplikace.')).toBeAttached();
     await expect.poll(() => fieldOutsideTheShownPanel(code)).toEqual([]);
+    expect(await dialogBox(dialog)).toEqual({ top: PANNED.offsetTop, height: PANNED.height });
+    expect(await panelAboveItsDialog(dialog)).toBe(0);
+  });
+
+  test('when the device reports the short layout itself and no keyboard is counted open, then the sheet still stands in the panned view with its head', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings',
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/nastaveni');
+    await page.getByRole('button', { name: 'Zneplatnit klíč serveru…' }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
+    await dialog.getByLabel('Kód z aplikace').tap();
+
+    await page.setViewportSize({ width: SMALL_PHONE.width, height: PANNED.height });
+    await page.evaluate(
+      ({ offsetTop, height }) =>
+        (window as PannedWindow).pannedViewport?.pan(offsetTop, height, height),
+      PANNED,
+    );
+
+    await expect(page.locator('html')).not.toHaveClass(/keyboard-open/);
+    await expect
+      .poll(() => dialogBox(dialog))
+      .toEqual({ top: PANNED.offsetTop, height: PANNED.height });
+    expect(await panelAboveItsDialog(dialog)).toBe(0);
   });
 });
