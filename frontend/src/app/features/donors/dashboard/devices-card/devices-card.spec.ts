@@ -11,7 +11,7 @@ import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessi
 import { deviceNameInSentence } from './device-labels';
 import { DevicesCard } from './devices-card';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
-import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
+import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/focus-after-row-leaves';
 import { leavesAsInTheBrowser } from '../../../../shared/ui/leaving-row/testing/leaves-as-in-the-browser';
 
 function expectLockedInPlace(button: HTMLButtonElement): void {
