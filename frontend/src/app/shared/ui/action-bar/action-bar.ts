@@ -5,12 +5,14 @@ import {
   DOCUMENT,
   ElementRef,
   inject,
+  Injector,
   signal,
 } from '@angular/core';
 
 const HEIGHT = '--action-bar-height';
 const SHARE_THAT_MOVES_INTO_THE_PAGE = 1 / 3;
 const SHARE_THAT_FLOATS_AGAIN = 0.3;
+const SHARE_OF_THE_TALLEST_SCREEN_THAT_RESETS_IT = 0.75;
 const GAP_THAT_STARTS_RESTING_PX = 2;
 const GAP_THAT_KEEPS_RESTING_PX = 0.5;
 
@@ -19,15 +21,14 @@ const GAP_THAT_KEEPS_RESTING_PX = 0.5;
   host: {
     '[class.ui-action-bar--in-flow]': 'inFlow()',
     '[class.ui-action-bar--resting]': 'resting()',
-    '(pointerdown)': 'used = true',
-    '(focusin)': 'used = true',
   },
 })
 export class ActionBar {
   protected readonly inFlow = signal(false);
   protected readonly resting = signal(false);
-  protected used = false;
 
+  private held = false;
+  private pressed = false;
   private tallestScreen = 0;
   private screenWidth = 0;
   private publishedHeight: string | null = null;
@@ -38,6 +39,7 @@ export class ActionBar {
     const root = document.documentElement;
     const view = document.defaultView;
     const destroyRef = inject(DestroyRef);
+    const injector = inject(Injector);
 
     const place = () => {
       if (!view) {
@@ -45,12 +47,46 @@ export class ActionBar {
       }
       const screen = this.stableScreenHeight(view, root);
       const height = bar.offsetHeight;
+      const bottomOffset = this.bottomOffset(bar, view);
+      if (height > view.innerHeight - bottomOffset) {
+        this.held = false;
+      }
       const inFlow = this.inFlow()
-        ? height > screen * SHARE_THAT_FLOATS_AGAIN
-        : height > screen * SHARE_THAT_MOVES_INTO_THE_PAGE && !this.inUse(bar, document);
+        ? this.pressed || height > screen * SHARE_THAT_FLOATS_AGAIN
+        : height > screen * SHARE_THAT_MOVES_INTO_THE_PAGE && !this.held;
+      if (inFlow && !this.inFlow()) {
+        this.keepTheFocusInView(bar, document, injector);
+      }
       this.inFlow.set(inFlow);
-      this.resting.set(inFlow || this.standsAboveTheBottom(bar, view));
+      this.resting.set(inFlow || this.standsAboveTheBottom(bar, view, bottomOffset));
       this.publish(root, inFlow ? 0 : height);
+    };
+
+    const pressStarts = (event: Event) => {
+      const inside = bar.contains(event.target as Node);
+      this.pressed = inside;
+      this.held = inside;
+      place();
+    };
+    const pressEnds = () => {
+      this.pressed = false;
+      place();
+    };
+    const pressTurnsIntoScroll = () => {
+      this.pressed = false;
+      this.held = false;
+      place();
+    };
+    const focusArrives = (event: Event) => {
+      this.held = bar.contains(event.target as Node);
+      place();
+    };
+    const focusLeaves = (event: FocusEvent) => {
+      const next = event.relatedTarget as Node | null;
+      if (next !== null && !bar.contains(next)) {
+        this.held = false;
+        place();
+      }
     };
 
     afterNextRender(() => {
@@ -64,11 +100,22 @@ export class ActionBar {
         destroyRef.onDestroy(() => observer.disconnect());
       }
       if (view) {
+        const passive = { passive: true, capture: true };
         view.addEventListener('scroll', place, { passive: true });
         view.addEventListener('resize', place, { passive: true });
+        view.addEventListener('pointerdown', pressStarts, passive);
+        view.addEventListener('pointerup', pressEnds, passive);
+        view.addEventListener('pointercancel', pressTurnsIntoScroll, passive);
+        view.addEventListener('focusin', focusArrives, true);
+        bar.addEventListener('focusout', focusLeaves);
         destroyRef.onDestroy(() => {
           view.removeEventListener('scroll', place);
           view.removeEventListener('resize', place);
+          view.removeEventListener('pointerdown', pressStarts, true);
+          view.removeEventListener('pointerup', pressEnds, true);
+          view.removeEventListener('pointercancel', pressTurnsIntoScroll, true);
+          view.removeEventListener('focusin', focusArrives, true);
+          bar.removeEventListener('focusout', focusLeaves);
         });
       }
     });
@@ -76,22 +123,37 @@ export class ActionBar {
   }
 
   private stableScreenHeight(view: Window, root: HTMLElement): number {
+    const current = Math.max(view.innerHeight, root.clientHeight);
     if (view.innerWidth !== this.screenWidth) {
       this.screenWidth = view.innerWidth;
       this.tallestScreen = 0;
+      this.held = false;
     }
-    this.tallestScreen = Math.max(this.tallestScreen, view.innerHeight, root.clientHeight);
+    const toolbarsComeAndGo = view.matchMedia?.('(pointer: coarse)').matches ?? false;
+    if (
+      !toolbarsComeAndGo ||
+      current < this.tallestScreen * SHARE_OF_THE_TALLEST_SCREEN_THAT_RESETS_IT
+    ) {
+      this.tallestScreen = 0;
+    }
+    this.tallestScreen = Math.max(this.tallestScreen, current);
     return this.tallestScreen;
   }
 
-  private inUse(bar: HTMLElement, document: Document): boolean {
-    return this.used || bar.contains(document.activeElement);
+  private keepTheFocusInView(bar: HTMLElement, document: Document, injector: Injector): void {
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && bar.contains(focused)) {
+      afterNextRender(() => focused.scrollIntoView?.({ block: 'nearest' }), { injector });
+    }
   }
 
-  private standsAboveTheBottom(bar: HTMLElement, view: Window): boolean {
+  private bottomOffset(bar: HTMLElement, view: Window): number {
     const offset = Number.parseFloat(view.getComputedStyle(bar).bottom);
-    const stuckBottom = view.innerHeight - (Number.isFinite(offset) ? offset : 0);
-    const gap = stuckBottom - bar.getBoundingClientRect().bottom;
+    return Number.isFinite(offset) ? offset : 0;
+  }
+
+  private standsAboveTheBottom(bar: HTMLElement, view: Window, bottomOffset: number): boolean {
+    const gap = view.innerHeight - bottomOffset - bar.getBoundingClientRect().bottom;
     return this.resting() ? gap > GAP_THAT_KEEPS_RESTING_PX : gap > GAP_THAT_STARTS_RESTING_PX;
   }
 

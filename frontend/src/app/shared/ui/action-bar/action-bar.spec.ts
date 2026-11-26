@@ -36,6 +36,7 @@ describe('Given a sticky action bar at the bottom of a page', () => {
   let bottomOf: (bar: HTMLElement) => number;
   let viewportHeight: number;
   let viewportWidth: number;
+  let coarsePointer: boolean;
 
   const third = () => Math.ceil(viewportHeight / 3) + 1;
   const isResting = (bar: HTMLElement) => bar.classList.contains('ui-action-bar--resting');
@@ -44,6 +45,12 @@ describe('Given a sticky action bar at the bottom of a page', () => {
   beforeEach(async () => {
     viewportHeight = 768;
     viewportWidth = 375;
+    coarsePointer = true;
+    vi.stubGlobal(
+      'matchMedia',
+      (query: string) =>
+        ({ matches: query === '(pointer: coarse)' && coarsePointer }) as MediaQueryList,
+    );
     heightOf = () => 84;
     bottomOf = () => viewportHeight;
     vi.stubGlobal('ResizeObserver', FakeResizeObserver);
@@ -313,6 +320,18 @@ describe('Given a sticky action bar at the bottom of a page', () => {
   it('when the window gets much shorter without turning, then the limit follows the new height', async () => {
     viewportHeight = 400;
     heightOf = () => 150;
+
+    window.dispatchEvent(new Event('resize'));
+    await fixture.whenStable();
+
+    expect(isInFlow(bar())).toBe(true);
+  });
+
+  it('when a window on a computer gets a little shorter without changing its width, then the limit follows the new height at once', async () => {
+    coarsePointer = false;
+    const tallThird = third();
+    viewportHeight = 700;
+    heightOf = () => tallThird - 2;
 
     window.dispatchEvent(new Event('resize'));
     await fixture.whenStable();
