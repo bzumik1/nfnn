@@ -6,6 +6,11 @@ import { provideRouter } from '@angular/router';
 import { PagePlacement } from '../../core/navigation/page-placement';
 import { ACCOUNT_SECTION_PAGES, AccountSection } from './account-section';
 
+interface NodeEvents {
+  on(event: 'unhandledRejection', listener: (reason: unknown) => void): void;
+  off(event: 'unhandledRejection', listener: (reason: unknown) => void): void;
+}
+
 @Component({ selector: 'app-loaded-section', template: '<h2>Moje dary</h2>' })
 class LoadedSection {}
 
@@ -45,6 +50,29 @@ describe('Given a section of the account sheet whose page’s code is still load
     });
 
     expect(fixture.nativeElement.textContent).toContain('Moje dary');
+  });
+
+  it('when it closes before its page came and the page comes after, then nothing is drawn into the closed section and no error is left unhandled', async () => {
+    const unhandled: unknown[] = [];
+    const note = (reason: unknown): void => {
+      unhandled.push(reason);
+    };
+    const runtime = (globalThis as unknown as { process: NodeEvents }).process;
+    runtime.on('unhandledRejection', note);
+    onTestFinished(() => {
+      runtime.off('unhandledRejection', note);
+    });
+    const fixture = TestBed.createComponent(AccountSection);
+    fixture.componentRef.setInput('path', '/darce/dary');
+    fixture.detectChanges();
+    fixture.destroy();
+
+    loaded(LoadedSection);
+    await new Promise((settled) => setTimeout(settled, 0));
+    await new Promise((settled) => setTimeout(settled, 0));
+
+    expect(unhandled).toEqual([]);
+    expect(TestBed.inject(PagePlacement).isSettled()).toBe(true);
   });
 
   it('when it closes before its page came, then the page is placed all the same, so no step waits on it', () => {

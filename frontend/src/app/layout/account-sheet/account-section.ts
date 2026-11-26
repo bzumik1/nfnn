@@ -51,10 +51,14 @@ export class AccountSection {
   private readonly placement = inject(PagePlacement);
   private readonly injector = inject(Injector);
   private placing: (() => void) | null = null;
+  private closed = false;
   protected readonly page = signal<Type<unknown> | null>(null);
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.placed());
+    inject(DestroyRef).onDestroy(() => {
+      this.closed = true;
+      this.placed();
+    });
     effect(() => {
       const path = this.path();
       untracked(() => this.show(path));
@@ -73,7 +77,7 @@ export class AccountSection {
     void loader().then(
       (component) => {
         loadedPages.set(loader, component);
-        if (this.path() === path) {
+        if (!this.closed && this.path() === path) {
           this.page.set(component);
           afterNextRender(() => this.placed(), { injector: this.injector });
         }
