@@ -133,10 +133,8 @@ function move(stage: PageTransitions, running: Running, view: Window, inFrame = 
     stage.finish();
     return;
   }
-  const returning =
-    running.kind === 'pop' ? stage.injector.get(PageFocus).placeReturnWhereLeft(layer) : null;
-  if (returning !== null) {
-    holdWhereTheCopyShows(stage, view, layer, returning);
+  if (running.kind === 'pop') {
+    stage.injector.get(PageFocus).placeReturnWhereLeft(layer);
   }
   moveTo(
     stage,
@@ -145,38 +143,6 @@ function move(stage: PageTransitions, running: Running, view: Window, inFrame = 
     { ...stage.shown(layer), sheet: running.sheet },
     inFrame ? 'raf' : stage.placement.placesInRendering ? 'resize-observer' : 'task',
   );
-}
-
-function holdWhereTheCopyShows(
-  stage: PageTransitions,
-  view: Window,
-  layer: HTMLElement,
-  row: HTMLElement,
-): void {
-  const shownAt = row.getBoundingClientRect().top;
-  let looking = false;
-  const keep = (): void => {
-    looking = false;
-    const drift = row.getBoundingClientRect().top - shownAt;
-    if (row.isConnected && Math.abs(drift) >= 1) {
-      view.scrollBy({ top: drift, behavior: 'instant' });
-    }
-  };
-  const lookSoon = (): void => {
-    if (!looking) {
-      looking = true;
-      nextFrame(view, keep);
-    }
-  };
-  const changes = new MutationObserver(lookSoon);
-  changes.observe(layer, { subtree: true, childList: true, characterData: true });
-  const growth = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(lookSoon);
-  growth?.observe(stage.document.body);
-  stage.whenFinished(() => {
-    changes.disconnect();
-    growth?.disconnect();
-    keep();
-  });
 }
 
 function moveTo(
