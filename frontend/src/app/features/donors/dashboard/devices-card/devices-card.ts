@@ -18,10 +18,10 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import {
   FocusAfterRowLeaves,
+  leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,
 } from '../../../../shared/ui/leaving-row/leaving-row';
-import { leaveWithClass } from '../../../../shared/ui/leaving-row/leave-with-class';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';

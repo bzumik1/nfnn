@@ -25,8 +25,7 @@ import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
-import { markRowsLeaving } from '../../../../shared/ui/leaving-row/leaving-row';
-import { leaveWithClass } from '../../../../shared/ui/leaving-row/leave-with-class';
+import { leaveWithClass, markRowsLeaving } from '../../../../shared/ui/leaving-row/leaving-row';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 
