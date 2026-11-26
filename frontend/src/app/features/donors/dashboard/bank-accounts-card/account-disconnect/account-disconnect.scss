@@ -1,0 +1,42 @@
+@use 'motion';
+
+:host {
+  display: contents;
+}
+
+.account-action-fold,
+.account-confirm {
+  max-width: 100%;
+}
+
+.account-action {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.account-action--apart {
+  margin-top: var(--space-2-5);
+}
+
+.account-action-fold > * {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.account-action-fold--returning {
+  @include motion.expand-on-open;
+}
+
+.account-action-fold--closing {
+  @include motion.row-leave;
+}
+
+.account-confirm {
+  @include motion.expand($closes-by: class);
+}
+
+.account-action-fold--closing:not(:last-child),
+.account-confirm--closing:not(:last-child) {
+  margin-block-end: calc(-1 * var(--space-2-5));
+}

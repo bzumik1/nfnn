@@ -125,106 +125,19 @@
                 }
               }
 
-              @if (confirming() !== account.id) {
-                @if (offersReconnect(account) || offersDisconnect(account)) {
-                  <div
-                    class="account-action-fold"
-                    [class.account-action-fold--returning]="returningAction() === account.id"
-                    appDisclosure
-                    animate.leave="account-action-fold--closing"
-                  >
-                    <div>
-                      @if (offersReconnect(account)) {
-                        <button
-                          appNeedsConnection
-                          type="button"
-                          class="ui-button account-action"
-                          [id]="actionButtonId(account)"
-                          [disabled]="busy() === account.id"
-                          [attr.aria-busy]="busy() === account.id"
-                          (click)="reconnect(account)"
-                          i18n="@@donor.bankAccounts.reconnect"
-                        >
-                          Znovu přiřazovat platby z&nbsp;účtu
-                        </button>
-                      } @else if (offersDisconnect(account)) {
-                        <button
-                          type="button"
-                          class="ui-button ui-button--quiet account-action"
-                          [class.account-action--apart]="account.symbolOffer !== null"
-                          [id]="actionButtonId(account)"
-                          [attr.aria-labelledby]="
-                            actionButtonId(account) + ' ' + actionButtonId(account) + '-number'
-                          "
-                          (click)="askToDisconnect(account)"
-                          i18n="@@donor.bankAccounts.disconnect"
-                        >
-                          Nepřiřazovat platby z&nbsp;tohoto účtu
-                        </button>
-                      }
-                    </div>
-                  </div>
-                }
-              } @else {
-                <div
-                  class="account-confirm"
-                  role="group"
-                  [attr.aria-labelledby]="actionButtonId(account) + '-confirm'"
-                  appDisclosure
-                  animate.leave="account-confirm--closing"
-                >
-                  <div>
-                    <div class="ui-confirm account-confirm-box">
-                      @if (account.confirmedSymbols.length > 0) {
-                        <p
-                          [id]="actionButtonId(account) + '-confirm'"
-                          class="ui-confirm__text account-confirm-text"
-                          i18n="@@donor.bankAccounts.confirm.textWithSymbols"
-                        >
-                          Platby bez variabilního symbolu ani platby se symbolem
-                          {{ symbolList(account.confirmedSymbols) }}, které z&nbsp;tohoto účtu
-                          přijdou od zítřka, vám už nebudeme přiřazovat. Dosavadní dary zůstanou;
-                          pokud některý z&nbsp;nich není váš,
-                          <a href="mailto:info@nfnn.cz">napište nám</a>.
-                        </p>
-                      } @else {
-                        <p
-                          [id]="actionButtonId(account) + '-confirm'"
-                          class="ui-confirm__text account-confirm-text"
-                          i18n="@@donor.bankAccounts.confirm.text"
-                        >
-                          Platby bez variabilního symbolu, které z&nbsp;tohoto účtu přijdou od
-                          zítřka, vám už nebudeme přiřazovat. Dosavadní dary zůstanou; pokud některý
-                          z&nbsp;nich není váš,
-                          <a href="mailto:info@nfnn.cz">napište nám</a>.
-                        </p>
-                      }
-                      <div class="ui-confirm__actions account-confirm-actions">
-                        <button
-                          appNeedsConnection
-                          type="button"
-                          class="ui-button ui-button--danger account-confirm-yes"
-                          [disabled]="busy() === account.id"
-                          [attr.aria-busy]="busy() === account.id"
-                          (click)="disconnect(account)"
-                          i18n="@@donor.bankAccounts.confirm.yes"
-                        >
-                          Ano, nepřiřazovat
-                        </button>
-                        <button
-                          #confirmCancel
-                          type="button"
-                          class="ui-button ui-button--quiet account-confirm-no"
-                          (click)="cancelDisconnect(account)"
-                          i18n="@@donor.bankAccounts.confirm.no"
-                        >
-                          Ponechat
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              }
+              <app-account-disconnect
+                [account]="account"
+                [buttonId]="actionButtonId(account)"
+                [action]="offeredAction(account)"
+                [confirming]="confirming() === account.id"
+                [returning]="returningAction() === account.id"
+                [busy]="busy() === account.id"
+                [symbols]="symbolList(account.confirmedSymbols)"
+                (reconnectRequested)="reconnect(account)"
+                (disconnectAsked)="askToDisconnect(account)"
+                (disconnectConfirmed)="disconnect(account)"
+                (disconnectKept)="cancelDisconnect(account)"
+              />
             </div>
           </div>
         </li>

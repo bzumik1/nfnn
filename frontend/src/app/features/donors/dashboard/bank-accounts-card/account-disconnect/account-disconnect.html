@@ -1,0 +1,96 @@
+@if (!confirming()) {
+  @if (action(); as offered) {
+    <div
+      class="account-action-fold"
+      [class.account-action-fold--returning]="returning()"
+      appDisclosure
+      animate.leave="account-action-fold--closing"
+    >
+      <div>
+        @if (offered === 'reconnect') {
+          <button
+            appNeedsConnection
+            type="button"
+            class="ui-button account-action"
+            [id]="buttonId()"
+            [disabled]="busy()"
+            [attr.aria-busy]="busy()"
+            (click)="reconnectRequested.emit()"
+            i18n="@@donor.bankAccounts.reconnect"
+          >
+            Znovu přiřazovat platby z&nbsp;účtu
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="ui-button ui-button--quiet account-action"
+            [class.account-action--apart]="account().symbolOffer !== null"
+            [id]="buttonId()"
+            [attr.aria-labelledby]="buttonId() + ' ' + buttonId() + '-number'"
+            (click)="disconnectAsked.emit()"
+            i18n="@@donor.bankAccounts.disconnect"
+          >
+            Nepřiřazovat platby z&nbsp;tohoto účtu
+          </button>
+        }
+      </div>
+    </div>
+  }
+} @else {
+  <div
+    class="account-confirm"
+    role="group"
+    [attr.aria-labelledby]="buttonId() + '-confirm'"
+    appDisclosure
+    animate.leave="account-confirm--closing"
+  >
+    <div>
+      <div class="ui-confirm account-confirm-box">
+        @if (account().confirmedSymbols.length > 0) {
+          <p
+            [id]="buttonId() + '-confirm'"
+            class="ui-confirm__text account-confirm-text"
+            i18n="@@donor.bankAccounts.confirm.textWithSymbols"
+          >
+            Platby bez variabilního symbolu ani platby se symbolem
+            {{ symbols() }}, které z&nbsp;tohoto účtu přijdou od zítřka, vám už nebudeme přiřazovat.
+            Dosavadní dary zůstanou; pokud některý z&nbsp;nich není váš,
+            <a href="mailto:info@nfnn.cz">napište nám</a>.
+          </p>
+        } @else {
+          <p
+            [id]="buttonId() + '-confirm'"
+            class="ui-confirm__text account-confirm-text"
+            i18n="@@donor.bankAccounts.confirm.text"
+          >
+            Platby bez variabilního symbolu, které z&nbsp;tohoto účtu přijdou od zítřka, vám už
+            nebudeme přiřazovat. Dosavadní dary zůstanou; pokud některý z&nbsp;nich není váš,
+            <a href="mailto:info@nfnn.cz">napište nám</a>.
+          </p>
+        }
+        <div class="ui-confirm__actions account-confirm-actions">
+          <button
+            appNeedsConnection
+            type="button"
+            class="ui-button ui-button--danger account-confirm-yes"
+            [disabled]="busy()"
+            [attr.aria-busy]="busy()"
+            (click)="disconnectConfirmed.emit()"
+            i18n="@@donor.bankAccounts.confirm.yes"
+          >
+            Ano, nepřiřazovat
+          </button>
+          <button
+            type="button"
+            class="ui-button ui-button--quiet account-confirm-no"
+            [id]="buttonId() + '-keep'"
+            (click)="disconnectKept.emit()"
+            i18n="@@donor.bankAccounts.confirm.no"
+          >
+            Ponechat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
