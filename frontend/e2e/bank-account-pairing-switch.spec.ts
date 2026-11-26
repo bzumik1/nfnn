@@ -8,6 +8,8 @@ import {
   untilAtRest,
 } from './motion-frames';
 
+const SWAP_IN_MOTION = '.account-swap--opening, .account-swap--closing';
+
 async function openVerifiedAccount(page: Page, width: number): Promise<Locator> {
   await mockDonorApi(page);
   await page.route(
@@ -36,12 +38,12 @@ test.describe('Given a signed-in donor with a verified bank account on a compute
         await page.emulateMedia({ reducedMotion: motion.reducedMotion });
         const row = await openVerifiedAccount(page, width);
 
-        const asking = heightsThroughTheMotion(row);
+        const asking = heightsThroughTheMotion(row, SWAP_IN_MOTION);
         await row.getByRole('button', { name: /Nepřiřazovat platby z\stohoto účtu/ }).click();
         const opening = await asking;
         await expect(row.getByRole('button', { name: 'Ponechat' })).toBeFocused();
 
-        const answering = heightsThroughTheMotion(row);
+        const answering = heightsThroughTheMotion(row, SWAP_IN_MOTION);
         await row.getByRole('button', { name: 'Ponechat' }).click();
         const closing = await answering;
         await expect(

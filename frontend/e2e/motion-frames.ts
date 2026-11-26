@@ -30,50 +30,75 @@ export interface MotionHeights {
   readonly rest: number;
 }
 
-export function heightsThroughTheMotion(element: Locator, steps = 20): Promise<MotionHeights> {
+export function heightsThroughTheMotion(
+  element: Locator,
+  movingParts: string,
+  steps = 20,
+): Promise<MotionHeights> {
   return element.evaluate(
-    (watched, stepCount) =>
+    (watched, { selector, stepCount }) =>
       new Promise<MotionHeights>((resolve) => {
         const height = () => watched.getBoundingClientRect().height;
         const endOf = (motion: Animation) => Number(motion.effect!.getComputedTiming().endTime);
-        const running = () =>
+        const finite = () =>
           watched
             .getAnimations({ subtree: true })
-            .filter((motion) => motion.playState === 'running' && Number.isFinite(endOf(motion)));
+            .filter((motion) => motion.playState !== 'finished' && Number.isFinite(endOf(motion)));
         const path = [height()];
-        const started = performance.now();
-        let moved = false;
-        let finished = path[0];
-        let stillFrames = 0;
-        const sample = () => {
-          const motions = running();
-          if (motions.length > 0) {
-            moved = true;
-            stillFrames = 0;
-            motions.forEach((motion) => motion.pause());
-            const end = Math.max(...motions.map(endOf));
-            for (let step = 0; step <= stepCount; step++) {
-              const time = (end * step) / stepCount;
-              motions.forEach((motion) => {
-                motion.currentTime = Math.min(time, endOf(motion));
-              });
-              path.push(height());
+        const settle = (finished: number) => {
+          const started = performance.now();
+          let stillFrames = 0;
+          const sample = () => {
+            stillFrames = finite().some((motion) => motion.playState === 'running')
+              ? 0
+              : stillFrames + 1;
+            if (stillFrames >= 3 || performance.now() - started > 3000) {
+              resolve({ path, finished, rest: height() });
+              return;
             }
-            motions.forEach((motion) => motion.finish());
-            finished = height();
-            path.push(finished);
-          } else if (moved) {
-            stillFrames += 1;
-          }
-          if ((moved && stillFrames >= 3) || performance.now() - started > 3000) {
-            resolve({ path, finished, rest: height() });
-            return;
-          }
+            requestAnimationFrame(sample);
+          };
           requestAnimationFrame(sample);
         };
-        sample();
+        const startsToMove = (record: MutationRecord) =>
+          record.type === 'attributes'
+            ? (record.target as Element).matches(selector)
+            : Array.from(record.addedNodes).some(
+                (node) => node instanceof Element && node.matches(selector),
+              );
+        const observer = new MutationObserver((records) => {
+          if (!records.some(startsToMove)) {
+            return;
+          }
+          observer.disconnect();
+          clearTimeout(giveUp);
+          const motions = finite();
+          motions.forEach((motion) => motion.pause());
+          const end = Math.max(0, ...motions.map(endOf));
+          for (let step = 0; step <= stepCount; step++) {
+            const time = (end * step) / stepCount;
+            motions.forEach((motion) => {
+              motion.currentTime = Math.min(time, endOf(motion));
+            });
+            path.push(height());
+          }
+          motions.forEach((motion) => motion.finish());
+          const finished = height();
+          path.push(finished);
+          settle(finished);
+        });
+        const giveUp = setTimeout(() => {
+          observer.disconnect();
+          resolve({ path, finished: path[0], rest: height() });
+        }, 3000);
+        observer.observe(watched, {
+          subtree: true,
+          childList: true,
+          attributes: true,
+          attributeFilter: ['class'],
+        });
       }),
-    steps,
+    { selector: movingParts, stepCount: steps },
   );
 }
 
