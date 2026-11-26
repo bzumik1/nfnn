@@ -81,7 +81,6 @@ html:has(app-root app-tab-bar) {
 }
 
 .ui-action-bar.ui-action-bar--resting {
-  margin-inline: 0;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
 }
