@@ -16,7 +16,10 @@
 .account-swap > * {
   min-height: 0;
   min-inline-size: 0;
-  padding-block-start: var(--space-2-5);
+}
+
+.account-swap > * > * {
+  margin-block-start: var(--space-2-5);
 }
 
 .account-action-fold > * {
@@ -31,7 +34,7 @@
 }
 
 .account-action--apart {
-  margin-top: var(--space-2-5);
+  margin-block-start: calc(2 * var(--space-2-5));
 }
 
 .account-swap--opening {
