@@ -890,6 +890,48 @@ describe('Given the donate section', () => {
       expect(element('.amount-hint')).toBeNull();
     });
 
+    function pointerOn(target: Element, type: string, pointerId: number): void {
+      target.dispatchEvent(
+        new PointerEvent(type, { bubbles: true, pointerType: 'touch', isPrimary: true, pointerId }),
+      );
+    }
+
+    it('and another pointer was released elsewhere during the press, then only the release of the pressing pointer shows the hint', async () => {
+      pointerOn(button('500 Kč'), 'pointerdown', 5);
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+
+      pointerOn(document.body, 'pointerup', 7);
+
+      expect(hintShows()).toBe(false);
+
+      pointerOn(document.body, 'pointerup', 5);
+      await settle();
+
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+    });
+
+    it('and the browser cancelled the press away from the amount, then a later release elsewhere shows no hint', async () => {
+      pointerOn(button('500 Kč'), 'pointerdown', 5);
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      pointerOn(document.body, 'pointercancel', 5);
+
+      pointerOn(document.body, 'pointerup', 5);
+      await settle();
+
+      expect(element('.amount-hint')).toBeNull();
+    });
+
+    it('and another pointer was cancelled during the press, then the release of the pressing pointer still shows the hint', async () => {
+      pointerOn(button('500 Kč'), 'pointerdown', 5);
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      pointerOn(button('500 Kč'), 'pointercancel', 7);
+
+      pointerOn(document.body, 'pointerup', 5);
+      await settle();
+
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+    });
+
     it('and a finger left the amount it pressed before its click, then no hint shows and the click still chooses 500 Kč', async () => {
       button('500 Kč').dispatchEvent(
         new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch', isPrimary: true }),
