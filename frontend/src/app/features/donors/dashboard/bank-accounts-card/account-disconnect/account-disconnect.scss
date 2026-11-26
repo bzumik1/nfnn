@@ -18,25 +18,37 @@
   margin-top: var(--space-2-5);
 }
 
+.account-action-fold {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
 .account-action-fold > * {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-}
-
-.account-action-fold--returning {
-  @include motion.expand-on-open;
-}
-
-.account-action-fold--closing {
-  @include motion.row-leave;
+  min-height: 0;
 }
 
 .account-confirm {
   @include motion.expand($closes-by: class);
 }
 
-.account-action-fold--closing:not(:last-child),
-.account-confirm--closing:not(:last-child) {
-  margin-block-end: calc(-1 * var(--space-2-5));
+.account-action-fold--returning {
+  @extend .account-confirm;
+}
+
+.account-action-fold--closing {
+  @extend .account-confirm--closing;
+}
+
+.account-action-fold--closing,
+.account-confirm--closing {
+  &:not(:last-child) {
+    margin-block-end: calc(-1 * var(--space-2-5));
+  }
+
+  &:last-child:not(:first-child) {
+    margin-block-start: calc(-1 * var(--space-2-5));
+  }
 }
