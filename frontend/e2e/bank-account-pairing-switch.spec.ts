@@ -9,8 +9,10 @@ import {
 } from './donor-session';
 import {
   heightsThroughTheMotion,
+  scrollThroughTheMotion,
   stepAfterTheMotion,
   stepsAgainst,
+  stepsBack,
   untilAtRest,
 } from './motion-frames';
 
@@ -216,7 +218,7 @@ test.describe('Given a donor on a 375 pt iPhone whose app shows the largest acce
     { name: '', reducedMotion: 'no-preference' as const },
     { name: ' with reduced motion', reducedMotion: 'reduce' as const },
   ]) {
-    test(`when Nepřiřazovat platby z tohoto účtu asks and Ponechat answers${motion.name}, then each button that takes the focus stands wholly in view once the row has settled`, async ({
+    test(`when Nepřiřazovat platby z tohoto účtu asks and Ponechat answers${motion.name}, then each button that takes the focus stands wholly in view once the row has settled and the page moves one way while it gets there`, async ({
       page,
     }) => {
       await page.emulateMedia({ reducedMotion: motion.reducedMotion });
@@ -247,11 +249,15 @@ test.describe('Given a donor on a 375 pt iPhone whose app shows the largest acce
       await untilAtRest(row);
       await expect(keep).toBeInViewport({ ratio: 1 });
 
+      await keep.scrollIntoViewIfNeeded();
+      const scrolling = scrollThroughTheMotion(row, SWAP_IN_MOTION);
       await keep.click();
+      const scrolled = await scrolling;
       await expect(exclude).toBeFocused();
       await untilAtRest(row);
       await expect(exclude).toBeInViewport({ ratio: 1 });
       await expect(exclude).toBeFocused();
+      expect(stepsBack(scrolled), JSON.stringify(scrolled)).toEqual([]);
     });
   }
 });
