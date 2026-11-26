@@ -1194,106 +1194,27 @@ describe('Given a phone that animates and an article opened from the news, which
     await returned;
   }
 
-  it('when the app steps back to it, then the news moves in at once over the copy kept at the push, never waiting for the live news to be drawn and placed', async () => {
-    TestBed.inject(PagePlacement).pending();
-
-    await stepsBack();
-    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
-
-    expect(moved).toBe(true);
-    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under`)?.textContent).toContain(
-      'Aktuality',
-    );
-    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--over`)?.textContent).toContain(
-      'Článek',
-    );
-  });
-
-  it('when the app steps back to it, then both copies lie in the cover before anything is scrolled or read, so the screen is laid out once', async () => {
-    const pagesInCover = (): number =>
-      document.querySelectorAll(`.${PAGE_TRANSITION_CLASS} .${PAGE_TRANSITION_CLASS}__page`).length;
-    const onePageWhen: string[] = [];
-    const scrolling = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop')!;
-    Object.defineProperty(Element.prototype, 'scrollTop', {
-      configurable: true,
-      get(this: Element) {
-        return scrolling.get!.call(this);
-      },
-      set(this: Element, top: number) {
-        if (pagesInCover() === 1) {
-          onePageWhen.push('scrolled');
-        }
-        scrolling.set!.call(this, top);
-      },
-    });
-    const styleOf = window.getComputedStyle;
-    vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => {
-      if (pagesInCover() === 1) {
-        onePageWhen.push('read');
-      }
-      return styleOf.call(window, element, pseudo);
-    });
-    onTestFinished(() => {
-      Object.defineProperty(Element.prototype, 'scrollTop', scrolling);
-    });
-
-    await stepsBack();
-
-    expect(document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}__page`)).toHaveLength(2);
-    expect(onePageWhen).toEqual([]);
-  });
-
-  it('when the news has moved in over its kept copy, then the cover stays until the live news is placed, and goes once it is', async () => {
+  it('when the app steps back to it, then the news moves in only once the live news is placed, over a copy of the live news as main does, never over the copy kept at the push (round 42)', async () => {
     const placed = TestBed.inject(PagePlacement).pending();
+    const under: string[] = [];
+    const copies = new MutationObserver(() => {
+      const page = document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under`);
+      if (page !== null && under.length === 0) {
+        under.push(page.textContent ?? '');
+      }
+    });
+    copies.observe(document.body, { subtree: true, childList: true });
+    onTestFinished(() => copies.disconnect());
 
     await stepsBack();
     await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
-    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).not.toBeNull();
+    expect(moved, 'moved before the live news was placed').toBe(false);
+    layer.textContent = 'Aktuality živě';
     placed();
     await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
 
-    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
-  });
-
-  it('when the live news is put back at another scroll than its kept copy showed, as after a cold launch whose page moved meanwhile, then the live news takes the copy’s scroll before the cover goes, so the list never jumps at the end (round 42)', async () => {
-    const placed = TestBed.inject(PagePlacement).pending();
-    const scrolledTo: number[] = [];
-    let scrollY = 460;
-    Object.defineProperty(window, 'scrollY', { configurable: true, get: () => scrollY });
-    vi.spyOn(window, 'scrollTo').mockImplementation((options?: ScrollToOptions | number) => {
-      scrollY = typeof options === 'number' ? options : (options?.top ?? scrollY);
-      scrolledTo.push(scrollY);
-    });
-    let scrollWhenTheCoverWent: number | null = null;
-    const gone = new MutationObserver(() => {
-      if (
-        scrollWhenTheCoverWent === null &&
-        document.querySelector(`.${PAGE_TRANSITION_CLASS}`) === null
-      ) {
-        scrollWhenTheCoverWent = scrollY;
-      }
-    });
-
-    await stepsBack();
-    gone.observe(document.body, { childList: true });
-    placed();
-    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS);
-    gone.disconnect();
-
-    expect(scrolledTo).toEqual([0]);
-    expect(scrollWhenTheCoverWent).toBe(0);
-  });
-
-  it('when the live news is put back at the scroll its kept copy showed, then the step back leaves the scroll alone', async () => {
-    const placed = TestBed.inject(PagePlacement).pending();
-    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
-
-    await stepsBack();
-    placed();
-    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS);
-
-    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
-    expect(scrollTo).not.toHaveBeenCalled();
+    expect(moved).toBe(true);
+    expect(under).toEqual([expect.stringContaining('Aktuality živě')]);
   });
 
   it('when the window has another width than when the news was kept, then the step back waits for the live news as before', async () => {
