@@ -207,11 +207,14 @@ function startMoving(
       return;
     }
     released = true;
-    stage.finishAfter(view, PAGE_TRANSITION_LONGEST_MS);
+    finishWithinTheMotion(stage, running, view);
     STEP_CHROME.release(view, running.overlay, stage.steadyFrameMs());
-    view.requestAnimationFrame(() =>
-      view.setTimeout(still, stage.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
-    );
+    view.requestAnimationFrame(() => {
+      if (stage.running === running) {
+        finishWithinTheMotion(stage, running, view);
+        view.setTimeout(still, stage.motionEndsWithinMs());
+      }
+    });
   };
   afterDrawnFrames(
     view,
@@ -220,6 +223,14 @@ function startMoving(
     release,
     () => framesStopped,
     () => stage.running === running,
+  );
+}
+
+function finishWithinTheMotion(stage: PageTransitions, running: Running, view: Window): void {
+  const waitsForTheLivePage = running.ahead === true && running.arrived !== true;
+  stage.finishAfter(
+    view,
+    waitsForTheLivePage ? PAGE_TRANSITION_LONGEST_MS : stage.motionEndsWithinMs(),
   );
 }
 

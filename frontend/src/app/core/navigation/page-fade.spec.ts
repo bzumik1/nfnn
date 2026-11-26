@@ -4,7 +4,12 @@ import { ActivationEnd, NavigationEnd, provideRouter, ResolveStart, Router } fro
 import { EMPTY, filter, firstValueFrom, Subject } from 'rxjs';
 import { AdministrationAccess } from '../auth/administration-access';
 import { CompactLayout } from '../layout/compact-layout';
-import { PAGE_FADE_CLASS, PAGE_FADE_HIDDEN_CLASS, PageFade } from './page-fade';
+import {
+  PAGE_FADE_CLASS,
+  PAGE_FADE_ENDS_LATE_BY_MS,
+  PAGE_FADE_HIDDEN_CLASS,
+  PageFade,
+} from './page-fade';
 import { PAGE_LAYER_CLASS, PAGE_TRANSITION_LONGEST_MS } from './page-transitions';
 import { ScrollHold } from './scroll-hold';
 
@@ -151,6 +156,55 @@ describe('Given a computer that animates, with O nás open', () => {
 
     expect(cover()).toBeNull();
     expect(scrolled).toHaveBeenCalledOnce();
+  });
+
+  function fadeLeftOver(): string[] {
+    return [
+      ...(cover() === null ? [] : ['the copy']),
+      ...(document.documentElement.classList.contains(PAGE_FADE_HIDDEN_CLASS)
+        ? ['the content is hidden']
+        : []),
+    ];
+  }
+
+  it('when no frame comes at all, as on a cold runner, then the copy goes and the content shows within PAGE_FADE_ENDS_LATE_BY_MS, not only after the cover’s longest time', async () => {
+    await start(false);
+    const frames = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    onTestFinished(() => frames.mockRestore());
+    vi.useFakeTimers();
+
+    await router.navigateByUrl('/aktuality');
+    await vi.advanceTimersByTimeAsync(PAGE_FADE_ENDS_LATE_BY_MS);
+
+    expect(fadeLeftOver()).toEqual([]);
+  });
+
+  it('when the fades never report that they finished, then the copy goes and the content shows within their length and PAGE_FADE_ENDS_LATE_BY_MS, not only after the longest time of each', async () => {
+    await start(false);
+    const fadeMs = 100;
+    const frames = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((frame) => {
+      frame(performance.now());
+      return 1;
+    });
+    onTestFinished(() => frames.mockRestore());
+    Object.defineProperty(Element.prototype, 'getAnimations', {
+      configurable: true,
+      value: () => [
+        {
+          finished: new Promise(() => undefined),
+          effect: { getComputedTiming: () => ({ endTime: fadeMs }) },
+        },
+      ],
+    });
+    onTestFinished(() => {
+      delete (Element.prototype as { getAnimations?: unknown }).getAnimations;
+    });
+    vi.useFakeTimers();
+
+    await router.navigateByUrl('/aktuality');
+    await vi.advanceTimersByTimeAsync(2 * fadeMs + PAGE_FADE_ENDS_LATE_BY_MS);
+
+    expect(fadeLeftOver()).toEqual([]);
   });
 
   it('when a pointer is pressed while the copy covers the page, then the new page shows at once and moves only once the press has ended, so the press lands where it was aimed', async () => {

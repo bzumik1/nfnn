@@ -24,9 +24,11 @@ import { NavigationPreview } from './navigation-preview';
 import { pathOf } from './app-tabs';
 import { pageFadeFor } from './page-transition-kind';
 import {
+  FRAME_LATE_MS,
   PAGE_COVER_LONGEST_MS,
   PAGE_LAYER_CLASS,
   PAGE_TRANSITION_LONGEST_MS,
+  nextFrame,
 } from './page-transitions';
 import { ScrollHold } from './scroll-hold';
 import { stillCopyOf } from './still-copy';
@@ -42,6 +44,9 @@ const ADMINISTRATION = '/sprava';
 const INTERRUPTIONS = ['pointerdown', 'keydown', 'wheel'] as const;
 const PRESS_ENDS = ['pointerup', 'pointercancel'] as const;
 const RENDERED_AFTER_FRAMES = 2;
+const STILL_LATE_BY_MS = 2 * FRAME_LATE_MS;
+export const PAGE_FADE_ENDS_LATE_BY_MS =
+  RENDERED_AFTER_FRAMES * FRAME_LATE_MS + 2 * STILL_LATE_BY_MS;
 
 interface Prepared {
   readonly layer: HTMLElement;
@@ -205,9 +210,9 @@ export class PageFade {
         then();
       }
     };
-    this.limit = view.setTimeout(once, PAGE_TRANSITION_LONGEST_MS);
     view.getComputedStyle(element).getPropertyValue('animation-name');
     const motions = typeof element.getAnimations === 'function' ? element.getAnimations() : [];
+    this.limit = view.setTimeout(once, stillWithinMs(motions));
     void Promise.allSettled(motions.map((motion) => motion.finished)).then(once);
   }
 
@@ -299,12 +304,20 @@ function isClear(colour: string): boolean {
   return /^rgba\(.*,\s*0\)$/.test(colour);
 }
 
+function stillWithinMs(motions: readonly Animation[]): number {
+  const longestMs = Math.max(
+    0,
+    ...motions.map((motion) => Number(motion.effect?.getComputedTiming().endTime ?? 0)),
+  );
+  return Math.min(PAGE_TRANSITION_LONGEST_MS, longestMs + STILL_LATE_BY_MS);
+}
+
 function afterFrames(view: Window, frames: number, then: () => void): void {
   if (frames === 0) {
     then();
     return;
   }
-  view.requestAnimationFrame(() => afterFrames(view, frames - 1, then));
+  nextFrame(view, () => afterFrames(view, frames - 1, then));
 }
 
 export const pageFadeAtStart: EnvironmentProviders = provideAppInitializer(
