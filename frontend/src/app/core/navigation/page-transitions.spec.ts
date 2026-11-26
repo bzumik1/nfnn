@@ -1011,6 +1011,47 @@ describe('Given a phone that animates and an article opened from the news, which
     expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
   });
 
+  it('when the live news is put back at another scroll than its kept copy showed, as after a cold launch whose page moved meanwhile, then the live news takes the copy’s scroll before the cover goes, so the list never jumps at the end (round 42)', async () => {
+    const placed = TestBed.inject(PagePlacement).pending();
+    const scrolledTo: number[] = [];
+    let scrollY = 460;
+    Object.defineProperty(window, 'scrollY', { configurable: true, get: () => scrollY });
+    vi.spyOn(window, 'scrollTo').mockImplementation((options?: ScrollToOptions | number) => {
+      scrollY = typeof options === 'number' ? options : (options?.top ?? scrollY);
+      scrolledTo.push(scrollY);
+    });
+    let scrollWhenTheCoverWent: number | null = null;
+    const gone = new MutationObserver(() => {
+      if (
+        scrollWhenTheCoverWent === null &&
+        document.querySelector(`.${PAGE_TRANSITION_CLASS}`) === null
+      ) {
+        scrollWhenTheCoverWent = scrollY;
+      }
+    });
+
+    await stepsBack();
+    gone.observe(document.body, { childList: true });
+    placed();
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS);
+    gone.disconnect();
+
+    expect(scrolledTo).toEqual([0]);
+    expect(scrollWhenTheCoverWent).toBe(0);
+  });
+
+  it('when the live news is put back at the scroll its kept copy showed, then the step back leaves the scroll alone', async () => {
+    const placed = TestBed.inject(PagePlacement).pending();
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+
+    await stepsBack();
+    placed();
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS);
+
+    expect(document.querySelector(`.${PAGE_TRANSITION_CLASS}`)).toBeNull();
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
   it('when the window has another width than when the news was kept, then the step back waits for the live news as before', async () => {
     const width = Object.getOwnPropertyDescriptor(window, 'innerWidth')!;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 420 });

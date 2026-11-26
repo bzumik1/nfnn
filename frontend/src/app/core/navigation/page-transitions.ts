@@ -69,6 +69,7 @@ export interface Running {
   readonly swiping: boolean;
   readonly sheet: HTMLElement | null;
   readonly fromSheet?: boolean;
+  readonly shownScrollY?: number;
   revealed: boolean;
   stepped?: boolean;
   ahead?: boolean;
@@ -400,6 +401,7 @@ export class PageTransitions {
       swiping: false,
       sheet,
       fromSheet: kind === 'push' && returningSheet !== null,
+      shownScrollY: ahead ? behind.scrollY : undefined,
       revealed: false,
       ahead,
     };
@@ -465,8 +467,17 @@ export class PageTransitions {
       return;
     }
     running.arrived = true;
+    this.standWhereTheCopyShowed(running);
     if (running.still) {
       this.finish();
+    }
+  }
+
+  private standWhereTheCopyShowed(running: Running): void {
+    const view = this.document.defaultView;
+    const top = running.shownScrollY;
+    if (view !== null && top !== undefined && Math.abs(view.scrollY - top) > 1) {
+      view.scrollTo({ top, behavior: 'instant' });
     }
   }
 
