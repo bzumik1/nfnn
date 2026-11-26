@@ -93,10 +93,14 @@ async function framesWhile(
   page: Page,
   watched: Record<string, string>,
   act: () => Promise<void>,
-  recording: { readonly removed?: string; readonly dividers?: string } = {},
+  recording: {
+    readonly removed?: string;
+    readonly dividers?: string;
+    readonly sampledAtTheStart?: boolean;
+  } = {},
 ): Promise<Frame[]> {
   await page.evaluate(
-    ({ watched, watchedMs, removed, dividers }) => {
+    ({ watched, watchedMs, removed, dividers, sampledAtTheStart }) => {
       const watch = window as unknown as FrameWatch;
       watch.settingsFrames = [];
       watch.settingsWatched = false;
@@ -148,7 +152,7 @@ async function framesWhile(
         (document.querySelector(watched['card'])?.getAnimations({ subtree: true }) ?? []).every(
           (animation) => animation.playState === 'finished',
         );
-      const sample = (frameTime: DOMHighResTimeStamp): void => {
+      const record = (frameTime: DOMHighResTimeStamp): void => {
         const boxes: Record<string, Box | null> = {};
         for (const [name, selector] of Object.entries(watched)) {
           const element = document.querySelector(selector);
@@ -167,6 +171,9 @@ async function framesWhile(
           lines: drawnLines(),
           afters: drawnAfters(),
         });
+      };
+      const sample = (frameTime: DOMHighResTimeStamp): void => {
+        record(frameTime);
         sampledAfterAct ||= watch.settingsActed;
         const stillThere = removed !== null && document.querySelector(removed) !== null;
         if (
@@ -180,6 +187,9 @@ async function framesWhile(
           watch.settingsWatched = true;
         }
       };
+      if (sampledAtTheStart) {
+        record(began);
+      }
       requestAnimationFrame(sample);
     },
     {
@@ -187,6 +197,7 @@ async function framesWhile(
       watchedMs: WATCHED_MS,
       removed: recording.removed ?? null,
       dividers: recording.dividers ?? null,
+      sampledAtTheStart: recording.sampledAtTheStart ?? false,
     },
   );
   await act();
@@ -995,7 +1006,11 @@ async function bothConnectionsLeaveOnReturnWatchingDividers(page: Page): Promise
       nextClient: `${otherConnectionRow} .connection-client`,
     },
     async () => answer(),
-    { removed: '.connection-list', dividers: '.connection, .connection-slot' },
+    {
+      removed: '.connection-list',
+      dividers: '.connection, .connection-slot',
+      sampledAtTheStart: true,
+    },
   );
 
   await expect(page.locator('.connection-client')).toHaveCount(0);
