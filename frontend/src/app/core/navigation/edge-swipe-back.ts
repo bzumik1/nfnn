@@ -23,6 +23,8 @@ const PRESS_TAKEN_OVER = `.${EDGE_SWIPE_DRAGGING_CLASS} :active {
   transform: none !important;
 }`;
 
+export const POINTER_LIFT_WAITS_FOR_TOUCH_END_MS = 50;
+
 const PASSIVE: AddEventListenerOptions = { passive: true, capture: true };
 
 interface Swipe {
@@ -47,6 +49,7 @@ export class EdgeSwipeBack {
   private swipe: Swipe | null = null;
   private pressCancel: CSSStyleSheet | null = null;
   private pops = 0;
+  private liftWithoutTouchEnd: ReturnType<typeof setTimeout> | undefined;
 
   private readonly onStart = (event: TouchEvent): void => this.started(event);
   private readonly onMove = (event: TouchEvent): void => this.moved(event);
@@ -156,6 +159,7 @@ export class EdgeSwipeBack {
   }
 
   private letGo(): void {
+    this.document.defaultView?.clearTimeout(this.liftWithoutTouchEnd);
     this.swipe = null;
     this.document.documentElement.classList.remove(EDGE_SWIPE_DRAGGING_CLASS);
   }
@@ -195,9 +199,17 @@ export class EdgeSwipeBack {
 
   private pointerLifted(event: PointerEvent): void {
     const swipe = this.swipe;
-    if (swipe !== null && event.pointerType === 'touch') {
-      this.ended(swipe, { x: event.clientX, y: event.clientY, at: event.timeStamp });
+    const view = this.document.defaultView;
+    if (swipe === null || view === null || event.pointerType !== 'touch') {
+      return;
     }
+    const point = { x: event.clientX, y: event.clientY, at: event.timeStamp };
+    view.clearTimeout(this.liftWithoutTouchEnd);
+    this.liftWithoutTouchEnd = view.setTimeout(() => {
+      if (this.swipe === swipe) {
+        this.ended(swipe, point);
+      }
+    }, POINTER_LIFT_WAITS_FOR_TOUCH_END_MS);
   }
 
   private ended(swipe: Swipe, point: SwipePoint): void {
