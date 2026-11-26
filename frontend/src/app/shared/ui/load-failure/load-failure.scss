@@ -2,6 +2,10 @@
   display: block;
 }
 
+.ui-notice--action {
+  border-radius: var(--radius-lg);
+}
+
 .load-failure-retry {
   max-inline-size: 100%;
   white-space: normal;
