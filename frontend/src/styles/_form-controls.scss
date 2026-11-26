@@ -35,6 +35,36 @@ textarea.form-control {
   resize: vertical;
 }
 
+select.form-control {
+  appearance: none;
+  padding-inline-end: calc(var(--space-4) + var(--list-chevron-size) / 2 + var(--space-3));
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - var(--list-chevron-size) / 24),
+      var(--color-text-subtle) 0 calc(50% + var(--list-chevron-size) / 24),
+      transparent 0
+    ),
+    linear-gradient(
+      135deg,
+      transparent calc(50% - var(--list-chevron-size) / 24),
+      var(--color-text-subtle) 0 calc(50% + var(--list-chevron-size) / 24),
+      transparent 0
+    );
+  background-repeat: no-repeat;
+  background-size: calc(var(--list-chevron-size) / 4) calc(var(--list-chevron-size) / 4);
+  background-position:
+    right calc(var(--space-4) + var(--list-chevron-size) / 4) center,
+    right var(--space-4) center;
+}
+
+@media (forced-colors: active) {
+  select.form-control {
+    appearance: auto;
+    background-image: none;
+  }
+}
+
 app-password-reveal .form-control {
   padding-right: calc(1.25rem + var(--space-2-5) * 2 + var(--space-3));
 }
