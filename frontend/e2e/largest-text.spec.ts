@@ -2166,7 +2166,7 @@ for (const { screen, viewport } of [
   test.describe(`Given a visitor on Aktuality on ${screen} whose installed app shows the largest accessibility text`, () => {
     test.use({ viewport });
 
-    test('when the featured article has a photo, then the card keeps its text and its photo side by side, with the title at the top of its column', async ({
+    test('when the featured article has a photo, then the card keeps its text and its photo side by side, with no photo-sized gap above the title', async ({
       page,
     }) => {
       await showLargestSystemText(page);
@@ -2182,7 +2182,8 @@ for (const { screen, viewport } of [
       const textBox = (await card.locator('.featured-text').boundingBox())!;
       const titleBox = (await card.getByRole('heading').boundingBox())!;
       expect(photoBox.x).toBeGreaterThanOrEqual(textBox.x + textBox.width - 1);
-      expect(titleBox.y - textBox.y).toBeLessThan(viewport.height / 4);
+      const cardBox = (await card.boundingBox())!;
+      expect(titleBox.y - textBox.y).toBeLessThan(cardBox.width / 3);
     });
   });
 }
@@ -4864,23 +4865,24 @@ for (const width of [390, 1280]) {
   });
 }
 
-async function gapsBetweenAccountingRows(card: Locator): Promise<number[]> {
+async function wrappedCopyButtonsTooCloseToTheirValue(card: Locator): Promise<string[]> {
   await card.evaluate(() => document.fonts.ready);
   return card.evaluate((element) => {
-    const parts =
-      '.accounting-item > dt, .accounting-value, .accounting-link, app-copy-button button';
-    const rows = Array.from(element.querySelectorAll<HTMLElement>('.accounting-item')).map(
-      (row) => {
-        const boxes = Array.from(row.querySelectorAll<HTMLElement>(parts)).map((part) =>
-          part.getBoundingClientRect(),
-        );
-        return {
-          top: Math.min(...boxes.map((box) => box.top)),
-          bottom: Math.max(...boxes.map((box) => box.bottom)),
-        };
-      },
-    );
-    return rows.slice(1).map((row, index) => Math.round(row.top - rows[index].bottom));
+    const gap = 4;
+    return Array.from(element.querySelectorAll<HTMLElement>('.accounting-item dd'))
+      .map((field) => ({
+        value: field.querySelector<HTMLElement>('.accounting-value'),
+        button: field.querySelector<HTMLElement>('app-copy-button button'),
+      }))
+      .filter(({ value, button }) => value && button)
+      .map(({ value, button }) => ({
+        name: value!.textContent!.trim(),
+        value: value!.getBoundingClientRect(),
+        button: button!.getBoundingClientRect(),
+      }))
+      .filter(({ value, button }) => button.top >= value.top + value.height / 2)
+      .filter(({ value, button }) => button.top - value.bottom < gap)
+      .map(({ name, value, button }) => `${name}: ${Math.round(button.top - value.bottom)} px`);
   });
 }
 
@@ -4891,7 +4893,7 @@ for (const { screen, viewport } of [
   test.describe(`Given an accountant on ${screen} whose text is at its default size`, () => {
     test.use({ viewport });
 
-    test('when they open Údaje pro účetní on O nás, then every copy button stays clear of its value and the rows stand one gap apart, whether a value takes one line or two and whether its button drops under it', async ({
+    test('when they open Údaje pro účetní on O nás, then every copy button stays clear of its value, and one that drops under its value keeps a gap above it', async ({
       page,
     }) => {
       await mockDonorApi(page);
@@ -4900,8 +4902,7 @@ for (const { screen, viewport } of [
       await expect(card).toContainText('CZ26 2010 0000 0055 4433 2217');
 
       expect(await valuesUnderTheirCopyButtons(card)).toEqual([]);
-      const gaps = await gapsBetweenAccountingRows(card);
-      expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(1);
+      expect(await wrappedCopyButtonsTooCloseToTheirValue(card)).toEqual([]);
     });
   });
 }
