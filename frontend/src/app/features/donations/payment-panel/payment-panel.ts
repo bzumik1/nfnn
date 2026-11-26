@@ -180,6 +180,7 @@ export class PaymentPanel {
   protected readonly failedAttempts = signal(0);
   private choosingByKey = false;
   private amountPressed = false;
+  private deletingSelection = false;
   private readonly announced = signal<number | null>(null);
   private lastAnnounced: number | null = null;
   private retried = false;
@@ -401,16 +402,23 @@ export class PaymentPanel {
 
   enterCustomAmount(event: Event): void {
     this.clearNotices();
+    this.amountPressed = false;
     const field = event.target as HTMLInputElement;
-    const deletion = (event as InputEvent).inputType;
-    if (
-      (deletion === 'deleteContentForward' || deletion === 'deleteContentBackward') &&
-      /^[\d\s]+$/.test(this.customText()) &&
-      digitsOf(field.value) === digitsOf(this.customText())
-    ) {
-      removeDigitBesideCaret(field, deletion === 'deleteContentForward');
+    const typing = event as InputEvent;
+    const deletion = typing.inputType;
+    const deletedSelection = this.deletingSelection;
+    this.deletingSelection = false;
+    if (!typing.isComposing) {
+      if (
+        !deletedSelection &&
+        (deletion === 'deleteContentForward' || deletion === 'deleteContentBackward') &&
+        /^[\d\s]+$/.test(this.customText()) &&
+        digitsOf(field.value) === digitsOf(this.customText())
+      ) {
+        removeDigitBesideCaret(field, deletion === 'deleteContentForward');
+      }
+      groupThousands(field);
     }
-    groupThousands(field);
     this.customText.set(field.value);
     const typed = wholeCrowns(field.value);
     this.customAmount.set(typed);
@@ -428,6 +436,11 @@ export class PaymentPanel {
 
   forgetAmountPress(): void {
     this.amountPressed = false;
+  }
+
+  noteDeletion(event: Event): void {
+    const field = event.target as HTMLInputElement;
+    this.deletingSelection = field.selectionStart !== field.selectionEnd;
   }
 
   leaveCustomAmount(): void {
@@ -790,16 +803,15 @@ function initialChoice(
 
 function groupThousands(field: HTMLInputElement): void {
   const digits = field.value.replace(/\s/g, '');
-  if (!/^\d+$/.test(digits) || !Number.isSafeInteger(Number(digits))) {
+  if (!/^\d+$/.test(digits)) {
     return;
   }
-  const grouped = formatCrowns(Number(digits));
+  const grouped = digits.replace(/\B(?=(\d{3})+$)/g, '\u00a0');
   if (grouped === field.value) {
     return;
   }
   const caret = field.selectionStart ?? field.value.length;
-  const dropped = digits.length - grouped.replace(/\D/g, '').length;
-  const digitsBefore = Math.max(field.value.slice(0, caret).replace(/\D/g, '').length - dropped, 0);
+  const digitsBefore = digitsOf(field.value.slice(0, caret)).length;
   field.value = grouped;
   const position = positionAfterDigits(grouped, digitsBefore);
   field.setSelectionRange(position, position);
