@@ -366,7 +366,7 @@
   --tab-pill-drag-scale: 1.04;
   --tab-bar-max-width: 400px;
   --tab-bar-home-indicator-overlap: 15px;
-  --tab-icon-size: 1.25rem;
+  --tab-icon-size: min(1.25rem, var(--tab-label-fit) * 1.8);
   --tab-label-fit: calc(
     (100cqi - 32px - 2 * var(--tab-bar-padding-inline) - 3 * var(--tab-bar-item-gap)) / 19
   );
