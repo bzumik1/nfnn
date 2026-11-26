@@ -5,6 +5,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   DOCUMENT,
   effect,
   ElementRef,
@@ -118,6 +119,7 @@ export class DevicesCard {
   );
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.focusAfterRowLeaves.forget());
     this.loadDevices(true);
     effect(() => {
       const devices = this.devices();
@@ -159,7 +161,9 @@ export class DevicesCard {
     const target = this.confirming();
     this.returning.set(target);
     this.confirming.set(null);
-    this.focusAfterRender(() => this.askingButton(target), { preventScroll: true });
+    afterNextRender(() => this.returnFocusAfterCancel(this.askingButton(target)), {
+      injector: this.injector,
+    });
   }
 
   signOut(device: SignedInDevice): void {
@@ -260,7 +264,7 @@ export class DevicesCard {
     const row = this.row(device);
     const neighbour = this.neighbourAfterSignOut(device, row);
     markRowsLeaving([row]);
-    this.focusAfterRowLeaves.rowLeaving(row);
+    this.focusAfterRowLeaves.rowLeaving(row, neighbour);
     if (row !== null && !this.leavesInView(row)) {
       this.focusAfterRowLeaves.rowLeaveEnded(row);
     }
@@ -298,6 +302,18 @@ export class DevicesCard {
     }
     control.focus({ preventScroll: true });
     this.focusAfterRowLeaves.keepInViewOnceSettled(control, [], false);
+  }
+
+  private returnFocusAfterCancel(button: HTMLElement | null | undefined): void {
+    if (button === null || button === undefined) {
+      return;
+    }
+    button.focus({ preventScroll: true });
+    this.focusAfterRowLeaves.keepInViewOnceSettled(
+      button,
+      button.closest('.devices')?.getAnimations?.({ subtree: true }) ?? [],
+      this.inputModality.lastPressByPointer(),
+    );
   }
 
   private closingFoldHoldsThePress(toggle: HTMLElement): boolean {
@@ -353,11 +369,8 @@ export class DevicesCard {
     );
   }
 
-  private focusAfterRender(
-    target: () => HTMLElement | null | undefined,
-    options?: FocusOptions,
-  ): void {
-    afterNextRender(() => target()?.focus(options), { injector: this.injector });
+  private focusAfterRender(target: () => HTMLElement | null | undefined): void {
+    afterNextRender(() => target()?.focus(), { injector: this.injector });
   }
 
   private begin(target: string): void {

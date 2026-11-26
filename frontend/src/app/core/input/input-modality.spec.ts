@@ -201,7 +201,7 @@ describe('Given the page that remembers whether the last press came from a point
       expect(lastInput()).toBe('keyboard');
     });
 
-    for (const modifier of ['Shift', 'Control', 'Alt', 'Meta']) {
+    for (const modifier of ['Shift', 'Control', 'Alt', 'AltGraph', 'Meta', 'CapsLock', 'Fn']) {
       it(`when ${modifier} alone is pressed after a touch, then it still names the pointer`, () => {
         touch();
         press(modifier);

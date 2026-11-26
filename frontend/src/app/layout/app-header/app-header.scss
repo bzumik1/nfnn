@@ -148,6 +148,7 @@
 .sign-in {
   flex: none;
   max-width: 60%;
+  min-height: var(--back-button-size);
   text-align: center;
   border-radius: var(--radius-pill);
   padding: var(--space-2-25) var(--space-4-5);

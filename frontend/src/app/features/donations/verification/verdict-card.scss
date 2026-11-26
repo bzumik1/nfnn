@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .verify-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -6,6 +8,13 @@
 
   > :not(.verify-tone, .ui-card__title) {
     grid-column: 1 / -1;
+  }
+}
+
+@include bp.container-down(ui-card, pair) {
+  .verify-card > .ui-card__title {
+    grid-column: 1 / -1;
+    margin-top: var(--space-3);
   }
 }
 

@@ -1,4 +1,4 @@
-import { expect, Locator, Page } from '@playwright/test';
+import { expect, Locator, Page, Response } from '@playwright/test';
 import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
 import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
 import { mockReceiptIssuing, ReceiptIssuing } from './receipt-issuing';
@@ -602,14 +602,22 @@ async function administrationFirstDownloadEnded(page: Page): Promise<void> {
   });
 }
 
+const ADMINISTRATION_COPY_WAIT_MS = 10_000;
+
+function isAdministrationCopy(response: Response): boolean {
+  return new URL(response.url()).pathname === '/api/admin/donations/sync';
+}
+
 export function whenAdministrationCopied(page: Page): () => Promise<void> {
-  const synced = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === '/api/admin/donations/sync',
-    { timeout: 10_000 },
-  );
+  let copied = false;
+  const answered = (response: Response) => {
+    copied ||= isAdministrationCopy(response);
+  };
+  page.on('response', answered);
   return async () => {
     await expect(page.locator('.admin-page h1')).toBeVisible();
-    await synced;
+    await expect.poll(() => copied, { timeout: ADMINISTRATION_COPY_WAIT_MS }).toBe(true);
+    page.off('response', answered);
     await administrationFirstDownloadEnded(page);
   };
 }

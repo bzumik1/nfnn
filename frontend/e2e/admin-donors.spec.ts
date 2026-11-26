@@ -368,7 +368,7 @@ test.describe('Given an administrator on the donors page', () => {
     await expect(page.getByRole('region', { name: 'Dary' })).toContainText(
       'Celkem 2 dary za 800 Kč.',
     );
-    await expect(page.getByRole('region', { name: 'Vystavená potvrzení' })).toContainText(
+    await expect(page.getByRole('region', { name: 'Potvrzení', exact: true })).toContainText(
       '2026-000001',
     );
 
@@ -517,7 +517,7 @@ test.describe('Given an administrator on the donors page', () => {
     );
 
     await page.goto(`/sprava/darci/${PETR_ID}`);
-    const receiptsCard = page.getByRole('region', { name: 'Vystavená potvrzení' });
+    const receiptsCard = page.getByRole('region', { name: 'Potvrzení', exact: true });
     const choice = receiptsCard.getByLabel('Potvrzení k vystavení');
     await expect(choice).toHaveValue(/dar-/);
     await choice.selectOption({ label: 'Dar z 12.\u00a010. 2026, 300\u00a0Kč' });
@@ -555,7 +555,7 @@ test.describe('Given an administrator on the donors page', () => {
     );
     await page.goto(`/sprava/darci/${PETR_ID}`);
     const row = page
-      .getByRole('region', { name: 'Vystavená potvrzení' })
+      .getByRole('region', { name: 'Potvrzení', exact: true })
       .getByRole('row')
       .filter({ hasText: receipt.number });
     const download = row.getByRole('button', { name: `Stáhnout PDF potvrzení ${receipt.number}` });
@@ -602,7 +602,7 @@ test.describe('Given an administrator on the donors page', () => {
       );
       await page.goto(`/sprava/darci/${PETR_ID}`);
       const row = page
-        .getByRole('region', { name: 'Vystavená potvrzení' })
+        .getByRole('region', { name: 'Potvrzení', exact: true })
         .getByRole('row')
         .filter({ hasText: receipt.number });
       await expect(
@@ -643,7 +643,7 @@ test.describe('Given an administrator on the donors page', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(`/sprava/darci/${PETR_ID}`);
     const row = page
-      .getByRole('region', { name: 'Vystavená potvrzení' })
+      .getByRole('region', { name: 'Potvrzení', exact: true })
       .getByRole('row')
       .filter({ hasText: receipt.number });
     await expect(
@@ -737,7 +737,7 @@ test.describe('Given an administrator on the donors page', () => {
     expect(Math.max(...baselines) - Math.min(...baselines)).toBeLessThanOrEqual(1);
 
     const row = page
-      .getByRole('region', { name: 'Vystavená potvrzení' })
+      .getByRole('region', { name: 'Potvrzení', exact: true })
       .getByRole('row')
       .filter({ hasText: petrDetail.receipts[0].number });
     const lines = async (cell: RegExp, selector: string | null) =>

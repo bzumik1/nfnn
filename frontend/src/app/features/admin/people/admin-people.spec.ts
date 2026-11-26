@@ -269,7 +269,7 @@ describe('Given an administrator and no people of the foundation yet', () => {
 
     expect(element(fixture, '#person-fund-email').getAttribute('aria-invalid')).toBe('true');
     expect(withOrdinarySpaces(fixture.nativeElement.textContent)).toContain(
-      'Zadejte e-mail ve tvaru jana@example.cz.',
+      'Zadejte e\u2011mail ve tvaru jana@example.cz.',
     );
     http.expectNone(PEOPLE_URL);
   });

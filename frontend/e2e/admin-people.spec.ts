@@ -181,6 +181,49 @@ test.describe('Given an administrator who keeps the people of the foundation', (
   });
 });
 
+test.describe('Given an administrator with two people of the foundation in order on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await servePhotos(page);
+    await rememberedSession(page);
+    const second = { ...member({ ...EVA, name: 'Jan Novák', portraitId: null }), position: 1 };
+    await page.route(
+      (url) => url.pathname === PEOPLE,
+      (route) =>
+        route.fulfill({
+          json: {
+            members: [member(EVA), { ...second, id: '0199f3e0-0000-7000-8000-00000000c002' }],
+            note: null,
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
+          },
+        }),
+    );
+  });
+
+  test('when they look at the order buttons, then each arrow ends before its word Výš or Níž starts', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/lide-fondu');
+    const arrows = page.locator('.ui-person-row__actions .move-arrow');
+    await expect(arrows).toHaveCount(4);
+    await page.evaluate(() => document.fonts.ready);
+
+    const gaps = await arrows.evaluateAll((elements) =>
+      elements.map((arrow) => {
+        const word = arrow.nextElementSibling!;
+        return word.getBoundingClientRect().left - arrow.getBoundingClientRect().right;
+      }),
+    );
+    for (const gap of gaps) {
+      expect(gap).toBeGreaterThanOrEqual(2);
+    }
+  });
+});
+
 test.describe('Given an administrator who chooses who signs the receipts', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);

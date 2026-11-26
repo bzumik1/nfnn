@@ -9,6 +9,7 @@ import {
   inject,
   Injector,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
@@ -45,6 +46,7 @@ export class VerificationPage {
   protected readonly compact = inject(CompactLayout).isCompact;
   protected readonly installed = runsInstalled(this.document.defaultView);
   private run = 0;
+  private readonly adminTitle = viewChild<ElementRef<HTMLHeadingElement>>('adminTitle');
 
   protected readonly page = signal<PageState>({ state: 'checking' });
   protected readonly step = signal<VerificationStep | null>(null);
@@ -54,6 +56,7 @@ export class VerificationPage {
   });
 
   constructor() {
+    afterNextRender(() => this.adminTitle()?.nativeElement.focus());
     const meta = inject(Meta);
     meta.updateTag({ name: 'robots', content: 'noindex' });
     this.destroyRef.onDestroy(() => meta.removeTag('name="robots"'));
