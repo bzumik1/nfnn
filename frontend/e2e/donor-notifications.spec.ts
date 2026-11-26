@@ -178,31 +178,35 @@ test.describe('Given a donor on Údaje a zabezpečení of a browser whose part o
   });
 });
 
-test.describe('Given a donor signed in without „Zapamatovat si mě“ on Údaje a zabezpečení', () => {
-  test('when the notifications card says where notifications can be turned on, then its two paragraphs stand as far apart as the paragraphs of Smazání účtu', async ({
+async function gapBetween(upper: Locator, lower: Locator): Promise<number> {
+  const [upperBox, lowerBox] = [await upper.boundingBox(), await lower.boundingBox()];
+  return (lowerBox?.y ?? 0) - ((upperBox?.y ?? 0) + (upperBox?.height ?? 0));
+}
+
+test.describe('Given a signed-in donor on Údaje a zabezpečení', () => {
+  test('when the notifications card says what this device can do, then its intro and that sentence stand as far apart as the paragraphs of Smazání účtu', async ({
     page,
   }) => {
     await mockDonorApi(page);
     await signIn(page);
     await openDonorSection(page, 'Údaje a zabezpečení');
     const notifications = page.locator('.notifications');
+    const intro = notifications.locator(':scope > .ui-card__intro').first();
     const state = notifications.locator('.notifications-state');
-    await expect(state).toContainText('Upozornění jdou zapnout jen');
+    await expect(intro).toContainText('Krátká upozornění na toto zařízení');
+    await expect(state).toHaveCount(1);
+    await expect(state).toBeVisible();
 
-    const gapBefore = (paragraph: Locator) =>
-      paragraph.evaluate((element) => {
-        const previous = element.previousElementSibling!;
-        return element.getBoundingClientRect().top - previous.getBoundingClientRect().bottom;
-      });
-    const deletionGaps = await Promise.all(
-      (await page.locator('.account-deletion .ui-card__intro').all())
-        .slice(1)
-        .map((paragraph) => gapBefore(paragraph)),
-    );
+    const deletion = await page.locator('.account-deletion .ui-card__intro').all();
+    expect(deletion.length).toBeGreaterThan(1);
+    const deletionGaps: number[] = [];
+    for (const [index, paragraph] of deletion.slice(1).entries()) {
+      deletionGaps.push(await gapBetween(deletion[index], paragraph));
+    }
+    const stateGap = await gapBetween(intro, state);
 
-    expect(deletionGaps.length).toBeGreaterThan(0);
     for (const gap of deletionGaps) {
-      expect(await gapBefore(state)).toBeCloseTo(gap, 0);
+      expect(stateGap).toBeCloseTo(gap, 0);
     }
   });
 });

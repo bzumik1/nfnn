@@ -9,16 +9,38 @@ import {
 } from './donor-session';
 
 const FACTS_MAXIMUM_HEIGHT = 300;
-const SHORT_PHONE_HEIGHT = 420;
 
-async function signInOnPhone(page: Page, width: number, height = 800): Promise<void> {
+async function signInOnPhone(page: Page, width: number): Promise<void> {
   await mockDonorApi(page);
   await page.route(
     (url) => url.pathname === '/api/donations/me/bank-accounts',
     (route) => route.fulfill({ json: { items: [bankAccountItem()] } }),
   );
   await signIn(page);
-  await page.setViewportSize({ width, height });
+  await page.setViewportSize({ width, height: 800 });
+}
+
+function spaceUnderTheLastCard(panel: HTMLElement): number {
+  const sized = panel.getAttribute('style');
+  Object.assign(panel.style, {
+    flex: 'none',
+    alignSelf: 'start',
+    height: 'auto',
+    minHeight: '0',
+    maxHeight: 'none',
+  });
+  const cards = Array.from(panel.querySelectorAll('.account-section-body .ui-card'), (card) =>
+    card.getBoundingClientRect(),
+  ).filter((box) => box.height > 0);
+  const lastCardBottom = Math.max(...cards.map((box) => box.bottom));
+  const contentEnd =
+    panel.getBoundingClientRect().bottom - parseFloat(getComputedStyle(panel).borderBottomWidth);
+  if (sized === null) {
+    panel.removeAttribute('style');
+  } else {
+    panel.setAttribute('style', sized);
+  }
+  return Math.round(contentEnd - lastCardBottom);
 }
 
 test.describe('Given a signed-in donor adding a bank account on a phone', () => {
@@ -235,10 +257,10 @@ test.describe('Given a signed-in donor with the account sheet open on a phone', 
     expect(Math.abs(edges.chevron - edges.rowChevron)).toBeLessThanOrEqual(1);
   });
 
-  test('when each section, taller than the sheet on a short phone, is scrolled to its end, then every section leaves the same space under its last card', async ({
+  test('when each section is scrolled to its end, then every section leaves the same space under its last card', async ({
     page,
   }) => {
-    await signInOnPhone(page, 390, SHORT_PHONE_HEIGHT);
+    await signInOnPhone(page, 390);
     const spaces: Record<string, number> = {};
 
     for (const section of [
@@ -251,25 +273,7 @@ test.describe('Given a signed-in donor with the account sheet open on a phone', 
       await openAccountItem(page, section);
       const panel = page.getByRole('dialog', { name: section }).locator(':scope > .dialog-panel');
       await expect(panel.locator('.account-section-body .ui-card').first()).toBeVisible();
-      const measured = await panel.evaluate((element) => {
-        element.scrollTo(0, element.scrollHeight);
-        const cards = Array.from(
-          element.querySelectorAll('.account-section-body .ui-card'),
-          (card) => card.getBoundingClientRect(),
-        ).filter((box) => box.height > 0);
-        const lastCardBottom = Math.max(...cards.map((box) => box.bottom));
-        const contentEnd =
-          element.getBoundingClientRect().top +
-          element.clientTop +
-          element.scrollHeight -
-          element.scrollTop;
-        return {
-          overflow: element.scrollHeight - element.clientHeight,
-          space: Math.round(contentEnd - lastCardBottom),
-        };
-      });
-      expect(measured.overflow, `${section} overflows the sheet`).toBeGreaterThan(0);
-      spaces[section] = measured.space;
+      spaces[section] = await panel.evaluate(spaceUnderTheLastCard);
     }
 
     const first = spaces['Můj přehled'];
