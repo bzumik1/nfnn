@@ -8,12 +8,14 @@ import {
 import { pathOf } from './app-tabs';
 import { pushWithinSection } from './page-transition-kind';
 import { BackDestination } from './back-target';
-import { SwipeSettle } from './back-swipe';
+import { curveOf, easedAt, settleFrom, steepestStepOver, SwipeSettle } from './back-swipe';
 import {
-  afterDrawn,
   BarCurve,
   BarItem,
+  DISPLAY_FRAME_MS,
   FRAME_LATE_MS,
+  HELD_WITHOUT_A_FRAME_MS,
+  liveDialogs,
   motionAllowed,
   nextFrame,
   PAGE_COVER_LONGEST_MS,
@@ -26,6 +28,8 @@ import {
   SHOWN_DIALOG,
   SwipePreview,
 } from './page-transitions';
+import { sheetOnly, sheetOverlay, standingSheetCopy } from './sheet-stepping';
+import { afterDrawnFrames, publishSteadyFrame } from './step-chrome';
 
 const SECTION_LINKS = 'nav a[href]';
 const NOT_COPIED = 'iframe, video, audio, object, embed, dialog';
@@ -34,38 +38,161 @@ const SIDE_NAVIGATION = '.side-nav-panel';
 const TAB_BAR = 'app-tab-bar .tab-bar';
 const STANDING_PARTS = 'app-header, .side-nav-panel, app-tab-bar';
 const CATCH_UP_SPANS = 3;
-const FRAME_MS = 16;
+const CLOSE_IN_FRAMES_AT_LEAST = 8;
+const ARRIVED_WITHIN_PX = 0.5;
+const SETTLE_ARRIVES_WITHIN_SLIDES = 1.5;
+const SETTLE_ARRIVES_WITHIN_MS = 400;
+const SETTLE_SPARE_FRAMES = 3;
+const CLOSE_IN_MARK = 'nfnn.close-in';
+const SETTLE_FIRST_MARK = 'nfnn.settle-first';
+
+function measuredFrameMs(stage: PageTransitions): number {
+  return stage.frameGaps.length === 0 ? DISPLAY_FRAME_MS : stage.steadyFrameMs();
+}
 
 export interface CatchUp {
+  readonly frameMs: number;
   readonly finger: () => number;
   readonly from: number;
-  readonly show: (offset: number) => void;
+  readonly show: (offset: number, drawn: boolean) => void;
   readonly goesOn: () => boolean;
   readonly caughtUp: () => void;
 }
 
 export function closeInOnFinger(view: Window, fastMs: number, catchUp: CatchUp): void {
   const closing = Math.max(1, fastMs / CATCH_UP_SPANS);
+  const startGap = Math.max(0, catchUp.finger() - catchUp.from);
+  const stepAtMost = startGap / CLOSE_IN_FRAMES_AT_LEAST;
+  let behind = startGap;
   let last: number | null = null;
-  let gap = catchUp.finger() - catchUp.from;
-  const closeIn = (now: number): void => {
+  let lastDrawnAt = view.performance.now();
+  let elapsed = 0;
+  const closeIn = (now: number, drawn: boolean): void => {
     if (!catchUp.goesOn()) {
       return;
     }
-    const elapsed = last === null ? FRAME_MS : Math.max(0, now - last);
-    last = now;
-    gap *= Math.exp(-elapsed / closing);
-    if (Math.abs(gap) < 1) {
-      gap = 0;
+    const stopped = !drawn && now - lastDrawnAt >= HELD_WITHOUT_A_FRAME_MS;
+    if (drawn) {
+      elapsed += Math.min(
+        catchUp.frameMs,
+        last === null ? DISPLAY_FRAME_MS : Math.max(0, now - last),
+      );
+      last = now;
+      lastDrawnAt = now;
+    } else if (stopped) {
+      elapsed += Math.max(0, now - (last ?? lastDrawnAt));
+      last = now;
     }
-    catchUp.show(catchUp.finger() - gap);
-    if (gap === 0) {
+    if (drawn || stopped) {
+      const spans = elapsed / closing;
+      const left = startGap * (1 + spans) * Math.exp(-spans);
+      const target = left < 1 ? 0 : left;
+      const before = behind;
+      behind = Math.max(target, behind - stepAtMost);
+      markFrame(view, CLOSE_IN_MARK, { behind, step: before - behind, gap0: startGap, drawn });
+      const finger = Math.max(0, catchUp.finger());
+      catchUp.show(Math.min(finger, Math.max(0, finger - behind)), drawn);
+    }
+    if (behind === 0) {
       catchUp.caughtUp();
     } else {
       nextFrame(view, closeIn);
     }
   };
   nextFrame(view, closeIn);
+}
+
+export interface SettleTrack {
+  readonly plan: SwipeSettle;
+  readonly finger: SwipeSettle;
+  readonly frameMs: number;
+  readonly firstStepAtMost: number;
+  readonly show: (at: number, drawn: boolean) => void;
+  readonly goesOn: () => boolean;
+  readonly drawnAt?: number;
+  readonly afterFreezeStepAtMost?: number;
+}
+
+function markFrame(view: Window, name: string, detail: object): void {
+  view.performance.mark?.(name, { detail });
+}
+
+export function trackSettle(view: Window, track: SettleTrack): Promise<void> {
+  const { plan } = track;
+  const curve = curveOf(plan.easing);
+  const way = plan.to - plan.from;
+  const steepest = new Map<number, number>();
+  let floor = track.firstStepAtMost;
+  const stepAtMostOver = (advanceMs: number): number => {
+    const key = Math.floor(advanceMs * 10) / 10;
+    const known = steepest.get(key) ?? steepestStepOver(track.finger, key);
+    steepest.set(key, known);
+    return Math.max(floor, known);
+  };
+  return new Promise((settled) => {
+    let at = plan.from;
+    let presentedAt = plan.from;
+    let elapsed = 0;
+    let last: number | null = null;
+    let lastDrawnAt = track.drawnAt ?? view.performance.now();
+    const arriveBy =
+      view.performance.now() +
+      Math.max(track.finger.durationMs * SETTLE_ARRIVES_WITHIN_SLIDES, SETTLE_ARRIVES_WITHIN_MS) +
+      SETTLE_SPARE_FRAMES * track.frameMs;
+    let first = true;
+    const step = (now: number, drawn: boolean): void => {
+      if (!track.goesOn()) {
+        settled();
+        return;
+      }
+      const stopped = !drawn && now - lastDrawnAt >= HELD_WITHOUT_A_FRAME_MS;
+      if (drawn && now - lastDrawnAt >= HELD_WITHOUT_A_FRAME_MS) {
+        at = presentedAt;
+        floor = Math.max(floor, track.afterFreezeStepAtMost ?? 0);
+        first = true;
+      }
+      if (drawn || stopped) {
+        const advanceMs = drawn
+          ? Math.min(track.frameMs, last === null ? DISPLAY_FRAME_MS : Math.max(0, now - last))
+          : Math.max(0, now - (last ?? lastDrawnAt));
+        elapsed += advanceMs;
+        last = now;
+        if (drawn) {
+          lastDrawnAt = now;
+        }
+        const due = now >= arriveBy;
+        const target =
+          due || plan.durationMs <= 0
+            ? plan.to
+            : plan.from + way * easedAt(curve, elapsed / plan.durationMs);
+        const atMost = due
+          ? Infinity
+          : first
+            ? floor
+            : stepAtMostOver(drawn ? advanceMs : track.frameMs);
+        const from = at;
+        const towards = target - at;
+        at = Math.abs(towards) <= atMost ? target : at + Math.sign(towards) * atMost;
+        if (first) {
+          markFrame(view, SETTLE_FIRST_MARK, { from, step: at - from, atMost, drawn });
+        }
+        first = false;
+        if (drawn) {
+          presentedAt = at;
+        }
+        track.show(at, drawn);
+      }
+      if (Math.abs(plan.to - at) < ARRIVED_WITHIN_PX) {
+        if (at !== plan.to) {
+          track.show(plan.to, drawn);
+        }
+        settled();
+      } else {
+        nextFrame(view, step);
+      }
+    };
+    nextFrame(view, step);
+  });
 }
 
 export async function withoutFocus<T>(
@@ -129,9 +256,6 @@ export function clipToContent(document: Document, overlay: HTMLElement): Content
           part.style.display = 'none';
         }
       });
-      overlay
-        .querySelectorAll<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--over`)
-        .forEach((page) => (page.style.borderRadius = '0'));
       return [];
     },
   };
@@ -217,7 +341,7 @@ export function startSwipe(
     stage.running !== null ||
     !motionAllowed(view) ||
     !stage.stepsBySwipe() ||
-    stage.document.querySelector(SHOWN_DIALOG) !== null
+    liveDialogs(stage.document, SHOWN_DIALOG).length > 0
   ) {
     return null;
   }
@@ -229,20 +353,102 @@ export function startSwipe(
   const leaving = stage.place(overlay, stage.shown(layer), 'over');
   const dress = (into: PlacedPage): BarItem[] =>
     content?.lineUp() ?? stage.dressChrome(overlay, leaving, into);
-  const bar = { items: dress(arriving) };
-  const under = arriving.box;
-  const over = leaving.box;
-  const dim = under.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__dim`);
   const sheet = behind?.sheet ?? null;
   const running: Running = { kind: 'pop', overlay, swiping: true, sheet, revealed: false };
   stage.running = running;
   stage.sheetUnder(sheet);
-  const width = Math.max(1, content?.width ?? view.innerWidth);
+  return followingFinger(stage, view, {
+    running,
+    under: arriving.box,
+    over: leaving.box,
+    bar: { items: dress(arriving) },
+    width: Math.max(1, content?.width ?? view.innerWidth),
+    ready: behind !== null,
+    draw: (bar, takeOver) =>
+      behind === null && destination.path !== null && !stage.dirtyForms.any()
+        ? drawUnder(stage, destination.path, running, arriving, (into) => {
+            bar.items = dress(into);
+            return takeOver();
+          })
+        : photosDrawn(arriving.box, FRAME_LATE_MS),
+    handOver: () => (stage.handingOver = true),
+    discard: () => stage.preview.discard(),
+  });
+}
+
+export function startSheetSwipe(stage: PageTransitions, under: HTMLElement): SwipePreview | null {
+  const view = stage.document.defaultView;
+  const shown = standingSheetCopy(stage);
+  if (view === null || shown === null || stage.running !== null || !motionAllowed(view)) {
+    return null;
+  }
+  const overlay = sheetOverlay(stage, 'pop');
+  overlay.classList.add(`${PAGE_TRANSITION_CLASS}--swipe`);
+  const arriving = stage.place(overlay, sheetOnly(stage, under), 'under');
+  const leaving = stage.place(overlay, sheetOnly(stage, shown), 'over');
+  const running: Running = { kind: 'pop', overlay, swiping: true, sheet: shown, revealed: true };
+  stage.running = running;
+  stage.sheetUnder(shown);
+  return followingFinger(stage, view, {
+    running,
+    under: arriving.box,
+    over: leaving.box,
+    bar: { items: stage.dressChrome(overlay, leaving, arriving) },
+    width: Math.max(1, view.innerWidth),
+    ready: true,
+    draw: () => Promise.resolve(),
+    handOver: () => (stage.sheetHandOver = running),
+    discard: () => undefined,
+  });
+}
+
+interface FingerStage {
+  readonly running: Running;
+  readonly under: HTMLElement;
+  readonly over: HTMLElement;
+  readonly bar: { items: BarItem[] };
+  readonly width: number;
+  readonly ready: boolean;
+  readonly draw: (bar: { items: BarItem[] }, takeOver: () => Promise<void>) => Promise<void>;
+  readonly handOver: () => void;
+  readonly discard: () => void;
+}
+
+function followingFinger(
+  stage: PageTransitions,
+  view: Window,
+  { running, under, over, bar, width, draw, handOver, discard, ...start }: FingerStage,
+): SwipePreview {
+  const dim = under.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__dim`);
   let progress = 0;
   let offset = 0;
-  let ready = behind !== null;
+  let ready = start.ready;
   let shown = 0;
+  let presented = 0;
+  let presentedStep = 0;
+  let stepAtMost = 0;
+  let closedIn = false;
   let catchingUp = false;
+  let drawnAt = view.performance.now();
+  let settling = false;
+  let presenting = false;
+  const present = (): void => {
+    presentedStep = shown - presented;
+    presented = shown;
+  };
+  const place = (at: number, drawn = true): void => {
+    shown = at;
+    if (drawn) {
+      present();
+    } else if (!presenting) {
+      presenting = true;
+      view.requestAnimationFrame(() => {
+        presenting = false;
+        present();
+      });
+    }
+    follow();
+  };
   const follow = (): void => {
     progress = shown / width;
     over.style.transform = `translateX(${shown}px)`;
@@ -253,46 +459,90 @@ export function startSwipe(
     followBar(bar.items, progress);
   };
   const takeOver = async (): Promise<void> => {
+    followBar(bar.items, progress);
     await photosDrawn(under, FRAME_LATE_MS);
     if (stage.running !== running) {
       return;
     }
     ready = true;
+    const watchFrames = (now: number): void => {
+      drawnAt = now;
+      if (!settling && stage.running === running) {
+        view.requestAnimationFrame(watchFrames);
+      }
+    };
+    view.requestAnimationFrame(watchFrames);
     catchingUp = true;
+    stepAtMost = Math.max(0, offset - shown) / CLOSE_IN_FRAMES_AT_LEAST;
     closeInOnFinger(view, stage.durationOf('--duration-fast'), {
+      frameMs: measuredFrameMs(stage),
       finger: () => offset,
       from: shown,
-      show: (at) => {
-        shown = at;
-        follow();
+      show: (at, drawn) => {
+        closedIn ||= drawn;
+        place(at, drawn);
       },
       goesOn: () => catchingUp && stage.running === running,
       caughtUp: () => (catchingUp = false),
     });
   };
-  const drawn =
-    behind === null && destination.path !== null && !stage.dirtyForms.any()
-      ? drawUnder(stage, destination.path, running, arriving, (into) => {
-          bar.items = dress(into);
-          followBar(bar.items, progress);
-          return takeOver();
-        })
-      : photosDrawn(under, FRAME_LATE_MS);
-  const settle = async (end: SwipeSettle): Promise<boolean> => {
+  const drawn = draw(bar, takeOver);
+  const settle = async (wanted: SwipeSettle): Promise<boolean> => {
     catchingUp = false;
+    settling = true;
     if (stage.running !== running) {
       return false;
     }
     if (!ready) {
       await drawn;
+      catchingUp = false;
     }
     if (!ready) {
-      stage.preview.discard();
+      discard();
       if (stage.running === running) {
         stage.finish();
       }
       return false;
     }
+    if (stepAtMost > 0 && shown !== presented) {
+      shown = presented;
+      follow();
+    }
+    const lags = shown !== wanted.from && stepAtMost > 0;
+    const end = lags ? settleFrom(wanted, shown, width) : wanted;
+    await (lags || (closedIn && stepAtMost > 0)
+      ? (closedIn ? Promise.resolve() : afterTwoDrawnFrames()).then(() =>
+          trackSettle(view, {
+            plan: end,
+            finger: wanted,
+            frameMs: measuredFrameMs(stage),
+            firstStepAtMost: Math.max(Math.sign(end.to - shown) * presentedStep, stepAtMost),
+            drawnAt,
+            afterFreezeStepAtMost: Math.abs(wanted.from - presented) / CLOSE_IN_FRAMES_AT_LEAST,
+            show: place,
+            goesOn: () => stage.running === running,
+          }),
+        )
+      : slide(end));
+    await drawn;
+    if (!end.completes) {
+      discard();
+    }
+    if (stage.running !== running) {
+      return false;
+    }
+    if (end.completes) {
+      running.stepped = true;
+      handOver();
+      stage.finishAfter(view, PAGE_COVER_LONGEST_MS);
+    } else {
+      stage.finish();
+    }
+    return end.completes;
+  };
+  const afterTwoDrawnFrames = (): Promise<void> =>
+    new Promise<void>((drawn) => afterDrawnFrames(view, stage.document, 2, drawn));
+  const slide = async (end: SwipeSettle): Promise<void> => {
     const timing: KeyframeAnimationOptions = {
       duration: end.durationMs,
       easing: end.easing,
@@ -305,34 +555,22 @@ export function startSwipe(
       ...barMotions(bar.items, end.completes ? 1 : 0, timing),
     ];
     motions.forEach((motion) => motion.pause());
-    await afterDrawn(view);
+    await afterTwoDrawnFrames();
     motions.forEach((motion) => motion.play());
+    publishSteadyFrame(view, stage.steadyFrameMs());
     await Promise.race([
       Promise.allSettled(motions.map((motion) => motion.finished)),
+      new Promise((done) =>
+        view.requestAnimationFrame(() => view.setTimeout(done, end.durationMs + 2 * FRAME_LATE_MS)),
+      ),
       new Promise((done) => view.setTimeout(done, PAGE_TRANSITION_LONGEST_MS)),
     ]);
-    await drawn;
-    if (!end.completes) {
-      stage.preview.discard();
-    }
-    if (stage.running !== running) {
-      return false;
-    }
-    if (end.completes) {
-      running.stepped = true;
-      stage.handingOver = true;
-      stage.finishing = view.setTimeout(() => stage.finish(), PAGE_COVER_LONGEST_MS);
-    } else {
-      stage.finish();
-    }
-    return end.completes;
   };
   return {
     follow: (to) => {
       offset = Math.min(width, Math.max(0, to));
       if (ready && !catchingUp) {
-        shown = offset;
-        follow();
+        place(offset, false);
       }
     },
     settle,

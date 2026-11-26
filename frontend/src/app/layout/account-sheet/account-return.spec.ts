@@ -3,7 +3,8 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
 import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
-import { AccountReturn, APP_ACCOUNT_KEY } from './account-return';
+import { PageTransitions } from '../../core/navigation/page-transitions';
+import { AccountReturn, APP_ACCOUNT_KEY, APP_ACCOUNT_SCROLL_KEY } from './account-return';
 
 @Component({ template: '' })
 class Blank {}
@@ -37,12 +38,20 @@ describe('Given a page the account sheet handed its entry over to', () => {
     await started;
   });
 
-  async function openFromTheSheet(url: string, section: string): Promise<void> {
+  async function openFromTheSheet(
+    url: string,
+    section: string,
+    scrolled: readonly number[] = [0],
+  ): Promise<void> {
     const location = TestBed.inject(Location);
     location.go(location.path(), '', { ...(location.getState() as object), nfnnDialogDepth: 1 });
     await router.navigateByUrl(url, {
       replaceUrl: true,
-      state: { [APP_DEPTH_KEY]: back.nextDepth(), [APP_ACCOUNT_KEY]: section },
+      state: {
+        [APP_DEPTH_KEY]: back.nextDepth(),
+        [APP_ACCOUNT_KEY]: section,
+        [APP_ACCOUNT_SCROLL_KEY]: scrolled,
+      },
     });
   }
 
@@ -65,6 +74,23 @@ describe('Given a page the account sheet handed its entry over to', () => {
 
     expect(router.url).toBe('/aktuality/clanek');
     expect(accountReturn.sectionToReopen()).toBe('');
+  });
+
+  it('when Zpět steps back from Správa opened from the scrolled list, then the sheet is asked to open at the scroll it was left at, and only once', async () => {
+    await openFromTheSheet('/sprava', '', [92]);
+
+    await stepBack(() => back.back('/'));
+
+    expect(accountReturn.takeScrollToReopen()).toEqual([92]);
+    expect(accountReturn.takeScrollToReopen()).toEqual([]);
+  });
+
+  it('when Zpět steps back to a section opened from the scrolled list, then the sheet is asked for the scroll of the list as well as of the section', async () => {
+    await openFromTheSheet('/overit', '/darce/potvrzeni', [92, 40]);
+
+    await stepBack(() => back.back('/'));
+
+    expect(accountReturn.takeScrollToReopen()).toEqual([92, 40]);
   });
 
   it('when the page was opened from a section of the sheet and Zpět steps back, then the sheet is asked to open on that section', async () => {
@@ -122,6 +148,45 @@ describe('Given a page the account sheet handed its entry over to', () => {
     expect(accountReturn.takeSectionToReopen()).toBe('');
     expect(accountReturn.sectionToReopen()).toBeNull();
     expect(accountReturn.takeSectionToReopen()).toBeNull();
+  });
+
+  describe('when the sheet kept copies of its screens for a finger', () => {
+    let forget: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      forget = vi.spyOn(TestBed.inject(PageTransitions), 'forgetSheetsOf');
+    });
+
+    it('and handed its entry over to a page, then the copies stay while that page stands', async () => {
+      await openFromTheSheet('/overit', '/darce/potvrzeni');
+
+      expect(forget).not.toHaveBeenCalled();
+    });
+
+    it('and Zpět opens it again on its section, then the copies stay for the sheet to take', async () => {
+      await openFromTheSheet('/overit', '/darce/potvrzeni');
+
+      await stepBack(() => back.back('/'));
+
+      expect(forget).not.toHaveBeenCalled();
+    });
+
+    it('and Zpět steps back without opening it again, then the copies go', async () => {
+      await openFromTheSheet('/sprava', '');
+
+      accountReturn.closeAdministration();
+      await stepBack(() => back.backBy(1));
+
+      expect(forget).toHaveBeenCalledWith(accountReturn);
+    });
+
+    it('and another page opens from the page it handed over to, then the copies go', async () => {
+      await openFromTheSheet('/overit', '/darce/potvrzeni');
+
+      await router.navigateByUrl('/aktuality/druhy');
+
+      expect(forget).toHaveBeenCalledWith(accountReturn);
+    });
   });
 
   it('when another page opens before the request is taken, then the request is dropped', async () => {

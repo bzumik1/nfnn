@@ -488,6 +488,7 @@ export async function openAccountItem(page: Page, name: string): Promise<void> {
   await item.click();
   if (opensInSheet) {
     await expect(sheet.getByRole('heading', { level: 2, name: sectionName(name) })).toBeVisible();
+    await expect(page.locator('.page-transition')).toHaveCount(0);
     return;
   }
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -593,10 +594,16 @@ const ADMINISTRATION_FIRST_DOWNLOAD = 'Ukládáme správu do zařízení';
 const ADMINISTRATION_FIRST_DOWNLOAD_STORED = 'Správa je uložená v tomto zařízení.';
 const FIRST_DOWNLOAD_STORED_WAIT_MS = 10_000;
 
+function livePage(page: Page): Locator {
+  return page.locator('app-root');
+}
+
 async function administrationFirstDownloadEnded(page: Page): Promise<void> {
-  await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD, { exact: true })).toBeHidden();
   await expect(
-    page.locator('.first-download').getByText(ADMINISTRATION_FIRST_DOWNLOAD_STORED),
+    livePage(page).getByText(ADMINISTRATION_FIRST_DOWNLOAD, { exact: true }),
+  ).toBeHidden();
+  await expect(
+    livePage(page).locator('.first-download').getByText(ADMINISTRATION_FIRST_DOWNLOAD_STORED),
   ).toBeHidden({
     timeout: FIRST_DOWNLOAD_STORED_WAIT_MS,
   });
@@ -615,7 +622,7 @@ export function whenAdministrationCopied(page: Page): () => Promise<void> {
   };
   page.on('response', answered);
   return async () => {
-    await expect(page.locator('.admin-page h1')).toBeVisible();
+    await expect(livePage(page).locator('.admin-page h1')).toBeVisible();
     await expect.poll(() => copied, { timeout: ADMINISTRATION_COPY_WAIT_MS }).toBe(true);
     page.off('response', answered);
     await administrationFirstDownloadEnded(page);
