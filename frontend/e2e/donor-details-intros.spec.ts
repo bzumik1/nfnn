@@ -77,3 +77,51 @@ test.describe('Given a signed-in donor on Údaje a zabezpečení on a computer',
     }
   });
 });
+
+for (const width of [390, 1180]) {
+  test.describe(`Given a signed-in donor on Údaje a zabezpečení in a ${width} px window`, () => {
+    test('when Přihlášení a zabezpečení lists its rows, then their dividers run from edge to edge of the card like the rows of the other cards, and the labels start on the title’s edge', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await rememberedDonorSession(page);
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/darce/udaje');
+      const card = page.locator('section.ui-card', {
+        has: page.getByRole('heading', { name: 'Přihlášení a zabezpečení' }),
+      });
+      await expect(card.locator('.account-row').nth(1)).toBeVisible();
+
+      const layout = await card.evaluate((section) => {
+        const style = getComputedStyle(section);
+        const box = section.getBoundingClientRect();
+        return {
+          inner: {
+            left: box.left + parseFloat(style.borderLeftWidth),
+            right: box.right - parseFloat(style.borderRightWidth),
+          },
+          titleLeft: section.querySelector('.ui-card__title')!.getBoundingClientRect().left,
+          rows: [...section.querySelectorAll('.account-row')].map((row) => ({
+            left: row.getBoundingClientRect().left,
+            right: row.getBoundingClientRect().right,
+            labelLeft: row.querySelector('dt')!.getBoundingClientRect().left,
+          })),
+        };
+      });
+
+      for (const row of layout.rows) {
+        expect(Math.abs(row.left - layout.inner.left), JSON.stringify(layout)).toBeLessThanOrEqual(
+          1,
+        );
+        expect(
+          Math.abs(row.right - layout.inner.right),
+          JSON.stringify(layout),
+        ).toBeLessThanOrEqual(1);
+        expect(
+          Math.abs(row.labelLeft - layout.titleLeft),
+          JSON.stringify(layout),
+        ).toBeLessThanOrEqual(1);
+      }
+    });
+  });
+}
