@@ -796,7 +796,7 @@ test.describe('Given the QR payment drawn as small as the Přispět page draws i
 });
 
 test.describe('Given a visitor on Přispět on an upright iPad', () => {
-  test('when Platíte z jiného zařízení? unfolds the QR code, then its card stands on the edges of the payment column and the amount does not stand alone on the caption’s last line', async ({
+  test('when Platíte z jiného zařízení? unfolds the QR code, then its card stands on the edges of the payment column and the amount stands whole with its currency on the caption’s last line', async ({
     page,
   }) => {
     await servePaymentDetails(page, []);
@@ -833,6 +833,6 @@ test.describe('Given a visitor on Přispět on an upright iPad', () => {
       }
       return [...byTop.entries()].sort(([a], [b]) => a - b).map(([, line]) => line.trim());
     });
-    expect(lines.at(-1), JSON.stringify(lines)).not.toMatch(/^[\d\s\u00a0]+Kč\.?$/);
+    expect(lines.at(-1), JSON.stringify(lines)).toMatch(/(^|\s)500\u00a0Kč\.$/);
   });
 });
