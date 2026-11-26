@@ -60,10 +60,13 @@ import {
 } from './bank-handoff';
 import { LocalPaymentRoute } from './local-payment-route';
 import { ChosenAmount, ChosenAmountStore } from './chosen-amount';
+import { thousandsGroups } from './thousands-groups';
 
 const DEFAULT_AMOUNT = 500;
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
+const CURRENCY = 'Kč';
+const CUSTOM_AMOUNT_MAX_LENGTH = `${formatCrowns(MAX_AMOUNT)}\u00a0${CURRENCY}`.length;
 const MINOR_PER_CROWN = 100;
 const ANNOUNCE_DELAY_MS = 1200;
 const ROOM_ABOVE_KEYBOARD_PX = 16;
@@ -183,6 +186,7 @@ export class PaymentPanel {
   protected readonly failedAttempts = signal(0);
   private choosingByKey = false;
   private amountPressed = false;
+  private leftDuringPress = false;
   private revealPending = false;
   private deletingSelection = false;
   private readonly announced = signal<number | null>(null);
@@ -332,6 +336,7 @@ export class PaymentPanel {
   protected readonly amountLabelId = computed(() => `${this.idPrefix()}-amount-label`);
   protected readonly customAmountId = computed(() => `${this.idPrefix()}-custom-amount`);
   protected readonly amountHintId = computed(() => `${this.idPrefix()}-amount-hint`);
+  protected readonly customAmountMaxLength = CUSTOM_AMOUNT_MAX_LENGTH;
   protected readonly redrawHintId = computed(() => `${this.idPrefix()}-redraw-hint`);
   protected readonly qrRegionId = computed(() => `${this.idPrefix()}-qr`);
   protected readonly otherDeviceId = computed(() => `${this.idPrefix()}-other-device`);
@@ -441,10 +446,21 @@ export class PaymentPanel {
 
   noteAmountPress(): void {
     this.amountPressed = true;
+    this.leftDuringPress = false;
   }
 
   forgetAmountPress(): void {
     this.amountPressed = false;
+  }
+
+  forgetDraggedOffPress(event: PointerEvent): void {
+    if (event.pointerType !== 'mouse' || !this.amountPressed) {
+      return;
+    }
+    this.amountPressed = false;
+    if (this.leftDuringPress) {
+      this.customAmountLeft.set(true);
+    }
   }
 
   customAmountFocused(): void {
@@ -460,7 +476,9 @@ export class PaymentPanel {
 
   leaveCustomAmount(): void {
     this.revealPending = false;
-    if (!this.amountPressed) {
+    if (this.amountPressed) {
+      this.leftDuringPress = true;
+    } else {
       this.customAmountLeft.set(true);
     }
   }
@@ -842,11 +860,11 @@ function initialChoice(
 }
 
 function groupThousands(field: HTMLInputElement): void {
-  const digits = field.value.replace(/\s/g, '');
+  const digits = withoutSpacesAndCurrency(field.value);
   if (!/^\d+$/.test(digits)) {
     return;
   }
-  const grouped = digits.replace(/\B(?=(\d{3})+$)/g, '\u00a0');
+  const grouped = [...thousandsGroups(digits)].join('\u00a0');
   if (grouped === field.value) {
     return;
   }
@@ -855,6 +873,11 @@ function groupThousands(field: HTMLInputElement): void {
   field.value = grouped;
   const position = positionAfterDigits(grouped, digitsBefore);
   field.setSelectionRange(position, position);
+}
+
+function withoutSpacesAndCurrency(text: string): string {
+  const compact = text.replace(/\s/g, '');
+  return compact.endsWith(CURRENCY) ? compact.slice(0, -CURRENCY.length) : compact;
 }
 
 function digitsOf(text: string): string {
@@ -890,7 +913,7 @@ function positionAfterDigits(text: string, count: number): number {
 }
 
 function wholeCrowns(typed: string): number | null {
-  const digits = typed.replace(/\s/g, '');
+  const digits = withoutSpacesAndCurrency(typed);
   return /^\d+$/.test(digits) ? Number(digits) : null;
 }
 

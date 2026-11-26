@@ -16,6 +16,7 @@
           [tabindex]="!customChosen() && presetAmount() === preset.amount ? 0 : -1"
           (pointerdown)="noteAmountPress()"
           (pointercancel)="forgetAmountPress()"
+          (pointerleave)="forgetDraggedOffPress($event)"
           (click)="choosePreset(preset.amount)"
         >
           {{ preset.label }}
@@ -30,6 +31,7 @@
         [tabindex]="customChosen() ? 0 : -1"
         (pointerdown)="noteAmountPress()"
         (pointercancel)="forgetAmountPress()"
+        (pointerleave)="forgetDraggedOffPress($event)"
         (click)="chooseCustomAmount()"
         i18n="@@home.donate.amount.other"
       >
@@ -53,6 +55,7 @@
             inputmode="numeric"
             enterkeyhint="done"
             autocomplete="off"
+            [maxLength]="customAmountMaxLength"
             [value]="customText()"
             [attr.aria-invalid]="showAmountHint()"
             [attr.aria-describedby]="customAmountDescription()"
