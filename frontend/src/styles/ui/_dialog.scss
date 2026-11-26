@@ -73,7 +73,16 @@ dialog.dialog[open] {
   height: min(var(--visual-viewport-height), 100%);
 }
 
-html.keyboard-open dialog.dialog[open]::backdrop {
+@include bp.up(nav) {
+  html.visual-viewport-panned dialog.dialog[open] > .dialog-panel--tall {
+    --dialog-tall-top: max(
+      0px,
+      (min(var(--visual-viewport-height), 100dvh) - var(--sheet-form-height)) / 2 - var(--space-5)
+    );
+  }
+}
+
+html.visual-viewport-panned dialog.dialog[open]::backdrop {
   background: var(--color-surface);
 }
 
@@ -88,7 +97,7 @@ html.keyboard-open dialog.dialog[open]::backdrop {
     background: var(--color-surface);
   }
 
-  html.keyboard-open .dialog--sheet[open] .dialog-panel {
+  html.visual-viewport-panned .dialog--sheet[open] .dialog-panel {
     max-height: calc(100% - max(var(--space-12), #{sheet.$top}));
   }
 }

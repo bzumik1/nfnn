@@ -1,11 +1,13 @@
 import { computed, DestroyRef, DOCUMENT, inject, Injectable, signal } from '@angular/core';
 
 export const KEYBOARD_OPEN_CLASS = 'keyboard-open';
+export const VIEW_PANNED_CLASS = 'visual-viewport-panned';
 
 const VIEW_TOP = '--visual-viewport-top';
 const VIEW_HEIGHT = '--visual-viewport-height';
 const SMALLEST_KEYBOARD_PX = 150;
 const UNZOOMED_SCALE_SLACK = 0.01;
+const ROUNDING_SLACK_PX = 1;
 
 export interface VisibleArea {
   readonly top: number;
@@ -63,6 +65,7 @@ export class SoftKeyboard {
       this.document.removeEventListener('focusout', updateAfterFocusMoves);
       this.document.documentElement.style.removeProperty(VIEW_TOP);
       this.document.documentElement.style.removeProperty(VIEW_HEIGHT);
+      this.document.documentElement.classList.remove(VIEW_PANNED_CLASS);
       this.show(null);
     });
   }
@@ -79,9 +82,13 @@ export class SoftKeyboard {
   }
 
   private follow(view: Window, viewport: VisualViewport): void {
-    const style = this.document.documentElement.style;
+    const root = this.document.documentElement;
+    const style = root.style;
     const unzoomed = Math.abs(viewport.scale - 1) <= UNZOOMED_SCALE_SLACK;
-    const panned = viewport.offsetTop !== 0 || viewport.height !== view.innerHeight;
+    const panned =
+      Math.abs(viewport.offsetTop) > ROUNDING_SLACK_PX ||
+      Math.abs(viewport.height - view.innerHeight) > ROUNDING_SLACK_PX;
+    root.classList.toggle(VIEW_PANNED_CLASS, unzoomed && panned);
     if (!unzoomed || !panned) {
       style.removeProperty(VIEW_TOP);
       style.removeProperty(VIEW_HEIGHT);
