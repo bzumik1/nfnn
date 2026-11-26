@@ -1,4 +1,12 @@
-import { afterNextRender, Directive, ElementRef, inject, Injector } from '@angular/core';
+import {
+  afterNextRender,
+  Directive,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  untracked,
+} from '@angular/core';
 
 import {
   focusWithoutScroll,
@@ -7,9 +15,15 @@ import {
   viewBand,
   ViewBand,
 } from '../../../core/layout/focus-in-view';
+import { SoftKeyboard, VisibleArea } from '../../../core/layout/soft-keyboard';
 import { TrackedForm } from '../../../core/updates/tracked-form';
 
 const STICKY_ACTIONS = '.ui-dialog__actions, .ui-action-bar';
+
+interface PlacedField {
+  readonly control: HTMLElement;
+  keyboardSeen: boolean;
+}
 
 @Directive({
   selector: 'form[appFocusFirstInvalid]',
@@ -19,28 +33,72 @@ const STICKY_ACTIONS = '.ui-dialog__actions, .ui-action-bar';
 export class FocusFirstInvalid {
   private readonly form = inject<ElementRef<HTMLFormElement>>(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
+  private readonly keyboard = inject(SoftKeyboard);
+  private placed: PlacedField | null = null;
+
+  constructor() {
+    effect(() => {
+      const area = this.keyboard.visibleArea();
+      untracked(() => this.keyboardMoved(area));
+    });
+  }
 
   focusFirstInvalid(): void {
     const control = this.form.querySelector<HTMLElement>('.form-control.ng-invalid');
     if (control === null || !focusWithoutScroll(control)) {
+      this.placed = null;
       return;
     }
-    afterNextRender(() => bringFieldIntoView(control), { injector: this.injector });
+    this.placed = { control, keyboardSeen: this.keyboard.isOpen() };
+    this.placeAfterRender(control);
+  }
+
+  private keyboardMoved(area: VisibleArea | null): void {
+    const placed = this.placed;
+    if (placed === null) {
+      return;
+    }
+    if (!stillWaitsForInput(placed.control)) {
+      this.placed = null;
+      return;
+    }
+    if (area !== null) {
+      placed.keyboardSeen = true;
+    } else if (placed.keyboardSeen) {
+      this.placed = null;
+    }
+    this.placeAfterRender(placed.control);
+  }
+
+  private placeAfterRender(control: HTMLElement): void {
+    afterNextRender(() => bringFieldIntoView(control, this.keyboard.visibleArea()), {
+      injector: this.injector,
+    });
   }
 }
 
-function bringFieldIntoView(control: HTMLElement): void {
+function stillWaitsForInput(control: HTMLElement): boolean {
+  const document = control.ownerDocument;
+  const focused = document.activeElement;
+  return (
+    control.isConnected &&
+    control.matches('.ng-invalid') &&
+    (focused === control || focused === null || focused === document.body)
+  );
+}
+
+function bringFieldIntoView(control: HTMLElement, keyboard: VisibleArea | null): void {
   const field = control.closest('app-form-field') ?? control;
   const view = field.ownerDocument.defaultView;
   const scroller = view === null ? null : scrollerAround(view, field);
   if (view === null || scroller === null) {
     if (!liesWhollyInView(field)) {
-      const fits = field.getBoundingClientRect().height <= bandHeight(shownBand(field));
+      const fits = field.getBoundingClientRect().height <= bandHeight(shownBand(field, keyboard));
       (fits ? field : control).scrollIntoView?.({ block: 'nearest' });
     }
     return;
   }
-  const band = bandAboveStickyActions(view, scroller, shownBand(field));
+  const band = bandAboveStickyActions(view, scroller, shownBand(field, keyboard));
   const box = field.getBoundingClientRect();
   if (scroller.closest('dialog') !== null && box.bottom + scroller.scrollTop <= band.bottom) {
     scroller.scrollTo({ top: 0 });
@@ -56,15 +114,14 @@ function bringFieldIntoView(control: HTMLElement): void {
   }
 }
 
-function shownBand(field: Element): ViewBand {
+function shownBand(field: Element, keyboard: VisibleArea | null): ViewBand {
   const band = viewBand(field);
-  const visual = field.ownerDocument.defaultView?.visualViewport;
-  return visual
-    ? {
-        top: Math.max(band.top, visual.offsetTop),
-        bottom: Math.min(band.bottom, visual.offsetTop + visual.height),
-      }
-    : band;
+  return keyboard === null
+    ? band
+    : {
+        top: Math.max(band.top, keyboard.top),
+        bottom: Math.min(band.bottom, keyboard.top + keyboard.height),
+      };
 }
 
 function bandAboveStickyActions(view: Window, scroller: Element, band: ViewBand): ViewBand {
