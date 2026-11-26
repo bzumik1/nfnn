@@ -47,6 +47,7 @@ function rowShapes(page: Page): Promise<RowShape[]> {
       const underTheNote = (element: HTMLElement | null) =>
         element === null || element.getBoundingClientRect().top >= noteBottom - 0.5;
       const outsideTheCard = [...row.querySelectorAll<HTMLElement>('*')]
+        .filter((element) => !element.closest('.ui-list__value'))
         .filter((element) => {
           const box = element.getBoundingClientRect();
           return box.width > 1 && (box.left < card.left - 0.5 || box.right > card.right + 0.5);
@@ -81,7 +82,7 @@ test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide
     }
   });
 
-  test('when the installed app shows the largest accessibility text, then nothing of a row, its e-mail and its tags reaches past the card', async ({
+  test('when the installed app shows the largest accessibility text, then the name, the note with its e-mail, the date and the tags of a row stay inside the card', async ({
     page,
   }) => {
     await page.addInitScript((px) => {

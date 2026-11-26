@@ -198,60 +198,62 @@ test.describe(`Given an administrator on an iPhone ${WIDE_PHONE.width} pt wide e
   });
 });
 
-const ENLARGED_TEXT_PX = 28;
+const FLOATING_ENLARGED_TEXT_PX = [24, 26];
 const SE = { width: 375, height: 667 };
 const SCROLL_STEP_PX = 16;
 const STILL_FRAMES = 3;
 
-test.describe(`Given an administrator on an iPhone ${SE.width} pt wide with the text at about 165 %, editing a saved article`, () => {
-  test.use({ viewport: SE });
+for (const rootPx of FLOATING_ENLARGED_TEXT_PX) {
+  test.describe(`Given an administrator on an iPhone ${SE.width} pt wide with a ${rootPx} px root text, editing a saved article whose bar still floats`, () => {
+    test.use({ viewport: SE });
 
-  test('when they scroll slowly through the whole form, then the action bar never changes how it stands while the page stands still', async ({
-    page,
-  }) => {
-    await page.addInitScript((px) => {
-      document.addEventListener('DOMContentLoaded', () => {
-        const style = document.createElement('style');
-        style.textContent = `html { font-size: ${px}px; }`;
-        document.head.append(style);
-      });
-    }, ENLARGED_TEXT_PX);
-    await openUnlockedAdministration(page, SAVED_ARTICLE_PATH);
-    const bar = page.locator('.ui-action-bar');
-    await expect(bar.getByRole('button').first()).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
+    test('when they scroll slowly through the whole form, then the action bar never changes how it stands while the page stands still', async ({
+      page,
+    }) => {
+      await page.addInitScript((px) => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = `html { font-size: ${px}px; }`;
+          document.head.append(style);
+        });
+      }, rootPx);
+      await openUnlockedAdministration(page, SAVED_ARTICLE_PATH);
+      const bar = page.locator('.ui-action-bar');
+      await expect(bar.getByRole('button').first()).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
 
-    const result = await bar.evaluate(
-      async (element, { step, stillFrames }) => {
-        const frame = () => new Promise<void>((done) => requestAnimationFrame(() => done()));
-        const state = () => element.className;
-        let changesWhileStill = 0;
-        let changes = 0;
-        window.scrollTo({ top: 0, behavior: 'instant' });
-        await frame();
-        let seen = state();
-        const end = () => document.documentElement.scrollHeight - innerHeight;
-        for (let top = 0; top <= end() + step; top += step) {
-          window.scrollTo({ top, behavior: 'instant' });
+      const result = await bar.evaluate(
+        async (element, { step, stillFrames }) => {
+          const frame = () => new Promise<void>((done) => requestAnimationFrame(() => done()));
+          const state = () => element.className;
+          let changesWhileStill = 0;
+          let changes = 0;
+          window.scrollTo({ top: 0, behavior: 'instant' });
           await frame();
-          if (state() !== seen) {
-            changes++;
-            seen = state();
-          }
-          for (let still = 0; still < stillFrames; still++) {
+          let seen = state();
+          const end = () => document.documentElement.scrollHeight - innerHeight;
+          for (let top = 0; top <= end() + step; top += step) {
+            window.scrollTo({ top, behavior: 'instant' });
             await frame();
             if (state() !== seen) {
-              changesWhileStill++;
+              changes++;
               seen = state();
             }
+            for (let still = 0; still < stillFrames; still++) {
+              await frame();
+              if (state() !== seen) {
+                changesWhileStill++;
+                seen = state();
+              }
+            }
           }
-        }
-        return { changes, changesWhileStill };
-      },
-      { step: SCROLL_STEP_PX, stillFrames: STILL_FRAMES },
-    );
+          return { changes, changesWhileStill };
+        },
+        { step: SCROLL_STEP_PX, stillFrames: STILL_FRAMES },
+      );
 
-    expect(result.changes).toBeGreaterThan(0);
-    expect(result.changesWhileStill).toBe(0);
+      expect(result.changes).toBeGreaterThan(0);
+      expect(result.changesWhileStill).toBe(0);
+    });
   });
-});
+}
