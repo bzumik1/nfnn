@@ -289,7 +289,7 @@ describe('Given the donate section', () => {
     ).map((item) => withOrdinarySpaces(item.textContent)?.replace(/\s+/g, ' ').trim());
     expect(items).toEqual([
       'Platili jste bez přihlášení? Po registraci si v sekci „Bankovní účty“ přidejte svůj účet ověřovací platbou 1 Kč a dřívější dary z něj se vám přiřadí také.',
-      'S účtem dárce si po skončení roku stáhnete roční potvrzení o daru. Dar si můžete odečíst od základu daně podle zákona o daních z příjmů.',
+      'Po skončení roku si stáhnete roční potvrzení o daru. Dar si můžete odečíst od základu daně podle zákona o daních z příjmů.',
     ]);
   });
 
@@ -673,22 +673,15 @@ describe('Given the donate section', () => {
     expect(drawnMatrixIs(QR_OF_100)).toBe(true);
   });
 
-  it('when nobody is signed in, then right after the card of the bank details and the QR one line says a receipt needs an account and opens the registration from there', async () => {
+  it('when nobody is signed in, then the account is offered once, before paying, and nothing after the card of the bank details asks for it again', async () => {
     await openWithQr();
 
-    const note = element('.bank-receipt-note');
-    expect(squashed('.bank-receipt-note')).toBe(
-      'Potvrzení o daru k platbě bez přihlášení vystavíme, až si založíte účet a ověříte v něm bankovní účet, ze kterého jste platili.',
-    );
-    expect(element('.bank').compareDocumentPosition(note)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(element('.bank').contains(element('.qr'))).toBe(true);
-
-    (note.querySelector('button') as HTMLButtonElement).click();
-
-    const dialog = TestBed.inject(LoginDialogService);
-    expect(dialog.isOpen()).toBe(true);
-    expect(dialog.initialMode()).toBe('register');
-    expect(dialog.confirmationReturnTo()).toBe('/#prispet');
+    const offers = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).filter((candidate) => /účet/i.test(spokenText(candidate)));
+    expect(offers.map((offer) => spokenText(offer))).toEqual(['Založit účet']);
+    expect(element('.before-pay').contains(offers[0])).toBe(true);
+    expect(element('.pay-details .ui-callout--warning')).toBeNull();
   });
 
   it('when it renders, then nothing in it sends the visitor to the contact form', async () => {
@@ -1077,13 +1070,6 @@ describe('Given the donate section', () => {
   });
 
   describe('Given a signed-in donor with a variable symbol', () => {
-    it('when the section opens, then no line beside the bank details asks for an account', async () => {
-      fixture.componentRef.setInput('variableSymbol', '1234567890');
-      await openWithQr();
-
-      expect(element('.bank-receipt-note')).toBeNull();
-    });
-
     it('when the section opens, then the variable symbol is in the QR payment and shown with the bank account', async () => {
       fixture.componentRef.setInput('variableSymbol', '1234567890');
       fixture.componentRef.setInput('donorName', 'Jana Nováková');

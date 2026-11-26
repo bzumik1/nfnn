@@ -522,7 +522,7 @@ test.describe('Given a visitor on the Přispět page', () => {
       await expect(page.locator('#prispet .qr')).toBeHidden();
     });
 
-    test('when the payment details fail after the code could not be made, then the bank actions are inert at once, the alert and the focus on Zkusit znovu come before they fold away, and Co bude dál then follows the note without a gap', async ({
+    test('when the payment details fail after the code could not be made, then the bank actions are inert at once, the alert and the focus on Zkusit znovu come before they fold away, and Co bude dál then follows the card without a gap', async ({
       page,
     }) => {
       const failure = await failureAfterRefusedQr(page);
@@ -531,9 +531,9 @@ test.describe('Given a visitor on the Přispět page', () => {
       expect(failure.alertAt).toBeLessThan(failure.foldedAt);
       expect(failure.focusAt).toBeLessThan(failure.foldedAt);
       await expect(page.locator('#prispet .pay-actions')).toBeHidden();
-      const note = (await page.locator('#prispet .bank-receipt-note').boundingBox())!;
+      const card = (await page.locator('#prispet .bank').boundingBox())!;
       const next = (await page.locator('#prispet .next').boundingBox())!;
-      expect(next.y - (note.y + note.height)).toBeLessThan(GAP_WITHOUT_ACTIONS);
+      expect(next.y - (card.y + card.height)).toBeLessThan(GAP_WITHOUT_ACTIONS);
     });
 
     test('when the payment details fail with reduced motion, then the bank actions are gone in the frame the alert comes', async ({
