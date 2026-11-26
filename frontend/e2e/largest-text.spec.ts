@@ -2379,33 +2379,18 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
     });
   });
 
-  test('when they look at the summary at the default text size, then every label stays beside the first line of its value, the values start on one column, the rows keep one step, Kopírovat stays on the line of the symbol without adding height and ověřen on the line of the e-mail', async ({
+  test('when they look at the summary at the default text size, then every label stays beside the first line of its value, Kopírovat stays on the line of the symbol and ověřen on the line of the e-mail', async ({
     page,
   }) => {
     const summary = await openSummary(page);
 
     const pairs = await summaryPairs(summary);
-    const column = pairs[0].value.left;
     for (const { label, value } of pairs) {
       expect(value.left).toBeGreaterThanOrEqual(label.right - 0.5);
-      expect(Math.abs(value.left - column)).toBeLessThanOrEqual(0.5);
     }
     for (const { label, value } of await firstLines(summary)) {
       expect(Math.abs(label.bottom - value.bottom)).toBeLessThanOrEqual(2);
     }
-    const rows = await summary.locator('dl > div').evaluateAll((elements) =>
-      elements.map((row) => {
-        const box = row.getBoundingClientRect();
-        return { top: box.top, bottom: box.bottom, height: box.height };
-      }),
-    );
-    const gaps = rows.slice(1).map((row, index) => row.top - rows[index].bottom);
-    for (const gap of gaps) {
-      expect(Math.abs(gap - gaps[0])).toBeLessThanOrEqual(0.5);
-    }
-    const symbolRow = rows[0];
-    const lastRow = rows[rows.length - 1];
-    expect(Math.abs(symbolRow.height - lastRow.height)).toBeLessThanOrEqual(1);
     const symbol = (await summary.locator('.summary-symbol .ui-figures').boundingBox())!;
     const copy = (await summary
       .getByRole('button', { name: 'Kopírovat variabilní symbol' })
@@ -2417,6 +2402,31 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
     expect(verified.y).toBeLessThan(email.y + email.height / 2);
     expect(verified.y + verified.height).toBeGreaterThan(email.y + email.height / 2);
     expect(await pastTheirCard(summary)).toEqual([]);
+  });
+
+  test('when they look at the summary at the default text size, then the values start on one column, the rows keep one step and Kopírovat adds no height to the line of the symbol', async ({
+    page,
+  }) => {
+    const summary = await openSummary(page);
+
+    const pairs = await summaryPairs(summary);
+    const column = pairs[0].value.left;
+    for (const { value } of pairs) {
+      expect(Math.abs(value.left - column)).toBeLessThanOrEqual(0.5);
+    }
+    const rows = await summary.locator('dl > div').evaluateAll((elements) =>
+      elements.map((row) => {
+        const box = row.getBoundingClientRect();
+        const label = row.querySelector('dt')!.getBoundingClientRect();
+        return { top: box.top, bottom: box.bottom, labelHeight: label.height };
+      }),
+    );
+    const gaps = rows.slice(1).map((row, index) => row.top - rows[index].bottom);
+    for (const gap of gaps) {
+      expect(Math.abs(gap - gaps[0])).toBeLessThanOrEqual(0.5);
+    }
+    const symbolRow = rows[0];
+    expect(symbolRow.bottom - symbolRow.top).toBeLessThanOrEqual(symbolRow.labelHeight + 2);
   });
 
   test('when they look at the summary on a phone 320 pt wide, then Kopírovat keeps a gap below the label VS', async ({

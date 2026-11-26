@@ -84,6 +84,12 @@
     }
   }
 
+  @include bp.container-down(donor-summary, narrow) {
+    .summary-list {
+      grid-template-columns: min-content minmax(0, 1fr);
+    }
+  }
+
   @include bp.container-down(donor-summary, pair) {
     .summary-list {
       flex-basis: 100%;
