@@ -14,6 +14,10 @@ const storyTile = readFileSync(
   new URL('../src/app/features/content/projects-page/story-tile.scss', import.meta.url),
   'utf8',
 );
+const storyTileCode = readFileSync(
+  new URL('../src/app/features/content/projects-page/story-tile.ts', import.meta.url),
+  'utf8',
+);
 
 const STORY_TILE_PHOTO = '--ratio-story-tile-photo';
 
@@ -26,6 +30,12 @@ function shapeRatio(source, shape) {
   const match = new RegExp(`${shape}: \\{ ratio: ([^,]+),`).exec(source);
   assert.ok(match, `focal-point.ts names the ratio of the shape ${shape}`);
   return ratioOf(match[1]);
+}
+
+function smallTileShape(source) {
+  const match = /small: \{[^}]*shape: '([A-Za-z]+)'/.exec(source);
+  assert.ok(match, 'story-tile.ts names the photo shape of a small tile');
+  return match[1];
 }
 
 function tokenRatio(source, token) {
@@ -41,10 +51,13 @@ function ruleBody(source, selector) {
 
 describe('Given the photo cut of a small story tile', () => {
   for (const theme of themes) {
-    it(`when the theme ${theme} is read, then it cuts the photo as the administration's preview of a project card does`, () => {
+    it(`when the theme ${theme} is read, then it cuts the photo as the administration previews the small tile's photo shape`, () => {
       const source = readFileSync(new URL(`${theme}/_theme.scss`, themesDir), 'utf8');
 
-      assert.equal(tokenRatio(source, STORY_TILE_PHOTO), shapeRatio(focalPoint, 'projectCard'));
+      assert.equal(
+        tokenRatio(source, STORY_TILE_PHOTO),
+        shapeRatio(focalPoint, smallTileShape(storyTileCode)),
+      );
     });
   }
 
@@ -58,6 +71,19 @@ describe('Given the photo cut of a small story tile', () => {
   it('when a theme writes another cut, then the comparison notices it', () => {
     const other = `:root { ${STORY_TILE_PHOTO}: 4 / 3; }`;
 
-    assert.notEqual(tokenRatio(other, STORY_TILE_PHOTO), shapeRatio(focalPoint, 'projectCard'));
+    assert.notEqual(
+      tokenRatio(other, STORY_TILE_PHOTO),
+      shapeRatio(focalPoint, smallTileShape(storyTileCode)),
+    );
+  });
+
+  it('when the small tile names another photo shape, then the comparison follows it', () => {
+    const swapped = storyTileCode.replace(/(small: \{[^}]*shape: ')[A-Za-z]+'/, "$1storySplit'");
+
+    assert.equal(smallTileShape(swapped), 'storySplit');
+    assert.notEqual(
+      shapeRatio(focalPoint, smallTileShape(swapped)),
+      shapeRatio(focalPoint, smallTileShape(storyTileCode)),
+    );
   });
 });
