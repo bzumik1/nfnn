@@ -165,3 +165,14 @@
     overflow-wrap: anywhere;
   }
 }
+
+.ui-detail__key {
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+}
+
+.ui-detail__value {
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  font-size: var(--text-md);
+}
