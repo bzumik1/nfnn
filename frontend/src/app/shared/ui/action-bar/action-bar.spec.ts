@@ -88,7 +88,7 @@ describe('Given a sticky action bar at the bottom of a page', () => {
     if (ownScrollIntoView) {
       Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', ownScrollIntoView);
     } else {
-      delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+      Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
     }
     vi.unstubAllGlobals();
     vi.restoreAllMocks();

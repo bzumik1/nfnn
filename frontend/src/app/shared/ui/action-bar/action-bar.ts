@@ -84,7 +84,7 @@ export class ActionBar {
       place(true);
     };
     const wheelScrolls = (event: WheelEvent) => {
-      if (event.ctrlKey) {
+      if (event.ctrlKey || !this.held) {
         return;
       }
       this.held = false;
