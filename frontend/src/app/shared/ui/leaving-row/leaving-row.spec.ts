@@ -992,6 +992,215 @@ describe('Given the only row whose leave leaves no control to move the focus to'
   });
 });
 
+describe('Given the only row whose result was brought into view in place while the page around it still settles', () => {
+  let list: HTMLUListElement;
+  let region: HTMLElement;
+  let result: HTMLParagraphElement;
+  let add: HTMLButtonElement;
+  let scrolled: { element: HTMLElement; options: unknown }[];
+  let page: SettlingPage;
+  let focus: FocusAfterRowLeaves;
+
+  class SettlingPage extends EventTarget {
+    readonly innerHeight = 600;
+    private readonly sizeWatchers: (() => void)[] = [];
+    private readonly timers = new Map<number, () => void>();
+    private nextTimer = 1;
+
+    readonly ResizeObserver = (() => {
+      const watchers = this.sizeWatchers;
+      return class {
+        private watching = true;
+
+        constructor(private readonly changed: () => void) {
+          watchers.push(() => {
+            if (this.watching) {
+              this.changed();
+            }
+          });
+        }
+
+        observe(): void {
+          this.watching = true;
+        }
+
+        disconnect(): void {
+          this.watching = false;
+        }
+      };
+    })();
+
+    matchMedia(query: string): { matches: boolean } {
+      return { matches: query === '(prefers-reduced-motion: reduce)' };
+    }
+
+    getComputedStyle(element: Element): CSSStyleDeclaration {
+      return getComputedStyle(element);
+    }
+
+    setTimeout(callback: () => void): number {
+      const id = this.nextTimer++;
+      this.timers.set(id, callback);
+      return id;
+    }
+
+    clearTimeout(id: number): void {
+      this.timers.delete(id);
+    }
+
+    resizes(): void {
+      for (const watcher of this.sizeWatchers) {
+        watcher();
+      }
+    }
+
+    scrolls(): void {
+      this.dispatchEvent(new Event('scroll'));
+    }
+
+    letTimePass(): void {
+      const due = [...this.timers.values()];
+      this.timers.clear();
+      for (const callback of due) {
+        callback();
+      }
+    }
+  }
+
+  beforeEach(async () => {
+    scrolled = [];
+    region = document.createElement('section');
+    region.tabIndex = -1;
+    list = document.createElement('ul');
+    list.innerHTML = '<li id="only"><button>Odebrat</button></li>';
+    result = document.createElement('p');
+    add = document.createElement('button');
+    region.append(list, result, add);
+    document.body.append(region);
+    for (const element of [region, result, add]) {
+      element.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+        scrolled.push({ element, options });
+      };
+    }
+    page = new SettlingPage();
+    focus = new FocusAfterRowLeaves(
+      {
+        get activeElement() {
+          return document.activeElement;
+        },
+        body: document.body,
+        documentElement: document.documentElement,
+        defaultView: page,
+      } as unknown as Document,
+      () => region,
+    );
+    const row = document.getElementById('only') as HTMLElement;
+    standing(result, -300, 40);
+    standing(add, -250, 40);
+    focus.rowLeaving(row);
+    focus.focusInPlace(region, { row, from: result, to: add });
+    focus.rowLeaveEnded(row);
+    row.remove();
+    await Promise.resolve();
+    expect(scrolled).toEqual([
+      { element: result, options: { block: 'start', behavior: 'instant' } },
+    ]);
+    scrolled = [];
+    standing(result, 88, 40);
+    standing(add, 140, 40);
+  });
+
+  afterEach(() => {
+    focus.forget();
+    region.remove();
+  });
+
+  function standing(element: HTMLElement, top: number, height: number): void {
+    element.getBoundingClientRect = () => new DOMRect(0, top, 300, height);
+  }
+
+  function leftAbove(): void {
+    standing(result, -191, 40);
+    standing(add, -135, 40);
+  }
+
+  it('when the page then changes size and leaves the result above the window, then the result is brought into view again', () => {
+    leftAbove();
+
+    page.resizes();
+
+    expect(scrolled).toEqual([
+      { element: result, options: { block: 'start', behavior: 'instant' } },
+    ]);
+  });
+
+  it('when the page is then scrolled by something other than the donor and leaves the result above the window, then the result is brought into view again', () => {
+    leftAbove();
+
+    page.scrolls();
+
+    expect(scrolled).toEqual([
+      { element: result, options: { block: 'start', behavior: 'instant' } },
+    ]);
+  });
+
+  it('when the page changes size and the result still stands in the window, then nothing scrolls', () => {
+    page.resizes();
+    page.scrolls();
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when the donor turns the wheel first, then a later change of the page brings nothing into view', () => {
+    page.dispatchEvent(new Event('wheel'));
+    leftAbove();
+
+    page.resizes();
+    page.scrolls();
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when the donor touches the screen or presses a key first, then a later change of the page brings nothing into view', () => {
+    for (const visitorMove of ['touchstart', 'keydown', 'pointerdown']) {
+      page.dispatchEvent(new Event(visitorMove));
+    }
+    leftAbove();
+
+    page.resizes();
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when the focus has moved elsewhere, then a later change of the page brings nothing into view', () => {
+    add.focus();
+    leftAbove();
+
+    page.resizes();
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when the page has been kept for its whole settling time, then a later change of the page brings nothing into view', () => {
+    page.letTimePass();
+    leftAbove();
+
+    page.resizes();
+    page.scrolls();
+
+    expect(scrolled).toEqual([]);
+  });
+
+  it('when another row starts to leave, then a later change of the page brings nothing into view', () => {
+    focus.rowLeaving(null);
+    leftAbove();
+
+    page.resizes();
+
+    expect(scrolled).toEqual([]);
+  });
+});
+
 describe('Given a control that takes the focus back while the panel below it closes', () => {
   let card: HTMLElement;
   let control: HTMLButtonElement;
