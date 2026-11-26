@@ -89,6 +89,15 @@ function touch(type: string, target: EventTarget, point: Point, fingers = 1): Ev
   return event;
 }
 
+function pointer(type: string, pointerType: string, point: Point): void {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'pointerType', { value: pointerType });
+  Object.defineProperty(event, 'clientX', { value: point.x });
+  Object.defineProperty(event, 'clientY', { value: point.y });
+  Object.defineProperty(event, 'timeStamp', { value: point.at });
+  page.dispatchEvent(event);
+}
+
 function drag(target: EventTarget, points: readonly Point[]): { start: Event; end: Event } {
   const [first, ...rest] = points;
   const start = touch('touchstart', target, first);
@@ -710,6 +719,46 @@ describe('Given the app opened from the home screen of an iPhone, which shows th
 
       expect(preview.slideBack).toHaveBeenCalledTimes(1);
       expect(stillUnderway()).toBe(false);
+    });
+
+    it('and a quick flick reports only that its pointer lifted, then the page settles from there and the app steps back', async () => {
+      touch('touchstart', page, { x: 20, y: 300, at: 0 });
+      touch('touchmove', page, { x: 80, y: 300, at: 50 });
+      touch('touchmove', page, { x: 140, y: 300, at: 100 });
+
+      pointer('pointerup', 'touch', { x: 140, y: 300, at: 110 });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(preview.settle).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ completes: true, to: 390 }),
+      );
+      expect(stillUnderway()).toBe(false);
+      expect(backTarget.back).toHaveBeenCalledExactlyOnceWith('/aktuality');
+    });
+
+    it('and both the pointer and the touch report the lift, then the page settles once and the app takes one step', async () => {
+      touch('touchstart', page, { x: 20, y: 300, at: 0 });
+      touch('touchmove', page, { x: 80, y: 300, at: 50 });
+      touch('touchmove', page, { x: 140, y: 300, at: 100 });
+
+      pointer('pointerup', 'touch', { x: 140, y: 300, at: 110 });
+      touch('touchend', page, { x: 140, y: 300, at: 111 });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(preview.settle).toHaveBeenCalledTimes(1);
+      expect(backTarget.back).toHaveBeenCalledTimes(1);
+    });
+
+    it('and a mouse button lifts somewhere, then the swipe goes on', () => {
+      takePage();
+
+      pointer('pointerup', 'mouse', { x: 200, y: 300, at: 150 });
+      touch('touchmove', page, { x: 240, y: 300, at: 200 });
+
+      expect(preview.settle).not.toHaveBeenCalled();
+      expect(preview.follow).toHaveBeenLastCalledWith(220);
     });
 
     it('and the finger rests a while before it moves on or lets go, then the swipe still follows it and steps back', async () => {

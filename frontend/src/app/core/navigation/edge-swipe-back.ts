@@ -50,7 +50,8 @@ export class EdgeSwipeBack {
 
   private readonly onStart = (event: TouchEvent): void => this.started(event);
   private readonly onMove = (event: TouchEvent): void => this.moved(event);
-  private readonly onEnd = (event: TouchEvent): void => this.ended(event);
+  private readonly onEnd = (event: TouchEvent): void => this.touchEnded(event);
+  private readonly onPointerUp = (event: PointerEvent): void => this.pointerLifted(event);
   private readonly onCancel = (): void => this.callOff();
   private readonly onHidden = (): void => {
     if (this.document.visibilityState === 'hidden') {
@@ -76,6 +77,7 @@ export class EdgeSwipeBack {
     this.document.addEventListener('touchmove', this.onMove, PASSIVE);
     this.document.addEventListener('touchend', this.onEnd, PASSIVE);
     this.document.addEventListener('touchcancel', this.onCancel, PASSIVE);
+    this.document.addEventListener('pointerup', this.onPointerUp, PASSIVE);
     this.document.addEventListener('visibilitychange', this.onHidden, PASSIVE);
     view.addEventListener('popstate', this.onLeave, PASSIVE);
     view.addEventListener('pagehide', this.onPageHide, PASSIVE);
@@ -87,6 +89,7 @@ export class EdgeSwipeBack {
     this.document.removeEventListener('touchmove', this.onMove, PASSIVE);
     this.document.removeEventListener('touchend', this.onEnd, PASSIVE);
     this.document.removeEventListener('touchcancel', this.onCancel, PASSIVE);
+    this.document.removeEventListener('pointerup', this.onPointerUp, PASSIVE);
     this.document.removeEventListener('visibilitychange', this.onHidden, PASSIVE);
     view?.removeEventListener('popstate', this.onLeave, PASSIVE);
     view?.removeEventListener('pagehide', this.onPageHide, PASSIVE);
@@ -182,14 +185,24 @@ export class EdgeSwipeBack {
     swipe.preview?.follow(swipe.motion.offset);
   }
 
-  private ended(event: TouchEvent): void {
+  private touchEnded(event: TouchEvent): void {
     const swipe = this.swipe;
     const touch = swipe === null ? undefined : touchOf(event, swipe.id);
-    if (swipe === null || touch === undefined) {
-      return;
+    if (swipe !== null && touch !== undefined) {
+      this.ended(swipe, pointOf(touch, event));
     }
+  }
+
+  private pointerLifted(event: PointerEvent): void {
+    const swipe = this.swipe;
+    if (swipe !== null && event.pointerType === 'touch') {
+      this.ended(swipe, { x: event.clientX, y: event.clientY, at: event.timeStamp });
+    }
+  }
+
+  private ended(swipe: Swipe, point: SwipePoint): void {
     this.letGo();
-    const settle = swipe.motion.release(pointOf(touch, event));
+    const settle = swipe.motion.release(point);
     const goesBack = settle?.completes === true && swipe.pops === this.pops;
     const back = (): void => swipe.steps.back();
     const preview = swipe.preview;
