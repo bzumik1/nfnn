@@ -89,3 +89,42 @@ for (const colorScheme of ['light', 'dark'] as const) {
     });
   });
 }
+
+interface MarkGap {
+  gap: number;
+  ownSpace: number;
+}
+
+async function gapUnderMark(mark: Locator, text: string): Promise<MarkGap> {
+  await expect(mark).toBeVisible();
+  return mark.evaluate((host, textSelector) => {
+    const drawn = host.querySelector('svg') ?? host;
+    const following = host.parentElement!.querySelector(textSelector)!;
+    return {
+      gap: following.getBoundingClientRect().top - drawn.getBoundingClientRect().bottom,
+      ownSpace: parseFloat(getComputedStyle(host).marginBottom),
+    };
+  }, text);
+}
+
+test.describe('Given a visitor on a computer who reads the quotes on Přispět and O nás, measured for their spacing', () => {
+  test.use({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await serveFoundersNote(page);
+  });
+
+  test('when they see both quotes, then the text under each quote mark starts exactly the mark’s own space below the drawn mark', async ({
+    page,
+  }) => {
+    await page.goto('/prispet');
+    const donate = await gapUnderMark(page.locator('.donate-quote-mark'), 'p');
+
+    await page.goto('/o-nas');
+    const about = await gapUnderMark(page.locator('#o-nas .quote-mark'), '.quote-text');
+
+    expect(Math.abs(donate.gap - donate.ownSpace)).toBeLessThanOrEqual(SIZE_TOLERANCE);
+    expect(Math.abs(about.gap - about.ownSpace)).toBeLessThanOrEqual(SIZE_TOLERANCE);
+  });
+});
