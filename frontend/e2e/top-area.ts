@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import { LATE_FRAME_PAST_THE_STEADY_ONE } from '../src/app/core/navigation/frame-pace';
 
 export type Rgb = readonly [number, number, number];
 
@@ -12,6 +13,7 @@ export interface BarLook {
 export interface ScreenFrame {
   readonly lightness: number;
   readonly edges: number;
+  readonly at?: number;
 }
 
 export interface TopArea {
@@ -42,31 +44,57 @@ interface LateFrames {
   read(reader: FrameRequestCallback): void;
 }
 
+export interface FrameReader {
+  readonly read: (at: number) => boolean;
+  readonly inFrame: boolean;
+}
+
+export interface SampleCost {
+  readonly at: number;
+  readonly from: number;
+  readonly ms: number;
+  readonly inFrame: boolean;
+}
+
 interface TopAreaWatch {
   topAreaRun: number;
   topAreaFrames: TopAreaFrame[];
   topAreaFailure: string | null;
   topAreaStop: TopAreaStop | null;
   nfnnLateFrames?: LateFrames;
+  nfnnFrameReaders?: Record<string, FrameReader>;
+  nfnnSampleCosts?: SampleCost[];
 }
 
-export interface SampledRegions {
+export interface TopAreaRegions {
   readonly glass: string;
   readonly glassCopies: string;
   readonly veilCopies: string;
+  readonly pageCopies: string;
   readonly pagesOver: string;
 }
 
+export interface SampledRegions {
+  readonly topArea?: TopAreaRegions;
+  readonly readers?: readonly string[];
+}
+
 export const TOP_AREA_REGIONS: SampledRegions = {
-  glass: 'app-root .ui-glass',
-  glassCopies: '.page-transition .ui-glass, .page-fade .ui-glass',
-  veilCopies: '.page-transition__sheet-backdrop, .page-transition__sheet > dialog',
-  pagesOver: '.page-transition__page--over',
+  topArea: {
+    glass: 'app-root .ui-glass',
+    glassCopies: '.page-transition .ui-glass, .page-fade .ui-glass',
+    veilCopies:
+      '.page-transition__sheet-backdrop, .page-transition__sheet > dialog, .page-transition__dim',
+    pagesOver: '.page-transition__page--over',
+    pageCopies: '.page-transition__page',
+  },
 };
 
 export interface FrameSampling {
   stopWhenStill(): Promise<TopAreaFrame[]>;
 }
+
+export const PROBE_SCRIPT = 'https://probe.invalid/nfnn-probe.js';
 
 export type BandName = 'under the header' | 'under the clock';
 
@@ -86,12 +114,30 @@ const BLUR_SHARE_SHOWN = 0.5;
 const BLUR_GAP_WORTH_JUDGING = 0.1;
 const EDGES_LEFT_UNDER_BLUR = 0.5;
 const CLOCK_BAND_TOLERANCE = 0.1;
+const LONGEST_GROUND_SHARE_PER_FRAME = 0.5;
+const LONGEST_GROUND_SHARE_FROM_REST = 0.75;
+const GROUNDS_TOLD_APART = 16;
+
+export function evaluateAsProbe<Argument, Result>(
+  page: Page,
+  probe: (argument: Argument) => Result | Promise<Result>,
+  argument: Argument,
+): Promise<Result> {
+  return page.evaluate<Result>(
+    `(${probe.toString()})(${JSON.stringify(argument)})\n//# sourceURL=${PROBE_SCRIPT}`,
+  );
+}
+
+export async function addProbeInitScript(page: Page, probe: () => void): Promise<void> {
+  await page.addInitScript({ content: `(${probe.toString()})()\n//# sourceURL=${PROBE_SCRIPT}` });
+}
 
 export async function sampleFrames(
   page: Page,
   regions: SampledRegions = TOP_AREA_REGIONS,
 ): Promise<FrameSampling> {
-  await page.evaluate(
+  await evaluateAsProbe(
+    page,
     ({ regions, quietFrames }) =>
       new Promise<void>((started, failedToStart) => {
         const watch = window as unknown as TopAreaWatch;
@@ -101,190 +147,245 @@ export async function sampleFrames(
         const run = watch.topAreaRun;
         const frames: TopAreaFrame[] = [];
         watch.topAreaFrames = frames;
-        const canvas = document.createElement('canvas');
-        canvas.width = 1;
-        canvas.height = 1;
-        const context = canvas.getContext('2d', { willReadFrequently: true });
-        if (context === null) {
-          failedToStart(new Error('no 2D canvas to read the colours with'));
+        const costs: SampleCost[] = [];
+        watch.nfnnSampleCosts = costs;
+        const readers = (watch.nfnnFrameReaders ??= {});
+        const unknown = (regions.readers ?? []).filter(
+          (name) => typeof readers[name]?.read !== 'function',
+        );
+        if (unknown.length > 0) {
+          failedToStart(new Error(`no frame reader is registered as ${unknown.join(', ')}`));
           return;
         }
-        const painted = (colour: string): [number, number, number, number] => {
-          const taken = ['#010203', '#040506'].map((sentinel) => {
-            context.fillStyle = sentinel;
-            context.fillStyle = colour;
-            return context.fillStyle;
-          });
-          if (taken[0] !== taken[1]) {
-            throw new Error(`the canvas cannot paint the colour „${colour}“`);
-          }
-          context.clearRect(0, 0, 1, 1);
-          context.fillRect(0, 0, 1, 1);
-          const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
-          return [red, green, blue, alpha / 255];
-        };
-        const rgb = (colour: string): [number, number, number] => {
-          const [red, green, blue] = painted(colour);
-          return [red, green, blue];
-        };
-        const topLevelParts = (value: string): string[] => {
-          const parts: string[] = [];
-          let depth = 0;
-          let part = '';
-          for (const character of value.trim()) {
-            depth += character === '(' ? 1 : character === ')' ? -1 : 0;
-            if (depth === 0 && /\s/.test(character)) {
-              if (part !== '') {
-                parts.push(part);
-              }
-              part = '';
-            } else {
-              part += character;
-            }
-          }
-          return part === '' ? parts : [...parts, part];
-        };
-        const scrollbarOf = (
-          scrollbar: string,
-        ): { thumb: [number, number, number]; track: [number, number, number] } | null => {
-          if (scrollbar === 'auto') {
-            return null;
-          }
-          const colours = topLevelParts(scrollbar);
-          if (colours.length !== 2) {
-            throw new Error(`the scrollbar-color „${scrollbar}“ does not name two colours`);
-          }
-          return { thumb: rgb(colours[0]), track: rgb(colours[1]) };
-        };
-        const backdropFilterOf = (style: CSSStyleDeclaration): string =>
-          style.getPropertyValue('backdrop-filter') ||
-          style.getPropertyValue('-webkit-backdrop-filter') ||
-          'none';
-        const ownShare = (style: CSSStyleDeclaration): number =>
-          style.visibility === 'hidden' || style.display === 'none' ? 0 : Number(style.opacity);
-        const shownShare = (element: Element): number => {
-          if (!element.checkVisibility({ opacityProperty: true, visibilityProperty: true })) {
-            return 0;
-          }
-          let share = 1;
-          for (let at: Element | null = element; at !== null; at = at.parentElement) {
-            share *= Number(getComputedStyle(at).opacity);
-          }
-          return share;
-        };
-        const groundOf = (): [number, number, number] => {
-          const root = painted(getComputedStyle(document.documentElement).backgroundColor);
-          const [red, green, blue] =
-            root[3] === 0 ? painted(getComputedStyle(document.body).backgroundColor) : root;
-          return [red, green, blue];
-        };
-        interface Veil {
-          readonly strength: number;
-          readonly blur: number;
-          readonly tint: [number, number, number];
+        interface TopAreaReader {
+          read(at: number): TopAreaFrame;
+          moving(): string[];
         }
-        const layerOf = (style: CSSStyleDeclaration, share: number): Veil => {
-          const [red, green, blue, alpha] = painted(style.backgroundColor);
-          return {
-            strength: alpha * share,
-            blur: backdropFilterOf(style) !== 'none' ? share : 0,
-            tint: [red, green, blue],
-          };
-        };
-        const layered = (layers: readonly Veil[]): Veil => {
-          const stronger = layers.reduce((strongest, layer) =>
-            layer.strength > strongest.strength ? layer : strongest,
-          );
-          return {
-            strength: 1 - layers.reduce((through, layer) => through * (1 - layer.strength), 1),
-            blur: Math.max(...layers.map((layer) => layer.blur)),
-            tint: stronger.tint,
-          };
-        };
-        const liveVeil = (): Veil | null => {
-          const modals = document.querySelectorAll('dialog:modal');
-          if (modals.length === 0) {
-            return null;
+        const topAreaReader = (top: TopAreaRegions): TopAreaReader => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 1;
+          canvas.height = 1;
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          if (context === null) {
+            throw new Error('no 2D canvas to read the colours with');
           }
-          const dialog = modals[modals.length - 1];
-          const own = getComputedStyle(dialog);
-          const behind = getComputedStyle(dialog, '::backdrop');
-          return layered([layerOf(own, ownShare(own)), layerOf(behind, ownShare(behind))]);
-        };
-        const point = { x: innerWidth / 2, y: 1 };
-        const coversPoint = (element: Element): boolean => {
-          const box = element.getBoundingClientRect();
-          return (
-            box.left <= point.x && point.x < box.right && box.top <= point.y && point.y < box.bottom
-          );
-        };
-        const pageAbove = (copy: Element): boolean => {
-          const stack = document.elementsFromPoint(point.x, point.y);
-          return Array.from(document.querySelectorAll(regions.pagesOver)).some(
-            (over) =>
-              !over.contains(copy) &&
-              (copy.compareDocumentPosition(over) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 &&
-              (stack.some((element) => over.contains(element)) ||
-                (coversPoint(over) && shownShare(over) > 0)),
-          );
-        };
-        const copyVeils = (): Veil[] => {
-          const layersOfCopy = new Map<Element | null, Veil[]>();
-          for (const layer of document.querySelectorAll(regions.veilCopies)) {
-            if (coversPoint(layer) && !pageAbove(layer)) {
-              const copy = layer.parentElement;
-              layersOfCopy.set(copy, [
-                ...(layersOfCopy.get(copy) ?? []),
-                layerOf(getComputedStyle(layer), shownShare(layer)),
-              ]);
+          const painted = (colour: string): [number, number, number, number] => {
+            const taken = ['#010203', '#040506'].map((sentinel) => {
+              context.fillStyle = sentinel;
+              context.fillStyle = colour;
+              return context.fillStyle;
+            });
+            if (taken[0] !== taken[1]) {
+              throw new Error(`the canvas cannot paint the colour „${colour}“`);
             }
+            context.clearRect(0, 0, 1, 1);
+            context.fillRect(0, 0, 1, 1);
+            const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+            return [red, green, blue, alpha / 255];
+          };
+          const rgb = (colour: string): [number, number, number] => {
+            const [red, green, blue] = painted(colour);
+            return [red, green, blue];
+          };
+          const topLevelParts = (value: string): string[] => {
+            const parts: string[] = [];
+            let depth = 0;
+            let part = '';
+            for (const character of value.trim()) {
+              depth += character === '(' ? 1 : character === ')' ? -1 : 0;
+              if (depth === 0 && /\s/.test(character)) {
+                if (part !== '') {
+                  parts.push(part);
+                }
+                part = '';
+              } else {
+                part += character;
+              }
+            }
+            return part === '' ? parts : [...parts, part];
+          };
+          const scrollbarOf = (
+            scrollbar: string,
+          ): { thumb: [number, number, number]; track: [number, number, number] } | null => {
+            if (scrollbar === 'auto') {
+              return null;
+            }
+            const colours = topLevelParts(scrollbar);
+            if (colours.length !== 2) {
+              throw new Error(`the scrollbar-color „${scrollbar}“ does not name two colours`);
+            }
+            return { thumb: rgb(colours[0]), track: rgb(colours[1]) };
+          };
+          const backdropFilterOf = (style: CSSStyleDeclaration): string =>
+            style.getPropertyValue('backdrop-filter') ||
+            style.getPropertyValue('-webkit-backdrop-filter') ||
+            'none';
+          const ownShare = (style: CSSStyleDeclaration): number =>
+            style.visibility === 'hidden' || style.display === 'none' ? 0 : Number(style.opacity);
+          const shownShare = (element: Element): number => {
+            if (!element.checkVisibility({ opacityProperty: true, visibilityProperty: true })) {
+              return 0;
+            }
+            let share = 1;
+            for (let at: Element | null = element; at !== null; at = at.parentElement) {
+              share *= Number(getComputedStyle(at).opacity);
+            }
+            return share;
+          };
+          const groundOf = (): [number, number, number] => {
+            const root = painted(getComputedStyle(document.documentElement).backgroundColor);
+            const [red, green, blue] =
+              root[3] === 0 ? painted(getComputedStyle(document.body).backgroundColor) : root;
+            return [red, green, blue];
+          };
+          interface Veil {
+            readonly strength: number;
+            readonly blur: number;
+            readonly tint: [number, number, number];
           }
-          return Array.from(layersOfCopy.values(), layered);
-        };
-        const barsOf = (): BarLook[] => {
-          const named = new Map<string, Element[]>();
-          for (const bar of document.querySelectorAll(`${regions.glass}, ${regions.glassCopies}`)) {
-            const name = bar.classList[0];
-            named.set(name, [...(named.get(name) ?? []), bar]);
-          }
-          return Array.from(named, ([name, all]) => {
-            const shown = all.filter((bar) =>
-              bar.checkVisibility({ opacityProperty: true, visibilityProperty: true }),
-            );
-            const seen = (shown.length > 0 ? shown : all).map((bar) => getComputedStyle(bar));
-            const looks = (look: (style: CSSStyleDeclaration) => string): string =>
-              [...new Set(seen.map(look))].sort().join(' | ');
+          const layerOf = (style: CSSStyleDeclaration, share: number): Veil => {
+            const [red, green, blue, alpha] = painted(style.backgroundColor);
             return {
-              name,
-              blur: looks(backdropFilterOf),
-              fill: looks((style) => painted(style.backgroundColor).join(' ')),
-              shown: shown.length > 0,
+              strength: alpha * share,
+              blur: backdropFilterOf(style) !== 'none' ? share : 0,
+              tint: [red, green, blue],
             };
-          });
-        };
-        const describe = (animation: Animation): string => {
-          const effect = animation.effect as KeyframeEffect | null;
-          const target = effect?.target;
-          const where =
-            target === null || target === undefined
-              ? 'nothing'
-              : `${target.localName}${Array.from(target.classList, (name) => `.${name}`).join('')}${effect?.pseudoElement ?? ''}`;
-          const what =
-            animation instanceof CSSTransition
-              ? `transition of ${animation.transitionProperty}`
-              : animation instanceof CSSAnimation
-                ? `animation ${animation.animationName}`
-                : `animation ${animation.id || 'from a script'}`;
-          return `${what} on ${where}`;
-        };
-        const running = (): Animation[] =>
-          document
-            .getAnimations()
-            .filter(
-              (animation) =>
-                animation.playState === 'running' &&
-                animation.effect?.getComputedTiming().iterations !== Infinity,
+          };
+          const layered = (layers: readonly Veil[]): Veil => {
+            const stronger = layers.reduce((strongest, layer) =>
+              layer.strength > strongest.strength ? layer : strongest,
             );
+            return {
+              strength: 1 - layers.reduce((through, layer) => through * (1 - layer.strength), 1),
+              blur: Math.max(...layers.map((layer) => layer.blur)),
+              tint: stronger.tint,
+            };
+          };
+          const liveVeil = (): Veil | null => {
+            const modals = document.querySelectorAll('dialog:modal');
+            if (modals.length === 0) {
+              return null;
+            }
+            const dialog = modals[modals.length - 1];
+            const own = getComputedStyle(dialog);
+            const behind = getComputedStyle(dialog, '::backdrop');
+            return layered([layerOf(own, ownShare(own)), layerOf(behind, ownShare(behind))]);
+          };
+          const point = { x: innerWidth / 2, y: 1 };
+          const coversPoint = (element: Element): boolean => {
+            const box = element.getBoundingClientRect();
+            return (
+              box.left <= point.x &&
+              point.x < box.right &&
+              box.top <= point.y &&
+              point.y < box.bottom
+            );
+          };
+          const pageAbove = (copy: Element): boolean => {
+            const stack = document.elementsFromPoint(point.x, point.y);
+            return Array.from(document.querySelectorAll(top.pagesOver)).some(
+              (over) =>
+                !over.contains(copy) &&
+                (copy.compareDocumentPosition(over) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 &&
+                (stack.some((element) => over.contains(element)) ||
+                  (coversPoint(over) && shownShare(over) > 0)),
+            );
+          };
+          const copyVeils = (): Veil[] => {
+            const layersOfCopy = new Map<Element | null, Veil[]>();
+            for (const layer of document.querySelectorAll(top.veilCopies)) {
+              if (coversPoint(layer) && !pageAbove(layer)) {
+                const copy = layer.closest(top.pageCopies) ?? layer.parentElement;
+                layersOfCopy.set(copy, [
+                  ...(layersOfCopy.get(copy) ?? []),
+                  layerOf(getComputedStyle(layer), shownShare(layer)),
+                ]);
+              }
+            }
+            return Array.from(layersOfCopy.values(), layered);
+          };
+          const barsOf = (): BarLook[] => {
+            const named = new Map<string, Element[]>();
+            for (const bar of document.querySelectorAll(`${top.glass}, ${top.glassCopies}`)) {
+              const name = bar.classList[0];
+              named.set(name, [...(named.get(name) ?? []), bar]);
+            }
+            return Array.from(named, ([name, all]) => {
+              const shown = all.filter((bar) =>
+                bar.checkVisibility({ opacityProperty: true, visibilityProperty: true }),
+              );
+              const seen = (shown.length > 0 ? shown : all).map((bar) => getComputedStyle(bar));
+              const looks = (look: (style: CSSStyleDeclaration) => string): string =>
+                [...new Set(seen.map(look))].sort().join(' | ');
+              return {
+                name,
+                blur: looks(backdropFilterOf),
+                fill: looks((style) => painted(style.backgroundColor).join(' ')),
+                shown: shown.length > 0,
+              };
+            });
+          };
+          const describe = (animation: Animation): string => {
+            const effect = animation.effect as KeyframeEffect | null;
+            const target = effect?.target;
+            const where =
+              target === null || target === undefined
+                ? 'nothing'
+                : `${target.localName}${Array.from(target.classList, (name) => `.${name}`).join('')}${effect?.pseudoElement ?? ''}`;
+            const what =
+              animation instanceof CSSTransition
+                ? `transition of ${animation.transitionProperty}`
+                : animation instanceof CSSAnimation
+                  ? `animation ${animation.animationName}`
+                  : `animation ${animation.id || 'from a script'}`;
+            return `${what} on ${where}`;
+          };
+          const running = (): Animation[] =>
+            document
+              .getAnimations()
+              .filter(
+                (animation) =>
+                  animation.playState === 'running' &&
+                  animation.effect?.getComputedTiming().iterations !== Infinity,
+              );
+          return {
+            read: (at) => {
+              const live = liveVeil();
+              const copies = copyVeils();
+              const strongest = [...(live === null ? [] : [live]), ...copies].reduce<Veil | null>(
+                (stronger, veil) =>
+                  stronger === null || veil.strength > stronger.strength ? veil : stronger,
+                null,
+              );
+              const scrollbar = scrollbarOf(
+                getComputedStyle(document.documentElement).scrollbarColor,
+              );
+              return {
+                at,
+                readAt: Number(document.timeline.currentTime ?? at),
+                veil: strongest === null ? null : strongest.strength,
+                blur: Math.max(
+                  0,
+                  ...[...(live === null ? [] : [live]), ...copies].map((veil) => veil.blur),
+                ),
+                tint: strongest === null ? null : strongest.tint,
+                ground: groundOf(),
+                track: scrollbar === null ? null : scrollbar.track,
+                thumb: scrollbar === null ? null : scrollbar.thumb,
+                bars: barsOf(),
+              };
+            },
+            moving: () => running().map(describe),
+          };
+        };
+        let topArea: TopAreaReader | null;
+        try {
+          topArea = regions.topArea === undefined ? null : topAreaReader(regions.topArea);
+        } catch (problem) {
+          failedToStart(problem instanceof Error ? problem : new Error(String(problem)));
+          return;
+        }
+        let sampled = 0;
         const channel = new MessageChannel();
         const ended = (): boolean => watch.topAreaRun !== run;
         const end = (): void => {
@@ -300,50 +401,46 @@ export async function sampleFrames(
         };
         const stopIfStill = (): void => {
           const stop = watch.topAreaStop;
-          if (stop === null) {
+          if (stop === null || topArea === null) {
             return;
           }
-          const moving = running();
+          const moving = topArea.moving();
           stop.quiet = moving.length === 0 ? stop.quiet + 1 : 0;
           if (stop.quiet >= quietFrames) {
-            end();
+            topArea = null;
             stop.settled(frames);
           } else if (moving.length > 0 && performance.now() > stop.deadline) {
             fail(
-              `the top of the page was still moving when the probe gave up: ${moving.map(describe).join(', ')}`,
+              `the top of the page was still moving when the probe gave up: ${moving.join(', ')}`,
             );
           }
+        };
+        const readAll = (at: number, inFrame: boolean): boolean => {
+          let read = false;
+          if (topArea !== null && !inFrame) {
+            frames.push(topArea.read(at));
+            read = true;
+          }
+          for (const [name, reader] of Object.entries(readers)) {
+            if (reader.inFrame === inFrame) {
+              read = true;
+              if (!reader.read(at)) {
+                delete readers[name];
+              }
+            }
+          }
+          return read;
         };
         const sample = (at: number): void => {
           if (ended()) {
             return;
           }
+          const from = performance.now();
+          let read: boolean;
           try {
-            const live = liveVeil();
-            const copies = copyVeils();
-            const strongest = [...(live === null ? [] : [live]), ...copies].reduce<Veil | null>(
-              (stronger, veil) =>
-                stronger === null || veil.strength > stronger.strength ? veil : stronger,
-              null,
-            );
-            const scrollbar = scrollbarOf(
-              getComputedStyle(document.documentElement).scrollbarColor,
-            );
-            frames.push({
-              at,
-              readAt: Number(document.timeline.currentTime ?? at),
-              veil: strongest === null ? null : strongest.strength,
-              blur: Math.max(
-                0,
-                ...[...(live === null ? [] : [live]), ...copies].map((veil) => veil.blur),
-              ),
-              tint: strongest === null ? null : strongest.tint,
-              ground: groundOf(),
-              track: scrollbar === null ? null : scrollbar.track,
-              thumb: scrollbar === null ? null : scrollbar.thumb,
-              bars: barsOf(),
-            });
-            if (frames.length === quietFrames + 1) {
+            read = readAll(at, false);
+            sampled += 1;
+            if (sampled === quietFrames + 1) {
               started();
             }
             stopIfStill();
@@ -351,23 +448,43 @@ export async function sampleFrames(
             fail(problem instanceof Error ? problem.message : String(problem));
             return;
           }
-          if (!ended()) {
-            nextFrame();
+          if (read) {
+            costs.push({ at, from, ms: performance.now() - from, inFrame: false });
+          }
+          if (ended()) {
+            return;
+          }
+          if (topArea === null && Object.keys(readers).length === 0) {
+            if (sampled < quietFrames + 1) {
+              started();
+            }
+            end();
           }
         };
         const nextFrame = (): void => {
           const late = watch.nfnnLateFrames;
           if (late === undefined) {
-            requestAnimationFrame(afterPaint);
+            requestAnimationFrame(onFrame);
           } else {
-            late.read(afterPaint);
+            late.read(onFrame);
           }
         };
         channel.port1.onmessage = (message: MessageEvent<number>) => sample(message.data);
-        const afterPaint = (at: number): void => {
-          if (!ended()) {
-            channel.port2.postMessage(at);
+        const onFrame = (at: number): void => {
+          if (ended()) {
+            return;
           }
+          const from = performance.now();
+          try {
+            if (readAll(at, true)) {
+              costs.push({ at, from, ms: performance.now() - from, inFrame: true });
+            }
+          } catch (problem) {
+            fail(problem instanceof Error ? problem.message : String(problem));
+            return;
+          }
+          channel.port2.postMessage(at);
+          nextFrame();
         };
         nextFrame();
       }),
@@ -377,7 +494,8 @@ export async function sampleFrames(
 }
 
 async function stopWhenStill(page: Page): Promise<TopAreaFrame[]> {
-  return page.evaluate(
+  return evaluateAsProbe(
+    page,
     (longestMs) =>
       new Promise<TopAreaFrame[]>((settled, failed) => {
         const watch = window as unknown as TopAreaWatch;
@@ -540,8 +658,10 @@ export async function topAreaWhile(
   const coveredBefore = await panelsOver(page, band);
   const screencast = await page.context().newCDPSession(page);
   const shots: string[] = [];
+  const shotAt: number[] = [];
   screencast.on('Page.screencastFrame', (shot) => {
     shots.push(shot.data);
+    shotAt.push((shot.metadata.timestamp ?? Number.NaN) * 1000);
     screencast
       .send('Page.screencastFrameAck', { sessionId: shot.sessionId })
       .catch(() => undefined);
@@ -557,7 +677,13 @@ export async function topAreaWhile(
     const clear = clearPartOf(band, [...coveredBefore, ...(await panelsOver(page, band))]);
     return {
       frames,
-      screens: clear === null ? [] : await screensOf(page, [before, ...shots, after], clear),
+      screens:
+        clear === null
+          ? []
+          : (await screensOf(page, [before, ...shots, after], clear)).map((screen, index) => {
+              const at = index === 0 ? undefined : shotAt[index - 1];
+              return at === undefined || Number.isNaN(at) ? screen : { ...screen, at };
+            }),
     };
   } finally {
     await screencast.detach();
@@ -822,4 +948,139 @@ export function bandUnderClockOutOfStep({ frames, screens }: TopArea): string[] 
         : [],
     ),
   ];
+}
+
+function groundWayUnderClock(
+  screens: readonly ScreenFrame[],
+): { share: (screen: ScreenFrame) => number } | string[] {
+  if (screens.length < 2) {
+    return ['too few screencast frames to follow the ground under the clock'];
+  }
+  const from = screens[0].lightness;
+  const travel = screens[screens.length - 1].lightness - from;
+  if (Math.abs(travel) < GROUNDS_TOLD_APART) {
+    return [
+      `the ground under the clock ends ${Math.round(Math.abs(travel))} of lightness from where it began, too little to follow its way`,
+    ];
+  }
+  return { share: (screen) => (screen.lightness - from) / travel };
+}
+
+export const NOT_JUDGED_ANNOTATION = 'nfnn-not-judged';
+const GROUND_AT_REST = 0.02;
+
+export function groundNotJudgedOnThisRunner({ screens }: TopArea, fadeMs: number): string | null {
+  const way = groundWayUnderClock(screens);
+  if (Array.isArray(way)) {
+    return null;
+  }
+  const firstEnd = screens.findIndex((screen) => way.share(screen) >= 1 - GROUND_AT_REST);
+  if (firstEnd <= 0) {
+    return null;
+  }
+  const lastRest = screens
+    .slice(0, firstEnd)
+    .map((screen, index) => ({ screen, index }))
+    .filter(({ screen }) => way.share(screen) <= GROUND_AT_REST)
+    .at(-1);
+  const restAt = lastRest?.screen.at;
+  const endAt = screens[firstEnd].at;
+  if (
+    lastRest === undefined ||
+    lastRest.index !== firstEnd - 1 ||
+    restAt === undefined ||
+    endAt === undefined
+  ) {
+    return null;
+  }
+  const gap = endAt - restAt;
+  return gap >= fadeMs - FRAME_MS
+    ? `the screencast drew no frame for ${Math.round(gap)} ms of a ${fadeMs} ms fade, so the ground's way cannot be judged on this runner`
+    : null;
+}
+
+export function groundStepsBackUnderClock({ screens }: TopArea): string[] {
+  const way = groundWayUnderClock(screens);
+  if (Array.isArray(way)) {
+    return way;
+  }
+  return screens.flatMap((screen, index) => {
+    const before = index === 0 ? null : way.share(screens[index - 1]);
+    return before !== null && way.share(screen) < before - STILL
+      ? [
+          `the ground under the clock steps back from ${percent(before)} to ${percent(way.share(screen))} of its way in screencast frame ${index}`,
+        ]
+      : [];
+  });
+}
+
+export interface GroundMotion {
+  readonly curve: readonly number[];
+  readonly durationMs: number;
+  readonly lagFrames: number;
+}
+
+function curveShareAt(curve: readonly number[], fraction: number): number {
+  const [x1, y1, x2, y2] = curve;
+  const bezier = (one: number, two: number, t: number): number =>
+    3 * (1 - t) * (1 - t) * t * one + 3 * (1 - t) * t * t * two + t * t * t;
+  const clamped = Math.min(1, Math.max(0, fraction));
+  let low = 0;
+  let high = 1;
+  for (let step = 0; step < 50; step++) {
+    const middle = (low + high) / 2;
+    if (bezier(x1, x2, middle) < clamped) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+  return bezier(y1, y2, (low + high) / 2);
+}
+
+export function groundJumpsUnderClock({ screens }: TopArea, motion?: GroundMotion): string[] {
+  const way = groundWayUnderClock(screens);
+  if (Array.isArray(way)) {
+    return way;
+  }
+  const share = way.share;
+  const moving = (index: number): boolean =>
+    index > 0 && Math.abs(share(screens[index]) - share(screens[index - 1])) > STILL;
+  const framesBetween = (earlier: ScreenFrame, later: ScreenFrame): number =>
+    earlier.at === undefined || later.at === undefined
+      ? 1
+      : Math.max(1, Math.round((later.at - earlier.at) / FRAME_MS));
+  const fromRestAllows = (earlier: ScreenFrame, later: ScreenFrame): number | null =>
+    motion === undefined || earlier.at === undefined || later.at === undefined
+      ? null
+      : curveShareAt(
+          motion.curve,
+          (later.at - earlier.at + (LATE_FRAME_PAST_THE_STEADY_ONE + motion.lagFrames) * FRAME_MS) /
+            motion.durationMs,
+        );
+  return screens.flatMap((screen, index) => {
+    if (index === 0) {
+      return [];
+    }
+    const previous = screens[index - 1];
+    const step = Math.abs(share(screen) - share(previous));
+    const allowed = moving(index - 1) ? null : fromRestAllows(previous, screen);
+    const jumps = moving(index - 1)
+      ? step / framesBetween(previous, screen) > LONGEST_GROUND_SHARE_PER_FRAME
+      : step > (allowed === null ? LONGEST_GROUND_SHARE_FROM_REST : allowed + STILL);
+    if (!jumps) {
+      return [];
+    }
+    const gap =
+      previous.at === undefined || screen.at === undefined
+        ? ''
+        : `, ${Math.round(screen.at - previous.at)} ms after the frame before`;
+    const curve =
+      allowed === null || motion === undefined
+        ? ''
+        : `, more than the ${percent(allowed)} its curve reaches in that time and ${LATE_FRAME_PAST_THE_STEADY_ONE} steady frames plus the stamp lag of ${motion.lagFrames.toFixed(2)}`;
+    return [
+      `the ground under the clock goes from ${percent(share(previous))} to ${percent(share(screen))} of its way in screencast frame ${index}${gap}${curve}`,
+    ];
+  });
 }
