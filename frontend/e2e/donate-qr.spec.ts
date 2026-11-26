@@ -19,6 +19,8 @@ const QR_NAME = 'QR platba na účet Nadačního fondu Nová naděje';
 const PHONE_LAYOUT_MAX_WIDTH = 899;
 const GAP_WITHOUT_ACTIONS = 64;
 const ONE_FRAME_MS = 17;
+const UNFOLD_SAMPLE_MS = 1000;
+const PRESS_FRAMES = 5;
 const DETAILS_FAILED =
   'Platební údaje se nepodařilo načíst. Zkuste to prosím znovu. Když to nepomůže, napište na info@nfnn.cz.';
 
@@ -172,6 +174,10 @@ async function failureAfterRefusedQr(page: Page): Promise<FoldedFailure> {
 
 type FoldedFailureWindow = Window & { foldedFailure?: Partial<FoldedFailure> };
 
+type HintWindow = Window & { hintSeen?: boolean };
+
+type UnfoldWindow = Window & { unfoldHeights?: number[]; unfoldSampled?: boolean };
+
 async function heldPaymentDetails(page: Page): Promise<{ fail: () => void }> {
   let fail: () => void = () => undefined;
   const failed = new Promise<void>((resolve) => (fail = resolve));
@@ -200,6 +206,15 @@ async function edgeAgainstTokens(
     const style = getComputedStyle(element);
     return { ground: style.backgroundColor, surface, edge: style.borderTopColor, border };
   });
+}
+
+async function expectCardFitsFailure(card: Locator): Promise<void> {
+  const box = (await card.boundingBox())!;
+  const failure = (await card.locator('.bank-failure').boundingBox())!;
+  const above = failure.y - box.y;
+  const below = box.y + box.height - (failure.y + failure.height);
+  expect(Math.abs(above - below)).toBeLessThanOrEqual(1);
+  expect(above).toBeLessThan(failure.height);
 }
 
 async function cardHeight(page: Page): Promise<number> {
@@ -235,6 +250,124 @@ test.describe('Given a visitor on the Přispět page', () => {
     expect(PAYMENT_QR_1000.modules).not.toBe(PAYMENT_QR_500.modules);
     expect(asked).toEqual([PAYMENT_DETAILS_PATH]);
     await expect(page.locator('#prispet')).toContainText('CZ26 2010 0000 0055 4433 2217');
+  });
+
+  test('when they open Jiná částka and go back to 500 Kč, then no hint about the amount shows in any frame', async ({
+    page,
+  }) => {
+    await servePaymentDetails(page, []);
+    await page.goto('/prispet');
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
+    const field = page.getByLabel('Vlastní částka v korunách');
+    await expect(field).toBeFocused();
+    await page.evaluate(() => {
+      const watched = window as HintWindow;
+      watched.hintSeen = false;
+      new MutationObserver(() => {
+        if (document.querySelector('#prispet .amount-hint') !== null) {
+          watched.hintSeen = true;
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    });
+
+    const preset = (await page.getByRole('radio', { name: '500 Kč' }).boundingBox())!;
+    await page.mouse.move(preset.x + preset.width / 2, preset.y + preset.height / 2);
+
+    await page.mouse.down();
+    await page.evaluate(
+      (frames) =>
+        new Promise<void>((done) => {
+          const next = (left: number) =>
+            left === 0 ? done() : requestAnimationFrame(() => next(left - 1));
+          next(frames);
+        }),
+      PRESS_FRAMES,
+    );
+    const hintWhilePressed = await page.evaluate(() => (window as HintWindow).hintSeen);
+    await page.mouse.up();
+
+    await expect(field).toHaveCount(0);
+    expect(hintWhilePressed).toBe(false);
+    expect(await page.evaluate(() => (window as HintWindow).hintSeen)).toBe(false);
+  });
+
+  test('when they type, delete and backspace in Jiná částka, then the thousands stay grouped, no digit is lost and the caret stays where they work', async ({
+    page,
+  }) => {
+    await servePaymentDetails(page, []);
+    await page.goto('/prispet');
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
+    const field = page.getByLabel('Vlastní částka v korunách');
+    const caret = () => field.evaluate((input: HTMLInputElement) => input.selectionStart);
+    const placeCaret = (at: number) =>
+      field.evaluate((input: HTMLInputElement, position) => {
+        input.setSelectionRange(position, position);
+      }, at);
+
+    await field.pressSequentially('1250000');
+    await expect(field).toHaveValue('1\u00a0250\u00a0000');
+    expect(await caret()).toBe(9);
+
+    await placeCaret(1);
+    await page.keyboard.press('Delete');
+    await expect(field).toHaveValue('150\u00a0000');
+    expect(await caret()).toBe(1);
+
+    await placeCaret(4);
+    await page.keyboard.press('Backspace');
+    await expect(field).toHaveValue('15\u00a0000');
+    expect(await caret()).toBe(2);
+
+    await field.fill('');
+    await field.pressSequentially('1000');
+    await expect(field).toHaveValue('1\u00a0000');
+    await placeCaret(2);
+    await page.keyboard.press('Backspace');
+    await expect(field).toHaveValue('000');
+    expect(await caret()).toBe(0);
+
+    await page.keyboard.type('2');
+    await expect(field).toHaveValue('2\u00a0000');
+    expect(await caret()).toBe(1);
+  });
+
+  test('when they open Jiná částka, then its field unfolds over several frames instead of jumping in at once', async ({
+    page,
+  }) => {
+    await servePaymentDetails(page, []);
+    await page.goto('/prispet');
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    const amount = page.locator('#prispet .amount');
+    const closedHeight = (await amount.boundingBox())!.height;
+    await page.evaluate((sampleMs) => {
+      const sampled = window as UnfoldWindow;
+      sampled.unfoldHeights = [];
+      const block = document.querySelector('#prispet .amount') as HTMLElement;
+      const started = performance.now();
+      const sample = () => {
+        sampled.unfoldHeights!.push(block.getBoundingClientRect().height);
+        if (performance.now() - started < sampleMs) {
+          requestAnimationFrame(sample);
+        } else {
+          sampled.unfoldSampled = true;
+        }
+      };
+      requestAnimationFrame(sample);
+    }, UNFOLD_SAMPLE_MS);
+
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
+
+    await expect
+      .poll(() => page.evaluate(() => (window as UnfoldWindow).unfoldSampled === true))
+      .toBe(true);
+    const heights = await page.evaluate(() => (window as UnfoldWindow).unfoldHeights!);
+    const openHeight = heights[heights.length - 1];
+    expect(openHeight).toBeGreaterThan(closedHeight + 1);
+    expect(heights.some((height) => height > closedHeight + 1 && height < openHeight - 1)).toBe(
+      true,
+    );
   });
 
   test('when they type an amount, then its QR payment is drawn and announced once they stop typing', async ({
@@ -325,7 +458,7 @@ test.describe('Given a visitor on the Přispět page', () => {
       'QR platba na 1 000\u00a0Kč je připravená.',
     );
     await expect(page.locator('#prispet .bank-row-amount .bank-value')).toHaveText('1 000\u00a0Kč');
-    expect(Math.abs((await cardHeight(page)) - failedHeight)).toBeLessThanOrEqual(1);
+    expect(await cardHeight(page)).toBeGreaterThan(failedHeight);
   });
 
   for (const look of [
@@ -422,7 +555,6 @@ test.describe('Given a visitor on the Přispět page', () => {
           'Kopírovat číslo účtu',
           'Kopírovat částku',
           'Kopírovat IBAN',
-          'založíte účet',
           'Otevřít v aplikaci banky',
           'Uložit QR kód',
           'Platíte z jiného zařízení? Zobrazit QR kód ke skenování',
@@ -435,7 +567,7 @@ test.describe('Given a visitor on the Přispět page', () => {
           'Kopírovat IBAN',
           'Zvětšit: QR platba na účet Nadačního fondu Nová naděje',
           'Uložit QR kód',
-          'založíte účet',
+          'zásady ochrany osobních údajů',
         ];
     const reached: string[] = [];
     while (reached.length < expected.length) {
@@ -477,6 +609,26 @@ test.describe('Given a visitor on the Přispět page', () => {
     await expect(page.locator('#prispet .bank')).toContainText('300 Kč');
   });
 
+  test.describe('on a computer', () => {
+    test.use({ viewport: { width: 1280, height: 900 } });
+
+    test('when the payment details fail, then the card shrinks to that message and its retry instead of keeping the height it had while loading', async ({
+      page,
+    }) => {
+      const answer = await heldPaymentDetails(page);
+      await page.goto('/prispet');
+      const card = page.locator('#prispet .bank');
+      await expect(card.locator('.bank-skeleton')).toBeAttached();
+      const loadingHeight = await cardHeight(page);
+
+      answer.fail();
+
+      await expect(card.getByRole('alert')).toHaveText(DETAILS_FAILED);
+      await expectCardFitsFailure(card);
+      expect(await cardHeight(page)).toBeLessThan(loadingHeight);
+    });
+  });
+
   test.describe('on a phone', () => {
     test.use({ viewport: { width: 390, height: 844 } });
 
@@ -503,7 +655,7 @@ test.describe('Given a visitor on the Přispět page', () => {
       expect(bankTop).toBeLessThan(qrTop);
     });
 
-    test('when the payment details fail, then the card says only that at the height it had while loading, with no bank buttons, other device or QR left under it', async ({
+    test('when the payment details fail, then the card shrinks to that message and its retry, with no bank buttons, other device or QR left under it', async ({
       page,
     }) => {
       const answer = await heldPaymentDetails(page);
@@ -515,14 +667,15 @@ test.describe('Given a visitor on the Přispět page', () => {
       answer.fail();
 
       await expect(card.getByRole('alert')).toHaveText(DETAILS_FAILED);
-      expect(Math.abs((await cardHeight(page)) - loadingHeight)).toBeLessThanOrEqual(1);
+      await expectCardFitsFailure(card);
+      expect(await cardHeight(page)).toBeLessThan(loadingHeight);
       await expect(page.locator('#prispet .pay-actions')).toHaveAttribute('inert', '');
       await expect(page.locator('#prispet .bank-app')).toBeHidden();
       await expect(page.locator('#prispet .other-device')).toBeHidden();
       await expect(page.locator('#prispet .qr')).toBeHidden();
     });
 
-    test('when the payment details fail after the code could not be made, then the bank actions are inert at once, the alert and the focus on Zkusit znovu come before they fold away, and Co bude dál then follows the note without a gap', async ({
+    test('when the payment details fail after the code could not be made, then the bank actions are inert at once, the alert and the focus on Zkusit znovu come before they fold away, and Co bude dál then follows the card without a gap', async ({
       page,
     }) => {
       const failure = await failureAfterRefusedQr(page);
@@ -531,9 +684,9 @@ test.describe('Given a visitor on the Přispět page', () => {
       expect(failure.alertAt).toBeLessThan(failure.foldedAt);
       expect(failure.focusAt).toBeLessThan(failure.foldedAt);
       await expect(page.locator('#prispet .pay-actions')).toBeHidden();
-      const note = (await page.locator('#prispet .bank-receipt-note').boundingBox())!;
+      const card = (await page.locator('#prispet .bank').boundingBox())!;
       const next = (await page.locator('#prispet .next').boundingBox())!;
-      expect(next.y - (note.y + note.height)).toBeLessThan(GAP_WITHOUT_ACTIONS);
+      expect(next.y - (card.y + card.height)).toBeLessThan(GAP_WITHOUT_ACTIONS);
     });
 
     test('when the payment details fail with reduced motion, then the bank actions are gone in the frame the alert comes', async ({
@@ -834,5 +987,98 @@ test.describe('Given a visitor on Přispět on an upright iPad', () => {
       return [...byTop.entries()].sort(([a], [b]) => a - b).map(([, line]) => line.trim());
     });
     expect(lines.at(-1), JSON.stringify(lines)).toMatch(/(^|\s)500\u00a0Kč\.$/);
+  });
+});
+
+async function textLinesOf(value: Locator): Promise<string[]> {
+  await value.page().evaluate(() => document.fonts.ready);
+  return value.evaluate((element) => {
+    const lines = new Map<number, string>();
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
+      for (let index = 0; index < text.length; index++) {
+        if (text[index].trim() === '') {
+          continue;
+        }
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + 1);
+        const top = Math.round(range.getBoundingClientRect().top);
+        lines.set(top, (lines.get(top) ?? '') + text[index]);
+      }
+    }
+    return [...lines.entries()].sort(([a], [b]) => a - b).map(([, characters]) => characters);
+  });
+}
+
+interface DetailType {
+  fontSize: string;
+  fontWeight: string;
+  color: string;
+}
+
+async function typeOf(element: Locator): Promise<DetailType> {
+  return element.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { fontSize: style.fontSize, fontWeight: style.fontWeight, color: style.color };
+  });
+}
+
+async function centreOf(element: Locator): Promise<number> {
+  const box = (await element.boundingBox())!;
+  return box.y + box.height / 2;
+}
+
+async function aboutRow(page: Page, label: string): Promise<{ key: Locator; value: Locator }> {
+  await page.goto('/o-nas');
+  const item = page
+    .locator('.accounting-item')
+    .filter({ has: page.getByText(label, { exact: true }) });
+  await expect(item.locator('.accounting-value')).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  return { key: item.locator('dt'), value: item.locator('.accounting-value') };
+}
+
+async function donateRow(page: Page, label: string): Promise<{ key: Locator; value: Locator }> {
+  await page.goto('/prispet');
+  const row = page.locator('#prispet .bank-row', { hasText: label });
+  await expect(row.locator('.bank-value')).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  return { key: row.locator('.bank-key'), value: row.locator('.bank-value') };
+}
+
+test.describe('Given the bank details on O nás and on Přispět', () => {
+  for (const [width, height] of [
+    [390, 844],
+    [1280, 900],
+  ]) {
+    test(`when they show at ${width} × ${height}, then Číslo účtu and IBAN read in one type on both pages`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      for (const label of ['Číslo účtu', 'IBAN']) {
+        const about = await aboutRow(page, label);
+        const aboutKey = await typeOf(about.key);
+        const aboutValue = await typeOf(about.value);
+        const donate = await donateRow(page, label);
+
+        expect(aboutKey).toEqual(await typeOf(donate.key));
+        expect(aboutValue).toEqual(await typeOf(donate.value));
+      }
+    });
+  }
+
+  test('when the IBAN takes two lines on a phone, then Kopírovat sits by the middle of both lines on both pages', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const open of [aboutRow, donateRow]) {
+      const { value } = await open(page, 'IBAN');
+      const copy = value.locator('xpath=..').locator('app-copy-button');
+
+      expect(await textLinesOf(value)).toHaveLength(2);
+      expect(Math.abs((await centreOf(copy)) - (await centreOf(value)))).toBeLessThanOrEqual(1);
+    }
   });
 });

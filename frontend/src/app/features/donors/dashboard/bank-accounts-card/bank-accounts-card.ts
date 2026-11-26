@@ -62,12 +62,13 @@ import { spayd } from '../../../donations/spayd';
 import { QrCode } from '../../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../../shared/ui/qr-code/qr-matrix';
+import { AccountDisconnect, OfferedAccountAction } from './account-disconnect/account-disconnect';
+import { revealWhenStill } from './reveal-when-still';
 import { PairingHelp } from './pairing-help/pairing-help';
 import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
-import { Disclosure } from '../../../../shared/ui/disclosure/disclosure';
 
 type ListState = 'loading' | 'ready' | 'error';
 
@@ -139,7 +140,6 @@ const PAYMENT_WATCH_CHECKS = 20;
   imports: [
     LoadFailure,
     Dialog,
-    Disclosure,
     CopyButton,
     NgTemplateOutlet,
     PairingHelp,
@@ -148,6 +148,7 @@ const PAYMENT_WATCH_CHECKS = 20;
     NeedsConnection,
     BankLogo,
     BankMark,
+    AccountDisconnect,
   ],
   templateUrl: './bank-accounts-card.html',
   styleUrl: './bank-accounts-card.scss',
@@ -176,7 +177,6 @@ export class BankAccountsCard {
   protected readonly donorName = computed(() => this.auth.donor()?.name ?? '');
 
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
-  private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
   private readonly helpToggle = viewChild<ElementRef<HTMLButtonElement>>('helpToggle');
   private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
   private readonly addResult = viewChild<ElementRef<HTMLElement>>('addResult');
@@ -189,6 +189,7 @@ export class BankAccountsCard {
   protected readonly retrying = signal(false);
   protected readonly accounts = signal<readonly BankAccountItem[]>([]);
   protected readonly confirming = signal<string | null>(null);
+  protected readonly returningAction = signal<string | null>(null);
   protected readonly busy = signal<string | null>(null);
   protected readonly actionError = signal('');
   protected readonly actionDone = signal('');
@@ -339,7 +340,7 @@ export class BankAccountsCard {
     return this.isNewestOfItsNumber(account) ? EXCLUDED_DISCONNECTED_HINT : '';
   }
 
-  protected offersDisconnect(account: BankAccountItem): boolean {
+  private offersDisconnect(account: BankAccountItem): boolean {
     return account.status === 'ACTIVE'
       ? !account.pairingExcluded
       : account.status !== 'DISCONNECTED';
@@ -376,7 +377,14 @@ export class BankAccountsCard {
     return joinedList(symbols);
   }
 
-  protected offersReconnect(account: BankAccountItem): boolean {
+  protected offeredAction(account: BankAccountItem): OfferedAccountAction | null {
+    if (this.offersReconnect(account)) {
+      return 'reconnect';
+    }
+    return this.offersDisconnect(account) ? 'disconnect' : null;
+  }
+
+  private offersReconnect(account: BankAccountItem): boolean {
     return (
       account.status === 'DISCONNECTED' &&
       !account.pairingExcluded &&
@@ -421,13 +429,34 @@ export class BankAccountsCard {
     this.actionError.set('');
     this.actionDone.set('');
     this.confirming.set(account.id);
-    afterNextRender(() => this.confirmCancel()?.nativeElement.focus(), { injector: this.injector });
+    afterNextRender(() => this.focusOnceSettled(this.keepButtonOf(account)), {
+      injector: this.injector,
+    });
   }
 
   protected cancelDisconnect(account: BankAccountItem): void {
+    this.returningAction.set(account.id);
     this.confirming.set(null);
     this.actionError.set('');
-    afterNextRender(() => this.actionButtonOf(account)?.focus(), { injector: this.injector });
+    afterNextRender(() => this.focusOnceSettled(this.actionButtonOf(account)), {
+      injector: this.injector,
+    });
+  }
+
+  private focusOnceSettled(button: HTMLButtonElement | null): void {
+    if (button === null) {
+      return;
+    }
+    button.focus({ preventScroll: true });
+    const row = button.closest('.account') ?? this.host.nativeElement;
+    const motions = (row.getAnimations?.({ subtree: true }) ?? []).filter((motion) =>
+      Number.isFinite(Number(motion.effect?.getComputedTiming().endTime)),
+    );
+    revealWhenStill(this.document, button, motions);
+  }
+
+  protected actionReturned(): void {
+    this.returningAction.set(null);
   }
 
   protected disconnect(account: BankAccountItem): void {
@@ -631,7 +660,16 @@ export class BankAccountsCard {
   }
 
   private actionButtonOf(account: BankAccountItem): HTMLButtonElement | null {
-    return this.host.nativeElement.querySelector<HTMLButtonElement>(`#${actionButtonId(account)}`);
+    return this.liveButton(`#${actionButtonId(account)}`);
+  }
+
+  private keepButtonOf(account: BankAccountItem): HTMLButtonElement | null {
+    return this.liveButton(`#${actionButtonId(account)}-keep`);
+  }
+
+  private liveButton(selector: string): HTMLButtonElement | null {
+    const buttons = this.host.nativeElement.querySelectorAll<HTMLButtonElement>(selector);
+    return Array.from(buttons).find((button) => button.closest('[inert]') === null) ?? null;
   }
 
   protected actionButtonId(account: BankAccountItem): string {

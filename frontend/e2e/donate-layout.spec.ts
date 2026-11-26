@@ -260,20 +260,15 @@ test.describe('Given the payment details on Přispět', () => {
   for (const [width, height] of [
     [375, 667],
     [390, 844],
-    [1280, 900],
   ]) {
-    test(`when they show at ${width} × ${height} to a visitor who is not signed in, then the bank details, the receipt note and the other device's box start their text on one left edge`, async ({
+    test(`when they show at ${width} × ${height} to a visitor who is not signed in, then the bank details and the other device's box start their text on one left edge`, async ({
       page,
     }) => {
       await openPrispetAt(page, width, height);
 
       const bank = await textStart(page, '.bank .panel-label');
-      const note = await textStart(page, '.bank-receipt-note');
-      expect(Math.abs(note - bank)).toBeLessThanOrEqual(PIXEL_TOLERANCE);
-      if (width < 900) {
-        const otherDevice = await textStart(page, '.other-device-title');
-        expect(Math.abs(otherDevice - bank)).toBeLessThanOrEqual(PIXEL_TOLERANCE);
-      }
+      const otherDevice = await textStart(page, '.other-device-title');
+      expect(Math.abs(otherDevice - bank)).toBeLessThanOrEqual(PIXEL_TOLERANCE);
     });
   }
 

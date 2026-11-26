@@ -239,7 +239,6 @@
 }
 
 .accounts-footer > p + p,
-.account-action--apart,
 .add-account-text + .add-account-text {
   margin-top: var(--space-2-5);
 }
@@ -252,15 +251,6 @@
 
 .account--disconnected .account-number {
   color: var(--color-text-muted);
-}
-
-.account-action {
-  max-width: 100%;
-  white-space: normal;
-}
-
-.account-confirm {
-  @include motion.expand($closes-by: class);
 }
 
 .add-account-title {
@@ -405,6 +395,10 @@
   .add-account-bank dd {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .add-account-strut {
+    display: none;
+  }
 }
 
 .bank-value {
@@ -418,6 +412,26 @@
   max-width: 100%;
   font-size: var(--text-sheet-account-number);
   white-space: normal;
+}
+
+.add-account-number__head {
+  display: inline-block;
+  max-inline-size: 100%;
+}
+
+.add-account-strut {
+  inline-size: 0;
+  padding-inline: 0;
+  border-inline-width: 0;
+  visibility: hidden;
+
+  &::before {
+    content: none;
+  }
+
+  &::after {
+    content: '\200b';
+  }
 }
 
 .add-account-watch {
