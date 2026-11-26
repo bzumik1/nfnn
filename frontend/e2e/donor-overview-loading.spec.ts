@@ -300,6 +300,26 @@ for (const [width, height] of [
       }
     });
 
+    test('when the bank details load in forced colours, then their skeleton shows no made-up account number and no label text', async ({
+      page,
+    }) => {
+      await mockDonorApi(page, noDonations);
+      await page.route(
+        (url) => url.pathname === '/api/donations/payment-details',
+        () => new Promise<void>(() => undefined),
+      );
+      await page.emulateMedia({ forcedColors: 'active' });
+      await rememberedDonorSession(page);
+      await page.setViewportSize({ width, height });
+      await page.goto('/darce/prehled');
+      const skeleton = page.locator('.send-gift .bank-skeleton.is-shown');
+      await expect(skeleton).toBeVisible();
+
+      await expect(skeleton.getByText('CZ00 0000 0000 0000 0000 0000')).toBeHidden();
+      await expect(skeleton.getByText('Číslo účtu')).toBeHidden();
+      await expect(skeleton.getByText('IBAN')).toBeHidden();
+    });
+
     test('when the bank details arrive after their skeleton, then no Kopírovat moves sideways', async ({
       page,
     }) => {
