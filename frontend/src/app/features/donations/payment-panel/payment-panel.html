@@ -175,33 +175,35 @@
                 @for (row of skeletonRows(); track row) {
                   <div class="bank-row">
                     <span class="bank-key"
-                      ><span class="bank-skeleton-line bank-skeleton-text">
-                        @switch (row) {
-                          @case ('account') {
-                            <ng-container i18n="@@home.donate.bank.account"
-                              >Číslo účtu</ng-container
-                            >
+                      ><span class="bank-skeleton-line"
+                        ><span>
+                          @switch (row) {
+                            @case ('account') {
+                              <ng-container i18n="@@home.donate.bank.account"
+                                >Číslo účtu</ng-container
+                              >
+                            }
+                            @case ('amount') {
+                              <ng-container i18n="@@home.donate.bank.amount">Částka</ng-container>
+                            }
+                            @case ('symbol') {
+                              <ng-container i18n="@@home.donate.bank.vs"
+                                >Variabilní symbol</ng-container
+                              >
+                            }
+                            @case ('iban') {
+                              <ng-container i18n="@@home.donate.bank.iban">IBAN</ng-container>
+                            }
                           }
-                          @case ('amount') {
-                            <ng-container i18n="@@home.donate.bank.amount">Částka</ng-container>
-                          }
-                          @case ('symbol') {
-                            <ng-container i18n="@@home.donate.bank.vs"
-                              >Variabilní symbol</ng-container
-                            >
-                          }
-                          @case ('iban') {
-                            <ng-container i18n="@@home.donate.bank.iban">IBAN</ng-container>
-                          }
-                        }
-                      </span></span
+                        </span></span
+                      ></span
                     >
                     <span class="bank-value-wrap">
                       @if (row === 'iban') {
                         <span class="bank-value ui-figures ui-figures--groups"
-                          ><span class="bank-skeleton-line bank-skeleton-text">{{
-                            skeletonIban
-                          }}</span></span
+                          ><span class="bank-skeleton-line"
+                            ><span>{{ skeletonIban }}</span></span
+                          ></span
                         >
                       } @else {
                         <span class="bank-value"
@@ -518,8 +520,9 @@
         @if (qrMatrix()) {
           <p class="qr-caption">
             <ng-container i18n="@@home.donate.qr.caption"
-              >QR platba na účet Nadačního fondu Nová naděje,
-              {{ drawnCrowns() }}&nbsp;Kč.</ng-container
+              >QR platba na účet Nadačního fondu Nová naděje,&nbsp;{{
+                drawnCrowns()
+              }}&nbsp;Kč.</ng-container
             >
           </p>
         }
