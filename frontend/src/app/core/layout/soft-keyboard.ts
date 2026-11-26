@@ -3,6 +3,8 @@ import { computed, DestroyRef, DOCUMENT, inject, Injectable, signal } from '@ang
 export const KEYBOARD_OPEN_CLASS = 'keyboard-open';
 
 const COVERED_HEIGHT = '--keyboard-covered-height';
+const VIEW_TOP = '--visual-viewport-top';
+const VIEW_HEIGHT = '--visual-viewport-height';
 const SMALLEST_KEYBOARD_PX = 150;
 
 export interface VisibleArea {
@@ -58,11 +60,14 @@ export class SoftKeyboard {
       viewport.removeEventListener('scroll', update);
       this.document.removeEventListener('focusin', update);
       this.document.removeEventListener('focusout', updateAfterFocusMoves);
+      this.document.documentElement.style.removeProperty(VIEW_TOP);
+      this.document.documentElement.style.removeProperty(VIEW_HEIGHT);
       this.show(null);
     });
   }
 
   private update(view: Window, viewport: VisualViewport): void {
+    this.follow(viewport);
     const typing = isTextEntry(this.document.activeElement);
     const keyboardHeight = view.innerHeight - viewport.height;
     if (typing && keyboardHeight >= SMALLEST_KEYBOARD_PX) {
@@ -72,6 +77,18 @@ export class SoftKeyboard {
       );
     } else {
       this.show(null);
+    }
+  }
+
+  private follow(viewport: VisualViewport): void {
+    const style = this.document.documentElement.style;
+    const top = `${viewport.offsetTop}px`;
+    const height = `${viewport.height}px`;
+    if (style.getPropertyValue(VIEW_TOP) !== top) {
+      style.setProperty(VIEW_TOP, top);
+    }
+    if (style.getPropertyValue(VIEW_HEIGHT) !== height) {
+      style.setProperty(VIEW_HEIGHT, height);
     }
   }
 

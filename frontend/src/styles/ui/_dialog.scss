@@ -63,28 +63,24 @@
 }
 
 :root {
-  --keyboard-covered-height: 0px;
+  --visual-viewport-top: 0px;
+  --visual-viewport-height: 100%;
 }
 
-html.keyboard-open .dialog[open] {
-  padding-bottom: calc(var(--space-5) + var(--keyboard-covered-height));
+dialog.dialog[open] {
+  top: var(--visual-viewport-top);
+  height: var(--visual-viewport-height);
 }
 
 @include bp.down(phone) {
   html.keyboard-open .dialog[open] {
-    padding-bottom: var(--keyboard-covered-height);
     background: var(--color-surface);
   }
 }
 
 @include bp.down(nav) {
   html.keyboard-open .dialog--full[open] {
-    padding-bottom: var(--keyboard-covered-height);
     background: var(--color-surface);
-  }
-
-  html.keyboard-open .dialog--sheet[open] {
-    padding-bottom: var(--keyboard-covered-height);
   }
 
   html.keyboard-open .dialog--sheet[open] .dialog-panel {

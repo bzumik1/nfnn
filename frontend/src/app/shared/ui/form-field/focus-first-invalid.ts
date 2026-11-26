@@ -102,7 +102,7 @@ function bringFieldIntoView(control: HTMLElement, keyboard: VisibleArea | null):
     }
     return;
   }
-  const band = bandAboveStickyActions(view, scroller, shownBand(field, keyboard));
+  const band = bandAboveStickyActions(view, scroller, scrollerBand(view, scroller));
   const box = field.getBoundingClientRect();
   if (scroller.closest('dialog') !== null && box.bottom + scroller.scrollTop <= band.bottom) {
     scroller.scrollTo({ top: 0 });
@@ -126,6 +126,21 @@ function shownBand(field: Element, keyboard: VisibleArea | null): ViewBand {
         top: Math.max(band.top, keyboard.top),
         bottom: Math.min(band.bottom, keyboard.top + keyboard.height),
       };
+}
+
+function scrollerBand(view: Window, scroller: Element): ViewBand {
+  const style = view.getComputedStyle(scroller);
+  const top = scroller.getBoundingClientRect().top + scroller.clientTop;
+  const visual = view.visualViewport;
+  const shownTop = visual?.offsetTop ?? 0;
+  const shownBottom = visual ? visual.offsetTop + visual.height : view.innerHeight;
+  return {
+    top: Math.max(top + (parseFloat(style.scrollPaddingTop) || 0), shownTop),
+    bottom: Math.min(
+      top + scroller.clientHeight - (parseFloat(style.scrollPaddingBottom) || 0),
+      shownBottom,
+    ),
+  };
 }
 
 function bandAboveStickyActions(view: Window, scroller: Element, band: ViewBand): ViewBand {
