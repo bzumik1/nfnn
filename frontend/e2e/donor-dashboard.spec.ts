@@ -1693,3 +1693,36 @@ test.describe('Given a donor with large totals on Můj přehled', () => {
     });
   }
 });
+
+test.describe('Given a signed-in donor without gifts on a 390 px phone at the largest text', () => {
+  test('when Jak nastavit trvalý příkaz wraps, then every line of the link starts on its edge, where the card text starts', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, noDonations);
+    await signIn(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addStyleTag({ content: 'html { font-size: 330%; }' });
+    const toggle = page.getByRole('button', { name: 'Jak nastavit trvalý příkaz' }).first();
+    await expect(toggle).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const layout = await toggle.evaluate((button) => {
+      const range = document.createRange();
+      range.selectNodeContents(button);
+      const starts = new Map<number, number>();
+      for (const rect of range.getClientRects()) {
+        if (rect.width === 0) {
+          continue;
+        }
+        const top = Math.round(rect.top);
+        starts.set(top, Math.min(starts.get(top) ?? rect.left, rect.left));
+      }
+      return { edge: button.getBoundingClientRect().left, starts: [...starts.values()] };
+    });
+
+    expect(layout.starts.length, JSON.stringify(layout)).toBeGreaterThan(1);
+    for (const start of layout.starts) {
+      expect(Math.abs(start - layout.edge), JSON.stringify(layout)).toBeLessThanOrEqual(1);
+    }
+  });
+});
