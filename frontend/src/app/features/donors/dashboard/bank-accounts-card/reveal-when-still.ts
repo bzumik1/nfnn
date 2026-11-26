@@ -1,4 +1,8 @@
-import { scrollIntoViewFitting } from '../../../../shared/ui/leaving-row/leaving-row';
+import {
+  scrollerOf,
+  scrollIntoViewFitting,
+  visibleBandOf,
+} from '../../../../shared/ui/leaving-row/leaving-row';
 
 const VISITOR_MOVES = ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown'] as const;
 const LISTENING: AddEventListenerOptions = { capture: true, passive: true };
@@ -16,8 +20,6 @@ export function revealWhenStill(
   if (view === null || typeof view.requestAnimationFrame !== 'function') {
     return;
   }
-  const scroller = scrollerOf(document, control, view);
-  const started = view.performance.now();
   let moved = false;
   const heard = (): void => {
     moved = true;
@@ -30,6 +32,7 @@ export function revealWhenStill(
   for (const type of VISITOR_MOVES) {
     document.addEventListener(type, heard, LISTENING);
   }
+  let started = Number.NaN;
   let reveals = 0;
   let lastTop = Number.NaN;
   let stillFrames = 0;
@@ -43,50 +46,31 @@ export function revealWhenStill(
       stop();
       return;
     }
-    const top = scroller.scrollTop;
+    const top = control.getBoundingClientRect().top;
     stillFrames = Math.abs(top - lastTop) <= SUBPIXEL_PX ? stillFrames + 1 : 0;
     lastTop = top;
-    if (stillFrames < STILL_FRAMES) {
-      view.requestAnimationFrame(look);
-      return;
+    if (
+      stillFrames >= STILL_FRAMES &&
+      reveals < REVEALS &&
+      !whollyInView(document, control, view)
+    ) {
+      reveals += 1;
+      stillFrames = 0;
+      scrollIntoViewFitting(control, document);
     }
-    if (whollyInView(document, scroller, control, view) || reveals >= REVEALS) {
-      stop();
-      return;
-    }
-    reveals += 1;
-    stillFrames = 0;
-    scrollIntoViewFitting(control, document);
     view.requestAnimationFrame(look);
   };
-  void Promise.allSettled(motions.map((motion) => motion.finished)).then(() =>
-    view.requestAnimationFrame(look),
-  );
+  void Promise.allSettled(motions.map((motion) => motion.finished)).then(() => {
+    started = view.performance.now();
+    view.requestAnimationFrame(look);
+  });
 }
 
-function scrollerOf(document: Document, control: HTMLElement, view: Window): Element {
-  for (let node = control.parentElement; node !== null; node = node.parentElement) {
-    if (/(auto|scroll)/.test(view.getComputedStyle(node).overflowY)) {
-      return node;
-    }
-  }
-  return document.scrollingElement ?? document.documentElement;
-}
-
-function whollyInView(
-  document: Document,
-  scroller: Element,
-  control: HTMLElement,
-  view: Window,
-): boolean {
-  const padding = view.getComputedStyle(scroller);
-  const paddingTop = parseFloat(padding.scrollPaddingTop) || 0;
-  const paddingBottom = parseFloat(padding.scrollPaddingBottom) || 0;
-  const pageScrolls = scroller === document.scrollingElement;
-  const box = pageScrolls ? { top: 0, bottom: view.innerHeight } : scroller.getBoundingClientRect();
+function whollyInView(document: Document, control: HTMLElement, view: Window): boolean {
+  const band = visibleBandOf(document, scrollerOf(document, control, view), view);
   const placed = control.getBoundingClientRect();
   return (
-    placed.top >= box.top + paddingTop - SUBPIXEL_PX &&
-    placed.bottom <= box.bottom - paddingBottom + SUBPIXEL_PX
+    placed.top >= Math.max(band.top, 0) - SUBPIXEL_PX &&
+    placed.bottom <= Math.min(band.bottom, view.innerHeight) + SUBPIXEL_PX
   );
 }
