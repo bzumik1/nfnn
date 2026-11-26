@@ -87,9 +87,13 @@ div.ui-list__row {
 
 .ui-list__meta {
   grid-area: meta;
+  overflow-wrap: anywhere;
+}
+
+.ui-list__meta,
+.ui-list__state--note {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
-  overflow-wrap: anywhere;
 }
 
 .ui-list__value {
@@ -145,11 +149,6 @@ div.ui-list__row {
   grid-area: state;
   justify-self: end;
   margin-inline-start: var(--space-3);
-}
-
-.ui-list__state--note {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
 }
 
 .ui-list__extra {
