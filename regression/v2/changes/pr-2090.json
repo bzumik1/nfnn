@@ -27,7 +27,7 @@
     "kind": "retired",
     "suite": "frontend-vitest",
     "test": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates and an article opened from the news, which was kept behind it > when the live news is put back at another scroll than its kept copy showed, as after a cold launch whose page moved meanwhile, then the live news takes the copy’s scroll before the cover goes, so the list never jumps at the end (round 42)",
-    "replacement": "e2e/back-motion-start.spec.ts > Given an administrator in the app on the home screen of a phone, launched straight on Správa scrolled down, gone on to Dárci > when Zpět is pressed for the first time since the launch, then both copies join the cover only once the live Správa is drawn beneath at the place its copy shows, the leaving Dárci stands at rest in the first frame both show, and the step ends on the live Správa without a jump (#2088)",
+    "replacement": "src/app/core/navigation/page-focus.spec.ts > Given a list of the administration that a step back returns to from the card it opened > when the list shows the link to the card at once > when the page above the row changed meanwhile, as Správa after a cold launch (#2088) > then a step back about to copy the list scrolls it so the row stands where it stood when the card opened, and leaves the focus to the return",
     "reason": "Round 43 (#2088): a step back moves over a copy of the live page taken once that page is placed, as main did before #1538, instead of over the copy kept at the push, which let the motion go before the page was rendered and started later than main on the phones",
     "contract": "docs/frontend-overview.md, Motion (Round 43)"
   },
@@ -35,7 +35,7 @@
     "kind": "retired",
     "suite": "frontend-vitest",
     "test": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates and an article opened from the news, which was kept behind it > when the live news is put back at the scroll its kept copy showed, then the step back leaves the scroll alone",
-    "replacement": "e2e/back-motion-start.spec.ts > Given an administrator in the app on the home screen of a phone, launched straight on Správa scrolled down, gone on to Dárci > when Zpět is pressed for the first time since the launch, then both copies join the cover only once the live Správa is drawn beneath at the place its copy shows, the leaving Dárci stands at rest in the first frame both show, and the step ends on the live Správa without a jump (#2088)",
+    "replacement": "src/app/core/navigation/page-focus.spec.ts > Given a list of the administration that a step back returns to from the card it opened > when the list shows the link to the card at once > when the page above the row changed meanwhile, as Správa after a cold launch (#2088) > then a step back about to copy the list scrolls it so the row stands where it stood when the card opened, and leaves the focus to the return",
     "reason": "Round 43 (#2088): a step back moves over a copy of the live page taken once that page is placed, as main did before #1538, instead of over the copy kept at the push, which let the motion go before the page was rendered and started later than main on the phones",
     "contract": "docs/frontend-overview.md, Motion (Round 43)"
   }
