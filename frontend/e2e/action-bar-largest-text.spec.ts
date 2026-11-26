@@ -1,5 +1,6 @@
 import { Locator, Page } from '@playwright/test';
 import {
+  article,
   donorWithDonations,
   mockAdministration,
   rememberedSession,
@@ -113,5 +114,98 @@ test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide
     expect(lineBoxes).toHaveLength(2);
     expect(lineBoxes[0]).toBe(lineBoxes[1]);
     expect(fontSizes).toEqual([smallText, smallText]);
+  });
+});
+
+const SAVED_ARTICLE_PATH = `/sprava/aktuality/${article.id}`;
+const LARGEST_SHARE_OF_THE_SCREEN_COVERED = 0.25;
+
+function coveredShareOfTheScreen(bar: Locator): Promise<number> {
+  return bar.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const covered = Math.max(0, Math.min(box.bottom, innerHeight) - Math.max(box.top, 0));
+    return covered / innerHeight;
+  });
+}
+
+test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide whose installed app shows the largest accessibility text, editing a saved article`, () => {
+  test.use({ viewport: NARROW_PHONE });
+
+  test.beforeEach(async ({ page }) => {
+    await showLargestSystemText(page);
+  });
+
+  test('when they read the form from its top, then the action bar covers at most a quarter of the screen and nothing on the page is wider than the screen', async ({
+    page,
+  }) => {
+    await openUnlockedAdministration(page, SAVED_ARTICLE_PATH);
+    const bar = page.locator('.ui-action-bar');
+    await expect(bar.getByRole('button').first()).toBeAttached();
+    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(() => window.scrollTo(0, 0));
+
+    await expect
+      .poll(() => coveredShareOfTheScreen(bar))
+      .toBeLessThanOrEqual(LARGEST_SHARE_OF_THE_SCREEN_COVERED);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(0);
+  });
+});
+
+const WIDE_PHONE = { width: 420, height: 746 };
+
+interface BarAndCard {
+  leftGap: number;
+  rightGap: number;
+  sameRadius: boolean;
+  sameShadow: boolean;
+}
+
+function barBesideTheCards(bar: Locator): Promise<BarAndCard> {
+  return bar.evaluate((element) => {
+    const card = document.querySelector<HTMLElement>('main .ui-card')!;
+    const own = element.getBoundingClientRect();
+    const cardBox = card.getBoundingClientRect();
+    const barStyle = getComputedStyle(element);
+    const cardStyle = getComputedStyle(card);
+    return {
+      leftGap: Math.round(Math.abs(own.left - cardBox.left)),
+      rightGap: Math.round(Math.abs(own.right - cardBox.right)),
+      sameRadius: barStyle.borderTopLeftRadius === cardStyle.borderTopLeftRadius,
+      sameShadow: barStyle.boxShadow === cardStyle.boxShadow,
+    };
+  });
+}
+
+test.describe(`Given an administrator on an iPhone ${WIDE_PHONE.width} pt wide editing a saved article`, () => {
+  test.use({ viewport: WIDE_PHONE });
+
+  test('when they scroll to the end of the form, then the action bar rests in the cards’ column with their edges, radius and shadow', async ({
+    page,
+  }) => {
+    await openUnlockedAdministration(page, SAVED_ARTICLE_PATH);
+    const bar = page.locator('.ui-action-bar');
+    await expect(bar.getByRole('button').first()).toBeVisible();
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+
+    await expect
+      .poll(() => barBesideTheCards(bar))
+      .toEqual({ leftGap: 0, rightGap: 0, sameRadius: true, sameShadow: true });
+  });
+
+  test('when they read the form from its top, then the action bar floats over the page on the bottom of the screen', async ({
+    page,
+  }) => {
+    await openUnlockedAdministration(page, SAVED_ARTICLE_PATH);
+    const bar = page.locator('.ui-action-bar');
+    await expect(bar.getByRole('button').first()).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 0));
+
+    await expect(bar).toBeInViewport({ ratio: 1 });
+    expect((await barBesideTheCards(bar)).sameShadow).toBe(false);
   });
 });
