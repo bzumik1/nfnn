@@ -61,3 +61,31 @@ test.describe('Given a visitor on a computer who reads the quotes on Přispět a
     expect(Math.abs(aboutMark.height - donateMark.height)).toBeLessThanOrEqual(SIZE_TOLERANCE);
   });
 });
+
+async function drawnColour(mark: Locator): Promise<string> {
+  await expect(mark).toBeVisible();
+  return mark.evaluate((host) => getComputedStyle(host.querySelector('svg') ?? host).fill);
+}
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test.describe(`Given a visitor on a computer in the ${colorScheme} appearance who reads the quotes on Přispět and O nás`, () => {
+    test.use({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce', colorScheme });
+
+    test.beforeEach(async ({ page }) => {
+      await mockDonorApi(page);
+      await serveFoundersNote(page);
+    });
+
+    test('when they see both quotes, then both quote marks take the same colour', async ({
+      page,
+    }) => {
+      await page.goto('/prispet');
+      const donateColour = await drawnColour(page.locator('.donate-quote-mark'));
+
+      await page.goto('/o-nas');
+      const aboutColour = await drawnColour(page.locator('#o-nas .quote-mark'));
+
+      expect(aboutColour).toBe(donateColour);
+    });
+  });
+}
