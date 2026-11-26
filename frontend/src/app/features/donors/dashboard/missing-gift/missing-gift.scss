@@ -6,7 +6,7 @@
   margin-top: var(--space-4);
   padding: var(--space-4);
   background: var(--color-surface-alt);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
 }
 
 .missing-gift-title {
@@ -25,5 +25,8 @@
 
 .missing-gift-add {
   max-width: 100%;
+  border-color: var(--color-border-accent);
+  background: var(--color-surface);
   white-space: normal;
+  text-align: center;
 }

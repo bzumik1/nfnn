@@ -2203,6 +2203,20 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
     });
   }
 
+  test('when they open /sprava/darci, then the initials of every donor without a portrait stay inside their circle', async ({
+    page,
+  }) => {
+    await serveRecentDonors(page);
+    await page.goto('/sprava/darci');
+    await expect(page.getByRole('heading', { level: 1, name: 'Dárci' })).toBeVisible();
+    const avatars = page.locator('main .donor-avatar:not(:has(img))');
+    await expect(avatars.first()).toBeVisible();
+
+    for (const avatar of await avatars.all()) {
+      expect(await lettersPastTheirCircle(avatar, avatar)).toBeLessThanOrEqual(0);
+    }
+  });
+
   test('when they open the monthly report, then Uložit nastavení keeps room for Ukládáme… and both labels wrap within the button and its form instead of being cut', async ({
     page,
   }) => {
@@ -2390,6 +2404,44 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
     expect(await pastTheirCard(summary)).toEqual([]);
   });
 
+  test('when they look at the summary at the default text size, then the values start on one column, the rows keep one step and Kopírovat adds no height to the line of the symbol', async ({
+    page,
+  }) => {
+    const summary = await openSummary(page);
+
+    const pairs = await summaryPairs(summary);
+    const column = pairs[0].value.left;
+    for (const { value } of pairs) {
+      expect(Math.abs(value.left - column)).toBeLessThanOrEqual(0.5);
+    }
+    const rows = await summary.locator('dl > div').evaluateAll((elements) =>
+      elements.map((row) => {
+        const box = row.getBoundingClientRect();
+        const label = row.querySelector('dt')!.getBoundingClientRect();
+        return { top: box.top, bottom: box.bottom, labelHeight: label.height };
+      }),
+    );
+    const gaps = rows.slice(1).map((row, index) => row.top - rows[index].bottom);
+    for (const gap of gaps) {
+      expect(Math.abs(gap - gaps[0])).toBeLessThanOrEqual(0.5);
+    }
+    const symbolRow = rows[0];
+    expect(symbolRow.bottom - symbolRow.top).toBeLessThanOrEqual(symbolRow.labelHeight + 2);
+  });
+
+  test('when they look at the summary on a phone 320 pt wide, then Kopírovat keeps a gap below the label VS', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    const summary = await openSummary(page);
+
+    const [symbolPair] = await summaryPairs(summary);
+    const copy = (await summary
+      .getByRole('button', { name: 'Kopírovat variabilní symbol' })
+      .boundingBox())!;
+    expect(copy.y).toBeGreaterThanOrEqual(symbolPair.label.bottom);
+  });
+
   test('when the device could not store the administration and they look at the card at the default text size, then the notice with Uložit znovu keeps the same gap above the summary as the cards keep between them', async ({
     page,
   }) => {
@@ -2450,6 +2502,20 @@ test.describe('Given an administrator on an iPhone 390 pt wide whose installed a
     await expect(table.locator('.ui-badge', { hasText: 'variabilním symbolem' })).toBeVisible();
 
     await expect.poll(() => badgesPastTheirRow(table)).toEqual([]);
+  });
+
+  test('when they open the gifts of a donor on an iPhone SE, then the line naming how a gift was paired breaks only between words', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`${PETR_DETAIL_PATH}/dary`);
+    const meta = page.locator('main .donation-rows .ui-list__meta');
+    await expect(meta.first()).toContainText('podle variabilního symbolu');
+    await page.evaluate(() => document.fonts.ready);
+
+    for (const line of await meta.all()) {
+      expect(await wordsBrokenInside(line)).toEqual([]);
+    }
   });
 });
 

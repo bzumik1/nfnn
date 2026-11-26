@@ -228,7 +228,7 @@ export class AdminPeople {
     maxlength: $localize`:@@admin.people.boardNote.tooLong:Poznámka může mít nejvíc ${MAX_BOARD_NOTE_LENGTH}:max: znaků.`,
   };
   protected readonly emailMessages = {
-    pattern: $localize`:@@admin.people.email.invalid:Zadejte e-mail ve tvaru jana@example.cz.`,
+    pattern: $localize`:@@admin.people.email.invalid:Zadejte e\u2011mail ve tvaru jana@example.cz.`,
     maxlength: $localize`:@@admin.people.email.tooLong:E-mail může mít nejvíc ${MAX_EMAIL_LENGTH}:max: znaků.`,
   };
   protected readonly receiptRoleMessages = {

@@ -699,9 +699,9 @@
                               >&ngsp;<span class="ui-figures ui-figures--groups">
                                 @for (symbol of item.confirmedSymbols; track symbol) {
                                   @if (!$first) {
-                                    ,&ngsp;
+                                    &ngsp;
                                   }
-                                  <span>{{ symbol }}</span>
+                                  <span>{{ symbol }}{{ $last ? '' : ',' }}</span>
                                 }
                               </span>
                             </span>
@@ -1168,7 +1168,7 @@
           aria-labelledby="receipts-title"
         >
           <h2 id="receipts-title" class="ui-card__title" i18n="@@admin.donorDetail.receipts.title">
-            Vystavená potvrzení
+            Potvrzení
           </h2>
           @if (erasedAt() === null) {
             <div class="ui-card__body receipt-issue">
