@@ -23,6 +23,7 @@ import { Connectivity } from '../../../core/connectivity/connectivity';
 import { formatDataDay } from '../../../core/connectivity/data-time';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ShortViewport } from '../../../core/layout/short-viewport';
+import { SoftKeyboard, VisibleArea } from '../../../core/layout/soft-keyboard';
 import { BusyButton } from '../../../shared/ui/busy-button/busy-button';
 import { BusyLabel } from '../../../shared/ui/busy-label/busy-label';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
@@ -65,6 +66,7 @@ const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
 const MINOR_PER_CROWN = 100;
 const ANNOUNCE_DELAY_MS = 1200;
+const ROOM_ABOVE_KEYBOARD_PX = 16;
 const PAYMENT_QR_LEVEL = 'H';
 const SAVED_QR_SIDE_PX = 720;
 const CHOOSING_KEYS = new Set(['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End']);
@@ -135,6 +137,7 @@ export class PaymentPanel {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly compact = inject(CompactLayout).isCompact;
   private readonly short = inject(ShortViewport).isShort;
+  private readonly keyboard = inject(SoftKeyboard);
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
   private readonly qrBox = viewChild<ElementRef<HTMLElement>>('qrBox');
   private readonly bankApp = viewChild<ElementRef<HTMLElement>>('bankApp');
@@ -340,6 +343,12 @@ export class PaymentPanel {
     effect(() => this.focusAfterRetry(this.state().kind, this.openReady()));
     afterRenderEffect(() => this.prepareImage());
     effect(() => this.giftArrival.enable(this.variableSymbol() !== null));
+    effect(() => {
+      const area = this.keyboard.visibleArea();
+      if (area !== null) {
+        untracked(() => this.revealCustomAmount(area));
+      }
+    });
     whenLeft(() => this.giftArrival.pageLeft());
     afterNextRender(() => {
       const qrBox = this.qrBox();
@@ -625,6 +634,22 @@ export class PaymentPanel {
       }
     };
     qrCode.pngBlob(SAVED_QR_SIDE_PX).then(keep, () => keep(null));
+  }
+
+  private revealCustomAmount(area: VisibleArea): void {
+    const field = this.customAmountField()?.nativeElement;
+    if (!field || field.ownerDocument.activeElement !== field) {
+      return;
+    }
+    const root = field.ownerDocument.documentElement;
+    const box = field.getBoundingClientRect();
+    const covered = box.bottom - (area.top + area.height - ROOM_ABOVE_KEYBOARD_PX);
+    if (covered <= 0) {
+      return;
+    }
+    const headerRoom = Number.parseFloat(getComputedStyle(root).scrollPaddingTop) || 0;
+    const room = box.top - (area.top + headerRoom);
+    root.scrollBy({ top: Math.min(covered, Math.max(room, 0)), behavior: 'instant' });
   }
 
   private redrawLater(): void {
