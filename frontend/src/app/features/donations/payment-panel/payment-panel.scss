@@ -181,17 +181,6 @@
   gap: var(--space-4);
 }
 
-.bank-key {
-  color: var(--color-text-muted);
-  font-size: var(--text-md);
-}
-
-.bank-value {
-  font-weight: var(--weight-bold);
-  color: var(--color-text);
-  font-size: var(--text-md);
-}
-
 .bank-row-amount {
   margin-inline: calc(-1 * var(--space-2));
   padding-inline: var(--space-2);
@@ -216,14 +205,8 @@
   }
 }
 
-.bank-skeleton {
-  &.is-held {
-    visibility: hidden;
-  }
-
-  .bank-value-wrap {
-    flex-wrap: nowrap;
-  }
+.bank-skeleton .bank-value-wrap {
+  flex-wrap: nowrap;
 }
 
 .bank-skeleton-line {
@@ -283,7 +266,6 @@
 
 .bank-failure {
   display: grid;
-  align-content: center;
   justify-items: start;
   gap: var(--space-4);
   @include motion.appear($rises: false);

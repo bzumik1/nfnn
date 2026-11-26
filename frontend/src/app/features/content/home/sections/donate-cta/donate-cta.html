@@ -83,23 +83,6 @@
         </h3>
       }
 
-      @if (!variableSymbol()) {
-        <p afterBankDetails class="ui-callout ui-callout--warning bank-receipt-note">
-          <span i18n="@@home.donate.bank.receiptNote.before"
-            >Potvrzení o&nbsp;daru k&nbsp;platbě bez přihlášení vystavíme, až si</span
-          >&ngsp;<button
-            type="button"
-            class="bank-receipt-register"
-            (click)="register()"
-            i18n="@@home.donate.bank.receiptNote.register"
-          >
-            založíte účet</button
-          >&ngsp;<span i18n="@@home.donate.bank.receiptNote.after"
-            >a&nbsp;ověříte v&nbsp;něm bankovní účet, ze kterého jste platili.</span
-          >
-        </p>
-      }
-
       <div afterPayment class="next">
         @if (stepLevel() === 2) {
           <h2 class="step-title" i18n="@@home.donate.next.title">Co bude dál</h2>
@@ -123,8 +106,8 @@
               také.
             </li>
             <li i18n="@@home.donate.next.receiptAnonymous">
-              S&nbsp;účtem dárce si po skončení roku stáhnete roční potvrzení o&nbsp;daru. Dar si
-              můžete odečíst od základu daně podle zákona o&nbsp;daních z&nbsp;příjmů.
+              Po skončení roku si stáhnete roční potvrzení o&nbsp;daru. Dar si můžete odečíst od
+              základu daně podle zákona o&nbsp;daních z&nbsp;příjmů.
             </li>
           }
         </ul>
