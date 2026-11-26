@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { mockDonorApi, openDonorSection, rememberedDonorSession, signIn } from './donor-session';
 import {
@@ -175,5 +175,38 @@ test.describe('Given a donor on Údaje a zabezpečení of a browser whose part o
       'Prohlížeč zatím nespustil část webu, která upozornění doručuje.',
     );
     expect(await page.evaluate(() => 'e2eBeforeRetry' in window)).toBe(true);
+  });
+});
+
+async function gapBetween(upper: Locator, lower: Locator): Promise<number> {
+  const [upperBox, lowerBox] = [await upper.boundingBox(), await lower.boundingBox()];
+  return (lowerBox?.y ?? 0) - ((upperBox?.y ?? 0) + (upperBox?.height ?? 0));
+}
+
+test.describe('Given a signed-in donor on Údaje a zabezpečení', () => {
+  test('when the notifications card says what this device can do, then its intro and that sentence stand as far apart as the paragraphs of Smazání účtu', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    const notifications = page.locator('.notifications');
+    const intro = notifications.locator(':scope > .ui-card__intro').first();
+    const state = notifications.locator('.notifications-state');
+    await expect(intro).toContainText('Krátká upozornění na toto zařízení');
+    await expect(state).toHaveCount(1);
+    await expect(state).toBeVisible();
+
+    const deletion = await page.locator('.account-deletion .ui-card__intro').all();
+    expect(deletion.length).toBeGreaterThan(1);
+    const deletionGaps: number[] = [];
+    for (const [index, paragraph] of deletion.slice(1).entries()) {
+      deletionGaps.push(await gapBetween(deletion[index], paragraph));
+    }
+    const stateGap = await gapBetween(intro, state);
+
+    for (const gap of deletionGaps) {
+      expect(stateGap).toBeCloseTo(gap, 0);
+    }
   });
 });
