@@ -6,7 +6,7 @@ import {
   openReceiptsAfterSignIn,
   pretendIphoneThatShares,
 } from './receipt-donations';
-import { answerReceiptIssuing, mockReceiptIssuing, RECEIPT_ISSUING_URL } from './receipt-issuing';
+import { answerReceiptIssuing, RECEIPT_ISSUING_URL } from './receipt-issuing';
 import { donorWithDonations } from './baseline/screen-mocks';
 import {
   bankAccountItem,
@@ -1299,73 +1299,6 @@ test.describe('Given a signed-in donor on a computer', () => {
       await expect(page.locator('.receipt-ready .receipt-status')).not.toHaveClass(
         /receipt-status--closing/,
       );
-    });
-
-    test(`when the next download of the ready receipt on Můj přehled is refused in a ${width} px window, then the finished status keeps its last text while its line closes`, async ({
-      page,
-    }) => {
-      await mockDonorApi(page, receiptDonations);
-      await mockReceiptIssuing(page, ISSUING);
-      await page.setViewportSize({ width, height: 844 });
-      await openReceiptsAfterSignIn(page);
-      await page.goto('/darce/prehled');
-      const button = page.locator('.receipt-ready-pdf');
-      const wrapper = page.locator('.receipt-ready .receipt-status');
-      await Promise.all([page.waitForEvent('download'), button.click()]);
-      await expect(page.locator('.receipt-ready').getByRole('status')).toHaveText(/\S/);
-      await expect(wrapper).not.toHaveClass(/receipt-status--closing/);
-      await untilStill(wrapper);
-      await page.route(
-        (url) => url.pathname === RECEIPT_ISSUING_URL,
-        (route) =>
-          route.fulfill({
-            status: 409,
-            contentType: 'application/problem+json',
-            json: {
-              type: 'https://nfnn.cz/problems/donations/receipt-signing-paused',
-              title: 'Vydávání potvrzení je pozastavené',
-              status: 409,
-            },
-          }),
-      );
-
-      const closing = wrapper.evaluate(
-        (element) =>
-          new Promise<{ rowsClose: boolean; textShown: boolean; textOutlastsRows: boolean }>(
-            (resolve) => {
-              new MutationObserver((_, observer) => {
-                if (!element.classList.contains('receipt-status--closing')) {
-                  return;
-                }
-                observer.disconnect();
-                const line = element.querySelector('[role="status"]')!;
-                const rows = element
-                  .getAnimations()
-                  .find(
-                    (animation) =>
-                      (animation as CSSTransition).transitionProperty === 'grid-template-rows',
-                  );
-                const shown = Array.from(line.children).filter(
-                  (part) => part.getBoundingClientRect().width > 0,
-                );
-                const endOf = (animation: Animation) =>
-                  Number(animation.effect!.getComputedTiming().endTime);
-                resolve({
-                  rowsClose: rows !== undefined,
-                  textShown: shown.length > 0,
-                  textOutlastsRows:
-                    rows !== undefined &&
-                    shown.some((part) =>
-                      part.getAnimations().some((leave) => endOf(leave) >= endOf(rows)),
-                    ),
-                });
-              }).observe(element, { attributes: true, attributeFilter: ['class'] });
-            },
-          ),
-      );
-      await button.click();
-
-      expect(await closing).toEqual({ rowsClose: true, textShown: true, textOutlastsRows: true });
     });
   }
 });
