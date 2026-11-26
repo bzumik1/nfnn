@@ -338,6 +338,23 @@ describe('Given a form built from form fields', () => {
       expect(errorsShownWhenScrolled).toEqual(['Vyplňte prosím jméno.']);
     });
 
+    it('then the keyboard rising over it brings the field into view again, and no longer once the field is filled in', async () => {
+      placeBelowTheWindow(nameField(), 120);
+      let scrolls = 0;
+      nameField().scrollIntoView = () => (scrolls += 1);
+      await submit();
+      expect(scrolls).toBe(1);
+
+      keyboard.show();
+      await fixture.whenStable();
+      expect(scrolls).toBe(2);
+
+      await type('name', 'Jan');
+      keyboard.hide();
+      await fixture.whenStable();
+      expect(scrolls).toBe(2);
+    });
+
     it('then a field taller than the window brings its control into view instead', async () => {
       placeBelowTheWindow(nameField(), 2000);
       const scrolled: string[] = [];
