@@ -161,9 +161,15 @@ export class PasskeysPanel {
   protected readonly added = signal<string | null>(null);
   protected readonly rowLeft = signal(false);
   private readonly rowsStillLeaving = signal(0);
+  private readonly rowsHoldingEmptyText = new Set<HTMLElement>();
   protected readonly emptyTextBehindLeavingRow = computed(() => this.rowsStillLeaving() > 0);
   protected readonly rowLeaves = leaveWithClass('passkey-slot--leaving', {
-    left: (row) => this.focusAfterRowLeaves.rowLeaveEnded(row),
+    left: (row) => {
+      if (!row.isConnected) {
+        this.letEmptyTextEnter(row);
+      }
+      this.focusAfterRowLeaves.rowLeaveEnded(row);
+    },
   });
   private readonly focusAfterRowLeaves = new FocusAfterRowLeaves(
     this.document,
@@ -444,7 +450,8 @@ export class PasskeysPanel {
       return;
     }
     this.rowsStillLeaving.update((count) => count + 1);
-    afterRemoval(row, () => this.letEmptyTextEnter(), this.region()?.nativeElement ?? null);
+    this.rowsHoldingEmptyText.add(row);
+    afterRemoval(row, () => this.letEmptyTextEnter(row), this.region()?.nativeElement ?? null);
     const list = row.parentElement;
     afterNextRender(
       () => {
@@ -457,7 +464,10 @@ export class PasskeysPanel {
     );
   }
 
-  private letEmptyTextEnter(): void {
+  private letEmptyTextEnter(row: HTMLElement): void {
+    if (!this.rowsHoldingEmptyText.delete(row)) {
+      return;
+    }
     this.rowsStillLeaving.update((count) => count - 1);
     if (this.rowsStillLeaving() === 0) {
       this.emptyText()?.nativeElement.classList.remove(EMPTY_TEXT_BEHIND_LEAVING_ROW);
