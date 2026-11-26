@@ -4,7 +4,9 @@
   [class.ui-page--form]="administration"
 >
   @if (administration) {
-    <app-page-title i18n="@@admin.verify.empty.title">Ověřit potvrzení</app-page-title>
+    <h1 #adminTitle class="ui-page-title" tabindex="-1" i18n="@@admin.verify.empty.title">
+      Ověřit potvrzení
+    </h1>
   } @else {
     <app-page-title i18n="@@donor.verify.empty.title">Ověření potvrzení o&nbsp;daru</app-page-title>
   }

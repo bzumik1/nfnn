@@ -19,6 +19,7 @@ import {
 } from '../../../../core/auth/testing/donor-fixtures';
 import { accessibleText } from '../../../../shared/ui/busy-label/testing/accessible-text';
 import { keepRoomForEmptyText, LaidOutBoxes, PasskeysPanel } from './passkeys-panel';
+import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/leaving-row';
 import { leavesAsInTheBrowser } from '../../../../shared/ui/leaving-row/testing/leaves-as-in-the-browser';
 import { withOrdinarySpaces } from '../../../../../testing/ordinary-spaces';
 
@@ -407,6 +408,18 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
   describe('when the donor removes a passkey', () => {
     beforeEach(() => render());
+
+    it('and the card is destroyed while the removed row leaves, then the leave it follows is forgotten, so no watch of it outlives the card', async () => {
+      await clickButton('Odebrat');
+      await clickButton('Ano, odebrat');
+      http.expectOne(`${PASSKEYS_URL}/${IPHONE.id}`).flush(null);
+      const forget = vi.spyOn(FocusAfterRowLeaves.prototype, 'forget');
+      onTestFinished(() => forget.mockRestore());
+
+      fixture.destroy();
+
+      expect(forget).toHaveBeenCalledOnce();
+    });
 
     it("then the card's status line, never the button, says first that it removes and then only the result", async () => {
       const status = element('.passkeys > .ui-form-status');

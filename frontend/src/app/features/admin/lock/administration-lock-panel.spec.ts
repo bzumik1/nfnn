@@ -115,6 +115,22 @@ describe('Given the panel of the locked administration', () => {
       ]);
     });
 
+    it('then the note Face ID, otisk prstu nebo zámek obrazovky stands right under the passkey button, before Použít heslo, and describes that button', () => {
+      const passkey = element('button.lock-passkey');
+      const note = Array.from(
+        fixture.nativeElement.querySelectorAll('p') as NodeListOf<HTMLElement>,
+      ).find(
+        (paragraph) =>
+          withOrdinarySpaces(paragraph.textContent)?.trim() ===
+          'Face ID, otisk prstu nebo zámek obrazovky.',
+      );
+
+      expect(note).toBeDefined();
+      expect(note?.previousElementSibling).toBe(passkey);
+      expect(note?.nextElementSibling).toBe(element('button.lock-use-password'));
+      expect(passkey?.getAttribute('aria-describedby')).toBe(note?.id || 'the note has no id');
+    });
+
     it('then its heading is the title of the card', () => {
       expect(element('h1')?.className).toBe('ui-card__title');
     });
@@ -205,6 +221,22 @@ describe('Given the panel of the locked administration', () => {
       ]);
       expect(element('button.lock-passkey')?.classList).toContain('ui-button--primary');
       expect(element('button.lock-use-password')?.classList).not.toContain('ui-button--primary');
+    });
+
+    it('then the note Face ID, otisk prstu nebo zámek obrazovky stands right under the passkey button, before Použít heslo, and describes that button', () => {
+      const passkey = element('button.lock-passkey');
+      const note = Array.from(
+        fixture.nativeElement.querySelectorAll('p') as NodeListOf<HTMLElement>,
+      ).find(
+        (paragraph) =>
+          withOrdinarySpaces(paragraph.textContent)?.trim() ===
+          'Face ID, otisk prstu nebo zámek obrazovky.',
+      );
+
+      expect(note).toBeDefined();
+      expect(note?.previousElementSibling).toBe(passkey);
+      expect(note?.nextElementSibling).toBe(element('button.lock-use-password'));
+      expect(passkey?.getAttribute('aria-describedby')).toBe(note?.id || 'the note has no id');
     });
 
     it('and the passkey is pressed, then the server checks the passkey of the account and nothing is asked of the device copy', async () => {
