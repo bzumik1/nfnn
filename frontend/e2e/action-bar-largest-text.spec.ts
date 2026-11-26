@@ -289,3 +289,55 @@ for (const rootPx of FLOATING_ENLARGED_TEXT_PX) {
     });
   });
 }
+
+function gapAboveTheBar(bar: Locator): Promise<{ gap: number; margin: number }> {
+  return bar.evaluate((element) => {
+    const before = element.previousElementSibling!.getBoundingClientRect();
+    return {
+      gap: Math.round(element.getBoundingClientRect().top - before.bottom),
+      margin: Math.round(Number.parseFloat(getComputedStyle(element).marginTop)),
+    };
+  });
+}
+
+for (const { name, viewport, rootPx } of [
+  {
+    name: 'an iPhone 375 pt wide with the largest accessibility text',
+    viewport: { width: 375, height: 667 },
+    rootPx: LARGEST_SYSTEM_TEXT_PX,
+  },
+  {
+    name: 'a computer window 1280 × 400 with the text at 200 %',
+    viewport: { width: 1280, height: 400 },
+    rootPx: 32,
+  },
+]) {
+  test.describe(`Given an administrator on ${name} editing a saved article whose bar stands in the page`, () => {
+    test.use({ viewport });
+
+    test('when the connection drops, then the bar keeps its place under the card above it instead of rising over it', async ({
+      page,
+      context,
+    }) => {
+      await page.addInitScript((px) => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = `html { font-size: ${px}px; }`;
+          document.head.append(style);
+        });
+      }, rootPx);
+      await openUnlockedAdministration(page, SAVED_ARTICLE_PATH);
+      const bar = page.locator('.ui-action-bar');
+      await expect(bar).toHaveClass(/ui-action-bar--in-flow/);
+      const online = await gapAboveTheBar(bar);
+
+      await page.route('**/api/**', (route) => route.abort('internetdisconnected'));
+      await context.setOffline(true);
+      await expect(page.locator('html')).toHaveClass(/\bis-offline\b/);
+      await expect(bar).toHaveClass(/ui-action-bar--in-flow/);
+
+      expect(online.gap).toBe(online.margin);
+      expect(await gapAboveTheBar(bar)).toEqual(online);
+    });
+  });
+}
