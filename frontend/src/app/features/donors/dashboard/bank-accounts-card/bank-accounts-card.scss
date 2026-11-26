@@ -416,6 +416,7 @@
 
 .add-account-number__head {
   display: inline-block;
+  max-inline-size: 100%;
 }
 
 .add-account-strut {
@@ -423,6 +424,10 @@
   padding-inline: 0;
   border-inline-width: 0;
   visibility: hidden;
+
+  &::before {
+    content: none;
+  }
 
   &::after {
     content: '\200b';
