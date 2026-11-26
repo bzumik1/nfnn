@@ -13,7 +13,7 @@ const NARROW_PHONE = { width: 375, height: 667 };
 
 interface RowShape {
   name: string;
-  noteBesideFigures: boolean;
+  figuresUnderTheNote: boolean;
   dateLikeNote: boolean;
   outsideTheCard: string[];
 }
@@ -40,16 +40,12 @@ function rowShapes(page: Page): Promise<RowShape[]> {
       const meta = part('meta')!;
       const value = part('value');
       const state = part('state');
-      const besideIt = (element: HTMLElement | null) => {
-        if (!element) {
-          return false;
-        }
-        const box = element.getBoundingClientRect();
-        return [title, meta].some((text) => {
-          const own = text.getBoundingClientRect();
-          return own.right > box.left && own.left < box.right;
-        });
-      };
+      const noteBottom = Math.max(
+        title.getBoundingClientRect().bottom,
+        meta.getBoundingClientRect().bottom,
+      );
+      const underTheNote = (element: HTMLElement | null) =>
+        element === null || element.getBoundingClientRect().top >= noteBottom - 0.5;
       const outsideTheCard = [...row.querySelectorAll<HTMLElement>('*')]
         .filter((element) => {
           const box = element.getBoundingClientRect();
@@ -60,7 +56,7 @@ function rowShapes(page: Page): Promise<RowShape[]> {
       const dateStyle = state ? getComputedStyle(state) : noteStyle;
       return {
         name: title.textContent!.trim(),
-        noteBesideFigures: besideIt(value) || besideIt(state),
+        figuresUnderTheNote: underTheNote(value) && underTheNote(state),
         dateLikeNote:
           dateStyle.fontSize === noteStyle.fontSize && dateStyle.color === noteStyle.color,
         outsideTheCard,
@@ -81,7 +77,7 @@ test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide
 
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
-      expect(row, row.name).toMatchObject({ noteBesideFigures: false, dateLikeNote: true });
+      expect(row, row.name).toMatchObject({ figuresUnderTheNote: true, dateLikeNote: true });
     }
   });
 
@@ -101,7 +97,7 @@ test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide
 
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
-      expect(row, row.name).toMatchObject({ noteBesideFigures: false, outsideTheCard: [] });
+      expect(row, row.name).toMatchObject({ figuresUnderTheNote: true, outsideTheCard: [] });
     }
   });
 });

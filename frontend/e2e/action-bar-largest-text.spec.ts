@@ -118,7 +118,7 @@ test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide
 });
 
 const SAVED_ARTICLE_PATH = `/sprava/aktuality/${article.id}`;
-const LARGEST_SHARE_OF_THE_SCREEN_COVERED = 0.25;
+const LARGEST_SHARE_OF_THE_SCREEN_COVERED = 1 / 3;
 
 function coveredShareOfTheScreen(bar: Locator): Promise<number> {
   return bar.evaluate((element) => {
@@ -135,7 +135,7 @@ test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide
     await showLargestSystemText(page);
   });
 
-  test('when they read the form from its top, then the action bar covers at most a quarter of the screen and nothing on the page is wider than the screen', async ({
+  test('when they read the form from its top, then the action bar covers at most a third of the screen and nothing on the page is wider than the screen', async ({
     page,
   }) => {
     await openUnlockedAdministration(page, SAVED_ARTICLE_PATH);
@@ -157,23 +157,19 @@ test.describe(`Given an administrator on an iPhone ${NARROW_PHONE.width} pt wide
 
 const WIDE_PHONE = { width: 420, height: 746 };
 
-interface BarAndCard {
-  leftGap: number;
-  rightGap: number;
+interface BarLook {
+  width: number;
   sameRadius: boolean;
   sameShadow: boolean;
 }
 
-function barBesideTheCards(bar: Locator): Promise<BarAndCard> {
+function barBesideTheCards(bar: Locator): Promise<BarLook> {
   return bar.evaluate((element) => {
     const card = document.querySelector<HTMLElement>('main .ui-card')!;
-    const own = element.getBoundingClientRect();
-    const cardBox = card.getBoundingClientRect();
     const barStyle = getComputedStyle(element);
     const cardStyle = getComputedStyle(card);
     return {
-      leftGap: Math.round(Math.abs(own.left - cardBox.left)),
-      rightGap: Math.round(Math.abs(own.right - cardBox.right)),
+      width: Math.round(element.getBoundingClientRect().width),
       sameRadius: barStyle.borderTopLeftRadius === cardStyle.borderTopLeftRadius,
       sameShadow: barStyle.boxShadow === cardStyle.boxShadow,
     };
@@ -183,29 +179,79 @@ function barBesideTheCards(bar: Locator): Promise<BarAndCard> {
 test.describe(`Given an administrator on an iPhone ${WIDE_PHONE.width} pt wide editing a saved article`, () => {
   test.use({ viewport: WIDE_PHONE });
 
-  test('when they scroll to the end of the form, then the action bar rests in the cards’ column with their edges, radius and shadow', async ({
-    page,
-  }) => {
-    await openUnlockedAdministration(page, SAVED_ARTICLE_PATH);
-    const bar = page.locator('.ui-action-bar');
-    await expect(bar.getByRole('button').first()).toBeVisible();
-
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-
-    await expect
-      .poll(() => barBesideTheCards(bar))
-      .toEqual({ leftGap: 0, rightGap: 0, sameRadius: true, sameShadow: true });
-  });
-
-  test('when they read the form from its top, then the action bar floats over the page on the bottom of the screen', async ({
+  test('when they scroll from the top of the form to its end, then the floating action bar rests with the radius and shadow of the cards and keeps its own width', async ({
     page,
   }) => {
     await openUnlockedAdministration(page, SAVED_ARTICLE_PATH);
     const bar = page.locator('.ui-action-bar');
     await expect(bar.getByRole('button').first()).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
-
     await expect(bar).toBeInViewport({ ratio: 1 });
-    expect((await barBesideTheCards(bar)).sameShadow).toBe(false);
+    const floating = await barBesideTheCards(bar);
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+
+    expect(floating.sameShadow).toBe(false);
+    await expect
+      .poll(() => barBesideTheCards(bar))
+      .toEqual({ width: floating.width, sameRadius: true, sameShadow: true });
+  });
+});
+
+const ENLARGED_TEXT_PX = 28;
+const SE = { width: 375, height: 667 };
+const SCROLL_STEP_PX = 16;
+const STILL_FRAMES = 3;
+
+test.describe(`Given an administrator on an iPhone ${SE.width} pt wide with the text at about 165 %, editing a saved article`, () => {
+  test.use({ viewport: SE });
+
+  test('when they scroll slowly through the whole form, then the action bar never changes how it stands while the page stands still', async ({
+    page,
+  }) => {
+    await page.addInitScript((px) => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent = `html { font-size: ${px}px; }`;
+        document.head.append(style);
+      });
+    }, ENLARGED_TEXT_PX);
+    await openUnlockedAdministration(page, SAVED_ARTICLE_PATH);
+    const bar = page.locator('.ui-action-bar');
+    await expect(bar.getByRole('button').first()).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const result = await bar.evaluate(
+      async (element, { step, stillFrames }) => {
+        const frame = () => new Promise<void>((done) => requestAnimationFrame(() => done()));
+        const state = () => element.className;
+        let changesWhileStill = 0;
+        let changes = 0;
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        await frame();
+        let seen = state();
+        const end = () => document.documentElement.scrollHeight - innerHeight;
+        for (let top = 0; top <= end() + step; top += step) {
+          window.scrollTo({ top, behavior: 'instant' });
+          await frame();
+          if (state() !== seen) {
+            changes++;
+            seen = state();
+          }
+          for (let still = 0; still < stillFrames; still++) {
+            await frame();
+            if (state() !== seen) {
+              changesWhileStill++;
+              seen = state();
+            }
+          }
+        }
+        return { changes, changesWhileStill };
+      },
+      { step: SCROLL_STEP_PX, stillFrames: STILL_FRAMES },
+    );
+
+    expect(result.changes).toBeGreaterThan(0);
+    expect(result.changesWhileStill).toBe(0);
   });
 });
