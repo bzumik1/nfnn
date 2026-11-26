@@ -177,7 +177,7 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
     await expect.poll(() => placeProblems(name, 0)).toEqual([]);
   });
 
-  test('when an administrator taps Zneplatnit klíč with the code still empty and the keyboard up, then the code field with its error and hint stands above the sticky buttons and the keyboard, and still above the buttons once the keyboard goes', async ({
+  test('when an administrator taps Zneplatnit klíč with the code still empty and the keyboard up, which keeps the focus in the field as iOS does, then the code field with its error and hint stands above the sticky buttons and the keyboard, and still above the buttons once the keyboard goes', async ({
     page,
   }) => {
     await mockDonorApi(page);
@@ -197,7 +197,9 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
     await code.tap();
     await showKeyboard(page);
 
-    await dialog.getByRole('button', { name: 'Zneplatnit klíč', exact: true }).tap();
+    await dialog
+      .getByRole('button', { name: 'Zneplatnit klíč', exact: true })
+      .dispatchEvent('click');
 
     await expect(code).toBeFocused();
     await expect(dialog.getByText('Opište prosím kód z aplikace.')).toBeVisible();
