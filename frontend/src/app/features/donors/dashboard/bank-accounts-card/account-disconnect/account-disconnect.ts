@@ -5,6 +5,9 @@ import { NeedsConnection } from '../../../../../shared/ui/needs-connection/needs
 
 export type OfferedAccountAction = 'reconnect' | 'disconnect';
 
+const RETURNING = 'account-action-fold--returning';
+const CLOSING = 'account-action-fold--closing';
+
 @Component({
   selector: 'app-account-disconnect',
   imports: [Disclosure, NeedsConnection],
@@ -28,7 +31,12 @@ export class AccountDisconnect {
 
   protected settle(event: TransitionEvent): void {
     const fold = event.currentTarget as HTMLElement;
-    if (event.target === fold && fold.getAnimations().length === 0) {
+    if (
+      event.target === fold &&
+      fold.classList.contains(RETURNING) &&
+      !fold.classList.contains(CLOSING) &&
+      fold.getAnimations().length === 0
+    ) {
       this.returned.emit();
     }
   }

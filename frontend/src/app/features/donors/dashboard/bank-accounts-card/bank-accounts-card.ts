@@ -643,7 +643,10 @@ export class BankAccountsCard {
   }
 
   private actionButtonOf(account: BankAccountItem): HTMLButtonElement | null {
-    return this.host.nativeElement.querySelector<HTMLButtonElement>(`#${actionButtonId(account)}`);
+    const buttons = this.host.nativeElement.querySelectorAll<HTMLButtonElement>(
+      `#${actionButtonId(account)}`,
+    );
+    return Array.from(buttons).find((button) => button.closest('[inert]') === null) ?? null;
   }
 
   private keepButtonOf(account: BankAccountItem): HTMLButtonElement | null {

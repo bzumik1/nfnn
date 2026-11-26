@@ -41,7 +41,7 @@
 .account-action-fold--closing {
   @extend .account-confirm--closing;
   display: grid;
-  transition-behavior: normal;
+  transition-behavior: normal !important;
 }
 
 .account-action-fold--closing,
