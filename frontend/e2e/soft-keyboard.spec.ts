@@ -272,6 +272,63 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
     await expect.poll(() => panelAboveItsDialog(dialog)).toBe(0);
   });
 
+  test('when a hardware keyboard’s bar shortens the view under the sign-in sheet without counting as a keyboard, then the strip under the sheet shows the surface, not the bare page', async ({
+    page,
+  }) => {
+    await page.goto('/prispet');
+    await page.getByRole('main').getByRole('button', { name: 'Přihlásit se' }).click();
+    const dialog = page.getByRole('dialog');
+    await page.locator('#login-email').tap();
+
+    await page.evaluate(() => (window as KeyboardWindow).standInKeyboard?.show(60));
+
+    await expect(page.locator('html')).not.toHaveClass(/keyboard-open/);
+    await expect.poll(() => backdropAgainstSurface(dialog)).toEqual({ same: true });
+  });
+
+  test('when the field of Zneplatnit klíč loses the focus while the keyboard is still up, then the sheet keeps the top gap the theme asks for, with no jump', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings',
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/nastaveni');
+    await page.evaluate(() =>
+      document.documentElement.style.setProperty('--sheet-top-gap', `${100}px`),
+    );
+    await page.getByRole('button', { name: 'Zneplatnit klíč serveru…' }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
+    const code = dialog.getByLabel('Kód z aplikace');
+    await code.tap();
+    await showKeyboard(page);
+    await expect.poll(() => panelBelowItsDialogTop(dialog)).toBeGreaterThanOrEqual(100);
+
+    await code.evaluate((field) => field.blur());
+
+    await expect(page.locator('html')).not.toHaveClass(/keyboard-open/);
+    await expect.poll(() => panelBelowItsDialogTop(dialog)).toBeGreaterThanOrEqual(100);
+  });
+
+  test('when the view reports a stale height taller than the window, as after a rotation, then the sign-in sheet stays within the window', async ({
+    page,
+  }) => {
+    await page.goto('/prispet');
+    await page.getByRole('main').getByRole('button', { name: 'Přihlásit se' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    await page.evaluate(() => (window as KeyboardWindow).standInKeyboard?.show(-233));
+
+    await expect.poll(() => dialogBox(dialog)).toEqual({ top: 0, height: SMALL_PHONE.height });
+  });
+
   test('when the visitor taps Jiná částka, then the amount field takes the focus in the same tap', async ({
     page,
   }) => {
@@ -326,6 +383,24 @@ async function standInForAPanningKeyboard(page: Page): Promise<void> {
         viewport.dispatchEvent(new Event('scroll'));
       },
     };
+  });
+}
+
+function panelBelowItsDialogTop(dialog: Locator): Promise<number> {
+  return dialog.evaluate((element) => {
+    const panel = element.querySelector('.dialog-panel')!.getBoundingClientRect();
+    return Math.round(panel.top - element.getBoundingClientRect().top);
+  });
+}
+
+function backdropAgainstSurface(dialog: Locator): Promise<{ same: boolean }> {
+  return dialog.evaluate((element) => {
+    const probe = document.createElement('span');
+    probe.style.background = 'var(--color-surface)';
+    document.body.append(probe);
+    const surface = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return { same: getComputedStyle(element, '::backdrop').backgroundColor === surface };
   });
 }
 

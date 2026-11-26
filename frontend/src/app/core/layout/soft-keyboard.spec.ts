@@ -49,6 +49,7 @@ describe('Given a phone whose on-screen keyboard shortens the visual viewport', 
     root().classList.remove(KEYBOARD_OPEN_CLASS);
     root().style.removeProperty('--visual-viewport-top');
     root().style.removeProperty('--visual-viewport-height');
+    root().classList.remove('visual-viewport-panned');
   });
 
   it('when nothing is typed into, then the keyboard counts as closed and the page is left as it is', () => {
@@ -88,6 +89,20 @@ describe('Given a phone whose on-screen keyboard shortens the visual viewport', 
 
       expect(root().style.getPropertyValue('--visual-viewport-top')).toBe('');
       expect(root().style.getPropertyValue('--visual-viewport-height')).toBe('');
+    });
+
+    it('then the page carries the panned mark beside them', () => {
+      expect(root().classList.contains('visual-viewport-panned')).toBe(true);
+    });
+
+    it('and the view is whole again but for a rounded half pixel, as with a fractional pixel ratio or a browser zoom, then the page carries neither them nor the mark', () => {
+      viewport.offsetTop = 0;
+      viewport.height = SCREEN_HEIGHT - 0.5;
+      viewport.dispatchEvent(new Event('resize'));
+
+      expect(root().style.getPropertyValue('--visual-viewport-top')).toBe('');
+      expect(root().style.getPropertyValue('--visual-viewport-height')).toBe('');
+      expect(root().classList.contains('visual-viewport-panned')).toBe(false);
     });
 
     it('and the view is pinch-zoomed, then the page no longer carries where it stands, so a zoomed page keeps its dialogs as they are', () => {
@@ -143,5 +158,28 @@ describe('Given a browser without a visual viewport', () => {
     expect(keyboard.isOpen()).toBe(false);
     field.remove();
     TestBed.resetTestingModule();
+  });
+});
+
+describe('Given a phone whose visual viewport is already panned when the soft keyboard starts', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    delete (window as { visualViewport?: unknown }).visualViewport;
+    document.documentElement.style.removeProperty('--visual-viewport-top');
+    document.documentElement.style.removeProperty('--visual-viewport-height');
+    document.documentElement.classList.remove('visual-viewport-panned');
+  });
+
+  it('when it starts, then the page knows the panned view before any viewport event', () => {
+    const viewport = new FakeVisualViewport();
+    viewport.offsetTop = 120;
+    viewport.height = SCREEN_HEIGHT - 200;
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: SCREEN_HEIGHT });
+
+    TestBed.inject(SoftKeyboard);
+
+    expect(document.documentElement.style.getPropertyValue('--visual-viewport-top')).toBe('120px');
+    expect(document.documentElement.classList.contains('visual-viewport-panned')).toBe(true);
   });
 });
