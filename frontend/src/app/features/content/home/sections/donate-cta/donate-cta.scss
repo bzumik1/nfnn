@@ -62,34 +62,6 @@
   margin-top: var(--space-2);
 }
 
-.bank-receipt-note {
-  margin: 0 0 var(--space-6);
-  padding-inline: var(--space-7);
-}
-
-@include bp.down(tablet) {
-  .bank-receipt-note {
-    padding-inline: var(--space-5);
-  }
-}
-
-@include bp.container-down(payment-panel, phone) {
-  .bank-receipt-note {
-    padding-inline: var(--space-5);
-  }
-}
-
-.bank-receipt-register {
-  padding: 0;
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  font-weight: var(--weight-semibold);
-  text-decoration: underline;
-  cursor: pointer;
-}
-
 .step-title {
   font-family: var(--font-display);
   font-size: var(--text-3xl);
