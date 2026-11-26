@@ -239,18 +239,22 @@
             Registrovaní dárci: {{ data.donorsRegistered }}, z&nbsp;toho nových v&nbsp;roce
             {{ data.year }}: {{ data.newDonors }}.
           </p>
-          @if (data.months.length > 0) {
-            <p id="admin-overview-hint" class="overview-hint" i18n="@@admin.home.overview.hint">
-              Dárci: kolik různých dárců v&nbsp;měsíci poslalo dar; platby bez dárce se nepočítají.
-              Noví dárci: kolik dárců se v&nbsp;měsíci zaregistrovalo.
-            </p>
-          }
           @if (data.months.length === 0) {
             <p class="admin-empty" i18n="@@admin.home.overview.empty">
               Rok {{ data.year }} ještě nezačal.
             </p>
           } @else {
             <div class="ui-table-frame">
+              <p
+                id="admin-overview-hint"
+                class="overview-hint overview-description"
+                i18n="@@admin.home.overview.hint"
+              >
+                Dárci: kolik různých dárců v&nbsp;měsíci poslalo dar; platby bez dárce se
+                nepočítají.<span class="col-new">
+                  Noví dárci: kolik dárců se v&nbsp;měsíci zaregistrovalo.</span
+                >
+              </p>
               <table
                 role="table"
                 class="ui-table overview-table"

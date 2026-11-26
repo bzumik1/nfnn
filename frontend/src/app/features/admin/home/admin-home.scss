@@ -84,6 +84,10 @@
   max-inline-size: var(--measure-prose);
 }
 
+.overview-description {
+  padding-inline: var(--card-inset);
+}
+
 .overview-columns {
   margin: var(--space-3) 0 0;
   padding-inline: var(--card-inset);
@@ -206,7 +210,8 @@
     }
   }
 
-  .overview-columns :is(.col-new, .col-paired) {
+  .overview-columns :is(.col-new, .col-paired),
+  .overview-description .col-new {
     display: none;
   }
 }
