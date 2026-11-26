@@ -184,7 +184,7 @@ test.describe('Given a donor signed in without „Zapamatovat si mě“ on Údaj
   }) => {
     await mockDonorApi(page);
     await signIn(page);
-    await page.goto('/darce/udaje');
+    await openDonorSection(page, 'Údaje a zabezpečení');
     const notifications = page.locator('.notifications');
     const state = notifications.locator('.notifications-state');
     await expect(state).toContainText('Upozornění jdou zapnout jen');
