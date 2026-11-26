@@ -254,7 +254,7 @@ describe('Given floating bars at the bottom of the screen', () => {
     it('when a control taller than the room between the header and the bar takes the focus with its bottom under the bar, then the page scrolls only until its top reaches the top of the visible band', () => {
       const { scrolls, focus, nextFrame } = pageWithFocus();
 
-      focus(control(300, 900));
+      focus(control(300, 1000));
       nextFrame();
 
       expect(scrolls).toEqual([{ top: 300 - BAND_TOP, behavior: 'instant' }]);
