@@ -63,6 +63,7 @@ interface VisibleBand {
 
 export class FocusAfterRowLeaves {
   private pending: PendingReveal | null = null;
+  private stopKeepingInView: () => void = () => undefined;
 
   constructor(
     private readonly document: Document,
@@ -142,6 +143,7 @@ export class FocusAfterRowLeaves {
   forget(): void {
     this.pending?.stopWatching();
     this.pending = null;
+    this.stopKeepingInView();
   }
 
   private revealOnceRowGone(pending: PendingReveal): void {
@@ -162,13 +164,53 @@ export class FocusAfterRowLeaves {
     const motions = [from, to].flatMap((element) => element?.getAnimations?.() ?? []);
     if (motions.length === 0) {
       this.revealSpan(from, to);
+      this.keepInViewWhileSettling(focused, from, to);
       return;
     }
     this.afterMotions(motions, () => {
       if (this.document.activeElement === focused && from.isConnected) {
         this.revealSpan(from, to);
+        this.keepInViewWhileSettling(focused, from, to);
       }
     });
+  }
+
+  private keepInViewWhileSettling(
+    focused: HTMLElement,
+    from: HTMLElement,
+    to: HTMLElement | null,
+  ): void {
+    this.stopKeepingInView();
+    const view = this.document.defaultView;
+    if (view === null || view.ResizeObserver === undefined) {
+      return;
+    }
+    const recheck = (): void => {
+      if (this.document.activeElement === focused && from.isConnected) {
+        this.revealSpan(from, to);
+      } else {
+        stop();
+      }
+    };
+    const sizes = new view.ResizeObserver(recheck);
+    const settled = view.setTimeout(() => stop(), KEPT_IN_VIEW_WHILE_SETTLING_MS);
+    const stop = (): void => {
+      sizes.disconnect();
+      view.clearTimeout(settled);
+      view.removeEventListener('scroll', recheck, KEEPING_IN_VIEW);
+      for (const type of VISITOR_MOVES) {
+        view.removeEventListener(type, stop, KEEPING_IN_VIEW);
+      }
+      if (this.stopKeepingInView === stop) {
+        this.stopKeepingInView = () => undefined;
+      }
+    };
+    sizes.observe(this.document.body);
+    view.addEventListener('scroll', recheck, KEEPING_IN_VIEW);
+    for (const type of VISITOR_MOVES) {
+      view.addEventListener(type, stop, KEEPING_IN_VIEW);
+    }
+    this.stopKeepingInView = stop;
   }
 
   private afterMotions(motions: readonly Animation[], settled: () => void): void {
@@ -314,6 +356,9 @@ export interface LeaveWithClass {
 }
 
 const LEAVE_GRACE_MS = 300;
+const KEPT_IN_VIEW_WHILE_SETTLING_MS = 1000;
+const VISITOR_MOVES = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
+const KEEPING_IN_VIEW: AddEventListenerOptions = { capture: true, passive: true };
 const DOUBLE_TAP_MS = 300;
 const LEAVE_ENDS = ['animationend', 'animationcancel'] as const;
 const settlingHolds = new WeakMap<Element, number>();
