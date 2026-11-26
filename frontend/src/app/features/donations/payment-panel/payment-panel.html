@@ -162,21 +162,17 @@
         }
       } @else {
         <div #pendingCard class="bank-pending" tabindex="-1">
-          <div
-            class="bank-skeleton"
-            [class.is-shown]="detailsLoading() && loadView.skeleton()"
-            [class.is-held]="detailsFailed()"
-          >
-            <div aria-hidden="true">
-              <p class="panel-label">
-                <span class="bank-skeleton-line bank-skeleton-label"></span>
-              </p>
-              <div class="bank-rows">
-                @for (row of skeletonRows(); track row) {
-                  <div class="bank-row">
-                    <span class="bank-key"
-                      ><span class="bank-skeleton-line">
-                        @if (!detailsFailed()) {
+          @if (!detailsFailed()) {
+            <div class="bank-skeleton" [class.is-shown]="detailsLoading() && loadView.skeleton()">
+              <div aria-hidden="true">
+                <p class="panel-label">
+                  <span class="bank-skeleton-line bank-skeleton-label"></span>
+                </p>
+                <div class="bank-rows">
+                  @for (row of skeletonRows(); track row) {
+                    <div class="bank-row">
+                      <span class="bank-key"
+                        ><span class="bank-skeleton-line">
                           <span>
                             @switch (row) {
                               @case ('account') {
@@ -197,58 +193,56 @@
                               }
                             }
                           </span>
-                        }
-                      </span></span
-                    >
-                    <span class="bank-value-wrap">
-                      @if (row === 'iban') {
-                        <span class="bank-value ui-figures ui-figures--groups"
-                          ><span class="bank-skeleton-line">
-                            @if (!detailsFailed()) {
+                        </span></span
+                      >
+                      <span class="bank-value-wrap">
+                        @if (row === 'iban') {
+                          <span class="bank-value ui-figures ui-figures--groups"
+                            ><span class="bank-skeleton-line">
                               <span>{{ skeletonIban }}</span>
-                            }
-                          </span></span
+                            </span></span
+                          >
+                        } @else {
+                          <span class="bank-value"
+                            ><span class="bank-skeleton-line bank-skeleton-value"></span
+                          ></span>
+                        }
+                        <span class="ui-pill-button bank-skeleton-pill"
+                          ><span i18n="@@ui.copy.action">Kopírovat</span></span
                         >
-                      } @else {
-                        <span class="bank-value"
-                          ><span class="bank-skeleton-line bank-skeleton-value"></span
-                        ></span>
+                      </span>
+                    </div>
+                  }
+                </div>
+              </div>
+              @if (qrInBankDetails()) {
+                <div class="qr">
+                  <div class="qr-code">
+                    <div
+                      class="qr-placeholder"
+                      [class.qr-placeholder-loading]="detailsLoading() && loadView.skeleton()"
+                    >
+                      @if (detailsLoading()) {
+                        <span role="status" i18n="@@home.donate.qr.loading"
+                          >Připravujeme QR kód…</span
+                        >
                       }
-                      <span class="ui-pill-button bank-skeleton-pill"
-                        ><span i18n="@@ui.copy.action">Kopírovat</span></span
-                      >
-                    </span>
+                    </div>
                   </div>
-                }
-              </div>
+                  <div class="qr-text" aria-hidden="true">
+                    <p class="qr-title">
+                      <span class="bank-skeleton-line bank-skeleton-label"></span>
+                    </p>
+                    <p class="qr-desc">
+                      <span class="bank-skeleton-line"></span>
+                      <span class="bank-skeleton-line"></span>
+                      <span class="bank-skeleton-line bank-skeleton-value"></span>
+                    </p>
+                  </div>
+                </div>
+              }
             </div>
-            @if (qrInBankDetails()) {
-              <div class="qr">
-                <div class="qr-code">
-                  <div
-                    class="qr-placeholder"
-                    [class.qr-placeholder-loading]="detailsLoading() && loadView.skeleton()"
-                  >
-                    @if (detailsLoading()) {
-                      <span role="status" i18n="@@home.donate.qr.loading"
-                        >Připravujeme QR kód…</span
-                      >
-                    }
-                  </div>
-                </div>
-                <div class="qr-text" aria-hidden="true">
-                  <p class="qr-title">
-                    <span class="bank-skeleton-line bank-skeleton-label"></span>
-                  </p>
-                  <p class="qr-desc">
-                    <span class="bank-skeleton-line"></span>
-                    <span class="bank-skeleton-line"></span>
-                    <span class="bank-skeleton-line bank-skeleton-value"></span>
-                  </p>
-                </div>
-              </div>
-            }
-          </div>
+          }
           @if (detailsFailed()) {
             <div class="bank-failure">
               @for (attempt of [failedAttempts()]; track attempt) {

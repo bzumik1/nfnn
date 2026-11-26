@@ -216,14 +216,8 @@
   }
 }
 
-.bank-skeleton {
-  &.is-held {
-    visibility: hidden;
-  }
-
-  .bank-value-wrap {
-    flex-wrap: nowrap;
-  }
+.bank-skeleton .bank-value-wrap {
+  flex-wrap: nowrap;
 }
 
 .bank-skeleton-line {
@@ -283,7 +277,6 @@
 
 .bank-failure {
   display: grid;
-  align-content: center;
   justify-items: start;
   gap: var(--space-4);
   @include motion.appear($rises: false);
