@@ -122,7 +122,7 @@ th.purpose-header {
 
 td.date .verification-tag {
   display: block;
-  inline-size: fit-content;
+  inline-size: max-content;
   margin-top: var(--space-1-5);
 }
 
