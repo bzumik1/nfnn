@@ -31,9 +31,9 @@ import {
 } from '../../../../core/auth/passkey-authenticator';
 import { deviceName } from '../../../../core/auth/device-name';
 import { deviceAccountOf, SESSION_DEVICE } from '../../../../core/auth/session-device';
+import { FocusAfterRowLeaves } from '../../../../shared/ui/leaving-row/focus-after-row-leaves';
 import {
   afterRemoval,
-  FocusAfterRowLeaves,
   leaveWithClass,
   markRowsLeaving,
   neighbourAfterRowLeaves,

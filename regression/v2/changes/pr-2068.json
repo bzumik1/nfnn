@@ -1,0 +1,522 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a control that takes the focus back while the panel below it closes > when a finger pressed the control and it ended above the window, then it is brought into view",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a control that takes the focus back while the panel below it closes > when a finger pressed the control and it ended above the window, then it is brought into view",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a control that takes the focus back while the panel below it closes > when a finger pressed the control and it still stands in the window, then it is left where it is",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a control that takes the focus back while the panel below it closes > when a finger pressed the control and it still stands in the window, then it is left where it is",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a control that takes the focus back while the panel below it closes > when nothing closes any more, then the control is brought into view at once",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a control that takes the focus back while the panel below it closes > when nothing closes any more, then the control is brought into view at once",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a control that takes the focus back while the panel below it closes > when the device asks for less motion, then the control jumps into view once the panel has closed",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a control that takes the focus back while the panel below it closes > when the device asks for less motion, then the control jumps into view once the panel has closed",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a control that takes the focus back while the panel below it closes > when the focus moved elsewhere before the panel has closed, then nothing scrolls",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a control that takes the focus back while the panel below it closes > when the focus moved elsewhere before the panel has closed, then nothing scrolls",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a control that takes the focus back while the panel below it closes > when the panel is still closing, then nothing scrolls until it has closed, and then the control glides into view",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a control that takes the focus back while the panel below it closes > when the panel is still closing, then nothing scrolls until it has closed, and then the control glides into view",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a control that takes the focus back while the panel below it closes, and a visitor who scrolls meanwhile > when the visitor turns the wheel before the panel has closed, then the control is left where they scrolled it",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a control that takes the focus back while the panel below it closes, and a visitor who scrolls meanwhile > when the visitor turns the wheel before the panel has closed, then the control is left where they scrolled it",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when a frame of the close carries the control 30 px above the top of the window, then the page scrolls back by those 30 px in that frame, at once",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when a frame of the close carries the control 30 px above the top of the window, then the page scrolls back by those 30 px in that frame, at once",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when a frame of the close leaves the control below the top, then nothing scrolls",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when a frame of the close leaves the control below the top, then nothing scrolls",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when a sheet keeps no scroll padding for a moment as the row starts to leave, as its head does for two frames after a press, then the control is held below the head once the padding is back",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when a sheet keeps no scroll padding for a moment as the row starts to leave, as its head does for two frames after a press, then the control is held below the head once the padding is back",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when another action begins before the row is gone, then the close is no longer watched",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when another action begins before the row is gone, then the close is no longer watched",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when another control takes the focus in its place, then that one is held",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when another control takes the focus in its place, then that one is held",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when it is forgotten after the control was brought into view while the list still moves, then no watcher, listener or timer is left",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when it is forgotten after the control was brought into view while the list still moves, then no watcher, listener or timer is left",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when no control is left to take the focus, then nothing is held",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when no control is left to take the focus, then nothing is held",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the close is watched, then it is watched on the row and on every box around it up to the page, so a change above the list holds the control too",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the close is watched, then it is watched on the row and on every box around it up to the page, so a change above the list holds the control too",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the control below the row already stands above the top as the row starts to leave, as after a flick, then no frame of the close scrolls and the control is put into view at once once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the control below the row already stands above the top as the row starts to leave, as after a flick, then no frame of the close scrolls and the control is put into view at once once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the control has taken the focus and the focus has moved on since, then nothing scrolls",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the control has taken the focus and the focus has moved on since, then nothing scrolls",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the control keeps a scroll margin of 12 px, then it is held 12 px below the top",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the control keeps a scroll margin of 12 px, then it is held 12 px below the top",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the control stands 8 px under the header as the row starts to leave, within the page's 16 px of scroll padding below it, then it is held where it stood",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the control stands 8 px under the header as the row starts to leave, within the page's 16 px of scroll padding below it, then it is held where it stood",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the control stands in a scrolling panel, then the panel scrolls back, not the page",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the control stands in a scrolling panel, then the panel scrolls back, not the page",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the device allows motion and the close comes over several frames, each scroll landing a frame late as on iOS, then nothing scrolls during the close, so the control only rises with it and never jerks back and forth, and it glides into view once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the device allows motion and the close comes over several frames, each scroll landing a frame late as on iOS, then nothing scrolls during the close, so the control only rises with it and never jerks back and forth, and it glides into view once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the focus goes in place to a region taller than the window, then the region is not held, so its result can be brought into view",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the focus goes in place to a region taller than the window, then the region is not held, so its result can be brought into view",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the focus goes to the heading standing 300 px above the window on a device that asks for less motion, then no frame of the close scrolls and the heading jumps into view once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the focus goes to the heading standing 300 px above the window on a device that asks for less motion, then no frame of the close scrolls and the heading jumps into view once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the focus goes to the heading standing 300 px above the window, then no frame of the close scrolls and the heading glides into view once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the focus goes to the heading standing 300 px above the window, then no frame of the close scrolls and the heading glides into view once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the nearest control left stands above the row, then no frame of the close scrolls",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the nearest control left stands above the row, then no frame of the close scrolls",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the page keeps 58 px under its header as scroll padding, then the control is held below the header",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the page keeps 58 px under its header as scroll padding, then the control is held below the header",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the row is gone and nothing in its list moves any more, then the frame of the removal is still held, and only after it the close is no longer watched",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the row is gone and nothing in its list moves any more, then the frame of the removal is still held, and only after it the close is no longer watched",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the row is gone before the first frame and before the focus moves, as under reduced motion, then the control below is still held in the frame of the removal",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the row is gone before the first frame and before the focus moves, as under reduced motion, then the control below is still held in the frame of the removal",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the row is removed without its leave ever being reported, as when a leave nested in another is skipped, then the close is no longer watched once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the row is removed without its leave ever being reported, as when a leave nested in another is skipped, then the close is no longer watched once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses Alt alone during the close, then the control is still held",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses Alt alone during the close, then the control is still held",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses AltGraph alone during the close, then the control is still held",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses AltGraph alone during the close, then the control is still held",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses CapsLock alone during the close, then the control is still held",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses CapsLock alone during the close, then the control is still held",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses Control alone during the close, then the control is still held",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses Control alone during the close, then the control is still held",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses Fn alone during the close, then the control is still held",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses Fn alone during the close, then the control is still held",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses Meta alone during the close, then the control is still held",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses Meta alone during the close, then the control is still held",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses Shift alone during the close, then the control is still held",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses Shift alone during the close, then the control is still held",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses Shift with Tab during the close, then the hold ends",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor presses Shift with Tab during the close, then the hold ends",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor's own keydown comes during the close, then later frames scroll nothing and the control is not brought into view once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor's own keydown comes during the close, then later frames scroll nothing and the control is not brought into view once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor's own pointerdown comes during the close, then later frames scroll nothing and the control is not brought into view once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor's own pointerdown comes during the close, then later frames scroll nothing and the control is not brought into view once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor's own touchmove comes during the close, then later frames scroll nothing and the control is not brought into view once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor's own touchmove comes during the close, then later frames scroll nothing and the control is not brought into view once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor's own touchstart comes during the close, then later frames scroll nothing and the control is not brought into view once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor's own touchstart comes during the close, then later frames scroll nothing and the control is not brought into view once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor's own wheel comes during the close, then later frames scroll nothing and the control is not brought into view once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor's own wheel comes during the close, then later frames scroll nothing and the control is not brought into view once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor's own wheel ends the hold before the focus moves, then the control takes the focus without the browser scrolling it against the visitor",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave carries the control below it toward the top of what shows the page, on a device that asks for less motion unless a case says otherwise > when the visitor's own wheel ends the hold before the focus moves, then the control takes the focus without the browser scrolling it against the visitor",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave moves the focus to a control below it > when a row it was not told about leaves, then nothing scrolls",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave moves the focus to a control below it > when a row it was not told about leaves, then nothing scrolls",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave moves the focus to a control below it > when another action began before the row is gone, then the stale row scrolls nothing",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave moves the focus to a control below it > when another action began before the row is gone, then the stale row scrolls nothing",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave moves the focus to a control below it > when it is forgotten while it waits for the row to be removed, then it stops watching the list",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave moves the focus to a control below it > when it is forgotten while it waits for the row to be removed, then it stops watching the list",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave moves the focus to a control below it > when no control is left and the focus goes in place to the heading, then nothing scrolls once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave moves the focus to a control below it > when no control is left and the focus goes in place to the heading, then nothing scrolls once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave moves the focus to a control below it > when the control below takes the focus while the row it will be revealed after still stands, then the browser is told not to scroll it there first",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave moves the focus to a control below it > when the control below takes the focus while the row it will be revealed after still stands, then the browser is told not to scroll it there first",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave moves the focus to a control below it > when the control is taller than the room the window leaves it, then it is brought into view from its top",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave moves the focus to a control below it > when the control is taller than the room the window leaves it, then it is brought into view from its top",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave moves the focus to a control below it > when the control takes the focus after a row it was not told about, then the browser scrolls it into view as usual",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave moves the focus to a control below it > when the control takes the focus after a row it was not told about, then the browser scrolls it into view as usual",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave moves the focus to a control below it > when the control takes the focus before the row is removed, then it glides into view only once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave moves the focus to a control below it > when the control takes the focus before the row is removed, then it glides into view only once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave moves the focus to a control below it > when the device asks for less motion, then the control jumps into view",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave moves the focus to a control below it > when the device asks for less motion, then the control jumps into view",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave moves the focus to a control below it > when the focus goes in place to the heading, then the browser is told not to scroll it into view either",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave moves the focus to a control below it > when the focus goes in place to the heading, then the browser is told not to scroll it into view either",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave moves the focus to a control below it > when the focus moved elsewhere before the row is gone, then nothing scrolls",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave moves the focus to a control below it > when the focus moved elsewhere before the row is gone, then nothing scrolls",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given a row whose leave moves the focus to a control below it > when the row is removed before the control takes the focus, then the control glides into view as it takes the focus",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given a row whose leave moves the focus to a control below it > when the row is removed before the control takes the focus, then the control glides into view as it takes the focus",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the device asks for less motion, then the result jumps into view",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the device asks for less motion, then the result jumps into view",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the focus moved elsewhere before the row is gone, then nothing scrolls",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the focus moved elsewhere before the row is gone, then nothing scrolls",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the region takes the focus in place before the row is removed, then the result above the window glides in from its top only once the row is gone",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the region takes the focus in place before the row is removed, then the result above the window glides in from its top only once the row is gone",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the result and the button already stand in the window, then nothing scrolls",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the result and the button already stand in the window, then nothing scrolls",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the result and the button below it stand under the window, then the button is brought up to its bottom edge",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the result and the button below it stand under the window, then the button is brought up to its bottom edge",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the result and the button together are taller than the window, then the result wins and is brought into view nearest",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the result and the button together are taller than the window, then the result wins and is brought into view nearest",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the result moves in without end, then it is revealed anyway once the grace after its motion has passed",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the result moves in without end, then it is revealed anyway once the grace after its motion has passed",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the result still moves in as the row is gone, then it is revealed only once its motion has finished",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the result still moves in as the row is gone, then it is revealed only once its motion has finished",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the reveal names a row it was not told about, then nothing scrolls",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the reveal names a row it was not told about, then nothing scrolls",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/leaving-row/leaving-row.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the row is removed before the region takes the focus in place, then the result is revealed as the region takes the focus",
+    "reason": "#2055 (PR #2068): FocusAfterRowLeaves moved unchanged from leaving-row.ts into focus-after-row-leaves.ts, so the initial bundle no longer carries it, and its unchanged specs moved beside it",
+    "replacement": "src/app/shared/ui/leaving-row/focus-after-row-leaves.spec.ts > Given the only row whose leave leaves no control to move the focus to > when the row is removed before the region takes the focus in place, then the result is revealed as the region takes the focus",
+    "contract": "docs/frontend-overview.md, shared/ui/leaving-row"
+  }
+]
