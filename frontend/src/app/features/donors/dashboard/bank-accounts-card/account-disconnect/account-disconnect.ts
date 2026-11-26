@@ -1,6 +1,8 @@
 import {
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   inject,
   input,
   output,
@@ -12,6 +14,7 @@ import { NeedsConnection } from '../../../../../shared/ui/needs-connection/needs
 
 export type OfferedAccountAction = 'reconnect' | 'disconnect';
 
+const FOLD = 'account-action-fold';
 const OPENING = 'account-swap--opening';
 const CLOSING = 'account-swap--closing';
 
@@ -35,17 +38,37 @@ export class AccountDisconnect {
   readonly disconnectConfirmed = output<void>();
   readonly disconnectKept = output<void>();
 
-  private readonly renderer = inject(Renderer2);
+  readonly returned = output<void>();
 
-  protected settle(event: TransitionEvent): void {
-    const swap = event.currentTarget as HTMLElement;
+  private readonly renderer = inject(Renderer2);
+  private readonly host: HTMLElement = inject(ElementRef<HTMLElement>).nativeElement;
+
+  constructor() {
+    afterRenderEffect(() => {
+      this.confirming();
+      this.returning();
+      this.action();
+      for (const swap of this.host.querySelectorAll<HTMLElement>(`.${OPENING}`)) {
+        const motions = swap.getAnimations?.() ?? [];
+        void Promise.allSettled(motions.map((motion) => motion.finished)).then(() =>
+          this.settle(swap),
+        );
+      }
+    });
+  }
+
+  private settle(swap: HTMLElement): void {
+    const moving = swap.getAnimations?.() ?? [];
     if (
-      event.target === swap &&
-      swap.classList.contains(OPENING) &&
-      !swap.classList.contains(CLOSING) &&
-      swap.getAnimations().length === 0
+      !swap.classList.contains(OPENING) ||
+      swap.classList.contains(CLOSING) ||
+      moving.some((motion) => motion.playState === 'running')
     ) {
-      this.renderer.removeClass(swap, OPENING);
+      return;
+    }
+    this.renderer.removeClass(swap, OPENING);
+    if (swap.classList.contains(FOLD)) {
+      this.returned.emit();
     }
   }
 }

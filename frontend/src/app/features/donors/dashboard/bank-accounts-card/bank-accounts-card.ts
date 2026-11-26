@@ -438,6 +438,10 @@ export class BankAccountsCard {
     afterNextRender(() => this.actionButtonOf(account)?.focus(), { injector: this.injector });
   }
 
+  protected actionReturned(): void {
+    this.returningAction.set(null);
+  }
+
   protected disconnect(account: BankAccountItem): void {
     this.run(
       account,

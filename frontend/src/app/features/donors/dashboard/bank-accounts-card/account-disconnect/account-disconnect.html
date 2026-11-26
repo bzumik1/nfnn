@@ -3,7 +3,6 @@
     <div
       class="account-action-fold account-swap"
       [class.account-swap--opening]="returning()"
-      (transitionend)="settle($event)"
       appDisclosure
       animate.leave="account-swap--closing"
     >
@@ -42,7 +41,6 @@
     class="account-confirm account-swap account-swap--opening"
     role="group"
     [attr.aria-labelledby]="buttonId() + '-confirm'"
-    (transitionend)="settle($event)"
     appDisclosure
     animate.leave="account-swap--closing"
   >
