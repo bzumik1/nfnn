@@ -230,6 +230,7 @@ for (const phone of PHONES_AT_DEFAULT_TEXT) {
 const FLOATING_ENLARGED_TEXT_PX = [24, 26];
 const SE = { width: 375, height: 667 };
 const SCROLL_STEP_PX = 16;
+const SETTLE_FRAMES = 3;
 const STILL_FRAMES = 3;
 
 for (const rootPx of FLOATING_ENLARGED_TEXT_PX) {
@@ -252,7 +253,7 @@ for (const rootPx of FLOATING_ENLARGED_TEXT_PX) {
       await page.evaluate(() => document.fonts.ready);
 
       const result = await bar.evaluate(
-        async (element, { step, stillFrames }) => {
+        async (element, { step, settleFrames, stillFrames }) => {
           const frame = () => new Promise<void>((done) => requestAnimationFrame(() => done()));
           const state = () => element.className;
           let changesWhileStill = 0;
@@ -263,7 +264,9 @@ for (const rootPx of FLOATING_ENLARGED_TEXT_PX) {
           const end = () => document.documentElement.scrollHeight - innerHeight;
           for (let top = 0; top <= end() + step; top += step) {
             window.scrollTo({ top, behavior: 'instant' });
-            await frame();
+            for (let render = 0; render < settleFrames; render++) {
+              await frame();
+            }
             if (state() !== seen) {
               changes++;
               seen = state();
@@ -278,7 +281,7 @@ for (const rootPx of FLOATING_ENLARGED_TEXT_PX) {
           }
           return { changes, changesWhileStill };
         },
-        { step: SCROLL_STEP_PX, stillFrames: STILL_FRAMES },
+        { step: SCROLL_STEP_PX, settleFrames: SETTLE_FRAMES, stillFrames: STILL_FRAMES },
       );
 
       expect(result.changes).toBeGreaterThan(0);

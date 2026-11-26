@@ -545,18 +545,18 @@ test.describe('Given an administrator who asks for less motion and whose saved s
   });
 });
 
-for (const { name, viewport, rootPx, barFloats } of [
+for (const { name, viewport, rootPx, floatingBar } of [
   {
     name: 'a computer 1280 × 720 with the text at 200 %',
     viewport: { width: 1280, height: 720 },
     rootPx: 32,
-    barFloats: true,
+    floatingBar: true,
   },
   {
     name: 'an iPhone 375 pt wide with the largest accessibility text',
     viewport: { width: 375, height: 667 },
     rootPx: 53,
-    barFloats: false,
+    floatingBar: false,
   },
 ]) {
   test.describe(`Given an administrator on ${name} changing a setting`, () => {
@@ -588,7 +588,7 @@ for (const { name, viewport, rootPx, barFloats } of [
         save: (page: Page) => page.locator('#setting-RECEIPT_FIRST_YEAR').press('Enter'),
       },
     ]) {
-      test(`when they ${way} and the question grows the action bar, then Zrušit keeps the focus inside the screen ${barFloats ? 'on the floating bar' : 'on the bar that moved into the page'}`, async ({
+      test(`when they ${way} and the question grows the action bar, then Zrušit keeps the focus inside the screen ${floatingBar ? 'on the bar that keeps floating' : 'in the save row of the page, which has no floating bar on a phone'}`, async ({
         page,
       }) => {
         await openUnlockedAdministrationPage(page, '/sprava/nastaveni', 'Nastavení');
@@ -607,10 +607,10 @@ for (const { name, viewport, rootPx, barFloats } of [
         );
 
         const bar = page.locator('.ui-action-bar');
-        if (barFloats) {
+        if (floatingBar) {
           await expect(bar).not.toHaveClass(/ui-action-bar--in-flow/);
         } else {
-          await expect(bar).toHaveClass(/ui-action-bar--in-flow/);
+          await expect(bar).toHaveCount(0);
         }
         await expect(cancel).toBeFocused();
         await expect(cancel).toBeInViewport({ ratio: 1 });
