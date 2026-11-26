@@ -48,15 +48,20 @@
   white-space: nowrap;
 }
 
+.summary-symbol {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.summary-symbol app-copy-button {
+  margin-block: calc(-1 * var(--space-1-5));
+}
+
 @include bp.down(nav) {
   .summary-list {
     gap: var(--space-2) var(--space-6);
-
-    div {
-      display: flex;
-      align-items: first baseline;
-      gap: var(--space-2);
-    }
 
     dt {
       font-size: var(--text-md);
@@ -70,7 +75,7 @@
     }
   }
 
-  @include bp.container-up(donor-summary, narrow) {
+  @include bp.container-up(donor-summary, pair) {
     .summary-list {
       flex-basis: 100%;
       display: grid;
@@ -81,7 +86,22 @@
         display: grid;
         grid-column: 1 / -1;
         grid-template-columns: subgrid;
+        align-items: first baseline;
       }
+    }
+
+    .summary-symbol {
+      column-gap: var(--space-1);
+    }
+
+    .summary-symbol app-copy-button {
+      margin-block: calc(-1 * var(--space-2));
+    }
+  }
+
+  @include bp.container-down(donor-summary, narrow) {
+    .summary-list {
+      grid-template-columns: min-content minmax(0, 1fr);
     }
   }
 
@@ -98,20 +118,11 @@
         row-gap: var(--space-0-5);
       }
     }
-  }
-}
 
-@include bp.up(nav) {
-  .summary-symbol app-copy-button {
-    margin-block: calc(-1 * var(--space-1-5));
+    .summary-symbol app-copy-button {
+      margin-block: 0;
+    }
   }
-}
-
-.summary-symbol {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 .badges {
@@ -447,4 +458,13 @@ td.amount {
 
 .donations-card--rows {
   overflow: clip;
+}
+
+.donation-rows .ui-list__meta {
+  text-wrap: pretty;
+}
+
+.donation-receipt {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }

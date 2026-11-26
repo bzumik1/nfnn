@@ -71,7 +71,7 @@
 
 .tile-media {
   position: relative;
-  aspect-ratio: 360 / 196;
+  aspect-ratio: var(--ratio-story-tile-photo);
   overflow: hidden;
   background: var(--color-accent-soft);
 
@@ -96,9 +96,9 @@
 
 .tile-tag {
   position: absolute;
-  top: var(--space-2-5);
-  left: var(--space-2-5);
-  max-width: calc(100% - var(--space-5));
+  top: var(--space-4);
+  left: var(--space-4);
+  max-width: calc(100% - 2 * var(--space-4));
   overflow: hidden;
   padding: var(--space-0-75) var(--space-2-5);
   border-radius: var(--radius-pill);
@@ -111,7 +111,7 @@
 }
 
 .tile-body {
-  padding: var(--space-3) var(--space-4) var(--space-4);
+  padding: var(--space-4);
 }
 
 .tile-title {
@@ -201,8 +201,9 @@
   }
 
   .tile-tag {
-    top: var(--space-4);
-    left: var(--space-4);
+    top: var(--space-5);
+    left: var(--space-5);
+    max-width: calc(100% - 2 * var(--space-5));
   }
 
   .tile-heart {
