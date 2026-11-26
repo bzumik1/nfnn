@@ -1,15 +1,20 @@
 import { NgComponentOutlet } from '@angular/common';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   effect,
   inject,
   InjectionToken,
+  Injector,
   input,
   signal,
   Type,
   untracked,
 } from '@angular/core';
+
+import { PagePlacement } from '../../core/navigation/page-placement';
 
 import { GIFT_FEED } from '../../features/donations/gift-arrival/gift-feed';
 import { DonorDonations } from '../../features/donors/dashboard/donor-donations';
@@ -43,9 +48,13 @@ export const ACCOUNT_SECTION_PAGES = new InjectionToken<AccountSectionPages>(
 export class AccountSection {
   readonly path = input.required<string>();
   private readonly pages = inject(ACCOUNT_SECTION_PAGES);
+  private readonly placement = inject(PagePlacement);
+  private readonly injector = inject(Injector);
+  private placing: (() => void) | null = null;
   protected readonly page = signal<Type<unknown> | null>(null);
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.placed());
     effect(() => {
       const path = this.path();
       untracked(() => this.show(path));
@@ -59,11 +68,22 @@ export class AccountSection {
     if (loader === undefined || loaded !== undefined) {
       return;
     }
-    void loader().then((component) => {
-      loadedPages.set(loader, component);
-      if (this.path() === path) {
-        this.page.set(component);
-      }
-    });
+    this.placed();
+    this.placing = this.placement.pending();
+    void loader().then(
+      (component) => {
+        loadedPages.set(loader, component);
+        if (this.path() === path) {
+          this.page.set(component);
+          afterNextRender(() => this.placed(), { injector: this.injector });
+        }
+      },
+      () => this.placed(),
+    );
+  }
+
+  private placed(): void {
+    this.placing?.();
+    this.placing = null;
   }
 }

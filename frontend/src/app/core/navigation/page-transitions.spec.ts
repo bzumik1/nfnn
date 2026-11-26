@@ -19,12 +19,14 @@ import { PagePlacement } from './page-placement';
 import { ACCOUNT_RETURNS_KEY } from './page-transitions';
 import { NavigationPreview } from './navigation-preview';
 import {
+  FIRST_SECTION_READS_WITHIN_MS,
   FRAME_LATE_MS,
   HELD_WITHOUT_A_FRAME_MS,
   PAGE_LAYER_CLASS,
   PAGE_TRANSITION_CLASS,
   PAGE_TRANSITION_LONGEST_MS,
   PageTransitions,
+  SECTION_READS_WITHIN_MS,
 } from './page-transitions';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
 import { closeOnceCovered, SHEET_STEPPING, sheetOnly, swipeBackInSheet } from './sheet-stepping';
@@ -3283,6 +3285,123 @@ describe('Given the app on a phone with a sheet open at its list', () => {
     delete (window as { DOMMatrixReadOnly?: unknown }).DOMMatrixReadOnly;
     document.documentElement.style.removeProperty('--page-title-fade-at');
     vi.restoreAllMocks();
+  });
+
+  it('when a section opens inside the sheet while its page is still being placed, then its copies are placed only once the page is placed and drawn, so it never slides in empty (round 42)', async () => {
+    const frames = heldFrames();
+    const placement = TestBed.inject(PagePlacement);
+    let pagePlaced: () => void = () => undefined;
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      owner: sheet,
+      change: () => {
+        pagePlaced = placement.pending();
+        sheet.textContent = '';
+      },
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+    drawFrame(frames);
+    expect(overlayPage('over'), 'the section slid in before its page was placed').toBeNull();
+
+    sheet.textContent = 'Moje dary';
+    pagePlaced();
+
+    await vi.waitFor(() => {
+      TestBed.inject(ApplicationRef).tick();
+      drawFrame(frames);
+      expect(overlayPage('over')?.textContent).toContain('Moje dary');
+    });
+  });
+
+  it('when a section opens inside the sheet and asks the server for its data, then its copies are placed only once the answers came, so it never slides in empty (round 42)', async () => {
+    const frames = heldFrames();
+    const placement = TestBed.inject(PagePlacement);
+    let answered: () => void = () => undefined;
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      owner: sheet,
+      change: () => {
+        answered = placement.reading();
+        sheet.textContent = 'Načítáme';
+      },
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+    drawFrame(frames);
+    expect(overlayPage('over'), 'the section slid in before its data came').toBeNull();
+
+    sheet.textContent = 'Moje dary';
+    answered();
+
+    await vi.waitFor(() => {
+      TestBed.inject(ApplicationRef).tick();
+      drawFrame(frames);
+      expect(overlayPage('over')?.textContent).toContain('Moje dary');
+    });
+  });
+
+  it('when a section opens inside the sheet and its data do not come within D1’s 150 ms, then it slides in with what it shows, so a read in the background never holds the step longer', async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const frames = heldFrames();
+    const placement = TestBed.inject(PagePlacement);
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      owner: sheet,
+      change: () => {
+        placement.reading();
+        sheet.textContent = 'Moje dary';
+      },
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+    drawFrame(frames);
+    await vi.advanceTimersByTimeAsync(SECTION_READS_WITHIN_MS - 10);
+    drawFrame(frames);
+    expect(overlayPage('over')).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(10 + FRAME_LATE_MS);
+    drawFrame(frames);
+
+    expect(overlayPage('over')?.textContent).toContain('Moje dary');
+  });
+
+  it('when a section opens inside the sheet while its page is being placed and its data never come, then it slides in 300 ms after the page was placed, and a page never placed holds it at most the longest time of a step', async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const frames = heldFrames();
+    const placement = TestBed.inject(PagePlacement);
+    transitions.stepInSheet({
+      kind: 'push',
+      depth: 1,
+      owner: sheet,
+      change: () => {
+        placement.pending();
+        placement.reading();
+        sheet.textContent = 'Načítáme';
+      },
+      placed: () => undefined,
+    });
+    TestBed.inject(ApplicationRef).tick();
+    drawFrame(frames);
+    await vi.advanceTimersByTimeAsync(
+      PAGE_TRANSITION_LONGEST_MS + FIRST_SECTION_READS_WITHIN_MS - 10,
+    );
+    drawFrame(frames);
+    expect(overlayPage('over')).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(10 + FRAME_LATE_MS);
+    drawFrame(frames);
+
+    expect(overlayPage('over')?.textContent).toContain('Načítáme');
   });
 
   it('when a section opens inside the sheet, then the page that slides in is the section over the list it leaves', () => {

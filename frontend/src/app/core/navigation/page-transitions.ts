@@ -43,6 +43,8 @@ export const PAGE_TRANSITION_LONGEST_MS = 2000;
 export const PAGE_COVER_LONGEST_MS = 5000;
 export const KEPT_PAGES = 3;
 export const FRAME_LATE_MS = 100;
+export const SECTION_READS_WITHIN_MS = 150;
+export const FIRST_SECTION_READS_WITHIN_MS = 300;
 export const HELD_WITHOUT_A_FRAME_MS = PAGE_TRANSITION_LONGEST_MS / 4;
 export type PlacingKind = 'raf' | 'resize-observer' | 'task';
 const SWIPE_HANDED_OVER_AFTER_FRAMES = 2;
@@ -324,6 +326,36 @@ export class PageTransitions {
         this.keptSheets.delete(depth);
       }
     }
+  }
+
+  countSectionReads(): void {
+    this.placement.countReadsFromHere();
+  }
+
+  whenSectionDrawn(view: Window, then: () => void): void {
+    const placedAlready = this.placement.isSettled();
+    if (placedAlready && this.placement.isAnswered()) {
+      this.placement.stopCountingReads();
+      then();
+      return;
+    }
+    const readsWithinMs = placedAlready ? SECTION_READS_WITHIN_MS : FIRST_SECTION_READS_WITHIN_MS;
+    void this.placement
+      .placed(view, PAGE_TRANSITION_LONGEST_MS)
+      .then(() => this.placement.answered(view, readsWithinMs))
+      .then(() => {
+        this.placement.stopCountingReads();
+        let drawn = false;
+        const go = (): void => {
+          if (!drawn) {
+            drawn = true;
+            view.clearTimeout(late);
+            then();
+          }
+        };
+        const late = view.setTimeout(go, FRAME_LATE_MS);
+        this.afterRender(go);
+      });
   }
 
   afterRender(then: () => void): void {

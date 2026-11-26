@@ -80,20 +80,23 @@ function stepInSheet(stage: PageTransitions, step: SheetStep): void {
   stage.running = running;
   stage.sheetUnder(leaving);
   stage.finishAfter(view, PAGE_COVER_LONGEST_MS);
+  stage.countSectionReads();
   step.change();
   stage.afterRender(() => {
     step.placed();
-    nextFrame(view, (_, inFrame) => {
-      if (stage.running !== running) {
-        return;
-      }
-      const arriving = standingSheetCopy(stage);
-      if (arriving === null) {
-        stage.finish();
-        return;
-      }
-      stage.moveTo(running, view, sheetOnly(stage, arriving), inFrame ? 'raf' : 'task');
-    });
+    stage.whenSectionDrawn(view, () =>
+      nextFrame(view, (_, inFrame) => {
+        if (stage.running !== running) {
+          return;
+        }
+        const arriving = standingSheetCopy(stage);
+        if (arriving === null) {
+          stage.finish();
+          return;
+        }
+        stage.moveTo(running, view, sheetOnly(stage, arriving), inFrame ? 'raf' : 'task');
+      }),
+    );
   });
 }
 

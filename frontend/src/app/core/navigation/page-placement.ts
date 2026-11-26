@@ -113,6 +113,15 @@ export class PagePlacement {
     };
   }
 
+  countReadsFromHere(): void {
+    this.forgetReads();
+    this.countsReads = true;
+  }
+
+  stopCountingReads(): void {
+    this.countsReads = false;
+  }
+
   isAnswered(): boolean {
     return this.reads.size === 0;
   }
