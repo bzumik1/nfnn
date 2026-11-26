@@ -509,6 +509,39 @@ describe('Given the donate section', () => {
     fixture.nativeElement.remove();
   });
 
+  describe('when the visitor deletes next to the space between thousands', () => {
+    beforeEach(async () => {
+      document.body.appendChild(fixture.nativeElement);
+      await openWithQr();
+      await enterCustomAmount('1250');
+    });
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    async function deleteSpace(caretAfter: number, inputType: string): Promise<HTMLInputElement> {
+      const field = element<HTMLInputElement>('#donate-custom-amount');
+      field.value = '1250';
+      field.setSelectionRange(caretAfter, caretAfter);
+      field.dispatchEvent(new InputEvent('input', { inputType }));
+      await settle();
+      return field;
+    }
+
+    it('then Delete before the space removes the digit after it', async () => {
+      const field = await deleteSpace(1, 'deleteContentForward');
+
+      expect(withOrdinarySpaces(field.value)).toBe('150');
+      expect(field.selectionStart).toBe(1);
+    });
+
+    it('then Backspace after the space removes the digit before it', async () => {
+      const field = await deleteSpace(1, 'deleteContentBackward');
+
+      expect(withOrdinarySpaces(field.value)).toBe('250');
+      expect(field.selectionStart).toBe(0);
+    });
+  });
+
   it('when the visitor types something that is not a whole number, then the field keeps it as typed', async () => {
     await openWithQr();
 
