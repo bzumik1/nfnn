@@ -1,3 +1,5 @@
+@use 'choice-arrow';
+
 .form-control {
   width: 100%;
   padding: var(--space-3) var(--space-4);
@@ -33,6 +35,10 @@
 
 textarea.form-control {
   resize: vertical;
+}
+
+select.form-control:not([multiple], [size]) {
+  @include choice-arrow.drawn(var(--space-4));
 }
 
 app-password-reveal .form-control {

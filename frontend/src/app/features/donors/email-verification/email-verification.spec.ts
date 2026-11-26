@@ -189,7 +189,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
 
       http.expectNone('/api/donors/auth/email-verification/request');
       expect(withOrdinarySpaces(element('#verification-email-error').textContent)).toContain(
-        'Vyplňte prosím e-mail.',
+        'Vyplňte prosím e\u2011mail.',
       );
     });
 

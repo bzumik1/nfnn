@@ -126,7 +126,8 @@ $lead-width: 34rem;
     position: relative;
     inset: auto;
     grid-area: photo;
-    width: auto;
+    width: 100%;
+    max-height: 50svh;
     aspect-ratio: 2 / 1;
 
     &::after {
@@ -149,7 +150,7 @@ $lead-width: 34rem;
 
   .band-text {
     grid-area: text;
-    padding: var(--space-2) var(--space-6) var(--space-7);
+    padding: var(--space-2) clamp(var(--space-6), 6cqi, var(--space-16)) var(--space-7);
     background: var(--color-surface-inverse);
   }
 }

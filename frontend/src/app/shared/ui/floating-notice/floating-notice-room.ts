@@ -36,11 +36,19 @@ export function keepRoomForFloatingNotice(
   };
   const view = document.defaultView;
   const observer = view?.ResizeObserver ? new view.ResizeObserver(measure) : null;
+  const visibleBandTop = (focused: Element) =>
+    (parseFloat(view?.getComputedStyle(document.documentElement).scrollPaddingTop ?? '0') || 0) +
+    (parseFloat(view?.getComputedStyle(focused).scrollMarginTop ?? '0') || 0);
   const scrollAboveBar = (focused: Element) => {
-    const hidden = focused.getBoundingClientRect().bottom - bar.getBoundingClientRect().top;
-    if (hidden > 0) {
-      const gap = parseFloat(view?.getComputedStyle(bar).bottom ?? '0') || 0;
-      view?.scrollBy({ top: hidden + gap, behavior: 'instant' });
+    const box = focused.getBoundingClientRect();
+    const hidden = box.bottom - bar.getBoundingClientRect().top;
+    if (hidden <= 0) {
+      return;
+    }
+    const gap = parseFloat(view?.getComputedStyle(bar).bottom ?? '0') || 0;
+    const by = Math.min(hidden + gap, box.top - visibleBandTop(focused));
+    if (by > 0) {
+      view?.scrollBy({ top: by, behavior: 'instant' });
     }
   };
   const mayHideUnderBar = (focused: unknown): focused is Element =>
