@@ -238,12 +238,14 @@ test.describe('Given a tablet whose on-screen keyboard covers the lower part of 
     await expect(codeField(page)).toBeFocused();
     await expect.poll(() => hitOnFieldCentre(codeField(page))).toBe('field');
 
+    const beforeDrag = await page.evaluate(() => window.scrollY);
     const dragged = await page.evaluate(() => {
-      window.scrollBy({ top: -40, behavior: 'instant' });
+      window.scrollBy({ top: 40, behavior: 'instant' });
       window.visualViewport?.dispatchEvent(new Event('scroll'));
       return window.scrollY;
     });
 
+    expect(dragged).toBe(beforeDrag + 40);
     expect(await scrollTopAfterTwoFrames(page)).toBe(dragged);
     expect(await hitOnFieldCentre(codeField(page))).toBe('field');
   });
