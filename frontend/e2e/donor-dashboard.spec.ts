@@ -1331,30 +1331,41 @@ test.describe('Given a signed-in donor on a computer', () => {
 
       const closing = wrapper.evaluate(
         (element) =>
-          new Promise<{ rowsClose: boolean; textShown: boolean }>((resolve) => {
-            new MutationObserver((_, observer) => {
-              if (!element.classList.contains('receipt-status--closing')) {
-                return;
-              }
-              observer.disconnect();
-              const line = element.querySelector('[role="status"]')!;
-              resolve({
-                rowsClose: element
+          new Promise<{ rowsClose: boolean; textShown: boolean; textOutlastsRows: boolean }>(
+            (resolve) => {
+              new MutationObserver((_, observer) => {
+                if (!element.classList.contains('receipt-status--closing')) {
+                  return;
+                }
+                observer.disconnect();
+                const line = element.querySelector('[role="status"]')!;
+                const rows = element
                   .getAnimations()
-                  .some(
+                  .find(
                     (animation) =>
                       (animation as CSSTransition).transitionProperty === 'grid-template-rows',
-                  ),
-                textShown: Array.from(line.children).some(
+                  );
+                const shown = Array.from(line.children).filter(
                   (part) => part.getBoundingClientRect().width > 0,
-                ),
-              });
-            }).observe(element, { attributes: true, attributeFilter: ['class'] });
-          }),
+                );
+                const endOf = (animation: Animation) =>
+                  Number(animation.effect!.getComputedTiming().endTime);
+                resolve({
+                  rowsClose: rows !== undefined,
+                  textShown: shown.length > 0,
+                  textOutlastsRows:
+                    rows !== undefined &&
+                    shown.some((part) =>
+                      part.getAnimations().some((leave) => endOf(leave) >= endOf(rows)),
+                    ),
+                });
+              }).observe(element, { attributes: true, attributeFilter: ['class'] });
+            },
+          ),
       );
       await button.click();
 
-      expect(await closing).toEqual({ rowsClose: true, textShown: true });
+      expect(await closing).toEqual({ rowsClose: true, textShown: true, textOutlastsRows: true });
     });
   }
 });

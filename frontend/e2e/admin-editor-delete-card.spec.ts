@@ -41,16 +41,20 @@ test.describe('Given an administrator editing saved content', () => {
         await expect
           .poll(() =>
             page.evaluate(() => {
-              const content = document.querySelector('form > .ui-card')!.getBoundingClientRect();
+              const card = document.querySelector('form > .ui-card')!;
+              const content = card.getBoundingClientRect();
               const remove = document.querySelector('.delete-card')!.getBoundingClientRect();
               const bar = document.querySelector('.editor-bar')!.getBoundingClientRect();
               return {
-                gapBelowContentIsUnderTheBarHeight: remove.top - content.bottom < bar.height,
+                gapIsTheCardSpacing:
+                  Math.abs(
+                    remove.top - content.bottom - parseFloat(getComputedStyle(card).marginBottom),
+                  ) < 0.5,
                 barAfterDeleteCard: bar.top >= remove.bottom,
               };
             }),
           )
-          .toEqual({ gapBelowContentIsUnderTheBarHeight: true, barAfterDeleteCard: true });
+          .toEqual({ gapIsTheCardSpacing: true, barAfterDeleteCard: true });
       });
     }
   }
