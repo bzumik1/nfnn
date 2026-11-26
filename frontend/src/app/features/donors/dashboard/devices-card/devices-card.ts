@@ -161,7 +161,9 @@ export class DevicesCard {
     const target = this.confirming();
     this.returning.set(target);
     this.confirming.set(null);
-    this.focusAfterRender(() => this.askingButton(target), { preventScroll: true });
+    afterNextRender(() => this.returnFocusAfterCancel(this.askingButton(target)), {
+      injector: this.injector,
+    });
   }
 
   signOut(device: SignedInDevice): void {
@@ -302,6 +304,18 @@ export class DevicesCard {
     this.focusAfterRowLeaves.keepInViewOnceSettled(control, [], false);
   }
 
+  private returnFocusAfterCancel(button: HTMLElement | null | undefined): void {
+    if (button === null || button === undefined) {
+      return;
+    }
+    button.focus({ preventScroll: true });
+    this.focusAfterRowLeaves.keepInViewOnceSettled(
+      button,
+      button.closest('.devices')?.getAnimations?.({ subtree: true }) ?? [],
+      this.inputModality.lastPressByPointer(),
+    );
+  }
+
   private closingFoldHoldsThePress(toggle: HTMLElement): boolean {
     const fold = this.olderFold()?.nativeElement;
     if (fold === undefined) {
@@ -355,11 +369,8 @@ export class DevicesCard {
     );
   }
 
-  private focusAfterRender(
-    target: () => HTMLElement | null | undefined,
-    options?: FocusOptions,
-  ): void {
-    afterNextRender(() => target()?.focus(options), { injector: this.injector });
+  private focusAfterRender(target: () => HTMLElement | null | undefined): void {
+    afterNextRender(() => target()?.focus(), { injector: this.injector });
   }
 
   private begin(target: string): void {

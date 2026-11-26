@@ -56,10 +56,13 @@ interface PendingReveal {
   reveal: (() => void) | null;
   gone: boolean;
   holds: boolean;
+  view: Window | null;
+  judged: HTMLElement | null;
   follower: HTMLElement | null;
   cancelled: boolean;
   stopWatching: () => void;
   stopHolding: () => void;
+  stopSettling: () => void;
 }
 
 const VISITOR_MOVES = ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown'] as const;
@@ -90,18 +93,25 @@ export class FocusAfterRowLeaves {
         reveal: null,
         gone: false,
         holds: true,
+        view: null,
+        judged: null,
         follower: null,
         cancelled: false,
         stopWatching: () => undefined,
         stopHolding: () => undefined,
+        stopSettling: () => undefined,
       };
       this.pending = pending;
+      pending.stopHolding = this.holdBelowTheTop(pending);
+      this.stopHolding = () => {
+        pending.stopSettling();
+        pending.stopHolding();
+      };
       const nearest = neighbour();
       if (nearest !== null) {
-        this.noteWhetherItFollows(pending, nearest);
+        this.judge(pending, nearest);
       }
-      pending.stopHolding = this.holdBelowTheTop(pending);
-      this.stopHolding = pending.stopHolding;
+      this.watchUntilGone(pending);
     }
   }
 
@@ -113,7 +123,7 @@ export class FocusAfterRowLeaves {
     }
     control.focus({ preventScroll: true });
     pending.focused = control;
-    this.noteWhetherItFollows(pending, control);
+    this.judge(pending, control);
     pending.reveal = () => this.scrollIntoViewFitting(control);
     this.revealOnceRowGone(pending);
   }
@@ -136,19 +146,7 @@ export class FocusAfterRowLeaves {
     if (pending === null || pending.row !== row) {
       return;
     }
-    pending.stopWatching();
-    const watched = this.watched();
-    pending.stopWatching = afterRemoval(
-      row,
-      () => {
-        pending.gone = true;
-        this.afterMotions(this.motionsWithin(watched), () =>
-          this.afterTheNextFrameLaidOut(() => pending.stopHolding()),
-        );
-        this.revealOnceRowGone(pending);
-      },
-      watched,
-    );
+    this.watchUntilGone(pending);
   }
 
   keepInViewOnceSettled(
@@ -179,12 +177,32 @@ export class FocusAfterRowLeaves {
     this.pending = null;
   }
 
+  private watchUntilGone(pending: PendingReveal): void {
+    if (pending.gone) {
+      return;
+    }
+    pending.stopWatching();
+    const watched = this.watched();
+    pending.stopWatching = afterRemoval(
+      pending.row,
+      () => {
+        pending.gone = true;
+        pending.stopSettling = this.afterMotions(this.motionsWithin(watched), () =>
+          this.afterTheNextFrameLaidOut(() => pending.stopHolding()),
+        );
+        this.revealOnceRowGone(pending);
+      },
+      watched,
+    );
+  }
+
   private holdBelowTheTop(pending: PendingReveal): () => void {
     const view = this.document.defaultView;
     const Observer = view?.ResizeObserver;
     if (view === null || view === undefined || Observer === undefined) {
       return () => undefined;
     }
+    pending.view = view;
     const scroller = this.scrollerOf(pending.row, view);
     const observer = new Observer(() => this.keepBelowTheTop(pending, view));
     observer.observe(pending.row);
@@ -247,15 +265,12 @@ export class FocusAfterRowLeaves {
     ) {
       return;
     }
-    this.noteWhetherItFollows(pending, held);
+    this.judge(pending, held);
     if (pending.follower !== held) {
       return;
     }
     const scroller = this.scrollerOf(held, view);
-    const floor =
-      this.visibleBand(scroller, view).top +
-      (parseFloat(view.getComputedStyle(held).scrollMarginTop) || 0);
-    const above = floor - held.getBoundingClientRect().top;
+    const above = this.floorOf(held, scroller, view) - held.getBoundingClientRect().top;
     if (above <= SUBPIXEL_PX) {
       return;
     }
@@ -267,10 +282,27 @@ export class FocusAfterRowLeaves {
     }
   }
 
-  private noteWhetherItFollows(pending: PendingReveal, control: HTMLElement): void {
-    if (pending.row.isConnected) {
-      pending.follower = followsRow(pending.row, control) ? control : null;
+  private judge(pending: PendingReveal, control: HTMLElement): void {
+    if (pending.judged === control) {
+      return;
     }
+    pending.judged = control;
+    const view = pending.view;
+    pending.follower =
+      view !== null &&
+      pending.row.isConnected &&
+      followsRow(pending.row, control) &&
+      control.getBoundingClientRect().top >=
+        this.floorOf(control, this.scrollerOf(control, view), view) - SUBPIXEL_PX
+        ? control
+        : null;
+  }
+
+  private floorOf(control: HTMLElement, scroller: HTMLElement, view: Window): number {
+    return (
+      this.visibleBand(scroller, view).top +
+      (parseFloat(view.getComputedStyle(control).scrollMarginTop) || 0)
+    );
   }
 
   private afterTheNextFrameLaidOut(then: () => void): void {
@@ -318,10 +350,10 @@ export class FocusAfterRowLeaves {
     });
   }
 
-  private afterMotions(motions: readonly Animation[], settled: () => void): void {
+  private afterMotions(motions: readonly Animation[], settled: () => void): () => void {
     if (motions.length === 0) {
       settled();
-      return;
+      return () => undefined;
     }
     const longest = Math.max(
       0,
@@ -333,11 +365,28 @@ export class FocusAfterRowLeaves {
         return;
       }
       done = true;
-      clearTimeout(fallback);
+      cancelFallback();
       settled();
     };
     void Promise.allSettled(motions.map((motion) => motion.finished)).then(finish);
-    const fallback = setTimeout(finish, (Number.isFinite(longest) ? longest : 0) + LEAVE_GRACE_MS);
+    const cancelFallback = this.later(
+      (Number.isFinite(longest) ? longest : 0) + LEAVE_GRACE_MS,
+      finish,
+    );
+    return () => {
+      done = true;
+      cancelFallback();
+    };
+  }
+
+  private later(delay: number, then: () => void): () => void {
+    const view = this.document.defaultView;
+    if (typeof view?.setTimeout === 'function') {
+      const timer = view.setTimeout(then, delay);
+      return () => view.clearTimeout(timer);
+    }
+    const timer = setTimeout(then, delay);
+    return () => clearTimeout(timer);
   }
 
   private revealSpan(from: HTMLElement, to: HTMLElement | null): void {

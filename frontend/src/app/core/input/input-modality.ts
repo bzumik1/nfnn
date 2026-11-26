@@ -9,7 +9,15 @@ import { isTextEntry } from '../layout/soft-keyboard';
 
 const PASSIVE_CAPTURE: AddEventListenerOptions = { passive: true, capture: true };
 const LAST_INPUT_ATTRIBUTE = 'data-input';
-export const LONE_MODIFIERS: ReadonlySet<string> = new Set(['Shift', 'Control', 'Alt', 'Meta']);
+export const LONE_MODIFIERS: ReadonlySet<string> = new Set([
+  'Shift',
+  'Control',
+  'Alt',
+  'AltGraph',
+  'Meta',
+  'CapsLock',
+  'Fn',
+]);
 const COMPOSING_KEYS: ReadonlySet<string> = new Set(['Unidentified', 'Process']);
 const COMPOSING_KEY_CODE = 229;
 const KEYS_THAT_LEAVE_TEXT: ReadonlySet<string> = new Set(['Tab', 'Escape']);
