@@ -126,33 +126,44 @@
               }
 
               @if (confirming() !== account.id) {
-                @if (offersReconnect(account)) {
-                  <button
-                    appNeedsConnection
-                    type="button"
-                    class="ui-button account-action"
-                    [id]="actionButtonId(account)"
-                    [disabled]="busy() === account.id"
-                    [attr.aria-busy]="busy() === account.id"
-                    (click)="reconnect(account)"
-                    i18n="@@donor.bankAccounts.reconnect"
+                @if (offersReconnect(account) || offersDisconnect(account)) {
+                  <div
+                    class="account-action-fold"
+                    [class.account-action-fold--returning]="returningAction() === account.id"
+                    appDisclosure
+                    animate.leave="account-action-fold--closing"
                   >
-                    Znovu přiřazovat platby z&nbsp;účtu
-                  </button>
-                } @else if (offersDisconnect(account)) {
-                  <button
-                    type="button"
-                    class="ui-button ui-button--quiet account-action"
-                    [class.account-action--apart]="account.symbolOffer !== null"
-                    [id]="actionButtonId(account)"
-                    [attr.aria-labelledby]="
-                      actionButtonId(account) + ' ' + actionButtonId(account) + '-number'
-                    "
-                    (click)="askToDisconnect(account)"
-                    i18n="@@donor.bankAccounts.disconnect"
-                  >
-                    Nepřiřazovat platby z&nbsp;tohoto účtu
-                  </button>
+                    <div>
+                      @if (offersReconnect(account)) {
+                        <button
+                          appNeedsConnection
+                          type="button"
+                          class="ui-button account-action"
+                          [id]="actionButtonId(account)"
+                          [disabled]="busy() === account.id"
+                          [attr.aria-busy]="busy() === account.id"
+                          (click)="reconnect(account)"
+                          i18n="@@donor.bankAccounts.reconnect"
+                        >
+                          Znovu přiřazovat platby z&nbsp;účtu
+                        </button>
+                      } @else if (offersDisconnect(account)) {
+                        <button
+                          type="button"
+                          class="ui-button ui-button--quiet account-action"
+                          [class.account-action--apart]="account.symbolOffer !== null"
+                          [id]="actionButtonId(account)"
+                          [attr.aria-labelledby]="
+                            actionButtonId(account) + ' ' + actionButtonId(account) + '-number'
+                          "
+                          (click)="askToDisconnect(account)"
+                          i18n="@@donor.bankAccounts.disconnect"
+                        >
+                          Nepřiřazovat platby z&nbsp;tohoto účtu
+                        </button>
+                      }
+                    </div>
+                  </div>
                 }
               } @else {
                 <div

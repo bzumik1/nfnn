@@ -259,8 +259,27 @@
   white-space: normal;
 }
 
+.account-action-fold > * {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.account-action-fold--returning {
+  @include motion.expand-on-open;
+}
+
+.account-action-fold--closing {
+  @include motion.row-leave;
+}
+
 .account-confirm {
   @include motion.expand($closes-by: class);
+}
+
+.account-action-fold--closing:not(:last-child),
+.account-confirm--closing:not(:last-child) {
+  margin-block-end: calc(-1 * var(--space-2-5));
 }
 
 .add-account-title {

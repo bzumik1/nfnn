@@ -189,6 +189,7 @@ export class BankAccountsCard {
   protected readonly retrying = signal(false);
   protected readonly accounts = signal<readonly BankAccountItem[]>([]);
   protected readonly confirming = signal<string | null>(null);
+  protected readonly returningAction = signal<string | null>(null);
   protected readonly busy = signal<string | null>(null);
   protected readonly actionError = signal('');
   protected readonly actionDone = signal('');
@@ -425,6 +426,7 @@ export class BankAccountsCard {
   }
 
   protected cancelDisconnect(account: BankAccountItem): void {
+    this.returningAction.set(account.id);
     this.confirming.set(null);
     this.actionError.set('');
     afterNextRender(() => this.actionButtonOf(account)?.focus(), { injector: this.injector });
