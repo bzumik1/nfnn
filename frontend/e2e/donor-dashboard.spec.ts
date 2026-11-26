@@ -1301,7 +1301,7 @@ test.describe('Given a signed-in donor on a computer', () => {
       );
     });
 
-    test(`when the finished status of the ready receipt on Můj přehled closes for the next download in a ${width} px window, then its last text stays in the line while the line closes`, async ({
+    test(`when the next download of the ready receipt on Můj přehled is refused in a ${width} px window, then the finished status keeps its last text while its line closes`, async ({
       page,
     }) => {
       await mockDonorApi(page, receiptDonations);
@@ -1317,7 +1317,16 @@ test.describe('Given a signed-in donor on a computer', () => {
       await untilStill(wrapper);
       await page.route(
         (url) => url.pathname === RECEIPT_ISSUING_URL,
-        () => new Promise<void>(() => undefined),
+        (route) =>
+          route.fulfill({
+            status: 409,
+            contentType: 'application/problem+json',
+            json: {
+              type: 'https://nfnn.cz/problems/donations/receipt-signing-paused',
+              title: 'Vydávání potvrzení je pozastavené',
+              status: 409,
+            },
+          }),
       );
 
       const closing = wrapper.evaluate(
