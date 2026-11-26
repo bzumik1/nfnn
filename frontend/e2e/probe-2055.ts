@@ -1,6 +1,9 @@
 import { Page, TestInfo } from '@playwright/test';
 
-export async function probeTheReveal(page: Page): Promise<void> {
+export async function probeTheReveal(page: Page, info: TestInfo): Promise<void> {
+  if (info.retry === 0) {
+    await page.context().tracing.start({ screenshots: true, snapshots: true });
+  }
   await page.addInitScript(() => {
     const log: unknown[] = [];
     (window as unknown as { probe2055: unknown[] }).probe2055 = log;
@@ -186,4 +189,14 @@ export async function keepTheProbe(page: Page, info: TestInfo, outcome: string):
     body: JSON.stringify(log, null, 1),
     contentType: 'application/json',
   });
+  if (info.retry > 0) {
+    return;
+  }
+  if (outcome.endsWith('failed')) {
+    const path = info.outputPath('probe-2055-trace.zip');
+    await page.context().tracing.stop({ path });
+    await info.attach('probe-2055-trace', { path, contentType: 'application/zip' });
+  } else {
+    await page.context().tracing.stop();
+  }
 }

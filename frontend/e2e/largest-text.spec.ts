@@ -1413,13 +1413,11 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
     });
 
     test.describe('probe 2055', () => {
-      test.use({ trace: 'retain-on-failure' });
-
       for (const round of Array.from({ length: 20 }, (_, index) => index + 1)) {
         test(`when they remove their only passkey, then the result is brought into view (probe round ${round})`, async ({
           page,
         }) => {
-          await probeTheReveal(page);
+          await probeTheReveal(page, test.info());
           await mockRemovablePasskeys(page, [iphonePasskey]);
           const passkeys = await signInOnTheAccountPageWithLargestText(page);
 
