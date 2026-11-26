@@ -59,7 +59,7 @@ interface PendingReveal {
   view: Window | null;
   judged: HTMLElement | null;
   follower: HTMLElement | null;
-  heldAt: number;
+  stoodAt: number;
   cancelled: boolean;
   stopWatching: () => void;
   stopHolding: () => void;
@@ -99,7 +99,7 @@ export class FocusAfterRowLeaves {
         view: null,
         judged: null,
         follower: null,
-        heldAt: 0,
+        stoodAt: 0,
         cancelled: false,
         stopWatching: () => undefined,
         stopHolding: () => undefined,
@@ -279,7 +279,8 @@ export class FocusAfterRowLeaves {
       return;
     }
     const scroller = this.scrollerOf(held, view);
-    const above = pending.heldAt - held.getBoundingClientRect().top;
+    const holdAt = Math.min(this.floorOf(held, scroller, view), pending.stoodAt);
+    const above = holdAt - held.getBoundingClientRect().top;
     if (above <= SUBPIXEL_PX) {
       return;
     }
@@ -307,7 +308,7 @@ export class FocusAfterRowLeaves {
       return;
     }
     pending.follower = control;
-    pending.heldAt = Math.min(this.floorOf(control, scroller, view), top);
+    pending.stoodAt = top;
   }
 
   private floorOf(control: HTMLElement, scroller: HTMLElement, view: Window): number {
