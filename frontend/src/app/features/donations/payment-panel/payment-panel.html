@@ -58,7 +58,7 @@
             [attr.aria-describedby]="customAmountDescription()"
             (beforeinput)="noteDeletion($event)"
             (input)="enterCustomAmount($event)"
-            (focus)="forgetAmountPress()"
+            (focus)="customAmountFocused()"
             (blur)="leaveCustomAmount()"
             (keydown.enter)="finishCustomAmount()"
           />

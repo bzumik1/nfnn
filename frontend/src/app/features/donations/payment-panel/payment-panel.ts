@@ -183,6 +183,7 @@ export class PaymentPanel {
   protected readonly failedAttempts = signal(0);
   private choosingByKey = false;
   private amountPressed = false;
+  private revealPending = false;
   private deletingSelection = false;
   private readonly announced = signal<number | null>(null);
   private lastAnnounced: number | null = null;
@@ -344,9 +345,8 @@ export class PaymentPanel {
     afterRenderEffect(() => this.prepareImage());
     effect(() => this.giftArrival.enable(this.variableSymbol() !== null));
     effect(() => {
-      const area = this.keyboard.visibleArea();
-      if (area !== null) {
-        untracked(() => this.revealCustomAmount(area));
+      if (this.keyboard.visibleArea() !== null) {
+        untracked(() => this.revealCustomAmountOnce());
       }
     });
     whenLeft(() => this.giftArrival.pageLeft());
@@ -447,12 +447,19 @@ export class PaymentPanel {
     this.amountPressed = false;
   }
 
+  customAmountFocused(): void {
+    this.amountPressed = false;
+    this.revealPending = true;
+    this.revealCustomAmountOnce();
+  }
+
   noteDeletion(event: Event): void {
     const field = event.target as HTMLInputElement;
     this.deletingSelection = field.selectionStart !== field.selectionEnd;
   }
 
   leaveCustomAmount(): void {
+    this.revealPending = false;
     if (!this.amountPressed) {
       this.customAmountLeft.set(true);
     }
@@ -636,11 +643,19 @@ export class PaymentPanel {
     qrCode.pngBlob(SAVED_QR_SIDE_PX).then(keep, () => keep(null));
   }
 
-  private revealCustomAmount(area: VisibleArea): void {
+  private revealCustomAmountOnce(): void {
+    const area = this.keyboard.visibleArea();
     const field = this.customAmountField()?.nativeElement;
-    if (!field || field.ownerDocument.activeElement !== field) {
+    if (!this.revealPending || area === null || !field) {
       return;
     }
+    this.revealPending = false;
+    if (field.ownerDocument.activeElement === field && field.closest('dialog') === null) {
+      this.revealAboveKeyboard(field, area);
+    }
+  }
+
+  private revealAboveKeyboard(field: HTMLInputElement, area: VisibleArea): void {
     const root = field.ownerDocument.documentElement;
     const box = field.getBoundingClientRect();
     const covered = box.bottom - (area.top + area.height - ROOM_ABOVE_KEYBOARD_PX);
