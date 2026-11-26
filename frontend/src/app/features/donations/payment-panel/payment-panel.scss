@@ -648,7 +648,14 @@
   aspect-ratio: 1;
 }
 
+.qr[role='region'] .qr-code {
+  display: flex;
+  align-self: stretch;
+  justify-content: center;
+}
+
 .qr-caption {
   margin-inline: auto;
   text-align: center;
+  text-wrap: balance;
 }
