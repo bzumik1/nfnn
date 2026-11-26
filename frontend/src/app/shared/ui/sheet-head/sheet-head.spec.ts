@@ -3,7 +3,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { PageTransitions } from '../../../core/navigation/page-transitions';
 import { SHEET_STEPPING } from '../../../core/navigation/sheet-stepping';
-import { SHEET_HEAD_RESIZE_OBSERVER, SheetHead } from './sheet-head';
+import {
+  SHEET_HEAD_ASKS_FOR_LESS_MOTION,
+  SHEET_HEAD_RESIZE_OBSERVER,
+  SheetHead,
+} from './sheet-head';
 import { withOrdinarySpaces } from '../../../../testing/ordinary-spaces';
 import { InputModality } from '../../../core/input/input-modality';
 import { FocusReturn } from '../dialog/focus-return';
@@ -112,6 +116,7 @@ describe('Given the head of a page inside a sheet', () => {
 describe('Given the head of a page standing in the scrolling panel of a sheet', () => {
   let fixture: ComponentFixture<SheetPanel>;
   let watchers: WatchedSizes[];
+  let lessMotion: boolean;
 
   class WatchedSizes {
     readonly targets = new Set<Element>();
@@ -139,6 +144,7 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
 
   beforeEach(async () => {
     watchers = [];
+    lessMotion = false;
     await TestBed.configureTestingModule({
       imports: [SheetPanel],
       providers: [
@@ -147,6 +153,7 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
           provide: SHEET_HEAD_RESIZE_OBSERVER,
           useValue: WatchedSizes as unknown as typeof ResizeObserver,
         },
+        { provide: SHEET_HEAD_ASKS_FOR_LESS_MOTION, useValue: () => lessMotion },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(SheetPanel);
@@ -250,10 +257,15 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
     const padding = () => panel().style.getPropertyValue('scroll-padding-top');
     const nextFrame = () => new Promise<void>((done) => requestAnimationFrame(() => done()));
     let scrolled: number[];
+    let behaviours: (ScrollBehavior | undefined)[];
 
     beforeEach(() => {
       scrolled = [];
-      panel().scrollBy = ((options: ScrollToOptions) => scrolled.push(options.top ?? 0)) as never;
+      behaviours = [];
+      panel().scrollBy = ((options: ScrollToOptions) => {
+        scrolled.push(options.top ?? 0);
+        behaviours.push(options.behavior);
+      }) as never;
       standAt(panel(), 100, 600);
       standAt(head()!, 100, 57);
     });
@@ -290,6 +302,43 @@ describe('Given the head of a page standing in the scrolling panel of a sheet', 
       await nextFrame();
 
       expect(scrolled).toEqual([-27]);
+    });
+
+    it('when the browser leaves a field it focused under the head and motion is allowed, then the panel glides it below the head', async () => {
+      standAt(control('#below'), 130, 40);
+
+      control('#below').focus();
+      await nextFrame();
+
+      expect(behaviours).toEqual(['smooth']);
+    });
+
+    it('when the browser leaves a field it focused under the head and the device asks for less motion, then the panel puts it below the head at once', async () => {
+      lessMotion = true;
+      standAt(control('#below'), 130, 40);
+
+      control('#below').focus();
+      await nextFrame();
+
+      expect(behaviours).toEqual(['instant']);
+    });
+
+    it('when code moves the focus without scrolling to a control standing wholly above what the panel shows, then the panel stays where it is, so the code that moved it brings it into view', async () => {
+      standAt(control('#toggle'), -900, 40);
+
+      control('#toggle').focus({ preventScroll: true });
+      await nextFrame();
+
+      expect(scrolled).toEqual([]);
+    });
+
+    it('when the browser leaves a field it focused with its top above the panel and its bottom inside it, then the panel still scrolls the field down below the head', async () => {
+      standAt(control('#below'), 80, 40);
+
+      control('#below').focus();
+      await nextFrame();
+
+      expect(scrolled).toEqual([-77]);
     });
 
     describe('when a finger pressed last', () => {

@@ -1100,6 +1100,10 @@ interface HeldSignOut {
 }
 
 async function holdTheOlderDeviceSignOut(page: Page): Promise<HeldSignOut> {
+  return holdTheSignOutOf(page, windowsEdge?.id);
+}
+
+async function holdTheSignOutOf(page: Page, deviceId: string | undefined): Promise<HeldSignOut> {
   let listed = [...signedInDevices, ...longUnusedDevices];
   let answer = (): void => undefined;
   const answered = new Promise<void>((resolve) => (answer = resolve));
@@ -1111,7 +1115,7 @@ async function holdTheOlderDeviceSignOut(page: Page): Promise<HeldSignOut> {
     (route) => route.fulfill({ json: { items: listed } }),
   );
   await page.route(
-    (url) => url.pathname === `/api/donors/me/devices/${windowsEdge?.id}`,
+    (url) => url.pathname === `/api/donors/me/devices/${deviceId}`,
     async (route) => {
       if (route.request().method() !== 'DELETE') {
         await route.fallback();
@@ -1119,7 +1123,7 @@ async function holdTheOlderDeviceSignOut(page: Page): Promise<HeldSignOut> {
       }
       asked();
       await answered;
-      listed = listed.filter((device) => device.id !== windowsEdge?.id);
+      listed = listed.filter((device) => device.id !== deviceId);
       await route.fulfill({ status: 204 });
     },
   );
@@ -4861,6 +4865,464 @@ for (const width of [390, 1280]) {
       );
 
       await expect.poll(() => linesOfEachFigure(page)).toEqual([1, 1, 1]);
+    });
+  });
+}
+
+const SUBPIXEL_PX = 0.5;
+
+interface NeighbourFrame {
+  readonly top: number;
+  readonly bottom: number;
+  readonly upperEdge: number;
+  readonly lowerEdge: number;
+  readonly rowThere: boolean;
+}
+
+interface NeighbourRecord {
+  frames: NeighbourFrame[];
+  recording: boolean;
+}
+
+async function recordTheNeighbourFromTheNextClick(
+  page: Page,
+  neighbour: string,
+  row: string,
+  inSheet: boolean,
+): Promise<() => Promise<NeighbourFrame[]>> {
+  return recordTheNeighbour(page, neighbour, row, inSheet, 'the next click');
+}
+
+async function recordTheNeighbour(
+  page: Page,
+  neighbour: string,
+  row: string,
+  inSheet: boolean,
+  from: 'the next click' | 'now',
+): Promise<() => Promise<NeighbourFrame[]>> {
+  await page.evaluate(
+    ({ neighbour, row, inSheet, from }) => {
+      const record: NeighbourRecord = { frames: [], recording: true };
+      (window as unknown as { neighbourRecord: NeighbourRecord }).neighbourRecord = record;
+      const edges = (): { upperEdge: number; lowerEdge: number } => {
+        if (inSheet) {
+          return {
+            upperEdge: document
+              .querySelector('app-account-sheet app-sheet-head')!
+              .getBoundingClientRect().bottom,
+            lowerEdge: document
+              .querySelector('app-account-sheet .dialog-panel')!
+              .getBoundingClientRect().bottom,
+          };
+        }
+        const header = [
+          ...document.querySelectorAll<HTMLElement>('app-header a, app-header button'),
+        ]
+          .filter((control) => getComputedStyle(control).visibility !== 'hidden')
+          .map((control) => control.getBoundingClientRect())
+          .filter((control) => control.width > 0 && control.height > 0 && control.bottom > 0)
+          .map((control) => control.bottom);
+        const covers = [
+          ...document.querySelectorAll<HTMLElement>(
+            'app-tab-bar nav, .ui-notice--floating, app-offline-status .offline-pill',
+          ),
+        ]
+          .map((cover) => cover.getBoundingClientRect())
+          .filter((cover) => cover.height > 0 && cover.top > window.innerHeight / 2)
+          .map((cover) => cover.top);
+        return {
+          upperEdge: Math.max(0, ...header),
+          lowerEdge: Math.min(window.innerHeight, ...covers),
+        };
+      };
+      const probe = document.createElement('div');
+      probe.style.cssText =
+        'position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none;';
+      const read = (): void => {
+        const box = document.querySelector(neighbour)?.getBoundingClientRect();
+        if (box !== undefined) {
+          record.frames.push({
+            top: box.top,
+            bottom: box.bottom,
+            ...edges(),
+            rowThere: document.querySelector(row) !== null,
+          });
+        }
+      };
+      const sampleAsPainted = (): void => {
+        const afterLayout = new ResizeObserver(() => {
+          afterLayout.disconnect();
+          read();
+          if (record.recording) {
+            requestAnimationFrame(sampleAsPainted);
+          } else {
+            probe.remove();
+          }
+        });
+        afterLayout.observe(probe);
+      };
+      const start = (): void => {
+        document.body.append(probe);
+        requestAnimationFrame(sampleAsPainted);
+      };
+      if (from === 'now') {
+        start();
+      } else {
+        document.addEventListener('click', start, { capture: true, once: true });
+      }
+    },
+    { neighbour, row, inSheet, from },
+  );
+  return async () => {
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (window as unknown as { neighbourRecord: NeighbourRecord }).neighbourRecord.frames.some(
+            (frame) => !frame.rowThere,
+          ),
+        ),
+      )
+      .toBe(true);
+    return page.evaluate(() => {
+      const record = (window as unknown as { neighbourRecord: NeighbourRecord }).neighbourRecord;
+      record.recording = false;
+      return record.frames;
+    });
+  };
+}
+
+function framesThatMoveItBackAndForth(frames: readonly NeighbourFrame[]): string[] {
+  return frames.flatMap((frame, index) => {
+    const before = frames[index - 1];
+    if (before === undefined) {
+      return [];
+    }
+    const moved = frame.top - before.top;
+    const back =
+      before.rowThere && frame.rowThere
+        ? moved > SUBPIXEL_PX
+        : !frame.rowThere && !before.rowThere && moved < -SUBPIXEL_PX;
+    return back
+      ? [
+          `frame ${index}: top ${frame.top.toFixed(1)} after ${before.top.toFixed(1)}${frame.rowThere ? ', row there' : ''}`,
+        ]
+      : [];
+  });
+}
+
+function expectHeldOrRidingWithoutJerks(
+  frames: readonly NeighbourFrame[],
+  reducedMotion: 'no-preference' | 'reduce',
+): void {
+  if (reducedMotion === 'reduce') {
+    expect(framesUnderTheTopEdge(frames)).toEqual([]);
+  } else {
+    expect(framesThatMoveItBackAndForth(frames)).toEqual([]);
+  }
+}
+
+function framesUnderTheTopEdge(frames: readonly NeighbourFrame[]): string[] {
+  return frames.flatMap((frame, index) =>
+    frame.top < frame.upperEdge - SUBPIXEL_PX
+      ? [
+          `frame ${index}: top ${frame.top.toFixed(1)} above the edge at ${frame.upperEdge.toFixed(1)}${frame.rowThere ? ', row there' : ''}`,
+        ]
+      : [],
+  );
+}
+
+function expectTheLastFrameInView(frames: readonly NeighbourFrame[]): void {
+  const last = frames.at(-1)!;
+  expect(last.rowThere).toBe(false);
+  expect(last.top).toBeGreaterThanOrEqual(last.upperEdge - SUBPIXEL_PX);
+  expect(last.bottom).toBeLessThanOrEqual(last.lowerEdge + SUBPIXEL_PX);
+}
+
+async function settledWithin(scope: Locator): Promise<void> {
+  await expect
+    .poll(() =>
+      scope.evaluate(
+        (element) =>
+          element
+            .getAnimations({ subtree: true })
+            .filter((motion) => motion.playState !== 'finished').length,
+      ),
+    )
+    .toBe(0);
+}
+
+async function signedInWithDevicesAt(page: Page, inSheet: boolean): Promise<Locator> {
+  const iphone = signedInDevices.find((device) => !device.current);
+  let listed = [...signedInDevices, ...longUnusedDevices];
+  await mockDonorApi(page);
+  await page.route(
+    (url) => url.pathname === '/api/donors/me/devices',
+    (route) => route.fulfill({ json: { items: listed } }),
+  );
+  await page.route(
+    (url) => url.pathname.startsWith('/api/donors/me/devices/'),
+    async (route) => {
+      listed = listed.filter((device) => device.id !== iphone?.id);
+      await route.fulfill({ status: 204 });
+    },
+  );
+  return openTheSettingsAt(page, inSheet);
+}
+
+async function openTheSettingsAt(page: Page, inSheet: boolean): Promise<Locator> {
+  if (inSheet) {
+    await rememberedDonorSession(page);
+    await page.goto('/darce/prehled');
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    const sheet = page.locator('app-account-sheet');
+    await expect(sheet.locator('app-sheet-head')).toBeVisible();
+    await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+    await settledWithin(sheet);
+    return sheet;
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page);
+  await openDonorSection(page, 'Údaje a zabezpečení');
+  await expect(page.locator('.first-sync')).toHaveCount(0, { timeout: 10_000 });
+  await page.setViewportSize({ width: 375, height: 667 });
+  return page.locator('app-donor-shell');
+}
+
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  for (const inSheet of [false, true]) {
+    const where = inSheet ? 'inside the account sheet' : 'on the account page';
+    test.describe(`Given a donor on an iPhone SE 375 × 667 pt with the largest accessibility text who asks for ${reducedMotion} motion, in Údaje a zabezpečení ${where}`, () => {
+      test.use({ viewport: { width: 375, height: 667 }, reducedMotion });
+
+      test.beforeEach(async ({ page }) => {
+        await showLargestSystemText(page);
+        await anchorNoScrollAsSafariDoes(page);
+      });
+
+      test('when they sign out the iPhone above Starší, then Starší never rises above the top edge of what shows the page under reduced motion and never moves back and forth with motion, and it ends in view', async ({
+        page,
+      }) => {
+        const iphone = signedInDevices.find((device) => !device.current);
+        const scope = await signedInWithDevicesAt(page, inSheet);
+        const devices = scope.locator('.devices');
+        await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+        const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+        await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+        await settledWithin(devices);
+        const row = `#device-row-${iphone?.id}`;
+        const frames = await recordTheNeighbourFromTheNextClick(
+          page,
+          '.devices-older-toggle',
+          row,
+          inSheet,
+        );
+
+        await question.getByRole('button', { name: 'Odhlásit', exact: true }).click();
+
+        const older = devices.getByRole('button', { name: /Starší \(2\)/ });
+        await expect(older).toBeFocused();
+        await expect(page.locator(row)).toHaveCount(0);
+        await settledWithin(scope);
+        await untilTheLastFrameStandsInView(page);
+        const recorded = await frames();
+        expectHeldOrRidingWithoutJerks(recorded, reducedMotion);
+        expectTheLastFrameInView(recorded);
+      });
+
+      test('when they remove the first of two passkeys with its Ano, odebrat at the top of what shows the page, then Přejmenovat of the key below never rises above the top edge of what shows the page under reduced motion and never moves back and forth with motion, and it ends in view', async ({
+        page,
+      }) => {
+        await offerPasskeysAsAnIPhoneDoes(page);
+        await mockDonorApi(page);
+        await mockRemovablePasskeys(page, [iphonePasskey, notebookPasskey]);
+        const scope = await openTheSettingsAt(page, inSheet);
+        const passkeys = await openThePasskeys(scope.locator('app-account-card'));
+        const confirm = await askToRemove(passkeys, iphonePasskey);
+        await settledWithin(scope.locator('app-account-card'));
+        await confirm.evaluate((button) => button.scrollIntoView({ block: 'start' }));
+        await expect(confirm).toBeInViewport({ ratio: 1 });
+        const row = `#passkey-row-${iphonePasskey.id}`;
+        const frames = await recordTheNeighbourFromTheNextClick(
+          page,
+          `#passkey-rename-button-${notebookPasskey.id}`,
+          row,
+          inSheet,
+        );
+
+        await confirm.click();
+
+        await expect(renameButtonOf(passkeys, notebookPasskey)).toBeFocused();
+        await expect(page.locator(row)).toHaveCount(0);
+        await settledWithin(scope);
+        await untilTheLastFrameStandsInView(page);
+        const recorded = await frames();
+        expectHeldOrRidingWithoutJerks(recorded, reducedMotion);
+        expectTheLastFrameInView(recorded);
+      });
+    });
+  }
+}
+
+async function untilTheLastFrameStandsInView(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate((subpixel) => {
+        const last = (
+          window as unknown as { neighbourRecord: NeighbourRecord }
+        ).neighbourRecord.frames.at(-1);
+        return (
+          last !== undefined &&
+          !last.rowThere &&
+          last.top >= last.upperEdge - subpixel &&
+          last.bottom <= last.lowerEdge + subpixel
+        );
+      }, SUBPIXEL_PX),
+    )
+    .toBe(true);
+}
+
+function framesThatMovedItWhileTheRowStood(
+  frames: readonly NeighbourFrame[],
+  topAtThePress: number,
+): string[] {
+  return frames.flatMap((frame, index) =>
+    frame.rowThere && Math.abs(frame.top - topAtThePress) > SUBPIXEL_PX
+      ? [`frame ${index}: top ${frame.top.toFixed(1)}, ${topAtThePress.toFixed(1)} at the press`]
+      : [],
+  );
+}
+
+for (const inSheet of [false, true]) {
+  const where = inSheet ? 'inside the account sheet' : 'on the account page';
+  test.describe(`Given a donor on an iPhone SE 375 × 667 pt with the largest accessibility text who allows motion, in Údaje a zabezpečení ${where}`, () => {
+    test.use({ viewport: { width: 375, height: 667 }, reducedMotion: 'no-preference' });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await anchorNoScrollAsSafariDoes(page);
+    });
+
+    test('when they remove the second of two passkeys with its Ano, odebrat at the top of what shows the page, then Přejmenovat of the key above stays where it stood while the row closes and is brought into view only once the row is gone', async ({
+      page,
+    }) => {
+      await offerPasskeysAsAnIPhoneDoes(page);
+      await mockDonorApi(page);
+      await mockRemovablePasskeys(page, [iphonePasskey, notebookPasskey]);
+      const scope = await openTheSettingsAt(page, inSheet);
+      const passkeys = await openThePasskeys(scope.locator('app-account-card'));
+      const confirm = await askToRemove(passkeys, notebookPasskey);
+      await settledWithin(scope.locator('app-account-card'));
+      await confirm.evaluate((button) => button.scrollIntoView({ block: 'start' }));
+      await expect(confirm).toBeInViewport({ ratio: 1 });
+      const above = renameButtonOf(passkeys, iphonePasskey);
+      await expect(above).not.toBeInViewport();
+      const topAtThePress = await above.evaluate((button) => button.getBoundingClientRect().top);
+      const row = `#passkey-row-${notebookPasskey.id}`;
+      const frames = await recordTheNeighbourFromTheNextClick(
+        page,
+        `#passkey-rename-button-${iphonePasskey.id}`,
+        row,
+        inSheet,
+      );
+
+      await confirm.click();
+
+      await expect(above).toBeFocused();
+      await expect(page.locator(row)).toHaveCount(0);
+      await settledWithin(scope);
+      await untilTheLastFrameStandsInView(page);
+      const recorded = await frames();
+      expect(framesThatMovedItWhileTheRowStood(recorded, topAtThePress)).toEqual([]);
+      expectTheLastFrameInView(recorded);
+    });
+  });
+}
+
+function framesThatPulledItDownWhileTheRowStood(
+  frames: readonly NeighbourFrame[],
+  topAtTheAnswer: number,
+): string[] {
+  return frames.flatMap((frame, index) =>
+    frame.rowThere && frame.top > topAtTheAnswer + SUBPIXEL_PX
+      ? [`frame ${index}: top ${frame.top.toFixed(1)}, ${topAtTheAnswer.toFixed(1)} at the answer`]
+      : [],
+  );
+}
+
+async function coastUntilItStandsAbove(control: Locator, distance: number): Promise<void> {
+  await control.evaluate((element, distance) => {
+    const panel = element.closest<HTMLElement>('.dialog-panel');
+    const edge = panel === null ? 0 : panel.getBoundingClientRect().top + panel.clientTop;
+    const by = element.getBoundingClientRect().top - (edge - distance);
+    if (panel === null) {
+      window.scrollBy({ top: by, behavior: 'instant' });
+    } else {
+      panel.scrollBy({ top: by, behavior: 'instant' });
+    }
+  }, distance);
+}
+
+async function topBelowItsScrollerEdge(control: Locator): Promise<number> {
+  return control.evaluate((element) => {
+    const panel = element.closest<HTMLElement>('.dialog-panel');
+    const edge = panel === null ? 0 : panel.getBoundingClientRect().top + panel.clientTop;
+    return element.getBoundingClientRect().top - edge;
+  });
+}
+
+async function untilAFrameWithTheRowRecorded(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as unknown as { neighbourRecord: NeighbourRecord }).neighbourRecord.frames.some(
+          (frame) => frame.rowThere,
+        ),
+      ),
+    )
+    .toBe(true);
+}
+
+for (const inSheet of [false, true]) {
+  const where = inSheet ? 'inside the account sheet' : 'on the account page';
+  test.describe(`Given a donor on an iPhone SE 375 × 667 pt with the largest accessibility text who allows motion, in Údaje a zabezpečení ${where}`, () => {
+    test.use({ viewport: { width: 375, height: 667 }, reducedMotion: 'no-preference' });
+
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await anchorNoScrollAsSafariDoes(page);
+    });
+
+    test('when what shows the page coasts on, as after a flick, until Starší stands above it while the iPhone above Starší signs out, then nothing pulls Starší back while the row closes and it glides into view once the row is gone', async ({
+      page,
+    }) => {
+      const iphone = signedInDevices.find((device) => !device.current);
+      const signOut = await holdTheSignOutOf(page, iphone?.id);
+      const scope = await openTheSettingsAt(page, inSheet);
+      const devices = scope.locator('.devices');
+      await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+      const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+      await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+      await settledWithin(devices);
+      await question.getByRole('button', { name: 'Odhlásit', exact: true }).click();
+      await signOut.asked;
+      const starsi = devices.locator('.devices-older-toggle');
+      await coastUntilItStandsAbove(starsi, 300);
+      expect(await topBelowItsScrollerEdge(starsi)).toBeLessThan(0);
+      const topAtTheAnswer = await starsi.evaluate((toggle) => toggle.getBoundingClientRect().top);
+      const row = `#device-row-${iphone?.id}`;
+      const frames = await recordTheNeighbour(page, '.devices-older-toggle', row, inSheet, 'now');
+      await untilAFrameWithTheRowRecorded(page);
+
+      signOut.answer();
+
+      await expect(starsi).toBeFocused();
+      await expect(page.locator(row)).toHaveCount(0);
+      await settledWithin(scope);
+      await untilTheLastFrameStandsInView(page);
+      const recorded = await frames();
+      expect(recorded.some((frame) => frame.rowThere)).toBe(true);
+      expect(framesThatPulledItDownWhileTheRowStood(recorded, topAtTheAnswer)).toEqual([]);
+      expectTheLastFrameInView(recorded);
     });
   });
 }
