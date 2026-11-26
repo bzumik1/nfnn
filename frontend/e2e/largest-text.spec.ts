@@ -48,7 +48,6 @@ import {
   boldReservesApartFromTheirLabel,
 } from './kept-together';
 import { offerPasskeysAsAnIPhoneDoes } from './passkeys-offered';
-import { keepTheProbe, probeTheReveal } from './probe-2055';
 import { serveReceiptKeys, serveReceiptStatus, YEARLY_RECEIPT } from './receipt-verification';
 
 const LARGEST_SYSTEM_TEXT_PX = 53;
@@ -1410,30 +1409,6 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
       await removeThePasskey(passkeys, iphonePasskey);
 
       await expectTheResultInViewWithTheAddButton(passkeys);
-    });
-
-    test.describe('probe 2055', () => {
-      for (const round of reducedMotion === 'reduce'
-        ? Array.from({ length: 60 }, (_, index) => index + 1)
-        : []) {
-        test(`when they remove their only passkey, then the result is brought into view (probe round ${round})`, async ({
-          page,
-        }) => {
-          await probeTheReveal(page, test.info());
-          await mockRemovablePasskeys(page, [iphonePasskey]);
-          const passkeys = await signInOnTheAccountPageWithLargestText(page);
-
-          await removeThePasskey(passkeys, iphonePasskey);
-
-          let outcome = 'failed';
-          try {
-            await expectTheResultInViewWithTheAddButton(passkeys);
-            outcome = 'passed';
-          } finally {
-            await keepTheProbe(page, test.info(), `${reducedMotion}-${outcome}`);
-          }
-        });
-      }
     });
 
     test('when they remove one passkey and then the last one left, then the panel takes the focus and the result is brought into view with Přidat přístupový klíč, its top between the header and whatever covers the bottom of the window', async ({
