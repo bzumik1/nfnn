@@ -71,8 +71,11 @@ export interface Running {
   readonly swiping: boolean;
   readonly sheet: HTMLElement | null;
   readonly fromSheet?: boolean;
+  readonly shownScrollY?: number;
   revealed: boolean;
   stepped?: boolean;
+  ahead?: boolean;
+  arrived?: boolean;
   still?: boolean;
 }
 
@@ -434,19 +437,27 @@ export class PageTransitions {
     const behind =
       kind === 'pop' && this.restoredDepth !== null ? this.keptAt(this.restoredDepth, view) : null;
     const sheet = behind?.sheet ?? null;
+    const ahead = behind?.copy != null && behind.url === event.urlAfterRedirects;
     const running: Running = {
       kind,
       overlay,
       swiping: false,
       sheet,
       fromSheet: kind === 'push' && returningSheet !== null,
+      shownScrollY: ahead ? behind.scrollY : undefined,
       revealed: false,
+      ahead,
     };
-    const placed = this.place(overlay, left, kind === 'push' ? 'under' : 'over');
-    this.dressChrome(overlay, placed, null);
+    if (!ahead) {
+      const placed = this.place(overlay, left, kind === 'push' ? 'under' : 'over');
+      this.dressChrome(overlay, placed, null);
+    }
     this.running = running;
     this.sheetUnder(sheet ?? left.sheet);
     this.finishAfter(view, PAGE_COVER_LONGEST_MS);
+    if (ahead) {
+      this.moveOver(running, view, left, behind);
+    }
   }
 
   private revealIfNoScrollFollows(): void {
@@ -478,7 +489,7 @@ export class PageTransitions {
     }
     void this.placement
       .placed(view, this.durationOf('--duration-page'))
-      .then(() => this.moveOnceAnswered(running, view));
+      .then(() => (running.ahead ? this.arrive(running) : this.moveOnceAnswered(running, view)));
   }
 
   private moveOnceAnswered(running: Running, view: Window): void {
@@ -492,6 +503,25 @@ export class PageTransitions {
     void this.placement
       .answered(view, waitsMs)
       .then(() => nextFrame(view, (_, inFrame) => this.move(running, view, inFrame)));
+  }
+
+  private arrive(running: Running): void {
+    if (this.running !== running) {
+      return;
+    }
+    running.arrived = true;
+    this.standWhereTheCopyShowed(running);
+    if (running.still) {
+      this.finish();
+    }
+  }
+
+  private standWhereTheCopyShowed(running: Running): void {
+    const view = this.document.defaultView;
+    const top = running.shownScrollY;
+    if (view !== null && top !== undefined && Math.abs(view.scrollY - top) > 1) {
+      view.scrollTo({ top, behavior: 'instant' });
+    }
   }
 
   private move(running: Running, view: Window, inFrame = false): void {
@@ -516,6 +546,15 @@ export class PageTransitions {
     const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
     this.dressChrome(running.overlay, left, shown);
     this.startMoving(running, view, shown.box, kind);
+  }
+
+  private moveOver(running: Running, view: Window, leaving: KeptPage, arriving: KeptPage): void {
+    const left = this.put(running.overlay, leaving, 'over');
+    const shown = this.put(running.overlay, arriving, 'under');
+    left.scroll();
+    shown.scroll();
+    this.dressChrome(running.overlay, this.placedPage(running.overlay, 'over'), shown.page);
+    this.startMoving(running, view, shown.page.box, 'task');
   }
 
   private startMoving(running: Running, view: Window, page: HTMLElement, kind: PlacingKind): void {
@@ -574,7 +613,9 @@ export class PageTransitions {
         return;
       }
       running.still = true;
-      this.finish();
+      if (!running.ahead || running.arrived) {
+        this.finish();
+      }
     };
     void Promise.allSettled(motions.map((motion) => motion.finished)).then(still);
     return still;
