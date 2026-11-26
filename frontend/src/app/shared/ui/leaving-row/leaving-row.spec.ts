@@ -1135,6 +1135,7 @@ describe('Given a row whose leave carries the control below it toward the top of
   let margins: Map<Element, Partial<CSSStyleDeclaration>>;
   let listening: number;
   let timers: Map<number, () => void>;
+  let timerIds = 0;
   let focus: FocusAfterRowLeaves;
 
   class WatchedSizes {
@@ -1212,9 +1213,9 @@ describe('Given a row whose leave carries the control below it toward the top of
         requestAnimationFrame: (callback: FrameRequestCallback) => requestAnimationFrame(callback),
         scrollBy: (options: ScrollToOptions) => scrolledBy.push(options),
         setTimeout: (callback: () => void) => {
-          const id = timers.size + 1;
-          timers.set(id, callback);
-          return id;
+          timerIds += 1;
+          timers.set(timerIds, callback);
+          return timerIds;
         },
         clearTimeout: (id: number) => timers.delete(id),
       },
@@ -1279,6 +1280,33 @@ describe('Given a row whose leave carries the control below it toward the top of
     aFrameOfTheClose();
 
     expect(scrolledBy).toEqual([{ top: -18, behavior: 'instant' }]);
+  });
+
+  it("when the control stands 8 px under the header as the row starts to leave, within the page's 16 px of scroll padding below it, then it is held where it stood", () => {
+    margins.set(document.documentElement, { scrollPaddingTop: '74px' });
+    standAt(below, 66);
+    focus.rowLeaving(row, () => below);
+    standAt(below, 30);
+
+    aFrameOfTheClose();
+
+    expect(scrolledBy).toEqual([{ top: -36, behavior: 'instant' }]);
+  });
+
+  it("when the visitor's own wheel ends the hold before the focus moves, then the control takes the focus without the browser scrolling it against the visitor", () => {
+    const asked: (FocusOptions | undefined)[] = [];
+    const focusOf = below.focus.bind(below);
+    below.focus = (options?: FocusOptions) => {
+      asked.push(options);
+      focusOf(options);
+    };
+    focus.rowLeaving(row, () => below);
+    document.dispatchEvent(new Event('wheel', { bubbles: true }));
+
+    focus.moveFocus(row, below);
+
+    expect(asked).toEqual([{ preventScroll: true }]);
+    expect(document.activeElement).toBe(below);
   });
 
   it('when the control stands in a scrolling panel, then the panel scrolls back, not the page', () => {

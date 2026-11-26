@@ -5038,42 +5038,80 @@ function framesThatPulledItDownWhileTheRowStood(
   );
 }
 
-test.describe('Given a donor on an iPhone SE 375 × 667 pt with the largest accessibility text who allows motion, in Údaje a zabezpečení on the account page', () => {
-  test.use({ viewport: { width: 375, height: 667 }, reducedMotion: 'no-preference' });
+async function coastUntilItStandsAbove(control: Locator, distance: number): Promise<void> {
+  await control.evaluate((element, distance) => {
+    const panel = element.closest<HTMLElement>('.dialog-panel');
+    const edge = panel === null ? 0 : panel.getBoundingClientRect().top + panel.clientTop;
+    const by = element.getBoundingClientRect().top - (edge - distance);
+    if (panel === null) {
+      window.scrollBy({ top: by, behavior: 'instant' });
+    } else {
+      panel.scrollBy({ top: by, behavior: 'instant' });
+    }
+  }, distance);
+}
 
-  test.beforeEach(async ({ page }) => {
-    await showLargestSystemText(page);
-    await anchorNoScrollAsSafariDoes(page);
+async function topBelowItsScrollerEdge(control: Locator): Promise<number> {
+  return control.evaluate((element) => {
+    const panel = element.closest<HTMLElement>('.dialog-panel');
+    const edge = panel === null ? 0 : panel.getBoundingClientRect().top + panel.clientTop;
+    return element.getBoundingClientRect().top - edge;
   });
+}
 
-  test('when the page coasts on, as after a flick, until Starší stands above the window while the iPhone above it signs out, then nothing pulls Starší back while the row closes and it glides into view once the row is gone', async ({
-    page,
-  }) => {
-    const iphone = signedInDevices.find((device) => !device.current);
-    const signOut = await holdTheSignOutOf(page, iphone?.id);
-    const scope = await openTheSettingsAt(page, false);
-    const devices = scope.locator('.devices');
-    await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
-    const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
-    await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
-    await settledWithin(devices);
-    await question.getByRole('button', { name: 'Odhlásit', exact: true }).click();
-    await signOut.asked;
-    const starsi = devices.locator('.devices-older-toggle');
-    await placeTheTopOf(starsi, -300);
-    const topAtTheAnswer = await starsi.evaluate((toggle) => toggle.getBoundingClientRect().top);
-    expect(topAtTheAnswer).toBeLessThan(0);
-    const row = `#device-row-${iphone?.id}`;
-    const frames = await recordTheNeighbour(page, '.devices-older-toggle', row, false, 'now');
+async function untilAFrameWithTheRowRecorded(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as unknown as { neighbourRecord: NeighbourRecord }).neighbourRecord.frames.some(
+          (frame) => frame.rowThere,
+        ),
+      ),
+    )
+    .toBe(true);
+}
 
-    signOut.answer();
+for (const inSheet of [false, true]) {
+  const where = inSheet ? 'inside the account sheet' : 'on the account page';
+  test.describe(`Given a donor on an iPhone SE 375 × 667 pt with the largest accessibility text who allows motion, in Údaje a zabezpečení ${where}`, () => {
+    test.use({ viewport: { width: 375, height: 667 }, reducedMotion: 'no-preference' });
 
-    await expect(starsi).toBeFocused();
-    await expect(page.locator(row)).toHaveCount(0);
-    await settledWithin(scope);
-    await untilTheLastFrameStandsInView(page);
-    const recorded = await frames();
-    expect(framesThatPulledItDownWhileTheRowStood(recorded, topAtTheAnswer)).toEqual([]);
-    expectTheLastFrameInView(recorded);
+    test.beforeEach(async ({ page }) => {
+      await showLargestSystemText(page);
+      await anchorNoScrollAsSafariDoes(page);
+    });
+
+    test('when what shows the page coasts on, as after a flick, until Starší stands above it while the iPhone above Starší signs out, then nothing pulls Starší back while the row closes and it glides into view once the row is gone', async ({
+      page,
+    }) => {
+      const iphone = signedInDevices.find((device) => !device.current);
+      const signOut = await holdTheSignOutOf(page, iphone?.id);
+      const scope = await openTheSettingsAt(page, inSheet);
+      const devices = scope.locator('.devices');
+      await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+      const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+      await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+      await settledWithin(devices);
+      await question.getByRole('button', { name: 'Odhlásit', exact: true }).click();
+      await signOut.asked;
+      const starsi = devices.locator('.devices-older-toggle');
+      await coastUntilItStandsAbove(starsi, 300);
+      expect(await topBelowItsScrollerEdge(starsi)).toBeLessThan(0);
+      const topAtTheAnswer = await starsi.evaluate((toggle) => toggle.getBoundingClientRect().top);
+      const row = `#device-row-${iphone?.id}`;
+      const frames = await recordTheNeighbour(page, '.devices-older-toggle', row, inSheet, 'now');
+      await untilAFrameWithTheRowRecorded(page);
+
+      signOut.answer();
+
+      await expect(starsi).toBeFocused();
+      await expect(page.locator(row)).toHaveCount(0);
+      await settledWithin(scope);
+      await untilTheLastFrameStandsInView(page);
+      const recorded = await frames();
+      expect(recorded.some((frame) => frame.rowThere)).toBe(true);
+      expect(framesThatPulledItDownWhileTheRowStood(recorded, topAtTheAnswer)).toEqual([]);
+      expectTheLastFrameInView(recorded);
+    });
   });
-});
+}
