@@ -37,7 +37,6 @@ import { AuthApi, type StoredProfile } from './auth-api';
 import type { PasskeyAuthenticator } from './passkey-authenticator';
 import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
 import { AdministrationAccess } from './administration-access';
-import { donorFromCopy } from './copy-profile';
 import { deviceAccountOf, SESSION_DEVICE, type SignInSecret } from './session-device';
 import {
   BROWSER_JAR,
@@ -481,13 +480,14 @@ export class AuthStore {
     const seen = this.changes;
     const expected: SessionKind = this.jar.installed ? 'APP' : 'REMEMBERED';
     const opening = await withinWait(this.device.openedOffline(expected));
-    if (opening === null || this.changes !== seen) {
+    const profiles = opening === null ? null : await import('./copy-profile');
+    if (opening === null || profiles === null || this.changes !== seen) {
       this.waitSignedOut();
       return;
     }
     this.changes++;
     this.accessToken = null;
-    this.currentDonor.set(donorFromCopy(opening.profile));
+    this.currentDonor.set(profiles.donorFromCopy(opening.profile));
     this.currentSession.set(opening.session.kind);
     this.acceptedAt.set(null);
     this.fromCopy.set(true);
