@@ -2,14 +2,15 @@ import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { requestsInFlight, settled } from './settled';
 import {
-  chunkLoadNotice,
-  openAboutThenLoseNewChunks,
-  openPolicyFromContact,
-  withoutSessionStorage,
-} from './lost-chunks';
+  mockDonorApi,
+  openDonorSection,
+  rememberedDonorSession,
+  secondFactorEnrolment,
+} from './donor-session';
 
 const SMALL_PHONE = { width: 375, height: 667 };
 const KEYBOARD_HEIGHT = 262;
+const TABLET = { width: 1180, height: 820 };
 
 interface StandInKeyboard {
   show(height: number): void;
@@ -63,12 +64,11 @@ async function expectAboveKeyboard(locator: Locator): Promise<void> {
 
 type Hit = 'field' | 'notice' | 'other';
 
-function hitOnFieldCentre(page: Page): Promise<Hit> {
-  return page.evaluate(() => {
-    const field = document.querySelector('#contact-name')!;
-    const box = field.getBoundingClientRect();
+function hitOnFieldCentre(field: Locator): Promise<Hit> {
+  return field.evaluate((element) => {
+    const box = element.getBoundingClientRect();
     const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-    if (hit === field) {
+    if (hit === element) {
       return 'field';
     }
     return hit?.closest('.ui-notice--floating') ? 'notice' : 'other';
@@ -84,12 +84,12 @@ function hitOnNoticeCentre(page: Page): Promise<boolean> {
   });
 }
 
-function scrollFieldUnderNotice(page: Page): Promise<void> {
-  return page.evaluate(() => {
-    const field = document.querySelector('#contact-name')!.getBoundingClientRect();
+function scrollFieldUnderNotice(field: Locator): Promise<void> {
+  return field.evaluate((element) => {
+    const box = element.getBoundingClientRect();
     const notice = document.querySelector('.ui-notice--floating')!.getBoundingClientRect();
     window.scrollBy({
-      top: field.top + field.height / 2 - (notice.top + notice.height / 2),
+      top: box.top + box.height / 2 - (notice.top + notice.height / 2),
       behavior: 'instant',
     });
   });
@@ -173,112 +173,78 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
 
     await expect(page.locator('#donate-custom-amount')).toBeFocused();
   });
+});
 
-  test.describe('when a floating notice shows over the field the visitor types into', () => {
-    test.beforeEach(async ({ page }) => {
-      await withoutSessionStorage(page);
-      await openAboutThenLoseNewChunks(page);
-      await openPolicyFromContact(page);
-      await expect(chunkLoadNotice(page)).toBeVisible();
-      await expect(
-        chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' }),
-      ).toBeFocused();
-      await page.locator('#contact-name').focus();
-      await expect(page.locator('#contact-name')).toBeFocused();
-      await expect
-        .poll(async () => {
-          await scrollFieldUnderNotice(page);
-          return hitOnFieldCentre(page);
-        })
-        .toBe('notice');
-      await expect(page.locator('#contact-name')).toBeFocused();
-      await page.evaluate(() => {
-        const moves: string[] = [];
-        Object.assign(window, { focusMoves: moves });
-        document.addEventListener(
-          'focusin',
-          (event) => {
-            const target = event.target as HTMLElement;
-            const host = target.closest('app-chunk-load-notice, app-tab-bar, header, main, nav');
-            const stack = (new Error().stack ?? '').split('\n').slice(2, 9).join(' < ');
-            moves.push(
-              `${target.tagName}#${target.id} "${target.textContent?.trim().slice(0, 30)}" in ${host?.tagName}: ${stack}`,
-            );
-          },
-          true,
-        );
-      });
+test.describe('Given a tablet whose on-screen keyboard covers the lower part of the screen while the overview of gifts is being saved to the device', () => {
+  test.use({ viewport: TABLET, hasTouch: true });
+
+  const codeField = (page: Page) => page.getByLabel('Kód z aplikace');
+
+  test.beforeEach(async ({ page }) => {
+    await standInForTheKeyboard(page);
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/sync',
+      () => new Promise<void>(() => undefined),
+    );
+    await page.route('**/api/donors/me/second-factor/setup', (route) =>
+      route.fulfill({ json: secondFactorEnrolment }),
+    );
+    await rememberedDonorSession(page);
+    await page.goto('/darce/prehled');
+    await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await page.getByRole('button', { name: 'Zapnout dvoufaktorové ověření' }).click();
+    await page.getByLabel('Současné heslo').fill('correct horse battery');
+    await page.getByRole('button', { name: 'Pokračovat' }).click();
+    await expect(page.locator('.first-sync--saving')).toBeVisible();
+    await codeField(page).focus();
+    await expect(codeField(page)).toBeFocused();
+    await expect
+      .poll(async () => {
+        await scrollFieldUnderNotice(codeField(page));
+        return hitOnFieldCentre(codeField(page));
+      })
+      .toBe('notice');
+    await expect(codeField(page)).toBeFocused();
+  });
+
+  test('when the keyboard comes up for the code field under the notice, then the notice steps aside for the field without moving the page, is still heard, and comes back when the keyboard goes down', async ({
+    page,
+  }) => {
+    const scrollTop = await page.evaluate(() => window.scrollY);
+
+    await showKeyboard(page);
+
+    await expect(page.locator('html')).toHaveClass(/(^|\s)keyboard-open(\s|$)/);
+    await expect(codeField(page)).toBeFocused();
+    await expect.poll(() => hitOnFieldCentre(codeField(page))).toBe('field');
+    expect(await scrollTopAfterTwoFrames(page)).toBe(scrollTop);
+    expect(await page.locator('.first-sync--saving').ariaSnapshot()).toContain(
+      'Ukládáme přehled vašich darů',
+    );
+
+    await hideKeyboard(page);
+
+    await expect.poll(() => hitOnNoticeCentre(page)).toBe(true);
+    expect(await scrollTopAfterTwoFrames(page)).toBe(scrollTop);
+  });
+
+  test('when the visitor drags the page while typing into the code field, then the page stays where the drag left it', async ({
+    page,
+  }) => {
+    await showKeyboard(page);
+    await expect(page.locator('html')).toHaveClass(/(^|\s)keyboard-open(\s|$)/);
+    await expect(codeField(page)).toBeFocused();
+    await expect.poll(() => hitOnFieldCentre(codeField(page))).toBe('field');
+
+    const dragged = await page.evaluate(() => {
+      window.scrollBy({ top: -40, behavior: 'instant' });
+      window.visualViewport?.dispatchEvent(new Event('scroll'));
+      return window.scrollY;
     });
 
-    test('and the keyboard comes up, then the notice steps aside for the field without moving the page, is still heard, and comes back when the keyboard goes down', async ({
-      page,
-    }) => {
-      const scrollTop = await page.evaluate(() => window.scrollY);
-
-      await showKeyboard(page);
-
-      expect(
-        await page.evaluate(() => ({
-          focused: document.activeElement?.id || document.activeElement?.tagName,
-          windowHeight: window.innerHeight,
-          visibleHeight: window.visualViewport?.height,
-          standIn: 'standInKeyboard' in window,
-          marked: document.documentElement.classList.contains('keyboard-open'),
-          focusMoves: (window as unknown as { focusMoves: string[] }).focusMoves,
-        })),
-      ).toEqual({
-        focused: 'contact-name',
-        windowHeight: SMALL_PHONE.height,
-        visibleHeight: SMALL_PHONE.height - KEYBOARD_HEIGHT,
-        standIn: true,
-        marked: true,
-        focusMoves: [],
-      });
-      await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toBeHidden();
-      await expect(page.locator('#contact-name')).toBeFocused();
-      await expect.poll(() => hitOnFieldCentre(page)).toBe('field');
-      expect(await scrollTopAfterTwoFrames(page)).toBe(scrollTop);
-      expect(await chunkLoadNotice(page).ariaSnapshot()).toContain('Načíst znovu');
-
-      await hideKeyboard(page);
-
-      await expect.poll(() => hitOnNoticeCentre(page)).toBe(true);
-      expect(await scrollTopAfterTwoFrames(page)).toBe(scrollTop);
-    });
-
-    test('and the visitor drags the page while typing, then the page stays where the drag left it', async ({
-      page,
-    }) => {
-      await showKeyboard(page);
-      expect(
-        await page.evaluate(() => ({
-          focused: document.activeElement?.id || document.activeElement?.tagName,
-          windowHeight: window.innerHeight,
-          visibleHeight: window.visualViewport?.height,
-          standIn: 'standInKeyboard' in window,
-          marked: document.documentElement.classList.contains('keyboard-open'),
-          focusMoves: (window as unknown as { focusMoves: string[] }).focusMoves,
-        })),
-      ).toEqual({
-        focused: 'contact-name',
-        windowHeight: SMALL_PHONE.height,
-        visibleHeight: SMALL_PHONE.height - KEYBOARD_HEIGHT,
-        standIn: true,
-        marked: true,
-        focusMoves: [],
-      });
-      await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toBeHidden();
-      await expect(page.locator('#contact-name')).toBeFocused();
-      await expect.poll(() => hitOnFieldCentre(page)).toBe('field');
-
-      const dragged = await page.evaluate(() => {
-        window.scrollBy({ top: -40, behavior: 'instant' });
-        window.visualViewport?.dispatchEvent(new Event('scroll'));
-        return window.scrollY;
-      });
-
-      expect(await scrollTopAfterTwoFrames(page)).toBe(dragged);
-      expect(await hitOnFieldCentre(page)).toBe('field');
-    });
+    expect(await scrollTopAfterTwoFrames(page)).toBe(dragged);
+    expect(await hitOnFieldCentre(codeField(page))).toBe('field');
   });
 });
