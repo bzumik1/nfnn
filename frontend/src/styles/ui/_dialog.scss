@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'sheet';
 
 .ui-dialog__title {
   font-family: var(--font-title);
@@ -69,7 +70,11 @@
 
 dialog.dialog[open] {
   top: var(--visual-viewport-top);
-  height: var(--visual-viewport-height);
+  height: min(var(--visual-viewport-height), 100%);
+}
+
+html.keyboard-open dialog.dialog[open]::backdrop {
+  background: var(--color-surface);
 }
 
 @include bp.down(phone) {
@@ -84,6 +89,6 @@ dialog.dialog[open] {
   }
 
   html.keyboard-open .dialog--sheet[open] .dialog-panel {
-    max-height: calc(100% - var(--space-12));
+    max-height: calc(100% - max(var(--space-12), #{sheet.$top}));
   }
 }

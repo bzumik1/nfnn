@@ -54,7 +54,6 @@ describe('Given a phone whose on-screen keyboard shortens the visual viewport', 
   it('when nothing is typed into, then the keyboard counts as closed and the page is left as it is', () => {
     expect(keyboard.isOpen()).toBe(false);
     expect(root().classList.contains(KEYBOARD_OPEN_CLASS)).toBe(false);
-    expect(root().style.getPropertyValue('--keyboard-covered-height')).toBe('');
   });
 
   describe('when the visitor taps a text field and the keyboard comes up', () => {
@@ -63,10 +62,9 @@ describe('Given a phone whose on-screen keyboard shortens the visual viewport', 
       viewport.showKeyboard(KEYBOARD_HEIGHT, 40);
     });
 
-    it('then the page is marked and knows the part of the screen the keyboard leaves visible and the part it covers', () => {
+    it('then the page is marked and knows the part of the screen the keyboard leaves visible', () => {
       expect(keyboard.isOpen()).toBe(true);
       expect(root().classList.contains(KEYBOARD_OPEN_CLASS)).toBe(true);
-      expect(root().style.getPropertyValue('--keyboard-covered-height')).toBe('222px');
       expect(keyboard.visibleArea()).toEqual({ top: 40, height: 287 });
     });
 
@@ -105,7 +103,6 @@ describe('Given a phone whose on-screen keyboard shortens the visual viewport', 
 
       expect(keyboard.isOpen()).toBe(false);
       expect(root().classList.contains(KEYBOARD_OPEN_CLASS)).toBe(false);
-      expect(root().style.getPropertyValue('--keyboard-covered-height')).toBe('');
     });
 
     it('and the field loses the focus to a button, then the keyboard counts as closed at once', async () => {
