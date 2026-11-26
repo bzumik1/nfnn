@@ -693,7 +693,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
   }
 
   it('when the news is placed by a resize observer, inside the frame that draws it, then the motions are let go in that frame, never held for another (vote 10, round 42)', async () => {
-    const motions = watchHeldMotions();
+    watchHeldMotions();
     framesOnRequest();
     const placement = TestBed.inject(PagePlacement);
     const placed = placement.pending();
