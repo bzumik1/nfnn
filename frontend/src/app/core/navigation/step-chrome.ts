@@ -175,11 +175,14 @@ function startMoving(
       return;
     }
     released = true;
-    stage.finishAfter(view, PAGE_TRANSITION_LONGEST_MS);
+    finishWithinTheMotion(stage, view);
     STEP_CHROME.release(view, running.overlay, stage.steadyFrameMs());
-    view.requestAnimationFrame(() =>
-      view.setTimeout(still, stage.durationOf('--duration-page') + 2 * FRAME_LATE_MS),
-    );
+    view.requestAnimationFrame(() => {
+      if (stage.running === running) {
+        finishWithinTheMotion(stage, view);
+        view.setTimeout(still, stage.motionEndsWithinMs());
+      }
+    });
   };
   afterDrawnFrames(
     view,
@@ -189,6 +192,10 @@ function startMoving(
     () => framesStopped,
     () => stage.running === running,
   );
+}
+
+function finishWithinTheMotion(stage: PageTransitions, view: Window): void {
+  stage.finishAfter(view, stage.motionEndsWithinMs());
 }
 
 export function publishSteadyFrame(view: Window, steadyBeforeMs: number): void {
