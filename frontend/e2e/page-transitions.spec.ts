@@ -288,6 +288,7 @@ async function followPairedPaymentsDonor(page: Page): Promise<void> {
   await expect(page).toHaveURL(new RegExp(`/sprava/darci/${administrator.id}$`));
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(overlays(page)).toHaveCount(0);
+  await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toBeFocused();
 }
 
 async function openArticleFromList(page: Page): Promise<void> {
@@ -766,6 +767,7 @@ test.describe('Given an administrator in the app on the home screen of a phone w
         .getByRole('link', { name: /^Dárci/ })
         .click();
       await expect(page).toHaveURL(/\/sprava\/darci/);
+      await expect(page.getByRole('heading', { level: 1, name: 'Dárci' })).toBeFocused();
       const search = page.getByLabel('Jméno, e-mail nebo variabilní symbol');
       await search.focus();
       await page.keyboard.type('nov');
