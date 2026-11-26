@@ -227,7 +227,7 @@ for (const phone of PHONES_AT_DEFAULT_TEXT) {
   });
 }
 
-const FLOATING_ENLARGED_TEXT_PX = [24, 26];
+const FLOATING_ENLARGED_TEXT_PX = [20, 22];
 const SE = { width: 375, height: 667 };
 const SCROLL_STEP_PX = 16;
 const SETTLE_FRAMES = 3;
@@ -251,6 +251,7 @@ for (const rootPx of FLOATING_ENLARGED_TEXT_PX) {
       const bar = page.locator('.ui-action-bar');
       await expect(bar.getByRole('button').first()).toBeVisible();
       await page.evaluate(() => document.fonts.ready);
+      await expect(bar).not.toHaveClass(/ui-action-bar--in-flow/);
 
       const result = await bar.evaluate(
         async (element, { step, settleFrames, stillFrames }) => {
@@ -292,10 +293,15 @@ for (const rootPx of FLOATING_ENLARGED_TEXT_PX) {
 
 function gapAboveTheBar(bar: Locator): Promise<{ gap: number; margin: number }> {
   return bar.evaluate((element) => {
-    const before = element.previousElementSibling!.getBoundingClientRect();
+    const card = element.previousElementSibling!;
     return {
-      gap: Math.round(element.getBoundingClientRect().top - before.bottom),
-      margin: Math.round(Number.parseFloat(getComputedStyle(element).marginTop)),
+      gap: Math.round(element.getBoundingClientRect().top - card.getBoundingClientRect().bottom),
+      margin: Math.round(
+        Math.max(
+          Number.parseFloat(getComputedStyle(element).marginTop),
+          Number.parseFloat(getComputedStyle(card).marginBottom),
+        ),
+      ),
     };
   });
 }
