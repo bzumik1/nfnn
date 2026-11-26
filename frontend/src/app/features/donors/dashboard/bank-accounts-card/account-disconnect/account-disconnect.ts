@@ -49,21 +49,22 @@ export class AccountDisconnect {
       this.returning();
       this.action();
       for (const swap of this.host.querySelectorAll<HTMLElement>(`.${OPENING}`)) {
-        const motions = swap.getAnimations?.() ?? [];
-        void Promise.allSettled(motions.map((motion) => motion.finished)).then(() =>
-          this.settle(swap),
-        );
+        this.settle(swap);
       }
     });
   }
 
   private settle(swap: HTMLElement): void {
-    const moving = swap.getAnimations?.() ?? [];
-    if (
-      !swap.classList.contains(OPENING) ||
-      swap.classList.contains(CLOSING) ||
-      moving.some((motion) => motion.playState === 'running')
-    ) {
+    if (!swap.classList.contains(OPENING) || swap.classList.contains(CLOSING)) {
+      return;
+    }
+    const running = (swap.getAnimations?.() ?? []).filter(
+      (motion) => motion.playState === 'running',
+    );
+    if (running.length > 0) {
+      void Promise.allSettled(running.map((motion) => motion.finished)).then(() =>
+        this.settle(swap),
+      );
       return;
     }
     this.renderer.removeClass(swap, OPENING);
