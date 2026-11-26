@@ -260,7 +260,13 @@ test.describe('Given a signed-in donor with the account sheet open on a phone', 
   test('when each section is scrolled to its end, then every section leaves the same space under its last card', async ({
     page,
   }) => {
-    await signInOnPhone(page, 390);
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/bank-accounts',
+      (route) => route.fulfill({ json: { items: [bankAccountItem()] } }),
+    );
+    await page.setViewportSize({ width: 390, height: 800 });
+    await signIn(page);
     const spaces: Record<string, number> = {};
 
     for (const section of [
