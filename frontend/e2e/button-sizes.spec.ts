@@ -1,7 +1,9 @@
 import { Locator, Page } from '@playwright/test';
 import {
+  article,
   donorWithDonations,
   mockAdministration,
+  mockPublicContent,
   rememberedSession,
   serveEmptyAdministrationCopy,
 } from './baseline/screen-mocks';
@@ -343,5 +345,27 @@ test.describe('Given a visitor on Aktuality', () => {
     const home = page.getByRole('link', { name: 'Zpět na úvodní stránku' });
     await expect(home).toBeVisible();
     expect(await sizeOf(home)).toEqual(failed);
+  });
+});
+
+test.describe('Given a signed-out visitor on a phone', () => {
+  test('when an article opens, then the back button and Přihlásit se in its header share one height and one middle', async ({
+    page,
+  }) => {
+    await mockPublicContent(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/aktuality/${article.slug}`);
+    const banner = page.getByRole('banner');
+    const back = banner.getByRole('button', { name: 'Zpět' });
+    const signInButton = banner.getByRole('button', { name: 'Přihlásit se' });
+    await expect(back).toBeVisible();
+    await expect(signInButton).toBeVisible();
+
+    const backBox = (await back.boundingBox())!;
+    const signInBox = (await signInButton.boundingBox())!;
+    expect(Math.abs(signInBox.height - backBox.height)).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(signInBox.y + signInBox.height / 2 - (backBox.y + backBox.height / 2)),
+    ).toBeLessThanOrEqual(1);
   });
 });
