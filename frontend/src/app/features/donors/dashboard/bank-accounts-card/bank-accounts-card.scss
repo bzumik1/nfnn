@@ -395,6 +395,10 @@
   .add-account-bank dd {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .add-account-strut {
+    display: none;
+  }
 }
 
 .bank-value {
