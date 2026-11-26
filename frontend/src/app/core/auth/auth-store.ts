@@ -1,6 +1,15 @@
 import { Appearance } from '../appearance/appearance';
 import { HttpErrorResponse } from '@angular/common/http';
-import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import {
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  Injectable,
+  PendingTasks,
+  signal,
+  untracked,
+} from '@angular/core';
 import {
   catchError,
   defer,
@@ -24,10 +33,11 @@ import {
 } from 'rxjs';
 import { Connectivity, isUnreachable } from '../connectivity/connectivity';
 import { AuthApi, type StoredProfile } from './auth-api';
-import { PasskeyAuthenticator } from './passkey-authenticator';
+import type { PasskeyAuthenticator } from './passkey-authenticator';
 import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
+import { DONOR_FROM_COPY_LOADER } from './copy-profile-loader';
+import { PASSKEY_AUTHENTICATOR_LOADER } from './passkey-authenticator-loader';
 import { AdministrationAccess } from './administration-access';
-import { donorFromCopy } from './copy-profile';
 import { deviceAccountOf, SESSION_DEVICE, type SignInSecret } from './session-device';
 import {
   BROWSER_JAR,
@@ -74,7 +84,9 @@ export const EMAIL_CONFIRMATION_SESSION: BrowserSessionKind = 'BROWSER';
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
   private readonly api = inject(AuthApi);
-  private readonly passkeys = inject(PasskeyAuthenticator);
+  private readonly loadPasskeys = inject(PASSKEY_AUTHENTICATOR_LOADER);
+  private readonly pendingTasks = inject(PendingTasks);
+  private readonly loadDonorFromCopy = inject(DONOR_FROM_COPY_LOADER);
   private readonly jar = inject(SESSION_JAR);
   private readonly locks = inject(TAB_LOCKS);
   private readonly channel = inject(SESSION_CHANNEL)();
@@ -182,7 +194,9 @@ export class AuthStore {
     return this.api.passkeySignInOptions().pipe(
       switchMap((options) =>
         from(this.device.prfInput()).pipe(
-          switchMap((input) => from(this.passkeys.getWithPrf(options, input))),
+          switchMap((input) =>
+            from(this.passkeyCeremony((passkeys) => passkeys.getWithPrf(options, input))),
+          ),
           switchMap(({ credential, prf }) => {
             let handedOver = false;
             return this.api.signInWithPasskey(options.challenge, credential, session).pipe(
@@ -322,11 +336,24 @@ export class AuthStore {
       .passkeySignInOptions()
       .pipe(
         switchMap((options) =>
-          from(this.passkeys.get(options)).pipe(
+          from(this.passkeyCeremony((passkeys) => passkeys.get(options))).pipe(
             map((credential) => ({ passkey: { challenge: options.challenge, credential } })),
           ),
         ),
       );
+  }
+
+  private async passkeyCeremony<T>(
+    ceremony: (passkeys: PasskeyAuthenticator) => Promise<T>,
+  ): Promise<T> {
+    const loading = this.pendingTasks.add();
+    let started: Promise<T>;
+    try {
+      started = ceremony(await this.loadPasskeys());
+    } finally {
+      loading();
+    }
+    return started;
   }
 
   setupSecondFactor(confirmation: Confirmation): Observable<SecondFactorEnrolment> {
@@ -453,11 +480,17 @@ export class AuthStore {
     }
     const seen = this.changes;
     const expected: SessionKind = this.jar.installed ? 'APP' : 'REMEMBERED';
-    const opening = await withinWait(this.device.openedOffline(expected));
-    if (opening === null || this.changes !== seen) {
+    const opened = await withinWait(
+      this.loadDonorFromCopy().then(async (donorFromCopy) => {
+        const opening = await this.device.openedOffline?.(expected);
+        return opening ? { opening, donorFromCopy } : null;
+      }),
+    );
+    if (opened === null || this.changes !== seen) {
       this.waitSignedOut();
       return;
     }
+    const { opening, donorFromCopy } = opened;
     this.changes++;
     this.accessToken = null;
     this.currentDonor.set(donorFromCopy(opening.profile));
