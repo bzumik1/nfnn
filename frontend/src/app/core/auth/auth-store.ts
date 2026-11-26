@@ -7,6 +7,7 @@ import {
   inject,
   Injectable,
   Injector,
+  PendingTasks,
   signal,
   untracked,
 } from '@angular/core';
@@ -84,6 +85,7 @@ export const EMAIL_CONFIRMATION_SESSION: BrowserSessionKind = 'BROWSER';
 export class AuthStore {
   private readonly api = inject(AuthApi);
   private readonly injector = inject(Injector);
+  private readonly pendingTasks = inject(PendingTasks);
   private readonly jar = inject(SESSION_JAR);
   private readonly locks = inject(TAB_LOCKS);
   private readonly channel = inject(SESSION_CHANNEL)();
@@ -190,8 +192,10 @@ export class AuthStore {
     const session = sessionKindFor(this.jar, chosen);
     return this.api.passkeySignInOptions().pipe(
       switchMap((options) =>
-        from(Promise.all([this.passkeyAuthenticator(), this.device.prfInput()])).pipe(
-          switchMap(([passkeys, input]) => from(passkeys.getWithPrf(options, input))),
+        from(this.device.prfInput()).pipe(
+          switchMap((input) =>
+            from(this.passkeyCeremony((passkeys) => passkeys.getWithPrf(options, input))),
+          ),
           switchMap(({ credential, prf }) => {
             let handedOver = false;
             return this.api.signInWithPasskey(options.challenge, credential, session).pipe(
@@ -331,17 +335,25 @@ export class AuthStore {
       .passkeySignInOptions()
       .pipe(
         switchMap((options) =>
-          from(this.passkeyAuthenticator().then((passkeys) => passkeys.get(options))).pipe(
+          from(this.passkeyCeremony((passkeys) => passkeys.get(options))).pipe(
             map((credential) => ({ passkey: { challenge: options.challenge, credential } })),
           ),
         ),
       );
   }
 
-  private passkeyAuthenticator(): Promise<PasskeyAuthenticator> {
-    return import('./passkey-authenticator').then((module) =>
-      this.injector.get(module.PasskeyAuthenticator),
-    );
+  private async passkeyCeremony<T>(
+    ceremony: (passkeys: PasskeyAuthenticator) => Promise<T>,
+  ): Promise<T> {
+    const loading = this.pendingTasks.add();
+    let started: Promise<T>;
+    try {
+      const module = await import('./passkey-authenticator');
+      started = ceremony(this.injector.get(module.PasskeyAuthenticator));
+    } finally {
+      loading();
+    }
+    return started;
   }
 
   setupSecondFactor(confirmation: Confirmation): Observable<SecondFactorEnrolment> {
