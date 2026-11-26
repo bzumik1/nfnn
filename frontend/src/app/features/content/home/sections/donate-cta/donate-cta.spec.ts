@@ -697,7 +697,9 @@ describe('Given the donate section', () => {
     afterEach(() => fixture.nativeElement.remove());
 
     function press(label: string): void {
-      button(label).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      button(label).dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, isPrimary: true }),
+      );
       element<HTMLInputElement>('#donate-custom-amount').blur();
       fixture.detectChanges();
     }
@@ -726,7 +728,9 @@ describe('Given the donate section', () => {
 
     it('and a scroll cancelled the press while the field kept the focus, then leaving the field shows the hint', async () => {
       element<HTMLInputElement>('#donate-custom-amount').focus();
-      button('500 Kč').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      button('500 Kč').dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, isPrimary: true }),
+      );
       button('500 Kč').dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
 
       element<HTMLInputElement>('#donate-custom-amount').blur();
@@ -739,7 +743,9 @@ describe('Given the donate section', () => {
     it('and the visitor typed after a cancelled press, then Done shows the hint for an amount that is not valid', async () => {
       const field = element<HTMLInputElement>('#donate-custom-amount');
       field.focus();
-      button('500 Kč').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      button('500 Kč').dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, isPrimary: true }),
+      );
       button('500 Kč').dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
       await type('0');
 
@@ -759,7 +765,9 @@ describe('Given the donate section', () => {
     });
 
     function mouse(type: string, label: string): void {
-      button(label).dispatchEvent(new PointerEvent(type, { bubbles: true, pointerType: 'mouse' }));
+      button(label).dispatchEvent(
+        new PointerEvent(type, { bubbles: true, pointerType: 'mouse', isPrimary: true }),
+      );
     }
 
     function hintShows(): boolean {
@@ -795,7 +803,7 @@ describe('Given the donate section', () => {
       expect(hintShows()).toBe(false);
 
       document.body.dispatchEvent(
-        new PointerEvent('pointerup', { bubbles: true, pointerType: 'mouse' }),
+        new PointerEvent('pointerup', { bubbles: true, pointerType: 'mouse', isPrimary: true }),
       );
       await settle();
 
@@ -806,7 +814,7 @@ describe('Given the donate section', () => {
     it('and the mouse pressed an amount and was released elsewhere while the field kept the focus, then leaving the field shows the hint', async () => {
       mouse('pointerdown', '500 Kč');
       document.body.dispatchEvent(
-        new PointerEvent('pointerup', { bubbles: true, pointerType: 'mouse' }),
+        new PointerEvent('pointerup', { bubbles: true, pointerType: 'mouse', isPrimary: true }),
       );
       element<HTMLInputElement>('#donate-custom-amount').blur();
       await settle();
@@ -814,12 +822,80 @@ describe('Given the donate section', () => {
       expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
     });
 
+    it('and the mouse pressed an amount and was released on another, then the hint shows and nothing else is chosen', async () => {
+      mouse('pointerdown', '500 Kč');
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      mouse('pointerup', '1 000 Kč');
+      element('[role="radiogroup"]').click();
+      await settle();
+
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+      expect(button('Jiná částka').getAttribute('aria-checked')).toBe('true');
+      expect(button('500 Kč').getAttribute('aria-checked')).toBe('false');
+      expect(button('1 000 Kč').getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('and the visitor right-clicked an amount, then no press is noted and leaving the field shows the hint', async () => {
+      button('500 Kč').dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          pointerType: 'mouse',
+          button: 2,
+          isPrimary: true,
+        }),
+      );
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      await settle();
+
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+    });
+
+    it('and a second finger pressed an amount, then no press is noted and leaving the field shows the hint', async () => {
+      button('500 Kč').dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch', isPrimary: false }),
+      );
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      await settle();
+
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+    });
+
+    it('and a press on Jiná částka ended with its click, then a later release elsewhere changes nothing while the visitor types', async () => {
+      mouse('pointerdown', 'Jiná částka');
+      mouse('pointerup', 'Jiná částka');
+      button('Jiná částka').click();
+      await type('0');
+
+      document.body.dispatchEvent(
+        new PointerEvent('pointerup', { bubbles: true, pointerType: 'mouse', isPrimary: true }),
+      );
+      await settle();
+
+      expect(document.activeElement?.id).toBe('donate-custom-amount');
+      expect(element('.amount-hint')).toBeNull();
+    });
+
+    it('and a scroll cancelled a press during which the field was left, then a later release elsewhere shows no hint', async () => {
+      button('500 Kč').dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch', isPrimary: true }),
+      );
+      element<HTMLInputElement>('#donate-custom-amount').blur();
+      button('500 Kč').dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+
+      document.body.dispatchEvent(
+        new PointerEvent('pointerup', { bubbles: true, pointerType: 'mouse', isPrimary: true }),
+      );
+      await settle();
+
+      expect(element('.amount-hint')).toBeNull();
+    });
+
     it('and a finger left the amount it pressed before its click, then no hint shows and the click still chooses 500 Kč', async () => {
       button('500 Kč').dispatchEvent(
-        new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }),
+        new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch', isPrimary: true }),
       );
       button('500 Kč').dispatchEvent(
-        new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch' }),
+        new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch', isPrimary: true }),
       );
       button('500 Kč').dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'touch' }));
       element<HTMLInputElement>('#donate-custom-amount').blur();
