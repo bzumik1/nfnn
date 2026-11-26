@@ -2,6 +2,7 @@
 @use 'motion';
 @use 'touch-target';
 @use 'focus-ring';
+@use 'choice-arrow';
 
 :host {
   display: block;
@@ -67,6 +68,7 @@
     border: 1.5px solid var(--color-border-field);
     border-radius: var(--radius-sm);
     padding: var(--space-1-5) var(--space-2-5);
+    @include choice-arrow.drawn(var(--space-2-5));
 
     &:focus-visible {
       @include focus-ring.ring;

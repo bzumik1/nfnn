@@ -1746,7 +1746,7 @@ describe('Given the sign-in dialog', () => {
 
       http.expectNone('/api/donors/auth/password-reset/request');
       expect(withOrdinarySpaces(element('#reset-email-error').textContent)).toContain(
-        'Zadejte e-mail ve tvaru jana@example.cz.',
+        'Zadejte e\u2011mail ve tvaru jana@example.cz.',
       );
     });
 

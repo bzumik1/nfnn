@@ -206,6 +206,8 @@ export class PaymentPanel {
   protected readonly detailsLoading = computed(
     () => this.loadView.state().kind === 'loading' && !this.retrying(),
   );
+  protected readonly skeletonIban = 'CZ00 0000 0000 0000 0000 0000';
+
   protected readonly skeletonRows = computed<readonly SkeletonRow[]>(() => [
     'account',
     ...(this.drawnAmount() === null ? [] : (['amount'] as const)),
