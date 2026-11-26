@@ -333,6 +333,28 @@ test.describe('Given a visitor on the Přispět page', () => {
     expect(await caret()).toBe(1);
   });
 
+  test('when they paste an amount with its spaces and Kč, then the field groups it, and a longer paste stops at 12 characters before it is grouped', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(
+      browserName !== 'chromium',
+      'Chromium proves the cut; the mobile team pastes 1 250 000 Kč into the field on the iPhone SE',
+    );
+    await servePaymentDetails(page, []);
+    await page.goto('/prispet');
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
+    const field = page.getByLabel('Vlastní částka v korunách');
+
+    await page.keyboard.insertText('1\u202f250\u202f000\u00a0Kč');
+    await expect(field).toHaveValue('1\u00a0250\u00a0000');
+
+    await field.fill('');
+    await page.keyboard.insertText('12345678901234');
+    await expect(field).toHaveValue('123\u00a0456\u00a0789\u00a0012');
+  });
+
   test('when they open Jiná částka, then its field unfolds over several frames instead of jumping in at once', async ({
     page,
   }) => {

@@ -9,7 +9,7 @@ describe('Given the digits of a typed amount', () => {
     expect([...thousandsGroups('1250000')]).toEqual(['1', '250', '000']);
   });
 
-  it('when 50 000 pasted digits are split, then each step yields one group of at most three digits and no digit is lost', () => {
+  it('when 50 000 digits are split, then each step yields one group of at most three digits and no digit is lost', () => {
     const digits = '12' + '345'.repeat(16_666);
 
     const groups = [...thousandsGroups(digits)];
