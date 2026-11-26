@@ -532,3 +532,80 @@ for (const screen of [
     });
   });
 }
+
+interface DetailType {
+  fontSize: string;
+  fontWeight: string;
+  color: string;
+}
+
+async function typeOf(element: Locator): Promise<DetailType> {
+  return element.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { fontSize: style.fontSize, fontWeight: style.fontWeight, color: style.color };
+  });
+}
+
+async function centreOf(element: Locator): Promise<number> {
+  const box = (await element.boundingBox())!;
+  return box.y + box.height / 2;
+}
+
+async function aboutRow(page: Page, label: string): Promise<{ key: Locator; value: Locator }> {
+  await page.goto('/o-nas');
+  const item = page
+    .locator('.accounting-item')
+    .filter({ has: page.getByText(label, { exact: true }) });
+  await expect(item.locator('.accounting-value')).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  return { key: item.locator('dt'), value: item.locator('.accounting-value') };
+}
+
+async function donateRow(page: Page, label: string): Promise<{ key: Locator; value: Locator }> {
+  await page.goto('/prispet');
+  const row = page.locator('#prispet .bank-row', { hasText: label });
+  await expect(row.locator('.bank-value')).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  return { key: row.locator('.bank-key'), value: row.locator('.bank-value') };
+}
+
+test.describe('Given the bank details on O nás and on Přispět', () => {
+  for (const [width, height] of [
+    [390, 844],
+    [1280, 900],
+  ]) {
+    test(`when they show at ${width} × ${height}, then Číslo účtu and IBAN read in one type on both pages`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      for (const label of ['Číslo účtu', 'IBAN']) {
+        const about = await aboutRow(page, label);
+        const aboutKey = await typeOf(about.key);
+        const aboutValue = await typeOf(about.value);
+        const donate = await donateRow(page, label);
+
+        expect(aboutKey).toEqual(await typeOf(donate.key));
+        expect(aboutValue).toEqual(await typeOf(donate.value));
+      }
+    });
+  }
+
+  test('when the IBAN takes two lines on a phone, then Kopírovat sits by the middle of both lines on both pages', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const open of [aboutRow, donateRow]) {
+      const { value } = await open(page, 'IBAN');
+      const copy = value.locator('xpath=..').locator('app-copy-button');
+      const valueBox = (await value.boundingBox())!;
+      const lineHeight = await value.evaluate((node) =>
+        parseFloat(getComputedStyle(node).lineHeight),
+      );
+
+      expect(valueBox.height).toBeGreaterThan(lineHeight * 1.5);
+      expect(Math.abs((await centreOf(copy)) - (await centreOf(value)))).toBeLessThanOrEqual(
+        PIXEL_TOLERANCE,
+      );
+    }
+  });
+});
