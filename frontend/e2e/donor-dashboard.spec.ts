@@ -1300,6 +1300,52 @@ test.describe('Given a signed-in donor on a computer', () => {
         /receipt-status--closing/,
       );
     });
+
+    test(`when the finished status of the ready receipt on Můj přehled closes for the next download in a ${width} px window, then its last text stays in the line while the line closes`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page, receiptDonations);
+      await page.setViewportSize({ width, height: 844 });
+      await openReceiptsAfterSignIn(page);
+      await page.goto('/darce/prehled');
+      const button = page.locator('.receipt-ready-pdf');
+      const wrapper = page.locator('.receipt-ready .receipt-status');
+      await Promise.all([page.waitForEvent('download'), button.click()]);
+      await expect(page.locator('.receipt-ready').getByRole('status')).toHaveText(/\S/);
+      await expect(wrapper).not.toHaveClass(/receipt-status--closing/);
+      await untilStill(wrapper);
+      await page.route(
+        (url) => url.pathname === RECEIPT_ISSUING_URL,
+        () => new Promise<void>(() => undefined),
+      );
+
+      const closing = wrapper.evaluate(
+        (element) =>
+          new Promise<{ rowsClose: boolean; textShown: boolean }>((resolve) => {
+            new MutationObserver((_, observer) => {
+              if (!element.classList.contains('receipt-status--closing')) {
+                return;
+              }
+              observer.disconnect();
+              const line = element.querySelector('[role="status"]')!;
+              resolve({
+                rowsClose: element
+                  .getAnimations()
+                  .some(
+                    (animation) =>
+                      (animation as CSSTransition).transitionProperty === 'grid-template-rows',
+                  ),
+                textShown: Array.from(line.children).some(
+                  (part) => part.getBoundingClientRect().width > 0,
+                ),
+              });
+            }).observe(element, { attributes: true, attributeFilter: ['class'] });
+          }),
+      );
+      await button.click();
+
+      expect(await closing).toEqual({ rowsClose: true, textShown: true });
+    });
   }
 });
 
