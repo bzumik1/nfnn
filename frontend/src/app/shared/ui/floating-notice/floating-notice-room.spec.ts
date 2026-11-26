@@ -142,6 +142,7 @@ describe('Given floating bars at the bottom of the screen', () => {
   describe('Given a bar whose top stands at 720 px of an 800 px window', () => {
     const BAR_TOP = 720;
     const BAR_GAP = 16;
+    const BAND_TOP = 88;
 
     const placedAt = <T extends HTMLElement>(element: T, top: number, bottom: number): T => {
       Object.defineProperty(element, 'getBoundingClientRect', {
@@ -163,7 +164,11 @@ describe('Given floating bars at the bottom of the screen', () => {
         scrollTo: () => undefined,
         scrollBy: (options: ScrollToOptions) => scrolls.push(options),
         requestAnimationFrame: (frame: FrameRequestCallback) => frames.push(frame),
-        getComputedStyle: () => ({ bottom: `${BAR_GAP}px` }),
+        getComputedStyle: (element: Element) => ({
+          bottom: `${BAR_GAP}px`,
+          scrollPaddingTop: element === root ? `${BAND_TOP}px` : '0px',
+          scrollMarginTop: '0px',
+        }),
       };
       const page = {
         documentElement: root,
@@ -244,6 +249,24 @@ describe('Given floating bars at the bottom of the screen', () => {
       nextFrame();
 
       expect(scrolls).toEqual([{ top: 780 - BAR_TOP + BAR_GAP, behavior: 'instant' }]);
+    });
+
+    it('when a control taller than the room between the header and the bar takes the focus with its bottom under the bar, then the page scrolls only until its top reaches the top of the visible band', () => {
+      const { scrolls, focus, nextFrame } = pageWithFocus();
+
+      focus(control(300, 900));
+      nextFrame();
+
+      expect(scrolls).toEqual([{ top: 300 - BAND_TOP, behavior: 'instant' }]);
+    });
+
+    it('when a control whose top stands just below the header and whose bottom reaches under the bar takes the focus, then the page does not move', () => {
+      const { scrolls, focus, nextFrame } = pageWithFocus();
+
+      focus(control(58, 940));
+      nextFrame();
+
+      expect(scrolls).toEqual([]);
     });
   });
 });
