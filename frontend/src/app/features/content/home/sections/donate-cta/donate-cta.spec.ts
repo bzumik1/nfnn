@@ -542,6 +542,19 @@ describe('Given the donate section', () => {
     });
   });
 
+  it('when the visitor deletes the comma of an amount that was not whole, then no digit goes with it', async () => {
+    await openWithQr();
+    await enterCustomAmount('12,50');
+    const field = element<HTMLInputElement>('#donate-custom-amount');
+
+    field.value = '1250';
+    field.setSelectionRange(2, 2);
+    field.dispatchEvent(new InputEvent('input', { inputType: 'deleteContentBackward' }));
+    await settle();
+
+    expect(withOrdinarySpaces(field.value)).toBe('1 250');
+  });
+
   it('when the visitor types something that is not a whole number, then the field keeps it as typed', async () => {
     await openWithQr();
 

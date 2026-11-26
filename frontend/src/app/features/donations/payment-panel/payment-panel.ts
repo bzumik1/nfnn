@@ -402,6 +402,14 @@ export class PaymentPanel {
   enterCustomAmount(event: Event): void {
     this.clearNotices();
     const field = event.target as HTMLInputElement;
+    const deletion = (event as InputEvent).inputType;
+    if (
+      (deletion === 'deleteContentForward' || deletion === 'deleteContentBackward') &&
+      /^[\d\s]+$/.test(this.customText()) &&
+      digitsOf(field.value) === digitsOf(this.customText())
+    ) {
+      removeDigitBesideCaret(field, deletion === 'deleteContentForward');
+    }
     groupThousands(field);
     this.customText.set(field.value);
     const typed = wholeCrowns(field.value);
@@ -795,6 +803,25 @@ function groupThousands(field: HTMLInputElement): void {
   field.value = grouped;
   const position = positionAfterDigits(grouped, digitsBefore);
   field.setSelectionRange(position, position);
+}
+
+function digitsOf(text: string): string {
+  return text.replace(/\D/g, '');
+}
+
+function removeDigitBesideCaret(field: HTMLInputElement, forward: boolean): void {
+  const text = field.value;
+  const caret = field.selectionStart ?? text.length;
+  const step = forward ? 1 : -1;
+  let index = forward ? caret : caret - 1;
+  while (index >= 0 && index < text.length && !/\d/.test(text[index])) {
+    index += step;
+  }
+  if (index < 0 || index >= text.length) {
+    return;
+  }
+  field.value = text.slice(0, index) + text.slice(index + 1);
+  field.setSelectionRange(index, index);
 }
 
 function positionAfterDigits(text: string, count: number): number {
