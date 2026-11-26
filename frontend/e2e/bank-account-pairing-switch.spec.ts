@@ -22,24 +22,30 @@ interface SwapPart {
   readonly motions: string[];
 }
 
-function pressOnFocus(row: Locator, focused: string, leaving: string): Promise<boolean> {
-  return row.evaluate(
-    (element, selectors) =>
-      new Promise<boolean>((resolve) => {
-        const pressed = (event: FocusEvent) => {
-          const target = event.target as HTMLElement;
-          if (!target.matches(selectors.focused)) {
-            return;
-          }
-          element.removeEventListener('focusin', pressed);
-          const leavingPartAttached = element.querySelector(selectors.leaving) !== null;
-          target.click();
-          resolve(leavingPartAttached);
-        };
-        element.addEventListener('focusin', pressed);
-      }),
+async function pressOnFocus(row: Locator, focused: string, leaving: string): Promise<void> {
+  await row.evaluate(
+    (element, selectors) => {
+      element.dataset['pressedOnFocus'] = 'waiting';
+      const pressed = (event: FocusEvent) => {
+        const target = event.target as HTMLElement;
+        if (!target.matches(selectors.focused)) {
+          return;
+        }
+        element.removeEventListener('focusin', pressed);
+        element.dataset['pressedOnFocus'] =
+          element.querySelector(selectors.leaving) === null
+            ? 'without the leaving part'
+            : 'while leaving';
+        target.click();
+      };
+      element.addEventListener('focusin', pressed);
+    },
     { focused, leaving },
   );
+}
+
+function pressedOnFocus(row: Locator): Promise<string | null> {
+  return row.getAttribute('data-pressed-on-focus');
 }
 
 function swapParts(row: Locator): Promise<SwapPart[]> {
@@ -121,13 +127,9 @@ test.describe('Given a signed-in donor with a verified bank account on a compute
     const row = await openVerifiedAccount(page, 1280);
     const exclude = row.getByRole('button', { name: /Nepřiřazovat platby z\stohoto účtu/ });
 
-    const keptWhileLeaving = pressOnFocus(
-      row,
-      '.account-confirm-no',
-      '.account-action-fold.account-swap--closing',
-    );
+    await pressOnFocus(row, '.account-confirm-no', '.account-action-fold.account-swap--closing');
     await exclude.click();
-    expect(await keptWhileLeaving).toBe(true);
+    await expect.poll(() => pressedOnFocus(row)).toBe('while leaving');
 
     await expect(exclude).toBeFocused();
     await untilAtRest(row);
@@ -153,13 +155,9 @@ test.describe('Given a signed-in donor with a verified bank account on a compute
 
     await exclude.click();
     await expect(keep).toBeFocused();
-    const askedWhileLeaving = pressOnFocus(
-      row,
-      '.account-action',
-      '.account-confirm.account-swap--closing',
-    );
+    await pressOnFocus(row, '.account-action', '.account-confirm.account-swap--closing');
     await page.keyboard.press('Enter');
-    expect(await askedWhileLeaving).toBe(true);
+    await expect.poll(() => pressedOnFocus(row)).toBe('while leaving');
 
     await expect(keep).toBeFocused();
     await untilAtRest(row);
