@@ -1,4 +1,5 @@
 import type { Locator } from '@playwright/test';
+import { mockAdministration, rememberedSession } from './baseline/screen-mocks';
 import { mockDonorApi, rememberedDonorSession } from './donor-session';
 import { expect, test } from './fixtures';
 
@@ -11,6 +12,7 @@ interface FieldLook {
   readonly text: string;
   readonly textInset: number;
   readonly endInset: number;
+  readonly height: number;
 }
 
 function lookOf(field: Locator): Promise<FieldLook> {
@@ -23,6 +25,7 @@ function lookOf(field: Locator): Promise<FieldLook> {
       text: `${style.fontFamily} ${style.fontSize} ${style.color}`,
       textInset: parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft),
       endInset: parseFloat(style.borderRightWidth) + parseFloat(style.paddingRight),
+      height: Math.round(element.getBoundingClientRect().height),
     };
   });
 }
@@ -50,6 +53,27 @@ test.describe('Given a signed-in donor editing their details', () => {
       expect(choiceLook.text).toBe(textFieldLook.text);
       expect(choiceLook.textInset).toBe(textFieldLook.textInset);
       expect(choiceLook.endInset).toBeGreaterThan(textFieldLook.endInset);
+      expect(choiceLook.height).toBe(textFieldLook.height);
+    });
+  }
+});
+
+test.describe('Given an administrator on the overview', () => {
+  for (const width of WIDTHS) {
+    test(`when the year choice of Dary a dárci shows ${width} px wide, then it draws the theme's arrow with room for it, not the system's`, async ({
+      page,
+    }) => {
+      await rememberedSession(page);
+      await mockAdministration(page);
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/sprava');
+      const choice = page.getByRole('main').getByLabel('Rok');
+      await expect(choice).toBeVisible();
+
+      const look = await lookOf(choice);
+
+      expect(look.appearance).toBe('none');
+      expect(look.endInset).toBeGreaterThan(look.textInset);
     });
   }
 });
