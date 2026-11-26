@@ -18,6 +18,7 @@ export type OfferedAccountAction = 'reconnect' | 'disconnect';
 const FOLD = 'account-action-fold';
 const OPENING = 'account-swap--opening';
 const CLOSING = 'account-swap--closing';
+const SETTLE_GRACE_MS = 300;
 
 @Component({
   selector: 'app-account-disconnect',
@@ -65,8 +66,23 @@ export class AccountDisconnect {
       (motion) => motion.playState === 'running',
     );
     if (running.length > 0) {
-      void Promise.allSettled(running.map((motion) => motion.finished)).then(() =>
-        this.settle(swap),
+      const longest = Math.max(
+        0,
+        ...running.map((motion) => Number(motion.effect?.getComputedTiming().endTime ?? 0)),
+      );
+      let looked = false;
+      const lookAgain = (): void => {
+        if (looked) {
+          return;
+        }
+        looked = true;
+        clearTimeout(fallback);
+        this.settle(swap);
+      };
+      void Promise.allSettled(running.map((motion) => motion.finished)).then(lookAgain);
+      const fallback = setTimeout(
+        lookAgain,
+        (Number.isFinite(longest) ? longest : 0) + SETTLE_GRACE_MS,
       );
       return;
     }
