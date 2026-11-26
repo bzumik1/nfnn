@@ -35,6 +35,7 @@ describe('Given a sticky action bar at the bottom of a page', () => {
   let heightOf: (bar: HTMLElement) => number;
   let bottomOf: (bar: HTMLElement) => number;
   let viewportHeight: number;
+  let viewportWidth: number;
 
   const third = () => Math.ceil(viewportHeight / 3) + 1;
   const isResting = (bar: HTMLElement) => bar.classList.contains('ui-action-bar--resting');
@@ -42,10 +43,12 @@ describe('Given a sticky action bar at the bottom of a page', () => {
 
   beforeEach(async () => {
     viewportHeight = 768;
+    viewportWidth = 375;
     heightOf = () => 84;
     bottomOf = () => viewportHeight;
     vi.stubGlobal('ResizeObserver', FakeResizeObserver);
     vi.spyOn(window, 'innerHeight', 'get').mockImplementation(() => viewportHeight);
+    vi.spyOn(window, 'innerWidth', 'get').mockImplementation(() => viewportWidth);
     vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
       this: HTMLElement,
     ) {
@@ -218,5 +221,102 @@ describe('Given a sticky action bar at the bottom of a page', () => {
     await resize();
 
     expect(isInFlow(bar())).toBe(false);
+  });
+
+  function pressInside(): void {
+    bar().dispatchEvent(new Event('pointerdown', { bubbles: true }));
+  }
+
+  function lift(): void {
+    window.dispatchEvent(new Event('pointerup'));
+  }
+
+  it('when the focus leaves the bar it held, then the bar taller than a third of the screen moves into the page', async () => {
+    const button = document.createElement('button');
+    bar().append(button);
+    button.focus();
+    heightOf = () => third();
+    await resize();
+    const outside = document.createElement('input');
+    document.body.append(outside);
+
+    outside.focus();
+    await fixture.whenStable();
+
+    expect(isInFlow(bar())).toBe(true);
+    outside.remove();
+  });
+
+  it('when the focus moves from one control of the bar to another, then the bar keeps floating', async () => {
+    const save = document.createElement('button');
+    const cancel = document.createElement('button');
+    bar().append(save, cancel);
+    save.focus();
+    heightOf = () => third();
+    await resize();
+
+    cancel.focus();
+    await resize();
+
+    expect(isInFlow(bar())).toBe(false);
+  });
+
+  it('when the administrator presses outside the bar it held, then the bar taller than a third of the screen moves into the page', async () => {
+    pressInside();
+    lift();
+    heightOf = () => third();
+    await resize();
+
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    await fixture.whenStable();
+
+    expect(isInFlow(bar())).toBe(true);
+  });
+
+  it('when the phone turns after a press, then the bar taller than a third of the new screen moves into the page', async () => {
+    pressInside();
+    lift();
+    viewportWidth = 667;
+    viewportHeight = 375;
+    heightOf = () => 200;
+
+    window.dispatchEvent(new Event('resize'));
+    await fixture.whenStable();
+
+    expect(isInFlow(bar())).toBe(true);
+  });
+
+  it('when the pressed bar is taller than the screen above its bottom edge, then it is not held afloat', async () => {
+    pressInside();
+    lift();
+    heightOf = () => viewportHeight + 10;
+
+    await resize();
+
+    expect(isInFlow(bar())).toBe(true);
+  });
+
+  it('when a bar in the page shrinks below 30 % while a finger is on it, then it stays under the finger until the finger lifts', async () => {
+    heightOf = () => third();
+    await resize();
+    pressInside();
+    heightOf = () => Math.floor(viewportHeight * 0.25);
+
+    await resize();
+    expect(isInFlow(bar())).toBe(true);
+
+    lift();
+    await resize();
+    expect(isInFlow(bar())).toBe(false);
+  });
+
+  it('when the window gets much shorter without turning, then the limit follows the new height', async () => {
+    viewportHeight = 400;
+    heightOf = () => 150;
+
+    window.dispatchEvent(new Event('resize'));
+    await fixture.whenStable();
+
+    expect(isInFlow(bar())).toBe(true);
   });
 });
