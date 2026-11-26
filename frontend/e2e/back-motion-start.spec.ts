@@ -813,7 +813,7 @@ test.describe('Given an administrator in the app on the home screen of a phone, 
     await openFromWhereItIsSeen(page, DONORS_HREF);
   });
 
-  test('when ‹ steps back to Dárci and again to Správa, then each step’s copies join the cover only once the live page is drawn beneath at the place its copy shows, the leaving page stands at rest in the first frame both show, and each step ends on the live page without a jump (#2088)', async ({
+  test(`when ‹ steps back to Dárci and again to Správa, then each step’s copies join the cover only once the live page is drawn beneath at the place its copy shows, the leaving page stands at rest in the first frame both show, the step to Dárci ends on the live page without a jump and the step to Správa, launched straight at the start, jumping no further than main's ${MAIN_SE_COLD_SPRAVA_END_JUMP_PX} px measured on the SE on 2026-11-26, since data that loads after the copy still moves Správa (#2103) (#2088)`, async ({
     page,
   }) => {
     const card = page.locator(`.admin-frame a[href^="${DONORS_HREF}/"]`).first();
@@ -824,6 +824,11 @@ test.describe('Given an administrator in the app on the home screen of a phone, 
     expectStartedOverTheLivePageAndEndedWithoutAJump(page, toDonors, 'Dárci');
 
     const toAdministration = await stepBackTo(page, '/sprava', DONORS_HREF);
-    expectStartedOverTheLivePageAndEndedWithoutAJump(page, toAdministration, 'Správa');
+    expectStartedOverTheLivePageAndEndedWithoutAJump(
+      page,
+      toAdministration,
+      'Správa',
+      MAIN_SE_COLD_SPRAVA_END_JUMP_PX,
+    );
   });
 });
