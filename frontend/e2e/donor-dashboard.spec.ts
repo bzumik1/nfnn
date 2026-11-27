@@ -16,6 +16,7 @@ import {
   noDonations,
   openDonorSection,
   problem,
+  rememberedDonorSession,
   session,
   signIn,
 } from './donor-session';
@@ -1738,5 +1739,44 @@ test.describe('Given a signed-in donor without gifts on a 390 px phone at the la
     for (const start of layout.starts) {
       expect(Math.abs(start - layout.edge), JSON.stringify(layout)).toBeLessThanOrEqual(1);
     }
+  });
+});
+
+test.describe('Given a donor whose first saving of the overview to this device takes longer than a second', () => {
+  test('when the saving ends while the bar saying Ukládáme… is still leaving, then the live region says only that the overview is stored', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent =
+          '.ui-notice--floating.ui-notice--leaving { animation-duration: 60s !important; }';
+        document.head.append(style);
+      });
+    });
+    let answerSync: () => void = () => undefined;
+    const syncAnswered = new Promise<void>((resolve) => (answerSync = resolve));
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/donations/me/sync',
+      async (route) => {
+        await syncAnswered;
+        await route.fallback();
+      },
+    );
+    await rememberedDonorSession(page);
+    await page.goto('/darce/prehled');
+    const region = page.locator('app-first-sync-notice [aria-live="polite"]');
+
+    await expect(page.locator('.first-sync--saving')).toBeVisible();
+    expect(await region.ariaSnapshot()).toContain('Ukládáme přehled vašich darů');
+
+    answerSync();
+
+    await expect(page.locator('.first-sync.ui-notice--status')).toBeVisible();
+    await expect(page.locator('.first-sync--saving.ui-notice--leaving')).toHaveCount(1);
+    const announced = await region.ariaSnapshot();
+    expect(announced).toContain('Přehled vašich darů je uložený');
+    expect(announced).not.toContain('Ukládáme');
   });
 });
