@@ -362,6 +362,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+      - name: Every known motion finding names its motion, its ceiling on main and an open issue
+        run: node ../scripts/motion-known-findings.mjs entries e2e/motion-known-findings.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Build with the control theme
         run: npx ng build --configuration=production,control-theme --output-path=dist/control-theme
 

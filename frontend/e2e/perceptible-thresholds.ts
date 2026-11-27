@@ -1,5 +1,3 @@
-import { LATE_FRAME_PAST_THE_STEADY_ONE } from '../src/app/core/navigation/frame-pace';
-
 export const LATER_THAN_MAIN_AT_MOST_FRAMES = 1;
 export const STEP_ABOVE_MAIN_AT_MOST_STEADY_STEPS = 0.5;
 export const JUMP_ABOVE_MAIN_AT_MOST_PX = 1;
@@ -7,13 +5,23 @@ export const COLOUR_ABOVE_MAIN_AT_MOST_LEVELS = 6;
 export const ENDS_LATER_THAN_MAIN_AT_MOST_MS = 50;
 export const FROZEN_LONGER_THAN_MAIN_AT_MOST_FRAMES = 1;
 
-export const PLACED_AFTER_THE_TAP_WITHIN_MS = 150;
+export const FIRST_MOVE_AFTER_THE_TAP_WITHIN_MS = 67;
+export const HELD_AFTER_A_RELEASE_AT_MOST_MS = 33;
+export const FIRST_FRAME_AT_MOST_SHARE_OF_THE_WAY = 0.174;
+export const STEP_AT_MOST_CURVE_STEPS = 1.5;
+export const BACK_AT_MOST_PX = 0.5;
+export const STILL_AT_MOST_PX = 1;
+export const FROZEN_AT_MOST_MS = 33;
+export const OFF_THE_CURVE_AT_MOST_FRAMES = 1;
+export const UNDER_THE_FINGER_WITHIN_PX = 1;
+export const UNDER_THE_FINGER_WITHIN_FRAMES = 1;
+export const BAND_UNDER_THE_CLOCK_AT_MOST_LEVELS = 8;
+export const STEP_LASTS_MS = 350;
+export const ENDS_AFTER_THE_STEP_AT_MOST_MS = 50;
+export const PRESS_SHOWN_WITHIN_MS = 33;
+
 export const FIRST_OPENING_PLACED_WITHIN_MS = 300;
-export const HELD_AT_MOST_MS = 150;
-export const FIRST_FRAME_AT_MOST_SHARE_OF_THE_WAY = 0.2;
-export const FIRST_HALF_STEP_AT_MOST_STEADY_FRAMES = LATE_FRAME_PAST_THE_STEADY_ONE;
 export const WRONG_FRAMES_AT_MOST = 0;
-export const BAND_UNDER_THE_CLOCK_AT_MOST_LEVELS = 16;
 export const GROUND_ABOVE_THE_SHEETS_AT_MOST_LEVELS = 3;
 export const BLUR_SHARE_AT_LEAST = 0.5;
 export const SECOND_TITLE_OPACITY_AT_MOST = 0.1;
