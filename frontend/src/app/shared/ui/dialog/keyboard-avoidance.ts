@@ -113,11 +113,13 @@ export class KeyboardAvoidance {
     const box = scroller.getBoundingClientRect();
     const top = box.top + (parseFloat(getComputedStyle(scroller).scrollPaddingTop) || 0);
     const area = this.keyboard.visibleArea();
-    return area === null
-      ? { top, bottom: box.bottom }
-      : {
-          top: Math.max(top, area.top),
-          bottom: Math.min(box.bottom, area.top + area.height),
-        };
+    if (area === null) {
+      return { top, bottom: box.bottom };
+    }
+    const shownTop = this.dialog.getBoundingClientRect().top;
+    return {
+      top: Math.max(top, shownTop),
+      bottom: Math.min(box.bottom, shownTop + area.height),
+    };
   }
 }

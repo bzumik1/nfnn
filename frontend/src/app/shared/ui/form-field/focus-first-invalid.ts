@@ -131,9 +131,9 @@ function shownBand(field: Element, keyboard: VisibleArea | null): ViewBand {
 function scrollerBand(view: Window, scroller: Element): ViewBand {
   const style = view.getComputedStyle(scroller);
   const top = scroller.getBoundingClientRect().top + scroller.clientTop;
-  const visual = view.visualViewport;
-  const shownTop = visual?.offsetTop ?? 0;
-  const shownBottom = visual ? visual.offsetTop + visual.height : view.innerHeight;
+  const shown = scroller.closest('dialog')?.getBoundingClientRect();
+  const shownTop = shown?.top ?? 0;
+  const shownBottom = shown?.bottom ?? view.innerHeight;
   return {
     top: Math.max(top + (parseFloat(style.scrollPaddingTop) || 0), shownTop),
     bottom: Math.min(
