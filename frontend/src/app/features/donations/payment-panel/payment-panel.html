@@ -55,7 +55,7 @@
             [value]="customText()"
             [attr.aria-invalid]="showAmountHint()"
             [attr.aria-describedby]="customAmountDescription()"
-            (beforeinput)="noteDeletion($event)"
+            (beforeinput)="beforeCustomAmountInput($event)"
             (input)="enterCustomAmount($event)"
             (focus)="customAmountFocused()"
             (blur)="leaveCustomAmount()"

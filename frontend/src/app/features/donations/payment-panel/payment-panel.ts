@@ -67,6 +67,7 @@ const DEFAULT_AMOUNT = 500;
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
 const PRIMARY_BUTTON = 0;
+const CLEANED_INSERTIONS = new Set(['insertText', 'insertFromPaste', 'insertReplacementText']);
 const CURRENCY = 'Kč';
 const CUSTOM_AMOUNT_MAX_LENGTH = `${formatCrowns(MAX_AMOUNT)}\u00a0${CURRENCY}`.length;
 const MINOR_PER_CROWN = 100;
@@ -438,6 +439,36 @@ export class PaymentPanel {
       }
       groupThousands(field);
     }
+    this.takeCustomAmount(field);
+  }
+
+  beforeCustomAmountInput(event: InputEvent): void {
+    const field = event.target as HTMLInputElement;
+    this.deletingSelection = field.selectionStart !== field.selectionEnd;
+    const inserted = insertedText(event);
+    if (inserted === null) {
+      return;
+    }
+    const start = field.selectionStart ?? field.value.length;
+    const end = field.selectionEnd ?? start;
+    const room = CUSTOM_AMOUNT_MAX_LENGTH - (field.value.length - (end - start));
+    const cleaned = withoutSpacesAndCurrency(inserted).slice(0, Math.max(room, 0));
+    if (cleaned === inserted) {
+      return;
+    }
+    event.preventDefault();
+    this.deletingSelection = false;
+    if (cleaned === '' && start === end) {
+      return;
+    }
+    field.setRangeText(cleaned, start, end, 'end');
+    this.clearNotices();
+    this.forgetAmountPress();
+    groupThousands(field);
+    this.takeCustomAmount(field);
+  }
+
+  private takeCustomAmount(field: HTMLInputElement): void {
     this.customText.set(field.value);
     const typed = wholeCrowns(field.value);
     this.customAmount.set(typed);
@@ -499,11 +530,6 @@ export class PaymentPanel {
     this.forgetAmountPress();
     this.revealPending = true;
     this.revealCustomAmountOnce();
-  }
-
-  noteDeletion(event: Event): void {
-    const field = event.target as HTMLInputElement;
-    this.deletingSelection = field.selectionStart !== field.selectionEnd;
   }
 
   leaveCustomAmount(): void {
@@ -908,8 +934,14 @@ function groupThousands(field: HTMLInputElement): void {
 }
 
 function withoutSpacesAndCurrency(text: string): string {
-  const compact = text.replace(/\s/g, '');
-  return compact.endsWith(CURRENCY) ? compact.slice(0, -CURRENCY.length) : compact;
+  return text.replace(/\s/g, '').replaceAll(CURRENCY, '');
+}
+
+function insertedText(event: InputEvent): string | null {
+  if (event.isComposing || !CLEANED_INSERTIONS.has(event.inputType)) {
+    return null;
+  }
+  return event.data ?? event.dataTransfer?.getData('text/plain') ?? null;
 }
 
 function digitsOf(text: string): string {
