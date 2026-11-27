@@ -196,6 +196,16 @@ test.describe('Given a visitor on the About page', () => {
       await expect(note).toBeVisible();
     });
 
+    test('when they send the form without a message, then the error under Vaše zpráva stands as close to the field as under the other fields', async ({
+      page,
+    }) => {
+      await page.goto('/o-nas');
+      await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
+
+      await expectErrorRightUnderItsControl(page, 'contact-name', { withHint: false });
+      await expectErrorRightUnderItsControl(page, 'contact-message', { withHint: false });
+    });
+
     test('when they reach the contact section, then the heading, the e-mail address and the address are there to read', async ({
       page,
     }) => {
