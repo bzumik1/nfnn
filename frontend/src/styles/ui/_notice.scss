@@ -199,6 +199,10 @@
   @include motion.leave;
 }
 
+html.keyboard-open .ui-notice--floating {
+  clip-path: inset(50%);
+}
+
 html:has(app-root app-tab-bar) .ui-notice--floating {
   bottom: calc(var(--tab-bar-clearance) + var(--space-2));
 }

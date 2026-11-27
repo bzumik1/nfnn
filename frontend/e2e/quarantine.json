@@ -30,16 +30,6 @@
     "since": "2026-11-27T07:32:15Z"
   },
   {
-    "project": "chromium",
-    "file": "e2e/runner-speed.spec.ts",
-    "title": [
-      "Given the in-page benchmark of the runner’s speed",
-      "when Chromium runs four times slower, then the benchmark reports a runner beyond 1.5× and the row fails naming the factor"
-    ],
-    "issue": 2149,
-    "since": "2026-11-27T07:55:09Z"
-  },
-  {
     "project": "iphone",
     "file": "e2e/edge-swipe.spec.ts",
     "title": [
@@ -48,5 +38,15 @@
     ],
     "issue": 2150,
     "since": "2026-11-27T08:46:16Z"
+  },
+  {
+    "project": "iphone-sprava",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone, in the light appearance",
+      "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 9 frames of the tap (D1, 150 ms at 60 Hz; 18 frames, 300 ms, while the page’s code loads), on the screen, where the runner captures frames, the page never goes back nor runs ahead of its curve by more than 1.5 steady frames plus the p99 stamp lag of the runner's screencast"
+    ],
+    "issue": 2093,
+    "since": "2026-11-27T11:44:32Z"
   }
 ]

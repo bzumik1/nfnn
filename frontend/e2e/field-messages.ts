@@ -17,20 +17,27 @@ async function fieldGap(page: Page): Promise<number> {
 export async function expectErrorRightUnderItsControl(
   page: Page,
   controlId: string,
+  { withHint = true }: { withHint?: boolean } = {},
 ): Promise<void> {
   const control = page.locator(`#${controlId}`);
   const error = page.locator(`#${controlId}-error`);
   const hint = page.locator(`#${controlId}-hint`);
   await expect(error).toBeVisible();
-  await expect(hint).toBeVisible();
+  if (withHint) {
+    await expect(hint).toBeVisible();
+  } else {
+    await expect(hint).toHaveCount(0);
+  }
 
   const gap = await fieldGap(page);
   const controlBox = (await control.boundingBox())!;
   const errorBox = (await error.boundingBox())!;
-  const hintBox = (await hint.boundingBox())!;
   const controlBottom = controlBox.y + controlBox.height;
 
   expect(errorBox.y).toBeGreaterThanOrEqual(controlBottom - SUBPIXEL_TOLERANCE);
   expect(errorBox.y - controlBottom).toBeLessThanOrEqual(gap + SUBPIXEL_TOLERANCE);
-  expect(hintBox.y).toBeGreaterThanOrEqual(errorBox.y + errorBox.height - SUBPIXEL_TOLERANCE);
+  if (withHint) {
+    const hintBox = (await hint.boundingBox())!;
+    expect(hintBox.y).toBeGreaterThanOrEqual(errorBox.y + errorBox.height - SUBPIXEL_TOLERANCE);
+  }
 }
