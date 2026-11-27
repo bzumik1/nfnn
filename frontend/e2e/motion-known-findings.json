@@ -201,7 +201,7 @@
     "project": "motion-timed",
     "file": "e2e/back-matrix.spec.ts",
     "test": "when ‹ is pressed on every detail, then it travels back over its list without a jump, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
-    "step": "/sprava/darci/{donor} opening",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001 opening",
     "metric": "first-move-ms",
     "recorded": 239,
     "everyRun": true,
@@ -211,7 +211,7 @@
     "project": "motion-timed",
     "file": "e2e/back-matrix.spec.ts",
     "test": "when ‹ is pressed on every detail, then it travels back over its list without a jump, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
-    "step": "/sprava/darci/{donor} back",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001 back",
     "metric": "first-move-ms",
     "recorded": 229,
     "everyRun": true,
@@ -311,7 +311,7 @@
     "project": "motion-timed",
     "file": "e2e/back-matrix.spec.ts",
     "test": "when a finger takes it back past half and lets go on every detail, then it travels back over its list without a jump, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
-    "step": "/sprava/darci/{donor} opening",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001 opening",
     "metric": "first-move-ms",
     "recorded": 241,
     "everyRun": true,
@@ -411,7 +411,7 @@
     "project": "motion-timed",
     "file": "e2e/back-matrix.spec.ts",
     "test": "when a finger takes it a short way and lets go on every detail, then it travels back over its list without a jump, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
-    "step": "/sprava/darci/{donor} opening",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001 opening",
     "metric": "first-move-ms",
     "recorded": 239,
     "everyRun": true,
@@ -443,5 +443,1205 @@
     "recorded": 0.254,
     "everyRun": true,
     "issue": 2168
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/lide-fondu opening",
+    "metric": "first-move-ms",
+    "recorded": 257,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/lide-fondu back",
+    "metric": "first-move-ms",
+    "recorded": 242,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/projekty opening",
+    "metric": "first-move-ms",
+    "recorded": 258,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/projekty back",
+    "metric": "first-move-ms",
+    "recorded": 244,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/aktuality/nova opening",
+    "metric": "first-move-ms",
+    "recorded": 274,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/aktuality/nova back",
+    "metric": "first-move-ms",
+    "recorded": 228,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/o-nas opening",
+    "metric": "first-move-ms",
+    "recorded": 224,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/o-nas back",
+    "metric": "first-move-ms",
+    "recorded": 228,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/upozorneni opening",
+    "metric": "first-move-ms",
+    "recorded": 225,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/upozorneni back",
+    "metric": "first-move-ms",
+    "recorded": 224,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/starsi-symboly opening",
+    "metric": "first-move-ms",
+    "recorded": 238,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/starsi-symboly back",
+    "metric": "first-move-ms",
+    "recorded": 227,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/bankovni-ucty opening",
+    "metric": "first-move-ms",
+    "recorded": 209,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/bankovni-ucty back",
+    "metric": "first-move-ms",
+    "recorded": 228,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/logy/urovne opening",
+    "metric": "first-move-ms",
+    "recorded": 225,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/logy/urovne back",
+    "metric": "first-move-ms",
+    "recorded": 229,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/platby opening",
+    "metric": "first-move-ms",
+    "recorded": 241,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/platby back",
+    "metric": "first-move-ms",
+    "recorded": 245,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/vice opening",
+    "metric": "first-move-ms",
+    "recorded": 240,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/vice back",
+    "metric": "first-move-ms",
+    "recorded": 245,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/projekty/nova opening",
+    "metric": "first-move-ms",
+    "recorded": 273,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/projekty/nova back",
+    "metric": "first-move-ms",
+    "recorded": 229,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/pruh-prispet opening",
+    "metric": "first-move-ms",
+    "recorded": 235,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/pruh-prispet back",
+    "metric": "first-move-ms",
+    "recorded": 226,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/historie opening",
+    "metric": "first-move-ms",
+    "recorded": 225,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/historie back",
+    "metric": "first-move-ms",
+    "recorded": 214,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/loga-bank opening",
+    "metric": "first-move-ms",
+    "recorded": 242,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/loga-bank back",
+    "metric": "first-move-ms",
+    "recorded": 228,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/dary opening",
+    "metric": "first-move-ms",
+    "recorded": 217,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/dary back",
+    "metric": "first-move-ms",
+    "recorded": 228,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/logy/vlakna opening",
+    "metric": "first-move-ms",
+    "recorded": 225,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/logy/vlakna back",
+    "metric": "first-move-ms",
+    "recorded": 228,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci opening",
+    "metric": "first-move-ms",
+    "recorded": 255,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci back",
+    "metric": "first-move-ms",
+    "recorded": 244,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/zalohy opening",
+    "metric": "first-move-ms",
+    "recorded": 240,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/zalohy back",
+    "metric": "first-move-ms",
+    "recorded": 230,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/hromadna-potvrzeni opening",
+    "metric": "first-move-ms",
+    "recorded": 224,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/hromadna-potvrzeni back",
+    "metric": "first-move-ms",
+    "recorded": 230,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/spravci opening",
+    "metric": "first-move-ms",
+    "recorded": 238,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/spravci back",
+    "metric": "first-move-ms",
+    "recorded": 228,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/nastaveni opening",
+    "metric": "first-move-ms",
+    "recorded": 237,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/nastaveni back",
+    "metric": "first-move-ms",
+    "recorded": 230,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/udaje opening",
+    "metric": "first-move-ms",
+    "recorded": 220,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/udaje back",
+    "metric": "first-move-ms",
+    "recorded": 226,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/potvrzeni opening",
+    "metric": "first-move-ms",
+    "recorded": 209,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/potvrzeni back",
+    "metric": "first-move-ms",
+    "recorded": 214,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/aktuality opening",
+    "metric": "first-move-ms",
+    "recorded": 252,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/aktuality back",
+    "metric": "first-move-ms",
+    "recorded": 241,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001 opening",
+    "metric": "first-move-ms",
+    "recorded": 240,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001 back",
+    "metric": "first-move-ms",
+    "recorded": 227,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/overit opening",
+    "metric": "first-move-ms",
+    "recorded": 239,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/overit back",
+    "metric": "first-move-ms",
+    "recorded": 228,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/prehledy opening",
+    "metric": "first-move-ms",
+    "recorded": 237,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/prehledy back",
+    "metric": "first-move-ms",
+    "recorded": 229,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/logy opening",
+    "metric": "first-move-ms",
+    "recorded": 255,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/logy back",
+    "metric": "first-move-ms",
+    "recorded": 229,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/prihlaseni opening",
+    "metric": "first-move-ms",
+    "recorded": 209,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/prihlaseni back",
+    "metric": "first-move-ms",
+    "recorded": 225,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/vymaz opening",
+    "metric": "first-move-ms",
+    "recorded": 208,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/vymaz back",
+    "metric": "first-move-ms",
+    "recorded": 227,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/lide-fondu opening",
+    "metric": "first-move-ms",
+    "recorded": 254,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/projekty opening",
+    "metric": "first-move-ms",
+    "recorded": 255,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/aktuality/nova opening",
+    "metric": "first-move-ms",
+    "recorded": 272,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/o-nas opening",
+    "metric": "first-move-ms",
+    "recorded": 239,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/upozorneni opening",
+    "metric": "first-move-ms",
+    "recorded": 230,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/starsi-symboly opening",
+    "metric": "first-move-ms",
+    "recorded": 241,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/bankovni-ucty opening",
+    "metric": "first-move-ms",
+    "recorded": 212,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/logy/urovne opening",
+    "metric": "first-move-ms",
+    "recorded": 235,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/platby opening",
+    "metric": "first-move-ms",
+    "recorded": 255,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/vice opening",
+    "metric": "first-move-ms",
+    "recorded": 240,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/projekty/nova opening",
+    "metric": "first-move-ms",
+    "recorded": 273,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/pruh-prispet opening",
+    "metric": "first-move-ms",
+    "recorded": 238,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/historie opening",
+    "metric": "first-move-ms",
+    "recorded": 223,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/loga-bank opening",
+    "metric": "first-move-ms",
+    "recorded": 238,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/dary opening",
+    "metric": "first-move-ms",
+    "recorded": 212,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/logy/vlakna opening",
+    "metric": "first-move-ms",
+    "recorded": 225,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci opening",
+    "metric": "first-move-ms",
+    "recorded": 254,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/zalohy opening",
+    "metric": "first-move-ms",
+    "recorded": 239,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/hromadna-potvrzeni opening",
+    "metric": "first-move-ms",
+    "recorded": 228,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/spravci opening",
+    "metric": "first-move-ms",
+    "recorded": 225,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/nastaveni opening",
+    "metric": "first-move-ms",
+    "recorded": 239,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/udaje opening",
+    "metric": "first-move-ms",
+    "recorded": 211,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/potvrzeni opening",
+    "metric": "first-move-ms",
+    "recorded": 209,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/aktuality opening",
+    "metric": "first-move-ms",
+    "recorded": 254,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001 opening",
+    "metric": "first-move-ms",
+    "recorded": 239,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/overit opening",
+    "metric": "first-move-ms",
+    "recorded": 237,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/prehledy opening",
+    "metric": "first-move-ms",
+    "recorded": 231,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/logy opening",
+    "metric": "first-move-ms",
+    "recorded": 254,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/prihlaseni opening",
+    "metric": "first-move-ms",
+    "recorded": 211,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it back past half and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/vymaz opening",
+    "metric": "first-move-ms",
+    "recorded": 210,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/lide-fondu opening",
+    "metric": "first-move-ms",
+    "recorded": 255,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/projekty opening",
+    "metric": "first-move-ms",
+    "recorded": 256,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/aktuality/nova opening",
+    "metric": "first-move-ms",
+    "recorded": 273,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/o-nas opening",
+    "metric": "first-move-ms",
+    "recorded": 236,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/upozorneni opening",
+    "metric": "first-move-ms",
+    "recorded": 238,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/starsi-symboly opening",
+    "metric": "first-move-ms",
+    "recorded": 236,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/bankovni-ucty opening",
+    "metric": "first-move-ms",
+    "recorded": 224,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 1 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/logy/urovne opening",
+    "metric": "first-move-ms",
+    "recorded": 223,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/platby opening",
+    "metric": "first-move-ms",
+    "recorded": 240,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/vice opening",
+    "metric": "first-move-ms",
+    "recorded": 237,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/projekty/nova opening",
+    "metric": "first-move-ms",
+    "recorded": 274,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/pruh-prispet opening",
+    "metric": "first-move-ms",
+    "recorded": 223,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/historie opening",
+    "metric": "first-move-ms",
+    "recorded": 224,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/loga-bank opening",
+    "metric": "first-move-ms",
+    "recorded": 243,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/dary opening",
+    "metric": "first-move-ms",
+    "recorded": 223,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 2 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/logy/vlakna opening",
+    "metric": "first-move-ms",
+    "recorded": 223,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci opening",
+    "metric": "first-move-ms",
+    "recorded": 248,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/zalohy opening",
+    "metric": "first-move-ms",
+    "recorded": 240,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/hromadna-potvrzeni opening",
+    "metric": "first-move-ms",
+    "recorded": 224,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/spravci opening",
+    "metric": "first-move-ms",
+    "recorded": 242,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/nastaveni opening",
+    "metric": "first-move-ms",
+    "recorded": 239,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/udaje opening",
+    "metric": "first-move-ms",
+    "recorded": 210,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 3 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/potvrzeni opening",
+    "metric": "first-move-ms",
+    "recorded": 223,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/aktuality opening",
+    "metric": "first-move-ms",
+    "recorded": 255,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001 opening",
+    "metric": "first-move-ms",
+    "recorded": 240,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/overit opening",
+    "metric": "first-move-ms",
+    "recorded": 240,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/prehledy opening",
+    "metric": "first-move-ms",
+    "recorded": 224,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/logy opening",
+    "metric": "first-move-ms",
+    "recorded": 241,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/prihlaseni opening",
+    "metric": "first-move-ms",
+    "recorded": 208,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "test": "when a finger takes it a short way and lets go on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 150 ms (300 ms while the page’s code loads) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)",
+    "step": "/sprava/darci/019a1c00-0000-7000-8000-00000000b001/vymaz opening",
+    "metric": "first-move-ms",
+    "recorded": 212,
+    "everyRun": true,
+    "issue": 2166
   }
 ]
