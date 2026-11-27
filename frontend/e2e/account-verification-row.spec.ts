@@ -145,6 +145,16 @@ test.describe('Given a donor whose account verification of 1 Kč shows its note 
           - cell /^1\sKč$/
       `);
       await expect(page.locator('.payments-card tbody').getByRole('row')).toHaveCount(2);
+      await page.evaluate(() => document.fonts.ready);
+      await page.waitForFunction(() =>
+        document
+          .getAnimations()
+          .every(
+            (animation) =>
+              animation.playState !== 'running' ||
+              animation.effect?.getTiming().iterations === Infinity,
+          ),
+      );
       const results = await new AxeBuilder({ page })
         .include('.payments-card')
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
