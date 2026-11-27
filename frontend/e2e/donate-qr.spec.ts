@@ -334,6 +334,50 @@ test.describe('Given a visitor on the Přispět page', () => {
     expect(await caret()).toBe(1);
   });
 
+  test('when they insert 25 Kč before 100 in Jiná částka, then the field groups 25 100 with the caret after the 25', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(
+      browserName !== 'chromium',
+      'Chromium inserts the text as one input; the mobile team pastes 25 Kč before 100 on the iPhone SE',
+    );
+    await servePaymentDetails(page, []);
+    await page.goto('/prispet');
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
+    const field = page.getByLabel('Vlastní částka v korunách');
+    await field.pressSequentially('100');
+    await field.evaluate((input: HTMLInputElement) => input.setSelectionRange(0, 0));
+
+    await page.keyboard.insertText('25 Kč');
+
+    await expect(field).toHaveValue('25\u00a0100');
+    expect(await field.evaluate((input: HTMLInputElement) => input.selectionStart)).toBe(2);
+  });
+
+  test('when they paste an amount with its spaces and Kč, then the field groups it, and a longer paste stops at 12 characters before it is grouped', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(
+      browserName !== 'chromium',
+      'Chromium proves the cut; the mobile team pastes 1 250 000 Kč into the field on the iPhone SE',
+    );
+    await servePaymentDetails(page, []);
+    await page.goto('/prispet');
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
+    const field = page.getByLabel('Vlastní částka v korunách');
+
+    await page.keyboard.insertText('1\u202f250\u202f000\u00a0Kč');
+    await expect(field).toHaveValue('1\u00a0250\u00a0000');
+
+    await field.fill('');
+    await page.keyboard.insertText('12345678901234');
+    await expect(field).toHaveValue('123\u00a0456\u00a0789\u00a0012');
+  });
+
   test('when they open Jiná částka, then its field unfolds over the token duration instead of jumping in at once (in Chromium over several frames, in WebKit by one grid-template-rows transition from 0fr to 1fr, not discrete, lasting --duration-base with the motion.expand easing, whose transitionend comes at least 80 % of that duration after the click while the fold stays rendered)', async ({
     page,
   }, testInfo) => {

@@ -9,6 +9,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  DOCUMENT,
   effect,
   ElementRef,
   inject,
@@ -60,10 +61,15 @@ import {
 } from './bank-handoff';
 import { LocalPaymentRoute } from './local-payment-route';
 import { ChosenAmount, ChosenAmountStore } from './chosen-amount';
+import { thousandsGroups } from './thousands-groups';
 
 const DEFAULT_AMOUNT = 500;
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
+const PRIMARY_BUTTON = 0;
+const CLEANED_INSERTIONS = new Set(['insertText', 'insertFromPaste', 'insertReplacementText']);
+const CURRENCY = 'Kč';
+const CUSTOM_AMOUNT_MAX_LENGTH = `${formatCrowns(MAX_AMOUNT)}\u00a0${CURRENCY}`.length;
 const MINOR_PER_CROWN = 100;
 const ANNOUNCE_DELAY_MS = 1200;
 const ROOM_ABOVE_KEYBOARD_PX = 16;
@@ -135,6 +141,7 @@ export class PaymentPanel {
   private readonly giftArrival = inject(GiftArrivalWatch);
   private readonly handOffs = inject(PaymentHandOffs);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
   protected readonly compact = inject(CompactLayout).isCompact;
   private readonly short = inject(ShortViewport).isShort;
   private readonly keyboard = inject(SoftKeyboard);
@@ -182,7 +189,9 @@ export class PaymentPanel {
   protected readonly retrying = signal(false);
   protected readonly failedAttempts = signal(0);
   private choosingByKey = false;
-  private amountPressed = false;
+  private pressedAmount: HTMLElement | null = null;
+  private leftDuringPress = false;
+  private stopWatchingPress: () => void = () => undefined;
   private revealPending = false;
   private deletingSelection = false;
   private readonly announced = signal<number | null>(null);
@@ -332,6 +341,7 @@ export class PaymentPanel {
   protected readonly amountLabelId = computed(() => `${this.idPrefix()}-amount-label`);
   protected readonly customAmountId = computed(() => `${this.idPrefix()}-custom-amount`);
   protected readonly amountHintId = computed(() => `${this.idPrefix()}-amount-hint`);
+  protected readonly customAmountMaxLength = CUSTOM_AMOUNT_MAX_LENGTH;
   protected readonly redrawHintId = computed(() => `${this.idPrefix()}-redraw-hint`);
   protected readonly qrRegionId = computed(() => `${this.idPrefix()}-qr`);
   protected readonly otherDeviceId = computed(() => `${this.idPrefix()}-other-device`);
@@ -365,11 +375,12 @@ export class PaymentPanel {
       this.host.nativeElement.removeEventListener('keydown', noteChoosingKey, { capture: true });
       clearTimeout(this.redrawTimer);
       clearTimeout(this.announceTimer);
+      this.forgetAmountPress();
     });
   }
 
   choosePreset(amount: number): void {
-    this.amountPressed = false;
+    this.forgetAmountPress();
     this.clearNotices();
     this.customChosen.set(false);
     this.presetAmount.set(amount);
@@ -379,7 +390,7 @@ export class PaymentPanel {
   }
 
   chooseCustomAmount(): void {
-    this.amountPressed = false;
+    this.forgetAmountPress();
     if (!this.customChosen()) {
       this.openCustomAmount();
     }
@@ -411,7 +422,7 @@ export class PaymentPanel {
 
   enterCustomAmount(event: Event): void {
     this.clearNotices();
-    this.amountPressed = false;
+    this.forgetAmountPress();
     const field = event.target as HTMLInputElement;
     const typing = event as InputEvent;
     const deletion = typing.inputType;
@@ -428,6 +439,36 @@ export class PaymentPanel {
       }
       groupThousands(field);
     }
+    this.takeCustomAmount(field);
+  }
+
+  beforeCustomAmountInput(event: InputEvent): void {
+    const field = event.target as HTMLInputElement;
+    this.deletingSelection = field.selectionStart !== field.selectionEnd;
+    const inserted = insertedText(event);
+    if (inserted === null) {
+      return;
+    }
+    const start = field.selectionStart ?? field.value.length;
+    const end = field.selectionEnd ?? start;
+    const room = CUSTOM_AMOUNT_MAX_LENGTH - (field.value.length - (end - start));
+    const cleaned = withoutSpacesAndCurrency(inserted).slice(0, Math.max(room, 0));
+    if (cleaned === inserted) {
+      return;
+    }
+    event.preventDefault();
+    this.deletingSelection = false;
+    if (cleaned === '' && start === end) {
+      return;
+    }
+    field.setRangeText(cleaned, start, end, 'end');
+    this.clearNotices();
+    this.forgetAmountPress();
+    groupThousands(field);
+    this.takeCustomAmount(field);
+  }
+
+  private takeCustomAmount(field: HTMLInputElement): void {
     this.customText.set(field.value);
     const typed = wholeCrowns(field.value);
     this.customAmount.set(typed);
@@ -439,28 +480,63 @@ export class PaymentPanel {
     this.announceAfterQuiet();
   }
 
-  noteAmountPress(): void {
-    this.amountPressed = true;
+  noteAmountPress(event: PointerEvent): void {
+    if (event.button !== PRIMARY_BUTTON || !event.isPrimary) {
+      return;
+    }
+    this.forgetAmountPress();
+    this.pressedAmount = event.currentTarget as HTMLElement;
+    this.watchPressEnd(event.pointerId);
   }
 
-  forgetAmountPress(): void {
-    this.amountPressed = false;
+  private forgetAmountPress(): void {
+    this.stopWatchingPress();
+    this.pressedAmount = null;
+    this.leftDuringPress = false;
+  }
+
+  private watchPressEnd(pointerId: number): void {
+    const released = (release: PointerEvent) => {
+      if (release.pointerId === pointerId) {
+        this.endAmountPress(release);
+      }
+    };
+    const cancelled = (cancel: PointerEvent) => {
+      if (cancel.pointerId === pointerId) {
+        this.forgetAmountPress();
+      }
+    };
+    this.document.addEventListener('pointerup', released, { capture: true });
+    this.document.addEventListener('pointercancel', cancelled, { capture: true });
+    this.stopWatchingPress = () => {
+      this.document.removeEventListener('pointerup', released, { capture: true });
+      this.document.removeEventListener('pointercancel', cancelled, { capture: true });
+    };
+  }
+
+  private endAmountPress(release: PointerEvent): void {
+    this.stopWatchingPress();
+    if (this.pressedAmount?.contains(release.target as Node | null)) {
+      return;
+    }
+    const leftDuringPress = this.leftDuringPress;
+    this.forgetAmountPress();
+    if (leftDuringPress) {
+      this.customAmountLeft.set(true);
+    }
   }
 
   customAmountFocused(): void {
-    this.amountPressed = false;
+    this.forgetAmountPress();
     this.revealPending = true;
     this.revealCustomAmountOnce();
   }
 
-  noteDeletion(event: Event): void {
-    const field = event.target as HTMLInputElement;
-    this.deletingSelection = field.selectionStart !== field.selectionEnd;
-  }
-
   leaveCustomAmount(): void {
     this.revealPending = false;
-    if (!this.amountPressed) {
+    if (this.pressedAmount !== null) {
+      this.leftDuringPress = true;
+    } else {
       this.customAmountLeft.set(true);
     }
   }
@@ -842,11 +918,11 @@ function initialChoice(
 }
 
 function groupThousands(field: HTMLInputElement): void {
-  const digits = field.value.replace(/\s/g, '');
+  const digits = withoutSpacesAndCurrency(field.value);
   if (!/^\d+$/.test(digits)) {
     return;
   }
-  const grouped = digits.replace(/\B(?=(\d{3})+$)/g, '\u00a0');
+  const grouped = [...thousandsGroups(digits)].join('\u00a0');
   if (grouped === field.value) {
     return;
   }
@@ -855,6 +931,17 @@ function groupThousands(field: HTMLInputElement): void {
   field.value = grouped;
   const position = positionAfterDigits(grouped, digitsBefore);
   field.setSelectionRange(position, position);
+}
+
+function withoutSpacesAndCurrency(text: string): string {
+  return text.replace(/\s/g, '').replaceAll(CURRENCY, '');
+}
+
+function insertedText(event: InputEvent): string | null {
+  if (event.isComposing || !CLEANED_INSERTIONS.has(event.inputType)) {
+    return null;
+  }
+  return event.data ?? event.dataTransfer?.getData('text/plain') ?? null;
 }
 
 function digitsOf(text: string): string {
@@ -890,7 +977,7 @@ function positionAfterDigits(text: string, count: number): number {
 }
 
 function wholeCrowns(typed: string): number | null {
-  const digits = typed.replace(/\s/g, '');
+  const digits = withoutSpacesAndCurrency(typed);
   return /^\d+$/.test(digits) ? Number(digits) : null;
 }
 
