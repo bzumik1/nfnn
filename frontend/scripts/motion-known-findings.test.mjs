@@ -9,6 +9,7 @@ import {
   judgedAgainstTheKnownFindings,
   MOTION_METRICS,
   timedBudgetOf,
+  timedChecksOf,
 } from '../e2e/motion-known-findings.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -180,6 +181,23 @@ describe('Given a motion judged in ms in a timed row, whose budget the runner sc
     const place = { project: timed.project, file: timed.file, title: timed.title };
 
     assert.deepEqual(findingsLeftBehind([known], place, [{ ...timed, value: 10 }]), []);
+  });
+});
+
+describe('Given a measure handed to a timed row', () => {
+  it('when the row is timed, then its budget checks take the measure', () => {
+    const checks = [];
+
+    assert.equal(timedChecksOf(checks, 'first-move-ms'), checks);
+  });
+
+  it('when the row is a gated one that the runner does not time, then the measure is refused instead of going unjudged', () => {
+    for (const notTimed of [null, undefined]) {
+      assert.throws(
+        () => timedChecksOf(notTimed, 'held-ms'),
+        /held-ms was handed to a timed row, but this row is not timed/,
+      );
+    }
   });
 });
 

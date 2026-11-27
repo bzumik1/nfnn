@@ -4,6 +4,7 @@ import {
   type MotionMeasure,
   type MotionMetric,
   timedBudgetOf,
+  timedChecksOf,
 } from './motion-known-findings';
 import { knownMotionFindings, placeOf, rememberMeasure } from './motion-measures';
 import {
@@ -40,7 +41,7 @@ const WORSE_THAN_ITS_CEILING_AT_MOST: Record<MotionMetric, number> = {
 };
 
 export interface TimedRow {
-  readonly judged: BudgetCheck[];
+  readonly judged: BudgetCheck[] | null | undefined;
   readonly lagMs: number;
 }
 
@@ -49,6 +50,8 @@ export function expectWithinTheBound(
   timedRow?: TimedRow,
 ): void {
   const testInfo = test.info();
+  const timedChecks =
+    timedRow === undefined ? undefined : timedChecksOf(timedRow.judged, measure.metric);
   const measured: MotionMeasure = {
     ...measure,
     ...placeOf(testInfo),
@@ -60,9 +63,9 @@ export function expectWithinTheBound(
     type: MOTION_MEASURE_ANNOTATION,
     description: JSON.stringify(measured),
   });
-  if (timedRow !== undefined) {
+  if (timedChecks !== undefined) {
     const { budget, what } = timedBudgetOf(knownMotionFindings(), measured);
-    timedRow.judged.push({
+    timedChecks.push({
       what,
       measured: measured.value,
       budget,

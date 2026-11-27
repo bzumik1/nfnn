@@ -301,7 +301,7 @@ test.describe('Given the app on the home screen of a phone with an article opene
 
       expectWithinTheBound(
         { metric: 'held-ms', value: heldMs, bound: HELD_AT_MOST_MS },
-        { judged: judgedAgainstTheRunner(page)!, lagMs: 0 },
+        { judged: judgedAgainstTheRunner(page), lagMs: 0 },
       );
       await expect(page).toHaveURL('/aktuality');
       await expect(page.locator('.page-transition')).toHaveCount(0);
