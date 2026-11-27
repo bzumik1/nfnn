@@ -28,5 +28,15 @@
     ],
     "issue": 2138,
     "since": "2026-11-27T07:32:15Z"
+  },
+  {
+    "project": "chromium",
+    "file": "e2e/runner-speed.spec.ts",
+    "title": [
+      "Given the in-page benchmark of the runner’s speed",
+      "when Chromium runs four times slower, then the benchmark reports a runner beyond 1.5× and the row fails naming the factor"
+    ],
+    "issue": 2149,
+    "since": "2026-11-27T07:55:09Z"
   }
 ]
