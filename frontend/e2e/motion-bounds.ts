@@ -1,24 +1,41 @@
-import { readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
 import { expect, test } from './fixtures';
 import {
   judgedAgainstTheKnownFindings,
-  type MotionKnownFinding,
   type MotionMeasure,
-  REGISTRY,
+  type MotionMetric,
 } from './motion-known-findings';
+import { knownMotionFindings, placeOf, rememberMeasure } from './motion-measures';
+import {
+  COLOUR_ABOVE_MAIN_AT_MOST_LEVELS,
+  ENDS_LATER_THAN_MAIN_AT_MOST_MS,
+  FROZEN_LONGER_THAN_MAIN_AT_MOST_FRAMES,
+  JUMP_ABOVE_MAIN_AT_MOST_PX,
+  LATER_THAN_MAIN_AT_MOST_FRAMES,
+  SCREENCAST_COLOUR_ALLOWANCE_LEVELS,
+  STEEPEST_FRAME_OF_THE_CURVE_SHARE,
+  STEP_ABOVE_MAIN_AT_MOST_STEADY_STEPS,
+} from './perceptible-thresholds';
 
 export const MOTION_MEASURE_ANNOTATION = 'nfnn-motion-measure';
 export const KNOWN_MOTION_FINDING_ANNOTATION = 'known motion finding';
 
-let registry: readonly MotionKnownFinding[] | undefined;
+const FRAME_AT_60_HZ_MS = 1000 / 60;
 
-function knownMotionFindings(): readonly MotionKnownFinding[] {
-  registry ??= JSON.parse(
-    readFileSync(join(__dirname, REGISTRY), 'utf8'),
-  ) as readonly MotionKnownFinding[];
-  return registry;
-}
+const WORSE_THAN_ITS_CEILING_AT_MOST: Record<MotionMetric, number> = {
+  'first-move-ms': LATER_THAN_MAIN_AT_MOST_FRAMES * FRAME_AT_60_HZ_MS,
+  'held-ms': LATER_THAN_MAIN_AT_MOST_FRAMES * FRAME_AT_60_HZ_MS,
+  'first-frame-share': LATER_THAN_MAIN_AT_MOST_FRAMES * STEEPEST_FRAME_OF_THE_CURVE_SHARE,
+  'step-curve-steps': STEP_ABOVE_MAIN_AT_MOST_STEADY_STEPS,
+  'back-px': JUMP_ABOVE_MAIN_AT_MOST_PX,
+  'still-px': JUMP_ABOVE_MAIN_AT_MOST_PX,
+  'frozen-ms': FROZEN_LONGER_THAN_MAIN_AT_MOST_FRAMES * FRAME_AT_60_HZ_MS,
+  'off-the-curve-frames': LATER_THAN_MAIN_AT_MOST_FRAMES,
+  'under-the-finger-px': JUMP_ABOVE_MAIN_AT_MOST_PX,
+  'under-the-finger-frames': LATER_THAN_MAIN_AT_MOST_FRAMES,
+  'band-levels': COLOUR_ABOVE_MAIN_AT_MOST_LEVELS + SCREENCAST_COLOUR_ALLOWANCE_LEVELS,
+  'ends-after-the-step-ms': ENDS_LATER_THAN_MAIN_AT_MOST_MS,
+  'press-shown-ms': LATER_THAN_MAIN_AT_MOST_FRAMES * FRAME_AT_60_HZ_MS,
+};
 
 export function expectWithinTheBound(
   measure: Pick<MotionMeasure, 'metric' | 'value' | 'bound' | 'step'>,
@@ -26,10 +43,10 @@ export function expectWithinTheBound(
   const testInfo = test.info();
   const measured: MotionMeasure = {
     ...measure,
-    project: testInfo.project.name,
-    file: relative(join(__dirname, '..'), testInfo.file).split('\\').join('/'),
-    test: testInfo.title,
+    ...placeOf(testInfo),
+    allowance: Math.round(WORSE_THAN_ITS_CEILING_AT_MOST[measure.metric] * 1000) / 1000,
   };
+  rememberMeasure(testInfo, measured);
   testInfo.annotations.push({
     type: MOTION_MEASURE_ANNOTATION,
     description: JSON.stringify(measured),

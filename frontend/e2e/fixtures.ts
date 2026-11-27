@@ -1,4 +1,5 @@
 import { BrowserContext, expect, Page, test as base } from '@playwright/test';
+import { motionFindingsLeftBehind } from './motion-measures';
 import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
 
 export const unmockedApi = {
@@ -86,6 +87,7 @@ export async function unlockAdministration(page: Page): Promise<void> {
 }
 
 export const test = base.extend<{
+  motionFindings: void;
   offlineApi: void;
   cspViolations: CspViolation[];
   unlocksAdministration: boolean;
@@ -140,6 +142,17 @@ export const test = base.extend<{
       expect(
         violations,
         'no page breaks the Content-Security-Policy or Trusted Types of the frontend nginx',
+      ).toEqual([]);
+    },
+    { auto: true },
+  ],
+  motionFindings: [
+    async ({ offlineApi }, use, testInfo) => {
+      void offlineApi;
+      await use();
+      expect(
+        motionFindingsLeftBehind(testInfo),
+        'a known motion finding that no longer breaches leaves motion-known-findings.json',
       ).toEqual([]);
     },
     { auto: true },
