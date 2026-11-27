@@ -4,7 +4,7 @@ import { githubIssues } from './e2e-quarantine.mjs';
 
 export const MOTION_METRICS = [
   'first-move-ms',
-  'held-after-release-ms',
+  'held-ms',
   'first-frame-share',
   'step-curve-steps',
   'back-px',

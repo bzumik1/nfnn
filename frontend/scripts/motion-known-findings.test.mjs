@@ -79,7 +79,7 @@ describe('Given a known finding of the measured motion', () => {
     for (const other of [
       { project: 'chromium' },
       { test: 'another test' },
-      { metric: 'held-after-release-ms' },
+      { metric: 'held-ms' },
       { step: '/sprava' },
     ]) {
       const verdict = judgedAgainstTheKnownFindings([finding(other)], { ...where, value: 0.3 });

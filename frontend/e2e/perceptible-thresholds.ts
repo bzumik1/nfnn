@@ -6,7 +6,7 @@ export const ENDS_LATER_THAN_MAIN_AT_MOST_MS = 50;
 export const FROZEN_LONGER_THAN_MAIN_AT_MOST_FRAMES = 1;
 
 export const FIRST_MOVE_AFTER_THE_TAP_WITHIN_MS = 67;
-export const HELD_AFTER_A_RELEASE_AT_MOST_MS = 33;
+export const HELD_AT_MOST_MS = 33;
 export const FIRST_FRAME_AT_MOST_SHARE_OF_THE_WAY = 0.174;
 export const STEP_AT_MOST_CURVE_STEPS = 1.5;
 export const BACK_AT_MOST_PX = 0.5;

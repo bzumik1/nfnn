@@ -1,10 +1,6 @@
-import type { TestInfo } from '@playwright/test';
-import { readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
-
 export const MOTION_METRICS = [
   'first-move-ms',
-  'held-after-release-ms',
+  'held-ms',
   'first-frame-share',
   'step-curve-steps',
   'back-px',
@@ -46,7 +42,7 @@ export interface MotionVerdict {
   readonly note: string | null;
 }
 
-const REGISTRY = 'motion-known-findings.json';
+export const REGISTRY = 'motion-known-findings.json';
 
 const covers = (finding: MotionKnownFinding, measure: MotionMeasure): boolean =>
   finding.project === measure.project &&
@@ -89,31 +85,4 @@ export function judgedAgainstTheKnownFindings(
     problem: null,
     note: `known finding #${known.issue}: ${shown}, bound ${measure.bound}, ceiling ${known.recorded}`,
   };
-}
-
-let registry: readonly MotionKnownFinding[] | undefined;
-
-function knownMotionFindings(): readonly MotionKnownFinding[] {
-  registry ??= JSON.parse(
-    readFileSync(join(__dirname, REGISTRY), 'utf8'),
-  ) as readonly MotionKnownFinding[];
-  return registry;
-}
-
-export function expectWithinTheBound(
-  testInfo: TestInfo,
-  measure: Pick<MotionMeasure, 'metric' | 'value' | 'bound' | 'step'>,
-): void {
-  const verdict = judgedAgainstTheKnownFindings(knownMotionFindings(), {
-    ...measure,
-    project: testInfo.project.name,
-    file: relative(join(__dirname, '..'), testInfo.file).split('\\').join('/'),
-    test: testInfo.title,
-  });
-  if (verdict.note !== null) {
-    testInfo.annotations.push({ type: 'known motion finding', description: verdict.note });
-  }
-  if (verdict.problem !== null) {
-    throw new Error(verdict.problem);
-  }
 }
