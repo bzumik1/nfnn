@@ -73,6 +73,16 @@ import {
 import { expect, test, testWithoutBrowser } from './fixtures';
 import { runnerSpeedProblems, startMotionGate } from './runner-speed';
 
+const ONE_GARBAGE_COLLECTOR_THREAD = '--js-flags=--single-threaded-gc';
+
+test.use({
+  launchOptions: [
+    async ({ browserName }, use) =>
+      use(browserName === 'chromium' ? { args: [ONE_GARBAGE_COLLECTOR_THREAD] } : {}),
+    { scope: 'worker' },
+  ],
+});
+
 test.beforeEach(({ page }, testInfo) => startMotionGate(page, testInfo.tags));
 
 test.afterEach(async ({ page }, testInfo) => {
