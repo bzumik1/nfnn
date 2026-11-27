@@ -69,6 +69,7 @@ export const VERIFICATION_BESIDE_WIDEST_AMOUNTS = [
 export async function expectVerificationNoteUnderItsGiftInAlignedYears(
   page: Page,
   widest: RegExp,
+  { comparesYears = true }: { comparesYears?: boolean } = {},
 ): Promise<void> {
   const card = page.locator('.payments-card');
   await expect(card.locator('table')).toHaveCount(3);
@@ -133,6 +134,9 @@ export async function expectVerificationNoteUnderItsGiftInAlignedYears(
   );
   expect(amountsOutside).toEqual([]);
 
+  if (!comparesYears) {
+    return;
+  }
   const starts = await card.locator('table').evaluateAll((tables) =>
     tables.map((table) =>
       Array.from(table.querySelectorAll('thead th'))
