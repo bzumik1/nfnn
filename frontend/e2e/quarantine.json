@@ -20,16 +20,6 @@
     "since": "2026-11-27T00:53:27Z"
   },
   {
-    "project": "chromium",
-    "file": "e2e/top-area.spec.ts",
-    "title": [
-      "Given an administrator in the app on the home screen of a phone in the light appearance, on the landing page with the account sheet open",
-      "when Správa is opened from it on a CPU 3× slower, then the ground under the clock moves from the sheet’s ground to Správa’s with the scrim, never in one frame and never back"
-    ],
-    "issue": 2107,
-    "since": "2026-11-27T01:22:49Z"
-  },
-  {
     "project": "iphone",
     "file": "e2e/largest-text.spec.ts",
     "title": [
