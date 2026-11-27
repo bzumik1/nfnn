@@ -216,8 +216,8 @@ jobs:
       - name: Build the frontend for production
         run: npm run build
 
-      - name: Every row of the back matrix that judges a step's time in ms, one at a time, its budgets scaled by the runner's speed against the Prodesk (gate C)
-        run: npx playwright test e2e/back-matrix.spec.ts e2e/sprava-back-matrix.spec.ts --project=motion-timed --retries=0 --reporter=list
+      - name: Every row of the back matrix and the held step back that judges a time in ms, one at a time, its budgets scaled by the runner's speed against the Prodesk (gate C)
+        run: npx playwright test e2e/back-matrix.spec.ts e2e/sprava-back-matrix.spec.ts e2e/back-motion-start.spec.ts --project=motion-timed --retries=0 --reporter=list
         env:
           E2E_DIST: dist/frontend/browser
           CI: "1"

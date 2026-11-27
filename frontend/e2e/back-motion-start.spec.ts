@@ -4,11 +4,18 @@ import { mockDonorApi } from './donor-session';
 import { expect, test } from './fixtures';
 import { expectWithinTheBound } from './motion-bounds';
 import { FIRST_FRAME_AT_MOST_SHARE_OF_THE_WAY, HELD_AT_MOST_MS } from './perceptible-thresholds';
+import {
+  judgedAgainstTheRunner,
+  runnerSpeedProblems,
+  startMotionGate,
+  TIMED_MOTION_TAG,
+} from './runner-speed';
 
 const FLICK_REST_MS = 100;
 const FINGER_Y = 420;
 const LIST_TITLE = 'Co je u nás nového';
 const BUSY_AS_ON_THE_PHONE_MS = 140;
+const HELD_BY_THE_PAGE_CLOCK_AT_MOST_MS = 150;
 
 const article = {
   id: '0199f3e0-0000-7000-8000-00000000c031',
@@ -265,28 +272,54 @@ test.describe('Given the app on the home screen of a phone with an article opene
     reducedMotion: 'no-preference',
   });
 
-  test.beforeEach(({ page }) => articleOpenedFromTheNews(page));
+  test.beforeEach(async ({ page }, testInfo) => {
+    await startMotionGate(page, testInfo.tags);
+    await articleOpenedFromTheNews(page);
+  });
+
+  test.afterEach(async ({ page }) => {
+    expect(await runnerSpeedProblems(page), 'the hold outside its budget on this runner').toEqual(
+      [],
+    );
+  });
 
   test('when Zpět is pressed, then the step back lets its held motion go by the page clock within the duration of a quick change all the same', async ({
     page,
   }) => {
-    await watchTheHoldWithoutFrames(page);
+    const heldMs = await heldMsAfterZpet(page);
 
-    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
-
-    await expect
-      .poll(() => page.evaluate(() => window.nfnnHoldSeen?.releasedAt ?? null))
-      .not.toBeNull();
-    const hold = await page.evaluate(() => window.nfnnHoldSeen!);
-    expectWithinTheBound({
-      metric: 'held-ms',
-      value: Math.round(hold.releasedAt! - hold.heldAt!),
-      bound: HELD_AT_MOST_MS,
-    });
+    expect(heldMs).toBeLessThanOrEqual(HELD_BY_THE_PAGE_CLOCK_AT_MOST_MS);
     await expect(page).toHaveURL('/aktuality');
     await expect(page.locator('.page-transition')).toHaveCount(0);
   });
+
+  test(
+    `when Zpět is pressed, then the step back lets its held motion go by the page clock within ${HELD_AT_MOST_MS} ms (binding bound 2) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)`,
+    { tag: [TIMED_MOTION_TAG] },
+    async ({ page }) => {
+      const heldMs = await heldMsAfterZpet(page);
+
+      expectWithinTheBound(
+        { metric: 'held-ms', value: heldMs, bound: HELD_AT_MOST_MS },
+        { judged: judgedAgainstTheRunner(page)!, lagMs: 0 },
+      );
+      await expect(page).toHaveURL('/aktuality');
+      await expect(page.locator('.page-transition')).toHaveCount(0);
+    },
+  );
 });
+
+async function heldMsAfterZpet(page: Page): Promise<number> {
+  await watchTheHoldWithoutFrames(page);
+
+  await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+
+  await expect
+    .poll(() => page.evaluate(() => window.nfnnHoldSeen?.releasedAt ?? null))
+    .not.toBeNull();
+  const hold = await page.evaluate(() => window.nfnnHoldSeen!);
+  return Math.round(hold.releasedAt! - hold.heldAt!);
+}
 
 function expectFirstFrameWithin(share: number): void {
   expectWithinTheBound({

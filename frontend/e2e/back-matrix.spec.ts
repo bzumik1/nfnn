@@ -63,6 +63,7 @@ import {
   type StepProbe,
   stepSeen,
   swipeBack,
+  walkingStep,
   walkRow,
   watchTheStep,
   WAY_NAMES,
@@ -295,6 +296,7 @@ for (const gate of MOTION_GATES) {
             for (const row of rows) {
               await test.step(row.name, async () => {
                 await motionsEnded(page);
+                walkingStep(`${row.href} opening`);
                 await watchTheStep(page, cost);
                 await clickWithoutScrolling(
                   accountSheet(page).locator(`a[href="${row.href}"]`).first(),
@@ -303,6 +305,7 @@ for (const gate of MOTION_GATES) {
                 const opening = await stepSeen(page);
                 expectArrived(opening, WIDTH);
                 withinTheBudget(opening);
+                walkingStep(undefined);
                 await screens.backButton().click();
                 await screens.returned(row);
                 await expect(page.locator('.page-transition')).toHaveCount(0);
@@ -334,11 +337,13 @@ for (const gate of MOTION_GATES) {
                 await clickWithoutScrolling(link);
                 await screens.shown(row);
                 await motionsEnded(page);
+                walkingStep(`${href} back`);
                 await watchTheStep(page, cost);
                 await screens.backButton().click();
                 const probe = await stepSeen(page);
                 expectLeftAway(probe, WIDTH, 0);
                 withinTheBudget(probe);
+                walkingStep(undefined);
                 await screens.returned(row);
                 await expect(page.locator('.page-transition')).toHaveCount(0);
               });

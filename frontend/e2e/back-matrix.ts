@@ -99,7 +99,7 @@ type Way = 'back-button' | 'swipe-completed' | 'swipe-cancelled';
 
 let stepOfTheWalk: { readonly testId: string; readonly step: string } | undefined;
 
-function walkingStep(step: string | undefined): void {
+export function walkingStep(step: string | undefined): void {
   stepOfTheWalk = step === undefined ? undefined : { testId: test.info().testId, step };
 }
 
@@ -1914,12 +1914,15 @@ function expectSteadyFirstHalf(
       frozenOnTheScreen(screenMotion),
       `the ${what} page on the screen (Prodesk/nightly only)`,
     ).toEqual([]);
-    expectWithinTheBound({
-      metric: 'frozen-ms',
-      value: Math.round(longestFrozenMs(screenMotion)),
-      bound: FROZEN_AT_MOST_MS,
-      step: measuredStep(what),
-    });
+    expectWithinTheBound(
+      {
+        metric: 'frozen-ms',
+        value: Math.round(longestFrozenMs(screenMotion)),
+        bound: FROZEN_AT_MOST_MS,
+        step: measuredStep(what),
+      },
+      { judged: probe.judged, lagMs: screenMotion.lagFrames * screenMotion.steadyMs },
+    );
   }
   for (let at = 1; at < shares.length; at++) {
     const before = shares[at - 1];
@@ -2141,12 +2144,15 @@ export function expectWithinTheBudget(probe: StepProbe, restingAt?: number): voi
   expect(busyFrameAt, 'no frame was drawn after both copies were placed').not.toBeNull();
   expect(placingKindProblems(probe), 'where the app placed both copies').toEqual([]);
   if (probe.judged !== undefined) {
-    expectWithinTheBound({
-      metric: 'first-move-ms',
-      value: Math.round(moved!.at - tappedAt!),
-      bound: FIRST_MOVE_AFTER_THE_TAP_WITHIN_MS,
-      step: measuredStep(),
-    });
+    expectWithinTheBound(
+      {
+        metric: 'first-move-ms',
+        value: Math.round(moved!.at - tappedAt!),
+        bound: FIRST_MOVE_AFTER_THE_TAP_WITHIN_MS,
+        step: measuredStep(),
+      },
+      { judged: probe.judged, lagMs: lagFramesOf(probe) * placing.steadyMs },
+    );
   }
   const anchoredAt = probe.anchoredAt ?? probe.placedAt!;
   const framesBefore = probe.frames.filter(
