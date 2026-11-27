@@ -21,16 +21,6 @@
   },
   {
     "project": "iphone",
-    "file": "e2e/largest-text.spec.ts",
-    "title": [
-      "Given a donor on an iPhone SE 375 × 667 pt with the largest accessibility text who allows motion, in Údaje a zabezpečení inside the account sheet",
-      "when they remove the second of two passkeys with its Ano, odebrat at the top of what shows the page, then Přejmenovat of the key above stays where it stood while the row closes and is brought into view only once the row is gone"
-    ],
-    "issue": 2121,
-    "since": "2026-11-27T01:22:49Z"
-  },
-  {
-    "project": "iphone",
     "file": "e2e/receipt-status-closing.spec.ts",
     "title": [
       "Given a signed-in donor whose yearly receipt is ready on Můj přehled",
