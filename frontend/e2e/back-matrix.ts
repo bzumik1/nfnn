@@ -299,7 +299,8 @@ async function screenOf(page: Page, markerY: number): Promise<ScreenShot[] | nul
     return null;
   }
   const origin = await page.evaluate(() => performance.timeOrigin);
-  const reader = await page.context().newPage();
+  const readerContext = await page.context().browser()!.newContext();
+  const reader = await readerContext.newPage();
   try {
     const offsets = await reader.evaluate(
       async ({ pictures, markerY, markerHeight, viewportWidth }) => {
@@ -342,7 +343,7 @@ async function screenOf(page: Page, markerY: number): Promise<ScreenShot[] | nul
       png: shot.data,
     }));
   } finally {
-    await reader.close();
+    await readerContext.close();
   }
 }
 
