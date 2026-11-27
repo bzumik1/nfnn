@@ -3,6 +3,7 @@ import {
   judgedAgainstTheKnownFindings,
   type MotionMeasure,
   type MotionMetric,
+  timedBudgetOf,
 } from './motion-known-findings';
 import { knownMotionFindings, placeOf, rememberMeasure } from './motion-measures';
 import {
@@ -15,6 +16,7 @@ import {
   STEEPEST_FRAME_OF_THE_CURVE_SHARE,
   STEP_ABOVE_MAIN_AT_MOST_STEADY_STEPS,
 } from './perceptible-thresholds';
+import type { BudgetCheck } from './runner-speed';
 
 export const MOTION_MEASURE_ANNOTATION = 'nfnn-motion-measure';
 export const KNOWN_MOTION_FINDING_ANNOTATION = 'known motion finding';
@@ -37,20 +39,38 @@ const WORSE_THAN_ITS_CEILING_AT_MOST: Record<MotionMetric, number> = {
   'press-shown-ms': LATER_THAN_MAIN_AT_MOST_FRAMES * FRAME_AT_60_HZ_MS,
 };
 
+export interface TimedRow {
+  readonly judged: BudgetCheck[];
+  readonly lagMs: number;
+}
+
 export function expectWithinTheBound(
   measure: Pick<MotionMeasure, 'metric' | 'value' | 'bound' | 'step'>,
+  timedRow?: TimedRow,
 ): void {
   const testInfo = test.info();
   const measured: MotionMeasure = {
     ...measure,
     ...placeOf(testInfo),
     allowance: Math.round(WORSE_THAN_ITS_CEILING_AT_MOST[measure.metric] * 1000) / 1000,
+    ...(timedRow === undefined ? {} : { timed: true, lagMs: Math.round(timedRow.lagMs * 10) / 10 }),
   };
   rememberMeasure(testInfo, measured);
   testInfo.annotations.push({
     type: MOTION_MEASURE_ANNOTATION,
     description: JSON.stringify(measured),
   });
+  if (timedRow !== undefined) {
+    const { budget, what } = timedBudgetOf(knownMotionFindings(), measured);
+    timedRow.judged.push({
+      what,
+      measured: measured.value,
+      budget,
+      slack: measured.lagMs ?? 0,
+      unit: 'ms',
+    });
+    return;
+  }
   const verdict = judgedAgainstTheKnownFindings(knownMotionFindings(), measured);
   if (verdict.note !== null) {
     testInfo.annotations.push({ type: KNOWN_MOTION_FINDING_ANNOTATION, description: verdict.note });

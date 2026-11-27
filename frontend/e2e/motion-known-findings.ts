@@ -19,7 +19,7 @@ export type MotionMetric = (typeof MOTION_METRICS)[number];
 export interface MotionKnownFinding {
   readonly project: string;
   readonly file: string;
-  readonly test: string;
+  readonly title: readonly string[];
   readonly step?: string;
   readonly metric: MotionMetric;
   readonly recorded: number;
@@ -30,7 +30,7 @@ export interface MotionKnownFinding {
 export interface MotionPlace {
   readonly project: string;
   readonly file: string;
-  readonly test: string;
+  readonly title: readonly string[];
 }
 
 export interface MotionMeasure extends MotionPlace {
@@ -39,6 +39,8 @@ export interface MotionMeasure extends MotionPlace {
   readonly value: number;
   readonly bound: number;
   readonly allowance: number;
+  readonly timed?: boolean;
+  readonly lagMs?: number;
 }
 
 export interface MotionVerdict {
@@ -48,8 +50,13 @@ export interface MotionVerdict {
 
 export const REGISTRY = 'motion-known-findings.json';
 
+const sameTitle = (one: readonly string[], other: readonly string[]): boolean =>
+  one.length === other.length && one.every((part, index) => part === other[index]);
+
 const placedAt = (finding: MotionKnownFinding, place: MotionPlace): boolean =>
-  finding.project === place.project && finding.file === place.file && finding.test === place.test;
+  finding.project === place.project &&
+  finding.file === place.file &&
+  sameTitle(finding.title, place.title);
 
 const covers = (finding: MotionKnownFinding, measure: MotionMeasure): boolean =>
   placedAt(finding, measure) &&
@@ -88,16 +95,38 @@ export function judgedAgainstTheKnownFindings(
   };
 }
 
+export function timedBudgetOf(
+  findings: readonly MotionKnownFinding[],
+  measure: MotionMeasure,
+): { readonly budget: number; readonly what: string } {
+  const known = findings.find((finding) => covers(finding, measure));
+  return known === undefined
+    ? { budget: measure.bound, what: `${shownOf(measure)} against its binding bound` }
+    : {
+        budget: Math.round((known.recorded + measure.allowance) * 1000) / 1000,
+        what: `${shownOf(measure)} against its known finding #${known.issue}, ceiling ${known.recorded} plus ${measure.allowance}`,
+      };
+}
+
+const withinTheBound = (measure: MotionMeasure, scale: number | undefined): boolean | null => {
+  if (!measure.timed) {
+    return measure.value <= measure.bound;
+  }
+  return scale === undefined ? null : measure.value <= measure.bound * scale + (measure.lagMs ?? 0);
+};
+
 export function findingsLeftBehind(
   findings: readonly MotionKnownFinding[],
   place: MotionPlace,
   measures: readonly MotionMeasure[],
+  scale?: number,
 ): string[] {
   return findings
     .filter((finding) => finding.everyRun && placedAt(finding, place))
     .flatMap((finding) => {
       const ofIt = measures.filter((measure) => covers(finding, measure));
-      return ofIt.length > 0 && ofIt.every((measure) => measure.value <= measure.bound)
+      const within = ofIt.map((measure) => withinTheBound(measure, scale));
+      return ofIt.length > 0 && within.every((each) => each === true)
         ? [
             `${ofIt.map(shownOf).join(', ')} within the bound ${ofIt[0].bound}: the known finding #${finding.issue} no longer breaches, so remove its entry from ${REGISTRY}`,
           ]

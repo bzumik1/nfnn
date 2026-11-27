@@ -147,11 +147,11 @@ export const test = base.extend<{
     { auto: true },
   ],
   motionFindings: [
-    async ({ offlineApi }, use, testInfo) => {
+    async ({ page, offlineApi }, use, testInfo) => {
       void offlineApi;
       await use();
       expect(
-        motionFindingsLeftBehind(testInfo),
+        motionFindingsLeftBehind(testInfo, page),
         'a known motion finding that no longer breaches leaves motion-known-findings.json',
       ).toEqual([]);
     },
