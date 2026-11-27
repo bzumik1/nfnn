@@ -14,7 +14,7 @@ const REFERENCE: SpeedReference = {
   recordedOn: 'the Prodesk',
 };
 
-const NAMES_THE_FACTOR = /the runner is \d\.\d\d× slower/;
+const NAMES_THE_FACTOR = /the runner is \d+\.\d\d× slower/;
 
 function placedAfter(ms: number): BudgetCheck {
   return {
