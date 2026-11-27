@@ -5185,6 +5185,29 @@ async function untilTheLastFrameStandsInView(page: Page): Promise<void> {
     .toBe(true);
 }
 
+async function readTheTopAtTheNextPress(
+  page: Page,
+  target: string,
+): Promise<() => Promise<number>> {
+  await page.evaluate((target) => {
+    const press = window as unknown as { topAtThePress?: number };
+    document.addEventListener(
+      'pointerdown',
+      () => {
+        press.topAtThePress = document.querySelector(target)!.getBoundingClientRect().top;
+      },
+      { capture: true, once: true },
+    );
+  }, target);
+  return async () => {
+    const top = await page.evaluate(
+      () => (window as unknown as { topAtThePress?: number }).topAtThePress,
+    );
+    expect(top).toBeDefined();
+    return top!;
+  };
+}
+
 function framesThatMovedItWhileTheRowStood(
   frames: readonly NeighbourFrame[],
   topAtThePress: number,
@@ -5220,7 +5243,10 @@ for (const inSheet of [false, true]) {
       await expect(confirm).toBeInViewport({ ratio: 1 });
       const above = renameButtonOf(passkeys, iphonePasskey);
       await expect(above).not.toBeInViewport();
-      const topAtThePress = await above.evaluate((button) => button.getBoundingClientRect().top);
+      const topAtThePress = await readTheTopAtTheNextPress(
+        page,
+        `#passkey-rename-button-${iphonePasskey.id}`,
+      );
       const row = `#passkey-row-${notebookPasskey.id}`;
       const frames = await recordTheNeighbourFromTheNextClick(
         page,
@@ -5236,7 +5262,7 @@ for (const inSheet of [false, true]) {
       await settledWithin(scope);
       await untilTheLastFrameStandsInView(page);
       const recorded = await frames();
-      expect(framesThatMovedItWhileTheRowStood(recorded, topAtThePress)).toEqual([]);
+      expect(framesThatMovedItWhileTheRowStood(recorded, await topAtThePress())).toEqual([]);
       expectTheLastFrameInView(recorded);
     });
   });
