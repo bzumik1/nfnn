@@ -459,7 +459,10 @@ export class PaymentPanel {
     const start = field.selectionStart ?? field.value.length;
     const end = field.selectionEnd ?? start;
     const room = CUSTOM_AMOUNT_MAX_LENGTH - (field.value.length - (end - start));
-    const cleaned = withoutSpacesCurrencyAndZeroHellers(inserted).slice(0, Math.max(room, 0));
+    const cleaned = withoutZeroHellersAtEnd(withoutSpacesAndCurrency(inserted)).slice(
+      0,
+      Math.max(room, 0),
+    );
     if (cleaned === inserted) {
       return;
     }
@@ -925,7 +928,7 @@ function initialChoice(
 }
 
 function groupThousands(field: HTMLInputElement): void {
-  const digits = withoutSpacesCurrencyAndZeroHellers(field.value);
+  const digits = withoutSpacesAndCurrency(field.value);
   if (!/^\d+$/.test(digits)) {
     return;
   }
@@ -940,8 +943,12 @@ function groupThousands(field: HTMLInputElement): void {
   field.setSelectionRange(position, position);
 }
 
-function withoutSpacesCurrencyAndZeroHellers(text: string): string {
-  return text.replace(/\s/g, '').replace(CURRENCY_NAMES, '').replace(ZERO_HELLERS_AT_END, '');
+function withoutSpacesAndCurrency(text: string): string {
+  return text.replace(/\s/g, '').replace(CURRENCY_NAMES, '');
+}
+
+function withoutZeroHellersAtEnd(text: string): string {
+  return text.replace(ZERO_HELLERS_AT_END, '');
 }
 
 function insertedText(event: InputEvent): string | null {
@@ -984,7 +991,7 @@ function positionAfterDigits(text: string, count: number): number {
 }
 
 function wholeCrowns(typed: string): number | null {
-  const digits = withoutSpacesCurrencyAndZeroHellers(typed);
+  const digits = withoutSpacesAndCurrency(typed);
   return /^\d+$/.test(digits) ? Number(digits) : null;
 }
 
