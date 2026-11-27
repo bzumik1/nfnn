@@ -71,7 +71,16 @@ import {
   WIDTH,
 } from './back-matrix';
 import { expect, test, testWithoutBrowser } from './fixtures';
+import { launchOptionsOf } from './launch-options';
 import { runnerSpeedProblems, startMotionGate } from './runner-speed';
+
+test.use({
+  launchOptions: [
+    async ({ browserName }, use, workerInfo) =>
+      use(launchOptionsOf(browserName, workerInfo.project.name)),
+    { scope: 'worker' },
+  ],
+});
 
 test.beforeEach(({ page }, testInfo) => startMotionGate(page, testInfo.tags));
 
