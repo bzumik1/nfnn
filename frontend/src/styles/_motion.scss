@@ -328,7 +328,7 @@ $_pressed: (--pressed-tint, filter);
   animation: motion-leave var(--duration-base) var(--ease-in) forwards;
   @include _fades-when-reduced(animation);
 
-  &:not(:only-child) {
+  &:not(:last-child) {
     display: none;
   }
 }

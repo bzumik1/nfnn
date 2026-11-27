@@ -22,7 +22,7 @@ Happy path and each rule as scenarios; validation and problem types; 401 without
 ## Quarantine of flaky e2e tests (Jakub 2026-11-27, #2125)
 - A team lead may move a known flaky e2e test with an open issue into `frontend/e2e/quarantine.json`, one entry per test with its `since` time, in a PR that names the issue and declares the file (`Výjimka:`). At most 5 entries. Each is fixed within 48 h of its `since`; past that its fix comes before other work.
 - The listed tests keep running in the job `e2e (karanténa)`, which does not block `gate`; the shards leave out exactly them, and the inventory keeps them. The PR that fixes one removes its entry and closes its issue.
-- `scripts/e2e-quarantine.mjs` in the `frontend` job fails `gate` on a sixth entry, an entry whose issue is missing or closed, one past 48 h by the CI clock, or one naming no test. How to add an entry: `testing-frontend.md`.
+- `scripts/e2e-quarantine.mjs` in the `frontend` job fails `gate` on a sixth entry, an entry whose issue is missing or closed, one naming no test, and on a PR one past 48 h by the CI clock (on `main` only a warning; the nightly fails and reports it, `deploy-ci.md`). How to add an entry: `testing-frontend.md`.
 
 ## Connector (`mcp/`)
 - Vitest specs in `mcp/test/*.spec.ts`, same naming (`describe('Given …')` → `it('when …, then …')`); the backend is `test/fake-backend.ts`, never a real one.

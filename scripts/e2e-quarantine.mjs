@@ -1,9 +1,14 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { tests as listedTests } from '../frontend/scripts/check-e2e-shards.mjs';
 
 export const MAXIMUM_ENTRIES = 5;
 export const MAXIMUM_AGE_HOURS = 48;
+export const DEADLINE_BY_MODE = {
+  pull_request: 'error',
+  push: 'warning',
+  nightly: 'error',
+};
 
 const HOUR_MS = 60 * 60 * 1000;
 const SHARD_PROJECTS = /^(?:chromium|baseline|iphone|iphone-sprava|device-[\w-]+)$/;
@@ -57,17 +62,20 @@ function shapeProblems(entry, index) {
   return problems;
 }
 
-function ageProblems(entry, now) {
-  const since = Date.parse(entry.since);
-  if (since > now) {
+function futureProblems(entry, now) {
+  if (Date.parse(entry.since) > now) {
     return [`${keyOf(entry)} entered the quarantine in the future (${entry.since})`];
   }
-  if (now - since > MAXIMUM_AGE_HOURS * HOUR_MS) {
-    return [
-      `${keyOf(entry)} has been in quarantine for more than ${MAXIMUM_AGE_HOURS} h (since ${entry.since}): fixing #${entry.issue} comes before other work`,
-    ];
-  }
   return [];
+}
+
+export function overdueProblems(entries, now) {
+  return entries
+    .filter((entry) => now - Date.parse(entry.since) > MAXIMUM_AGE_HOURS * HOUR_MS)
+    .map(
+      (entry) =>
+        `${keyOf(entry)} has been in quarantine for more than ${MAXIMUM_AGE_HOURS} h (since ${entry.since}): fixing #${entry.issue} comes before other work`,
+    );
 }
 
 export function entryProblems(entries, now) {
@@ -91,7 +99,7 @@ export function entryProblems(entries, now) {
     }
     seen.add(key);
     if (now !== undefined) {
-      problems.push(...ageProblems(entry, now));
+      problems.push(...futureProblems(entry, now));
     }
   });
   return problems;
@@ -112,6 +120,22 @@ export async function issueProblems(entries, lookup) {
     }
   }
   return problems;
+}
+
+export async function checkEntries(entries, { now, mode, lookup }) {
+  if (!Object.hasOwn(DEADLINE_BY_MODE, mode ?? '')) {
+    throw new Error(`unknown mode ${mode}: give --mode=${Object.keys(DEADLINE_BY_MODE).join('|')}`);
+  }
+  const problems = entryProblems(entries, now);
+  if (problems.length > 0) {
+    return { errors: problems, warnings: [], overdue: [] };
+  }
+  const issues = await issueProblems(entries, lookup);
+  const overdue = overdueProblems(entries, now);
+  if (DEADLINE_BY_MODE[mode] === 'warning') {
+    return { errors: issues, warnings: overdue, overdue };
+  }
+  return { errors: [...issues, ...overdue], warnings: [], overdue };
 }
 
 export function githubIssues({
@@ -136,7 +160,11 @@ export function githubIssues({
       throw new Error(`GitHub answered ${answer.status} for issue #${number}`);
     }
     const issue = await answer.json();
-    return { found: true, state: issue.state, pullRequest: issue.pull_request !== undefined };
+    return {
+      found: true,
+      state: issue.state,
+      pullRequest: issue.pull_request !== undefined,
+    };
   };
 }
 
@@ -178,22 +206,52 @@ function readJson(file) {
   return JSON.parse(readFileSync(file, 'utf8'));
 }
 
+function annotation(level, problem) {
+  return `::${level}::${problem.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A')}`;
+}
+
 function failWith(problems) {
   for (const problem of problems) {
-    console.error(
-      `::error::${problem.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A')}`,
-    );
+    console.error(annotation('error', problem));
   }
   process.exit(1);
 }
 
-async function main([command, quarantineFile, ...lists]) {
+function usage() {
+  console.error(
+    'usage: node scripts/e2e-quarantine.mjs entries <quarantine.json> --mode=pull_request|push|nightly [--overdue=<file>]',
+  );
+  console.error('       node scripts/e2e-quarantine.mjs test-list <quarantine.json>');
+  console.error(
+    '       node scripts/e2e-quarantine.mjs tests <quarantine.json> <full list JSON> <list JSON without the quarantine>',
+  );
+  process.exit(2);
+}
+
+function splitOptions(args) {
+  const options = {};
+  const positional = [];
+  for (const arg of args) {
+    const option = arg.match(/^--(mode|overdue)=(.+)$/);
+    if (option) {
+      options[option[1]] = option[2];
+    } else if (arg.startsWith('--')) {
+      usage();
+    } else {
+      positional.push(arg);
+    }
+  }
+  return { options, positional };
+}
+
+async function main(args) {
+  const { options, positional } = splitOptions(args);
+  const [command, quarantineFile, ...lists] = positional;
   if (!['entries', 'tests', 'test-list'].includes(command) || !quarantineFile) {
-    console.error('usage: node scripts/e2e-quarantine.mjs entries|test-list <quarantine.json>');
-    console.error(
-      '       node scripts/e2e-quarantine.mjs tests <quarantine.json> <full list JSON> <list JSON without the quarantine>',
-    );
-    process.exit(2);
+    usage();
+  }
+  if (command === 'entries' && !Object.hasOwn(DEADLINE_BY_MODE, options.mode ?? '')) {
+    usage();
   }
   const entries = readJson(quarantineFile);
   const problems = entryProblems(entries, command === 'entries' ? Date.now() : undefined);
@@ -220,6 +278,9 @@ async function main([command, quarantineFile, ...lists]) {
     );
     return;
   }
+  if (options.overdue) {
+    writeFileSync(options.overdue, '');
+  }
   if (entries.length === 0) {
     console.log('No end-to-end test is in quarantine.');
     return;
@@ -236,9 +297,19 @@ async function main([command, quarantineFile, ...lists]) {
     repository,
     apiUrl: process.env.GITHUB_API_URL || undefined,
   });
-  const found = await issueProblems(entries, lookup);
-  if (found.length > 0) {
-    failWith(found);
+  const { errors, warnings, overdue } = await checkEntries(entries, {
+    now: Date.now(),
+    mode: options.mode,
+    lookup,
+  });
+  if (options.overdue) {
+    writeFileSync(options.overdue, overdue.map((problem) => `${problem}\n`).join(''));
+  }
+  for (const warning of warnings) {
+    console.log(annotation('warning', warning));
+  }
+  if (errors.length > 0) {
+    failWith(errors);
   }
   for (const entry of entries) {
     console.log(`in quarantine since ${entry.since}, issue #${entry.issue} open: ${keyOf(entry)}`);
