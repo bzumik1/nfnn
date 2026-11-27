@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { signal, WritableSignal } from '@angular/core';
+import { Component, signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -1237,5 +1237,87 @@ describe('Given the custom amount on a phone whose keyboard opens over the page'
     await fixture.whenStable();
 
     expect(scrolled).toEqual([]);
+  });
+});
+
+@Component({
+  imports: [PaymentPanel],
+  template: `<app-payment-panel idPrefix="first" /><app-payment-panel idPrefix="second" />`,
+})
+class TwoPanels {}
+
+describe('Given two payment panels on one page', () => {
+  let fixture: ComponentFixture<TwoPanels>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [TwoPanels],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    }).compileComponents();
+    fixture = TestBed.createComponent(TwoPanels);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController)
+      .match((request) => request.url === PAYMENT_DETAILS_URL)
+      .forEach((request) => request.flush(foundationPaymentDetails()));
+    await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    fixture.nativeElement.remove();
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  function amountIn(panel: 'first' | 'second', label: string): HTMLButtonElement {
+    const panels = fixture.nativeElement.querySelectorAll('app-payment-panel');
+    const host = panels[panel === 'first' ? 0 : 1] as HTMLElement;
+    return Array.from(host.querySelectorAll('button')).find(
+      (candidate) => withOrdinarySpaces(candidate.textContent?.trim()) === label,
+    )!;
+  }
+
+  function mouseDown(button: HTMLButtonElement): void {
+    button.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse', isPrimary: true }),
+    );
+  }
+
+  it("when the visitor leaves the first panel's empty field by pressing an amount of the second, then the first shows its hint at once and the second shows none", async () => {
+    amountIn('first', 'Jiná částka').click();
+    await fixture.whenStable();
+    const firstField = fixture.nativeElement.querySelector(
+      '#first-custom-amount',
+    ) as HTMLInputElement;
+    expect(document.activeElement).toBe(firstField);
+
+    mouseDown(amountIn('second', '1 000 Kč'));
+    firstField.blur();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('#first-amount-hint')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('#second-amount-hint')).toBeNull();
+  });
+
+  it('when the visitor presses an amount of the first panel and releases it on the second, then the first shows the hint for the field it left and nothing is chosen in either', async () => {
+    amountIn('first', 'Jiná částka').click();
+    await fixture.whenStable();
+    const firstField = fixture.nativeElement.querySelector(
+      '#first-custom-amount',
+    ) as HTMLInputElement;
+
+    mouseDown(amountIn('first', '500 Kč'));
+    firstField.blur();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#first-amount-hint')).toBeNull();
+
+    amountIn('second', '1 000 Kč').dispatchEvent(
+      new PointerEvent('pointerup', { bubbles: true, pointerType: 'mouse', isPrimary: true }),
+    );
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('#first-amount-hint')).not.toBeNull();
+    expect(amountIn('first', 'Jiná částka').getAttribute('aria-checked')).toBe('true');
+    expect(amountIn('second', '500 Kč').getAttribute('aria-checked')).toBe('true');
+    expect(amountIn('second', '1 000 Kč').getAttribute('aria-checked')).toBe('false');
   });
 });
