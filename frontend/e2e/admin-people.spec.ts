@@ -271,6 +271,59 @@ test.describe('Given an administrator with a person of three tags on an upright 
   });
 });
 
+for (const viewport of [
+  { width: 390, height: 844 },
+  { width: 1280, height: 900 },
+]) {
+  test.describe(`Given an administrator with a person of three tags and a person of none in a ${viewport.width} px window`, () => {
+    test.use({ viewport });
+
+    test.beforeEach(async ({ page }) => {
+      await mockDonorApi(page);
+      await servePhotos(page);
+      await rememberedSession(page);
+      const untagged = {
+        ...member({ ...EVA, name: 'Jan Novák', onBoard: false, featured: false, portraitId: null }),
+        id: '0199f3e0-0000-7000-8000-00000000c002',
+        position: 1,
+      };
+      await page.route(
+        (url) => url.pathname === PEOPLE,
+        (route) =>
+          route.fulfill({
+            json: {
+              members: [member(EVA), untagged],
+              note: null,
+              footnote: null,
+              noteVersion: '6a0c1e3f9b2d4875',
+              footnoteVersion: '1f8e2d7c4b6a9035',
+            },
+          }),
+      );
+      await page.route(
+        (url) => url.pathname === SIGNATORY,
+        (route) => route.fulfill({ json: signatory({ personId: PERSON_ID, name: EVA.name }) }),
+      );
+    });
+
+    test('when they read the list of people, then the person without tags takes one row fewer than the person with them', async ({
+      page,
+    }) => {
+      await page.goto('/sprava/lide-fondu');
+      const rows = page.locator('.person-row');
+      await expect(rows).toHaveCount(2);
+      await expect(rows.first().locator('.person-badges > li')).toHaveCount(3);
+      await expect(rows.last().locator('.person-badges > li')).toHaveCount(0);
+      await page.evaluate(() => document.fonts.ready);
+
+      const tracks = await rows.evaluateAll((items) =>
+        items.map((item) => getComputedStyle(item).gridTemplateRows.split(' ').length),
+      );
+      expect(tracks[1]).toBe(tracks[0] - 1);
+    });
+  });
+}
+
 test.describe('Given an administrator who chooses who signs the receipts', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
