@@ -4158,5 +4158,303 @@
     "recorded": 212,
     "everyRun": true,
     "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the light appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 300 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/udaje opening",
+    "metric": "first-move-ms",
+    "recorded": 314,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the light appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 300 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/prehled opening",
+    "metric": "first-move-ms",
+    "recorded": 323,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the light appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 300 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/dary opening",
+    "metric": "first-move-ms",
+    "recorded": 254,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the light appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 300 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/potvrzeni opening",
+    "metric": "first-move-ms",
+    "recorded": 247,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the light appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 300 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/ucty opening",
+    "metric": "first-move-ms",
+    "recorded": 257,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the light appearance",
+      "when ‹ is pressed on Platby, Zálohy and Lidé fondu, then the page moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 150 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/sprava/platby back",
+    "metric": "first-move-ms",
+    "recorded": 257,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the light appearance",
+      "when ‹ is pressed on Platby, Zálohy and Lidé fondu, then the page moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 150 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/sprava/zalohy back",
+    "metric": "first-move-ms",
+    "recorded": 229,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the light appearance",
+      "when ‹ is pressed on Platby, Zálohy and Lidé fondu, then the page moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 150 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/sprava/lide-fondu back",
+    "metric": "first-move-ms",
+    "recorded": 230,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the light appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen even when the frame after the late one lasts long too and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/udaje opening",
+    "metric": "first-frame-share",
+    "recorded": 0.254,
+    "everyRun": true,
+    "issue": 2168
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the light appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen even when the frame after the late one lasts long too and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/dary opening",
+    "metric": "first-frame-share",
+    "recorded": 0.254,
+    "everyRun": true,
+    "issue": 2168
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the light appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen even when the frame after the late one lasts long too and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/ucty opening",
+    "metric": "first-frame-share",
+    "recorded": 0.254,
+    "everyRun": true,
+    "issue": 2168
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the dark appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 300 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/udaje opening",
+    "metric": "first-move-ms",
+    "recorded": 307,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the dark appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 300 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/prehled opening",
+    "metric": "first-move-ms",
+    "recorded": 324,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the dark appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 300 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/dary opening",
+    "metric": "first-move-ms",
+    "recorded": 243,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the dark appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 300 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/potvrzeni opening",
+    "metric": "first-move-ms",
+    "recorded": 248,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the dark appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 300 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/ucty opening",
+    "metric": "first-move-ms",
+    "recorded": 258,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the dark appearance",
+      "when ‹ is pressed on Platby, Zálohy and Lidé fondu, then the page moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 150 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/sprava/platby back",
+    "metric": "first-move-ms",
+    "recorded": 258,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the dark appearance",
+      "when ‹ is pressed on Platby, Zálohy and Lidé fondu, then the page moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 150 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/sprava/zalohy back",
+    "metric": "first-move-ms",
+    "recorded": 225,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the dark appearance",
+      "when ‹ is pressed on Platby, Zálohy and Lidé fondu, then the page moves on the screen within 3 frames of the placing plus the ceiling of the p99 stamp lag of the runner's screencast and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), both copies placed within 150 ms on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/sprava/lide-fondu back",
+    "metric": "first-move-ms",
+    "recorded": 230,
+    "everyRun": true,
+    "issue": 2166
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the dark appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen even when the frame after the late one lasts long too and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/udaje opening",
+    "metric": "first-frame-share",
+    "recorded": 0.254,
+    "everyRun": true,
+    "issue": 2168
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the dark appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen even when the frame after the late one lasts long too and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/dary opening",
+    "metric": "first-frame-share",
+    "recorded": 0.254,
+    "everyRun": true,
+    "issue": 2168
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone that draws the first frame of a step late while its page waits, in the dark appearance",
+      "when each section of the account sheet opens for the first time, then it moves on the screen even when the frame after the late one lasts long too and its first moved frame on the screen comes at most a fifth of the way (Prodesk/nightly only), each frame of the first half on the screen within 1.5 steady frames and no frame frozen (Prodesk/nightly only) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "step": "/darce/ucty opening",
+    "metric": "first-frame-share",
+    "recorded": 0.254,
+    "everyRun": true,
+    "issue": 2168
+  },
+  {
+    "project": "motion-timed",
+    "file": "e2e/back-motion-start.spec.ts",
+    "title": [
+      "Given the app on the home screen of a phone with an article opened from the news, whose browser then gives no more animation frames",
+      "when Zpět is pressed, then the step back lets its held motion go by the page clock within 33 ms (binding bound 2) on a runner as fast as the reference (budget scaled by the runner’s speed, at most 1.5×; judged only on the Prodesk and in the nightly)"
+    ],
+    "metric": "held-ms",
+    "recorded": 97,
+    "everyRun": true,
+    "issue": 2167
   }
 ]
