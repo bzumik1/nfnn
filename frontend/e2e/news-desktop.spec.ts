@@ -806,4 +806,41 @@ test.describe('Given a visitor on the Aktuality tab on a phone whose sharing fai
     await expect(copy).toBeVisible();
     expect(Math.abs((await boxOf(copy)).right - shareRight)).toBeLessThanOrEqual(EDGE_TOLERANCE_PX);
   });
+
+  test('when the share fails and copying the link fails too, then both failure lines and Kopírovat odkaz end at the trailing edge where Sdílet stood', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: () => Promise.reject(new Error('Clipboard refused')) },
+      });
+    });
+    await openNews(page, [article(1), article(2), article(3)], { width: 390, height: 844 });
+    const card = page.locator('app-news-card').first();
+    const share = card.locator('.news-share').getByRole('button', { name: /^Sdílet/ });
+    await share.scrollIntoViewIfNeeded();
+    const shareRight = (await boxOf(share)).right;
+    await share.click();
+    const copy = card.getByRole('button', { name: /^Kopírovat odkaz/ });
+
+    await copy.click();
+
+    const copyFailure = card.getByRole('status').filter({ hasText: 'Zkopírovat se nepodařilo' });
+    await expect(copyFailure).toBeVisible();
+    expect(Math.abs((await boxOf(copy)).right - shareRight)).toBeLessThanOrEqual(EDGE_TOLERANCE_PX);
+    for (const failure of [card.getByRole('alert'), copyFailure]) {
+      const lineEnds = await failure.evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        return [...range.getClientRects()]
+          .filter((rect) => rect.width > 0)
+          .map((rect) => rect.right);
+      });
+      expect(lineEnds.length).toBeGreaterThan(0);
+      for (const end of lineEnds) {
+        expect(Math.abs(end - shareRight)).toBeLessThanOrEqual(EDGE_TOLERANCE_PX);
+      }
+    }
+  });
 });
