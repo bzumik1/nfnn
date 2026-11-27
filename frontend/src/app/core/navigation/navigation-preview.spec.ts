@@ -6,11 +6,16 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { ShownAnswers } from '../connectivity/shown-answers';
 import { BackTarget } from './back-target';
 import { KeptTabPages } from './kept-tab-pages';
-import { NavigationPreview } from './navigation-preview';
+import {
+  NavigationPreview,
+  PREVIEW_DRAWING_LONGEST_MS,
+  PREVIEW_FRAMES_LONGEST_MS,
+} from './navigation-preview';
 import { PreviewingReuse } from './previewing-reuse';
 import { PageFocus } from './page-focus';
 import { TabMemory } from './tab-memory';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
+import { CLOCK_ONLY } from './testing/clock-only';
 
 const created: string[] = [];
 const destroyed: string[] = [];
@@ -59,6 +64,11 @@ describe('Given the administration opened straight from the home screen, whose Z
     preview = TestBed.inject(NavigationPreview);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   it('when the landing page is previewed, then it is drawn for the look taken of it while the administration stays the same live page at its address', async () => {
     const seen = await preview.visit(
       '/',
@@ -71,6 +81,23 @@ describe('Given the administration opened straight from the home screen, whose Z
     expect(created).toEqual(['/sprava', '/']);
     expect(destroyed).toEqual([]);
     expect(withOrdinarySpaces(harness.routeNativeElement?.textContent)).toContain('/sprava');
+  });
+
+  it('when the frames stop coming, as on a cold runner, then the look is taken within PREVIEW_DRAWING_LONGEST_MS and PREVIEW_FRAMES_LONGEST_MS of the drawing and the administration is back at its address, never waiting on a frame', async () => {
+    vi.useFakeTimers(CLOCK_ONLY);
+    vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(0);
+    const seen: string[] = [];
+
+    const visiting = preview.visit('/', () =>
+      seen.push(withOrdinarySpaces(document.querySelector('h1')?.textContent) ?? ''),
+    );
+    await vi.advanceTimersByTimeAsync(PREVIEW_DRAWING_LONGEST_MS + PREVIEW_FRAMES_LONGEST_MS);
+
+    expect(seen, 'the look of the landing page was not taken').toEqual(['/']);
+    await vi.advanceTimersByTimeAsync(PREVIEW_DRAWING_LONGEST_MS + PREVIEW_FRAMES_LONGEST_MS);
+    await visiting;
+    expect(router.url).toBe('/sprava');
+    expect(preview.active()).toBe(false);
   });
 
   it('when the swipe then goes back to the landing page, then the page drawn for the preview is the one shown, not a new one', async () => {
