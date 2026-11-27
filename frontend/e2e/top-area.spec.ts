@@ -11,6 +11,8 @@ import {
 import { STAMP_LAG_P99_FRAMES } from './back-matrix';
 import { fingerAlong } from './finger';
 import { expect, test, testWithoutBrowser } from './fixtures';
+import { expectWithinTheBound } from './motion-bounds';
+import { BAND_UNDER_THE_CLOCK_AT_MOST_LEVELS } from './perceptible-thresholds';
 import {
   bandUnderClockOutOfStep,
   barsThatChanged,
@@ -23,6 +25,7 @@ import {
   groundJumpsUnderClock,
   groundStepsBackUnderClock,
   NOT_JUDGED_ANNOTATION,
+  groundApartLevels,
   groundOutOfStep,
   scrollbarOutOfStep,
   TopAreaFrame,
@@ -1124,8 +1127,8 @@ for (const { place, path } of [
         const opening = await whileTheSheetOpens(page);
         const closing = await whileTheSheetCloses(page);
 
-        expect(groundOutOfStep(opening)).toEqual([]);
-        expect(groundOutOfStep(closing)).toEqual([]);
+        expectBandWithinTheBound(opening, 'opening');
+        expectBandWithinTheBound(closing, 'closing');
       });
     });
   }
@@ -1308,3 +1311,12 @@ test.describe('Given an administrator in the app on the home screen of a phone i
     });
   }
 });
+
+function expectBandWithinTheBound(frames: readonly TopAreaFrame[], step: string): void {
+  expectWithinTheBound({
+    metric: 'band-levels',
+    value: groundApartLevels(frames),
+    bound: BAND_UNDER_THE_CLOCK_AT_MOST_LEVELS,
+    step,
+  });
+}

@@ -19,6 +19,12 @@ import {
   whenAdministrationCopied,
 } from './donor-session';
 import { expect, test } from './fixtures';
+import { expectWithinTheBound } from './motion-bounds';
+import {
+  FIRST_FRAME_AT_MOST_SHARE_OF_THE_WAY,
+  FIRST_MOVE_AFTER_THE_TAP_WITHIN_MS,
+  FROZEN_AT_MOST_MS,
+} from './perceptible-thresholds';
 import {
   type BudgetCheck,
   judgedAgainstTheRunner,
@@ -48,7 +54,6 @@ const LIVE_CLOCK_STEP_MS = 1;
 const GROUND_CHANGES_WITH_THE_SCRIM = ['/sprava'];
 export const SCROLLED_BY_PX = 160;
 const STEP_ENDS_WITHIN_MS = 6000;
-const FIRST_SHOWN_AT_MOST = 0.25;
 const BUSY_AS_ON_THE_PHONE_MS = 140;
 const DRAWN_AS_LATE_AS_ON_THE_PHONE_MS = 140;
 const LONG_AS_ON_THE_PHONE_MS = 80;
@@ -91,6 +96,17 @@ const KEPT_CALLBACK_TIMES = 5000;
 const LONG_FRAME_MS = 50;
 
 type Way = 'back-button' | 'swipe-completed' | 'swipe-cancelled';
+
+let stepOfTheWalk: { readonly testId: string; readonly step: string } | undefined;
+
+function walkingStep(step: string | undefined): void {
+  stepOfTheWalk = step === undefined ? undefined : { testId: test.info().testId, step };
+}
+
+function measuredStep(what?: string): string | undefined {
+  const walking = stepOfTheWalk?.testId === test.info().testId ? stepOfTheWalk.step : undefined;
+  return [walking, what].filter((part) => part !== undefined).join(' ') || undefined;
+}
 type Look = 'light' | 'dark';
 
 export interface MotionGate {
@@ -1568,7 +1584,7 @@ function shownFirstProblems(
     : [];
 }
 
-export function frozenOnTheScreen(motion: ScreenMotion): string[] {
+function stillnessesOnTheScreen(motion: ScreenMotion): { ms: number; share: number }[] {
   const shown = progressOf(motion);
   const start = motion.startTime ?? shown[0]?.at ?? 0;
   const curveAt = (at: number): number =>
@@ -1577,16 +1593,23 @@ export function frozenOnTheScreen(motion: ScreenMotion): string[] {
     const before = shown[index];
     const stood = Math.abs(shot.share - before.share) <= BACK_AT_MOST;
     const went = curveAt(shot.at) - curveAt(before.at) > BACK_AT_MOST;
-    return shot.at - before.at >= FROZEN_AFTER_MS &&
-      stood &&
-      went &&
-      before.share > BACK_AT_MOST &&
-      before.share < 1 - BACK_AT_MOST
-      ? [
-          `the page stood still on the screen for ${(shot.at - before.at).toFixed(0)} ms at ${percentOf(before.share)} of its way while its curve went on`,
-        ]
+    return stood && went && before.share > BACK_AT_MOST && before.share < 1 - BACK_AT_MOST
+      ? [{ ms: shot.at - before.at, share: before.share }]
       : [];
   });
+}
+
+export function longestFrozenMs(motion: ScreenMotion): number {
+  return Math.max(0, ...stillnessesOnTheScreen(motion).map((still) => still.ms));
+}
+
+export function frozenOnTheScreen(motion: ScreenMotion): string[] {
+  return stillnessesOnTheScreen(motion)
+    .filter((still) => still.ms >= FROZEN_AFTER_MS)
+    .map(
+      (still) =>
+        `the page stood still on the screen for ${still.ms.toFixed(0)} ms at ${percentOf(still.share)} of its way while its curve went on`,
+    );
 }
 
 function firstMovedFrame(moving: readonly Frame[], from: number): Frame | null {
@@ -1891,6 +1914,12 @@ function expectSteadyFirstHalf(
       frozenOnTheScreen(screenMotion),
       `the ${what} page on the screen (Prodesk/nightly only)`,
     ).toEqual([]);
+    expectWithinTheBound({
+      metric: 'frozen-ms',
+      value: Math.round(longestFrozenMs(screenMotion)),
+      bound: FROZEN_AT_MOST_MS,
+      step: measuredStep(what),
+    });
   }
   for (let at = 1; at < shares.length; at++) {
     const before = shares[at - 1];
@@ -2111,6 +2140,14 @@ export function expectWithinTheBudget(probe: StepProbe, restingAt?: number): voi
   const busyFrameAt = probe.busyFrameAt;
   expect(busyFrameAt, 'no frame was drawn after both copies were placed').not.toBeNull();
   expect(placingKindProblems(probe), 'where the app placed both copies').toEqual([]);
+  if (probe.judged !== undefined) {
+    expectWithinTheBound({
+      metric: 'first-move-ms',
+      value: Math.round(moved!.at - tappedAt!),
+      bound: FIRST_MOVE_AFTER_THE_TAP_WITHIN_MS,
+      step: measuredStep(),
+    });
+  }
   const anchoredAt = probe.anchoredAt ?? probe.placedAt!;
   const framesBefore = probe.frames.filter(
     (frame) => frame.at > anchoredAt && frame.at < moved!.at,
@@ -2211,11 +2248,16 @@ function expectShownOnItsWay(
 function expectFirstShownNear(
   probe: StepProbe,
   moving: readonly Frame[],
-  near: (offset: number) => void,
+  shareOfTheWay: (offset: number) => number,
 ): void {
   if (probe.paced && !(probe.screen != null && probe.judged === undefined)) {
     expect(moving.length, 'no frame showed the moving page placed').toBeGreaterThan(0);
-    near(moving[0].offset!);
+    expectWithinTheBound({
+      metric: 'first-frame-share',
+      value: Math.round(shareOfTheWay(moving[0].offset!) * 1000) / 1000,
+      bound: FIRST_FRAME_AT_MOST_SHARE_OF_THE_WAY,
+      step: measuredStep(),
+    });
   }
 }
 
@@ -2224,11 +2266,7 @@ export function expectLeftAway(probe: StepProbe, width: number, from: number): v
   const between = travelledFrames.filter((frame) => frame.offset! > 1 && frame.offset! < width - 1);
   expectShownOnItsWay(probe, between, 2, 'no frame showed the leaving page on its way');
   const moving = onTheScreen(probe, travelledFrames);
-  expectFirstShownNear(probe, moving, (offset) =>
-    expect(offset, 'px the leaving page had gone in its first frame').toBeLessThanOrEqual(
-      from + width * FIRST_SHOWN_AT_MOST,
-    ),
-  );
+  expectFirstShownNear(probe, moving, (offset) => (offset - from) / width);
   expectSteadyFirstHalf(probe, moving, from, width - from, 'leaving');
   for (let at = 1; at < travelledFrames.length; at++) {
     expect(
@@ -2245,12 +2283,7 @@ export function expectArrived(probe: StepProbe, width: number): void {
   const between = travelledFrames.filter((frame) => frame.offset! > 1 && frame.offset! < width - 1);
   expectShownOnItsWay(probe, between, 2, 'no frame showed the arriving page on its way');
   const moving = onTheScreen(probe, travelledFrames);
-  expectFirstShownNear(probe, moving, (offset) =>
-    expect(
-      offset,
-      'px the arriving page was from its place in its first frame',
-    ).toBeGreaterThanOrEqual(width * (1 - FIRST_SHOWN_AT_MOST)),
-  );
+  expectFirstShownNear(probe, moving, (offset) => (width - offset) / width);
   expectSteadyFirstHalf(probe, moving, width, width, 'arriving');
   for (let at = 1; at < travelledFrames.length; at++) {
     expect(
@@ -2265,11 +2298,7 @@ export function expectArrived(probe: StepProbe, width: number): void {
 export function expectSlidBack(probe: StepProbe, width: number, from: number): void {
   const travelledFrames = travelled(probe);
   const moving = onTheScreen(probe, travelledFrames);
-  expectFirstShownNear(probe, moving, (offset) =>
-    expect(offset, 'px the page had come back in its first frame').toBeGreaterThanOrEqual(
-      from * (1 - FIRST_SHOWN_AT_MOST),
-    ),
-  );
+  expectFirstShownNear(probe, moving, (offset) => (from - offset) / from);
   const between = moving.filter((frame) => frame.offset! > 1 && frame.offset! < from - 1);
   expectShownOnItsWay(probe, between, 1, 'no frame showed the page on its way back');
   for (let at = 1; at < travelledFrames.length; at++) {
@@ -2443,6 +2472,7 @@ export async function walkRow(
   await screens.scrollTo(scrolled ? SCROLLED_BY_PX : 0);
   const shownBefore = (await placementOf(link)).shown;
   const groundBefore = onTheSheetGround(screens, row) ? await bandColour(page) : null;
+  walkingStep(`${row.href} opening`);
   await watchTheStep(page);
   const top = await screens.scrollTop();
   await open();
@@ -2460,6 +2490,7 @@ export async function walkRow(
     expectSameColour(await bandColour(page), groundBefore, 'when the next screen opened');
   }
   await watchTheScroll(page, row.href, !measuresFrames(page), screens.scroller ?? null);
+  walkingStep(`${row.href} back`);
   try {
     await stepBackFrom(page, screens, row, way);
     await expect(page.locator('.page-transition')).toHaveCount(0);
@@ -2481,6 +2512,7 @@ export async function walkRow(
       await expectBroughtIntoViewTheLeast(page);
     }
   } finally {
+    walkingStep(undefined);
     await stopWatchingTheScroll(page);
   }
   if (groundBefore !== null) {
