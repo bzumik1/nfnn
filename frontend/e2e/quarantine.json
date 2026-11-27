@@ -38,5 +38,15 @@
     ],
     "issue": 2149,
     "since": "2026-11-27T07:55:09Z"
+  },
+  {
+    "project": "iphone",
+    "file": "e2e/edge-swipe.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone who opened Správa from the account sheet over the news",
+      "when Zpět is pressed again while the first step back still slides, then the second step lands two pages back and no transition stays over it"
+    ],
+    "issue": 2150,
+    "since": "2026-11-27T08:46:16Z"
   }
 ]
