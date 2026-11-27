@@ -15,8 +15,12 @@ test.describe('Given a signed-in donor whose yearly receipt is ready on Můj př
     { name: '', reducedMotion: 'no-preference' as const, rowsMove: true },
     { name: ' with reduced motion', reducedMotion: 'reduce' as const, rowsMove: false },
   ]) {
-    for (const width of [1280, 390]) {
-      test(`when the next download of the receipt is refused in a ${width} px window${motion.name}, then the finished status keeps its last text for as long as its line closes`, async ({
+    for (const { width, refusal } of [
+      { width: 1280, refusal: { name: '', afterFirstStep: false } },
+      { width: 390, refusal: { name: '', afterFirstStep: false } },
+      { width: 390, refusal: { name: ' only once its first step shows', afterFirstStep: true } },
+    ]) {
+      test(`when the next download of the receipt is refused${refusal.name} in a ${width} px window${motion.name}, then the finished status keeps its last text for as long as its line closes`, async ({
         page,
       }) => {
         await page.emulateMedia({ reducedMotion: motion.reducedMotion });
@@ -34,8 +38,15 @@ test.describe('Given a signed-in donor whose yearly receipt is ready on Můj př
         await untilAtRest(wrapper);
         await page.route(
           (url) => url.pathname === RECEIPT_ISSUING_URL,
-          (route) =>
-            route.fulfill({
+          async (route) => {
+            if (refusal.afterFirstStep) {
+              await page.waitForFunction(() =>
+                document
+                  .querySelector('.receipt-ready [role="status"]')
+                  ?.textContent?.includes('Připravujeme údaje potvrzení'),
+              );
+            }
+            await route.fulfill({
               status: 409,
               contentType: 'application/problem+json',
               json: {
@@ -43,7 +54,8 @@ test.describe('Given a signed-in donor whose yearly receipt is ready on Můj př
                 title: 'Vydávání potvrzení je pozastavené',
                 status: 409,
               },
-            }),
+            });
+          },
         );
 
         const closing = wrapper.evaluate(

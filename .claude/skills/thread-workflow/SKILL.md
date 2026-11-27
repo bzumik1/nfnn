@@ -56,7 +56,7 @@ Known flaky (remove a line when its fix merges):
 - A rebase without a conflict in code (none, or only in docs) needs no new local test run: push it, CI runs everything. A conflict in code reruns what `CLAUDE.md` "Done means" requires for the code it touched.
 - Hot files take new entries in their place, never appended at the end, so two PRs edit different lines:
   - `docs/roadmap.md`: a feature already listed changes its status or PR cell in place; a feature that moves (when it ships or Jakub decides, as the file's introduction says) goes into its sorted place in the target table or list (task number, phase), not after the last row.
-  - `docs/api-contract.md`, `system-overview.md`, `frontend-overview.md`, `security-overview.md`: inside the section of its context or resource, in that section's order.
+  - `docs/api-contract.md`, `system-overview.md`, `frontend/*.md`, `security-overview.md`: inside the section of its context or resource, in that section's order.
   - `frontend/e2e/accessibility.spec.ts` and `e2e/theme.spec.ts`: beside the cases or routes of the same area (public pages, `/darce`, `/sprava`), in their order.
   - `messages_cs.properties` and `messages_en.properties`: beside the keys with the same prefix.
 

@@ -233,9 +233,39 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  e2e-quarantine-deadline:
+    name: "Karanténa e2e: lhůta 48 h"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      overdue: ${{ steps.deadline.outputs.overdue }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+
+      - name: Every quarantined end-to-end test has an open issue and entered at most 48 hours ago, at most five of them
+        id: deadline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status=0
+          node scripts/e2e-quarantine.mjs entries frontend/e2e/quarantine.json --mode=nightly --overdue="$RUNNER_TEMP/overdue.txt" || status=$?
+          if [ -s "$RUNNER_TEMP/overdue.txt" ]; then
+            echo "overdue=$(base64 -w0 < "$RUNNER_TEMP/overdue.txt")" >> "$GITHUB_OUTPUT"
+          fi
+          exit "$status"
+
   report:
     name: Hlášení
-    needs: [public-screens, release, sync-convergence, bulk-receipts, throttled-motion, timed-motion]
+    needs: [public-screens, release, sync-convergence, bulk-receipts, throttled-motion, timed-motion, e2e-quarantine-deadline]
     if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -247,6 +277,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RESULTS: ${{ toJSON(needs) }}
+          QUARANTINE_OVERDUE: ${{ needs.e2e-quarantine-deadline.outputs.overdue }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           lane() {
@@ -257,6 +288,7 @@ jobs:
               bulk-receipts) echo "Hromadná potvrzení (300 potvrzení při čtvrtinovém výkonu)|kreslení potvrzení v prohlížeči a hromadná potvrzení|další řez, který mění kreslení potvrzení nebo hromadná potvrzení (2.19)" ;;
               throttled-motion) echo "Známá vada #1982: pohyb při 4× pomalejším CPU|pohyb kroků zpět a vpřed v aplikaci|nic: červený je záměrně, dokud nepřistane #1982, a issue neotevírá" ;;
               timed-motion) echo "Pohyb v čase proti Prodesku (brána C)|pohyb kroků zpět a vpřed v aplikaci|další řez, který mění pohyb kroků v aplikaci" ;;
+              e2e-quarantine-deadline) echo "Karanténa e2e: lhůta 48 h|testy e2e v karanténě|všechno: oprava testu v karanténě déle než 48 h má přednost před jinou prací" ;;
               *) echo "$1|neurčeno|doplňte job do tabulky v nightly.yml a v .claude/rules/testing-nightly.md" ;;
             esac
           }
@@ -271,12 +303,19 @@ jobs:
             [ "$result" = success ] || [ "$job" = throttled-motion ] || failed=1
           done
           echo "$table"
+          overdue=""
+          if [ -n "$QUARANTINE_OVERDUE" ]; then
+            overdue="
+
+          Testy v karanténě déle než 48 h (jejich oprava má přednost před jinou prací):
+          $(base64 -d <<<"$QUARANTINE_OVERDUE" | sed 's/^/- /')"
+          fi
           existing=$(gh issue list --label nightly --state open --json number --jq '.[0].number // empty')
           if [ "$failed" = 1 ]; then
             gh label create nightly --color B60205 --description "Noční běh selhal" 2> /dev/null || true
             body="Noční běh $(date -u +%Y-%m-%d) neprošel: $RUN_URL
 
-          $table
+          $table$overdue
 
           Dokud je job červený, další řez jeho oblasti čeká. Opravu dělá vlákno, které vlastní oblast; issue se zavře samo po prvním zeleném nočním běhu."
             if [ -n "$existing" ]; then

@@ -150,15 +150,16 @@ describe('Given a disclosure that opens and closes through motion.expand', () =>
     assert.equal(valueOf(blocksOf(css, '.panel[hidden]')[0] ?? '', 'display'), 'none');
   });
 
-  it('when its content leaves while it closes, then the content fades and stays in the flow, and content replaced by another goes at once', () => {
+  it('when its content leaves while it closes, then the content fades and stays in the flow, content followed by what replaced it goes at once, and of contents leaving together the last one stays', () => {
     const leaving = plainOf(css, '.form--leaving');
 
     assert.match(valueOf(leaving, 'animation'), /^motion-leave var\(--duration-base\)/);
     assert.doesNotMatch(framesOf(animationNameOf(leaving)), MOVING);
     assert.equal(
-      valueOf(blocksOf(css, '.form--leaving:not(:only-child)')[0] ?? '', 'display'),
+      valueOf(blocksOf(css, '.form--leaving:not(:last-child)')[0] ?? '', 'display'),
       'none',
     );
+    assert.deepEqual(blocksOf(css, '.form--leaving:not(:only-child)'), []);
   });
 
   it('when the visitor asks for less motion, then its height, visibility and display change at once on opening and only its opacity fades in the reduced duration', () => {

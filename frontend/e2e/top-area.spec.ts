@@ -39,6 +39,10 @@ const FULL_BACKDROP = 0.6;
 const WEAKEST_BACKDROP = 0.5;
 const BLUR_REPORTED = /blur does not show|blur shows at/;
 const GLASS = { name: 'account-button', blur: 'blur(24px)', fill: '255 255 255 0.94', shown: true };
+const MOTIONS_CARRYING_THE_GROUND = [
+  'Správa’s page sliding over it',
+  'the scrim fading in to the same ground under it',
+].length;
 
 function veiled(base: Rgb, strength: number): Rgb {
   const under = (channel: number): number =>
@@ -154,7 +158,13 @@ testWithoutBrowser.describe(
     const everyFrame = (lightness: (frame: number) => number, frames: number): ScreenFrame[] =>
       Array.from({ length: frames }, (_, frame) => shownAt(lightness(frame), frame * 17));
 
-    const SPRING = { curve: [0.32, 0.72, 0, 1], durationMs: FADE_MS, lagFrames: 3 };
+    const SPRING = {
+      curve: [0.32, 0.72, 0, 1],
+      durationMs: FADE_MS,
+      lagFrames: 3,
+      carryingMotions: 1,
+    };
+    const SPRING_UNDER_A_FADING_SCRIM = { ...SPRING, carryingMotions: MOTIONS_CARRYING_THE_GROUND };
     const fromRest = (lightness: number, afterMs: number): ScreenFrame[] => [
       shownAt(48, 0),
       shownAt(48, 17),
@@ -177,6 +187,32 @@ testWithoutBrowser.describe(
       () => {
         expect(groundJumpsUnderClock({ frames: [], screens: fromRest(105, 17) }, SPRING)).toEqual([
           'the ground under the clock goes from 0 % to 95 % of its way in screencast frame 3, 17 ms after the frame before, more than the 80 % its curve reaches in that time and 1.5 steady frames plus the stamp lag of 3.00',
+        ]);
+      },
+    );
+
+    testWithoutBrowser(
+      'when the ground leaves its rest as Správa’s page slides over a scrim fading in under it, both on the spring curve, 98 % of its way in a frame stamped 100 ms after the one at rest, as run 45843592674 drew, then the check finds no jump, since the two motions together cover that within the time and the screencast’s stamp lag',
+      () => {
+        expect(
+          groundJumpsUnderClock(
+            { frames: [], screens: fromRest(106.8, 100) },
+            SPRING_UNDER_A_FADING_SCRIM,
+          ),
+        ).toEqual([]);
+      },
+    );
+
+    testWithoutBrowser(
+      'when the ground leaves its rest under a fading scrim faster than both motions on the spring curve and the stamp lag allow, its whole way in a frame stamped 17 ms after the one at rest, then the check reports the jump with the share they allow',
+      () => {
+        expect(
+          groundJumpsUnderClock(
+            { frames: [], screens: fromRest(108, 17) },
+            SPRING_UNDER_A_FADING_SCRIM,
+          ),
+        ).toEqual([
+          'the ground under the clock goes from 0 % to 100 % of its way in screencast frame 3, 17 ms after the frame before, more than the 96 % its curve reaches in that time with 2 motions on it at once and 1.5 steady frames plus the stamp lag of 3.00',
         ]);
       },
     );
@@ -1250,6 +1286,7 @@ test.describe('Given an administrator in the app on the home screen of a phone i
           curve,
           durationMs: fadeMs,
           lagFrames: STAMP_LAG_P99_FRAMES,
+          carryingMotions: MOTIONS_CARRYING_THE_GROUND,
         }),
         ...groundStepsBackUnderClock(opening),
       ];

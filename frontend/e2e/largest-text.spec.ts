@@ -137,6 +137,11 @@ async function expectFocusBelowTheSheetHeadInsideTheSheet(page: Page): Promise<v
   }).toPass();
 }
 
+async function fontsLoaded(target: Page | Locator): Promise<void> {
+  const page = 'page' in target ? target.page() : target;
+  await expect.poll(() => page.evaluate(() => document.fonts.status)).toBe('loaded');
+}
+
 async function linesOf(control: Locator): Promise<number> {
   return control.evaluate((element) => {
     const range = document.createRange();
@@ -166,7 +171,7 @@ async function wordsSplitAcrossLines(
 }
 
 async function linesOfTheBankCode(value: Locator): Promise<number> {
-  await value.evaluate(() => document.fonts.ready);
+  await fontsLoaded(value);
   return value.evaluate((element) => {
     const tops: number[] = [];
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
@@ -187,7 +192,7 @@ async function linesOfTheBankCode(value: Locator): Promise<number> {
 }
 
 async function numbersSplitAcrossLines(element: Locator): Promise<string[]> {
-  await element.evaluate(() => document.fonts.ready);
+  await fontsLoaded(element);
   return element.evaluate((root) => {
     const split: string[] = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -213,8 +218,8 @@ async function numbersSplitAcrossLines(element: Locator): Promise<string[]> {
 
 async function lettersPastTheirCircle(circle: Locator, letters: Locator): Promise<number> {
   const lettersElement = await letters.elementHandle();
-  return circle.evaluate(async (element, inner) => {
-    await document.fonts.ready;
+  await fontsLoaded(circle);
+  return circle.evaluate((element, inner) => {
     const frame = element.getBoundingClientRect();
     const range = document.createRange();
     range.selectNodeContents(inner);
@@ -246,7 +251,7 @@ async function headingsOffScreen(page: Page): Promise<string[]> {
 }
 
 async function contentPastTheSides(dialog: Locator): Promise<string[]> {
-  await dialog.evaluate(() => document.fonts.ready);
+  await fontsLoaded(dialog);
   return dialog.evaluate((element) => {
     const frame = element.getBoundingClientRect();
     const left = frame.left + element.clientLeft;
@@ -268,7 +273,7 @@ async function contentPastTheSides(dialog: Locator): Promise<string[]> {
 }
 
 async function figuresPastTheirContent(card: Locator): Promise<string[]> {
-  await card.evaluate(() => document.fonts.ready);
+  await fontsLoaded(card);
   return card.evaluate((element) =>
     Array.from(element.querySelectorAll<HTMLElement>('.stat-value.ui-figures, .last-gift-amount'))
       .filter((figure) => {
@@ -289,7 +294,7 @@ async function figuresPastTheirContent(card: Locator): Promise<string[]> {
 }
 
 async function currencyAloneThoughItFitsBesideTheLastGroup(card: Locator): Promise<string[]> {
-  await card.evaluate(() => document.fonts.ready);
+  await fontsLoaded(card);
   return card.evaluate((element) =>
     Array.from(
       element.querySelectorAll<HTMLElement>('.stat-value.ui-figures, .last-gift-amount'),
@@ -336,7 +341,7 @@ async function currencyAloneThoughItFitsBesideTheLastGroup(card: Locator): Promi
 }
 
 async function digitGroupsSplitAcrossLines(card: Locator): Promise<string[]> {
-  await card.evaluate(() => document.fonts.ready);
+  await fontsLoaded(card);
   return card.evaluate((element) => {
     const split: string[] = [];
     for (const figure of element.querySelectorAll('.stat-value.ui-figures, .last-gift-amount')) {
@@ -360,7 +365,7 @@ async function digitGroupsSplitAcrossLines(card: Locator): Promise<string[]> {
 }
 
 async function linesOfEachFigure(page: Page): Promise<number[]> {
-  await page.evaluate(() => document.fonts.ready);
+  await fontsLoaded(page);
   return page
     .locator('.overview-stats .stat-value.ui-figures, .last-gift .last-gift-amount')
     .evaluateAll((figures) =>
@@ -474,7 +479,7 @@ for (const { width, height } of [
       await page.goto('/');
       const title = page.getByRole('heading', { level: 1, name: 'Nová naděje' });
       await expect(title).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       expect(await wordsSplitAcrossLines(title)).toEqual([]);
       expect(await headingsOffScreen(page)).toEqual([]);
@@ -544,7 +549,7 @@ for (const { width, height } of [
       await page.setViewportSize({ width, height });
       const heading = page.getByRole('heading', { level: 1, name: 'Údaje a zabezpečení' });
       await expect(heading).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
       expect(await linesOf(heading)).toBeGreaterThan(1);
       const title = page.locator('.edge-title');
       const firstLinePastTheBar = (): Promise<number> =>
@@ -600,7 +605,7 @@ for (const { width, height } of [
       const card = page.locator('.accounts-card');
       const numbers = card.locator('.account-number');
       await expect(numbers).toHaveCount(2);
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       const frame = (await card.boundingBox())!;
       for (const number of await numbers.all()) {
@@ -930,7 +935,7 @@ for (const { width, height } of [
         });
       const eye = field.getByRole('button', { name: 'Zobrazit heslo' });
       await expect(eye).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
       await expect
         .poll(() =>
           field.evaluate(
@@ -1528,7 +1533,7 @@ test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows 
     await page.setViewportSize({ width: 390, height: 844 });
     const add = page.getByRole('button', { name: 'Přidat bankovní účet' });
     await expect(add).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
     await expect.poll(() => layoutAtRest(add)).toBe(true);
     const label = add.locator('.ui-list__title');
 
@@ -1772,7 +1777,7 @@ test.describe('Given a donor in Safari on an iPhone 390 pt wide whose text is th
     await signIn(page);
     await openDonorSection(page, 'Bankovní účty');
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
     const measured = await iconsBesideTheirText(
       page.locator('.accounts-help .accounts-help-icon'),
       '.accounts-help',
@@ -1821,7 +1826,7 @@ test.describe('Given a visitor on an iPhone 390 pt wide whose installed app show
       page,
     }) => {
       const { title } = await open(page);
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
       const titles = everyDialogTitle().filter((candidate) => titleGroup(candidate) === group);
 
       expect(titles.flatMap((candidate) => candidate.texts)).not.toEqual([]);
@@ -1943,7 +1948,7 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
       await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
       const titles = page.getByRole('navigation', { name: nav }).locator('.ui-list__title');
       await expect(titles.first()).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       for (const title of await titles.all()) {
         expect(await wordsSplitAcrossLines(title, 'between-spaces-and-hyphens')).toEqual([]);
@@ -1965,7 +1970,7 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
     const head = page.getByRole('banner');
     const title = head.getByText(name, { exact: true });
     await expect(title).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
 
     const room = await title.evaluate((element) => {
       const root = getComputedStyle(document.documentElement);
@@ -2003,7 +2008,7 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
     await expect(page.getByRole('heading', { level: 1, name: 'Logy a diagnostika' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Úrovně logování 1 dočasně/ })).toBeVisible();
     await expect(page.getByRole('link', { name: /Fio refused the request/ })).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
 
     const split = await page
       .getByRole('main')
@@ -2052,7 +2057,7 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
     await page.goto('/sprava/logy/stav');
     await expect(page.getByRole('heading', { level: 1, name: 'Stav serveru' })).toBeVisible();
     await expect(page.getByText('123456789 v práci')).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
 
     const overflowing = await page
       .getByRole('main')
@@ -2100,7 +2105,7 @@ test.describe('Given a visitor verifying a receipt on a phone 320 pt wide with t
     }) => {
       await page.goto(address);
       await expect(page.getByRole('heading', { name: heading })).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       const titles = page
         .getByRole('main')
@@ -2133,7 +2138,7 @@ for (const width of [375, 420]) {
       await page.goto(`/overit#${YEARLY_RECEIPT.fragment}`);
       const verdict = page.getByRole('heading', { level: 2, name: 'Podepsáno fondem Nová naděje' });
       await expect(verdict).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       expect(await wordsSplitAcrossLines(verdict)).toEqual([]);
     });
@@ -2201,7 +2206,7 @@ for (const { screen, viewport } of [
       const card = page.locator('app-featured-news article');
       const photo = card.locator('img');
       await expect(photo).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       const photoBox = (await photo.boundingBox())!;
       const textBox = (await card.locator('.featured-text').boundingBox())!;
@@ -2227,7 +2232,7 @@ for (const width of [375, 420]) {
       const card = page.locator('app-featured-news article');
       const photo = card.locator('img');
       await expect(photo).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       const photoBox = (await photo.boundingBox())!;
       const cardBox = (await card.boundingBox())!;
@@ -2301,7 +2306,7 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
         ':is(.ui-card__title, .ui-card__subtitle, .ui-list__title, .ui-list__meta, .ui-list__value)',
       );
       await expect(texts.first()).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       for (const text of await texts.all()) {
         expect(await wordsBrokenInside(text)).toEqual([]);
@@ -2361,7 +2366,7 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
     await page.goto('/sprava/prehledy');
     const save = page.locator('form.settings-form button[type="submit"]');
     await expect(save).toHaveAccessibleName('Uložit nastavení');
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
 
     const cut = await save.evaluate((button) => {
       const box = button.getBoundingClientRect();
@@ -2465,7 +2470,7 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
     await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeAttached();
     const summary = page.getByRole('region', { name: 'Shrnutí dárce' });
     await expect(summary.locator('dt').last()).toHaveText('Dvoufaktorové ověření');
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
     return summary;
   };
 
@@ -2600,7 +2605,7 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
 });
 
 async function badgesPastTheirRow(scope: Locator): Promise<string[]> {
-  await scope.evaluate(() => document.fonts.ready);
+  await fontsLoaded(scope);
   return scope.locator('.ui-badge').evaluateAll((badges) =>
     badges
       .filter((badge) => badge.getClientRects().length > 0)
@@ -2649,7 +2654,7 @@ test.describe('Given an administrator on an iPhone 390 pt wide whose installed a
     await page.goto(`${PETR_DETAIL_PATH}/dary`);
     const meta = page.locator('main .donation-rows .ui-list__meta');
     await expect(meta.first()).toContainText('podle variabilního symbolu');
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
 
     for (const line of await meta.all()) {
       expect(await wordsBrokenInside(line)).toEqual([]);
@@ -2673,7 +2678,7 @@ test.describe('Given an administrator on a tablet 768 pt wide opening the card o
     await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeAttached();
     const summary = page.getByRole('region', { name: 'Shrnutí dárce' });
     await expect(summary.locator('dt').last()).toHaveText('Dvoufaktorové ověření');
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
 
     const pairs = await summaryPairs(summary);
     const column = pairs[0].value.left;
@@ -2718,7 +2723,7 @@ for (const { phone, viewport } of [
       await expect(retry).toBeVisible();
       const summary = page.getByRole('region', { name: 'Shrnutí dárce' });
       await expect(summary).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       const text = notice.locator('.first-download__title');
       const textBox = (await text.boundingBox())!;
@@ -2737,7 +2742,7 @@ for (const { phone, viewport } of [
 }
 
 async function datesPastTheirCells(scope: Locator): Promise<string[]> {
-  await scope.evaluate(() => document.fonts.ready);
+  await fontsLoaded(scope);
   return scope.evaluate((element) => {
     const cellOf = (date: Element): HTMLElement => {
       let cell = date.parentElement!;
@@ -2772,7 +2777,7 @@ const PUBLIC_PAGES_WITH_A_LEAD = [
 ];
 
 async function lastWordsOfLines(element: Locator): Promise<string[]> {
-  await element.evaluate(() => document.fonts.ready);
+  await fontsLoaded(element);
   return element.evaluate((root) => {
     const lines = new Map<number, string>();
     const range = document.createRange();
@@ -2909,7 +2914,7 @@ test.describe('Given an administrator on a computer 1280 px wide with the text a
     await page.goto('/sprava/starsi-symboly');
     const accounts = page.locator('main table app-bank-account');
     await expect(accounts).toHaveCount(2);
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
 
     const apart = await accounts.evaluateAll((elements) =>
       elements
@@ -2929,7 +2934,7 @@ test.describe('Given an administrator on a computer 1280 px wide with the text a
     await page.goto('/sprava/starsi-symboly');
     const card = page.locator('main section.ui-card');
     await expect(card.locator('tbody tr')).toHaveCount(2);
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
 
     const edges = await card.evaluate((element) => {
       const box = element.getBoundingClientRect();
@@ -2970,7 +2975,7 @@ async function pastTheirCells(scope: Locator, selector: string): Promise<string[
 }
 
 async function textLinesOf(element: Locator): Promise<string[]> {
-  await element.evaluate(() => document.fonts.ready);
+  await fontsLoaded(element);
   return element.evaluate((root) => {
     const lines = new Map<number, string>();
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -3122,7 +3127,7 @@ for (const { pose, width, rootSize } of [
       await passkeys.getByRole('button', { name: 'Odebrat', exact: true }).click();
       const remove = passkeys.locator('.passkey-confirm .ui-button--danger-soft');
       await expect(remove).toHaveAccessibleName('Ano, odebrat');
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       for (const [button, row] of [
         [signOut, page.locator('.device-confirm')],
@@ -3216,7 +3221,7 @@ for (const { pose, width, rootSize } of [
       for (const button of buttons) {
         await expect(button).toBeVisible();
       }
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
       const heights = async () =>
         Promise.all(
           buttons.map((button) =>
@@ -3288,7 +3293,7 @@ for (const { pose, width, rootSize } of [
       await openDonorSection(page, 'Údaje a zabezpečení');
       const manage = page.getByRole('button', { name: 'Spravovat přístupové klíče' });
       await expect(manage).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       const offsets = await manage.evaluate(
         (button) =>
@@ -3343,7 +3348,7 @@ test.describe('Given a donor on an iPhone 390 pt wide whose installed app shows 
     const change = page.locator('app-account-card').getByRole('button', { name: 'Změnit e-mail' });
     await expect(label).toHaveText('E-mail');
     await expect(change).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
 
     expect(await linesOf(label)).toBe(1);
     const text = await label.evaluate((element) => {
@@ -3448,7 +3453,7 @@ for (const { pose, width, rootSize } of [
       await dialog.getByRole('button', { name: 'Vytvořit účet' }).click();
       const resend = dialog.locator('.registration-resend');
       await expect(resend).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
       const resting = await busyLayout(resend);
       expectHeldByTheTallerLabel(resting, 'Poslat odkaz znovu');
 
@@ -3485,7 +3490,7 @@ for (const { pose, width, rootSize } of [
         await page.clock.runFor(200);
         const retry = dialog.locator('.offline-entry-try-again');
         await expect(retry).toBeVisible();
-        await page.evaluate(() => document.fonts.ready);
+        await fontsLoaded(page);
         const resting = await busyLayout(retry);
         expectHeldByTheTallerLabel(resting, 'Zkusit znovu');
 
@@ -3510,7 +3515,7 @@ for (const { pose, width, rootSize } of [
       await page.evaluate((size) => (document.documentElement.style.fontSize = size), rootSize);
       const submit = page.getByRole('dialog').locator('.login-form .ui-button--primary');
       await expect(submit).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       await submit.evaluate((control) => {
         const unseen = control.querySelector('.busy-label__face:not(.busy-label__face--shown)');
@@ -3601,7 +3606,7 @@ for (const { pose, width, rootSize } of [
         .locator('button')
         .filter({ has: page.locator('.busy-label__face', { hasText: 'Zálohovat teď' }) });
       await expect(backUp).toBeVisible();
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
       const resting = await busyLayout(backUp);
       expectHeldByTheTallerLabel(resting, 'Zálohovat teď');
 
@@ -3617,7 +3622,7 @@ for (const { pose, width, rootSize } of [
 }
 
 async function overflowAtTheLargestText(page: Page): Promise<string[]> {
-  await page.evaluate(() => document.fonts.ready);
+  await fontsLoaded(page);
   return oneLetterGroupsPastTheirLine(page);
 }
 
@@ -3781,7 +3786,7 @@ test.describe(`Given the longest word a one-letter word keeps beside it, ${LONGE
         ).toBeVisible();
       }
       await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       let previous: LongestKeptWord | undefined;
       let longest: LongestKeptWord | undefined;
@@ -3832,7 +3837,7 @@ for (const width of [390, 1280]) {
         await rememberedSession(page);
         await page.goto(path);
         await expect(page.locator('h1').first()).toBeVisible();
-        await page.evaluate(() => document.fonts.ready);
+        await fontsLoaded(page);
 
         expect(await boldReservesApartFromTheirLabel(page)).toEqual([]);
       });
@@ -3844,7 +3849,7 @@ async function textPastTheSides(
   frame: Locator,
   { ellipsis }: { ellipsis: 'past' | 'within' } = { ellipsis: 'past' },
 ): Promise<string[]> {
-  await frame.evaluate(() => document.fonts.ready);
+  await fontsLoaded(frame);
   return frame.evaluate((element, ellipsizedTextStaysWithin) => {
     const box = element.getBoundingClientRect();
     const left = box.left + element.clientLeft;
@@ -3888,7 +3893,7 @@ async function textPastTheSides(
 }
 
 async function rowTitlesNarrowerThanTheirLongestWord(rows: Locator): Promise<string[]> {
-  await rows.first().evaluate(() => document.fonts.ready);
+  await fontsLoaded(rows.first());
   return rows.evaluateAll((elements) =>
     elements.flatMap((row) => {
       const title = row.querySelector<HTMLElement>(':scope > .ui-list__title');
@@ -3941,7 +3946,7 @@ async function rowTitlesNarrowerThanTheirLongestWord(rows: Locator): Promise<str
 }
 
 async function titlesOverTheirValues(rows: Locator): Promise<string[]> {
-  await rows.first().evaluate(() => document.fonts.ready);
+  await fontsLoaded(rows.first());
   return rows.evaluateAll((elements) =>
     elements.flatMap((row) => {
       const title = row.querySelector(':scope > .ui-list__title');
@@ -3972,7 +3977,7 @@ async function titlesOverTheirValues(rows: Locator): Promise<string[]> {
 }
 
 async function wordsBrokenThatWouldFit(element: Locator): Promise<string[]> {
-  await element.evaluate(() => document.fonts.ready);
+  await fontsLoaded(element);
   return element.evaluate((root) => {
     const style = getComputedStyle(root);
     const line =
@@ -4009,7 +4014,7 @@ async function wordsBrokenThatWouldFit(element: Locator): Promise<string[]> {
 }
 
 async function linesOfText(element: Locator): Promise<string[]> {
-  await element.evaluate(() => document.fonts.ready);
+  await fontsLoaded(element);
   return element.evaluate((root) => {
     const lines: { top: number; bottom: number; text: string }[] = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -4042,7 +4047,7 @@ async function linesOfText(element: Locator): Promise<string[]> {
 }
 
 async function controlsOverTheirLabels(rows: Locator): Promise<string[]> {
-  await rows.first().evaluate(() => document.fonts.ready);
+  await fontsLoaded(rows.first());
   return rows.evaluateAll((elements) =>
     elements.flatMap((row) => {
       const label = row.querySelector('dt');
@@ -4453,7 +4458,7 @@ for (const rootSize of ['200%', `${LARGEST_SYSTEM_TEXT_PX}px`]) {
         }
         const titles = page.locator('main .ui-card__title');
         await expect(titles.first()).toBeVisible();
-        await page.evaluate(() => document.fonts.ready);
+        await fontsLoaded(page);
 
         for (const title of await titles.all()) {
           expect(await wordsBrokenInside(title), await title.innerText()).toEqual([]);
@@ -4466,7 +4471,7 @@ for (const rootSize of ['200%', `${LARGEST_SYSTEM_TEXT_PX}px`]) {
 async function cardTitlesBelowTheirFullSize(page: Page): Promise<string[]> {
   const titles = page.locator('main .ui-card__title');
   await expect(titles.first()).toBeVisible();
-  await page.evaluate(() => document.fonts.ready);
+  await fontsLoaded(page);
   const below: string[] = [];
   for (const title of await titles.all()) {
     if (!(await title.isVisible())) {
@@ -4489,7 +4494,7 @@ interface CardsBesideEachOther {
 async function cardsBesideEachOtherWithoutTheCardContainer(
   page: Page,
 ): Promise<CardsBesideEachOther> {
-  await page.evaluate(() => document.fonts.ready);
+  await fontsLoaded(page);
   return page.evaluate(() => {
     const cards = [...document.querySelectorAll<HTMLElement>('main .ui-card')].filter((card) =>
       card.checkVisibility(),
@@ -4594,7 +4599,7 @@ for (const width of [1280, 1920]) {
 }
 
 async function wrappedOntoMoreLines(elements: Locator): Promise<string[]> {
-  await elements.first().evaluate(() => document.fonts.ready);
+  await fontsLoaded(elements.first());
   return elements.evaluateAll((list) =>
     list
       .filter((element) => {
@@ -4729,7 +4734,7 @@ test.describe('Given a donor on an iPhone SE 320 pt wide with the largest access
     await openDonorSection(page, 'Údaje a zabezpečení');
     await expect(page.locator('app-devices-card .device-sign-out').first()).toHaveText('Odhlásit');
     await expect(page.locator('app-devices-card .device-current')).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
+    await fontsLoaded(page);
 
     const actions = await page.locator('app-devices-card .device-action').evaluateAll((slots) =>
       slots.map((slot) => {
@@ -4850,7 +4855,7 @@ for (const width of [320, 390]) {
       const totals = page.locator('.yearly-card .year-total');
       await expect(totals).toHaveCount(2);
       await expect(totals.first()).toHaveText(/1\s251\s503\sKč/);
-      await page.evaluate(() => document.fonts.ready);
+      await fontsLoaded(page);
 
       for (const total of await totals.all()) {
         expect(await linesOf(total), await total.textContent()).toBe(1);
@@ -5202,6 +5207,29 @@ async function untilTheLastFrameStandsInView(page: Page): Promise<void> {
     .toBe(true);
 }
 
+async function readTheTopAtTheNextPress(
+  page: Page,
+  target: string,
+): Promise<() => Promise<number>> {
+  await page.evaluate((target) => {
+    const press = window as unknown as { topAtThePress?: number };
+    document.addEventListener(
+      'pointerdown',
+      () => {
+        press.topAtThePress = document.querySelector(target)!.getBoundingClientRect().top;
+      },
+      { capture: true, once: true },
+    );
+  }, target);
+  return async () => {
+    const top = await page.evaluate(
+      () => (window as unknown as { topAtThePress?: number }).topAtThePress,
+    );
+    expect(top).toBeDefined();
+    return top!;
+  };
+}
+
 function framesThatMovedItWhileTheRowStood(
   frames: readonly NeighbourFrame[],
   topAtThePress: number,
@@ -5237,7 +5265,10 @@ for (const inSheet of [false, true]) {
       await expect(confirm).toBeInViewport({ ratio: 1 });
       const above = renameButtonOf(passkeys, iphonePasskey);
       await expect(above).not.toBeInViewport();
-      const topAtThePress = await above.evaluate((button) => button.getBoundingClientRect().top);
+      const topAtThePress = await readTheTopAtTheNextPress(
+        page,
+        `#passkey-rename-button-${iphonePasskey.id}`,
+      );
       const row = `#passkey-row-${notebookPasskey.id}`;
       const frames = await recordTheNeighbourFromTheNextClick(
         page,
@@ -5253,7 +5284,7 @@ for (const inSheet of [false, true]) {
       await settledWithin(scope);
       await untilTheLastFrameStandsInView(page);
       const recorded = await frames();
-      expect(framesThatMovedItWhileTheRowStood(recorded, topAtThePress)).toEqual([]);
+      expect(framesThatMovedItWhileTheRowStood(recorded, await topAtThePress())).toEqual([]);
       expectTheLastFrameInView(recorded);
     });
   });
@@ -5349,7 +5380,7 @@ for (const inSheet of [false, true]) {
 }
 
 async function wrappedCopyButtonsTooCloseToTheirValue(card: Locator): Promise<string[]> {
-  await card.evaluate(() => document.fonts.ready);
+  await fontsLoaded(card);
   return card.evaluate((element) => {
     const gap = 4;
     return Array.from(element.querySelectorAll<HTMLElement>('.accounting-item dd'))
