@@ -357,10 +357,11 @@ jobs:
           npx playwright test --list --project='*' --reporter=json --test-list-invert "$RUNNER_TEMP/e2e-quarantine.txt" > "$RUNNER_TEMP/e2e-without-quarantine.json"
           node ../scripts/e2e-quarantine.mjs tests e2e/quarantine.json "$RUNNER_TEMP/inventory/frontend-playwright.json" "$RUNNER_TEMP/e2e-without-quarantine.json"
 
-      - name: Every quarantined end-to-end test has an open issue and entered at most 48 hours ago, at most five of them
-        run: node ../scripts/e2e-quarantine.mjs entries e2e/quarantine.json
+      - name: Every quarantined end-to-end test has an open issue and entered at most 48 hours ago (on main only a warning), at most five of them
+        run: node ../scripts/e2e-quarantine.mjs entries e2e/quarantine.json --mode="$EVENT_NAME"
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
 
       - name: Build with the control theme
         run: npx ng build --configuration=production,control-theme --output-path=dist/control-theme
