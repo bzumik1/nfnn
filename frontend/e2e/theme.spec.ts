@@ -1,7 +1,14 @@
 import { Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { administrator, mockDonorApi, openSignInDialog, session } from './donor-session';
+import {
+  administrator,
+  mockDonorApi,
+  openDonorSection,
+  openSignInDialog,
+  session,
+  signIn,
+} from './donor-session';
 import { expect, test } from './fixtures';
 import {
   CHANGED_AMOUNT,
@@ -19,6 +26,11 @@ import {
   openPolicyFromContact,
   withoutSessionStorage,
 } from './lost-chunks';
+import {
+  expectVerificationNoteUnderItsGiftInAlignedYears,
+  VERIFICATION_BESIDE_WIDEST_AMOUNTS,
+  VERIFICATION_TAG_WIDTHS,
+} from './verification-tag-fit';
 
 const THEME = process.env.E2E_THEME;
 const REFERENCE_THEME = 'nova-nadeje';
@@ -255,6 +267,21 @@ test.describe('Given the site built with another theme', () => {
 
     expect(await lookOfTheReferenceTheme(page)).toEqual([]);
   });
+
+  for (const width of VERIFICATION_TAG_WIDTHS) {
+    for (const beside of VERIFICATION_BESIDE_WIDEST_AMOUNTS) {
+      test(`when Moje dary lists an account verification and ${beside.name} in other years in a ${width} px window, then the note Ověření účtu keeps to one line under its whole row from the date text, every amount stays inside its column and every year's columns start at the same places`, async ({
+        page,
+      }) => {
+        await mockDonorApi(page, beside.gifts);
+        await signIn(page);
+        await page.setViewportSize({ width, height: 900 });
+        await openDonorSection(page, 'Moje dary');
+
+        await expectVerificationNoteUnderItsGiftInAlignedYears(page, beside.widest);
+      });
+    }
+  }
 
   test('when an administrator opens every page of their account and the administration, then none of them shows a colour or font of the default theme', async ({
     page,
