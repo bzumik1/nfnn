@@ -655,6 +655,67 @@ describe('Given the donate section', () => {
     });
   }
 
+  describe('when the visitor types a comma amount key by key', () => {
+    beforeEach(async () => {
+      document.body.appendChild(fixture.nativeElement);
+      await openWithQr();
+      button('Jiná částka').click();
+      await settle();
+    });
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    async function typeKeys(keys: string): Promise<HTMLInputElement> {
+      const field = element<HTMLInputElement>('#donate-custom-amount');
+      field.focus();
+      for (const key of keys) {
+        const caret = field.selectionStart ?? field.value.length;
+        const typing = new InputEvent('beforeinput', {
+          inputType: 'insertText',
+          data: key,
+          bubbles: true,
+          cancelable: true,
+        });
+        if (field.dispatchEvent(typing)) {
+          field.setRangeText(key, caret, field.selectionEnd ?? caret, 'end');
+          field.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: key }));
+        }
+        await settle();
+      }
+      return field;
+    }
+
+    async function leave(field: HTMLInputElement): Promise<void> {
+      field.blur();
+      await settle();
+    }
+
+    it('and the keys are 10,000, then the field keeps 10,000 and leaving it shows the hint', async () => {
+      const field = await typeKeys('10,000');
+      await settle(REDRAW_MS);
+
+      expect(field.value).toBe('10,000');
+      await leave(field);
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+      expect(field.getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('and Backspace deletes 5,005 to 5,00, then the field keeps 5,00 and leaving it shows the hint', async () => {
+      await type('5,005');
+      const field = element<HTMLInputElement>('#donate-custom-amount');
+
+      field.value = '5,00';
+      field.setSelectionRange(4, 4);
+      field.dispatchEvent(new InputEvent('input', { inputType: 'deleteContentBackward' }));
+      await settle(REDRAW_MS);
+
+      expect(field.value).toBe('5,00');
+      await leave(field);
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+      expect(field.getAttribute('aria-invalid')).toBe('true');
+    });
+  });
+
   describe('when the visitor pastes into Jiná částka', () => {
     beforeEach(async () => {
       document.body.appendChild(fixture.nativeElement);
