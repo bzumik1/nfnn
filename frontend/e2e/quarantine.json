@@ -28,15 +28,5 @@
     ],
     "issue": 2121,
     "since": "2026-11-27T01:22:49Z"
-  },
-  {
-    "project": "iphone",
-    "file": "e2e/receipt-status-closing.spec.ts",
-    "title": [
-      "Given a signed-in donor whose yearly receipt is ready on Můj přehled",
-      "when the next download of the receipt is refused in a 390 px window with reduced motion, then the finished status keeps its last text for as long as its line closes"
-    ],
-    "issue": 2123,
-    "since": "2026-11-27T01:22:49Z"
   }
 ]
