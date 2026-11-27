@@ -5,6 +5,7 @@ import {
   Component,
   ElementRef,
   inject,
+  untracked,
   viewChild,
 } from '@angular/core';
 
@@ -43,10 +44,12 @@ export class ChunkLoadNotice {
       if (!button || !message) {
         return;
       }
-      button.focus();
-      if (this.document.activeElement !== button) {
-        onCleanup(this.dialogAnnouncer.announce(message));
-      }
+      untracked(() => {
+        button.focus();
+        if (this.document.activeElement !== button) {
+          onCleanup(this.dialogAnnouncer.announce(message));
+        }
+      });
     });
     afterRenderEffect(() => {
       const heading = this.pageHeading()?.nativeElement;
