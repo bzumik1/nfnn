@@ -38,5 +38,21 @@
     "replacement": "src/app/core/navigation/page-focus.spec.ts > Given a list of the administration that a step back returns to from the card it opened > when the list shows the link to the card at once > when the page above the row changed meanwhile, as Správa after a cold launch (#2088) > then a step back about to copy the list scrolls it so the row stands where it stood when the card opened, and leaves the focus to the return",
     "reason": "Round 43 (#2088): a step back moves over a copy of the live page taken once that page is placed, as main did before #1538, instead of over the copy kept at the push, which let the motion go before the page was rendered and started later than main on the phones",
     "contract": "docs/frontend-overview.md, Motion (Round 43)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates, an article opened from the news, and the news placed again on the way back > when the news is placed by a resize observer, inside the frame that draws it, then the motions are held through that frame only and let go in the next",
+    "replacement": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates, an article opened from the news, and the news placed again on the way back > when the news is placed by a resize observer, inside the frame that draws it, then it is copied only in the next frame, whose motions are held through that frame only and let go in the one after (#2088 round 44)",
+    "reason": "Round 44 (#2088): a step back copies the live page only in the frame after the one that first draws it beneath the cover, as main drew it before copying, because on the iPhone 17e the live page's first paint and its copy in one frame put the first visible frame of the step more than one frame later than main",
+    "contract": "docs/frontend/motion.md, Round 44"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/page-transitions.spec.ts > Given the app on the home screen of a phone, scrolling restored, on the news with an article to open, in a browser that gives no frame for now > when the news comes back with no copy kept of it, then its copy joins the cover as soon as the router has put its scroll back, never waiting for a frame first",
+    "replacement": "src/app/core/navigation/page-transitions.spec.ts > Given the app on the home screen of a phone, scrolling restored, on the news with an article to open, in a browser that gives no frame for now > when the news comes back, then its copy joins the cover once the frames that would draw the live news beneath it are late, never waiting longer for a browser that gives no frame (#2088 round 44)",
+    "reason": "Round 44 (#2088): a step back copies the live page only in the frame after the one that first draws it beneath the cover, as main drew it before copying, because on the iPhone 17e the live page's first paint and its copy in one frame put the first visible frame of the step more than one frame later than main",
+    "contract": "docs/frontend/motion.md, Round 44"
   }
 ]

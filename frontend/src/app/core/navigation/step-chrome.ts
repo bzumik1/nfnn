@@ -40,6 +40,7 @@ import { PageFocus } from './page-focus';
 const PLACED_WITHIN_FRAMES = 9;
 const FIRST_OPENING_PLACED_WITHIN_FRAMES = 18;
 const FRAMES_TO_PLACE = 2;
+const FRAMES_TO_PLACE_A_STEP_BACK = FRAMES_TO_PLACE + 1;
 const LONG_TASK_MS = 50;
 const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
 const BAR_ITEMS = ['.back-button', '.account-button'];
@@ -112,16 +113,38 @@ function whenSectionDrawn(stage: PageTransitions, view: Window, then: () => void
 }
 
 function moveOnceAnswered(stage: PageTransitions, running: Running, view: Window): void {
+  const framesToPlace = running.kind === 'pop' ? FRAMES_TO_PLACE_A_STEP_BACK : FRAMES_TO_PLACE;
   const waitsMs = running.fromSheet
     ? PAGE_TRANSITION_LONGEST_MS
-    : Math.min(FRAME_LATE_MS, readsWaitLeftMs(stage));
+    : Math.min(FRAME_LATE_MS, readsWaitLeftMs(stage, framesToPlace));
   if (stage.placement.isAnswered() || waitsMs <= 0) {
-    move(stage, running, view);
+    moveOnceDrawn(stage, running, view, false);
     return;
   }
   void stage.placement
     .answered(view, waitsMs)
-    .then(() => nextFrame(view, (_, inFrame) => move(stage, running, view, inFrame)));
+    .then(() => nextFrame(view, (_, inFrame) => moveOnceDrawn(stage, running, view, inFrame)));
+}
+
+function moveOnceDrawn(
+  stage: PageTransitions,
+  running: Running,
+  view: Window,
+  inFrame: boolean,
+): void {
+  if (running.kind !== 'pop') {
+    move(stage, running, view, inFrame);
+    return;
+  }
+  const afterTheLivePageIsDrawn = (frames: number): void =>
+    nextFrame(view, (_, drawn) => {
+      if (drawn && frames > 1) {
+        afterTheLivePageIsDrawn(frames - 1);
+      } else {
+        move(stage, running, view, drawn);
+      }
+    });
+  afterTheLivePageIsDrawn(inFrame || stage.placement.placesInRendering ? 1 : 2);
 }
 
 function move(stage: PageTransitions, running: Running, view: Window, inFrame = false): void {
@@ -242,11 +265,11 @@ function samplePace(stage: PageTransitions): void {
   view.requestAnimationFrame(frame);
 }
 
-function readsWaitLeftMs(stage: PageTransitions): number {
+function readsWaitLeftMs(stage: PageTransitions, framesToPlace = FRAMES_TO_PLACE): number {
   const frames = loadedItsCode(stage) ? FIRST_OPENING_PLACED_WITHIN_FRAMES : PLACED_WITHIN_FRAMES;
   const frameMs = Math.min(stage.steadyFrameMs(), DISPLAY_FRAME_MS);
   const now = stage.document.defaultView?.performance.now() ?? 0;
-  return stage.tappedAt + (frames - FRAMES_TO_PLACE) * frameMs - now;
+  return stage.tappedAt + (frames - framesToPlace) * frameMs - now;
 }
 
 function loadedItsCode(stage: PageTransitions): boolean {

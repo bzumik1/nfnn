@@ -895,7 +895,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(moving()?.classList).toContain(`${PAGE_TRANSITION_CLASS}--held`);
   });
 
-  it('when the news is placed by a resize observer, inside the frame that draws it, then the motions are held through that frame only and let go in the next', async () => {
+  it('when the news is placed by a resize observer, inside the frame that draws it, then it is copied only in the next frame, whose motions are held through that frame only and let go in the one after (#2088 round 44)', async () => {
     watchHeldMotions();
     const draw = framesOnRequest();
     const placement = TestBed.inject(PagePlacement);
@@ -905,10 +905,12 @@ describe('Given a phone that animates, an article opened from the news, and the 
 
     placement.inRendering(placed);
     await vi.advanceTimersByTimeAsync(0);
+    expect(moving(), 'copied in the frame that first draws the live news').toBeNull();
+    draw(5000);
     expect(moving()?.classList, 'held in the frame that placed the copies').toContain(
       `${PAGE_TRANSITION_CLASS}--held`,
     );
-    draw(5000);
+    draw(5016);
 
     expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
   });
@@ -1304,6 +1306,45 @@ describe('Given a phone that animates and an article opened from the news, which
     expect(seen).toEqual(['layer before the copy']);
   });
 
+  it('when the app steps back to it, then the live news is copied only in the frame after the one that first draws it beneath the cover, so a phone never paints the live news and its copy in one frame, as main drew it before copying (#2088 round 44)', async () => {
+    let waiting: FrameRequestCallback[] = [];
+    let frame = 0;
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      waiting.push(callback);
+      return waiting.length;
+    });
+    onTestFinished(() => vi.mocked(window.requestAnimationFrame).mockRestore());
+    const drawFrame = (): void => {
+      frame++;
+      const now = waiting;
+      waiting = [];
+      now.forEach((callback) => callback(frame * 16));
+    };
+    let copiedIn: string | null = null;
+    const copies = new MutationObserver(() => {
+      if (
+        copiedIn === null &&
+        document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under`) !== null
+      ) {
+        copiedIn = frame === 0 ? 'the task that placed the live news' : `frame ${frame}`;
+      }
+    });
+    copies.observe(document.body, { subtree: true, childList: true });
+    onTestFinished(() => copies.disconnect());
+    const placed = TestBed.inject(PagePlacement).pending();
+
+    await stepsBack();
+    await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 4 + 100);
+    placed();
+    await vi.advanceTimersByTimeAsync(0);
+    for (let drawn = 0; drawn < 3 && copiedIn === null; drawn++) {
+      drawFrame();
+      await vi.advanceTimersByTimeAsync(0);
+    }
+
+    expect(copiedIn).toBe('frame 2');
+  });
+
   it('when the window has another width than when the news was kept, then the step back waits for the live news as before', async () => {
     const width = Object.getOwnPropertyDescriptor(window, 'innerWidth')!;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 420 });
@@ -1450,7 +1491,7 @@ describe('Given the app on the home screen of a phone, scrolling restored, on th
     expect(arriving).toEqual(['Článek']);
   });
 
-  it('when the news comes back with no copy kept of it, then its copy joins the cover as soon as the router has put its scroll back, never waiting for a frame first', async () => {
+  it('when the news comes back, then its copy joins the cover once the frames that would draw the live news beneath it are late, never waiting longer for a browser that gives no frame (#2088 round 44)', async () => {
     await router.navigateByUrl('/aktuality/clanek');
     await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS * 2);
     const width = Object.getOwnPropertyDescriptor(window, 'innerWidth')!;
@@ -1464,6 +1505,8 @@ describe('Given the app on the home screen of a phone, scrolling restored, on th
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
     layer.textContent = 'Aktuality';
     await vi.advanceTimersByTimeAsync(FRAME_LATE_MS / 2);
+    expect(returning, 'copied before a frame could draw the live news').toEqual([]);
+    await vi.advanceTimersByTimeAsync(FRAME_LATE_MS);
 
     expect(returning).toEqual(['Aktuality']);
   });
