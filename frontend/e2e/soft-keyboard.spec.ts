@@ -469,6 +469,29 @@ function dialogBox(dialog: Locator): Promise<{ top: number; height: number }> {
   });
 }
 
+function fieldOutsideItsSheet(code: Locator): Promise<string[]> {
+  return code.evaluate((element) => {
+    const field = element.closest('app-form-field')!.getBoundingClientRect();
+    const dialog = element.closest('dialog')!;
+    const panel = dialog.querySelector('.dialog-panel')!;
+    const panelTop = panel.getBoundingClientRect().top + panel.clientTop;
+    const top = Math.round(Math.max(dialog.getBoundingClientRect().top, panelTop));
+    let bottom = Math.min(dialog.getBoundingClientRect().bottom, panelTop + panel.clientHeight);
+    for (const actions of dialog.querySelectorAll('.ui-dialog__actions')) {
+      bottom = Math.min(bottom, actions.getBoundingClientRect().top);
+    }
+    bottom = Math.round(bottom);
+    const problems: string[] = [];
+    if (field.top < top - 1) {
+      problems.push(`field ${Math.round(field.top)}–${Math.round(field.bottom)} above ${top}`);
+    }
+    if (field.bottom > bottom + 1) {
+      problems.push(`field ${Math.round(field.top)}–${Math.round(field.bottom)} below ${bottom}`);
+    }
+    return problems;
+  });
+}
+
 function fieldOutsideTheShownPanel(code: Locator): Promise<string[]> {
   return code.evaluate((element) => {
     const field = element.closest('app-form-field')!.getBoundingClientRect();
@@ -535,6 +558,47 @@ test.describe('Given an iPhone SE whose keyboard pans the visual viewport under 
     await expect.poll(() => fieldOutsideTheShownPanel(code)).toEqual([]);
     expect(await dialogBox(dialog)).toEqual({ top: PANNED.offsetTop, height: PANNED.height });
     expect(await panelAboveItsDialog(dialog)).toBe(0);
+  });
+
+  test('when an administrator taps Zneplatnit klíč with the code still empty and the phone measures every box from the panned view, as iOS does, then the code field with its error and hint stands inside the sheet above its sticky buttons', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings',
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/nastaveni');
+    await page.getByRole('button', { name: 'Zneplatnit klíč serveru…' }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
+    const code = dialog.getByLabel('Kód z aplikace');
+    await code.tap();
+    await page.setViewportSize({ width: SMALL_PHONE.width, height: PANNED.height });
+    await page.evaluate(
+      ({ offsetTop, height, layoutHeight }) =>
+        (window as PannedWindow).pannedViewport?.pan(offsetTop, height, layoutHeight),
+      PANNED,
+    );
+    await expect
+      .poll(() => dialogBox(dialog))
+      .toEqual({
+        top: PANNED.offsetTop,
+        height: PANNED.height,
+      });
+    await dialog.evaluate((element) => element.style.setProperty('top', '0px', 'important'));
+
+    await dialog
+      .getByRole('button', { name: 'Zneplatnit klíč', exact: true })
+      .dispatchEvent('click');
+
+    await expect(code).toBeFocused();
+    await expect(dialog.getByText('Opište prosím kód z aplikace.')).toBeAttached();
+    await expect.poll(() => fieldOutsideItsSheet(code)).toEqual([]);
   });
 
   test('when the device reports the short layout itself and no keyboard is counted open, then the sheet still stands in the panned view with its head', async ({

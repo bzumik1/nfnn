@@ -85,7 +85,7 @@ describe('Given a dialog with a form on a phone whose keyboard covers the lower 
   });
 
   it('when the phone lies on its side and the browser has moved the visible part down, then the dialog scrolls the field into that part', () => {
-    box(native(), 0, 375);
+    box(native(), 102, 203);
     box(find('#form-password'), 224, 269);
     find<HTMLInputElement>('#form-password').focus();
 
@@ -108,6 +108,18 @@ describe('Given a dialog with a form on a phone whose keyboard covers the lower 
 
     expect(panelScrolled).toEqual([-(57 + 16 - 30)]);
     expect(30 - panelScrolled[0]).toBeGreaterThanOrEqual(57);
+  });
+
+  it('when an iPhone pans the view under the keyboard and measures every box from the visible part, then a field already in sight stays where it is', () => {
+    box(native(), 0, 287);
+    box(find('#form-email'), 100, 144);
+    box(find('#form-submit'), 160, 200);
+    find<HTMLInputElement>('#form-email').focus();
+
+    keyboard.show({ top: 303, height: 287 });
+    fixture.detectChanges();
+
+    expect(scrolled).toEqual([]);
   });
 
   it('when the keyboard comes up for a field that is already in sight with the button, then the dialog stays where it is', () => {
