@@ -8,6 +8,7 @@ import {
   findingsLeftBehind,
   judgedAgainstTheKnownFindings,
   MOTION_METRICS,
+  timedBudgetOf,
 } from '../e2e/motion-known-findings.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -15,7 +16,10 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const where = {
   project: 'iphone',
   file: 'e2e/back-motion-start.spec.ts',
-  test: 'when Zpět is pressed, then the first frame comes early',
+  title: [
+    'Given the app on the home screen of a phone, in the light appearance',
+    'when Zpět is pressed, then the first frame comes early',
+  ],
   metric: 'first-frame-share',
   bound: 0.174,
   allowance: 0.194,
@@ -24,7 +28,7 @@ const where = {
 const finding = (overrides = {}) => ({
   project: where.project,
   file: where.file,
-  test: where.test,
+  title: where.title,
   metric: where.metric,
   recorded: 0.58,
   everyRun: true,
@@ -81,7 +85,8 @@ describe('Given a known finding of the measured motion', () => {
   it('when the finding names another project, test, metric or step, then it does not cover the motion', () => {
     for (const other of [
       { project: 'chromium' },
-      { test: 'another test' },
+      { title: [where.title[0], 'another test'] },
+      { title: ['Given the same app, in the dark appearance', where.title[1]] },
       { metric: 'held-ms' },
       { step: '/sprava' },
     ]) {
@@ -107,7 +112,7 @@ describe('Given a known finding of the measured motion', () => {
 });
 
 describe('Given the measures one test took of its known findings', () => {
-  const place = { project: where.project, file: where.file, test: where.test };
+  const place = { project: where.project, file: where.file, title: where.title };
   const measured = (value, overrides = {}) => ({ ...where, value, ...overrides });
 
   it('when a finding seen in every run on main breached in none of them, then it is left behind until its entry goes', () => {
@@ -131,9 +136,50 @@ describe('Given the measures one test took of its known findings', () => {
   it('when the test took no measure of the finding, then nothing is judged', () => {
     assert.deepEqual(findingsLeftBehind([finding()], place, []), []);
     assert.deepEqual(
-      findingsLeftBehind([finding()], { ...place, test: 'another test' }, [measured(0.1)]),
+      findingsLeftBehind([finding()], { ...place, title: [where.title[0], 'another test'] }, [
+        measured(0.1),
+      ]),
       [],
     );
+  });
+});
+
+describe('Given a motion judged in ms in a timed row, whose budget the runner scales', () => {
+  const timed = {
+    ...where,
+    metric: 'first-move-ms',
+    bound: 67,
+    allowance: 16.667,
+    lagMs: 34,
+    timed: true,
+  };
+  const known = finding({ metric: 'first-move-ms', recorded: 300 });
+
+  it('when the motion has no known finding, then its budget is the binding bound', () => {
+    assert.equal(timedBudgetOf([], { ...timed, value: 80 }).budget, 67);
+  });
+
+  it('when the motion is a known finding, then its budget is the ceiling plus what a user sees', () => {
+    const { budget, what } = timedBudgetOf([known], { ...timed, value: 290 });
+
+    assert.equal(budget, 316.667);
+    assert.match(what, /known finding #2200, ceiling 300/);
+  });
+
+  it('when the runner was 1.5× slower, then a value within the scaled bound and the lag is no breach, so a known finding left behind is reported', () => {
+    const place = { project: timed.project, file: timed.file, title: timed.title };
+
+    assert.match(
+      findingsLeftBehind([known], place, [{ ...timed, value: 134 }], 1.5).join('\n'),
+      /#2200 no longer breaches/,
+    );
+    assert.deepEqual(findingsLeftBehind([known], place, [{ ...timed, value: 136 }], 1.5), []);
+  });
+
+  it('when the runner’s scale is unknown, then a timed measure is not judged as gone', () => {
+    const place = { project: timed.project, file: timed.file, title: timed.title };
+
+    assert.deepEqual(findingsLeftBehind([known], place, [{ ...timed, value: 10 }]), []);
   });
 });
 

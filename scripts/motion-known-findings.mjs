@@ -21,13 +21,29 @@ export const MOTION_METRICS = [
 const PROJECTS = /^(?:chromium|iphone|iphone-sprava|motion-timed)$/;
 const SPEC_FILE = /^e2e\/[\w./-]+\.spec\.ts$/;
 
+const TITLE_DELIMITER = '›';
+const CONTROL_CHARACTER = /[\u0000-\u001f\u007f-\u009f]/;
+
 function keyOf(entry) {
   const step = entry.step === undefined ? '' : ` @ ${entry.step}`;
-  return `[${entry.project}] ${entry.file} > ${entry.test}${step}: ${entry.metric}`;
+  return `[${entry.project}] ${[entry.file, ...entry.title].join(' > ')}${step}: ${entry.metric}`;
 }
 
 function nonEmpty(value) {
-  return typeof value === 'string' && value.trim() === value && value !== '';
+  return (
+    typeof value === 'string' &&
+    value.trim() === value &&
+    value !== '' &&
+    !CONTROL_CHARACTER.test(value)
+  );
+}
+
+function readableTitle(title) {
+  return (
+    Array.isArray(title) &&
+    title.length > 0 &&
+    title.every((part) => nonEmpty(part) && !part.includes(TITLE_DELIMITER))
+  );
 }
 
 function shapeProblems(entry, index) {
@@ -42,11 +58,13 @@ function shapeProblems(entry, index) {
   if (typeof entry.file !== 'string' || !SPEC_FILE.test(entry.file)) {
     problems.push(`${name} must name its spec file as e2e/<name>.spec.ts`);
   }
-  if (!nonEmpty(entry.test)) {
-    problems.push(`${name} must give its test title as Playwright names the test`);
+  if (!readableTitle(entry.title)) {
+    problems.push(
+      `${name} must give its title as the list of its describe titles and its test title, as Playwright names the test, none empty, holding ${TITLE_DELIMITER} or a control character`,
+    );
   }
   if ('step' in entry && !nonEmpty(entry.step)) {
-    problems.push(`${name} must leave the step out or name it`);
+    problems.push(`${name} must leave the step out or name it, with no control character`);
   }
   if (!MOTION_METRICS.includes(entry.metric)) {
     problems.push(`${name} must name a metric of ${MOTION_METRICS.join(', ')}`);
@@ -137,24 +155,25 @@ export async function checkEntries(entries, { mode, lookup }) {
 
 function listedTests(report) {
   const listed = new Set();
-  const walk = (suite) => {
+  const walk = (suite, titles) => {
+    const path = suite.title && !suite.title.endsWith('.ts') ? [...titles, suite.title] : titles;
     for (const spec of suite.specs ?? []) {
       for (const test of spec.tests ?? []) {
-        listed.add(JSON.stringify([test.projectName, `e2e/${spec.file}`, spec.title]));
+        listed.add(JSON.stringify([test.projectName, `e2e/${spec.file}`, [...path, spec.title]]));
       }
     }
     for (const child of suite.suites ?? []) {
-      walk(child);
+      walk(child, path);
     }
   };
-  (report.suites ?? []).forEach(walk);
+  (report.suites ?? []).forEach((suite) => walk(suite, []));
   return listed;
 }
 
 export function testProblems(entries, fullReport) {
   const listed = listedTests(fullReport);
   return entries
-    .filter((entry) => !listed.has(JSON.stringify([entry.project, entry.file, entry.test])))
+    .filter((entry) => !listed.has(JSON.stringify([entry.project, entry.file, entry.title])))
     .map(
       (entry) =>
         `${keyOf(entry)} names no test of playwright test --list: its test was renamed, moved or removed, so the entry no longer judges anything`,

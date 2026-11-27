@@ -18,7 +18,10 @@ function entry(overrides = {}) {
   return {
     project: 'iphone',
     file: 'e2e/back-motion-start.spec.ts',
-    test: 'when Zpět is pressed, then the first frame comes early',
+    title: [
+      'Given the app on the home screen of a phone',
+      'when Zpět is pressed, then the first frame comes early',
+    ],
     metric: 'first-frame-share',
     recorded: 0.58,
     everyRun: true,
@@ -44,8 +47,13 @@ describe('Given the known motion findings', () => {
   for (const [what, overrides, message] of [
     ['an unknown project', { project: 'firefox' }, /project/],
     ['a file outside e2e', { file: 'src/app/x.spec.ts' }, /e2e\/<name>\.spec\.ts/],
-    ['an empty test title', { test: '' }, /test title/],
+    ['an empty title', { title: [] }, /title/],
+    ['a title that is no list', { title: 'when Zpět is pressed' }, /title/],
+    ['an empty part of its title', { title: ['Given the app', ''] }, /title/],
+    ['a line break in its title', { title: ['Given the app', 'when Zpět\nis pressed'] }, /title/],
+    ['a control character in its title', { title: ['Given the app\u0007', 'when Zpět'] }, /title/],
     ['an empty step', { step: '' }, /step/],
+    ['a control character in its step', { step: '/sprava\u001b opening' }, /step/],
     ['an unknown metric', { metric: 'speed' }, /metric/],
     ['a ceiling that is no number', { recorded: '0.5' }, /recorded/],
     ['no answer whether it breached in every run', { everyRun: 'yes' }, /everyRun/],
@@ -154,9 +162,9 @@ describe('Given the known motion findings and the full Playwright list', () => {
         specs: [],
         suites: [
           {
-            title: 'Given the app on the home screen of a phone',
+            title: entry().title[0],
             specs: tests.map(({ project, title }) => ({
-              title,
+              title: title.at(-1),
               file: 'back-motion-start.spec.ts',
               tests: [{ projectName: project, results: [] }],
             })),
@@ -167,30 +175,37 @@ describe('Given the known motion findings and the full Playwright list', () => {
   });
 
   test('when every entry names a listed test of its project, then nothing is reported', () => {
-    const list = listOf([{ project: 'iphone', title: entry().test }]);
+    const list = listOf([{ project: 'iphone', title: entry().title }]);
 
     assert.deepEqual(testProblems([entry()], list), []);
   });
 
   test('when the test was renamed, then the entry is refused as naming no test', () => {
-    const list = listOf([{ project: 'iphone', title: `${entry().test}, renamed` }]);
+    const list = listOf([{ project: 'iphone', title: [entry().title[0], `${entry().title[1]}, renamed`] }]);
 
     assert.match(testProblems([entry()], list).join('\n'), /names no test of playwright test --list/);
   });
 
   test('when the test runs only in another project, then the entry is refused', () => {
-    const list = listOf([{ project: 'chromium', title: entry().test }]);
+    const list = listOf([{ project: 'chromium', title: entry().title }]);
 
     assert.match(testProblems([entry()], list).join('\n'), /\[iphone\].*names no test/);
   });
 
   test('when the entry names another spec file, then it is refused', () => {
-    const list = listOf([{ project: 'iphone', title: entry().test }]);
+    const list = listOf([{ project: 'iphone', title: entry().title }]);
 
     assert.match(
       testProblems([entry({ file: 'e2e/back-matrix.spec.ts' })], list).join('\n'),
       /names no test/,
     );
+  });
+
+  test('when the same test title stands in another describe, as the dark copy of a light one, then the entry is refused', () => {
+    const list = listOf([{ project: 'iphone', title: entry().title }]);
+    const dark = entry({ title: ['Given the app in the dark appearance', entry().title[1]] });
+
+    assert.match(testProblems([dark], list).join('\n'), /names no test/);
   });
 
   test('when the list holds no test at all, then every entry is refused', () => {
