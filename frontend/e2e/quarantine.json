@@ -1,0 +1,22 @@
+[
+  {
+    "project": "iphone",
+    "file": "e2e/largest-text.spec.ts",
+    "title": [
+      "Given a donor on an iPhone 320 pt wide whose installed app shows the largest accessibility text, on their account",
+      "when they open Údaje a zabezpečení with its passkeys open, then no text reaches past its card, no button covers its label, a heading breaks inside a word only when the word is wider than its line and no date breaks inside a number"
+    ],
+    "issue": 2081,
+    "since": "2026-11-27T00:51:42Z"
+  },
+  {
+    "project": "iphone-sprava",
+    "file": "e2e/sprava-back-matrix.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone, in the dark appearance",
+      "when ‹ is pressed on the sections and subpages of Správa in part 4 of 4 of its walk, then it travels back over the screen it came from without a jump, over one still background, with the scroll and the focus kept, both copies placed within 9 frames of the tap (D1, 150 ms at 60 Hz; 18 frames, 300 ms, while the page’s code loads), on the screen, where the runner captures frames, the page never goes back nor runs ahead of its curve by more than 1.5 steady frames plus the p99 stamp lag of the runner's screencast"
+    ],
+    "issue": 2093,
+    "since": "2026-11-27T00:53:27Z"
+  }
+]
