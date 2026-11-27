@@ -125,95 +125,20 @@
                 }
               }
 
-              @if (confirming() !== account.id) {
-                @if (offersReconnect(account)) {
-                  <button
-                    appNeedsConnection
-                    type="button"
-                    class="ui-button account-action"
-                    [id]="actionButtonId(account)"
-                    [disabled]="busy() === account.id"
-                    [attr.aria-busy]="busy() === account.id"
-                    (click)="reconnect(account)"
-                    i18n="@@donor.bankAccounts.reconnect"
-                  >
-                    Znovu přiřazovat platby z&nbsp;účtu
-                  </button>
-                } @else if (offersDisconnect(account)) {
-                  <button
-                    type="button"
-                    class="ui-button ui-button--quiet account-action"
-                    [class.account-action--apart]="account.symbolOffer !== null"
-                    [id]="actionButtonId(account)"
-                    [attr.aria-labelledby]="
-                      actionButtonId(account) + ' ' + actionButtonId(account) + '-number'
-                    "
-                    (click)="askToDisconnect(account)"
-                    i18n="@@donor.bankAccounts.disconnect"
-                  >
-                    Nepřiřazovat platby z&nbsp;tohoto účtu
-                  </button>
-                }
-              } @else {
-                <div
-                  class="account-confirm"
-                  role="group"
-                  [attr.aria-labelledby]="actionButtonId(account) + '-confirm'"
-                  appDisclosure
-                  animate.leave="account-confirm--closing"
-                >
-                  <div>
-                    <div class="ui-confirm account-confirm-box">
-                      @if (account.confirmedSymbols.length > 0) {
-                        <p
-                          [id]="actionButtonId(account) + '-confirm'"
-                          class="ui-confirm__text account-confirm-text"
-                          i18n="@@donor.bankAccounts.confirm.textWithSymbols"
-                        >
-                          Platby bez variabilního symbolu ani platby se symbolem
-                          {{ symbolList(account.confirmedSymbols) }}, které z&nbsp;tohoto účtu
-                          přijdou od zítřka, vám už nebudeme přiřazovat. Dosavadní dary zůstanou;
-                          pokud některý z&nbsp;nich není váš,
-                          <a href="mailto:info@nfnn.cz">napište nám</a>.
-                        </p>
-                      } @else {
-                        <p
-                          [id]="actionButtonId(account) + '-confirm'"
-                          class="ui-confirm__text account-confirm-text"
-                          i18n="@@donor.bankAccounts.confirm.text"
-                        >
-                          Platby bez variabilního symbolu, které z&nbsp;tohoto účtu přijdou od
-                          zítřka, vám už nebudeme přiřazovat. Dosavadní dary zůstanou; pokud některý
-                          z&nbsp;nich není váš,
-                          <a href="mailto:info@nfnn.cz">napište nám</a>.
-                        </p>
-                      }
-                      <div class="ui-confirm__actions account-confirm-actions">
-                        <button
-                          appNeedsConnection
-                          type="button"
-                          class="ui-button ui-button--danger account-confirm-yes"
-                          [disabled]="busy() === account.id"
-                          [attr.aria-busy]="busy() === account.id"
-                          (click)="disconnect(account)"
-                          i18n="@@donor.bankAccounts.confirm.yes"
-                        >
-                          Ano, nepřiřazovat
-                        </button>
-                        <button
-                          #confirmCancel
-                          type="button"
-                          class="ui-button ui-button--quiet account-confirm-no"
-                          (click)="cancelDisconnect(account)"
-                          i18n="@@donor.bankAccounts.confirm.no"
-                        >
-                          Ponechat
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              }
+              <app-account-disconnect
+                [account]="account"
+                [buttonId]="actionButtonId(account)"
+                [action]="offeredAction(account)"
+                [confirming]="confirming() === account.id"
+                [returning]="returningAction() === account.id"
+                [busy]="busy() === account.id"
+                [symbols]="symbolList(account.confirmedSymbols)"
+                (reconnectRequested)="reconnect(account)"
+                (disconnectAsked)="askToDisconnect(account)"
+                (disconnectConfirmed)="disconnect(account)"
+                (disconnectKept)="cancelDisconnect(account)"
+                (returned)="actionReturned()"
+              />
             </div>
           </div>
         </li>
@@ -362,9 +287,10 @@
             >
               Platba z&nbsp;účtu
               <span class="watch-account add-account-number ui-figures"
-                >{{ accountParts(account.accountNumber).head }}<wbr />{{
-                  accountParts(account.accountNumber).bankCode
+                ><span class="add-account-number__head">{{
+                  accountParts(account.accountNumber).head
                 }}</span
+                ><wbr />{{ accountParts(account.accountNumber).bankCode }}</span
               >
               dorazila
             </p>
@@ -377,9 +303,10 @@
             >
               Účet
               <span class="watch-account add-account-number ui-figures"
-                >{{ accountParts(account.accountNumber).head }}<wbr />{{
-                  accountParts(account.accountNumber).bankCode
+                ><span class="add-account-number__head">{{
+                  accountParts(account.accountNumber).head
                 }}</span
+                ><wbr />{{ accountParts(account.accountNumber).bankCode }}</span
               >
               je ověřený
             </p>
@@ -442,7 +369,8 @@
           @for (part of verified; track $index) {
             @if (part.account; as account) {
               <span class="add-account-number ui-figures"
-                >{{ account.head }}<wbr />{{ account.bankCode }}</span
+                ><span class="add-account-number__head">{{ account.head }}</span
+                ><wbr />{{ account.bankCode }}</span
               >
             } @else {
               <span>{{ part.text }}</span>
@@ -524,9 +452,10 @@
               <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
               <dd>
                 <span class="bank-value add-account-number ui-figures"
-                  >{{ accountParts(response.account.number).head }}<wbr />{{
-                    accountParts(response.account.number).bankCode
+                  ><span class="add-account-number__head">{{
+                    accountParts(response.account.number).head
                   }}</span
+                  ><wbr />{{ accountParts(response.account.number).bankCode }}</span
                 >
                 <app-copy-button
                   [value]="response.account.number"
@@ -544,6 +473,7 @@
                     >Kč</ng-container
                   ></span
                 >
+                <span class="ui-pill-button add-account-strut" aria-hidden="true"></span>
               </dd>
             </div>
             <div class="add-account-row">
