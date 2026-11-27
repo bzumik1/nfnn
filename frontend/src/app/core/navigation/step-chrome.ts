@@ -34,7 +34,12 @@ import {
   SECTION_READS_WITHIN_MS,
   StepChrome,
 } from './page-transitions';
-import { PLACING_MARK, STEADY_FRAME_MARK, STEADY_FRAMES_KEPT } from './frame-pace';
+import {
+  LATE_FRAME_PAST_THE_STEADY_ONE,
+  PLACING_MARK,
+  STEADY_FRAME_MARK,
+  STEADY_FRAMES_KEPT,
+} from './frame-pace';
 import { PageFocus } from './page-focus';
 
 const PLACED_WITHIN_FRAMES = 9;
@@ -184,13 +189,34 @@ function startMoving(
       }
     });
   };
+  const goesOn = (): boolean => stage.running === running;
+  let paintFrameAt: number | null = kind === 'task' ? null : view.performance.now();
+  if (paintFrameAt === null) {
+    view.requestAnimationFrame((at) => (paintFrameAt ??= at));
+  }
+  const paintedLate = (): boolean =>
+    paintFrameAt !== null &&
+    view.performance.now() - paintFrameAt > LATE_FRAME_PAST_THE_STEADY_ONE * stage.steadyFrameMs();
+  const releaseOnceTheCopiesAreTakenIn = (): void => {
+    if (
+      running.kind === 'pop' &&
+      !released &&
+      !framesStopped &&
+      stage.document.visibilityState !== 'hidden' &&
+      paintedLate()
+    ) {
+      afterDrawnFrames(view, stage.document, 1, release, () => framesStopped, goesOn);
+      return;
+    }
+    release();
+  };
   afterDrawnFrames(
     view,
     stage.document,
     kind === 'task' ? 2 : 1,
-    release,
+    releaseOnceTheCopiesAreTakenIn,
     () => framesStopped,
-    () => stage.running === running,
+    goesOn,
   );
 }
 

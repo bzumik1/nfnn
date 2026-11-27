@@ -714,6 +714,48 @@ describe('Given a phone that animates, an article opened from the news, and the 
     expect(startTimes(motions)).toEqual(new Set([null]));
   });
 
+  function pageClockOnTheFrames(): void {
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => frameClock.at);
+    onTestFinished(() => clock.mockRestore());
+  }
+
+  it('when the frame that paints the copies of the step back comes late, beyond one and a half steady frames, as when an iPhone 17e paints a copy of Správa, then the motions stay held through the frame after it too and are let go only in the one after that, as main let its step back go (#2088 round 44)', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    pageClockOnTheFrames();
+    drawnSteadilyBeforeTheTap(draw, 16);
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    draw(5000);
+    draw(5048);
+    expect(
+      moving()?.classList,
+      'let go in the frame right after the late one that painted the copies',
+    ).toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(5064);
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(5080);
+
+    expect(startTimes(motions)).toEqual(new Set([5080]));
+  });
+
+  it('when the frame that paints the copies of the step back comes on time, then the motions are let go in the frame after it, with no frame more (#2088 round 44)', async () => {
+    const motions = watchHeldMotions();
+    const draw = framesOnRequest();
+    pageClockOnTheFrames();
+    drawnSteadilyBeforeTheTap(draw, 16);
+    await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
+    await holdBegun();
+
+    draw(5000);
+    draw(5016);
+    expect(moving()?.classList).not.toContain(`${PAGE_TRANSITION_CLASS}--held`);
+    draw(5032);
+
+    expect(startTimes(motions)).toEqual(new Set([5032]));
+  });
+
   it('when the motions are let go, then the browser starts none of them before the frame after however long that frame takes within the motion’s length, so the screen moves only from a frame that already showed both pages at rest', async () => {
     const motions = watchHeldMotions();
     const draw = framesOnRequest();
@@ -1017,7 +1059,7 @@ describe('Given a phone that animates, an article opened from the news, and the 
     const draw = framesOnRequest();
     await router.navigateByUrl('/aktuality', { info: BACK_NAVIGATION });
     await holdBegun();
-    for (const at of [5600, 6200]) {
+    for (const at of [5600, 6200, 6800]) {
       await vi.advanceTimersByTimeAsync(600);
       draw(at);
     }
