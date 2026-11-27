@@ -27,6 +27,10 @@
   font-size: var(--text-sm);
 }
 
+:host(.is-end) .share-failed {
+  text-align: end;
+}
+
 :host(.is-on-dark) .share-failed {
   color: var(--color-on-image);
 }

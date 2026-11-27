@@ -85,6 +85,40 @@ test.describe('Given an administrator who prints the yearly receipts of 2026', (
     expect(requested).toEqual([]);
   });
 
+  test('when the PDF is ready on a 375 pt phone at the largest text, then Stáhnout PDF and Otevřít PDF stay inside their card and the page does not scroll sideways', async ({
+    page,
+  }) => {
+    await mockYearlyReceipts(page, { donors: FOUR_DONORS, withArt: true });
+
+    await page.goto('/sprava/hromadna-potvrzeni');
+    await expect(page.locator('.donors-table tbody tr')).toHaveCount(4);
+    await page.getByRole('button', { name: 'Vystavit a připravit PDF k tisku' }).click();
+    await expect(page.locator('app-live-notice').getByRole('status')).toHaveText(
+      'PDF k tisku je připravené: obsahuje 3 potvrzení.',
+    );
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.addStyleTag({ content: 'html { font-size: 53px; }' });
+
+    const download = page.getByRole('button', { name: 'Stáhnout PDF' });
+    await expect(download).toBeVisible();
+    const overflow = await download.evaluate((button) => {
+      const card = button.closest('.ui-card')!;
+      const style = getComputedStyle(card);
+      const start = card.getBoundingClientRect().left + parseFloat(style.paddingLeft);
+      const end = card.getBoundingClientRect().right - parseFloat(style.paddingRight);
+      const past = Array.from(card.querySelectorAll('.pdf-actions .ui-button')).map((action) => {
+        const box = action.getBoundingClientRect();
+        return Math.max(start - box.left, box.right - end);
+      });
+      return {
+        pastTheCard: Math.max(...past),
+        sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+    expect(overflow.pastTheCard).toBeLessThanOrEqual(0.5);
+    expect(overflow.sideways).toBeLessThanOrEqual(0);
+  });
+
   test('when the server stops in the middle, then the alert offers to try again and the next try sends only the donors left', async ({
     page,
   }) => {

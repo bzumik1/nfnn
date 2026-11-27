@@ -34,7 +34,7 @@
   }
 }
 
-:host-context(.has-floating-notice) .offline-pill {
+:host-context(html.has-floating-notice:not(.keyboard-open)) .offline-pill {
   bottom: calc(
     env(safe-area-inset-bottom) + var(--floating-notice-height) + var(--space-4) + var(--space-3)
   );
@@ -44,7 +44,8 @@
   bottom: var(--tab-bar-clearance);
 }
 
-:host-context(html.has-floating-notice:has(app-root app-tab-bar)) .offline-pill {
+:host-context(html.has-floating-notice:not(.keyboard-open):has(app-root app-tab-bar))
+  .offline-pill {
   bottom: calc(
     var(--tab-bar-clearance) + var(--space-2) + var(--floating-notice-height) + var(--space-3)
   );

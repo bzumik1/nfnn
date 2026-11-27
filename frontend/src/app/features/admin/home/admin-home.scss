@@ -84,6 +84,10 @@
   max-inline-size: var(--measure-prose);
 }
 
+.overview-description {
+  padding-inline: var(--card-inset);
+}
+
 .overview-columns {
   margin: var(--space-3) 0 0;
   padding-inline: var(--card-inset);
@@ -148,7 +152,8 @@
   }
 }
 
-.admin-overview .ui-table-frame {
+.overview-frame {
+  container: overview-frame / inline-size;
   margin-inline: calc(-1 * var(--card-inset));
 }
 
@@ -213,6 +218,12 @@
 
 @include bp.container-down(ui-table, ledger) {
   @include overview-as-cards;
+}
+
+@include bp.container-down(overview-frame, ledger) {
+  .overview-description .col-new {
+    display: none;
+  }
 }
 
 .admin-failure-message {

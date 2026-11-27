@@ -49,6 +49,15 @@
   margin-top: var(--space-1-5);
 }
 
+.ui-person-row > .ui-person-row__badges {
+  grid-column: 2 / -1;
+  margin-top: calc(var(--space-1-5) - var(--space-3));
+
+  &:empty {
+    display: none;
+  }
+}
+
 .ui-person-row__note {
   grid-column: 2 / -1;
   font-size: var(--text-sm);

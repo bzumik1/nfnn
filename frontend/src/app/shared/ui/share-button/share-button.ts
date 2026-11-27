@@ -11,6 +11,7 @@ import { CopyButton } from '../copy-button/copy-button';
   host: {
     '[class.is-on-dark]': "tone() === 'dark'",
     '[class.is-finger-size]': "size() === 'finger'",
+    '[class.is-end]': "align() === 'end'",
   },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -20,6 +21,7 @@ export class ShareButton {
   readonly subject = input<string | null>(null);
   readonly tone = input<'light' | 'dark'>('light');
   readonly size = input<'compact' | 'finger'>('compact');
+  readonly align = input<'start' | 'end'>('start');
 
   protected readonly copyWhat = $localize`:@@ui.share.copyWhat:odkaz na stránku`;
   protected readonly copyLabel = $localize`:@@ui.share.copyLink:Kopírovat odkaz`;

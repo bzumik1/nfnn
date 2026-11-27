@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { donationItem, mockDonorApi, openDonorSection, signIn } from './donor-session';
@@ -76,6 +77,57 @@ async function openList(page: Page, list: (typeof LISTS)[number], width: number)
   return { verificationRow: rows.first(), giftRow: rows.last() };
 }
 
+interface MotionCount {
+  motionStarts?: number;
+}
+
+function motionStarts(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const counted = window as unknown as MotionCount;
+    if (counted.motionStarts === undefined) {
+      counted.motionStarts = 0;
+      for (const type of ['animationstart', 'transitionrun']) {
+        document.addEventListener(type, () => (counted.motionStarts! += 1), true);
+      }
+    }
+    return counted.motionStarts;
+  });
+}
+
+async function analysePaymentsCardOnceStill(
+  page: Page,
+): Promise<{ violations: string[]; still: boolean }> {
+  const before = await motionStarts(page);
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (animation) =>
+          animation.playState !== 'running' ||
+          animation.effect?.getTiming().iterations === Infinity,
+      ),
+  );
+  const results = await new AxeBuilder({ page })
+    .include('.payments-card')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze();
+  return {
+    violations: results.violations.flatMap((violation) =>
+      violation.nodes.map((node) => `${violation.id}: ${node.target.join(' ')}`),
+    ),
+    still: (await motionStarts(page)) === before,
+  };
+}
+
+async function paymentsCardViolations(page: Page): Promise<string[]> {
+  await page.evaluate(() => document.fonts.ready);
+  let analysis = await analysePaymentsCardOnceStill(page);
+  for (let attempt = 1; !analysis.still && attempt < 5; attempt += 1) {
+    analysis = await analysePaymentsCardOnceStill(page);
+  }
+  return analysis.violations;
+}
+
 test.describe('Given a donor whose account verification of 1 Kč arrived beside a gift', () => {
   for (const list of LISTS) {
     for (const layout of LAYOUTS) {
@@ -129,6 +181,42 @@ test.describe('Given a donor whose account verification of 1 Kč arrived beside 
         .toBe(true);
     });
   }
+});
+
+test.describe('Given a donor whose account verification of 1 Kč shows its note under its row in Moje dary', () => {
+  for (const width of [1000, 1280]) {
+    test(`when a screen reader reads the table in a ${width} px window, then the note Ověření účtu is read in the verification's own row with its date, no row of its own is added and the card breaks no rule`, async ({
+      page,
+    }) => {
+      const { verificationRow } = await openList(page, LISTS[1], width);
+
+      await expect(verificationRow).toMatchAriaSnapshot(String.raw`
+        - row /Ověření účtu/:
+          - cell /^20\.\s3\.\s2026\sOvěření účtu$/
+          - cell /^1\sKč$/
+      `);
+      await expect(page.locator('.payments-card tbody').getByRole('row')).toHaveCount(2);
+      expect(await paymentsCardViolations(page)).toEqual([]);
+    });
+  }
+
+  test('when the page is printed, then the verification row keeps its note and is never split between two pages', async ({
+    page,
+  }) => {
+    const { verificationRow } = await openList(page, LISTS[1], 1280);
+
+    await page.emulateMedia({ media: 'print' });
+
+    const kept = await verificationRow.evaluate((row) => {
+      const note = row.querySelector('.verification-tag')!.getBoundingClientRect();
+      const box = row.getBoundingClientRect();
+      return {
+        breakInside: getComputedStyle(row).breakInside,
+        noteInside: note.top >= box.top && note.bottom <= box.bottom + 0.5,
+      };
+    });
+    expect(kept).toEqual({ breakInside: 'avoid', noteInside: true });
+  });
 });
 
 const newerGift = donationItem({
