@@ -334,6 +334,28 @@ test.describe('Given a visitor on the Přispět page', () => {
     expect(await caret()).toBe(1);
   });
 
+  test('when they insert 25 Kč before 100 in Jiná částka, then the field groups 25 100 with the caret after the 25', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(
+      browserName !== 'chromium',
+      'Chromium inserts the text as one input; the mobile team pastes 25 Kč before 100 on the iPhone SE',
+    );
+    await servePaymentDetails(page, []);
+    await page.goto('/prispet');
+    await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    await page.getByRole('radio', { name: 'Jiná částka' }).click();
+    const field = page.getByLabel('Vlastní částka v korunách');
+    await field.pressSequentially('100');
+    await field.evaluate((input: HTMLInputElement) => input.setSelectionRange(0, 0));
+
+    await page.keyboard.insertText('25 Kč');
+
+    await expect(field).toHaveValue('25\u00a0100');
+    expect(await field.evaluate((input: HTMLInputElement) => input.selectionStart)).toBe(2);
+  });
+
   test('when they paste an amount with its spaces and Kč, then the field groups it, and a longer paste stops at 12 characters before it is grouped', async ({
     page,
     browserName,

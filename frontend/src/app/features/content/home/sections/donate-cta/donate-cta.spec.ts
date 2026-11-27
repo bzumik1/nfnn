@@ -655,6 +655,107 @@ describe('Given the donate section', () => {
     });
   }
 
+  describe('when the visitor pastes into Jiná částka', () => {
+    beforeEach(async () => {
+      document.body.appendChild(fixture.nativeElement);
+      await openWithQr();
+      button('Jiná částka').click();
+      await settle();
+    });
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    type Carrier = 'data' | 'dataTransfer';
+
+    async function paste(
+      text: string,
+      carrier: Carrier,
+      start = 0,
+      end = start,
+    ): Promise<HTMLInputElement> {
+      const field = element<HTMLInputElement>('#donate-custom-amount');
+      field.focus();
+      field.setSelectionRange(start, end);
+      const pasting = new InputEvent('beforeinput', {
+        inputType: 'insertFromPaste',
+        data: carrier === 'data' ? text : null,
+        bubbles: true,
+        cancelable: true,
+      });
+      if (carrier === 'dataTransfer') {
+        Object.defineProperty(pasting, 'dataTransfer', {
+          value: { getData: (type: string) => (type === 'text/plain' ? text : '') },
+        });
+      }
+      if (field.dispatchEvent(pasting)) {
+        const room = field.maxLength - (field.value.length - (end - start));
+        field.setRangeText(text.slice(0, Math.max(room, 0)), start, end, 'end');
+        field.dispatchEvent(new InputEvent('input', { inputType: 'insertFromPaste' }));
+      }
+      await settle();
+      return field;
+    }
+
+    for (const carrier of ['data', 'dataTransfer'] as const) {
+      for (const [space, name] of [
+        [' ', 'ordinary spaces'],
+        ['\u00a0', 'no-break spaces'],
+        ['\u202f', 'narrow no-break spaces'],
+      ] as const) {
+        it(`and the paste carries 1 250 Kč with ${name} in its ${carrier}, then the field groups 1 250 and the QR is drawn for it without a hint`, async () => {
+          const field = await paste(`1${space}250${space}Kč`, carrier);
+          await settle(REDRAW_MS);
+
+          expect(field.value).toBe('1\u00a0250');
+          expect(drawnMatrixIs(qrOfTyped(1250))).toBe(true);
+          field.blur();
+          await settle();
+          expect(element('.amount-hint')).toBeNull();
+        });
+      }
+
+      it(`and the paste carries 10 000 000 Kč in its ${carrier}, then the field shows 10 000 000 without a stray letter and leaving it shows the hint`, async () => {
+        const field = await paste('10\u202f000\u202f000\u00a0Kč', carrier);
+
+        expect(field.value).toBe('10\u00a0000\u00a0000');
+        field.blur();
+        await settle();
+        expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+        expect(field.getAttribute('aria-invalid')).toBe('true');
+      });
+
+      it(`and the paste carries 25 Kč in its ${carrier} before 100, then the field groups 25 100 with the caret after the 25 and the QR is drawn for it`, async () => {
+        await type('100');
+
+        const field = await paste('25 Kč', carrier, 0);
+        await settle(REDRAW_MS);
+
+        expect(field.value).toBe('25\u00a0100');
+        expect(field.selectionStart).toBe(2);
+        expect(drawnMatrixIs(qrOfTyped(25100))).toBe(true);
+        field.blur();
+        await settle();
+        expect(element('.amount-hint')).toBeNull();
+      });
+
+      it(`and the paste carries 12,50 Kč in its ${carrier}, then the field keeps 12,50 without the currency and leaving it shows the hint`, async () => {
+        const field = await paste('12,50 Kč', carrier);
+
+        expect(field.value).toBe('12,50');
+        field.blur();
+        await settle();
+        expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+        expect(field.getAttribute('aria-invalid')).toBe('true');
+      });
+
+      it(`and the paste carries more digits than fit in its ${carrier}, then the length bound cuts the digits, not the spaces and the currency`, async () => {
+        const field = await paste('1 234 567 890 123 Kč', carrier);
+
+        expect(field.value).toBe('123\u00a0456\u00a0789\u00a0012');
+      });
+    }
+  });
+
   it('when the visitor picks Jiná částka, then the field takes at most the largest amount, 1 000 000 Kč, with its spaces and currency', async () => {
     await openWithQr();
 
