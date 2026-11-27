@@ -1018,6 +1018,11 @@ export interface GroundMotion {
   readonly curve: readonly number[];
   readonly durationMs: number;
   readonly lagFrames: number;
+  readonly carryingMotions: number;
+}
+
+function wayAt(motion: GroundMotion, fraction: number): number {
+  return 1 - (1 - curveShareAt(motion.curve, fraction)) ** motion.carryingMotions;
 }
 
 function curveShareAt(curve: readonly number[], fraction: number): number {
@@ -1053,8 +1058,8 @@ export function groundJumpsUnderClock({ screens }: TopArea, motion?: GroundMotio
   const fromRestAllows = (earlier: ScreenFrame, later: ScreenFrame): number | null =>
     motion === undefined || earlier.at === undefined || later.at === undefined
       ? null
-      : curveShareAt(
-          motion.curve,
+      : wayAt(
+          motion,
           (later.at - earlier.at + (LATE_FRAME_PAST_THE_STEADY_ONE + motion.lagFrames) * FRAME_MS) /
             motion.durationMs,
         );
@@ -1078,7 +1083,7 @@ export function groundJumpsUnderClock({ screens }: TopArea, motion?: GroundMotio
     const curve =
       allowed === null || motion === undefined
         ? ''
-        : `, more than the ${percent(allowed)} its curve reaches in that time and ${LATE_FRAME_PAST_THE_STEADY_ONE} steady frames plus the stamp lag of ${motion.lagFrames.toFixed(2)}`;
+        : `, more than the ${percent(allowed)} its curve reaches in that time${motion.carryingMotions > 1 ? ` with ${motion.carryingMotions} motions on it at once` : ''} and ${LATE_FRAME_PAST_THE_STEADY_ONE} steady frames plus the stamp lag of ${motion.lagFrames.toFixed(2)}`;
     return [
       `the ground under the clock goes from ${percent(share(previous))} to ${percent(share(screen))} of its way in screencast frame ${index}${gap}${curve}`,
     ];
