@@ -84,38 +84,129 @@ export function entryProblems(entries) {
   return problems;
 }
 
-export async function issueProblems(entries, lookup) {
-  const problems = [];
+export const CLOSED_ISSUE_BY_MODE = {
+  pull_request: 'error',
+  push: 'warning',
+  nightly: 'error',
+};
+
+const REGISTRY = 'frontend/e2e/motion-known-findings.json';
+
+async function issueFindings(entries, lookup) {
+  const byIssue = new Map();
   for (const entry of entries) {
-    const issue = await lookup(entry.issue);
+    byIssue.set(entry.issue, [...(byIssue.get(entry.issue) ?? []), entry]);
+  }
+  const findings = [];
+  for (const [number, ofIt] of byIssue) {
+    const issue = await lookup(number);
+    const named = `${ofIt.length} ${ofIt.length === 1 ? 'entry' : 'entries'}`;
     if (!issue.found) {
-      problems.push(`${keyOf(entry)}: issue #${entry.issue} does not exist`);
+      findings.push({ kind: 'broken', message: `issue #${number} does not exist, named by ${named}: ${ofIt.map(keyOf).join('; ')}` });
     } else if (issue.pullRequest) {
-      problems.push(`${keyOf(entry)}: #${entry.issue} is a pull request, not an issue`);
+      findings.push({ kind: 'broken', message: `#${number} is a pull request, not an issue, named by ${named}: ${ofIt.map(keyOf).join('; ')}` });
     } else if (issue.state !== 'open') {
-      problems.push(
-        `${keyOf(entry)}: issue #${entry.issue} is closed, so its fix landed and the entry goes`,
-      );
+      findings.push({
+        kind: 'closed',
+        message: `issue #${number} is closed, so its fix landed: remove its ${named} from ${REGISTRY}: ${ofIt.map(keyOf).join('; ')}`,
+      });
     }
   }
-  return problems;
+  return findings;
+}
+
+export async function issueProblems(entries, lookup) {
+  return (await issueFindings(entries, lookup)).map((finding) => finding.message);
+}
+
+export async function checkEntries(entries, { mode, lookup }) {
+  if (!Object.hasOwn(CLOSED_ISSUE_BY_MODE, mode ?? '')) {
+    throw new Error(`unknown mode ${mode}: give --mode=${Object.keys(CLOSED_ISSUE_BY_MODE).join('|')}`);
+  }
+  const problems = entryProblems(entries);
+  if (problems.length > 0) {
+    return { errors: problems, warnings: [] };
+  }
+  const findings = await issueFindings(entries, lookup);
+  const broken = findings.filter((finding) => finding.kind === 'broken').map((finding) => finding.message);
+  const closed = findings.filter((finding) => finding.kind === 'closed').map((finding) => finding.message);
+  return CLOSED_ISSUE_BY_MODE[mode] === 'warning'
+    ? { errors: broken, warnings: closed }
+    : { errors: [...broken, ...closed], warnings: [] };
+}
+
+function listedTests(report) {
+  const listed = new Set();
+  const walk = (suite) => {
+    for (const spec of suite.specs ?? []) {
+      for (const test of spec.tests ?? []) {
+        listed.add(JSON.stringify([test.projectName, `e2e/${spec.file}`, spec.title]));
+      }
+    }
+    for (const child of suite.suites ?? []) {
+      walk(child);
+    }
+  };
+  (report.suites ?? []).forEach(walk);
+  return listed;
+}
+
+export function testProblems(entries, fullReport) {
+  const listed = listedTests(fullReport);
+  return entries
+    .filter((entry) => !listed.has(JSON.stringify([entry.project, entry.file, entry.test])))
+    .map(
+      (entry) =>
+        `${keyOf(entry)} names no test of playwright test --list: its test was renamed, moved or removed, so the entry no longer judges anything`,
+    );
+}
+
+function annotation(level, message) {
+  return `::${level}::${message.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A')}`;
 }
 
 function failWith(problems) {
   for (const problem of problems) {
-    console.error(
-      `::error::${problem.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A')}`,
-    );
+    console.error(annotation('error', problem));
   }
   process.exit(1);
 }
 
-async function main([command, file]) {
-  if (command !== 'entries' || !file) {
-    console.error('usage: node scripts/motion-known-findings.mjs entries <motion-known-findings.json>');
-    process.exit(2);
+const USAGE = [
+  'usage: node scripts/motion-known-findings.mjs entries <motion-known-findings.json> --mode=pull_request|push|nightly',
+  '       node scripts/motion-known-findings.mjs tests <motion-known-findings.json> <full Playwright list JSON>',
+];
+
+function usage() {
+  console.error(USAGE.join('\n'));
+  process.exit(2);
+}
+
+function readJson(file) {
+  return JSON.parse(readFileSync(file, 'utf8'));
+}
+
+function runTests(file, listFile) {
+  if (!listFile) {
+    failWith(['the tests check needs the full Playwright list (playwright test --list --project=* --reporter=json)']);
   }
-  const entries = JSON.parse(readFileSync(file, 'utf8'));
+  const entries = readJson(file);
+  const problems = entryProblems(entries);
+  if (problems.length > 0) {
+    failWith(problems);
+  }
+  const found = testProblems(entries, readJson(listFile));
+  if (found.length > 0) {
+    failWith(found);
+  }
+  console.log(`known motion findings: each of the ${entries.length} entries names a listed test of its project`);
+}
+
+async function runEntries(file, mode) {
+  if (!Object.hasOwn(CLOSED_ISSUE_BY_MODE, mode ?? '')) {
+    usage();
+  }
+  const entries = readJson(file);
   const problems = entryProblems(entries);
   if (problems.length > 0) {
     failWith(problems);
@@ -129,16 +220,33 @@ async function main([command, file]) {
   if (!token || !repository) {
     failWith(['GH_TOKEN and GITHUB_REPOSITORY are needed to read the issues of the known motion findings']);
   }
-  const found = await issueProblems(
-    entries,
-    githubIssues({ token, repository, apiUrl: process.env.GITHUB_API_URL || undefined }),
-  );
-  if (found.length > 0) {
-    failWith(found);
+  const { errors, warnings } = await checkEntries(entries, {
+    mode,
+    lookup: githubIssues({ token, repository, apiUrl: process.env.GITHUB_API_URL || undefined }),
+  });
+  for (const warning of warnings) {
+    console.log(annotation('warning', warning));
   }
-  for (const entry of entries) {
-    console.log(`known, ceiling ${entry.recorded}, issue #${entry.issue} open: ${keyOf(entry)}`);
+  if (errors.length > 0) {
+    failWith(errors);
   }
+  console.log(`known motion findings: ${entries.length} entries, every issue checked (${mode})`);
+}
+
+async function main([command, file, ...rest]) {
+  if (!file) {
+    usage();
+  }
+  if (command === 'tests') {
+    runTests(file, rest[0]);
+    return;
+  }
+  if (command === 'entries') {
+    const mode = rest.map((arg) => arg.match(/^--mode=(.+)$/)?.[1]).find(Boolean);
+    await runEntries(file, mode);
+    return;
+  }
+  usage();
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
