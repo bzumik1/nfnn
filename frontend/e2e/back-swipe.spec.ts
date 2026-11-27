@@ -131,7 +131,7 @@ test.describe('Given the app on the home screen of a phone with an article opene
     await expect(swipeOverlay(page).locator('.page-transition__page--over h1')).toHaveText(
       article.title,
     );
-    expect(await pageOffset(page)).toBeCloseTo(220, 0);
+    await expect.poll(() => pageOffset(page)).toBeCloseTo(220, 0);
 
     await restLongerThanAFlick(page);
     await finger.up();
