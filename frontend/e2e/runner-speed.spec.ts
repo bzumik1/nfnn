@@ -14,6 +14,8 @@ const REFERENCE: SpeedReference = {
   recordedOn: 'the Prodesk',
 };
 
+const NAMES_THE_FACTOR = /the runner is \d\.\d\d× slower/;
+
 function placedAfter(ms: number): BudgetCheck {
   return {
     what: 'ms from the tap until both copies were placed',
@@ -55,6 +57,21 @@ testWithoutBrowser.describe(
 
         expect(problems).toHaveLength(1);
         expect(problems[0]).toContain('2.20× slower than the reference');
+      },
+    );
+
+    testWithoutBrowser(
+      'when the runner is ten times slower or more than the reference, then the row still fails naming the factor',
+      () => {
+        const problems = speedProblems({
+          medians: [20, 207.4],
+          reference: REFERENCE,
+          version: '1.0',
+          checks: [placedAfter(100)],
+        });
+
+        expect(problems).toEqual([expect.stringMatching(NAMES_THE_FACTOR)]);
+        expect(problems[0]).toContain('10.37× slower than the reference');
       },
     );
 
@@ -133,6 +150,6 @@ test.describe('Given the in-page benchmark of the runner’s speed', () => {
       version: slowed.version,
       checks: [placedAfter(100)],
     });
-    expect(problems).toEqual([expect.stringMatching(/the runner is \d\.\d\d× slower/)]);
+    expect(problems).toEqual([expect.stringMatching(NAMES_THE_FACTOR)]);
   });
 });
