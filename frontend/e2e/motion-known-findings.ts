@@ -133,3 +133,12 @@ export function findingsLeftBehind(
         : [];
     });
 }
+
+export function timedChecksOf<T>(judged: T[] | null | undefined, metric: MotionMetric): T[] {
+  if (judged === null || judged === undefined) {
+    throw new Error(
+      `${metric} was handed to a timed row, but this row is not timed: the runner does not scale its budgets here (judgesTime is false), so judge it without a timed row`,
+    );
+  }
+  return judged;
+}
