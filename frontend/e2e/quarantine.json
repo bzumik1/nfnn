@@ -18,5 +18,35 @@
     ],
     "issue": 2093,
     "since": "2026-11-27T00:53:27Z"
+  },
+  {
+    "project": "chromium",
+    "file": "e2e/top-area.spec.ts",
+    "title": [
+      "Given an administrator in the app on the home screen of a phone in the light appearance, on the landing page with the account sheet open",
+      "when Správa is opened from it on a CPU 3× slower, then the ground under the clock moves from the sheet’s ground to Správa’s with the scrim, never in one frame and never back"
+    ],
+    "issue": 2107,
+    "since": "2026-11-27T01:22:49Z"
+  },
+  {
+    "project": "iphone",
+    "file": "e2e/largest-text.spec.ts",
+    "title": [
+      "Given a donor on an iPhone SE 375 × 667 pt with the largest accessibility text who allows motion, in Údaje a zabezpečení inside the account sheet",
+      "when they remove the second of two passkeys with its Ano, odebrat at the top of what shows the page, then Přejmenovat of the key above stays where it stood while the row closes and is brought into view only once the row is gone"
+    ],
+    "issue": 2121,
+    "since": "2026-11-27T01:22:49Z"
+  },
+  {
+    "project": "iphone",
+    "file": "e2e/receipt-status-closing.spec.ts",
+    "title": [
+      "Given a signed-in donor whose yearly receipt is ready on Můj přehled",
+      "when the next download of the receipt is refused in a 390 px window with reduced motion, then the finished status keeps its last text for as long as its line closes"
+    ],
+    "issue": 2123,
+    "since": "2026-11-27T01:22:49Z"
   }
 ]
