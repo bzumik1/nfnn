@@ -3,6 +3,7 @@ import jsQR from 'jsqr';
 import { expect, test } from './fixtures';
 import { waitWhileNothingMayHappen } from './fixed-waits';
 import { openSection } from './donor-session';
+import { expectUnfoldsByOneTransition, followUnfoldTransition } from './fold-transition';
 import {
   FOUNDATION_PAYMENT_DETAILS,
   PAYMENT_QR_1000,
@@ -333,12 +334,21 @@ test.describe('Given a visitor on the Přispět page', () => {
     expect(await caret()).toBe(1);
   });
 
-  test('when they open Jiná částka, then its field unfolds over several frames instead of jumping in at once', async ({
+  test('when they open Jiná částka, then its field unfolds over the token duration instead of jumping in at once (in Chromium over several frames, in WebKit by one grid-template-rows transition from 0fr to 1fr, not discrete, lasting --duration-base with the motion.expand easing, whose transitionend comes at least 80 % of that duration after the click while the fold stays rendered)', async ({
     page,
-  }) => {
+  }, testInfo) => {
     await servePaymentDetails(page, []);
     await page.goto('/prispet');
     await expect(page.locator('#prispet .bank')).toContainText('5544332217/2010');
+    if (testInfo.project.name === 'iphone') {
+      await followUnfoldTransition(page, {
+        fold: '#prispet .amount app-fold',
+        trigger: '#prispet .amount-options',
+      });
+      await page.getByRole('radio', { name: 'Jiná částka' }).click();
+      await expectUnfoldsByOneTransition(page);
+      return;
+    }
     const amount = page.locator('#prispet .amount');
     const closedHeight = (await amount.boundingBox())!.height;
     await page.evaluate((sampleMs) => {

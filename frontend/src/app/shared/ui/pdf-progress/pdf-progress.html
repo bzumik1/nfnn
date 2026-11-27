@@ -8,9 +8,14 @@
 >
   @if (shown(); as shown) {
     @if (shown.kind === 'running') {
-      <span>{{ shown.text }}</span>
+      <span animate.leave="pdf-progress__leaving">{{ shown.text }}</span>
     } @else {
-      <span class="pdf-progress__brief" aria-hidden="true" [attr.data-brief]="shown.brief">
+      <span
+        class="pdf-progress__brief"
+        aria-hidden="true"
+        [attr.data-brief]="shown.brief"
+        animate.leave="pdf-progress__leaving"
+      >
         @if (shown.kind !== 'cancelled') {
           <svg
             viewBox="0 0 24 24"
