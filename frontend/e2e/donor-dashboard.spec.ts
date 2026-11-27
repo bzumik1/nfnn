@@ -12,6 +12,7 @@ import {
   bankAccountItem,
   donationItem,
   donor,
+  donorSyncOf,
   mockDonorApi,
   noDonations,
   openDonorSection,
@@ -1756,7 +1757,10 @@ test.describe('Given a donor whose first saving of the overview to this device t
     });
     let answerSync: () => void = () => undefined;
     const syncAnswered = new Promise<void>((resolve) => (answerSync = resolve));
-    await mockDonorApi(page);
+    await mockDonorApi(page, {
+      ...receiptDonations,
+      sync: await donorSyncOf(receiptDonations.summary, { gifts: receiptDonations.list.items }),
+    });
     await page.route(
       (url) => url.pathname === '/api/donations/me/sync',
       async (route) => {

@@ -174,8 +174,10 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
     await page.goto('/o-nas');
     const field = page.locator('#contact-name');
     const pill = page.locator(OFFLINE_PILL);
+    await expect(field).toBeVisible();
+    await page.route('**/api/**', (route) => route.abort('internetdisconnected'));
     await context.setOffline(true);
-    await expect(pill).toBeVisible();
+    await expect(pill).toBeVisible({ timeout: 10_000 });
     await field.focus();
     await expect(field).toBeFocused();
     await expect
