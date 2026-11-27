@@ -15,6 +15,8 @@ const FOUNDATION_COMPANY_IDENTIFIER = 27278794;
 const PROOF_MESSAGE_TAG = 'nfnn.cz/receipt/v1';
 const QR_PREFIX = 'https://nfnn.cz/overit#1';
 const SIGNATURE_BYTES = 64;
+const TOTP_STEP_SECONDS = 30;
+const TOTP_WAIT_LIMIT_MILLISECONDS = 65_000;
 const CHUNK_DIGITS_BY_BYTES = [0, 3, 5, 8, 10, 13, 15, 17];
 const CONNECTOR_CLIENT = 'https://claude.ai/oauth/claude-code-client-metadata';
 const CONNECTOR_REDIRECT = 'http://127.0.0.1/callback';
@@ -48,6 +50,12 @@ export function totpCode(secret, step, digits = 6) {
   const offset = digest[digest.length - 1] & 15;
   const number = digest.readUInt32BE(offset) & 0x7fffffff;
   return String(number % 10 ** digits).padStart(digits, '0');
+}
+
+export function totpStepToSend(nowMilliseconds, lastStep) {
+  const current = Math.floor(nowMilliseconds / 1000 / TOTP_STEP_SECONDS);
+  const step = Math.max(current, (lastStep ?? -Infinity) + 1);
+  return step > current + 1 ? null : step;
 }
 
 export function proofBytes(qrText) {
@@ -441,16 +449,15 @@ class Journey {
     return session;
   }
 
-  nextTotpStep() {
-    const current = Math.floor(Date.now() / 1000 / 30);
-    return Math.max(current - 1, (this.state.admin.lastStep ?? -Infinity) + 1);
-  }
-
   async freshCode() {
-    let step = this.nextTotpStep();
-    while (step > Math.floor(Date.now() / 1000 / 30) + 1) {
-      await sleep(2000);
-      step = this.nextTotpStep();
+    const deadline = Date.now() + TOTP_WAIT_LIMIT_MILLISECONDS;
+    let step = totpStepToSend(Date.now(), this.state.admin.lastStep);
+    while (step === null) {
+      if (Date.now() > deadline) {
+        fail(`no unused TOTP step after ${this.state.admin.lastStep} became current within ${TOTP_WAIT_LIMIT_MILLISECONDS / 1000} s`);
+      }
+      await sleep(1000);
+      step = totpStepToSend(Date.now(), this.state.admin.lastStep);
     }
     this.state.admin.lastStep = step;
     this.save();

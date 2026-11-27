@@ -18,6 +18,7 @@ import {
   statusDigest,
   syntheticPortraitPng,
   totpCode,
+  totpStepToSend,
 } from './stack-journey.mjs';
 
 const payloadCases = JSON.parse(
@@ -47,6 +48,35 @@ test('Given the RFC 6238 SHA-1 secret, when the journey computes the code of a s
   assert.equal(totpCode(secret, Math.floor(59 / 30), 8), '94287082');
   assert.equal(totpCode(secret, Math.floor(1111111109 / 30), 8), '07081804');
   assert.equal(totpCode(secret, Math.floor(1111111109 / 30)), '081804');
+});
+
+const STEP = 59_000_000;
+const atSecondOfStep = (step, second) => (step * 30 + second) * 1000;
+const acceptedThroughoutNextStep = (sent, step) => sent >= step && sent <= step + 1;
+
+test('Given no code spent yet, when the journey takes a code at second 29 of a step, then it takes that step, which the backend still accepts in the next one', () => {
+  assert.equal(totpStepToSend(atSecondOfStep(STEP, 29.99), undefined), STEP);
+});
+
+test('Given the code of the current step spent, when the journey takes another, then it takes the next step at once', () => {
+  assert.equal(totpStepToSend(atSecondOfStep(STEP, 29.99), STEP), STEP + 1);
+});
+
+test('Given the code of the next step spent, when the journey takes another, then it waits for that step to become current', () => {
+  assert.equal(totpStepToSend(atSecondOfStep(STEP, 0), STEP + 1), null);
+  assert.equal(totpStepToSend(atSecondOfStep(STEP + 1, 0), STEP + 1), STEP + 2);
+});
+
+test('Given any second of a step and any spent step, when the journey takes a code, then the backend accepts it in this step and in the next one', () => {
+  for (const second of [0, 0.5, 15, 29, 29.99]) {
+    for (const lastStep of [undefined, STEP - 5, STEP - 2, STEP - 1, STEP, STEP + 1]) {
+      const sent = totpStepToSend(atSecondOfStep(STEP, second), lastStep);
+      if (sent !== null) {
+        assert.ok(acceptedThroughoutNextStep(sent, STEP), `second ${second}, last step ${lastStep}: sent ${sent}`);
+        assert.ok(lastStep === undefined || sent > lastStep, `second ${second}, last step ${lastStep}: sent ${sent} again`);
+      }
+    }
+  }
 });
 
 test('Given an age key, when the journey names words of it, then they are its 24 Czech words at those positions', () => {
