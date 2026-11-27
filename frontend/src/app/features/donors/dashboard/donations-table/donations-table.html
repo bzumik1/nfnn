@@ -69,7 +69,7 @@
     </thead>
     <tbody role="rowgroup">
       @for (item of items(); track item.id) {
-        <tr role="row">
+        <tr role="row" [class.with-verification-note]="item.accountVerification">
           <td
             role="cell"
             class="date"
