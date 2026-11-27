@@ -32,6 +32,24 @@ export async function followUnfoldTransition(
   page: Page,
   selectors: FoldTransitionSelectors,
 ): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          (fold) =>
+            document
+              .querySelector(fold)
+              ?.getAnimations({ subtree: true })
+              .some(
+                (animation) =>
+                  animation instanceof CSSTransition &&
+                  animation.transitionProperty === 'grid-template-rows',
+              ) ?? true,
+          selectors.fold,
+        ),
+      { message: 'the closed fold runs no grid-template-rows transition before the click' },
+    )
+    .toBe(false);
   await page.evaluate(({ fold, trigger }) => {
     const trace: {
       samples: unknown[];
@@ -84,6 +102,7 @@ export async function followUnfoldTransition(
       (event) => {
         const target = event.target as Element;
         if (
+          trace.clickedAt !== null &&
           trace.endedAt === null &&
           event.propertyName === 'grid-template-rows' &&
           target.closest(fold) !== null
@@ -101,6 +120,7 @@ export async function followUnfoldTransition(
       'transitioncancel',
       (event) => {
         if (
+          trace.clickedAt !== null &&
           event.propertyName === 'grid-template-rows' &&
           (event.target as Element).closest(fold) !== null
         ) {
@@ -113,7 +133,7 @@ export async function followUnfoldTransition(
       if (trace.endedAt !== null) {
         return;
       }
-      const transition = foldTransition();
+      const transition = trace.clickedAt === null ? undefined : foldTransition();
       const effect = transition?.effect as KeyframeEffect | undefined;
       const target = effect?.target as HTMLElement | null | undefined;
       if (transition && effect && target) {
