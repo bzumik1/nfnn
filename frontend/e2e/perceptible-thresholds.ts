@@ -1,23 +1,22 @@
-export const PRESSED_WITHIN_MS = 33;
-export const FIRST_MOVE_WITHIN_MS = 67;
-export const RELEASE_HELD_AT_MOST_MS = 33;
-export const FIRST_FRAME_AT_MOST_CURVE_FRAMES = 1.5;
+import { LATE_FRAME_PAST_THE_STEADY_ONE } from '../src/app/core/navigation/frame-pace';
+
 export const LATER_THAN_MAIN_AT_MOST_FRAMES = 1;
-export const STILL_JUMP_AT_MOST_PX = 1;
-export const STEP_AT_MOST_STEADY_STEPS = 1.5;
-export const GOES_BACK_AT_MOST_PX = 0.5;
-export const CURVE_DRIFT_AT_MOST_FRAMES = 1;
-export const FROZEN_AT_MOST_MS = 33;
-export const UNDER_THE_FINGER_WITHIN_PX = 1;
-export const BEHIND_THE_FINGER_AT_MOST_FRAMES = 1;
-export const SETTLE_JUMP_AT_MOST_PX = 1;
-export const ENDS_LATE_AT_MOST_MS = 50;
+export const STEP_ABOVE_MAIN_AT_MOST_STEADY_STEPS = 0.5;
+export const JUMP_ABOVE_MAIN_AT_MOST_PX = 1;
+export const COLOUR_ABOVE_MAIN_AT_MOST_LEVELS = 6;
+export const ENDS_LATER_THAN_MAIN_AT_MOST_MS = 50;
+export const FROZEN_LONGER_THAN_MAIN_AT_MOST_FRAMES = 1;
+
+export const PLACED_AFTER_THE_TAP_WITHIN_MS = 150;
+export const FIRST_OPENING_PLACED_WITHIN_MS = 300;
+export const HELD_AT_MOST_MS = 150;
+export const FIRST_FRAME_AT_MOST_SHARE_OF_THE_WAY = 0.2;
+export const FIRST_HALF_STEP_AT_MOST_STEADY_FRAMES = LATE_FRAME_PAST_THE_STEADY_ONE;
 export const WRONG_FRAMES_AT_MOST = 0;
-export const SAME_GROUND_AT_MOST_LEVELS = 6;
-export const SECOND_TITLE_OPACITY_AT_MOST = 0.1;
+export const BAND_UNDER_THE_CLOCK_AT_MOST_LEVELS = 16;
+export const GROUND_ABOVE_THE_SHEETS_AT_MOST_LEVELS = 3;
 export const BLUR_SHARE_AT_LEAST = 0.5;
-export const KEPT_SCROLL_WITHIN_PX = 1;
+export const SECOND_TITLE_OPACITY_AT_MOST = 0.1;
 export const RING_FRAMES_AFTER_A_TOUCH = 0;
-export const RING_WITHIN_PX = 0.5;
+
 export const SCREENCAST_COLOUR_ALLOWANCE_LEVELS = 2;
-export const VSYNC_PHASE_ALLOWANCE_FRAMES = 0.5;
