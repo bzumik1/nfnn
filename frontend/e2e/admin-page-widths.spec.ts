@@ -502,3 +502,24 @@ test.describe('Given an administrator on a content list in the sheet', () => {
     }
   }
 });
+
+async function titleTop(page: Page, path: string): Promise<number> {
+  await openUnlocked(page, path);
+  const title = page.locator('h1.ui-page-title');
+  await expect(title).toBeVisible();
+  return title.evaluate((element) => Math.round(element.getBoundingClientRect().top + scrollY));
+}
+
+test.describe('Given an administrator on an iPad on its side', () => {
+  test('when Ověřit potvrzení opens from the side navigation, then its title stands at the height of Nastavení and Platby z banky', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1180, height: 820 });
+
+    const verify = await titleTop(page, '/sprava/overit');
+    const settings = await titleTop(page, '/sprava/nastaveni');
+    const payments = await titleTop(page, '/sprava/platby');
+
+    expect({ verify, settings }).toEqual({ verify: payments, settings: payments });
+  });
+});

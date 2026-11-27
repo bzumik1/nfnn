@@ -13,6 +13,11 @@ import {
 } from './donor-session';
 import { donations as receiptDonations, openReceiptsAfterSignIn } from './receipt-donations';
 import { RECEIPT_ISSUING_URL } from './receipt-issuing';
+import {
+  expectVerificationNoteUnderItsGiftInAlignedYears,
+  VERIFICATION_BESIDE_WIDEST_AMOUNTS,
+  VERIFICATION_TAG_WIDTHS,
+} from './verification-tag-fit';
 
 type Gift = ReturnType<typeof donationItem>;
 
@@ -712,6 +717,34 @@ test.describe('Given a signed-in donor whose gifts fill the tables of the portal
       }).length;
     });
     expect(outside).toBe(0);
+  });
+
+  for (const width of VERIFICATION_TAG_WIDTHS) {
+    for (const beside of VERIFICATION_BESIDE_WIDEST_AMOUNTS) {
+      test(`when Moje dary lists an account verification and ${beside.name} in other years in a ${width} px window, then the note Ověření účtu keeps to one line under its whole row from the date text, every amount stays inside its column and every year's columns start at the same places`, async ({
+        page,
+      }) => {
+        await mockDonorApi(page, beside.gifts);
+        await signIn(page);
+        await page.setViewportSize({ width, height: 900 });
+        await openDonorSection(page, 'Moje dary');
+
+        await expectVerificationNoteUnderItsGiftInAlignedYears(page, beside.widest);
+      });
+    }
+  }
+
+  test('when Moje dary lists an account verification at 200 % text in a window wide enough for the table, then the note Ověření účtu keeps to one line under its whole row from the date text and every year lines up', async ({
+    page,
+  }) => {
+    const [beside] = VERIFICATION_BESIDE_WIDEST_AMOUNTS;
+    await mockDonorApi(page, beside.gifts);
+    await signIn(page);
+    await page.setViewportSize({ width: 2400, height: 1400 });
+    await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+    await openDonorSection(page, 'Moje dary');
+
+    await expectVerificationNoteUnderItsGiftInAlignedYears(page, beside.widest);
   });
 
   for (const path of ['/darce/prehled', '/darce/dary', '/darce/potvrzeni']) {

@@ -399,6 +399,13 @@ test.describe('Given an administrator', () => {
     await expect(note).toHaveText('Celkem zahrnuje i platby, které ještě nemají dárce.', {
       useInnerText: true,
     });
+    await expect(page.locator('#admin-overview-hint')).toHaveText(
+      'Dárci: kolik různých dárců v měsíci poslalo dar; platby bez dárce se nepočítají.',
+      { useInnerText: true },
+    );
+    await expect(page.locator('.overview-table')).toHaveAccessibleDescription(
+      'Dárci: kolik různých dárců v měsíci poslalo dar; platby bez dárce se nepočítají.',
+    );
     await expect.poll(() => noteStartFromTitle(page)).toBeCloseTo(0, 0);
     await page.setViewportSize({ width: 1280, height: 900 });
 

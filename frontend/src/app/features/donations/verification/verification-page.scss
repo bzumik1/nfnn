@@ -27,7 +27,7 @@ $intro-measure: calc($container-width - 2 * var(--space-6));
 }
 
 .ui-page-title {
-  margin: 0 0 var(--space-5);
+  margin: var(--space-2) 0 var(--space-5);
 }
 
 .verify-intro {
