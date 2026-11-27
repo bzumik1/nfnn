@@ -52,14 +52,14 @@
 .copy-status {
   font-size: var(--text-xs);
   color: var(--color-danger);
-  text-align: right;
+  text-align: end;
 }
 
 :host(.has-failed.is-start) {
   align-items: flex-start;
 
   .copy-status {
-    text-align: left;
+    text-align: start;
   }
 }
 
