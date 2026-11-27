@@ -57,7 +57,7 @@ export class ChunkLoadNotice {
         this.title.setTitle(
           $localize`:@@layout.chunk-load.pageTitle:Stránku se nepodařilo otevřít | Nová naděje – nadační fond`,
         );
-        heading.focus();
+        untracked(() => heading.focus());
       }
     });
     afterRenderEffect((onCleanup) => {

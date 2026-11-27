@@ -11,6 +11,7 @@ import { ReloadGuard } from '../../core/reload/reload-guard';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { ChunkLoadNotice } from './chunk-load-notice';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
+import { restoreWindowProperties } from '../../../testing/window-properties';
 
 @Component({ template: '' })
 class Page {}
@@ -190,38 +191,66 @@ describe('Given the chunk-load notice', () => {
     });
   });
 
-  describe('when a later page could not be loaded on a phone whose on-screen keyboard shortens the visual viewport', () => {
+  describe('on a phone whose on-screen keyboard shortens the visual viewport', () => {
     const screenHeight = 667;
     let viewport: EventTarget & { height: number; offsetTop: number };
     let field: HTMLInputElement;
+    let replacedWindowProperties: Map<string, PropertyDescriptor | undefined>;
 
-    beforeEach(async () => {
+    beforeEach(() => {
+      replacedWindowProperties = new Map(
+        ['innerHeight', 'visualViewport'].map(
+          (name) => [name, Object.getOwnPropertyDescriptor(window, name)] as const,
+        ),
+      );
       viewport = Object.assign(new EventTarget(), { height: screenHeight, offsetTop: 0 });
       Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
       Object.defineProperty(window, 'innerHeight', { configurable: true, value: screenHeight });
       TestBed.inject(SoftKeyboard);
-      await TestBed.inject(Router).navigateByUrl('/jinam');
-      await failToLoad();
       field = document.createElement('input');
-      document.body.append(field);
     });
 
     afterEach(() => {
       field.remove();
-      delete (window as { visualViewport?: unknown }).visualViewport;
+      restoreWindowProperties(window, replacedWindowProperties);
       document.documentElement.classList.remove(KEYBOARD_OPEN_CLASS);
     });
 
-    it('and the visitor focuses a text field and the keyboard comes up, then the focus stays in the field through the next render', async () => {
-      expect(document.activeElement).toBe(reloadButton());
-
+    async function focusTheFieldAndRaiseTheKeyboard(): Promise<void> {
+      document.body.append(field);
       field.focus();
       viewport.height = screenHeight - 262;
       viewport.dispatchEvent(new Event('resize'));
       await fixture.whenStable();
+    }
 
-      expect(TestBed.inject(SoftKeyboard).isOpen()).toBe(true);
-      expect(document.activeElement).toBe(field);
+    describe('when a later page could not be loaded', () => {
+      beforeEach(async () => {
+        await TestBed.inject(Router).navigateByUrl('/jinam');
+        await failToLoad();
+      });
+
+      it('and the visitor focuses a text field and the keyboard comes up, then the focus stays in the field through the next render', async () => {
+        expect(document.activeElement).toBe(reloadButton());
+
+        await focusTheFieldAndRaiseTheKeyboard();
+
+        expect(TestBed.inject(SoftKeyboard).isOpen()).toBe(true);
+        expect(document.activeElement).toBe(field);
+      });
+    });
+
+    describe('when the first page could not be loaded', () => {
+      beforeEach(failToLoad);
+
+      it('and the visitor focuses a text field and the keyboard comes up, then the focus stays in the field through the next render', async () => {
+        expect(document.activeElement).toBe(element().querySelector('main h1'));
+
+        await focusTheFieldAndRaiseTheKeyboard();
+
+        expect(TestBed.inject(SoftKeyboard).isOpen()).toBe(true);
+        expect(document.activeElement).toBe(field);
+      });
     });
   });
 
