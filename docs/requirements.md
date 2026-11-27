@@ -1,6 +1,6 @@
 # Zadání: web Nadačního fondu Nová naděje
 
-Co web dělá a co o něm rozhodl klient (Jakub, za fond se ptá Pavla). Popisuje web tak, jak má fungovat, ne jak je postavený: jak to funguje uvnitř, je v `system-overview.md`, zabezpečení v `security-overview.md`, stránky v `frontend-overview.md`, rozhraní v `api-contract.md` a server v `deploy/README.md`. Co přijde dál, je v `roadmap.md`.
+Co web dělá a co o něm rozhodl klient (Jakub, za fond se ptá Pavla). Popisuje web tak, jak má fungovat, ne jak je postavený: jak to funguje uvnitř, je v `system-overview.md`, zabezpečení v `security-overview.md`, stránky v `frontend-overview.md` (po oblastech v `frontend/`), rozhraní v `api-contract.md` a server v `deploy/README.md`. Co přijde dál, je v `roadmap.md`.
 
 Rozhodnutí vznikla v rozhovorech s Jakubem od 17. 10. 2026; výchozí volby, které navrhl Claude, prošel Jakub 23. 10. 2026 jednu po druhé a potvrdil nebo změnil. Kdy a proč se co rozhodlo, ukáže historie tohoto souboru. Nové rozhodnutí se zapíše sem ve stejném PR, který ho staví.
 

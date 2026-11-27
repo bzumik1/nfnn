@@ -206,7 +206,7 @@ A merge to `main` that changes an image publishes it to `ghcr.io/bzumik1/nfnn-*`
 | [`docs/requirements.md`](docs/requirements.md) | What the site does and every decision of the foundation (Czech) |
 | [`docs/roadmap.md`](docs/roadmap.md) | Versions, what is in progress and the backlog (Czech) |
 | [`docs/system-overview.md`](docs/system-overview.md) | How each bounded context, the regression suite and CI work today |
-| [`docs/frontend-overview.md`](docs/frontend-overview.md) | What the Angular app contains and its conventions |
+| [`docs/frontend-overview.md`](docs/frontend-overview.md) | What the Angular app contains and its conventions, one file per area in `docs/frontend/` |
 | [`docs/security-overview.md`](docs/security-overview.md) | Authentication, connected applications, receipts, device copies, limits and logs |
 | [`docs/api-contract.md`](docs/api-contract.md) | The HTTP API and the MCP connector's tools |
 | [`docs/glossary.md`](docs/glossary.md) | The Czech UI word and the English code name of every domain term |

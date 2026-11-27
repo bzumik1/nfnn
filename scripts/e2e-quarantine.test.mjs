@@ -1,14 +1,17 @@
 import { strict as assert } from 'node:assert';
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
+  checkEntries,
   entryProblems,
   githubIssues,
   issueProblems,
+  overdueProblems,
   testList,
   testProblems,
 } from './e2e-quarantine.mjs';
@@ -37,13 +40,23 @@ function report(tests) {
     const [describe, it] = title;
     files.get(name).suites.push({
       title: describe,
-      specs: [{ title: it, file: name, tests: [{ projectName: project, results: [] }] }],
+      specs: [
+        {
+          title: it,
+          file: name,
+          tests: [{ projectName: project, results: [] }],
+        },
+      ],
     });
   }
   return { suites: [...files.values()] };
 }
 
-const QUARANTINED = { project: 'iphone', file: 'e2e/dialog-back.spec.ts', title: entry().title };
+const QUARANTINED = {
+  project: 'iphone',
+  file: 'e2e/dialog-back.spec.ts',
+  title: entry().title,
+};
 const OTHER = {
   project: 'chromium',
   file: 'e2e/home.spec.ts',
@@ -70,13 +83,13 @@ describe('Given the list of quarantined end-to-end tests', () => {
     assert.match(entryProblems([withoutIssue], NOW).join('\n'), /issue/);
   });
 
-  test('when an entry is older than 48 h by the clock of the check, then it is refused', () => {
-    const problems = entryProblems([entry({ since: '2026-11-25T11:59:59Z' })], NOW);
-    assert.match(problems.join('\n'), /more than 48 h/);
+  test('when an entry is older than 48 h by the clock of the check, then it is overdue', () => {
+    const problems = overdueProblems([entry({ since: '2026-11-25T11:59:59Z' })], NOW);
+    assert.match(problems.join('\n'), /more than 48 h.*#2093/);
   });
 
-  test('when an entry entered exactly 48 h ago, then it is still allowed', () => {
-    assert.deepEqual(entryProblems([entry({ since: '2026-11-25T12:00:00Z' })], NOW), []);
+  test('when an entry entered exactly 48 h ago, then it is not overdue yet', () => {
+    assert.deepEqual(overdueProblems([entry({ since: '2026-11-25T12:00:00Z' })], NOW), []);
   });
 
   test('when an entry entered in the future, then it is refused so its 48 h cannot be extended', () => {
@@ -91,14 +104,18 @@ describe('Given the list of quarantined end-to-end tests', () => {
 
   test('when six tests are listed, then the list is refused for holding more than 5', () => {
     const entries = Array.from({ length: 6 }, (_, index) =>
-      entry({ title: ['Given a dialog open', `when case ${index}, then it closes`] }),
+      entry({
+        title: ['Given a dialog open', `when case ${index}, then it closes`],
+      }),
     );
     assert.match(entryProblems(entries, NOW).join('\n'), /6 tests are in quarantine, at most 5/);
   });
 
   test('when five tests are listed, then the count is allowed', () => {
     const entries = Array.from({ length: 5 }, (_, index) =>
-      entry({ title: ['Given a dialog open', `when case ${index}, then it closes`] }),
+      entry({
+        title: ['Given a dialog open', `when case ${index}, then it closes`],
+      }),
     );
     assert.deepEqual(entryProblems(entries, NOW), []);
   });
@@ -171,7 +188,11 @@ describe('Given the issues of the quarantined tests', () => {
         return { status: 200, ok: true, json: async () => ({ state: 'open' }) };
       },
     });
-    assert.deepEqual(await lookup(2093), { found: true, state: 'open', pullRequest: false });
+    assert.deepEqual(await lookup(2093), {
+      found: true,
+      state: 'open',
+      pullRequest: false,
+    });
     assert.deepEqual(asked, [
       {
         url: 'https://api.example/repos/owner/repository/issues/2093',
@@ -196,6 +217,104 @@ describe('Given the issues of the quarantined tests', () => {
       fetch: async () => ({ status: 503, ok: false }),
     });
     await assert.rejects(lookup(1), /503/);
+  });
+});
+
+describe('Given an entry past its 48 h', () => {
+  const STALE = entry({ since: '2026-11-25T11:59:59Z' });
+  const open = async () => ({ found: true, state: 'open' });
+
+  test('when a pull request is checked, then the entry fails the check', async () => {
+    const verdict = await checkEntries([STALE], {
+      now: NOW,
+      mode: 'pull_request',
+      lookup: open,
+    });
+    assert.match(verdict.errors.join('\n'), /more than 48 h/);
+    assert.deepEqual(verdict.warnings, []);
+  });
+
+  test('when a push to main is checked, then the entry only warns and the check passes', async () => {
+    const verdict = await checkEntries([STALE], {
+      now: NOW,
+      mode: 'push',
+      lookup: open,
+    });
+    assert.deepEqual(verdict.errors, []);
+    assert.match(verdict.warnings.join('\n'), /more than 48 h.*#2093/);
+  });
+
+  test('when the nightly checks it, then the entry fails the check', async () => {
+    const verdict = await checkEntries([STALE], {
+      now: NOW,
+      mode: 'nightly',
+      lookup: open,
+    });
+    assert.match(verdict.errors.join('\n'), /more than 48 h/);
+    assert.deepEqual(verdict.warnings, []);
+  });
+
+  test('when any mode checks it, then the overdue entries are named for a report', async () => {
+    for (const mode of ['pull_request', 'push', 'nightly']) {
+      const verdict = await checkEntries([STALE, entry({ title: ['Given a fresh', 'when ok'] })], {
+        now: NOW,
+        mode,
+        lookup: open,
+      });
+      assert.equal(verdict.overdue.length, 1);
+      assert.match(verdict.overdue[0], /dialog-back\.spec\.ts.*#2093/);
+    }
+  });
+
+  test('when no mode or an unknown one is given, then the check refuses to guess', async () => {
+    await assert.rejects(checkEntries([STALE], { now: NOW, lookup: open }), /mode/);
+    await assert.rejects(
+      checkEntries([STALE], { now: NOW, mode: 'schedule', lookup: open }),
+      /mode/,
+    );
+  });
+});
+
+describe('Given a push to main', () => {
+  const check = (entries, lookup = async () => ({ found: true, state: 'open' })) =>
+    checkEntries(entries, { now: NOW, mode: 'push', lookup });
+
+  test('when six tests are listed, then the check still fails', async () => {
+    const entries = Array.from({ length: 6 }, (_, index) =>
+      entry({
+        title: ['Given a dialog open', `when case ${index}, then it closes`],
+      }),
+    );
+    assert.match((await check(entries)).errors.join('\n'), /at most 5/);
+  });
+
+  test('when an issue is missing or closed, then the check still fails', async () => {
+    assert.match(
+      (await check([entry()], async () => ({ found: false }))).errors.join('\n'),
+      /does not exist/,
+    );
+    assert.match(
+      (await check([entry()], async () => ({ found: true, state: 'closed' }))).errors.join('\n'),
+      /is closed/,
+    );
+  });
+
+  test('when an entry entered in the future or has an invalid time, then the check still fails', async () => {
+    assert.match(
+      (await check([entry({ since: '2026-11-27T12:00:01Z' })])).errors.join('\n'),
+      /in the future/,
+    );
+    assert.match((await check([entry({ since: 'yesterday' })])).errors.join('\n'), /since/);
+  });
+
+  test('when an entry is stale and its issue closed, then the closed issue fails and the age only warns', async () => {
+    const verdict = await check([entry({ since: '2026-11-25T11:59:59Z' })], async () => ({
+      found: true,
+      state: 'closed',
+    }));
+    assert.match(verdict.errors.join('\n'), /is closed/);
+    assert.doesNotMatch(verdict.errors.join('\n'), /48 h/);
+    assert.match(verdict.warnings.join('\n'), /48 h/);
   });
 });
 
@@ -255,26 +374,108 @@ describe('Given the command line', () => {
   }
 
   test('when the list is empty, then the entries pass without asking GitHub', () => {
-    const result = run(['entries', write('quarantine.json', [])]);
+    const result = run(['entries', write('quarantine.json', []), '--mode=pull_request']);
     assert.equal(result.status, 0, result.output);
     assert.match(result.output, /No end-to-end test is in quarantine/);
   });
 
-  test('when an entry is past its 48 h, then the entries fail by the clock of the run', () => {
-    const quarantine = write('quarantine.json', [entry({ since: '2020-01-01T00:00:00Z' })]);
-    const result = run(['entries', quarantine], {
-      GH_TOKEN: 'token-value',
-      GITHUB_REPOSITORY: 'o/r',
+  async function withGitHub(states, action) {
+    const server = createServer((request, response) => {
+      const number = request.url.match(/^\/repos\/o\/r\/issues\/(\d+)$/)?.[1];
+      if (number === undefined || !(number in states)) {
+        response.writeHead(404).end();
+        return;
+      }
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ state: states[number] }));
     });
-    assert.equal(result.status, 1);
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    try {
+      return await action({
+        GH_TOKEN: 'token-value',
+        GITHUB_REPOSITORY: 'o/r',
+        GITHUB_API_URL: `http://127.0.0.1:${server.address().port}`,
+      });
+    } finally {
+      server.close();
+    }
+  }
+
+  function runAsync(args, env) {
+    return new Promise((resolve) => {
+      const child = spawn(process.execPath, [SCRIPT, ...args], {
+        env: { PATH: process.env.PATH, ...env },
+      });
+      let output = '';
+      child.stdout.on('data', (chunk) => (output += chunk));
+      child.stderr.on('data', (chunk) => (output += chunk));
+      child.on('close', (status) => resolve({ status, output }));
+    });
+  }
+
+  const stale = () => write('quarantine.json', [entry({ since: '2020-01-01T00:00:00Z' })]);
+
+  test('when the entries are checked without a mode, then the command refuses to guess', () => {
+    const result = run(['entries', write('quarantine.json', [])]);
+    assert.equal(result.status, 2);
+    assert.match(result.output, /--mode=pull_request\|push\|nightly/);
+  });
+
+  test('when a pull request finds an entry past its 48 h, then the entries fail by the clock of the run', async () => {
+    const result = await withGitHub({ 2093: 'open' }, (env) =>
+      runAsync(['entries', stale(), '--mode=pull_request'], env),
+    );
+    assert.equal(result.status, 1, result.output);
     assert.match(result.output, /::error::.*more than 48 h/);
+  });
+
+  test('when a push to main finds an entry past its 48 h, then it warns naming the entry and its issue and passes', async () => {
+    const result = await withGitHub({ 2093: 'open' }, (env) =>
+      runAsync(['entries', stale(), '--mode=push'], env),
+    );
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.output, /::warning::.*dialog-back\.spec\.ts.*more than 48 h.*#2093/);
+    assert.doesNotMatch(result.output, /::error::/);
+  });
+
+  test('when a push to main finds a closed issue, then the entries still fail', async () => {
+    const result = await withGitHub({ 2093: 'closed' }, (env) =>
+      runAsync(['entries', stale(), '--mode=push'], env),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*#2093 is closed/);
+  });
+
+  test('when the nightly finds an entry past its 48 h, then it fails and writes the overdue entries for its issue', async () => {
+    const overdue = join(folder, 'overdue.txt');
+    const result = await withGitHub({ 2093: 'open' }, (env) =>
+      runAsync(['entries', stale(), '--mode=nightly', `--overdue=${overdue}`], env),
+    );
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.output, /::error::.*more than 48 h/);
+    assert.match(
+      readFileSync(overdue, 'utf8'),
+      /^\[iphone\] e2e\/dialog-back\.spec\.ts.*#2093.*\n$/,
+    );
+  });
+
+  test('when the nightly finds no entry past its 48 h, then it passes and the overdue file stays empty', async () => {
+    const overdue = join(folder, 'overdue.txt');
+    const fresh = write('quarantine.json', [
+      entry({ since: new Date().toISOString().replace(/\.\d+Z$/, 'Z') }),
+    ]);
+    const result = await withGitHub({ 2093: 'open' }, (env) =>
+      runAsync(['entries', fresh, '--mode=nightly', `--overdue=${overdue}`], env),
+    );
+    assert.equal(result.status, 0, result.output);
+    assert.equal(readFileSync(overdue, 'utf8'), '');
   });
 
   test('when tests are listed but no token is given, then the entries fail', () => {
     const quarantine = write('quarantine.json', [
       entry({ since: new Date().toISOString().replace(/\.\d+Z$/, 'Z') }),
     ]);
-    const result = run(['entries', quarantine]);
+    const result = run(['entries', quarantine, '--mode=push']);
     assert.equal(result.status, 1);
     assert.match(result.output, /::error::.*GH_TOKEN/);
   });
