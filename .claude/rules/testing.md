@@ -19,6 +19,11 @@ Happy path and each rule as scenarios; validation and problem types; 401 without
 ## Frontend e2e
 - No fixed waits: a Playwright test waits on state the page exposes (`expect`, `expect.poll`, `toPass`, `e2e/settled.ts`); a wait for time itself waits on the page's clock (`performance.now()`), as `dialog-back.spec.ts` rests a finger past the flick window. Lint refuses `waitForTimeout` in `e2e/`, called, bracketed or destructured (`no-restricted-syntax`, `scripts/eslint-fixed-waits.test.mjs`) except in `e2e/fixed-waits.ts`, whose `waitWhileNothingMayHappen(page, ms)` is the one way to wait a fixed time, only in a test that proves nothing happens (a page that does not reload); no `eslint-disable` directive, which is a comment (ESLint runs with `noInlineConfig`). A `setTimeout` in e2e only bounds a wait, delays a mock's answer, flushes a task, throws a planted error from a task of its own or paces a poll of observable state, never stands in for one.
 
+## Quarantine of flaky e2e tests (Jakub 2026-11-27, #2125)
+- A team lead may move a known flaky e2e test with an open issue into `frontend/e2e/quarantine.json`, one entry per test with its `since` time, in a PR that names the issue and declares the file (`Výjimka:`). At most 5 entries. Each is fixed within 48 h of its `since`; past that its fix comes before other work.
+- The listed tests keep running in the job `e2e (karanténa)`, which does not block `gate`; the shards leave out exactly them, and the inventory keeps them. The PR that fixes one removes its entry and closes its issue.
+- `scripts/e2e-quarantine.mjs` in the `frontend` job fails `gate` on a sixth entry, an entry whose issue is missing or closed, one past 48 h by the CI clock, or one naming no test. How to add an entry: `testing-frontend.md`.
+
 ## Connector (`mcp/`)
 - Vitest specs in `mcp/test/*.spec.ts`, same naming (`describe('Given …')` → `it('when …, then …')`); the backend is `test/fake-backend.ts`, never a real one.
 
