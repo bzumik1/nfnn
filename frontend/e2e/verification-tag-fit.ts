@@ -42,15 +42,12 @@ function giftsOf(items: readonly Gift[]): DonorApiMock {
   };
 }
 
-function verificationBeside(widest: Gift): DonorApiMock {
+const PAIRED_BY_ACCOUNT = { pairedBy: 'SENDER_ACCOUNT', senderAccount: '19-2000145399/0800' };
+
+function verificationBeside(widest: Gift, pairing: Record<string, unknown> = {}): DonorApiMock {
   return giftsOf([
     gift(4, '2026-03-15', 50000),
-    gift(3, '2026-02-10', 100, {
-      accountVerification: true,
-      receiptAvailable: false,
-      pairedBy: 'SENDER_ACCOUNT',
-      senderAccount: '19-2000145399/0800',
-    }),
+    gift(3, '2026-02-10', 100, { accountVerification: true, receiptAvailable: false, ...pairing }),
     widest,
     gift(1, '2024-06-20', 30000, { receiptAvailable: false }),
   ]);
@@ -58,8 +55,8 @@ function verificationBeside(widest: Gift): DonorApiMock {
 
 export const VERIFICATION_BESIDE_WIDEST_AMOUNTS = [
   {
-    name: 'a gift of 999 999 Kč, the widest amount of the ordinary column',
-    gifts: verificationBeside(gift(2, '2025-06-10', 99999900)),
+    name: 'a gift of 999 999 Kč (the widest ordinary amount; the verification paired by its account)',
+    gifts: verificationBeside(gift(2, '2025-06-10', 99999900), PAIRED_BY_ACCOUNT),
     widest: /^999\s999\sKč$/,
   },
   {
