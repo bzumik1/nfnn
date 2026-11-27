@@ -6,5 +6,13 @@
     "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they open Jiná částka, then its field unfolds over the token duration instead of jumping in at once (in Chromium over several frames, in WebKit by one grid-template-rows transition from 0fr to 1fr, not discrete, lasting --duration-base with the motion.expand easing, whose transitionend comes at least 80 % of that duration after the click while the fold stays rendered)",
     "reason": "PR #2133 (#2132): WebKit may paint no frame during the fold on a CI runner, so the iphone project proves the fold by its one grid-template-rows transition, as device-copy does (R106, #1515); Chromium keeps the frame-by-frame height",
     "contract": "docs/frontend-overview.md, Testing a height that folds in WebKit"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they open Jiná částka, then its field unfolds over several frames instead of jumping in at once #2",
+    "replacement": "e2e/donate-qr.spec.ts > Given a visitor on the Přispět page > when they open Jiná částka, then its field unfolds over the token duration instead of jumping in at once (in Chromium over several frames, in WebKit by one grid-template-rows transition from 0fr to 1fr, not discrete, lasting --duration-base with the motion.expand easing, whose transitionend comes at least 80 % of that duration after the click while the fold stays rendered) #2",
+    "reason": "PR #2133 (#2132): WebKit may paint no frame during the fold on a CI runner, so the iphone project proves the fold by its one grid-template-rows transition, as device-copy does (R106, #1515); Chromium keeps the frame-by-frame height",
+    "contract": "docs/frontend-overview.md, Testing a height that folds in WebKit"
   }
 ]
