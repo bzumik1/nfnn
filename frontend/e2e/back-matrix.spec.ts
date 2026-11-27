@@ -71,14 +71,13 @@ import {
   WIDTH,
 } from './back-matrix';
 import { expect, test, testWithoutBrowser } from './fixtures';
+import { launchOptionsOf } from './launch-options';
 import { runnerSpeedProblems, startMotionGate } from './runner-speed';
-
-const ONE_GARBAGE_COLLECTOR_THREAD = '--js-flags=--single-threaded-gc';
 
 test.use({
   launchOptions: [
-    async ({ browserName }, use) =>
-      use(browserName === 'chromium' ? { args: [ONE_GARBAGE_COLLECTOR_THREAD] } : {}),
+    async ({ browserName }, use, workerInfo) =>
+      use(launchOptionsOf(browserName, workerInfo.project.name)),
     { scope: 'worker' },
   ],
 });
