@@ -729,6 +729,8 @@ describe('Given a change to a script that decides a required check', () => {
     'frontend/e2e/stamp-lag.json',
     'frontend/e2e/quarantine.json',
     'scripts/e2e-quarantine.mjs',
+    'frontend/e2e/motion-known-findings.json',
+    'scripts/motion-known-findings.mjs',
     'frontend/eslint-confinement.js',
     'scripts/agent-context-budget.mjs',
     'mcp/src/tool-list.ts',
