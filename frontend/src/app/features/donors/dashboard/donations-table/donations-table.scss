@@ -53,6 +53,7 @@ th {
 
 tbody tr {
   border-top: 1px solid var(--color-divider);
+  break-inside: avoid;
 
   @include motion.hover(background-color) {
     background-color: var(--color-surface-alt);
@@ -120,10 +121,25 @@ th.purpose-header {
   text-align: start;
 }
 
-td.date .verification-tag {
+td.date {
+  position: relative;
+}
+
+td.date > .verification-tag {
+  position: absolute;
+  inset-block-end: var(--space-3-5);
+  inset-inline-start: var(--card-inset);
+  inline-size: max-content;
+  max-inline-size: none;
+  white-space: nowrap;
+}
+
+tr.with-verification-note td::after {
+  content: '';
   display: block;
-  inline-size: fit-content;
-  margin-top: var(--space-1-5);
+  block-size: calc(var(--space-1-5) + 1lh + 2 * var(--space-0-75));
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
 }
 
 td.date .date-status {
@@ -254,6 +270,19 @@ td .receipt-diagnostics {
     align-self: center;
     font-weight: var(--weight-semibold);
     color: var(--color-text);
+  }
+
+  td.date > .verification-tag {
+    position: static;
+    display: block;
+    inline-size: fit-content;
+    max-inline-size: 100%;
+    margin-top: var(--space-1-5);
+    white-space: normal;
+  }
+
+  tr.with-verification-note td::after {
+    display: none;
   }
 
   td.purpose-cell {
