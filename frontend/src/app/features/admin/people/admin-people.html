@@ -43,49 +43,49 @@
                     @if (member.role) {
                       <p class="ui-person-row__meta">{{ member.role }}</p>
                     }
-                    <ul class="ui-person-row__badges person-badges">
-                      @if (member.featured) {
-                        <li class="ui-badge ui-badge--accent" i18n="@@admin.people.badge.featured">
-                          Karta s&nbsp;portrétem
-                        </li>
-                      }
-                      @if (member.onBoard) {
-                        <li class="person-board">
-                          <span class="ui-badge ui-badge--success" i18n="@@admin.people.badge.board"
-                            >Ve správní radě</span
-                          >
-                          @if (member.boardNote; as note) {
-                            &ngsp;<span class="person-board-note">({{ note }})</span>
-                          }
-                        </li>
-                      }
-                      @if (signs(member)) {
-                        <li class="ui-badge ui-badge--success" i18n="@@admin.people.badge.receipts">
-                          Podepisuje potvrzení
-                        </li>
-                      }
-                      @if (member.linkedToAccount) {
-                        <li class="ui-badge ui-badge--success" i18n="@@admin.people.badge.linked">
-                          Propojeno s&nbsp;účtem na webu
-                        </li>
-                      }
-                    </ul>
-                    @if (signatureUrlOf(member); as url) {
-                      <div class="person-signatures">
-                        <figure class="person-signature">
-                          <figcaption i18n="@@admin.people.list.webSignature">Podpis</figcaption>
-                          <img
-                            class="person-signature-ink ui-ink"
-                            loading="lazy"
-                            [src]="url"
-                            [alt]="signatureAlt(member)"
-                            [attr.width]="member.signature?.width"
-                            [attr.height]="member.signature?.height"
-                          />
-                        </figure>
-                      </div>
-                    }
                   </div>
+                  <ul class="ui-person-row__badges person-badges">
+                    @if (member.featured) {
+                      <li class="ui-badge ui-badge--accent" i18n="@@admin.people.badge.featured">
+                        Karta s&nbsp;portrétem
+                      </li>
+                    }
+                    @if (member.onBoard) {
+                      <li class="person-board">
+                        <span class="ui-badge ui-badge--success" i18n="@@admin.people.badge.board"
+                          >Ve správní radě</span
+                        >
+                        @if (member.boardNote; as note) {
+                          &ngsp;<span class="person-board-note">({{ note }})</span>
+                        }
+                      </li>
+                    }
+                    @if (signs(member)) {
+                      <li class="ui-badge ui-badge--success" i18n="@@admin.people.badge.receipts">
+                        Podepisuje potvrzení
+                      </li>
+                    }
+                    @if (member.linkedToAccount) {
+                      <li class="ui-badge ui-badge--success" i18n="@@admin.people.badge.linked">
+                        Propojeno s&nbsp;účtem na webu
+                      </li>
+                    }
+                  </ul>
+                  @if (signatureUrlOf(member); as url) {
+                    <div class="person-signatures">
+                      <figure class="person-signature">
+                        <figcaption i18n="@@admin.people.list.webSignature">Podpis</figcaption>
+                        <img
+                          class="person-signature-ink ui-ink"
+                          loading="lazy"
+                          [src]="url"
+                          [alt]="signatureAlt(member)"
+                          [attr.width]="member.signature?.width"
+                          [attr.height]="member.signature?.height"
+                        />
+                      </figure>
+                    </div>
+                  }
                   <div class="ui-person-row__actions">
                     <button
                       appNeedsConnection

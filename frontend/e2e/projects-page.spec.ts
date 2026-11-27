@@ -161,6 +161,33 @@ test.describe('Given a visitor on the Pomáháme tab', () => {
   });
 });
 
+test.describe('Given a visitor on Pomáháme on a computer', () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await publishedStories(page);
+  });
+
+  test('when it opens, then the summary stands beside the intro no wider than its measure', async ({
+    page,
+  }) => {
+    await page.goto('/projekty');
+    await expect(page.locator('.summary-tile--total')).toBeVisible();
+
+    const placed = await page.evaluate(() => {
+      const intro = document.querySelector('.stories-intro')!.getBoundingClientRect();
+      const summary = document.querySelector('.summary')!.getBoundingClientRect();
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      return {
+        beside: summary.top < intro.bottom && summary.left >= intro.right,
+        widerThanItsMeasure: summary.width > 40 * rem + 0.5,
+      };
+    });
+    expect(placed).toEqual({ beside: true, widerThanItsMeasure: false });
+  });
+});
+
 async function stripPlacement(page: Page, year: number) {
   const strip = page
     .locator('section.year')
@@ -208,6 +235,19 @@ test.describe('Given a visitor on Pomáháme with every year on an iPad upright'
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
     await publishedStories(page);
+  });
+
+  test('when it opens, then the summary under the intro runs to the column edge like the year under it', async ({
+    page,
+  }) => {
+    await page.goto('/projekty');
+    await expect(page.locator('.summary-tile--total')).toBeVisible();
+
+    const edges = await page.evaluate(() => ({
+      summary: Math.round(document.querySelector('.summary')!.getBoundingClientRect().right),
+      year: Math.round(document.querySelector('section.year')!.getBoundingClientRect().right),
+    }));
+    expect(edges.summary).toBe(edges.year);
   });
 
   test('when the strips of 2025 and 2024 show, then each fits the column without a tile cut at its edge and both draw their tiles one size', async ({

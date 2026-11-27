@@ -1,3 +1,4 @@
+import { KEYBOARD_OPEN_CLASS } from '../../../core/layout/soft-keyboard';
 import { keepRoomForFloatingNotice } from './floating-notice-room';
 
 const NOTHING_HELD = { holding: false };
@@ -23,7 +24,7 @@ describe('Given floating bars at the bottom of the screen', () => {
 
   afterEach(() => {
     releases.splice(0).forEach((release) => release());
-    root.classList.remove('has-floating-notice');
+    root.classList.remove('has-floating-notice', KEYBOARD_OPEN_CLASS);
     root.style.removeProperty('--floating-notice-height');
     document.body.replaceChildren();
   });
@@ -235,6 +236,16 @@ describe('Given floating bars at the bottom of the screen', () => {
       nextFrame();
 
       expect(scrolls).toEqual([{ top: 780 - BAR_TOP + BAR_GAP, behavior: 'instant' }]);
+    });
+
+    it('when a field behind the bar takes the focus while the on-screen keyboard is up and the bar is clipped away, then the page does not move', () => {
+      const { scrolls, focus, nextFrame } = pageWithFocus();
+      root.classList.add(KEYBOARD_OPEN_CLASS);
+
+      focus(control(740, 780));
+      nextFrame();
+
+      expect(scrolls).toEqual([]);
     });
 
     it('when a control taller than the room between the header and the bar takes the focus with its bottom under the bar, then the page scrolls only until its top reaches the top of the visible band', () => {

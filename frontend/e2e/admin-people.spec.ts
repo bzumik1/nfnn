@@ -224,6 +224,53 @@ test.describe('Given an administrator with two people of the foundation in order
   });
 });
 
+test.describe('Given an administrator with a person of three tags on an upright iPad', () => {
+  test.use({ viewport: { width: 820, height: 1180 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await servePhotos(page);
+    await rememberedSession(page);
+    await page.route(
+      (url) => url.pathname === PEOPLE,
+      (route) =>
+        route.fulfill({
+          json: {
+            members: [member(EVA)],
+            note: null,
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === SIGNATORY,
+      (route) => route.fulfill({ json: signatory({ personId: PERSON_ID, name: EVA.name }) }),
+    );
+  });
+
+  test('when they read the list of people, then the buttons stand on the name’s line and the tags run in a line under the name', async ({
+    page,
+  }) => {
+    await page.goto('/sprava/lide-fondu');
+    const row = page.locator('.person-row');
+    const tags = row.locator('.person-badges > li');
+    await expect(tags).toHaveText(['Karta s portrétem', 'Ve správní radě', 'Podepisuje potvrzení']);
+    await page.evaluate(() => document.fonts.ready);
+
+    const name = (await row.locator('.person-name').boundingBox())!;
+    const actions = (await row.locator('.ui-person-row__actions').boundingBox())!;
+    expect(actions.y).toBeLessThan(name.y + name.height);
+    const tops = await tags.evaluateAll((items) =>
+      items.map((item) => Math.round(item.getBoundingClientRect().top)),
+    );
+    expect(new Set(tops).size).toBeLessThanOrEqual(2);
+    const firstTag = (await tags.first().boundingBox())!;
+    expect(Math.abs(firstTag.x - name.x)).toBeLessThanOrEqual(1);
+  });
+});
+
 test.describe('Given an administrator who chooses who signs the receipts', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
