@@ -7,6 +7,12 @@ import {
   rememberedDonorSession,
   secondFactorEnrolment,
 } from './donor-session';
+import {
+  chunkLoadNotice,
+  openAboutThenLoseNewChunks,
+  openPolicyFromContact,
+  withoutSessionStorage,
+} from './lost-chunks';
 
 const SMALL_PHONE = { width: 375, height: 667 };
 const KEYBOARD_HEIGHT = 262;
@@ -172,6 +178,25 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
     await page.getByRole('radio', { name: 'Jiná částka' }).tap();
 
     await expect(page.locator('#donate-custom-amount')).toBeFocused();
+  });
+  test('when the chunk-load notice shows and the visitor types into a field of the contact form, then the field keeps the focus once the keyboard is up and takes what is typed', async ({
+    page,
+  }) => {
+    await withoutSessionStorage(page);
+    await openAboutThenLoseNewChunks(page);
+    await openPolicyFromContact(page);
+    await expect(chunkLoadNotice(page)).toBeVisible();
+    await expect(chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' })).toBeFocused();
+    const field = page.locator('#contact-name');
+    await field.focus();
+    await expect(field).toBeFocused();
+
+    await showKeyboard(page);
+    await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toBeHidden();
+    await page.keyboard.type('Jana');
+
+    await expect(field).toBeFocused();
+    await expect(field).toHaveValue('Jana');
   });
 });
 

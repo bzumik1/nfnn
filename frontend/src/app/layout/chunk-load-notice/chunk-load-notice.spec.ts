@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NavigationError, provideRouter, Router } from '@angular/router';
 
 import { Connectivity } from '../../core/connectivity/connectivity';
+import { KEYBOARD_OPEN_CLASS, SoftKeyboard } from '../../core/layout/soft-keyboard';
 import { ExternalNavigation } from '../../core/navigation/external-navigation';
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
 import { ChunkProbe } from '../../core/reload/chunk-probe';
@@ -186,6 +187,41 @@ describe('Given the chunk-load notice', () => {
 
       expect(element().querySelector('.chunk-load-bar')).toBeNull();
       expect(document.documentElement.classList).not.toContain('has-floating-notice');
+    });
+  });
+
+  describe('when a later page could not be loaded on a phone whose on-screen keyboard shortens the visual viewport', () => {
+    const screenHeight = 667;
+    let viewport: EventTarget & { height: number; offsetTop: number };
+    let field: HTMLInputElement;
+
+    beforeEach(async () => {
+      viewport = Object.assign(new EventTarget(), { height: screenHeight, offsetTop: 0 });
+      Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: screenHeight });
+      TestBed.inject(SoftKeyboard);
+      await TestBed.inject(Router).navigateByUrl('/jinam');
+      await failToLoad();
+      field = document.createElement('input');
+      document.body.append(field);
+    });
+
+    afterEach(() => {
+      field.remove();
+      delete (window as { visualViewport?: unknown }).visualViewport;
+      document.documentElement.classList.remove(KEYBOARD_OPEN_CLASS);
+    });
+
+    it('and the visitor focuses a text field and the keyboard comes up, then the focus stays in the field through the next render', async () => {
+      expect(document.activeElement).toBe(reloadButton());
+
+      field.focus();
+      viewport.height = screenHeight - 262;
+      viewport.dispatchEvent(new Event('resize'));
+      await fixture.whenStable();
+
+      expect(TestBed.inject(SoftKeyboard).isOpen()).toBe(true);
+      expect(document.activeElement).toBe(field);
     });
   });
 
