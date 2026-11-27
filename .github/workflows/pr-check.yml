@@ -287,6 +287,9 @@ jobs:
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: read
     defaults:
       run:
         working-directory: frontend
@@ -347,6 +350,18 @@ jobs:
           path: ${{ runner.temp }}/inventory/
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'push' && 90 || 3 }}
+
+      - name: Each quarantined end-to-end test exists, and the shards leave out exactly those
+        run: |
+          node ../scripts/e2e-quarantine.mjs test-list e2e/quarantine.json > "$RUNNER_TEMP/e2e-quarantine.txt"
+          npx playwright test --list --project='*' --reporter=json --test-list-invert "$RUNNER_TEMP/e2e-quarantine.txt" > "$RUNNER_TEMP/e2e-without-quarantine.json"
+          node ../scripts/e2e-quarantine.mjs tests e2e/quarantine.json "$RUNNER_TEMP/inventory/frontend-playwright.json" "$RUNNER_TEMP/e2e-without-quarantine.json"
+
+      - name: Every quarantined end-to-end test has an open issue and entered at most 48 hours ago (on main only a warning), at most five of them
+        run: node ../scripts/e2e-quarantine.mjs entries e2e/quarantine.json --mode="$EVENT_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
 
       - name: Build with the control theme
         run: npx ng build --configuration=production,control-theme --output-path=dist/control-theme
@@ -419,8 +434,11 @@ jobs:
           cat "$RUNNER_TEMP/playwright-install.log"
           [ "$(cat "$RUNNER_TEMP/playwright-install.status" 2>/dev/null)" = 0 ] || { echo "::error::Playwright's browsers were not installed (log above)"; exit 1; }
 
-      - name: End-to-end and accessibility tests of this shard
-        run: set -f; npx playwright test $PROJECTS --shard="$SHARD" --reporter=github,blob
+      - name: End-to-end and accessibility tests of this shard, without the quarantined ones
+        run: |
+          set -f
+          node ../scripts/e2e-quarantine.mjs test-list e2e/quarantine.json > "$RUNNER_TEMP/e2e-quarantine.txt"
+          npx playwright test $PROJECTS --shard="$SHARD" --test-list-invert "$RUNNER_TEMP/e2e-quarantine.txt" --reporter=github,blob
         env:
           PROJECTS: ${{ matrix.projects }}
           SHARD: ${{ matrix.shard }}
@@ -435,6 +453,55 @@ jobs:
           path: frontend/blob-report/
           if-no-files-found: error
           retention-days: 1
+
+  e2e-quarantine:
+    name: e2e (karanténa)
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.full == 'true'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: List the quarantined tests, which run here without blocking gate
+        id: quarantine
+        run: |
+          node ../scripts/e2e-quarantine.mjs test-list e2e/quarantine.json > "$RUNNER_TEMP/e2e-quarantine.txt"
+          if [ -s "$RUNNER_TEMP/e2e-quarantine.txt" ]; then
+            cat "$RUNNER_TEMP/e2e-quarantine.txt"
+            echo "listed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No end-to-end test is in quarantine."
+          fi
+
+      - if: steps.quarantine.outputs.listed == 'true'
+        run: npm ci
+
+      - name: Install the browsers of every shard
+        if: steps.quarantine.outputs.listed == 'true'
+        run: scripts/install-playwright-browsers.sh --only-shell webkit chromium
+
+      - name: Build
+        if: steps.quarantine.outputs.listed == 'true'
+        run: npm run build
+
+      - name: The quarantined tests, each in its own project
+        if: steps.quarantine.outputs.listed == 'true'
+        run: npx playwright test --test-list "$RUNNER_TEMP/e2e-quarantine.txt"
+        env:
+          E2E_DIST: dist/frontend/browser
 
   pwa:
     name: Web jako aplikace
@@ -1825,12 +1892,13 @@ jobs:
         working-directory: frontend
         run: node scripts/motion-judged-summary.mjs "$RUNNER_TEMP/e2e-merged.json" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Every listed end-to-end test ran in exactly one shard
+      - name: Every listed end-to-end test but the quarantined ones ran in exactly one shard
         id: shards
         if: ${{ !cancelled() && steps.device-report.outcome == 'success' }}
         working-directory: frontend
         run: |
-          npx playwright test --list --reporter=json > "$RUNNER_TEMP/e2e-listed.json"
+          node ../scripts/e2e-quarantine.mjs test-list e2e/quarantine.json > "$RUNNER_TEMP/e2e-quarantine.txt"
+          npx playwright test --list --reporter=json --test-list-invert "$RUNNER_TEMP/e2e-quarantine.txt" > "$RUNNER_TEMP/e2e-listed.json"
           node scripts/check-e2e-shards.mjs "$RUNNER_TEMP/e2e-listed.json" "$RUNNER_TEMP/e2e-merged.json"
 
       - name: Every job passed, or the change touches no code and only the agent context ran
