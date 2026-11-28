@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NavigationError, provideRouter, Router } from '@angular/router';
 
 import { Connectivity } from '../../core/connectivity/connectivity';
+import { KEYBOARD_OPEN_CLASS, SoftKeyboard } from '../../core/layout/soft-keyboard';
 import { ExternalNavigation } from '../../core/navigation/external-navigation';
 import { ChunkLoadRecovery } from '../../core/reload/chunk-load-recovery';
 import { ChunkProbe } from '../../core/reload/chunk-probe';
@@ -10,6 +11,7 @@ import { ReloadGuard } from '../../core/reload/reload-guard';
 import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { ChunkLoadNotice } from './chunk-load-notice';
 import { withOrdinarySpaces } from '../../../testing/ordinary-spaces';
+import { restoreWindowProperties } from '../../../testing/window-properties';
 
 @Component({ template: '' })
 class Page {}
@@ -186,6 +188,69 @@ describe('Given the chunk-load notice', () => {
 
       expect(element().querySelector('.chunk-load-bar')).toBeNull();
       expect(document.documentElement.classList).not.toContain('has-floating-notice');
+    });
+  });
+
+  describe('on a phone whose on-screen keyboard shortens the visual viewport', () => {
+    const screenHeight = 667;
+    let viewport: EventTarget & { height: number; offsetTop: number };
+    let field: HTMLInputElement;
+    let replacedWindowProperties: Map<string, PropertyDescriptor | undefined>;
+
+    beforeEach(() => {
+      replacedWindowProperties = new Map(
+        ['innerHeight', 'visualViewport'].map(
+          (name) => [name, Object.getOwnPropertyDescriptor(window, name)] as const,
+        ),
+      );
+      viewport = Object.assign(new EventTarget(), { height: screenHeight, offsetTop: 0 });
+      Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: screenHeight });
+      TestBed.inject(SoftKeyboard);
+      field = document.createElement('input');
+    });
+
+    afterEach(() => {
+      field.remove();
+      restoreWindowProperties(window, replacedWindowProperties);
+      document.documentElement.classList.remove(KEYBOARD_OPEN_CLASS);
+    });
+
+    async function focusTheFieldAndRaiseTheKeyboard(): Promise<void> {
+      document.body.append(field);
+      field.focus();
+      viewport.height = screenHeight - 262;
+      viewport.dispatchEvent(new Event('resize'));
+      await fixture.whenStable();
+    }
+
+    describe('when a later page could not be loaded', () => {
+      beforeEach(async () => {
+        await TestBed.inject(Router).navigateByUrl('/jinam');
+        await failToLoad();
+      });
+
+      it('and the visitor focuses a text field and the keyboard comes up, then the focus stays in the field through the next render', async () => {
+        expect(document.activeElement).toBe(reloadButton());
+
+        await focusTheFieldAndRaiseTheKeyboard();
+
+        expect(TestBed.inject(SoftKeyboard).isOpen()).toBe(true);
+        expect(document.activeElement).toBe(field);
+      });
+    });
+
+    describe('when the first page could not be loaded', () => {
+      beforeEach(failToLoad);
+
+      it('and the visitor focuses a text field and the keyboard comes up, then the focus stays in the field through the next render', async () => {
+        expect(document.activeElement).toBe(element().querySelector('main h1'));
+
+        await focusTheFieldAndRaiseTheKeyboard();
+
+        expect(TestBed.inject(SoftKeyboard).isOpen()).toBe(true);
+        expect(document.activeElement).toBe(field);
+      });
     });
   });
 
