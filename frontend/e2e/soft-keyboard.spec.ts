@@ -418,6 +418,19 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
     expect(await scrollTopAfterTwoFrames(page)).toBe(scrollTop);
   });
 
+  test('when the keyboard is up under the sign-in sheet and the phone paints no backdrop under the keyboard, as iOS does, then the part of the screen under the sheet shows the surface, not the page', async ({
+    page,
+  }) => {
+    await page.goto('/prispet');
+    await page.getByRole('main').getByRole('button', { name: 'Přihlásit se' }).click();
+    await page.locator('#login-email').tap();
+    await showKeyboard(page);
+    await expect(page.locator('html')).toHaveClass(/keyboard-open/);
+    await page.addStyleTag({ content: 'dialog::backdrop { display: none !important; }' });
+
+    await expect.poll(() => surfaceUnderTheSheet(page, KEYBOARD_HEIGHT / 2)).toBe(true);
+  });
+
   test('when the visitor taps Jiná částka, then the amount field takes the focus in the same tap', async ({
     page,
   }) => {
@@ -507,6 +520,42 @@ function dialogBox(dialog: Locator): Promise<{ top: number; height: number }> {
   });
 }
 
+function panelScrollTop(dialog: Locator): Promise<number> {
+  return dialog.evaluate((element) => element.querySelector('.dialog-panel')!.scrollTop);
+}
+
+async function surfaceUnderTheSheet(page: Page, depthBelowTheSheet: number): Promise<boolean> {
+  const shot = await page.screenshot({ animations: 'disabled' });
+  return page.evaluate(
+    async ({ base64, depth }) => {
+      const dialog = document.querySelector('dialog[open]')!;
+      const probe = new OffscreenCanvas(1, 1).getContext('2d', { willReadFrequently: true })!;
+      probe.fillStyle = getComputedStyle(document.documentElement)
+        .getPropertyValue('--color-surface')
+        .trim();
+      probe.fillRect(0, 0, 1, 1);
+      const surface = [...probe.getImageData(0, 0, 1, 1).data];
+      const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+      const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+      const image = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const context = image.getContext('2d', { willReadFrequently: true })!;
+      context.drawImage(bitmap, 0, 0);
+      const scale = bitmap.width / window.innerWidth;
+      const y = Math.floor((dialog.getBoundingClientRect().bottom + depth) * scale);
+      const pixels = context.getImageData(0, y, bitmap.width, 1).data;
+      for (let index = 0; index < pixels.length; index += 4) {
+        for (let channel = 0; channel < 3; channel++) {
+          if (Math.abs(pixels[index + channel] - surface[channel]) > 2) {
+            return false;
+          }
+        }
+      }
+      return true;
+    },
+    { base64: shot.toString('base64'), depth: depthBelowTheSheet },
+  );
+}
+
 function fieldOutsideItsSheet(code: Locator): Promise<string[]> {
   return code.evaluate((element) => {
     const field = element.closest('app-form-field')!.getBoundingClientRect();
@@ -554,6 +603,52 @@ function fieldOutsideTheShownPanel(code: Locator): Promise<string[]> {
     return problems;
   });
 }
+
+test.describe('Given a phone 390 × 844 whose on-screen keyboard covers the lower part of the screen, where Zneplatnit klíč shows its head and its code field together once the keyboard is gone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+  test.beforeEach(async ({ page }) => {
+    await standInForTheKeyboard(page);
+  });
+
+  test('when an administrator sends the empty code with the keyboard up and then taps Done, which blurs the field before the keyboard goes, then the sheet comes back to its start with its title and close button', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/settings',
+      (route) => route.fulfill({ json: adminSettings }),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/nastaveni');
+    await page.getByRole('button', { name: 'Zneplatnit klíč serveru…' }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
+    const code = dialog.getByLabel('Kód z aplikace');
+    await code.tap();
+    await page.evaluate(() => (window as KeyboardWindow).standInKeyboard?.show(370));
+    await dialog
+      .getByRole('button', { name: 'Zneplatnit klíč', exact: true })
+      .dispatchEvent('click');
+    await expect(dialog.getByText('Opište prosím kód z aplikace.')).toBeVisible();
+    await expect.poll(() => panelScrollTop(dialog)).toBeGreaterThan(0);
+
+    await code.evaluate((field) => field.blur());
+    await expect(page.locator('html')).not.toHaveClass(/keyboard-open/);
+    await hideKeyboard(page);
+
+    await expect.poll(() => panelScrollTop(dialog)).toBe(0);
+    await expect(dialog.getByRole('heading', { name: 'Zneplatnit klíč 21fe31df?' })).toBeInViewport(
+      {
+        ratio: 1,
+      },
+    );
+    await expect(dialog.getByRole('button', { name: 'Zavřít' })).toBeInViewport({ ratio: 1 });
+  });
+});
 
 test.describe('Given an iPhone SE whose keyboard pans the visual viewport under a fixed dialog, as the home-screen app does', () => {
   test.use({ viewport: SMALL_PHONE, hasTouch: true });
