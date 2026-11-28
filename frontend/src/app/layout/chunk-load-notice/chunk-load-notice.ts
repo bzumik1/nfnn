@@ -5,6 +5,7 @@ import {
   Component,
   ElementRef,
   inject,
+  untracked,
   viewChild,
 } from '@angular/core';
 
@@ -43,10 +44,12 @@ export class ChunkLoadNotice {
       if (!button || !message) {
         return;
       }
-      button.focus();
-      if (this.document.activeElement !== button) {
-        onCleanup(this.dialogAnnouncer.announce(message));
-      }
+      untracked(() => {
+        button.focus();
+        if (this.document.activeElement !== button) {
+          onCleanup(this.dialogAnnouncer.announce(message));
+        }
+      });
     });
     afterRenderEffect(() => {
       const heading = this.pageHeading()?.nativeElement;
@@ -54,7 +57,7 @@ export class ChunkLoadNotice {
         this.title.setTitle(
           $localize`:@@layout.chunk-load.pageTitle:Stránku se nepodařilo otevřít | Nová naděje – nadační fond`,
         );
-        heading.focus();
+        untracked(() => heading.focus());
       }
     });
     afterRenderEffect((onCleanup) => {
