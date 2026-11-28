@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates and an article opened from the news, which was kept behind it > when the app steps back to it, then the news moves in at once over the copy kept at the push, never waiting for the live news to be drawn and placed",
+    "replacement": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates and an article opened from the news, which was kept behind it > when the app steps back to it, then the news moves in only once the live news is placed, over a copy of the live news as main does, never over the copy kept at the push (#2088)",
+    "reason": "Round 43 (#2088): a step back moves over a copy of the live page taken once that page is placed, as main did before #1538, instead of over the copy kept at the push, which let the motion go before the page was rendered and started later than main on the phones",
+    "contract": "docs/frontend-overview.md, Motion (Round 43)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates and an article opened from the news, which was kept behind it > when the app steps back to it, then both copies lie in the cover before anything is scrolled or read, so the screen is laid out once",
+    "replacement": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates and an article opened from the news, which was kept behind it > when the app steps back to it, then the news moves in only once the live news is placed, over a copy of the live news as main does, never over the copy kept at the push (#2088)",
+    "reason": "Round 43 (#2088): a step back moves over a copy of the live page taken once that page is placed, as main did before #1538, instead of over the copy kept at the push, which let the motion go before the page was rendered and started later than main on the phones",
+    "contract": "docs/frontend-overview.md, Motion (Round 43)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates and an article opened from the news, which was kept behind it > when the news has moved in over its kept copy, then the cover stays until the live news is placed, and goes once it is",
+    "replacement": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates and an article opened from the news, which was kept behind it > when the app steps back to it, then the news moves in only once the live news is placed, over a copy of the live news as main does, never over the copy kept at the push (#2088)",
+    "reason": "Round 43 (#2088): a step back moves over a copy of the live page taken once that page is placed, as main did before #1538, instead of over the copy kept at the push, which let the motion go before the page was rendered and started later than main on the phones",
+    "contract": "docs/frontend-overview.md, Motion (Round 43)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates and an article opened from the news, which was kept behind it > when the live news is put back at another scroll than its kept copy showed, as after a cold launch whose page moved meanwhile, then the live news takes the copy’s scroll before the cover goes, so the list never jumps at the end (round 42)",
+    "replacement": "src/app/core/navigation/page-focus.spec.ts > Given a list of the administration that a step back returns to from the card it opened > when the list shows the link to the card at once > when the page above the row changed meanwhile, as Správa after a cold launch (#2088) > then a step back about to copy the list scrolls it so the row stands where it stood when the card opened, and leaves the focus to the return",
+    "reason": "Round 43 (#2088): a step back moves over a copy of the live page taken once that page is placed, as main did before #1538, instead of over the copy kept at the push, which let the motion go before the page was rendered and started later than main on the phones",
+    "contract": "docs/frontend-overview.md, Motion (Round 43)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/page-transitions.spec.ts > Given a phone that animates and an article opened from the news, which was kept behind it > when the live news is put back at the scroll its kept copy showed, then the step back leaves the scroll alone",
+    "replacement": "src/app/core/navigation/page-focus.spec.ts > Given a list of the administration that a step back returns to from the card it opened > when the list shows the link to the card at once > when the page above the row changed meanwhile, as Správa after a cold launch (#2088) > then a step back about to copy the list scrolls it so the row stands where it stood when the card opened, and leaves the focus to the return",
+    "reason": "Round 43 (#2088): a step back moves over a copy of the live page taken once that page is placed, as main did before #1538, instead of over the copy kept at the push, which let the motion go before the page was rendered and started later than main on the phones",
+    "contract": "docs/frontend-overview.md, Motion (Round 43)"
+  }
+]

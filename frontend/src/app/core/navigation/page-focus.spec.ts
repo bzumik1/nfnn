@@ -130,6 +130,45 @@ describe('Given a list of the administration that a step back returns to from th
       document.documentElement.style.scrollPaddingBottom = '';
     });
 
+    describe('when the page above the row changed meanwhile, as Správa after a cold launch (#2088)', () => {
+      let scrolledBy: ReturnType<typeof vi.fn<(options?: ScrollToOptions) => void>>;
+
+      async function placedByTheStepBackWithTheLinkMovedTo(top: number): Promise<void> {
+        let linkTop = 300;
+        link = row({ href: CARD });
+        link.getBoundingClientRect = () => new DOMRect(0, linkTop, 300, 56);
+        scope.append(link);
+        await openTheCard(link);
+        await stepBack();
+        linkTop = top;
+        scrolledBy = vi.fn<(options?: ScrollToOptions) => void>();
+        const scrolls = vi
+          .spyOn(window, 'scrollBy')
+          .mockImplementation(scrolledBy as typeof window.scrollBy);
+        onTestFinished(() => scrolls.mockRestore());
+        focus.placeReturnWhereLeft(scope);
+      }
+
+      it('then a step back about to copy the list scrolls it so the row stands where it stood when the card opened, and leaves the focus to the return', async () => {
+        await placedByTheStepBackWithTheLinkMovedTo(-76);
+
+        expect(scrolledBy).toHaveBeenCalledWith({ top: -376, behavior: 'instant' });
+        expect(document.activeElement).toBe(heading);
+      });
+
+      it('then a step back about to copy the list leaves a row that stands where it was left', async () => {
+        await placedByTheStepBackWithTheLinkMovedTo(300);
+
+        expect(scrolledBy).not.toHaveBeenCalled();
+      });
+
+      it('then a step back about to copy the list keeps the restored scroll while the row still shows, though it stands elsewhere than when the card opened, since the page above may still be settling (sprava-back-matrix, the scroll kept at 160 against 152 and 218)', async () => {
+        await placedByTheStepBackWithTheLinkMovedTo(429);
+
+        expect(scrolledBy).not.toHaveBeenCalled();
+      });
+    });
+
     it('then the link takes the focus from the heading without moving the page while the row shows', async () => {
       await returnWithTheLinkAt(300);
 

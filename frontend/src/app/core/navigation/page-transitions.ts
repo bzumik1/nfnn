@@ -71,11 +71,8 @@ export interface Running {
   readonly swiping: boolean;
   readonly sheet: HTMLElement | null;
   readonly fromSheet?: boolean;
-  readonly shownScrollY?: number;
   revealed: boolean;
   stepped?: boolean;
-  ahead?: boolean;
-  arrived?: boolean;
   still?: boolean;
 }
 
@@ -85,7 +82,6 @@ export interface KeptPage {
   readonly ground: string;
   readonly width: number;
   readonly sheet?: HTMLElement | null;
-  readonly url?: string;
 }
 
 export interface PlacedPage {
@@ -144,7 +140,6 @@ export interface StepChrome {
     mayEndByClock?: () => boolean,
     goesOn?: () => boolean,
   ): void;
-  arrive(stage: PageTransitions, running: Running): void;
   moveOnceAnswered(stage: PageTransitions, running: Running, view: Window): void;
   moveTo(
     stage: PageTransitions,
@@ -152,13 +147,6 @@ export interface StepChrome {
     view: Window,
     arriving: KeptPage,
     kind: PlacingKind,
-  ): void;
-  moveOver(
-    stage: PageTransitions,
-    running: Running,
-    view: Window,
-    leaving: KeptPage,
-    arriving: KeptPage,
   ): void;
   whenSectionDrawn(stage: PageTransitions, view: Window, then: () => void): void;
 }
@@ -192,7 +180,7 @@ export class PageTransitions {
   readonly preview = inject(NavigationPreview);
   readonly dirtyForms = inject(DirtyForms);
   readonly placement = inject(PagePlacement);
-  private readonly injector = inject(Injector);
+  readonly injector = inject(Injector);
   drawing: SwipeDrawing | null = null;
   sheets: SheetLooks | null = null;
   private stepChrome: StepChrome | null = null;
@@ -416,8 +404,6 @@ export class PageTransitions {
       const chrome = this.dressing;
       if (chrome === null) {
         this.finish();
-      } else if (running.ahead) {
-        chrome.arrive(this, running);
       } else {
         chrome.moveOnceAnswered(this, running, view);
       }
@@ -467,9 +453,7 @@ export class PageTransitions {
         return;
       }
       running.still = true;
-      if (!running.ahead || running.arrived) {
-        this.finish();
-      }
+      this.finish();
     };
     void Promise.allSettled(motions.map((motion) => motion.finished)).then(still);
     return still;
@@ -514,7 +498,7 @@ export class PageTransitions {
     return placed.page;
   }
 
-  put(
+  private put(
     overlay: HTMLElement,
     kept: KeptPage,
     position: 'under' | 'over',

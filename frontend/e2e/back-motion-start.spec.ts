@@ -1,5 +1,13 @@
 import type { Page } from '@playwright/test';
 import { deflateSync } from 'node:zlib';
+import {
+  clickWithoutScrolling,
+  HEIGHT,
+  onThePhone,
+  openAdministrationAt,
+  placementOf,
+  WIDTH,
+} from './back-matrix';
 import { mockDonorApi } from './donor-session';
 import { expect, test } from './fixtures';
 import { expectWithinTheBound } from './motion-bounds';
@@ -645,5 +653,227 @@ test.describe('Given the app on the home screen of a phone with the news and the
       'px the news jumped between the copy of the step and the live page',
     ).toBeLessThanOrEqual(1);
     await expect(page).toHaveURL('/aktuality');
+  });
+});
+
+interface KeptCopyFrame {
+  readonly at: number;
+  readonly overlay: boolean;
+  readonly both: boolean;
+  readonly held: boolean;
+  readonly leavingOffset: number | null;
+  readonly liveDrawn: boolean;
+  readonly liveMarkTop: number | null;
+  readonly copyMarkTop: number | null;
+}
+
+interface KeptCopyStep {
+  readonly frames: KeptCopyFrame[];
+  placed: KeptCopyFrame | null;
+  liveDrawnAt: number | null;
+  releasedAt: number | null;
+  done: boolean;
+}
+
+declare global {
+  interface Window {
+    nfnnKeptCopyStep?: KeptCopyStep;
+  }
+}
+
+const DONORS_HREF = '/sprava/darci';
+const SAME_PLACE_PX = 1;
+const MAIN_SE_COLD_SPRAVA_END_JUMP_PX = 131;
+
+async function watchTheStepBackTo(page: Page, mark: string): Promise<void> {
+  await page.evaluate((mark) => {
+    const step: KeptCopyStep = {
+      frames: [],
+      placed: null,
+      liveDrawnAt: null,
+      releasedAt: null,
+      done: false,
+    };
+    window.nfnnKeptCopyStep = step;
+    const markIn = (root: Element | null | undefined): HTMLElement | null =>
+      root?.querySelector<HTMLElement>(`.admin-frame a[href="${mark}"]`) ?? null;
+    const seen = (): KeptCopyFrame => {
+      const overlay = document.querySelector('.page-transition');
+      const over = overlay?.querySelector('.page-transition__page--over') ?? null;
+      const under = overlay?.querySelector('.page-transition__page--under') ?? null;
+      const live = markIn(document.querySelector('.page-layer'));
+      return {
+        at: performance.now(),
+        overlay: overlay !== null,
+        both: over !== null && under !== null,
+        held: overlay?.classList.contains('page-transition--held') ?? false,
+        leavingOffset:
+          over === null ? null : new DOMMatrixReadOnly(getComputedStyle(over).transform).m41,
+        liveDrawn: live !== null,
+        liveMarkTop: live === null ? null : Math.round(live.getBoundingClientRect().top),
+        copyMarkTop: (() => {
+          const copied = markIn(under);
+          return copied === null ? null : Math.round(copied.getBoundingClientRect().top);
+        })(),
+      };
+    };
+    const changes = new MutationObserver(() => {
+      const now = seen();
+      if (step.liveDrawnAt === null && now.liveDrawn) {
+        step.liveDrawnAt = now.at;
+      }
+      if (step.placed === null && now.both) {
+        step.placed = now;
+      }
+      if (step.placed !== null && step.releasedAt === null && !now.held) {
+        step.releasedAt = now.at;
+      }
+    });
+    changes.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    let after = 0;
+    const look = (): void => {
+      const now = seen();
+      step.frames.push(now);
+      if (!now.overlay && step.placed !== null && ++after > 2) {
+        changes.disconnect();
+        step.done = true;
+        return;
+      }
+      requestAnimationFrame(look);
+    };
+    requestAnimationFrame(look);
+  }, mark);
+}
+
+async function keptCopyStepSeen(page: Page): Promise<KeptCopyStep> {
+  await expect.poll(() => page.evaluate(() => window.nfnnKeptCopyStep?.done ?? false)).toBe(true);
+  return page.evaluate(() => window.nfnnKeptCopyStep!);
+}
+
+function expectStartedOverTheLivePageAndEndedWithoutAJump(
+  page: Page,
+  step: KeptCopyStep,
+  screen: string,
+  movesAtMostPx = SAME_PLACE_PX,
+): void {
+  const { frames, placed } = step;
+  expect(placed, `no copy of ${screen} joined the cover`).not.toBeNull();
+  expect(
+    { liveDrawn: placed!.liveDrawn, held: placed!.held, leavingOffset: placed!.leavingOffset },
+    `the cover as the copy of ${screen} joined it, against the live ${screen} drawn beneath before it, as main steps back`,
+  ).toEqual({ liveDrawn: true, held: true, leavingOffset: 0 });
+  expect(
+    step.releasedAt! - step.liveDrawnAt!,
+    `ms from the live ${screen} drawn to the motion let go`,
+  ).toBeGreaterThanOrEqual(0);
+  const covered = frames.filter((frame) => frame.both && frame.at >= placed!.at);
+  expect(covered.length, `no frame showed both copies of the step to ${screen}`).toBeGreaterThan(0);
+  expect(
+    Math.abs(covered[0].copyMarkTop! - covered[0].liveMarkTop!),
+    `px the copy of ${screen} stood from the live ${screen} beneath it in the first frame of the step`,
+  ).toBeLessThanOrEqual(movesAtMostPx);
+  expect(
+    covered
+      .filter((frame) => Math.abs(frame.copyMarkTop! - frame.liveMarkTop!) > movesAtMostPx)
+      .map((frame) => `copy ${frame.copyMarkTop} px, live ${frame.liveMarkTop} px`),
+    `frames in which the copy of ${screen} stood more than ${movesAtMostPx} px from the live ${screen} beneath it`,
+  ).toEqual([]);
+  if (measuresFrames(page)) {
+    expect(
+      covered[0].leavingOffset,
+      `the first frame that showed both copies of the step to ${screen} had already moved them`,
+    ).toBe(0);
+  }
+  const lastCovered = covered.at(-1)!;
+  const ended = frames.find((frame) => !frame.overlay && frame.at > lastCovered.at);
+  expect(ended?.liveMarkTop, `the live ${screen} after the step`).not.toBeNull();
+  expect(
+    Math.abs(ended!.liveMarkTop! - lastCovered.copyMarkTop!),
+    `px ${screen} jumped between the last frame of the step and the live page`,
+  ).toBeLessThanOrEqual(movesAtMostPx);
+}
+
+function administrationBack(page: Page) {
+  return page.getByRole('banner').getByRole('button', { name: 'Zpět' });
+}
+
+async function openFromWhereItIsSeen(page: Page, href: string): Promise<void> {
+  const link = page.locator(`.admin-frame a[href="${href}"]`).first();
+  await link.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const most = document.documentElement.scrollHeight - window.innerHeight;
+    const top = window.scrollY + box.top + box.height / 2 - window.innerHeight / 2;
+    window.scrollTo({ top: Math.max(0, Math.min(top, most)), behavior: 'instant' });
+  });
+  expect((await placementOf(link)).shown, `${href} is not on the screen to be tapped`).toBe(true);
+  await clickWithoutScrolling(link);
+  await expect(page).toHaveURL((url) => url.pathname === href);
+  await expect(page.locator('app-root .admin-page h1')).toBeVisible();
+  await expect(page.locator('.page-transition')).toHaveCount(0);
+}
+
+async function stepBackTo(page: Page, href: string, mark: string): Promise<KeptCopyStep> {
+  await watchTheStepBackTo(page, mark);
+  await administrationBack(page).click();
+  const step = await keptCopyStepSeen(page);
+  await expect(page).toHaveURL((url) => url.pathname === href);
+  await expect(page.locator('.page-transition')).toHaveCount(0);
+  return step;
+}
+
+test.describe('Given an administrator in the app on the home screen of a phone, launched straight on Správa and gone on to Dárci from where Správa shows it', () => {
+  test.use({ viewport: { width: WIDTH, height: HEIGHT }, hasTouch: true });
+
+  test.beforeEach(async ({ page }) => {
+    await onThePhone(page, 'light');
+    await openAdministrationAt(page, ['/sprava']);
+    await openFromWhereItIsSeen(page, DONORS_HREF);
+  });
+
+  test(`when Zpět is pressed for the first time since the launch, then both copies join the cover only once the live Správa is drawn beneath at the place its copy shows, the leaving Dárci stands at rest in the first frame both show, and the step ends on the live Správa jumping no further than main's ${MAIN_SE_COLD_SPRAVA_END_JUMP_PX} px measured on the SE on 2026-11-26, since data that loads after the copy still moves Správa (#2103) (#2088)`, async ({
+    page,
+  }) => {
+    const step = await stepBackTo(page, '/sprava', DONORS_HREF);
+
+    expectStartedOverTheLivePageAndEndedWithoutAJump(
+      page,
+      step,
+      'Správa',
+      MAIN_SE_COLD_SPRAVA_END_JUMP_PX,
+    );
+  });
+});
+
+test.describe('Given an administrator in the app on the home screen of a phone, gone from Správa to Dárci and on to a donor’s card, each tapped where its list shows it', () => {
+  test.use({ viewport: { width: WIDTH, height: HEIGHT }, hasTouch: true });
+
+  test.beforeEach(async ({ page }) => {
+    await onThePhone(page, 'light');
+    await openAdministrationAt(page, ['/sprava']);
+    await openFromWhereItIsSeen(page, DONORS_HREF);
+  });
+
+  test(`when ‹ steps back to Dárci and again to Správa, then each step’s copies join the cover only once the live page is drawn beneath at the place its copy shows, the leaving page stands at rest in the first frame both show, the step to Dárci ends on the live page without a jump and the step to Správa, launched straight at the start, jumping no further than main's ${MAIN_SE_COLD_SPRAVA_END_JUMP_PX} px measured on the SE on 2026-11-26, since data that loads after the copy still moves Správa (#2103) (#2088)`, async ({
+    page,
+  }) => {
+    const card = page.locator(`.admin-frame a[href^="${DONORS_HREF}/"]`).first();
+    const cardHref = (await card.getAttribute('href'))!;
+    await openFromWhereItIsSeen(page, cardHref);
+
+    const toDonors = await stepBackTo(page, DONORS_HREF, cardHref);
+    expectStartedOverTheLivePageAndEndedWithoutAJump(page, toDonors, 'Dárci');
+
+    const toAdministration = await stepBackTo(page, '/sprava', DONORS_HREF);
+    expectStartedOverTheLivePageAndEndedWithoutAJump(
+      page,
+      toAdministration,
+      'Správa',
+      MAIN_SE_COLD_SPRAVA_END_JUMP_PX,
+    );
   });
 });

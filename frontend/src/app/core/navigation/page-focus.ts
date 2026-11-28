@@ -57,6 +57,7 @@ export class PageFocus {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly openers = new Map<string, string>();
+  private readonly openerTops = new Map<string, number>();
   private pressed: Press | null = null;
   private stopReturning: (() => void) | null = null;
   private guard: ScrollGuard | null = null;
@@ -138,6 +139,22 @@ export class PageFocus {
       return true;
     }
     return active.localName === 'dialog' && places.includes(active as HTMLElement);
+  }
+
+  placeReturnWhereLeft(scope: HTMLElement): void {
+    const view = this.document.defaultView;
+    const top = this.openerTops.get(pathOf(this.router.url));
+    if (view === null || top === undefined || !this.layout.isCompact() || this.preview.drives()) {
+      return;
+    }
+    const target = this.returnTarget(scope)?.() ?? null;
+    if (target === null || scrollsInABoxOfItsOwn(view, target) || liesInView(target)) {
+      return;
+    }
+    const drift = target.getBoundingClientRect().top - top;
+    if (Math.abs(drift) >= 1) {
+      view.scrollBy({ top: drift, behavior: 'instant' });
+    }
   }
 
   returnAfterStepBack(scope: HTMLElement): void {
@@ -228,8 +245,16 @@ export class PageFocus {
     }
     const left = pathOf(this.router.url);
     this.openers.delete(left);
+    this.openerTops.delete(left);
     const opener = pressed !== null && this.now() - pressed.at <= OPENER_FRESH_MS ? pressed : null;
-    if (opener === null || opener.control.id === '' || opener.control.closest('dialog') !== null) {
+    if (opener === null || opener.control.closest('dialog') !== null) {
+      return;
+    }
+    this.openerTops.set(left, opener.control.getBoundingClientRect().top);
+    while (this.openerTops.size > KEPT_OPENERS) {
+      this.openerTops.delete(this.openerTops.keys().next().value!);
+    }
+    if (opener.control.id === '') {
       return;
     }
     this.openers.set(left, opener.control.id);
@@ -464,4 +489,18 @@ export class PageFocus {
     }
     target.focus({ preventScroll: true });
   }
+}
+
+function scrollsInABoxOfItsOwn(view: Window, element: HTMLElement): boolean {
+  const { body, documentElement } = element.ownerDocument;
+  for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
+    if (parent === body || parent === documentElement) {
+      return false;
+    }
+    const overflow = view.getComputedStyle(parent).overflowY;
+    if (overflow === 'auto' || overflow === 'scroll') {
+      return true;
+    }
+  }
+  return false;
 }

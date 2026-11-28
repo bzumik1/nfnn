@@ -164,6 +164,7 @@ export interface Frame {
   readonly overRounded: number;
   readonly underRounded: number;
   readonly overPlaced: boolean;
+  readonly underPlaced: boolean;
   readonly underDrawn: boolean;
   readonly underDimmed: boolean;
   readonly onGround: boolean;
@@ -1132,6 +1133,7 @@ export async function watchTheStep(page: Page, cost: FrameCost = 'busy'): Promis
           overRounded: cornerOf(over),
           underRounded: cornerOf(under),
           overPlaced: over !== null,
+          underPlaced: under !== null,
           underDrawn:
             (under?.querySelector('.page-transition__scroller')?.childElementCount ?? 0) > 0 ||
             under?.querySelector('.page-transition__sheet') != null,
@@ -1273,16 +1275,17 @@ function travelled(probe: StepProbe): Frame[] {
     'a step on the ground of a sheet, with no shadow and no dim beneath, rounded its top page',
   ).toBe(0);
   const topped = shown.filter((frame) => frame.overPlaced);
+  const stepped = topped.filter((frame) => frame.underPlaced);
   expect(
-    [...new Set(topped.map((frame) => frame.overRounded))],
+    [...new Set(stepped.map((frame) => frame.overRounded))],
     'the top page changed its corners within the step',
-  ).toHaveLength(Math.min(1, topped.length));
+  ).toHaveLength(Math.min(1, stepped.length));
   expect(
     topped.filter((frame) => frame.overRounded > 0 && !(frame.underDrawn && frame.underDimmed))
       .length,
     'frames in which the top page had corners without a drawn, dimmed page beneath',
   ).toBe(0);
-  const firstTopped = topped[0];
+  const firstTopped = stepped[0];
   if (
     probe.paced &&
     firstTopped !== undefined &&
@@ -3183,6 +3186,7 @@ export async function openAdministrationAt(page: Page, trail: readonly string[])
 
 export interface CornerFrame {
   readonly over: boolean;
+  readonly under: boolean;
   readonly radius: number;
   readonly drawnBeneath: boolean;
   readonly dimmedBeneath: boolean;
@@ -3209,6 +3213,7 @@ export async function watchCorners(page: Page): Promise<void> {
         const dimStyle = dim === null ? null : getComputedStyle(dim);
         frames.push({
           over: over !== null,
+          under: under != null,
           radius:
             over === null ? 0 : Number.parseFloat(getComputedStyle(over).borderTopLeftRadius) || 0,
           drawnBeneath:
@@ -3242,7 +3247,7 @@ export function cornerProblems(frames: readonly CornerFrame[]): string[] {
   if (placed.length === 0) {
     return ['no frame showed a page on top of the step'];
   }
-  const radii = [...new Set(placed.map((frame) => frame.radius))];
+  const radii = [...new Set(placed.filter((frame) => frame.under).map((frame) => frame.radius))];
   const bare = placed.filter(
     (frame) => frame.radius > 0 && !(frame.drawnBeneath && frame.dimmedBeneath),
   );
