@@ -520,6 +520,36 @@ function dialogBox(dialog: Locator): Promise<{ top: number; height: number }> {
   });
 }
 
+const KEYBOARD_OVER_THE_HEAD = 400;
+const SHEET_TOP_GAP = 48;
+const SCROLL_LEFT_AT_FULL_HEIGHT = 30;
+
+function afterTwoFrames(page: Page): Promise<void> {
+  return page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+}
+
+function sheetMeasures(
+  dialog: Locator,
+): Promise<{ content: number; fieldEnd: number; buttons: number }> {
+  return dialog.evaluate((element) => {
+    const panel = element.querySelector<HTMLElement>('.dialog-panel')!;
+    const field = element.querySelector('#withdrawal-code')!.closest('app-form-field')!;
+    const panelTop = panel.getBoundingClientRect().top + panel.clientTop;
+    return {
+      content: panel.scrollHeight,
+      fieldEnd: Math.ceil(field.getBoundingClientRect().bottom - panelTop + panel.scrollTop),
+      buttons: Math.ceil(
+        element.querySelector('.ui-dialog__actions')!.getBoundingClientRect().height,
+      ),
+    };
+  });
+}
+
 function panelScrollTop(dialog: Locator): Promise<number> {
   return dialog.evaluate((element) => element.querySelector('.dialog-panel')!.scrollTop);
 }
@@ -604,14 +634,14 @@ function fieldOutsideTheShownPanel(code: Locator): Promise<string[]> {
   });
 }
 
-test.describe('Given a phone 390 × 844 whose on-screen keyboard covers the lower part of the screen, where Zneplatnit klíč shows its head and its code field together once the keyboard is gone', () => {
+test.describe('Given a phone 390 pt wide, as tall as Zneplatnit klíč needs to show its head and its code field together once the keyboard is gone, but shorter than the whole sheet, as the 17e is', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 
   test.beforeEach(async ({ page }) => {
     await standInForTheKeyboard(page);
   });
 
-  test('when an administrator sends the empty code with the keyboard up and then taps Done, which blurs the field before the keyboard goes, then the sheet comes back to its start with its title and close button', async ({
+  test('when an administrator sends the empty code with the keyboard up and then taps Done, which blurs the field while the view is still short and grows it only later, then the sheet comes back to its start with its title and close button', async ({
     page,
   }) => {
     await mockDonorApi(page);
@@ -629,15 +659,26 @@ test.describe('Given a phone 390 × 844 whose on-screen keyboard covers the lowe
     const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
     const code = dialog.getByLabel('Kód z aplikace');
     await code.tap();
-    await page.evaluate(() => (window as KeyboardWindow).standInKeyboard?.show(370));
+    await page.evaluate(() =>
+      (window as KeyboardWindow).standInKeyboard?.show(KEYBOARD_OVER_THE_HEAD),
+    );
     await dialog
       .getByRole('button', { name: 'Zneplatnit klíč', exact: true })
       .dispatchEvent('click');
     await expect(dialog.getByText('Opište prosím kód z aplikace.')).toBeVisible();
     await expect.poll(() => panelScrollTop(dialog)).toBeGreaterThan(0);
+    const sheet = await sheetMeasures(dialog);
+    const windowHeight = sheet.content + SHEET_TOP_GAP - SCROLL_LEFT_AT_FULL_HEIGHT;
+    expect(sheet.fieldEnd + sheet.buttons).toBeLessThanOrEqual(windowHeight - SHEET_TOP_GAP);
+    await page.setViewportSize({ width: 390, height: windowHeight });
+    await page.evaluate(() =>
+      (window as KeyboardWindow).standInKeyboard?.show(KEYBOARD_OVER_THE_HEAD),
+    );
+    await expect(page.locator('html')).toHaveClass(/keyboard-open/);
 
     await code.evaluate((field) => field.blur());
     await expect(page.locator('html')).not.toHaveClass(/keyboard-open/);
+    await afterTwoFrames(page);
     await hideKeyboard(page);
 
     await expect.poll(() => panelScrollTop(dialog)).toBe(0);
