@@ -10,26 +10,6 @@
     "since": "2026-11-27T00:53:27Z"
   },
   {
-    "project": "chromium",
-    "file": "e2e/back-matrix.spec.ts",
-    "title": [
-      "Given an administrator in the app on the home screen of a phone, in the light appearance",
-      "when ‹ is pressed on every detail, then it travels back over its list without a jump, with the scroll and the focus kept, both copies placed within 9 frames of the tap (D1, 150 ms at 60 Hz; 18 frames, 300 ms, while the page’s code loads), on the screen, where the runner captures frames, the page never goes back nor runs ahead of its curve by more than 1.5 steady frames plus the p99 stamp lag of the runner's screencast"
-    ],
-    "issue": 2138,
-    "since": "2026-11-27T07:32:15Z"
-  },
-  {
-    "project": "chromium",
-    "file": "e2e/back-matrix.spec.ts",
-    "title": [
-      "Given an administrator in the app on the home screen of a phone, in the dark appearance",
-      "when ‹ is pressed on every detail, then it travels back over its list without a jump, with the scroll and the focus kept, both copies placed within 9 frames of the tap (D1, 150 ms at 60 Hz; 18 frames, 300 ms, while the page’s code loads), on the screen, where the runner captures frames, the page never goes back nor runs ahead of its curve by more than 1.5 steady frames plus the p99 stamp lag of the runner's screencast"
-    ],
-    "issue": 2138,
-    "since": "2026-11-27T07:32:15Z"
-  },
-  {
     "project": "iphone",
     "file": "e2e/edge-swipe.spec.ts",
     "title": [

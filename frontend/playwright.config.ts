@@ -62,7 +62,7 @@ export default defineConfig<DeviceOptions, { safariPose?: SafariPose }>({
         {
           name: 'motion-timed',
           default: false,
-          testMatch: /back-matrix\.spec\.ts$/,
+          testMatch: /(?:back-matrix|back-motion-start)\.spec\.ts$/,
           grep: TIMED_MOTION,
           workers: 1,
           use: { ...devices['Desktop Chrome'] },

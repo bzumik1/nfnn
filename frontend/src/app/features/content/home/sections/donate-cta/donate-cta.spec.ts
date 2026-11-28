@@ -655,6 +655,67 @@ describe('Given the donate section', () => {
     });
   }
 
+  describe('when the visitor types a comma amount key by key', () => {
+    beforeEach(async () => {
+      document.body.appendChild(fixture.nativeElement);
+      await openWithQr();
+      button('Jiná částka').click();
+      await settle();
+    });
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    async function typeKeys(keys: string): Promise<HTMLInputElement> {
+      const field = element<HTMLInputElement>('#donate-custom-amount');
+      field.focus();
+      for (const key of keys) {
+        const caret = field.selectionStart ?? field.value.length;
+        const typing = new InputEvent('beforeinput', {
+          inputType: 'insertText',
+          data: key,
+          bubbles: true,
+          cancelable: true,
+        });
+        if (field.dispatchEvent(typing)) {
+          field.setRangeText(key, caret, field.selectionEnd ?? caret, 'end');
+          field.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: key }));
+        }
+        await settle();
+      }
+      return field;
+    }
+
+    async function leave(field: HTMLInputElement): Promise<void> {
+      field.blur();
+      await settle();
+    }
+
+    it('and the keys are 10,000, then the field keeps 10,000 and leaving it shows the hint', async () => {
+      const field = await typeKeys('10,000');
+      await settle(REDRAW_MS);
+
+      expect(field.value).toBe('10,000');
+      await leave(field);
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+      expect(field.getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('and Backspace deletes 5,005 to 5,00, then the field keeps 5,00 and leaving it shows the hint', async () => {
+      await type('5,005');
+      const field = element<HTMLInputElement>('#donate-custom-amount');
+
+      field.value = '5,00';
+      field.setSelectionRange(4, 4);
+      field.dispatchEvent(new InputEvent('input', { inputType: 'deleteContentBackward' }));
+      await settle(REDRAW_MS);
+
+      expect(field.value).toBe('5,00');
+      await leave(field);
+      expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+      expect(field.getAttribute('aria-invalid')).toBe('true');
+    });
+  });
+
   describe('when the visitor pastes into Jiná částka', () => {
     beforeEach(async () => {
       document.body.appendChild(fixture.nativeElement);
@@ -667,20 +728,26 @@ describe('Given the donate section', () => {
 
     type Carrier = 'data' | 'dataTransfer';
 
+    interface Insertion {
+      inputType?: 'insertFromPaste' | 'insertFromDrop';
+      cancelable?: boolean;
+    }
+
     async function paste(
       text: string,
       carrier: Carrier,
       start = 0,
       end = start,
+      { inputType = 'insertFromPaste', cancelable = true }: Insertion = {},
     ): Promise<HTMLInputElement> {
       const field = element<HTMLInputElement>('#donate-custom-amount');
       field.focus();
       field.setSelectionRange(start, end);
       const pasting = new InputEvent('beforeinput', {
-        inputType: 'insertFromPaste',
+        inputType,
         data: carrier === 'data' ? text : null,
         bubbles: true,
-        cancelable: true,
+        cancelable,
       });
       if (carrier === 'dataTransfer') {
         Object.defineProperty(pasting, 'dataTransfer', {
@@ -690,11 +757,19 @@ describe('Given the donate section', () => {
       if (field.dispatchEvent(pasting)) {
         const room = field.maxLength - (field.value.length - (end - start));
         field.setRangeText(text.slice(0, Math.max(room, 0)), start, end, 'end');
-        field.dispatchEvent(new InputEvent('input', { inputType: 'insertFromPaste' }));
+        field.dispatchEvent(new InputEvent('input', { inputType }));
       }
       await settle();
       return field;
     }
+
+    it('and a drop carries 10 000 000 Kč in its dataTransfer, then the field shows 10 000 000 without a stray letter', async () => {
+      const field = await paste('10\u202f000\u202f000\u00a0Kč', 'dataTransfer', 0, 0, {
+        inputType: 'insertFromDrop',
+      });
+
+      expect(field.value).toBe('10\u00a0000\u00a0000');
+    });
 
     for (const carrier of ['data', 'dataTransfer'] as const) {
       for (const [space, name] of [
@@ -713,6 +788,46 @@ describe('Given the donate section', () => {
           expect(element('.amount-hint')).toBeNull();
         });
       }
+
+      for (const shape of [
+        '1 250,00 Kč',
+        '1 250,- Kč',
+        'KČ 1 250',
+        '1 250 kč',
+        'CZK 1 250',
+        '1 250 CZK',
+      ]) {
+        it(`and the paste carries ${shape} in its ${carrier}, then the field groups 1 250 and the QR is drawn for it without a hint`, async () => {
+          const field = await paste(shape, carrier);
+          await settle(REDRAW_MS);
+
+          expect(field.value).toBe('1\u00a0250');
+          expect(drawnMatrixIs(qrOfTyped(1250))).toBe(true);
+          field.blur();
+          await settle();
+          expect(element('.amount-hint')).toBeNull();
+        });
+      }
+
+      it(`and the paste carries 1 250,50 Kč in its ${carrier}, then the field keeps 1250,50 without the currency and leaving it shows the hint`, async () => {
+        const field = await paste('1 250,50 Kč', carrier);
+
+        expect(field.value).toBe('1250,50');
+        field.blur();
+        await settle();
+        expect(text('.amount-hint')).toContain('celou částku od 1 do 1 000 000 Kč');
+        expect(field.getAttribute('aria-invalid')).toBe('true');
+      });
+
+      it(`and an uncancelable paste carries 25 Kč in its ${carrier} before 100, then the browser's own insert alone gives 25 100`, async () => {
+        await type('100');
+
+        const field = await paste('25 Kč', carrier, 0, 0, { cancelable: false });
+        await settle(REDRAW_MS);
+
+        expect(field.value).toBe('25\u00a0100');
+        expect(drawnMatrixIs(qrOfTyped(25100))).toBe(true);
+      });
 
       it(`and the paste carries 10 000 000 Kč in its ${carrier}, then the field shows 10 000 000 without a stray letter and leaving it shows the hint`, async () => {
         const field = await paste('10\u202f000\u202f000\u00a0Kč', carrier);

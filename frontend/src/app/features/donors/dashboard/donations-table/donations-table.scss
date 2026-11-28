@@ -61,14 +61,19 @@ tbody tr {
 }
 
 td {
+  --cell-inset-inline-start: var(--space-3);
   padding: var(--space-3-5) var(--space-3);
+  padding-inline-start: var(--cell-inset-inline-start);
   font-size: var(--text-md);
   color: var(--color-text-secondary);
 }
 
-th:first-child,
-td:first-child {
+th:first-child {
   padding-inline-start: var(--card-inset);
+}
+
+td:first-child {
+  --cell-inset-inline-start: var(--card-inset);
 }
 
 th:last-child,
@@ -128,7 +133,7 @@ td.date {
 td.date > .verification-tag {
   position: absolute;
   inset-block-end: var(--space-3-5);
-  inset-inline-start: var(--card-inset);
+  inset-inline-start: var(--cell-inset-inline-start);
   inline-size: max-content;
   max-inline-size: none;
   white-space: nowrap;

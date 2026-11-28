@@ -103,37 +103,40 @@ async function expectAboveKeyboard(locator: Locator): Promise<void> {
   expect(box!.y + box!.height).toBeLessThanOrEqual(SMALL_PHONE.height - KEYBOARD_HEIGHT);
 }
 
-type Hit = 'field' | 'notice' | 'other';
+const FLOATING_NOTICE = '.ui-notice--floating';
+const OFFLINE_PILL = '.offline-pill';
 
-function hitOnFieldCentre(field: Locator): Promise<Hit> {
-  return field.evaluate((element) => {
+type Hit = 'field' | 'cover' | 'other';
+
+function hitOnFieldCentre(field: Locator, cover = FLOATING_NOTICE): Promise<Hit> {
+  return field.evaluate((element, coverSelector) => {
     const box = element.getBoundingClientRect();
     const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
     if (hit === element) {
       return 'field';
     }
-    return hit?.closest('.ui-notice--floating') ? 'notice' : 'other';
-  });
+    return hit?.closest(coverSelector) ? 'cover' : 'other';
+  }, cover);
 }
 
-function hitOnNoticeCentre(page: Page): Promise<boolean> {
-  return page.evaluate(() => {
-    const notice = document.querySelector('.ui-notice--floating')!;
-    const box = notice.getBoundingClientRect();
+function hitOnCoverCentre(page: Page, cover = FLOATING_NOTICE): Promise<boolean> {
+  return page.evaluate((coverSelector) => {
+    const covering = document.querySelector(coverSelector)!;
+    const box = covering.getBoundingClientRect();
     const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-    return hit !== null && notice.contains(hit);
-  });
+    return hit !== null && covering.contains(hit);
+  }, cover);
 }
 
-function scrollFieldUnderNotice(field: Locator): Promise<void> {
-  return field.evaluate((element) => {
+function scrollFieldUnder(field: Locator, cover = FLOATING_NOTICE): Promise<void> {
+  return field.evaluate((element, coverSelector) => {
     const box = element.getBoundingClientRect();
-    const notice = document.querySelector('.ui-notice--floating')!.getBoundingClientRect();
+    const covering = document.querySelector(coverSelector)!.getBoundingClientRect();
     window.scrollBy({
-      top: box.top + box.height / 2 - (notice.top + notice.height / 2),
+      top: box.top + box.height / 2 - (covering.top + covering.height / 2),
       behavior: 'instant',
     });
-  });
+  }, cover);
 }
 
 function scrollTopAfterTwoFrames(page: Page): Promise<number> {
@@ -378,6 +381,41 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
     await page.evaluate(() => (window as KeyboardWindow).standInKeyboard?.show(-233));
 
     await expect.poll(() => dialogBox(dialog)).toEqual({ top: 0, height: SMALL_PHONE.height });
+  });
+
+  test('when the visitor is offline and types into a field of the contact form under the Offline pill, then the pill steps aside for the field without moving the page, is still heard, and comes back when the keyboard goes down', async ({
+    page,
+    context,
+  }) => {
+    await page.goto('/o-nas');
+    const field = page.locator('#contact-name');
+    const pill = page.locator(OFFLINE_PILL);
+    await expect(field).toBeVisible();
+    await page.route('**/api/**', (route) => route.abort('internetdisconnected'));
+    await context.setOffline(true);
+    await expect(pill).toBeVisible({ timeout: 10_000 });
+    await field.focus();
+    await expect(field).toBeFocused();
+    await expect
+      .poll(async () => {
+        await scrollFieldUnder(field, OFFLINE_PILL);
+        return hitOnFieldCentre(field, OFFLINE_PILL);
+      })
+      .toBe('cover');
+    const scrollTop = await page.evaluate(() => window.scrollY);
+
+    await showKeyboard(page);
+
+    await expect(page.locator('html')).toHaveClass(/(^|\s)keyboard-open(\s|$)/);
+    await expect(field).toBeFocused();
+    await expect.poll(() => hitOnFieldCentre(field, OFFLINE_PILL)).toBe('field');
+    expect(await scrollTopAfterTwoFrames(page)).toBe(scrollTop);
+    expect(await pill.ariaSnapshot()).toContain('Offline');
+
+    await hideKeyboard(page);
+
+    await expect.poll(() => hitOnCoverCentre(page, OFFLINE_PILL)).toBe(true);
+    expect(await scrollTopAfterTwoFrames(page)).toBe(scrollTop);
   });
 
   test('when the visitor taps Jiná částka, then the amount field takes the focus in the same tap', async ({
@@ -701,10 +739,10 @@ test.describe('Given a tablet whose on-screen keyboard covers the lower part of 
     await expect(codeField(page)).toBeFocused();
     await expect
       .poll(async () => {
-        await scrollFieldUnderNotice(codeField(page));
+        await scrollFieldUnder(codeField(page));
         return hitOnFieldCentre(codeField(page));
       })
-      .toBe('notice');
+      .toBe('cover');
     await expect(codeField(page)).toBeFocused();
   });
 
@@ -725,7 +763,7 @@ test.describe('Given a tablet whose on-screen keyboard covers the lower part of 
 
     await hideKeyboard(page);
 
-    await expect.poll(() => hitOnNoticeCentre(page)).toBe(true);
+    await expect.poll(() => hitOnCoverCentre(page)).toBe(true);
     expect(await scrollTopAfterTwoFrames(page)).toBe(scrollTop);
   });
 
