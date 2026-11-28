@@ -29,6 +29,12 @@ describe('Given a photo shown in a shape of the site', () => {
     });
   });
 
+  describe('when the picker previews the column news card', () => {
+    it('then it uses the 360 / 196 photo the card shows', () => {
+      expect(PHOTO_SHAPES.newsCard.ratio).toBe(360 / 196);
+    });
+  });
+
   describe('when it has a focal point', () => {
     it('then every shape keeps that spot in view', () => {
       expect(objectPosition({ x: 42, y: 18 }, 'newsCard')).toBe('42% 18%');
