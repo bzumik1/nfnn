@@ -809,6 +809,16 @@ function stripsDiffer(name: string, strip: Rgb | null, under: Rgb, index: number
     : [];
 }
 
+export function groundApartLevels(frames: readonly TopAreaFrame[]): number {
+  const rest = restingFrame(frames);
+  return Math.max(
+    0,
+    ...frames.map((frame) =>
+      frame.ground === null ? 0 : apart(frame.ground, veiledBy(frame, rest.ground)),
+    ),
+  );
+}
+
 export function groundOutOfStep(frames: readonly TopAreaFrame[]): string[] {
   const rest = restingFrame(frames);
   return frames.flatMap((frame, index) =>

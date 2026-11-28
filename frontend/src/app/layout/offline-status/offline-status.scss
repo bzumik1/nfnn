@@ -51,6 +51,10 @@
   );
 }
 
+:host-context(html.keyboard-open) .offline-pill {
+  clip-path: inset(50%);
+}
+
 .offline-pill--loading {
   @include motion.pulse;
 

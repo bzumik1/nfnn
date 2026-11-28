@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { rememberRunnerScale } from './motion-measures';
 import { evaluateAsProbe } from './top-area';
 
 export interface SpeedReference {
@@ -154,13 +155,26 @@ export async function runnerSpeedProblems(page: Page): Promise<string[]> {
     return [];
   }
   const after = await runnerSpeed(page);
-  return speedProblems({
+  const verdict: SpeedVerdict = {
     medians: [gate.before.medianMs, after.medianMs],
     reference: referenceFor(after.browser),
     version: after.version,
     checks: gate.checks,
     unscaled: CPU_SLOWDOWN > 1 ? UNSCALED_AT_SLOW_CPU : undefined,
-  });
+  };
+  const factor = scaleOf(verdict);
+  if (factor !== null) {
+    rememberRunnerScale(page, factor);
+  }
+  return speedProblems(verdict);
+}
+
+export function scaleOf({ medians, reference, version, unscaled }: SpeedVerdict): number | null {
+  if (reference === null || unscaled !== undefined) {
+    return FASTEST_SCALE;
+  }
+  const raw = Math.max(...medians) / reference.medianMs;
+  return reference.version !== version || raw > SLOWEST_SCALE ? null : Math.max(FASTEST_SCALE, raw);
 }
 
 function rounded(value: number, unit: string): string {
