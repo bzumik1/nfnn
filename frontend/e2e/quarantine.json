@@ -28,5 +28,25 @@
     ],
     "issue": 2093,
     "since": "2026-11-27T11:44:32Z"
+  },
+  {
+    "project": "chromium",
+    "file": "e2e/app-shell.spec.ts",
+    "title": [
+      "Given a signed-in donor on a phone who opens a section from the account sheet",
+      "when they open the question about written input from Zavřít with the keyboard and close it with its ×, then it fades out over the whole screen and the focus returns to Zavřít"
+    ],
+    "issue": 2175,
+    "since": "2026-11-27T19:52:01Z"
+  },
+  {
+    "project": "iphone",
+    "file": "e2e/largest-text.spec.ts",
+    "title": [
+      "Given a donor on an iPhone 320 pt wide whose installed app shows the largest accessibility text, on their account",
+      "when they open Údaje a zabezpečení with its passkeys open, then no text reaches past its card, no button covers its label, a heading breaks inside a word only when the word is wider than its line and no date breaks inside a number"
+    ],
+    "issue": 2081,
+    "since": "2026-11-27T19:52:01Z"
   }
 ]
