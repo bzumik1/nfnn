@@ -1,9 +1,13 @@
 import { computed, DestroyRef, DOCUMENT, inject, Injectable, signal } from '@angular/core';
 
 export const KEYBOARD_OPEN_CLASS = 'keyboard-open';
+export const VIEW_PANNED_CLASS = 'visual-viewport-panned';
 
-const COVERED_HEIGHT = '--keyboard-covered-height';
+const VIEW_TOP = '--visual-viewport-top';
+const VIEW_HEIGHT = '--visual-viewport-height';
 const SMALLEST_KEYBOARD_PX = 150;
+const UNZOOMED_SCALE_SLACK = 0.01;
+const ROUNDING_SLACK_PX = 1;
 
 export interface VisibleArea {
   readonly top: number;
@@ -40,6 +44,8 @@ export class SoftKeyboard {
 
   readonly visibleArea = this.visible.asReadonly();
   readonly isOpen = computed(() => this.visible() !== null);
+  private readonly shortened = signal(false);
+  readonly viewShortened = this.shortened.asReadonly();
 
   constructor() {
     const view = this.document.defaultView;
@@ -53,40 +59,59 @@ export class SoftKeyboard {
     viewport.addEventListener('scroll', update);
     this.document.addEventListener('focusin', update);
     this.document.addEventListener('focusout', updateAfterFocusMoves);
+    update();
     inject(DestroyRef).onDestroy(() => {
       viewport.removeEventListener('resize', update);
       viewport.removeEventListener('scroll', update);
       this.document.removeEventListener('focusin', update);
       this.document.removeEventListener('focusout', updateAfterFocusMoves);
+      this.document.documentElement.style.removeProperty(VIEW_TOP);
+      this.document.documentElement.style.removeProperty(VIEW_HEIGHT);
+      this.document.documentElement.classList.remove(VIEW_PANNED_CLASS);
       this.show(null);
     });
   }
 
   private update(view: Window, viewport: VisualViewport): void {
+    this.follow(view, viewport);
     const typing = isTextEntry(this.document.activeElement);
     const keyboardHeight = view.innerHeight - viewport.height;
     if (typing && keyboardHeight >= SMALLEST_KEYBOARD_PX) {
-      this.show(
-        { top: viewport.offsetTop, height: viewport.height },
-        view.innerHeight - viewport.offsetTop - viewport.height,
-      );
+      this.show({ top: viewport.offsetTop, height: viewport.height });
     } else {
       this.show(null);
     }
   }
 
-  private show(area: VisibleArea | null, covered = 0): void {
+  private follow(view: Window, viewport: VisualViewport): void {
+    const root = this.document.documentElement;
+    const style = root.style;
+    const unzoomed = Math.abs(viewport.scale - 1) <= UNZOOMED_SCALE_SLACK;
+    const shortened = Math.abs(viewport.height - view.innerHeight) > ROUNDING_SLACK_PX;
+    this.shortened.set(shortened);
+    const panned = Math.abs(viewport.offsetTop) > ROUNDING_SLACK_PX || shortened;
+    root.classList.toggle(VIEW_PANNED_CLASS, unzoomed && panned);
+    if (!unzoomed || !panned) {
+      style.removeProperty(VIEW_TOP);
+      style.removeProperty(VIEW_HEIGHT);
+      return;
+    }
+    const top = `${viewport.offsetTop}px`;
+    const height = `${viewport.height}px`;
+    if (style.getPropertyValue(VIEW_TOP) !== top) {
+      style.setProperty(VIEW_TOP, top);
+    }
+    if (style.getPropertyValue(VIEW_HEIGHT) !== height) {
+      style.setProperty(VIEW_HEIGHT, height);
+    }
+  }
+
+  private show(area: VisibleArea | null): void {
     const current = this.visible();
     if (current?.top === area?.top && current?.height === area?.height) {
       return;
     }
-    const root = this.document.documentElement;
-    root.classList.toggle(KEYBOARD_OPEN_CLASS, area !== null);
-    if (area === null) {
-      root.style.removeProperty(COVERED_HEIGHT);
-    } else {
-      root.style.setProperty(COVERED_HEIGHT, `${covered}px`);
-    }
+    this.document.documentElement.classList.toggle(KEYBOARD_OPEN_CLASS, area !== null);
     this.visible.set(area);
   }
 }

@@ -150,19 +150,6 @@
   }
 }
 
-.erase-title {
-  font-family: var(--font-title);
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-semibold);
-  margin-bottom: var(--space-3);
-}
-
-@include bp.container-down(dialog-panel, tabs) {
-  .erase-title {
-    font-size: var(--text-dialog-title-large);
-  }
-}
-
 .erase-lead {
   margin: 0 0 var(--space-3);
   font-size: var(--text-md);

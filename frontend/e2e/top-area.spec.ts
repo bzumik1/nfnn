@@ -923,11 +923,13 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
   test('when the donor switches from Světlý to Tmavý in the open account sheet, then the backdrop stays over the page in every frame', async ({
     page,
   }) => {
-    test.fixme(true, '#1644: the dialog and its backdrop are hidden for two frames');
     await whileTheSheetOpens(page);
     const appearance = accountSheet(page).getByRole('button', { name: /^Vzhled: / });
     await appearance.press('Enter');
     await expect(appearance).toHaveAccessibleName('Vzhled: Světlý');
+    await appearance.evaluate((button) =>
+      button.addEventListener('focusout', () => button.setAttribute('data-focus-left', '')),
+    );
 
     const frames = await topAreaFramesWhile(
       page,
@@ -938,6 +940,8 @@ test.describe('Given a signed-in donor reading the news on a computer that anima
     expect(
       frames.map((frame) => frame.veil ?? 0).filter((veil) => veil < WEAKEST_BACKDROP),
     ).toEqual([]);
+    await expect(appearance).toBeFocused();
+    await expect(appearance).not.toHaveAttribute('data-focus-left');
   });
 
   test('when the donor opens Můj přehled from the account sheet, then the backdrop at the top, live or its copy where no arriving page covers it, fades a little in every frame', async ({

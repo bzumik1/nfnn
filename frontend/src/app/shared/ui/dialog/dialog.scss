@@ -63,7 +63,9 @@
   }
 
   &.dialog--repainting {
-    visibility: hidden;
+    @supports (-webkit-touch-callout: none) {
+      visibility: hidden;
+    }
   }
 }
 
@@ -127,7 +129,7 @@
 @include bp.up(phone) {
   .dialog-panel {
     --dialog-panel-ground: var(--color-surface-elevated);
-    max-block-size: calc(100dvh - 2 * var(--space-5));
+    max-block-size: 100%;
     overflow-y: auto;
     overscroll-behavior: contain;
     background:
@@ -151,7 +153,7 @@
   .dialog-panel--tall {
     --dialog-tall-top: max(0px, (100dvh - var(--sheet-form-height)) / 2 - var(--space-5));
     margin-top: var(--dialog-tall-top);
-    max-block-size: min(var(--sheet-form-height), calc(100dvh - 2 * var(--space-5)));
+    max-block-size: min(var(--sheet-form-height), 100%);
   }
 }
 
@@ -229,7 +231,7 @@
     @include sheet.edge;
 
     min-height: 0;
-    max-height: calc(100dvh - var(--space-12));
+    max-height: calc(100% - var(--space-12));
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: var(--space-10) max(var(--space-5), env(safe-area-inset-right))
@@ -255,7 +257,7 @@
   }
 
   .dialog--sheet .dialog-panel--tall {
-    height: calc(100dvh - #{sheet.$top});
+    height: calc(100% - #{sheet.$top});
     max-height: none;
     padding: var(--sheet-close-inset) sheet.$inline-end
       calc(var(--space-8) + env(safe-area-inset-bottom)) sheet.$inline-start;
@@ -344,8 +346,8 @@
     }
 
     .dialog--sheet .dialog-panel--tall {
-      height: min(var(--sheet-form-height), calc(100dvh - var(--space-12)));
-      max-height: calc(100dvh - var(--space-12));
+      height: min(var(--sheet-form-height), calc(100% - var(--space-12)));
+      max-height: calc(100% - var(--space-12));
       padding-bottom: var(--space-8);
     }
 

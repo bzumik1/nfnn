@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'sheet';
 
 .ui-dialog__title {
   font-family: var(--font-title);
@@ -63,31 +64,45 @@
 }
 
 :root {
-  --keyboard-covered-height: 0px;
+  --visual-viewport-top: 0px;
+  --visual-viewport-height: 100%;
 }
 
-html.keyboard-open .dialog[open] {
-  padding-bottom: calc(var(--space-5) + var(--keyboard-covered-height));
+dialog.dialog[open] {
+  top: var(--visual-viewport-top);
+  height: min(var(--visual-viewport-height), 100%);
+}
+
+@include bp.up(nav) {
+  html.visual-viewport-panned dialog.dialog[open] > .dialog-panel--tall {
+    --dialog-tall-top: max(
+      0px,
+      (min(var(--visual-viewport-height), 100dvh) - var(--sheet-form-height)) / 2 - var(--space-5)
+    );
+  }
+}
+
+html.visual-viewport-panned dialog.dialog[open]::backdrop {
+  background: var(--color-surface);
+}
+
+html.keyboard-open dialog.dialog[open],
+html.visual-viewport-panned dialog.dialog[open] {
+  box-shadow: var(--shadow-under-keyboard);
 }
 
 @include bp.down(phone) {
   html.keyboard-open .dialog[open] {
-    padding-bottom: var(--keyboard-covered-height);
     background: var(--color-surface);
   }
 }
 
 @include bp.down(nav) {
   html.keyboard-open .dialog--full[open] {
-    padding-bottom: var(--keyboard-covered-height);
     background: var(--color-surface);
   }
 
-  html.keyboard-open .dialog--sheet[open] {
-    padding-bottom: var(--keyboard-covered-height);
-  }
-
-  html.keyboard-open .dialog--sheet[open] .dialog-panel {
-    max-height: calc(100% - var(--space-12));
+  html.visual-viewport-panned .dialog--sheet[open] .dialog-panel {
+    max-height: calc(100% - max(var(--space-12), #{sheet.$top}));
   }
 }

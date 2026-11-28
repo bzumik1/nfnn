@@ -309,6 +309,81 @@ describe('Given a form built from form fields', () => {
     expect(document.activeElement).toBe(input('email'));
   });
 
+  describe('when the form is sent while the first field to fill in stands below the window', () => {
+    const nameField = () => input('name').closest('app-form-field') as HTMLElement;
+
+    function placeBelowTheWindow(element: HTMLElement, height: number): void {
+      element.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: 2000,
+          left: 0,
+          top: 2000,
+          right: 300,
+          bottom: 2000 + height,
+          width: 300,
+          height,
+          toJSON: () => ({}),
+        }) as DOMRect;
+    }
+
+    it('then the field comes into view only once its error is drawn, so the error counts too', async () => {
+      placeBelowTheWindow(nameField(), 120);
+      const errorsShownWhenScrolled: (string | undefined)[] = [];
+      nameField().scrollIntoView = () =>
+        errorsShownWhenScrolled.push(withOrdinarySpaces(errorOf('name')?.textContent)?.trim());
+
+      await submit();
+
+      expect(errorsShownWhenScrolled).toEqual(['Vyplňte prosím jméno.']);
+    });
+
+    it('then the keyboard rising over it brings the field into view again, and no longer once the field is filled in', async () => {
+      placeBelowTheWindow(nameField(), 120);
+      let scrolls = 0;
+      nameField().scrollIntoView = () => (scrolls += 1);
+      await submit();
+      expect(scrolls).toBe(1);
+
+      keyboard.show();
+      await fixture.whenStable();
+      expect(scrolls).toBe(2);
+
+      await type('name', 'Jan');
+      keyboard.hide();
+      await fixture.whenStable();
+      expect(scrolls).toBe(2);
+    });
+
+    it('then a keyboard that dips and rises again while the field keeps the focus places the field again', async () => {
+      placeBelowTheWindow(nameField(), 120);
+      let scrolls = 0;
+      nameField().scrollIntoView = () => (scrolls += 1);
+      keyboard.show();
+      await submit();
+      expect(document.activeElement).toBe(input('name'));
+      const afterSubmit = scrolls;
+
+      keyboard.hide();
+      await fixture.whenStable();
+      keyboard.show();
+      await fixture.whenStable();
+
+      expect(scrolls).toBe(afterSubmit + 2);
+    });
+
+    it('then a field taller than the window brings its control into view instead', async () => {
+      placeBelowTheWindow(nameField(), 2000);
+      const scrolled: string[] = [];
+      nameField().scrollIntoView = () => scrolled.push('field');
+      input('name').scrollIntoView = () => scrolled.push('control');
+
+      await submit();
+
+      expect(scrolled).toEqual(['control']);
+    });
+  });
+
   describe('when the server refuses fields with its own messages', () => {
     let unplaced: { field: string; message: string }[];
 

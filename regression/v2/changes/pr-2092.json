@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/largest-text.spec.ts > Given a visitor on an iPhone 390 pt wide whose installed app shows the largest accessibility text, opening a sheet or a dialog > when they open a dialog titled by features/admin/*",
+    "reason": "#1558 (shared batch S2, both teams 12/12 pending in the PR): every administration dialog takes the shared title ui-dialog__title, so the payments, erasure and log level sheets leave their own title classes; their openers now measure the shared title's texts in the real sheets and are named by the dialog, not by a class that is gone",
+    "replacement": "e2e/largest-text.spec.ts > Given a visitor on an iPhone 390 pt wide whose installed app shows the largest accessibility text, opening a sheet or a dialog > when they open a dialog titled by Přiřazená platba, then its title and every title of the templates in its place break only between words and stay at least as large as the sheet's body text",
+    "contract": "docs/frontend-overview.md, Dialogs (one title for every dialog of the administration)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/largest-text.spec.ts > Given a visitor on an iPhone * pt wide whose installed app shows the largest accessibility text, whose groups kept together may break only where they are wider than the line > when they open the sheet titled by features/admin/*",
+    "reason": "#1558 (shared batch S2, both teams 12/12 pending in the PR): every administration dialog takes the shared title ui-dialog__title, so the payments, erasure and log level sheets leave their own title classes; their openers now measure the shared title's texts in the real sheets and are named by the dialog, not by a class that is gone",
+    "replacement": "e2e/largest-text.spec.ts > Given a visitor on an iPhone 390 pt wide whose installed app shows the largest accessibility text, whose groups kept together may break only where they are wider than the line > when they open the sheet titled by Přiřazená platba, then no word kept with a one-letter word in its title, buttons or choices reaches past its line",
+    "contract": "docs/frontend-overview.md, Dialogs (one title for every dialog of the administration)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/layout/soft-keyboard.spec.ts > Given a phone whose on-screen keyboard shortens the visual viewport > when the visitor taps a text field and the keyboard comes up > then the page is marked and knows the part of the screen the keyboard leaves visible and the part it covers",
+    "reason": "#2092 removed --keyboard-covered-height, which nothing reads any more: an open dialog now covers the visual viewport itself (--visual-viewport-top and --visual-viewport-height), so the dialogs' bottom padding that counted the keyboard went with its writer; the test keeps checking the mark and the visible part",
+    "replacement": "src/app/core/layout/soft-keyboard.spec.ts > Given a phone whose on-screen keyboard shortens the visual viewport > when the visitor taps a text field and the keyboard comes up > then the page is marked and knows the part of the screen the keyboard leaves visible",
+    "contract": "docs/frontend-overview.md, Dialogs (the dialog on the visual viewport) and core/layout (SoftKeyboard)"
+  }
+]

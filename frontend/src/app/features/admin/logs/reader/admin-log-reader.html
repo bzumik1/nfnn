@@ -292,7 +292,7 @@
 
 @if (opened(); as entry) {
   <app-dialog labelledBy="log-entry-title" presentation="sheet" (dismissed)="close()">
-    <h2 id="log-entry-title" class="sheet-title">
+    <h2 id="log-entry-title" class="ui-dialog__title entry-sheet-title">
       <app-level-icon [level]="entry.level" />
       {{ sheetTitle(entry) }}
     </h2>

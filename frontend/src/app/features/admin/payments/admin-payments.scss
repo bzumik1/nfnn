@@ -205,20 +205,6 @@
   text-align: left;
 }
 
-.pair-title {
-  font-family: var(--font-title);
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-semibold);
-  color: var(--color-text);
-  margin-bottom: var(--space-4);
-}
-
-@include bp.container-down(dialog-panel, tabs) {
-  .pair-title {
-    font-size: var(--text-dialog-title-large);
-  }
-}
-
 .pair-payment {
   display: grid;
   grid-template-columns: repeat(

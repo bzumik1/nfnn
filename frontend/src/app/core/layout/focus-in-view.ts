@@ -135,7 +135,7 @@ export function viewBand(target: Element): ViewBand {
   return band;
 }
 
-function scrollerAround(view: Window, element: Element): Element | null {
+export function scrollerAround(view: Window, element: Element): Element | null {
   const { body, documentElement } = element.ownerDocument;
   for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
     if (parent === documentElement) {

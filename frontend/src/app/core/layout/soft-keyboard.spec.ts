@@ -8,6 +8,7 @@ const KEYBOARD_HEIGHT = 262;
 class FakeVisualViewport extends EventTarget {
   height = SCREEN_HEIGHT;
   offsetTop = 0;
+  scale = 1;
 
   showKeyboard(height = KEYBOARD_HEIGHT, offsetTop = 0): void {
     this.height = SCREEN_HEIGHT - height;
@@ -46,12 +47,14 @@ describe('Given a phone whose on-screen keyboard shortens the visual viewport', 
     button.remove();
     delete (window as { visualViewport?: unknown }).visualViewport;
     root().classList.remove(KEYBOARD_OPEN_CLASS);
+    root().style.removeProperty('--visual-viewport-top');
+    root().style.removeProperty('--visual-viewport-height');
+    root().classList.remove('visual-viewport-panned');
   });
 
   it('when nothing is typed into, then the keyboard counts as closed and the page is left as it is', () => {
     expect(keyboard.isOpen()).toBe(false);
     expect(root().classList.contains(KEYBOARD_OPEN_CLASS)).toBe(false);
-    expect(root().style.getPropertyValue('--keyboard-covered-height')).toBe('');
   });
 
   describe('when the visitor taps a text field and the keyboard comes up', () => {
@@ -60,11 +63,54 @@ describe('Given a phone whose on-screen keyboard shortens the visual viewport', 
       viewport.showKeyboard(KEYBOARD_HEIGHT, 40);
     });
 
-    it('then the page is marked and knows the part of the screen the keyboard leaves visible and the part it covers', () => {
+    it('then the page is marked and knows the part of the screen the keyboard leaves visible', () => {
       expect(keyboard.isOpen()).toBe(true);
       expect(root().classList.contains(KEYBOARD_OPEN_CLASS)).toBe(true);
-      expect(root().style.getPropertyValue('--keyboard-covered-height')).toBe('222px');
       expect(keyboard.visibleArea()).toEqual({ top: 40, height: 287 });
+    });
+
+    it('then the page knows where the visual viewport stands, so a fixed dialog can follow it while iOS pans it', () => {
+      expect(root().style.getPropertyValue('--visual-viewport-top')).toBe('40px');
+      expect(root().style.getPropertyValue('--visual-viewport-height')).toBe('287px');
+    });
+
+    it('and the keyboard goes down while the view stays panned, as after Done on an iPhone, then the page still knows the panned view', () => {
+      field.blur();
+      viewport.height = SCREEN_HEIGHT;
+      viewport.offsetTop = 30;
+      viewport.dispatchEvent(new Event('scroll'));
+
+      expect(root().style.getPropertyValue('--visual-viewport-top')).toBe('30px');
+      expect(root().style.getPropertyValue('--visual-viewport-height')).toBe(`${SCREEN_HEIGHT}px`);
+    });
+
+    it('and the keyboard goes down and the view is whole again, then the page no longer carries where it stands, so dialogs fill the window as they do without a keyboard', () => {
+      viewport.hideKeyboard();
+
+      expect(root().style.getPropertyValue('--visual-viewport-top')).toBe('');
+      expect(root().style.getPropertyValue('--visual-viewport-height')).toBe('');
+    });
+
+    it('then the page carries the panned mark beside them', () => {
+      expect(root().classList.contains('visual-viewport-panned')).toBe(true);
+    });
+
+    it('and the view is whole again but for a rounded half pixel, as with a fractional pixel ratio or a browser zoom, then the page carries neither them nor the mark', () => {
+      viewport.offsetTop = 0;
+      viewport.height = SCREEN_HEIGHT - 0.5;
+      viewport.dispatchEvent(new Event('resize'));
+
+      expect(root().style.getPropertyValue('--visual-viewport-top')).toBe('');
+      expect(root().style.getPropertyValue('--visual-viewport-height')).toBe('');
+      expect(root().classList.contains('visual-viewport-panned')).toBe(false);
+    });
+
+    it('and the view is pinch-zoomed, then the page no longer carries where it stands, so a zoomed page keeps its dialogs as they are', () => {
+      viewport.scale = 2;
+      viewport.dispatchEvent(new Event('resize'));
+
+      expect(root().style.getPropertyValue('--visual-viewport-top')).toBe('');
+      expect(root().style.getPropertyValue('--visual-viewport-height')).toBe('');
     });
 
     it('and the keyboard goes down again, then the mark and the visible part are gone', () => {
@@ -72,7 +118,6 @@ describe('Given a phone whose on-screen keyboard shortens the visual viewport', 
 
       expect(keyboard.isOpen()).toBe(false);
       expect(root().classList.contains(KEYBOARD_OPEN_CLASS)).toBe(false);
-      expect(root().style.getPropertyValue('--keyboard-covered-height')).toBe('');
     });
 
     it('and the field loses the focus to a button, then the keyboard counts as closed at once', async () => {
@@ -113,5 +158,28 @@ describe('Given a browser without a visual viewport', () => {
     expect(keyboard.isOpen()).toBe(false);
     field.remove();
     TestBed.resetTestingModule();
+  });
+});
+
+describe('Given a phone whose visual viewport is already panned when the soft keyboard starts', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    delete (window as { visualViewport?: unknown }).visualViewport;
+    document.documentElement.style.removeProperty('--visual-viewport-top');
+    document.documentElement.style.removeProperty('--visual-viewport-height');
+    document.documentElement.classList.remove('visual-viewport-panned');
+  });
+
+  it('when it starts, then the page knows the panned view before any viewport event', () => {
+    const viewport = new FakeVisualViewport();
+    viewport.offsetTop = 120;
+    viewport.height = SCREEN_HEIGHT - 200;
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: SCREEN_HEIGHT });
+
+    TestBed.inject(SoftKeyboard);
+
+    expect(document.documentElement.style.getPropertyValue('--visual-viewport-top')).toBe('120px');
+    expect(document.documentElement.classList.contains('visual-viewport-panned')).toBe(true);
   });
 });

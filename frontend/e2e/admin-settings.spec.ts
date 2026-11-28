@@ -618,3 +618,54 @@ for (const { name, viewport, rootPx, floatingBar } of [
     }
   });
 }
+
+for (const [width, height] of [
+  [375, 667],
+  ...[640, 680, 720, 760, 800, 844, 880].map((tall) => [390, tall]),
+]) {
+  test.describe(`Given an administrator on a phone ${width} × ${height} px withdrawing the receipt signing key in its sheet`, () => {
+    test.use({ viewport: { width, height } });
+
+    test.beforeEach(async ({ page }) => {
+      await mockDonorApi(page);
+      await rememberedSession(page);
+      await page.route(
+        (url) => url.pathname === SETTINGS,
+        (route) => route.fulfill({ json: adminSettings }),
+      );
+    });
+
+    test('when they press Zneplatnit klíč without a code, then the code field with its label, error and hint stands above the sticky buttons', async ({
+      page,
+    }) => {
+      await page.goto('/sprava/nastaveni');
+      await page.getByRole('button', { name: 'Zneplatnit klíč serveru…' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
+      await expect(dialog).toBeVisible();
+
+      await dialog.getByRole('button', { name: 'Zneplatnit klíč', exact: true }).click();
+
+      await expect(dialog.getByLabel('Kód z aplikace')).toBeFocused();
+      await expect(dialog.getByText('Opište prosím kód z aplikace.')).toBeVisible();
+      await expect
+        .poll(() => fieldBesideTheButtons(page))
+        .toEqual({ underTheTop: 0, underTheButtons: 0 });
+    });
+  });
+}
+
+function fieldBesideTheButtons(
+  page: Page,
+): Promise<{ underTheTop: number; underTheButtons: number }> {
+  return page.getByRole('dialog').evaluate((dialog) => {
+    const field = dialog.querySelector('#withdrawal-code')!.closest('app-form-field')!;
+    const panel = dialog.querySelector('.dialog-panel')!;
+    const buttons = dialog.querySelector('.ui-dialog__actions')!;
+    const box = field.getBoundingClientRect();
+    const top = panel.getBoundingClientRect().top + panel.clientTop;
+    return {
+      underTheTop: Math.max(0, Math.round(top - box.top)),
+      underTheButtons: Math.max(0, Math.round(box.bottom - buttons.getBoundingClientRect().top)),
+    };
+  });
+}
