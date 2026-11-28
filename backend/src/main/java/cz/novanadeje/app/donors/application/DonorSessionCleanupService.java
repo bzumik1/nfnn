@@ -8,19 +8,15 @@ import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorChallengeRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRecoveryRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
+import cz.novanadeje.app.donors.domain.SessionRecordRetention;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 
 @Service
 public class DonorSessionCleanupService {
-
-    public static final Duration SPENT_TOKEN_RETENTION = Duration.ofDays(30);
-    public static final Duration ENDED_DEVICE_RETENTION = Duration.ofDays(400);
-    public static final Duration SPENT_SECRET_RETENTION = Duration.ofDays(30);
 
     private final DonorDeviceRepository devices;
     private final RefreshTokenRepository refreshTokens;
@@ -48,7 +44,7 @@ public class DonorSessionCleanupService {
     @Transactional
     public SessionCleanup cleanUp() {
         Instant now = clock.instant();
-        Instant spentSecretsCutoff = now.minus(SPENT_SECRET_RETENTION);
+        Instant spentSecretsCutoff = SessionRecordRetention.spentSecretsCutoff(now);
         recoveries.forgetCodesClosedAt(now);
         recoveries.deleteExpiredBefore(spentSecretsCutoff);
         challenges.deleteExpiredBefore(spentSecretsCutoff);
@@ -57,8 +53,8 @@ public class DonorSessionCleanupService {
         int expired = (int) devices.findActiveWithoutUsableTokenAt(now).stream()
                 .filter(device -> signOuts.end(device.donorId(), device.id(), DeviceSignOutReason.EXPIRED, now))
                 .count();
-        int tokens = refreshTokens.deleteSpentBefore(now.minus(SPENT_TOKEN_RETENTION));
-        int ended = devices.deleteEndedBefore(now.minus(ENDED_DEVICE_RETENTION));
+        int tokens = refreshTokens.deleteSpentBefore(SessionRecordRetention.spentTokensCutoff(now));
+        int ended = devices.deleteEndedBefore(SessionRecordRetention.endedDevicesCutoff(now));
         return new SessionCleanup(expired, tokens, ended);
     }
 

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.application.backup;
 
+import cz.novanadeje.app.operations.domain.backup.BackupKeyRevealPause;
 import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.slf4j.Logger;
@@ -9,7 +10,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,8 +18,6 @@ import java.util.UUID;
 public class BackupKeyRevealRefusals {
 
     static final String REFUSED_ACTION = "VIEW_BACKUP_KEY_REFUSED";
-    static final int REFUSALS_BEFORE_PAUSE = 5;
-    static final Duration PAUSE_WINDOW = Duration.ofMinutes(15);
 
     private static final Logger log = LoggerFactory.getLogger(BackupKeyRevealRefusals.class);
 
@@ -33,7 +31,7 @@ public class BackupKeyRevealRefusals {
 
     @Transactional(readOnly = true)
     public boolean paused(UUID adminId, Instant now) {
-        return trail.countPerformedSince(adminId, REFUSED_ACTION, now.minus(PAUSE_WINDOW)) >= REFUSALS_BEFORE_PAUSE;
+        return BackupKeyRevealPause.pausedAfter(trail.countPerformedSince(adminId, REFUSED_ACTION, BackupKeyRevealPause.refusalsCountedSince(now)));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
