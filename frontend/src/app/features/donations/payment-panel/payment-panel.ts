@@ -67,8 +67,15 @@ const DEFAULT_AMOUNT = 500;
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
 const PRIMARY_BUTTON = 0;
-const CLEANED_INSERTIONS = new Set(['insertText', 'insertFromPaste', 'insertReplacementText']);
+const CLEANED_INSERTIONS = new Set([
+  'insertText',
+  'insertFromPaste',
+  'insertFromDrop',
+  'insertReplacementText',
+]);
 const CURRENCY = 'Kč';
+const CURRENCY_NAMES = /kč|czk/gi;
+const ZERO_HELLERS_AT_END = /,(?:00|-)$/;
 const CUSTOM_AMOUNT_MAX_LENGTH = `${formatCrowns(MAX_AMOUNT)}\u00a0${CURRENCY}`.length;
 const MINOR_PER_CROWN = 100;
 const ANNOUNCE_DELAY_MS = 1200;
@@ -446,13 +453,16 @@ export class PaymentPanel {
     const field = event.target as HTMLInputElement;
     this.deletingSelection = field.selectionStart !== field.selectionEnd;
     const inserted = insertedText(event);
-    if (inserted === null) {
+    if (inserted === null || !event.cancelable) {
       return;
     }
     const start = field.selectionStart ?? field.value.length;
     const end = field.selectionEnd ?? start;
     const room = CUSTOM_AMOUNT_MAX_LENGTH - (field.value.length - (end - start));
-    const cleaned = withoutSpacesAndCurrency(inserted).slice(0, Math.max(room, 0));
+    const cleaned = withoutZeroHellersAtEnd(withoutSpacesAndCurrency(inserted)).slice(
+      0,
+      Math.max(room, 0),
+    );
     if (cleaned === inserted) {
       return;
     }
@@ -934,7 +944,11 @@ function groupThousands(field: HTMLInputElement): void {
 }
 
 function withoutSpacesAndCurrency(text: string): string {
-  return text.replace(/\s/g, '').replaceAll(CURRENCY, '');
+  return text.replace(/\s/g, '').replace(CURRENCY_NAMES, '');
+}
+
+function withoutZeroHellersAtEnd(text: string): string {
+  return text.replace(ZERO_HELLERS_AT_END, '');
 }
 
 function insertedText(event: InputEvent): string | null {
