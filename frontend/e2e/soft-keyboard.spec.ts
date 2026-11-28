@@ -684,8 +684,9 @@ test.describe('Given a phone 390 pt wide, as tall as Zneplatnit klíč needs to 
     const dialog = page.getByRole('dialog', { name: 'Zneplatnit klíč 21fe31df?' });
     const code = dialog.getByLabel('Kód z aplikace');
     await code.tap();
-    await page.evaluate(() =>
-      (window as KeyboardWindow).standInKeyboard?.show(KEYBOARD_OVER_THE_HEAD),
+    await page.evaluate(
+      (height) => (window as KeyboardWindow).standInKeyboard?.show(height),
+      KEYBOARD_OVER_THE_HEAD,
     );
     await dialog
       .getByRole('button', { name: 'Zneplatnit klíč', exact: true })
@@ -696,8 +697,9 @@ test.describe('Given a phone 390 pt wide, as tall as Zneplatnit klíč needs to 
     const windowHeight = sheet.content + SHEET_TOP_GAP - SCROLL_LEFT_AT_FULL_HEIGHT;
     expect(sheet.fieldEnd + sheet.buttons).toBeLessThanOrEqual(windowHeight - SHEET_TOP_GAP);
     await page.setViewportSize({ width: 390, height: windowHeight });
-    await page.evaluate(() =>
-      (window as KeyboardWindow).standInKeyboard?.show(KEYBOARD_OVER_THE_HEAD),
+    await page.evaluate(
+      (height) => (window as KeyboardWindow).standInKeyboard?.show(height),
+      KEYBOARD_OVER_THE_HEAD,
     );
     await expect(page.locator('html')).toHaveClass(/keyboard-open/);
 
