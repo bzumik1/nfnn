@@ -9,6 +9,7 @@ export class FakeSoftKeyboard {
 
   readonly visibleArea = this.visible.asReadonly();
   readonly isOpen = computed(() => this.visible() !== null);
+  readonly viewShortened = computed(() => this.visible() !== null);
 
   show(area: VisibleArea = KEYBOARD_ON_SMALL_PHONE): void {
     this.visible.set(area);

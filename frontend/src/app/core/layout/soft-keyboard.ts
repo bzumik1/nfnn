@@ -44,6 +44,8 @@ export class SoftKeyboard {
 
   readonly visibleArea = this.visible.asReadonly();
   readonly isOpen = computed(() => this.visible() !== null);
+  private readonly shortened = signal(false);
+  readonly viewShortened = this.shortened.asReadonly();
 
   constructor() {
     const view = this.document.defaultView;
@@ -85,9 +87,9 @@ export class SoftKeyboard {
     const root = this.document.documentElement;
     const style = root.style;
     const unzoomed = Math.abs(viewport.scale - 1) <= UNZOOMED_SCALE_SLACK;
-    const panned =
-      Math.abs(viewport.offsetTop) > ROUNDING_SLACK_PX ||
-      Math.abs(viewport.height - view.innerHeight) > ROUNDING_SLACK_PX;
+    const shortened = Math.abs(viewport.height - view.innerHeight) > ROUNDING_SLACK_PX;
+    this.shortened.set(shortened);
+    const panned = Math.abs(viewport.offsetTop) > ROUNDING_SLACK_PX || shortened;
     root.classList.toggle(VIEW_PANNED_CLASS, unzoomed && panned);
     if (!unzoomed || !panned) {
       style.removeProperty(VIEW_TOP);

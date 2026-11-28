@@ -86,6 +86,11 @@ html.visual-viewport-panned dialog.dialog[open]::backdrop {
   background: var(--color-surface);
 }
 
+html.keyboard-open dialog.dialog[open],
+html.visual-viewport-panned dialog.dialog[open] {
+  box-shadow: var(--shadow-under-keyboard);
+}
+
 @include bp.down(phone) {
   html.keyboard-open .dialog[open] {
     background: var(--color-surface);

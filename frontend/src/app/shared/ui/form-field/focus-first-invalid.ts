@@ -39,7 +39,8 @@ export class FocusFirstInvalid {
   constructor() {
     effect(() => {
       const area = this.keyboard.visibleArea();
-      untracked(() => this.keyboardMoved(area));
+      const shortened = this.keyboard.viewShortened();
+      untracked(() => this.keyboardMoved(area, shortened));
     });
   }
 
@@ -53,7 +54,7 @@ export class FocusFirstInvalid {
     this.placeAfterRender(control);
   }
 
-  private keyboardMoved(area: VisibleArea | null): void {
+  private keyboardMoved(area: VisibleArea | null, shortened: boolean): void {
     const placed = this.placed;
     if (placed === null) {
       return;
@@ -65,6 +66,9 @@ export class FocusFirstInvalid {
     if (area !== null) {
       placed.keyboardSeen = true;
     } else if (placed.keyboardSeen && !hasFocus(placed.control)) {
+      if (shortened) {
+        return;
+      }
       this.placed = null;
     }
     this.placeAfterRender(placed.control);
